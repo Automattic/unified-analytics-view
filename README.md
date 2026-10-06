@@ -9,6 +9,7 @@ Tracking, storage and retrieval are built elsewhere. This repo starts at the que
 ```
 docs/
   view-grammar-reference.md   the design: start here
+  milestones.md               the course to the MVP
   claude-code-prompt.md       the brief for milestone 1 (typed core, no DOM)
   design-inputs/              research behind the design: views, view spec, semantic model
 prototype/                    read-only reference: the whole pipeline in one file, plus its sweep test
@@ -22,7 +23,7 @@ apps/
   bench/                      the playground
 ```
 
-`packages/` and `apps/` are empty until milestone 1 scaffolds the workspace.
+`core` and `fixtures` are built and tested (`pnpm install && pnpm test`). `dom`, `dots` and `bench` are not started. The course is in `docs/milestones.md`.
 
 ## Running the prototype
 

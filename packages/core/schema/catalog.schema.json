@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://universal-analytics.local/schema/catalog-0.json",
+  "title": "Catalog",
+  "description": "The slice of the semantic model the front end needs: names, and the properties that drive presentation.",
+  "type": "object",
+  "required": ["metrics", "dimensions"],
+  "additionalProperties": false,
+  "properties": {
+    "metrics": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["label", "unit", "polarity"],
+        "additionalProperties": false,
+        "properties": {
+          "label": { "type": "string" },
+          "unit": { "type": "string" },
+          "polarity": { "enum": ["up", "down", "none"], "description": "Whether an increase is good. Drives delta colour." },
+          "rangeTotal": { "enum": ["sum", "sum of daily"], "description": "How the engine forms a total over a range." },
+          "instant": { "type": "boolean", "description": "No range and no prior period, such as people present now." }
+        }
+      }
+    },
+    "dimensions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["label", "type"],
+        "additionalProperties": false,
+        "properties": {
+          "label": { "type": "string" },
+          "type": { "enum": ["time", "categorical"] }
+        }
+      }
+    }
+  }
+}

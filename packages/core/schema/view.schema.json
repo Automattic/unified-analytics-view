@@ -1,0 +1,84 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://universal-analytics.local/schema/view-0.json",
+  "title": "View spec, view/0",
+  "description": "A view described once, in catalog names. It carries no sizes and no breakpoints; the host decides presentation.",
+  "type": "object",
+  "required": ["spec", "query"],
+  "additionalProperties": false,
+  "properties": {
+    "spec": { "const": "view/0" },
+    "title": { "type": "string", "description": "Shown by the host's frame, not drawn in the scene." },
+    "use": { "type": "string", "description": "A preset name. Expands into layers. Ignored if layers is present." },
+    "query": { "$ref": "#/definitions/query" },
+    "layers": { "type": "array", "items": { "$ref": "#/definitions/layer" } },
+    "guides": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "x": { "type": "boolean" },
+        "y": { "type": "boolean" },
+        "grid": { "type": "boolean" },
+        "legend": { "enum": ["full", "top"] }
+      }
+    },
+    "headline": { "type": "boolean", "description": "Show the number above the marks." },
+    "keep": {
+      "type": "array",
+      "description": "Parts the host may not drop.",
+      "items": { "enum": ["guides", "secondary", "rows", "marks"] },
+      "uniqueItems": true
+    }
+  },
+  "allOf": [
+    {
+      "description": "A dimension needs something to draw it with: layers, or a preset.",
+      "if": { "properties": { "query": { "type": "object", "required": ["by"], "properties": { "by": { "type": "array", "minItems": 1 } } } } },
+      "then": { "anyOf": [{ "required": ["use"] }, { "required": ["layers"] }] }
+    },
+    {
+      "description": "A preset needs a dimension in query.by.",
+      "if": { "required": ["use"] },
+      "then": { "properties": { "query": { "type": "object", "required": ["by"], "properties": { "by": { "type": "array", "minItems": 1 } } } } }
+    }
+  ],
+  "definitions": {
+    "query": {
+      "type": "object",
+      "required": ["metrics"],
+      "additionalProperties": false,
+      "properties": {
+        "metrics": { "type": "array", "items": { "type": "string" }, "minItems": 1, "description": "Catalog metric names. The first is the primary metric." },
+        "by": { "type": "array", "items": { "type": "string" }, "maxItems": 1, "description": "Zero or one catalog dimension." },
+        "range": { "type": "string", "description": "For example \"28d\"." },
+        "compare": { "const": "previous" },
+        "limit": { "type": "integer", "minimum": 1, "description": "Top-N for a categorical dimension." }
+      }
+    },
+    "field": { "type": ["string", "number"], "description": "A dimension name, a metric name, or a number (for a rule)." },
+    "layer": {
+      "type": "object",
+      "required": ["mark"],
+      "additionalProperties": false,
+      "properties": {
+        "mark": { "enum": ["line", "area", "bar", "rule", "text"] },
+        "encode": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "x": { "$ref": "#/definitions/field" },
+            "y": { "$ref": "#/definitions/field" },
+            "color": { "$ref": "#/definitions/field" },
+            "text": { "$ref": "#/definitions/field" }
+          }
+        },
+        "series": { "const": "previous", "description": "Draw the comparison companion of the metric." },
+        "role": { "enum": ["primary", "comparison", "reference", "context"] },
+        "stack": { "const": "normalize" },
+        "label": { "type": "string", "description": "Text for a rule." },
+        "align": { "const": "end" },
+        "paint": { "type": "string", "description": "A paint token, never a colour." }
+      }
+    }
+  }
+}

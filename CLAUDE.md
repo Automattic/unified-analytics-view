@@ -26,7 +26,8 @@ There is no build step yet. Packages export their TypeScript source; a bundler a
 ## Rules
 
 - **The core has no DOM and no framework.** Runtime dependencies are `d3-scale`, `d3-shape` and `d3-array`. Ask before adding any other.
-- **Do not add chart types.** A new shape is a mark. A new combination is a preset.
+- **Do not add chart types.** A new shape is a mark. A new combination is a preset, named after the `@automattic/charts` component it replaces where one exists.
+- **This is the candidate next major of `@automattic/charts`.** Keep its token names (`--a8c-charts-*`) and its keyboard model. See `docs/positioning.md`.
 - **No sizes or breakpoints in a spec.** They belong to the host.
 - **Scenes carry paint tokens, never colours.**
 - **Keys are stable and unique.** Transitions and keyboard navigation hang on them.

@@ -110,7 +110,7 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
 }
 
 export const samples: Record<string, { label: string; spec: Spec }> = {
-  trend:  { label: 'Visitors over time', spec: { spec: 'view/0', title: 'Visitors',    use: 'trend',     query: { metrics: ['visitors'],  by: ['date.day'], range: '28d', compare: 'previous' } } },
+  trend:  { label: 'Visitors over time', spec: { spec: 'view/0', title: 'Visitors',    use: 'line',      query: { metrics: ['visitors'],  by: ['date.day'], range: '28d', compare: 'previous' } } },
   pages:  { label: 'Top pages',          spec: { spec: 'view/0', title: 'Top pages',   use: 'bar-list',  query: { metrics: ['pageviews'], by: ['page'],     range: '28d', limit: 8 } } },
   mix:    { label: 'Channel mix',        spec: { spec: 'view/0', title: 'Channels',    use: 'share-bar', query: { metrics: ['visitors'],  by: ['channel'],  range: '28d' } } },
   total:  { label: 'Page views total',   spec: { spec: 'view/0', title: 'Page views',  query: { metrics: ['pageviews'], range: '28d', compare: 'previous' } } },

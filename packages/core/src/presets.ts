@@ -1,9 +1,10 @@
 import type { Channel, Layer, PresetLibrary, Spec } from './types.ts';
 
 /* A preset is a saved fragment of a spec. It expands into ordinary layers
- * before the grammar runs, and nothing downstream knows its name. */
+ * before the grammar runs, and nothing downstream knows its name.
+ * Names follow the @automattic/charts component they replace, where one exists. */
 export const PRESETS: PresetLibrary = {
-  'trend': { layers: [
+  'line': { layers: [
     { mark: 'area', encode: { x: '$by', y: '$metric' }, role: 'context' },
     { mark: 'line', encode: { x: '$by', y: '$metric' }, series: 'previous', role: 'comparison' },
     { mark: 'line', encode: { x: '$by', y: '$metric' }, role: 'primary' } ] },

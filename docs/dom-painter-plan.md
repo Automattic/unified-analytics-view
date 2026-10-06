@@ -123,7 +123,29 @@ One custom element, `<ua-view>`, with an open shadow root. It takes `spec`, `res
 - **Bars are HTML,** positioned by custom properties (`inset-inline-start: calc(var(--x) * 100%)`, `block-size: calc(var(--v) * 100%)`), so corner radii and hairlines stay true at any size. Lines and areas are the stretched SVG. Text is never inside the SVG.
 - **`rows`** is a grid per row: `minmax(0, 1fr) auto`, label ellipsized by CSS, the bar a background sized by `--v`. No character-width estimates.
 - **`band`** segments use `flex-grow: var(--v)`.
-- Paint tokens become custom properties on `:host` (`series.1` → `--p-series-1`), so a surface themes a view from outside the shadow root.
+- Paint tokens become custom properties on `:host`, so a surface themes a view from outside the shadow root. They use the `@automattic/charts` names; see section 4.1.
+
+### 4.1 Paint tokens as `@automattic/charts` custom properties
+
+Names on the right were read from `src/styles/chart-scope.scss` on Jetpack trunk. A page that already styles `@automattic/charts` themes a view with no extra work.
+
+| Paint token | Custom property | Note |
+|---|---|---|
+| `ink` | `--a8c-charts-color-label` | |
+| `ink.muted` | `--a8c-charts-color-label-secondary` | Tick labels use `--a8c-charts-color-label-axis` |
+| `grid` | `--a8c-charts-color-grid` | |
+| `axis` | `--a8c-charts-color-axis-x`, `-axis-y` | |
+| `series.1` to `series.6` | `--a8c-charts-color-series-1` to `-6` | Theirs declares only slot 1 and generates the rest in script. We declare all six |
+| `rule` | `--a8c-charts-color-annotation` | |
+| `compare` | `--a8c-charts-color-comparison` | **New.** Theirs dashes the series colour instead |
+| `delta.good`, `delta.bad` | `--a8c-charts-color-delta-good`, `-delta-bad` | **New.** They default to `-trend-up` and `-trend-down`. Theirs names a direction; ours names a judgement, because polarity can make a rise bad |
+| flat delta | `--a8c-charts-color-trend-neutral` | |
+| `live` | `--a8c-charts-color-live` | **New** |
+| panel and tile surfaces | `--a8c-charts-color-surface`, `-surface-secondary`, `-background` | |
+| bar track | `--a8c-charts-color-track` | |
+| tooltip | `--a8c-charts-color-tooltip-surface` | |
+| bar corner | `--a8c-charts-border-radius-bar` | |
+| entrance motion | `--a8c-charts-motion-duration-entrance`, `-motion-easing-entrance` | Update and exit motion tokens are new |
 
 ## 5. The measured pass
 
@@ -141,7 +163,7 @@ It never rebuilds the scene.
 - Positions are custom properties, so an update is a CSS transition on `--x`, `--w`, `--v`, `--t`, timed by motion tokens. They have to be registered as numbers to animate. `@property` is ignored inside a shadow root, so the painter registers them once on the document with `CSS.registerProperty`. Where that is missing, values still apply and nothing animates.
 - Path shapes cannot transition in CSS. On a data change the painter interpolates the values and regenerates `d` per frame. This is the one scripted animation.
 - No transition runs during a resize. Elements hidden by a container query simply go.
-- **Keyboard:** one tab stop per view. Arrow keys move across `vg-hits`, one per row of the result, which is also what hover and tooltips attach to. The readout announces the dimension value, the metric in its catalog format, and the comparison if present. Lines need this because a line is one path with no element per point.
+- **Keyboard:** the `@automattic/charts` model, kept as is. One tab stop per view; left and right arrows step through points; Enter or Space activates the point; Tab and Escape leave; the tooltip is the readout. The arrows move across `vg-hits`, one per row of the result, which is also what hover and tooltips attach to. The readout announces the dimension value, the metric in its catalog format, and the comparison if present. Lines need this because a line is one path with no element per point.
 - The sentence is the figure's description. The table is the same result and is reachable by a control the surface provides.
 
 ## 7. Things to prove first

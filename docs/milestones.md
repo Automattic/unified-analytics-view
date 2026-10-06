@@ -2,7 +2,7 @@
 
 As of October 5, 2026. The course from the prototype to the MVP surfaces, for the three things this repo owns end to end:
 
-- **A. The grammar.** Nail it, and position it against `@automattic/charts` and Jetpack Stats.
+- **A. The grammar.** Nail it, and position it as the next version of `@automattic/charts`, informed by Jetpack Stats.
 - **B. The MVP views.** Settle the initial set of views and charts, and design them.
 - **C. The MVP surfaces.** Build the first places those views appear.
 
@@ -30,15 +30,11 @@ Port sections 1 to 7 of `prototype/prototype-bench.js` into `packages/core` and 
 
 ### 2. Positioning
 
-A short doc, `docs/positioning.md`, grounded in the actual code of both packages. It answers:
+`docs/positioning.md`, grounded in the code of both packages. The framing (decided Oct 5): this work is the next version of `@automattic/charts`, redone with what Jetpack Stats taught us and what Spacefast and Unified Analytics now require. It is a major version, consumers refactor, and it keeps the parts worth keeping.
 
-- What each `@automattic/charts` component is in this grammar: a preset, a mark, a custom mark, or a part of the chrome.
-- What the Jetpack Stats widget framework has that this does not (placement, sections, attributes, shared report params) and the reverse (a declarative data binding, fallback, a sentence).
-- What we take from each. Known candidates: comparison as a property of a series (Eder), the metric card and richer ranked list as the missing compositions (Jarosław), `ReportParams` as the shape of shared params.
-- How the two could meet later: a view spec as the body of a Jetpack widget, or `@automattic/charts` components as painters for a plan. Neither is built this week.
-- The chart substrate call, stated once so the team can stop discussing it.
+Three alignment choices follow from that and are already made: paint tokens use the `--a8c-charts-*` names, the keyboard model is version 4's, and presets are named after the chart they replace (`line`, `bar-list`).
 
-**Done when:** Bob, Laura and Jeff can read it in five minutes and nobody has to ask "why not just use Automattic Charts".
+**Done when:** Bob, Laura and Jeff can read it in five minutes and nobody has to ask "why not just use Automattic Charts". Proposing it to the charts and Stats owners comes after the Friday demo.
 
 ### 3. MVP view set
 
@@ -47,7 +43,7 @@ The views the Friday cut needs, each written as a `view/0` spec against fixtures
 | View | Metrics | Form today | Needs |
 |---|---|---|---|
 | Headline tiles | Visitors, page views, unique page views, engaged time, conversions, revenue | Number with delta | Duration and currency formats; optional sparkline beside the number |
-| Trend | Any tile's metric by day | `trend` | Nothing new |
+| Trend | Any tile's metric by day | `line` | Nothing new |
 | Top pages | Page views by page | `bar-list` | A top-three step when narrow |
 | Referrers | Visitors by referrer domain, then URL | `bar-list` | Two-level drill |
 | Channels, with AI assistants | Visitors by channel | `share-bar` or `bar-list` | A decision between the two |
@@ -94,7 +90,7 @@ Replace the fixture engine with the team's API behind the seam. If the API is no
 
 ## After Friday
 
-In rough order: params and selections (cross-filtering), boards, generalizing the three hard-coded layouts, the `arc` mark, the dot-grid painter ported to the packages, label collision, keyboard navigation and keyed transitions, the agent surface over MCP, and the paths into Jetpack Stats that the positioning doc describes.
+In rough order: params and selections (cross-filtering), boards, generalizing the three hard-coded layouts, the `arc` mark, the dot-grid painter ported to the packages, label collision, keyboard navigation and keyed transitions, the agent surface over MCP, and the parity list and port into the Jetpack monorepo that the positioning doc describes.
 
 ## The seam
 

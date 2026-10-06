@@ -14,6 +14,8 @@ import { catalog, runQuery, samples, scenarios } from '@universal-analytics/fixt
 (globalThis as any).d3 = { ...d3array, ...d3scale, ...d3shape };
 vm.runInThisContext(readFileSync(new URL('../prototype/prototype-bench.js', import.meta.url), 'utf8'));
 const proto = (globalThis as any).VGB;
+// The prototype calls the `line` preset `trend`. That rename is the one deliberate difference.
+const toProto = (s: Spec): Spec => (s.use === 'line' ? { ...s, use: 'trend' } : s);
 
 const trend = samples.trend!.spec;
 const specs: Record<string, Spec> = {
@@ -24,7 +26,7 @@ const specs: Record<string, Spec> = {
 const invalid: Record<string, Spec> = {
   'unknown preset': { spec: 'view/0', use: 'donut', query: { metrics: ['visitors'], by: ['channel'] } },
   'dimension, no layers': { spec: 'view/0', query: { metrics: ['visitors'], by: ['channel'] } },
-  'preset, no dimension': { spec: 'view/0', use: 'trend', query: { metrics: ['visitors'] } },
+  'preset, no dimension': { spec: 'view/0', use: 'line', query: { metrics: ['visitors'] } },
 };
 const painters: PainterName[] = ['svg', 'dots'];
 const heights = [null, 300, 160, 100, 60, 40];
@@ -47,9 +49,9 @@ describe('the sweep', () => {
         expect(JSON.stringify(scene, (_, v) => (typeof v === 'number' && isNaN(v) ? 'NaN' : v)), 'NaN: ' + at).not.toMatch(/NaN/);
         if (h != null && plan.layout !== 'sentence') expect(scene.height, 'too tall: ' + at).toBeLessThanOrEqual(h);
 
-        const host0 = proto.makeHost(w, h, p, 8), res0 = proto.runQuery(spec.query, sc), plan0 = proto.resolve(spec, res0, host0);
+        const host0 = proto.makeHost(w, h, p, 8), res0 = proto.runQuery(spec.query, sc), plan0 = proto.resolve(toProto(spec), res0, host0);
         expect(plain(runQuery(spec.query, sc)), 'result: ' + at).toEqual(plain(res0));
-        expect(plain(plan), 'plan: ' + at).toEqual(plain(plan0));
+        expect(plain(plan), 'plan: ' + at).toEqual({ ...plain(plan0), preset: plan.preset });
         expect(plain(scene), 'scene: ' + at).toEqual(plain(proto.buildScene(plan0, spec.query, res0, host0)));
       }
     });
@@ -141,13 +143,14 @@ describe('fitting the host (reference section 10.1)', () => {
 describe('validation', () => {
   it('names the fix', () => {
     const err = (s: Spec) => { try { resolve(s, runQuery(s.query), makeHost(346), catalog); } catch (e) { return (e as Error).message; } };
-    expect(err(invalid['unknown preset']!)).toBe('Unknown preset "donut". The library has: trend, bar-list, share-bar.');
-    expect(err(invalid['dimension, no layers']!)).toBe('This spec has a dimension but no layers, so there is nothing to draw it with. Add "layers", or "use" one of: trend, bar-list, share-bar.');
-    expect(err(invalid['preset, no dimension']!)).toBe('The "trend" preset needs a dimension in query.by.');
+    expect(err(invalid['unknown preset']!)).toBe('Unknown preset "donut". The library has: line, bar-list, share-bar.');
+    expect(err(invalid['dimension, no layers']!)).toBe('This spec has a dimension but no layers, so there is nothing to draw it with. Add "layers", or "use" one of: line, bar-list, share-bar.');
+    expect(err(invalid['preset, no dimension']!)).toBe('The "line" preset needs a dimension in query.by.');
     expect(err({ query: { metrics: ['pageviews'], by: ['page'] }, layers: [{ mark: 'bar', encode: { y: 'page', x: 'visitors' } }] }))
       .toBe('Layer 1 encodes "visitors" on x, which the query does not return. It returns: page, pageviews.');
   });
   it('a preset expands into layers, without the comparison when the query has none', () => {
+    expect(run(trend, 346).plan.preset).toBe('line');
     expect(expand(trend).layers!.map((l) => l.series)).toEqual([undefined, 'previous', undefined]);
     expect(expand({ ...trend, query: { ...trend.query, compare: undefined } }).layers!.length).toBe(2);
   });

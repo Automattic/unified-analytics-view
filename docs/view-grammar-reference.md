@@ -157,7 +157,7 @@ The fixture engine has three data states: `typical`, `no-prior` (comparison requ
 {
   "spec": "view/0",
   "title": "Visitors",
-  "use": "trend",
+  "use": "line",
   "query": { "metrics": ["visitors"], "by": ["date.day"], "range": "28d", "compare": "previous" }
 }
 ```
@@ -269,7 +269,7 @@ A preset is a saved fragment of a spec with two slots, `$by` and `$metric`, fill
 
 ```json
 {
-  "trend": { "layers": [
+  "line": { "layers": [
     { "mark": "area", "encode": { "x": "$by", "y": "$metric" }, "role": "context" },
     { "mark": "line", "encode": { "x": "$by", "y": "$metric" }, "series": "previous", "role": "comparison" },
     { "mark": "line", "encode": { "x": "$by", "y": "$metric" }, "role": "primary" }
@@ -286,6 +286,7 @@ A preset is a saved fragment of a spec with two slots, `$by` and `$metric`, fill
 ```
 
 - The library ships the basics. Users and agents add their own presets to it.
+- A preset is named after the `@automattic/charts` component it replaces, where one exists: `line` for `LineChart`, `bar-list` for `BarListChart`. The prototype calls `line` by its earlier name, `trend`.
 - A `previous` layer is left out on expansion when the query has no `compare`.
 - **Proposed:** a preset may pin a hand-tuned form for a size where the derived result is not good enough. The format for this is Open.
 - **The health check for the whole approach:** count how many presets need pins or custom marks. If most do, this has become a chart-type library with extra steps.
@@ -413,7 +414,7 @@ Paint tokens in use: `ink`, `ink.muted`, `grid`, `axis`, `series.1` to `series.6
 **Status: SVG and dot grid Proven. An HTML and CSS painter is Proposed and comes first in the build.**
 
 - **Two layers per view.** Data marks go to whichever renderer fits. Axes, labels, tooltips, brush and focus rings always stay in the DOM, so text stays crisp, tokens apply through CSS and keyboard access survives.
-- **Tokens, not colours.** A painter maps paint tokens to CSS custom properties (`series.1` becomes `--p-series-1`). Light and dark are token sets.
+- **Tokens, not colours.** A painter maps paint tokens to CSS custom properties, using the `@automattic/charts` token names (`series.1` becomes `--a8c-charts-color-series-1`). The full map is in `docs/dom-painter-plan.md`. Light and dark are token sets.
 - **Isolation.** On a customer's site the view must not inherit or leak styles. Use a custom element with shadow DOM.
 - **Renderer choice by mark count.** HTML and SVG for up to a few thousand marks, canvas beyond, WebGPU later. Aggregating to pixel resolution first keeps most analytics views in the first tier.
 
@@ -498,7 +499,7 @@ The six sample specs in the prototype are the first acceptance tests. Port them 
 
 | Sample | Spec | Covers |
 |---|---|---|
-| Visitors over time | `use: "trend"`, visitors by day, compare previous | Time series, comparison, partial bucket |
+| Visitors over time | `use: "line"`, visitors by day, compare previous | Time series, comparison, partial bucket |
 | Top pages | `use: "bar-list"`, page views by page, limit 8 | Ranked list |
 | Channel mix | `use: "share-bar"`, visitors by channel | Part to whole |
 | Page views total | A query with no dimension and no layers | The number alone, with delta |

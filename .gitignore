@@ -1,0 +1,7 @@
+.DS_Store
+node_modules/
+dist/
+
+# internal team context, not for the repo
+context-brief.md
+prototype/bench.js

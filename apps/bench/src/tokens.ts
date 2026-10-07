@@ -72,6 +72,7 @@ function render() {
       rampGrid.append(cell);
     }
   }
+  rampGrid.style.setProperty('--steps', String(Math.max(0, ...[...ramps.values()].map((steps) => steps.length))));
   section('Colour ramps', 'base tier, from Leonardo', rampGrid);
 
   const chips = (entries: [string, string][], prefix: string) => {
@@ -85,8 +86,10 @@ function render() {
     }
     return grid;
   };
+  section('Outside the ramps', 'base tier: white, black and the constants, the same in both themes', chips(take(/^--ua-color-(white|black|constant-)/), '--ua-color-'));
+  section('Surfaces', 'base tier: the page and the levels that rise from it, a value per theme', chips(take(/^--ua-color-surface-/), '--ua-color-'));
   section('Qualitative', 'the series slots', chips(take(/^--ua-color-qualitative-/), '--ua-color-'));
-  section('Common colours', 'named roles, aliased into the ramps per theme', chips(take(/^--ua-color-/), '--ua-color-'));
+  section('Common colours', 'named roles, aliased into the base tier', chips(take(/^--ua-color-/), '--ua-color-'));
   section('Chart paint', 'the @automattic/charts names, as the bench maps them', chips(take(/^--a8c-charts-color-/), '--a8c-charts-color-'));
 
   const type = fluid();

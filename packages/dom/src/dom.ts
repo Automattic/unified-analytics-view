@@ -1,4 +1,5 @@
 import type { SceneNode, TextNode } from '@universal-analytics/core';
+import { leave } from './motion.ts';
 
 /* How the painter touches the document. Everything goes through the object model, as a strict content
  * security policy asks: createElement, never innerHTML; style.setProperty, never a style attribute in markup. */
@@ -41,19 +42,34 @@ export function ensureSvg(parent: Element): SVGSVGElement {
   return svg;
 }
 
-/** Reconcile the children of `parent` with scene nodes, by data-key: new keys enter at the end, missing keys leave,
- * the rest update in place. A kept element is never re-inserted, because that would cancel its transition. */
+/** Reconcile the children of `parent` with scene nodes, by data-key: new keys enter, missing keys leave (motion.ts
+ * says when), the rest update in place. Children end in scene order, which is reading order. A new element is put
+ * in its place and a kept one is left where it is unless the kept ones changed order among themselves.
+ * ponytail: every kept element found out of place is moved, not the fewest. Longest increasing run if it shows. */
 export function keyed<N extends SceneNode>(parent: Element, nodes: N[], tag: (n: N) => string, each: (el: HTMLElement | SVGElement, n: N) => void): void {
   const old = new Map(Array.from(parent.children, (c) => [c.getAttribute('data-key'), c as HTMLElement | SVGElement]));
   const svg = parent.namespaceURI === SVG;
-  for (const n of nodes) {
-    let el = old.get(n.key);
-    if (el) old.delete(n.key);
-    else el = parent.appendChild(svg ? document.createElementNS(SVG, tag(n)) as SVGElement : document.createElement(tag(n)));
-    mark(el, n);
-    each(el, n);
-  }
-  old.forEach((c) => c.remove());
+  const els = nodes.map((n) => {
+    const el = old.get(n.key);
+    if (!el) return svg ? document.createElementNS(SVG, tag(n)) as SVGElement : document.createElement(tag(n));
+    old.delete(n.key); el.removeAttribute('data-exit');                   // one that was leaving is back
+    return el;
+  });
+  old.forEach(leave);
+  let at = parent.firstElementChild;
+  els.forEach((el, i) => {
+    while (at?.hasAttribute('data-exit')) at = at.nextElementSibling;     // one that is leaving stays where it was
+    if (el === at) at = el.nextElementSibling; else move(parent, el, at);
+    mark(el, nodes[i]!);
+    each(el, nodes[i]!);
+  });
+}
+/* Moving an element with insertBefore cancels its transitions and those of everything in it. moveBefore keeps
+ * them, where there is one. */
+function move(parent: Element, el: Element, before: Element | null): void {
+  const keep = (parent as { moveBefore?: (el: Element, before: Element | null) => void }).moveBefore;
+  if (keep && el.parentNode === parent) try { keep.call(parent, el, before); return; } catch { /* not connected */ }
+  parent.insertBefore(el, before);
 }
 
 /** Set, change or clear an attribute. An element that already says so is not touched. */

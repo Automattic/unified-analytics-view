@@ -4,6 +4,7 @@ import { compileFitRules, type FitExtras } from './compile.ts';
 import { attr, ensure, keyed, paintVar, text } from './dom.ts';
 import { LAYOUTS } from './layouts/index.ts';
 import { NUMBER_FITS, fitNumber, readNumber } from './measure.ts';
+import { MOTION_CSS, begin, register, settle } from './motion.ts';
 
 /* <ua-view>: one view, in whatever room it is handed. It plans once per data change, for a container with no
  * limits, builds the ratio scene and paints it. The stylesheet fits it. On resize only the measured pass runs
@@ -62,6 +63,7 @@ const BASE_CSS = `@layer vg {
 .vg-ruler > .vg-number > span { inline-size: max-content; }
 
 ${painters.map((p) => p.css).join('\n')}
+${MOTION_CSS}
 
 /* Only a size container answers a block-size query, so this matches exactly when a layout has handed the view a
  * box. The body then takes the height left over. No attribute on the view. */
@@ -233,12 +235,14 @@ export class UaView extends Base {
       if (spec.title) fig.setAttribute('aria-label', spec.title); else fig.removeAttribute('aria-label');
       // The plot's natural heights are the context's, read by the stylesheet. The painter hard-codes neither.
       fig.style.setProperty('--vg-axes-height', rules.axes.height + 'px'); fig.style.setProperty('--vg-bare-height', rules.bare.height + 'px');
+      begin(fig, this.#layout === scene.layout);
       this.#prose.textContent = plan.text;
       for (const el of [this.#number, ...this.#ruler]) paintNumber(el, scene.nodes.filter((n) => n.part === 'number'));
       if (this.#layout !== scene.layout) { this.#body.replaceChildren(); this.#body.removeAttribute('data-scale'); this.#layout = scene.layout; }
       LAYOUTS[scene.layout]?.paint(this.#body, scene, rules);
       paintTable(this.#table, spec.title, expand(spec).query, result, catalog);
       fig.hidden = false; this.#error.hidden = true;
+      settle(fig);
       if (this.#sizes) this.#measure(true);
     } catch (e) {
       // Never out of a lifecycle callback: the view says what is wrong where it would have drawn.
@@ -277,10 +281,6 @@ export class UaView extends Base {
 /** Define <ua-view>, once. Called by the page, not at import, so a page can be ready for it first. */
 export function defineUaView(): void {
   if (customElements.get('ua-view')) return;
-  // @property is ignored in a shadow root, so the ratios are registered on the document, which is why they carry a
-  // prefix. Where this fails, values still apply and nothing animates.
-  for (const name of ['--vg-x', '--vg-w', '--vg-v', '--vg-t']) {
-    try { CSS.registerProperty({ name, syntax: '<number>', inherits: false, initialValue: '0' }); } catch { /* registered already, or unsupported */ }
-  }
+  register();
   customElements.define('ua-view', UaView);
 }

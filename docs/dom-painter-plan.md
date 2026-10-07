@@ -50,7 +50,7 @@ The trend view's rules, carrying today's thresholds over unchanged:
 ]
 ```
 
-**Compiled** (by `packages/dom`, once, into the shadow root's stylesheet):
+**Compiled** (by `packages/dom`, once, into a constructed stylesheet the shadow root adopts):
 
 ```css
 @container view (inline-size < 280px) or (block-size < 120px) {
@@ -96,7 +96,7 @@ Rows under a height limit: a column flex container with `flex-wrap: wrap` and `o
 
 ## 4. Elements and containers
 
-One custom element, `<ua-view>`, with an open shadow root. It takes `spec`, `result` and `catalog` as properties.
+One custom element, `<ua-view>`, with an open shadow root. It takes `spec`, `result` and `catalog` as properties, or as JSON in child `<script type="application/json" data-for="spec">` elements, so a view can be written as markup alone by an agent or a server template. A property wins over the markup.
 
 ```html
 <ua-view>                                     <!-- :host is the `view` container -->
@@ -104,18 +104,18 @@ One custom element, `<ua-view>`, with an open shadow root. It takes `spec`, `res
   <figure class="vg" data-layout="cartesian" data-keep="" aria-describedby="s">
     <figcaption id="s" class="vg-prose">Visitors: 10.5k in the last 28 days, up 12%…</figcaption>
     <div class="vg-number">                   <!-- value, delta, note -->
-    <div class="vg-y-axis"> <span style="--t:.25" data-rank="1">200</span> … </div>
+    <div class="vg-y-axis"> <span style="--vg-t:.25" data-rank="1">200</span> … </div>
     <div class="vg-plot">                     <!-- the `plot` container; definite block size -->
-      <div class="vg-grid"> <i style="--t:.25"></i> … </div>
+      <div class="vg-grid"> <i style="--vg-t:.25"></i> … </div>
       <svg viewBox="0 0 100 100" preserveAspectRatio="none">
         <path data-key="L0:area" data-role="context" />
         <path data-key="L1:line" data-role="comparison" />
         <path data-key="L2:line" data-role="primary" />
         <path data-key="L2:line:partial" data-role="primary" />
       </svg>
-      <div class="vg-hits"> <i data-row="2026-09-08" style="--x:.0"></i> … </div>
+      <div class="vg-hits"> <i data-row="2026-09-08" style="--vg-x:.0"></i> … </div>
     </div>
-    <div class="vg-x-axis"> <span style="--x:0">Sep 8</span> <span class="mid" style="--x:.5">Sep 21</span> … </div>
+    <div class="vg-x-axis"> <span style="--vg-x:0">Sep 8</span> <span class="mid" style="--vg-x:.5">Sep 21</span> … </div>
     <table class="vg-table" hidden>…</table>  <!-- the same result as a table -->
   </figure>
 </ua-view>
@@ -124,10 +124,11 @@ One custom element, `<ua-view>`, with an open shadow root. It takes `spec`, `res
 - **`view`** is the host element. By default it is `container-type: inline-size`: it fills the width it is handed and takes its natural height. It cannot collapse, whatever it is dropped into. A surface layout that hands out a box (section 4.2) makes it `container-type: size`, and the plot fills the height left over. Both behaviours have to exist, because an element whose height can be queried cannot also take its height from its content. The view is never told which it is: the layout sets it, in the layout's own CSS.
 - **`plot`** is `container-type: size`. Its height is always definite: the leftover when the view was handed a box, and otherwise a size from the context's rule set, read as a custom property (`axes.height` and `bare.height`, 184 and 46 px by default). The painter hard-codes neither. That definite height is what makes height queries on the plot legal.
 - A rule about axes queries `view`, never `plot`, because hiding the x axis changes the plot's size. A rule about roles queries `plot`, because those elements live inside it.
-- **Bars are HTML,** positioned by custom properties (`inset-inline-start: calc(var(--x) * 100%)`, `block-size: calc(var(--v) * 100%)`), so corner radii and hairlines stay true at any size. Lines and areas are the stretched SVG. Text is never inside the SVG.
-- **`rows`** is a grid per row: `minmax(0, 1fr) auto`, label ellipsized by CSS, the bar a background sized by `--v`. No character-width estimates.
-- **`band`** segments use `flex-grow: var(--v)`.
+- **Bars are HTML,** positioned by custom properties (`inset-inline-start: calc(var(--vg-x) * 100%)`, `block-size: calc(var(--vg-v) * 100%)`), so corner radii and hairlines stay true at any size. Lines and areas are the stretched SVG. Text is never inside the SVG.
+- **`rows`** is a grid per row: `minmax(0, 1fr) auto`, label ellipsized by CSS, the bar a background sized by `--vg-v`. No character-width estimates.
+- **`band`** segments use `flex-grow: var(--vg-v)`.
 - Paint tokens become custom properties on `:host`, so a surface themes a view from outside the shadow root. They use the `@automattic/charts` names; see section 4.1.
+- **The painter is safe under a strict content security policy,** because a browser's own panel and an agent harness's frame both impose one (`docs/shell-plan.md`, section 3). Nodes are made with `createElement`, never `innerHTML`. The `style` attributes in the sketch above show the result; they are written with `style.setProperty`. Styles are constructed stylesheets adopted by the shadow root, never a `<style>` element.
 
 ### 4.1 Paint tokens as `@automattic/charts` custom properties
 
@@ -164,6 +165,8 @@ The surface owns the layout scheme, and it is plain CSS on the surface, outside 
 .ua-row > ua-view { flex: 1 1 0; min-inline-size: 0; block-size: 100%; container-type: size; }
 ```
 
+When the surface is itself a custom element, these rules sit in its shadow root, not the page's. So they are also exported as a constructed stylesheet a surface can adopt.
+
 A dashboard grid of tiles is the row's rule on a grid. A context that wants its containers fitted differently in one of these (a toolbar that keeps a bare plot at 24 px) passes them a different rule set, as today. Whether the one declaration above is enough for the shadow styles, or the layout must also set an attribute on its children, is spike item 6.
 
 ## 5. The measured pass
@@ -179,11 +182,11 @@ It never rebuilds the scene.
 ## 6. Keys, keyboard and transitions
 
 - Every element carries `data-key`. Repainting reconciles by key: new keys enter, missing keys exit, the rest update in place.
-- Positions are custom properties, so an update is a CSS transition on `--x`, `--w`, `--v`, `--t`, timed by motion tokens. They have to be registered as numbers to animate. `@property` is ignored inside a shadow root, so the painter registers them once on the document with `CSS.registerProperty`. Where that is missing, values still apply and nothing animates.
+- Positions are custom properties, so an update is a CSS transition on `--vg-x`, `--vg-w`, `--vg-v`, `--vg-t`, timed by motion tokens. They have to be registered as numbers to animate. `@property` is ignored inside a shadow root, so the painter registers them once on the document with `CSS.registerProperty`. Registration is global to the page, which is why they carry the `vg` prefix: a bare `--x` would change what a customer's own `--x` means. Where registration is missing or fails, values still apply and nothing animates.
 - Path shapes cannot transition in CSS. On a data change the painter interpolates the values and regenerates `d` per frame. This is the one scripted animation.
 - No transition runs during a resize. Elements hidden by a container query simply go.
 - **Keyboard:** the `@automattic/charts` model, kept as is. One tab stop per view; left and right arrows step through points; Enter or Space activates the point; Tab and Escape leave; the tooltip is the readout. The arrows move across `vg-hits`, one per row of the result, which is also what hover and tooltips attach to. The readout announces the dimension value, the metric in its catalog format, and the comparison if present. Lines need this because a line is one path with no element per point.
-- The tldr prose is the figure's description. The table is the same result and is reachable by a control the surface provides.
+- The tldr prose is the figure's description. The table is the same result and is reachable by a control the surface provides. The surface is outside the shadow root, so the switch is public: a `table` attribute on `<ua-view>` shows the table in place of the marks.
 
 ## 7. Things to prove first
 
@@ -195,6 +198,7 @@ A half-day spike on the trend view, before the rest of the painter, to check:
 4. `container-type: size` on the plot behaves inside a grid in Safari.
 5. The stretched monotone path matches the pixel path from `place()` to within a pixel.
 6. One stylesheet serves both sizings: the same view takes its natural height in a stack and fills its box in a row, with only the layout's CSS differing. If it cannot, the layout also sets a `fit="box"` attribute on its children, and the view's styles key off that.
+7. The painter runs clean on a page whose content security policy forbids inline styles and `eval`.
 
 If 1 or 2 fails, the fallback is the pixel scene painted as SVG and re-planned on resize, which is proven.
 
@@ -207,6 +211,7 @@ Reviewed October 7, under the principle at the top.
 3. **Y ticks always round to 4,** with a rule thinning them on short plots. Agreed, as a consequence of 2. A deliberate departure from the prototype.
 4. **Bars as HTML, lines as stretched SVG.** Agreed. The alternative was a script on resize.
 5. **The tldr prose rung is measured, not a container query.** Still proposed. It is the one place the fit is not intrinsic: the threshold is the width of the number itself. The pass reads sizes and sets an attribute; CSS still does the hiding.
+6. **The painter is held to the shell's authoring rules.** Added October 7 from `docs/shell-plan.md`: prefixed registered properties, strict content security, inputs as markup, a public `table` attribute, and the surface layouts as an adoptable stylesheet. The attribute names (`table`, `data-for`) are proposed.
 
 ## 9. Order of work, once agreed
 

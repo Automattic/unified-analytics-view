@@ -84,6 +84,8 @@ The first surface: a panel that slides in on the front end of a site for a recog
 
 **Done when:** a single script tag on an arbitrary page, not a Spacefast space, opens the panel on fixtures.
 
+How it is authored (decided Oct 7): the chrome and the surfaces are custom elements, with Lit inside the stateful ones, built by Vite into one self-contained file. Surface state is plain data in core, and the query function and the page are handed in. That is what lets the same components land in a native browser's panel and an agent harness's artifact later. See `docs/shell-plan.md`.
+
 Both ship (decided Oct 5). The dashboard page is the same views in wider containers, as tiles in a layout that hands each view a box, sharing the panel's params. It is a second shell and a layout, not a second set of views. If Thursday runs short, the dashboard is cut before the panel.
 
 ### 7. Live data and demo

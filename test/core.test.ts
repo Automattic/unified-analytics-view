@@ -130,7 +130,7 @@ describe('tldr prose', () => {
 describe('what a painter says with: values and dimensions in catalog format', () => {
   it('a metric by its entry, a day as a date, a category as itself, and the unfinished bucket marked', () => {
     const V = catalog.metrics.visitors!, rows = runQuery(trend.query).rows, last = rows[rows.length - 1]!;
-    expect([formatValue(1234, V), formatValue(10531, V), formatValue(1234, V, true), formatValue(null, V)]).toEqual(['1,234', '10.5k', '1.2k', '–']);
+    expect([formatValue(1234, V), formatValue(10531, V), formatValue(1234, V, 'compact'), formatValue(10531, V, 'exact'), formatValue(null, V), formatValue(null, V, 'exact')]).toEqual(['1,234', '10.5k', '1.2k', '10,531', '–', '–']);
     expect(formatDimension('2026-09-08', catalog.dimensions['date.day']!)).toBe('Sep 8');
     expect(formatDimension('/pricing', catalog.dimensions.page!)).toBe('/pricing');
     expect(formatDimension(null, catalog.dimensions.page!)).toBe('–');

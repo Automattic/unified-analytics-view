@@ -15,10 +15,11 @@ export function fmtPct(p: number): string {
 export function fmtDay(iso: string): string {
   return new Date(iso + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
 }
-/** A metric's value as its catalog entry sets it: what a readout or a table cell says. `compact` is the short form, "10.5k".
+/** A metric's value as its catalog entry sets it. With no form it is what a readout says: whole under ten thousand,
+ * "10.5k" from there. `compact` is always the short form, and `exact` never is: a table cell, where the digits matter.
  * ponytail: every unit in the catalog is a count today, so `unit` picks nothing yet. A new unit gets its branch here. */
-export function formatValue(v: number | null | undefined, _metric: MetricDef, compact?: boolean): string {
-  return fmt(v, compact);
+export function formatValue(v: number | null | undefined, _metric: MetricDef, form?: 'compact' | 'exact'): string {
+  return form === 'exact' && v != null ? NF.format(v) : fmt(v, form === 'compact');
 }
 /** A dimension's value as its catalog entry sets it: a day as "Sep 8", a category as itself. */
 export function formatDimension(v: Row[string], dim: DimensionDef): string {

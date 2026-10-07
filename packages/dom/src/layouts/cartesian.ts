@@ -1,5 +1,6 @@
 import type { LineNode, PathNode, RectNode, SceneNode, TextNode } from '@universal-analytics/core';
 import { ensure, ensureSvg, keyed, prop, text } from '../dom.ts';
+import { hitNodes } from '../keys.ts';
 import type { LayoutPainter } from '../layout.ts';
 import { thin } from '../measure.ts';
 import { morph } from '../motion.ts';
@@ -99,5 +100,9 @@ export const cartesian: LayoutPainter = {
       if (n.kind === 'line') return line(el, n);
       text(el, n); prop(el, '--vg-t', n.t); el.toggleAttribute('data-halo', !!n.halo);
     });
+    // A line is one path, so the points to hover and step through are a layer of their own, above the marks.
+    const hits = ensure(plot, 'div', 'vg-hits');
+    hits.setAttribute('data-hits', 'x');
+    keyed(hits, hitNodes(scene), () => 'i', (el, n) => { prop(el, '--vg-x', n.x); prop(el, '--vg-w', n.w); prop(el, '--vg-c', n.c); });
   },
 };

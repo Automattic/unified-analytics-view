@@ -46,7 +46,7 @@ export const band: LayoutPainter = {
   paint(body, scene) {
     const rows = scene.rows ?? [], nodes = (part: string) => scene.nodes.filter((n) => n.part === part);
     const segs = ensure(body, 'div', 'vg-band'), legend = ensure(body, 'div', 'vg-legend'), top = ensure(body, 'div', 'vg-legend-top');
-    segs.setAttribute('aria-hidden', 'true');
+    segs.setAttribute('data-hits', 'x');                                     // each segment is its own hit target
     prop(body, '--vg-rows', rows.length);
     keyed(segs, nodes('band').filter((n): n is RectNode => n.kind === 'rect'), () => 'i', (el, n) => prop(el, '--vg-v', n.v));
     keyed(legend, nodes('legend'), (n) => (n.kind === 'text' ? 'span' : 'i'), (el, n) => { if (n.kind === 'text') text(el, n); });

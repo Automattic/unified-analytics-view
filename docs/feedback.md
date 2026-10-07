@@ -1,6 +1,6 @@
 # Feedback from the build
 
-As of October 7, 2026. What executing `docs/dom-painter-plan.md` has found so far: where the plan did not hold as written, bugs, and loose ends. Steps 1, 2 and 3 are merged into `dom-painter`.
+As of October 7, 2026. What executing `docs/dom-painter-plan.md` has found so far: where the plan did not hold as written, bugs, and loose ends. Steps 1 to 3 and the cartesian part of step 4 are merged into `dom-painter`.
 
 Each entry says what was found, what was done about it, and what is still to decide. Nothing here has been settled quietly.
 
@@ -65,6 +65,42 @@ How far the verdicts go:
 - Item 3 (animated registered properties) uses a stand-in data change, the last 7 rows of the same result, because no fixture query moves a shared tick.
 - Item 5 (stretched path within a pixel: 0.054 px at worst) proves geometry, not rasterised pixels.
 - Not built in the spike: the hit targets, the table, tick ranks, the measured pass.
+
+## Findings: step 4, `<ua-view>` for cartesian
+
+`packages/dom` exists: the fit-rule compiler, the element, the cartesian layout, and stubs for `rows` and `band` behind a documented seam (`packages/dom/src/layout.ts`). The bench's views page has a painter control. Observed in Chrome 155 and Playwright's WebKit 26.4; not in Firefox or Safari itself. Nobody has watched a live drag.
+
+Where the plan did not hold as written:
+
+1. **A rule's `set` cannot be compiled from data alone.** The compiler takes per-rule declarations from the layout module (`fit` on a `LayoutPainter`). The `marks` rule needs them too, though it has no `set`.
+2. **`show` compiles to `display: block`,** so a shown part has to work as a block.
+3. **The stated `block-size` is on `.vg-body`, not the plot.** The plot stretches inside it and still answers `block-size` queries in Chrome and WebKit.
+4. **Ranked y ticks are thinned by a rule local to `packages/dom`,** on the view at `block: 152` (120 for the plot, 10 above, 22 for the x axis). The y axis sits outside the `plot` container, so a `plot` query cannot reach its labels. It is wrong when the number sits above the plot. A `plot` rule in core, with the y axis inside that container, would say it properly. Open.
+5. **Two additions beyond the plan:** base styles sit in `@layer vg`, so compiled rules win whatever the specificity; and rule names are validated before they reach a selector, because a rule set can arrive as markup JSON.
+
+Where `<ua-view>` shows something other than what `resolve()` plans at that size. At natural height every checked case agrees (trend and layers, 346 to 80 px wide). In a box:
+
+- **346 by 100:** `resolve()` drops the comparison, the context fill and the reference line; `<ua-view>` shows them. In a box the bare plot fills the height, so the `secondary` rule does not apply. `resolve()` builds its bare plot to 46 px.
+- **Any box in the side arrangement:** the plot is as tall as the box, where the pixel scene keeps 46 px. Sparklines in tiles are much taller than the pixel painter's.
+- **40 px tall at 120 px and wider, and the trend at 120 by 60:** `resolve()` goes to prose; `<ua-view>` shows the number. This is the measured pass, not built yet.
+
+Visible differences from the pixel painter, for the design pass:
+
+- The y-axis gutter is sized by its labels, not 36 px, and there is no right margin, so the plot is wider and starts further left.
+- Beside a bare plot the number column is as wide as its content, not 42% or 76 px, and the number is centred vertically, not top-aligned.
+- At 120 px wide the pixel painter shows the number at 34 px with its note; `<ua-view>` shows it at 26 px in short form with no note. Left for the measured pass, which will own the number's size.
+- Bars are HTML boxes snapped to device pixels, with all four corners rounded. The dashed reference line is a gradient, snapped to 1 or 2 px.
+- Paint order in the plot is fixed (grid, bars, paths, rules and labels), whatever the layer order.
+- Overall height matches the pixel painter: 184 px natural, 152 px plot.
+
+Gaps:
+
+- No attribute on the element to force light or dark; theme comes only through the custom properties.
+- The views page enforces no content security policy, unlike the spike page. The source follows the rules, but nothing is checking.
+- Right-to-left is not handled.
+- Wanted from core: `fmt` is not exported, so the table formats numbers itself; the number's short-form widths (160, 200, 120) are constants in `place.ts`, copied into the base CSS.
+- The table is built but has only been checked by its row count.
+- A running dev server does not see a new workspace package. After `packages/dom` was merged the bench was blank until the server was restarted.
 
 ## Bugs
 

@@ -28,12 +28,26 @@ describe('fitNumber', () => {
     expect(at(189)).toBe('delta-short');
   });
 
-  it('falls to prose when the number is taller than a box it was handed, and never at natural height', () => {
+  it('gives up the note before the number when a box it was handed is too short, and never at natural height', () => {
     expect(at(346, 68)).toBe('');
-    expect(at(346, 67)).toBeNull();
-    expect(at(120, 60)).toBeNull();                    // 52 and a 16 px note
+    expect(at(346, 67)).toBe('no-note');               // 52 and a 16 px note
+    expect(at(346, 52)).toBe('no-note');
+    expect(at(346, 51)).toBeNull();
+    expect(at(120, 60)).toBe('short delta-short no-note');
+    expect(at(104, 58)).toBe('small short delta-short');
+    expect(at(104, 57)).toBe('small short delta-short no-note');
     expect(at(80, 60)).toBe('small short delta-short no-note');
     expect(at(80, 41)).toBeNull();
+  });
+
+  it('once it has gone to prose while narrowing in a 60 or a 40 px box, stays there', () => {
+    for (const block of [60, 40]) {
+      let prose = false;
+      for (let w = 420; w >= 40; w--) { const fit = at(w, block); if (prose) expect(fit).toBeNull(); prose = fit == null; }
+      expect(prose).toBe(true);
+    }
+    expect(at(420, 40)).toBeNull();
+    expect(at(74, 60)).not.toBeNull();
   });
 
   it('says nothing of a delta or a note the number does not have', () => {
@@ -41,10 +55,12 @@ describe('fitNumber', () => {
   });
 
   it('is the same whichever way the size was reached', () => {
-    const down: (string | null)[] = [], up: (string | null)[] = [];
-    for (let w = 420; w >= 40; w--) down.push(at(w));
-    for (let w = 40; w <= 420; w++) up.push(at(w));
-    expect(up.reverse()).toEqual(down);
+    for (const block of [null, 60, 40]) {
+      const down: (string | null)[] = [], up: (string | null)[] = [];
+      for (let w = 420; w >= 40; w--) down.push(at(w, block));
+      for (let w = 40; w <= 420; w++) up.push(at(w, block));
+      expect(up.reverse()).toEqual(down);
+    }
   });
 });
 

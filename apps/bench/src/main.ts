@@ -1,4 +1,5 @@
-import { buildScene, makeContainer, place, resolve } from '@universal-analytics/core';
+import { buildScene, makeContainer, place, resolve, unboundedContainer } from '@universal-analytics/core';
+import { UaView, defineUaView, surfaceSheet } from '@universal-analytics/dom';
 import { catalog, runQuery, samples, type Scenario } from '@universal-analytics/fixtures';
 import { paintSVG } from './paint-svg.ts';
 
@@ -10,17 +11,42 @@ const views = document.querySelector('#views')!;
 
 const params = new URLSearchParams(location.search);
 for (const [k, v] of params) { const input = controls.querySelector<HTMLInputElement>(`[name="${k}"][value="${v}"]`); if (input) input.checked = true; }
-const state = () => Object.fromEntries(new FormData(controls)) as { scenario: Scenario; height: string; theme: string };
+const state = () => Object.fromEntries(new FormData(controls)) as { scenario: Scenario; height: string; theme: string; painter: 'svg' | 'ua-view' };
+
+// The surface layouts are the surface's to adopt. Here the page is the surface, and each frame a stack or a row of one.
+defineUaView();
+document.adoptedStyleSheets.push(surfaceSheet());
+
+/** The frame's one child, swapped when the painter changes. */
+function child<E extends Element>(frame: HTMLElement, tag: string, create: () => E): E {
+  const now = frame.firstElementChild;
+  if (now?.localName === tag) return now as E;
+  const el = create();
+  frame.replaceChildren(el);
+  return el;
+}
 
 function paint(frame: HTMLElement) {
-  const { scenario, height } = state(), spec = samples[frame.dataset.sample!]!.spec;
-  const svg = frame.querySelector('svg')!, caption = frame.nextElementSibling!;
-  const width = frame.clientWidth;
+  const { scenario, height, painter } = state(), spec = samples[frame.dataset.sample!]!.spec;
+  const caption = frame.nextElementSibling!, boxed = painter === 'ua-view' && !!Number(height);
+  // The pixel painter is told a height limit. <ua-view> is handed a box, as a row or a tile would hand it one.
+  frame.classList.toggle('ua-row', boxed); frame.classList.toggle('ua-stack', painter === 'ua-view' && !boxed);
+  frame.style.blockSize = boxed ? height + 'px' : '';
   try {
-    const container = makeContainer(width, Number(height) || null), result = runQuery(spec.query, scenario);
+    const result = runQuery(spec.query, scenario);
+    caption.className = 'meta';
+    if (painter === 'ua-view') {
+      // Planned once, with no limits. Nothing here runs when the frame is resized, so the caption says only what the plan holds.
+      const view = child(frame, 'ua-view', () => new UaView());
+      view.spec = spec; view.result = result; view.catalog = catalog;
+      const plan = resolve(spec, result, unboundedContainer(), catalog), scene = buildScene(plan, spec.query, result, catalog);
+      caption.textContent = '<ua-view> · planned with no limits: ' + plan.layout + ', parts ' + scene.parts.join(', ') + ' · CSS decides what shows at this size · ' + plan.text;
+      return;
+    }
+    const svg = child(frame, 'svg', () => document.createElementNS('http://www.w3.org/2000/svg', 'svg'));
+    const width = frame.clientWidth, container = makeContainer(width, Number(height) || null);
     const plan = resolve(spec, result, container, catalog);
     paintSVG(svg, place(buildScene(plan, spec.query, result, catalog), container));
-    caption.className = 'meta';
     caption.textContent = width + ' px · ' + plan.layout + (plan.dropped.length ? ' · dropped: ' + plan.dropped.join(', ') : '') + ' · ' + plan.text;
   } catch (e) {
     caption.className = 'meta error';
@@ -28,7 +54,8 @@ function paint(frame: HTMLElement) {
   }
 }
 
-const resized = new ResizeObserver((entries) => entries.forEach((e) => paint(e.target as HTMLElement)));
+// Only the pixel painter repaints on resize.
+const resized = new ResizeObserver((entries) => { if (state().painter === 'svg') entries.forEach((e) => paint(e.target as HTMLElement)); });
 for (const [name, sample] of Object.entries(samples)) {
   const h2 = document.createElement('h2'), small = document.createElement('small'), sizes = document.createElement('div');
   h2.textContent = sample.label + ' '; small.textContent = JSON.stringify(sample.spec); h2.append(small);
@@ -37,7 +64,6 @@ for (const [name, sample] of Object.entries(samples)) {
     // The frame is the container and holds nothing but the view. What the bench says about it sits outside.
     const cell = document.createElement('div'), frame = document.createElement('div');
     cell.className = 'cell'; frame.className = 'frame'; frame.dataset.sample = name; frame.style.inlineSize = w + 'px';
-    frame.append(document.createElementNS('http://www.w3.org/2000/svg', 'svg'));
     cell.append(frame, document.createElement('p'));
     sizes.append(cell);
     resized.observe(frame);

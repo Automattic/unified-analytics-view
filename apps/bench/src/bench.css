@@ -19,6 +19,7 @@
   --a8c-charts-color-delta-bad: var(--ua-color-destructive-text);
   --a8c-charts-color-trend-neutral: var(--ua-color-muted-foreground);
   --a8c-charts-color-live: var(--ua-color-live);
+  --a8c-charts-color-background: var(--ua-color-background);
 }
 :root[data-theme="light"] { color-scheme: light; }
 :root[data-theme="dark"] { color-scheme: dark; }
@@ -71,6 +72,8 @@ h2 small { display: inline; }
 .ua-row   { display: flex; gap: var(--ua-space-s); }
 .ua-row > ua-spike-view { flex: 1 1 0; min-inline-size: 0; block-size: 100%; container-type: size; }
 .frame.ua-row { resize: both; }
+/* A frame holding one <ua-view>: a stack, or a row when the height control hands it a box. The gap is between views, and there is one. */
+.frame:is(.ua-stack, .ua-row) { gap: 0; }
 
 .spike > p, .spike section > p { max-inline-size: 76ch; }
 .spike section { margin-block-start: var(--ua-space-l); border-block-start: 1px solid var(--ua-color-border); }

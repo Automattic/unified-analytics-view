@@ -1,4 +1,4 @@
-import type { RectNode, SceneNode, TextNode } from '@universal-analytics/core';
+import type { RectNode, TextNode } from '@universal-analytics/core';
 import { ensure, keyed, prop, text } from '../dom.ts';
 import type { LayoutPainter } from '../layout.ts';
 
@@ -48,10 +48,8 @@ export const band: LayoutPainter = {
     const segs = ensure(body, 'div', 'vg-band'), legend = ensure(body, 'div', 'vg-legend'), top = ensure(body, 'div', 'vg-legend-top');
     segs.setAttribute('aria-hidden', 'true');
     prop(body, '--vg-rows', rows.length);
-    // A kept element is never moved, so a segment that enters between two others is put in its place by `order`.
-    const place = (el: HTMLElement | SVGElement, n: SceneNode) => prop(el, 'order', n.row == null ? null : rows.indexOf(n.row));
-    keyed(segs, nodes('band').filter((n): n is RectNode => n.kind === 'rect'), () => 'i', (el, n) => { prop(el, '--vg-v', n.v); place(el, n); });
-    keyed(legend, nodes('legend'), (n) => (n.kind === 'text' ? 'span' : 'i'), (el, n) => { if (n.kind === 'text') text(el, n); place(el, n); });
+    keyed(segs, nodes('band').filter((n): n is RectNode => n.kind === 'rect'), () => 'i', (el, n) => prop(el, '--vg-v', n.v));
+    keyed(legend, nodes('legend'), (n) => (n.kind === 'text' ? 'span' : 'i'), (el, n) => { if (n.kind === 'text') text(el, n); });
     keyed(top, nodes('legend-top').filter((n): n is TextNode => n.kind === 'text'), () => 'span', text);
   },
 };

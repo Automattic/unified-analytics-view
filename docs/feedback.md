@@ -4,6 +4,17 @@ As of October 7, 2026. What executing `docs/dom-painter-plan.md` has found so fa
 
 Each entry says what was found, what was done about it, and what is still to decide. Nothing here has been settled quietly.
 
+## Decided October 7, after the build
+
+Six of the open items below were put to David and settled. Each is still marked where it was found; this list is what to build.
+
+1. **Path keys are fixed in core.** Keys name the layer by its role and do not count layers, so they hold when a layer drops. Every cartesian parity case changes key names, so the parity test maps the prototype's keys to ours on purpose. The painter's local guard goes.
+2. **Keyboard: two departures from version 4 stay, one goes.** Up and down step in bar lists, and a click or tap activates. A chosen point no longer stays when the mouse leaves a focused view; it clears, as in version 4.
+3. **The readout is in catalog format and marks the unfinished day.** Core exports its value and date formatters; the readout and the table both use them.
+4. **Core exports the path function.** One function from points to a path string, used by the scene builder and by the painter's interpolation. The copy in `packages/dom` is deleted.
+5. **The measured pass defers its write a frame,** so no "ResizeObserver loop" error can reach a host page. A view that crosses a threshold paints one frame in the old state.
+6. **The note is given up before prose.** When the number with its note is too tall for the box, the note goes first, in `resolve()` and in the measured pass together. This departs from the prototype, so the parity test changes on purpose for those cases.
+
 ## Findings: step 1, fit rules
 
 The rules are data in `packages/core/src/fit.ts` and `resolve()` reads them. No plan, scene or prose changed.

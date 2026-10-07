@@ -27,6 +27,18 @@ const fromProto = ({ headline, ...p }: any) => ({
   ...p, tldrValue: headline, layout: p.layout === 'sentence' ? 'prose' : p.layout,
   reductions: p.reductions.map((r: any) => (r.id === 'sentence' ? { ...r, id: 'prose' } : r)),
 });
+// Layer keys: a deliberate departure from the prototype (feedback, decision 1 of October 7; transitions finding 1).
+// The prototype's keys count layers, `L<index>:<mark>`, so when a layer drops the next one takes its key and a painter
+// that reconciles by key morphs one layer into another. Ours name the layer by role and mark, with `#n` for the nth of
+// a role and mark. This maps the prototype's keys to ours, here and nowhere else. Nothing but `key` is touched, so
+// geometry, paint and order are still compared exactly.
+const ourKeys = (scene0: any, layers: { role: string; mark: string }[]) => {
+  const seen: Record<string, number> = {};
+  const names = layers.map((l) => { const base = l.role + ':' + l.mark, n = (seen[base] = (seen[base] || 0) + 1); return n > 1 ? base + '#' + n : base; });
+  return { ...scene0, nodes: scene0.nodes.map((n: any) => ({ ...n, key: n.key.replace(/^L(\d+):[a-z]+/, (_: string, i: string) => names[+i]) })) };
+};
+/** The prototype's scene as plain data, its layer keys mapped to ours. */
+const protoScene = (plan0: any, q: Spec['query'], res0: unknown, host0: unknown) => ourKeys(plain(proto.buildScene(plan0, q, res0, host0)), plan0.layers);
 
 const trend = samples.trend!.spec;
 const specs: Record<string, Spec> = {
@@ -65,7 +77,7 @@ describe('the sweep', () => {
         const host0 = proto.makeHost(w, h, p, 8), res0 = proto.runQuery(spec.query, sc), plan0 = proto.resolve(toProto(spec, rules), res0, host0);
         expect(plain(runQuery(spec.query, sc)), 'result: ' + at).toEqual(plain(res0));
         expect(plain(plan), 'plan: ' + at).toEqual({ ...fromProto(plain(plan0)), preset: plan.preset });
-        expect(plain(scene), 'scene: ' + at).toEqual(plain(proto.buildScene(plan0, spec.query, res0, host0)));
+        expect(plain(scene), 'scene: ' + at).toEqual(protoScene(plan0, spec.query, res0, host0));
       }
     });
   }
@@ -223,7 +235,7 @@ describe('the ratio scene (dom-painter-plan section 3)', () => {
     expect(ratio).toMatchObject({ layout: 'cartesian', parts: ['y-axis', 'plot', 'x-axis'], scale: 'point' });
     expect(ratio.nodes.filter((n) => n.rank).map((n) => n.key)).toEqual(['sub', 'xtick:2026-09-21']);
     expect(unbounded(specs.layers!).ratio.nodes.filter((n) => n.rank).map((n) => n.key)).toEqual(['grid:500', 'ytick:500', 'grid:1500', 'ytick:1500', 'xtick:2026-09-21']);
-    expect(ratio.nodes.filter((n) => n.role).map((n) => n.key + ' ' + n.role)).toEqual(['L0:area context', 'L1:line comparison', 'L2:line primary', 'L2:line:partial primary']);
+    expect(ratio.nodes.filter((n) => n.role).map((n) => n.key + ' ' + n.role)).toEqual(['context:area context', 'comparison:line comparison', 'primary:line primary', 'primary:line:partial primary']);
     // The number is there to be shown in compensation, though this plan does not show it.
     expect(ratio.nodes.filter((n) => n.part === 'number').map((n) => n.key)).toEqual(['value', 'delta', 'sub']);
   });
@@ -259,6 +271,28 @@ describe('the ratio scene (dom-painter-plan section 3)', () => {
   for (const name of Object.keys(samples)) it(`${name}, with no size`, () => expect(unbounded(specs[name]!).ratio).toMatchSnapshot());
 });
 
+describe('layer keys: a deliberate departure from the prototype (feedback, decision 1 of October 7)', () => {
+  const layerKeys = (spec: Spec, sc: (typeof scenarios)[number] = 'typical') => [...new Set(run(spec, 346, null, sc).ratio.nodes.filter((n) => n.role).map((n) => n.key.replace(/:(partial|label)$/, '')))];
+  it('a layer keeps its key when another drops: the prototype hands the primary line the comparison\'s', () => {
+    expect(layerKeys(trend)).toEqual(['context:area', 'comparison:line', 'primary:line']);
+    expect(layerKeys(trend, 'no-prior')).toEqual(['context:area', 'primary:line']);
+    const host0 = proto.makeHost(346, null, 'svg', 8), keys0 = (sc: string) => {
+      const res0 = proto.runQuery(trend.query, sc);
+      return proto.buildScene(proto.resolve(toProto(trend), res0, host0), trend.query, res0, host0).nodes.map((n: any) => n.key);
+    };
+    expect(keys0('typical')).toContain('L2:line');
+    expect(keys0('no-prior')).not.toContain('L2:line');
+  });
+  it('two layers of one role and mark are counted among themselves, the previous series last', () => {
+    const y = { x: 'date.day', y: 'visitors' };
+    // An odd spec on purpose: a previous series given the primary role, ahead of the current one.
+    const two: Spec = { query: trend.query, layers: [{ mark: 'line', encode: y, series: 'previous', role: 'primary' }, { mark: 'line', encode: y }, { mark: 'rule', encode: { y: 300 } }, { mark: 'rule', encode: { y: 400 } }] };
+    expect(layerKeys(two)).toEqual(['primary:line#2', 'primary:line', 'reference:rule', 'reference:rule#2']);
+    expect(layerKeys(two, 'no-prior')).toEqual(['primary:line', 'reference:rule', 'reference:rule#2']);
+    expect(run(specs.pages!, 346).ratio.nodes.filter((n) => n.row === '/').map((n) => n.key)).toEqual(['primary:bar:/', 'primary:text:/', 'primary:text#2:/']);
+  });
+});
+
 describe('y ticks: a deliberate departure from the prototype (dom-painter-plan section 8, decision 3)', () => {
   // The prototype rounds the y scale to 2 ticks when the plot is under 120 px tall, so its domain changes with the size.
   // A scene with no size cannot. We always round to 4, rank the ticks, and place() thins them on a short plot.
@@ -271,7 +305,7 @@ describe('y ticks: a deliberate departure from the prototype (dom-painter-plan s
     const plan0 = proto.resolve(toProto(spec), res0, host0);
     expect(ours.scene.plot).toEqual({ w: 346, h: 100 });
     expect(plain(ours.plan), 'the plan is still the prototype\'s').toEqual({ ...fromProto(plain(plan0)), preset: ours.plan.preset });
-    return { ...ours, scene0: plain(proto.buildScene(plan0, spec.query, res0, host0)) };
+    return { ...ours, scene0: protoScene(plan0, spec.query, res0, host0) };
   };
   it('on a 100 px plot the prototype draws bars against another scale; ours is the tall plot\'s, thinned', () => {
     const { ratio, scene, scene0 } = short(specs.layers!), tall = run(specs.layers!, 346);
@@ -298,7 +332,7 @@ describe('one row on a time axis: a deliberate departure from the prototype (fee
   it('the prototype repeats the tick; ours has it once, and nothing else differs', () => {
     const container = makeContainer(346), plan = resolve(trend, one, container, catalog);
     const ratio = buildScene(plan, trend.query, one, catalog), scene = plain(place(ratio, container));
-    const host0 = proto.makeHost(346, null, 'svg', 8), plan0 = proto.resolve(toProto(trend), one, host0), scene0 = plain(proto.buildScene(plan0, trend.query, one, host0));
+    const host0 = proto.makeHost(346, null, 'svg', 8), plan0 = proto.resolve(toProto(trend), one, host0), scene0 = protoScene(plan0, trend.query, one, host0);
     expect(xticks(scene0)).toEqual(['xtick:' + day, 'xtick:' + day]);
     expect(xticks(ratio)).toEqual(['xtick:' + day]);
     expect(xticks(scene)).toEqual(['xtick:' + day]);

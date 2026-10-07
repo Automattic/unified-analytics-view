@@ -14,6 +14,19 @@ const num = (r: Row, f: string) => r[f] as number;
 export function roleOf(l: Layer): Role {
   return l.role || (l.series === 'previous' ? 'comparison' : l.mark === 'rule' ? 'reference' : 'primary');
 }
+/* A layer's key names it by role and mark, and does not count the layers before it, so it holds when another layer
+ * drops. Two layers of one role and mark are told apart by a count among themselves alone: `primary:text`, then
+ * `primary:text#2`. Layers of the previous series are counted last. A reduction drops whole roles, and missing prior
+ * data drops the whole previous series, so neither can move a count. */
+function layerKeys(layers: Layer[]): string[] {
+  const seen: Record<string, number> = {}, keys: string[] = [];
+  for (const prev of [false, true]) layers.forEach((l, i) => {
+    if ((l.series === 'previous') !== prev) return;
+    const base = roleOf(l) + ':' + l.mark, n = (seen[base] = (seen[base] || 0) + 1);
+    keys[i] = n > 1 ? base + '#' + n : base;
+  });
+  return keys;
+}
 export function isDim(catalog: Catalog, f: unknown): f is string { return typeof f === 'string' && f in catalog.dimensions; }
 
 /** How a plot shares x among its rows. The scene uses it on 0 to 1 and place() in pixels, so both divide the room the same way. */
@@ -62,8 +75,9 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, rows:
         anchor: !isTime ? 'middle' : j === 0 ? 'start' : j === idx.length - 1 ? 'end' : 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...(mid && { rank: 1 }) });
     });
   }
+  const ids = layerKeys(layers);
   layers.forEach((l, i) => {
-    const id = 'L' + i + ':' + l.mark, prev = l.series === 'previous', role = roleOf(l);
+    const id = ids[i]!, prev = l.series === 'previous', role = roleOf(l);
     const paint = l.paint || (prev ? 'compare' : 'series.1');
     if (l.mark === 'line' || l.mark === 'area') {
       const f = yField(l), pts = rows.filter((r) => r[f] != null);
@@ -111,15 +125,15 @@ function sceneRows(catalog: Catalog, layers: Layer[], rows: Row[]): Body {
   const nodes: SceneNode[] = [];
   const dim = layers.map((l) => l.encode && l.encode.y).find((f) => isDim(catalog, f)) as string;
   const barL = layers.find((l) => l.mark === 'bar');
-  const top = barL ? max(rows, (r) => num(r, barL.encode!.x as string)) || 1 : 1;
+  const top = barL ? max(rows, (r) => num(r, barL.encode!.x as string)) || 1 : 1, ids = layerKeys(layers);
   rows.forEach((r) => {
     const k = r[dim] as string;
     layers.forEach((l, li) => {
       if (l.mark === 'bar') {
-        nodes.push({ key: 'L' + li + ':bar:' + k, part: 'rows', kind: 'rect', v: num(r, l.encode!.x as string) / top, row: k, paint: l.paint || 'series.1', opacity: 0.2, layer: 'data', role: roleOf(l) });
+        nodes.push({ key: ids[li] + ':' + k, part: 'rows', kind: 'rect', v: num(r, l.encode!.x as string) / top, row: k, paint: l.paint || 'series.1', opacity: 0.2, layer: 'data', role: roleOf(l) });
       } else if (l.mark === 'text') {
         const f = l.encode!.text as string, metric = f in catalog.metrics;
-        nodes.push({ key: 'L' + li + ':text:' + k, part: 'rows', kind: 'text', row: k, text: metric ? fmt(num(r, f)) : String(r[f]),
+        nodes.push({ key: ids[li] + ':' + k, part: 'rows', kind: 'text', row: k, text: metric ? fmt(num(r, f)) : String(r[f]),
           anchor: l.align === 'end' ? 'end' : 'start', baseline: 'middle', font: metric ? 'value' : 'label', paint: 'ink', layer: 'data', role: roleOf(l) });
       } else {
         throw new Error('The "' + l.mark + '" mark has no rule for rows yet. Use bar or text.');

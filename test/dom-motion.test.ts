@@ -15,7 +15,7 @@ const numbers = (d: string) => d.split(/[A-Z,]/).filter(Boolean).map(Number), co
 describe('pathD', () => {
   it('draws the trend at rest as core does: the same commands, and numbers within a rounding', () => {
     const all = ['28d', '14d', '7d'].flatMap((r) => paths(r));
-    expect(all.map((n) => n.key).slice(0, 4)).toEqual(['L0:area', 'L1:line', 'L2:line', 'L2:line:partial']);
+    expect(all.map((n) => n.key).slice(0, 4)).toEqual(['context:area', 'comparison:line', 'primary:line', 'primary:line:partial']);
     let same = 0;
     for (const n of all) {
       const d = pathD(n.points, n.curve, n.fill);
@@ -38,9 +38,9 @@ describe('resample and mix', () => {
   const [, , line] = paths('28d'), [, , week] = paths('7d');
 
   it('leaves a set alone when the rows are the same, so a morph starts and ends on the two drawn shapes', () => {
-    // With no previous period the comparison layer goes, and core's keys, which count layers, move up one.
+    // With no previous period the comparison layer goes. Core's keys name the layer, so the primary line keeps its own.
     const to = paths('28d', 'no-prior').find((n) => n.role === 'primary')!;
-    expect(to.key).toBe('L1:line');
+    expect(to.key).toBe(line!.key);
     const from = resample(line!.points, to.points);
     expect(from).toEqual(line!.points.map(({ x, v }) => ({ x, v })));
     expect(mix(from, to.points, 0)).toEqual(from);

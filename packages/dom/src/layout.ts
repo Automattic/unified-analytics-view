@@ -15,6 +15,9 @@ import { ensure } from './dom.ts';
  * dom.ts), and gives each part's element the class `vg-<part>`, because that is what a fit rule's `hide` and
  * `show` compile to. It runs once per data change and never on resize.
  *
+ * The element that holds its points carries `data-hits` ("x" across, "y" down), and each point is a child with
+ * `data-row`. That is all the keyboard, hover and the readout ask of a layout (keys.ts).
+ *
  * What a stylesheet cannot see is the measured pass's (measure.ts). The element runs it after each paint and when
  * the view's room changes, and owns the number and the prose rung. A layout joins it with `measure`. */
 export interface LayoutPainter {

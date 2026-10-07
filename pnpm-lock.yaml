@@ -65,6 +65,12 @@ importers:
       '@universal-analytics/tokens':
         specifier: workspace:*
         version: link:../../packages/tokens
+      d3-scale:
+        specifier: ^4.0.2
+        version: 4.0.2
+      d3-shape:
+        specifier: ^3.2.0
+        version: 3.2.0
     devDependencies:
       vite:
         specifier: ^8.3.3

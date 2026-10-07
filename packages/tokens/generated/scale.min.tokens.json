@@ -5,162 +5,232 @@
       "$description": "Static type scale at 280px viewport",
       "3xl": {
         "$value": {
-          "value": 20.82,
+          "value": 22.43,
           "unit": "px"
         },
-        "$description": "20.82px at 280px viewport"
+        "$description": "22.43px at 280px viewport"
       },
       "2xl": {
         "$value": {
-          "value": 18.51,
+          "value": 19.93,
           "unit": "px"
         },
-        "$description": "18.51px at 280px viewport"
+        "$description": "19.93px at 280px viewport"
       },
       "xl": {
         "$value": {
-          "value": 16.45,
+          "value": 17.72,
           "unit": "px"
         },
-        "$description": "16.45px at 280px viewport"
+        "$description": "17.72px at 280px viewport"
       },
       "lg": {
         "$value": {
-          "value": 14.63,
+          "value": 15.75,
           "unit": "px"
         },
-        "$description": "14.63px at 280px viewport"
+        "$description": "15.75px at 280px viewport"
       },
       "base": {
         "$value": {
-          "value": 13,
+          "value": 14,
           "unit": "px"
         },
-        "$description": "13px at 280px viewport"
+        "$description": "14px at 280px viewport"
       },
       "sm": {
         "$value": {
-          "value": 11.56,
+          "value": 12.44,
           "unit": "px"
         },
-        "$description": "11.56px at 280px viewport"
+        "$description": "12.44px at 280px viewport"
       },
       "xs": {
         "$value": {
-          "value": 10.27,
+          "value": 11.06,
           "unit": "px"
         },
-        "$description": "10.27px at 280px viewport"
+        "$description": "11.06px at 280px viewport"
       }
     }
   },
   "space": {
     "$type": "dimension",
     "$description": "Static space scale at 280px viewport",
-    "3xs": {
+    "7xs": {
       "$value": {
-        "value": 3,
+        "value": 2,
         "unit": "px"
       },
-      "$description": "3px at 280px viewport"
+      "$description": "2px at 280px viewport"
+    },
+    "6xs": {
+      "$value": {
+        "value": 4,
+        "unit": "px"
+      },
+      "$description": "4px at 280px viewport"
+    },
+    "5xs": {
+      "$value": {
+        "value": 5,
+        "unit": "px"
+      },
+      "$description": "5px at 280px viewport"
+    },
+    "4xs": {
+      "$value": {
+        "value": 7,
+        "unit": "px"
+      },
+      "$description": "7px at 280px viewport"
+    },
+    "3xs": {
+      "$value": {
+        "value": 9,
+        "unit": "px"
+      },
+      "$description": "9px at 280px viewport"
     },
     "2xs": {
       "$value": {
-        "value": 7,
+        "value": 11,
         "unit": "px"
       },
-      "$description": "7px at 280px viewport"
+      "$description": "11px at 280px viewport"
     },
     "xs": {
       "$value": {
-        "value": 10,
+        "value": 12,
         "unit": "px"
       },
-      "$description": "10px at 280px viewport"
+      "$description": "12px at 280px viewport"
     },
     "s": {
       "$value": {
-        "value": 13,
+        "value": 14,
         "unit": "px"
       },
-      "$description": "13px at 280px viewport"
+      "$description": "14px at 280px viewport"
     },
     "m": {
       "$value": {
-        "value": 20,
+        "value": 18,
         "unit": "px"
       },
-      "$description": "20px at 280px viewport"
+      "$description": "18px at 280px viewport"
     },
     "l": {
       "$value": {
-        "value": 26,
+        "value": 21,
         "unit": "px"
       },
-      "$description": "26px at 280px viewport"
+      "$description": "21px at 280px viewport"
     },
     "xl": {
       "$value": {
-        "value": 39,
+        "value": 28,
         "unit": "px"
       },
-      "$description": "39px at 280px viewport"
+      "$description": "28px at 280px viewport"
     },
     "2xl": {
       "$value": {
-        "value": 52,
+        "value": 35,
         "unit": "px"
       },
-      "$description": "52px at 280px viewport"
+      "$description": "35px at 280px viewport"
     },
-    "3xs-2xs": {
+    "3xl": {
       "$value": {
-        "value": 3,
+        "value": 42,
         "unit": "px"
       },
-      "$description": "3px at 280px viewport"
+      "$description": "42px at 280px viewport"
     },
-    "2xs-xs": {
+    "7xs-6xs": {
+      "$value": {
+        "value": 2,
+        "unit": "px"
+      },
+      "$description": "2px at 280px viewport"
+    },
+    "6xs-5xs": {
+      "$value": {
+        "value": 4,
+        "unit": "px"
+      },
+      "$description": "4px at 280px viewport"
+    },
+    "5xs-4xs": {
+      "$value": {
+        "value": 5,
+        "unit": "px"
+      },
+      "$description": "5px at 280px viewport"
+    },
+    "4xs-3xs": {
       "$value": {
         "value": 7,
         "unit": "px"
       },
       "$description": "7px at 280px viewport"
     },
-    "xs-s": {
+    "3xs-2xs": {
       "$value": {
-        "value": 10,
+        "value": 9,
         "unit": "px"
       },
-      "$description": "10px at 280px viewport"
+      "$description": "9px at 280px viewport"
+    },
+    "2xs-xs": {
+      "$value": {
+        "value": 11,
+        "unit": "px"
+      },
+      "$description": "11px at 280px viewport"
+    },
+    "xs-s": {
+      "$value": {
+        "value": 12,
+        "unit": "px"
+      },
+      "$description": "12px at 280px viewport"
     },
     "s-m": {
       "$value": {
-        "value": 13,
+        "value": 14,
         "unit": "px"
       },
-      "$description": "13px at 280px viewport"
+      "$description": "14px at 280px viewport"
     },
     "m-l": {
       "$value": {
-        "value": 20,
+        "value": 18,
         "unit": "px"
       },
-      "$description": "20px at 280px viewport"
+      "$description": "18px at 280px viewport"
     },
     "l-xl": {
       "$value": {
-        "value": 26,
+        "value": 21,
         "unit": "px"
       },
-      "$description": "26px at 280px viewport"
+      "$description": "21px at 280px viewport"
     },
     "xl-2xl": {
       "$value": {
-        "value": 39,
+        "value": 28,
         "unit": "px"
       },
-      "$description": "39px at 280px viewport"
+      "$description": "28px at 280px viewport"
+    },
+    "2xl-3xl": {
+      "$value": {
+        "value": 35,
+        "unit": "px"
+      },
+      "$description": "35px at 280px viewport"
     }
   },
   "size": {
@@ -168,10 +238,10 @@
     "$description": "Static control size scale at 280px viewport",
     "sm": {
       "$value": {
-        "value": 26,
+        "value": 28,
         "unit": "px"
       },
-      "$description": "26px at 280px viewport",
+      "$description": "28px at 280px viewport",
       "$extensions": {
         "com.figma.scopes": [
           "WIDTH_HEIGHT"
@@ -180,10 +250,10 @@
     },
     "md": {
       "$value": {
-        "value": 35.75,
+        "value": 35,
         "unit": "px"
       },
-      "$description": "35.75px at 280px viewport",
+      "$description": "35px at 280px viewport",
       "$extensions": {
         "com.figma.scopes": [
           "WIDTH_HEIGHT"
@@ -192,10 +262,10 @@
     },
     "lg": {
       "$value": {
-        "value": 44.2,
+        "value": 42,
         "unit": "px"
       },
-      "$description": "44.2px at 280px viewport",
+      "$description": "42px at 280px viewport",
       "$extensions": {
         "com.figma.scopes": [
           "WIDTH_HEIGHT"

@@ -4,105 +4,145 @@
       "$type": "dimension",
       "$description": "Fluid type scale (280px → 720px)",
       "3xl": {
-        "$value": "clamp(1.3015rem, 0.8926rem + 2.3365cqi, 1.944rem)",
-        "$description": "20.82px → 31.10px"
+        "$value": "clamp(1.4016rem, 0.9739rem + 2.4437cqi, 2.0736rem)",
+        "$description": "22.43px → 33.18px"
       },
       "2xl": {
-        "$value": "clamp(1.1569rem, 0.8621rem + 1.6841cqi, 1.62rem)",
-        "$description": "18.51px → 25.92px"
+        "$value": "clamp(1.2458rem, 0.939rem + 1.7533cqi, 1.728rem)",
+        "$description": "19.93px → 27.65px"
       },
       "xl": {
-        "$value": "clamp(1.0283rem, 0.8236rem + 1.1697cqi, 1.35rem)",
-        "$description": "16.45px → 21.60px"
+        "$value": "clamp(1.1074rem, 0.8958rem + 1.2094cqi, 1.44rem)",
+        "$description": "17.72px → 23.04px"
       },
       "lg": {
-        "$value": "clamp(0.9141rem, 0.7798rem + 0.767cqi, 1.125rem)",
-        "$description": "14.63px → 18.00px"
+        "$value": "clamp(0.9844rem, 0.8472rem + 0.7841cqi, 1.2rem)",
+        "$description": "15.75px → 19.20px"
       },
       "base": {
-        "$value": "clamp(0.8125rem, 0.733rem + 0.4545cqi, 0.9375rem)",
-        "$description": "13.00px → 15.00px"
+        "$value": "clamp(0.875rem, 0.7955rem + 0.4545cqi, 1rem)",
+        "$description": "14.00px → 16.00px"
       },
       "sm": {
-        "$value": "clamp(0.7222rem, 0.6847rem + 0.2146cqi, 0.7813rem)",
-        "$description": "11.56px → 12.50px"
+        "$value": "clamp(0.7778rem, 0.7424rem + 0.202cqi, 0.8333rem)",
+        "$description": "12.44px → 13.33px"
       },
       "xs": {
-        "$value": "clamp(0.642rem, 0.6362rem + 0.033cqi, 0.651rem)",
-        "$description": "10.27px → 10.42px"
+        "$value": "clamp(0.6914rem, 0.6894rem + 0.0112cqi, 0.6944rem)",
+        "$description": "11.06px → 11.11px"
       }
     }
   },
   "space": {
     "$type": "dimension",
     "$description": "Fluid space scale (280px → 720px)",
-    "3xs": {
-      "$value": "clamp(0.1875rem, 0.1477rem + 0.2273cqi, 0.25rem)",
-      "$description": "3.00px → 4.00px"
+    "7xs": {
+      "$value": "clamp(0.125rem, 0.125rem + 0cqi, 0.125rem)",
+      "$description": "2.00px → 2.00px"
     },
-    "2xs": {
+    "6xs": {
+      "$value": "clamp(0.25rem, 0.25rem + 0cqi, 0.25rem)",
+      "$description": "4.00px → 4.00px"
+    },
+    "5xs": {
+      "$value": "clamp(0.3125rem, 0.2727rem + 0.2273cqi, 0.375rem)",
+      "$description": "5.00px → 6.00px"
+    },
+    "4xs": {
       "$value": "clamp(0.4375rem, 0.3977rem + 0.2273cqi, 0.5rem)",
       "$description": "7.00px → 8.00px"
     },
+    "3xs": {
+      "$value": "clamp(0.5625rem, 0.5227rem + 0.2273cqi, 0.625rem)",
+      "$description": "9.00px → 10.00px"
+    },
+    "2xs": {
+      "$value": "clamp(0.6875rem, 0.6477rem + 0.2273cqi, 0.75rem)",
+      "$description": "11.00px → 12.00px"
+    },
     "xs": {
-      "$value": "clamp(0.625rem, 0.5852rem + 0.2273cqi, 0.6875rem)",
-      "$description": "10.00px → 11.00px"
+      "$value": "clamp(0.75rem, 0.6705rem + 0.4545cqi, 0.875rem)",
+      "$description": "12.00px → 14.00px"
     },
     "s": {
-      "$value": "clamp(0.8125rem, 0.733rem + 0.4545cqi, 0.9375rem)",
-      "$description": "13.00px → 15.00px"
+      "$value": "clamp(0.875rem, 0.7955rem + 0.4545cqi, 1rem)",
+      "$description": "14.00px → 16.00px"
     },
     "m": {
-      "$value": "clamp(1.25rem, 1.1307rem + 0.6818cqi, 1.4375rem)",
-      "$description": "20.00px → 23.00px"
+      "$value": "clamp(1.125rem, 1.0455rem + 0.4545cqi, 1.25rem)",
+      "$description": "18.00px → 20.00px"
     },
     "l": {
-      "$value": "clamp(1.625rem, 1.4659rem + 0.9091cqi, 1.875rem)",
-      "$description": "26.00px → 30.00px"
+      "$value": "clamp(1.3125rem, 1.1932rem + 0.6818cqi, 1.5rem)",
+      "$description": "21.00px → 24.00px"
     },
     "xl": {
-      "$value": "clamp(2.4375rem, 2.1989rem + 1.3636cqi, 2.8125rem)",
-      "$description": "39.00px → 45.00px"
+      "$value": "clamp(1.75rem, 1.5909rem + 0.9091cqi, 2rem)",
+      "$description": "28.00px → 32.00px"
     },
     "2xl": {
-      "$value": "clamp(3.25rem, 2.9318rem + 1.8182cqi, 3.75rem)",
-      "$description": "52.00px → 60.00px"
+      "$value": "clamp(2.1875rem, 1.9886rem + 1.1364cqi, 2.5rem)",
+      "$description": "35.00px → 40.00px"
+    },
+    "3xl": {
+      "$value": "clamp(2.625rem, 2.3864rem + 1.3636cqi, 3rem)",
+      "$description": "42.00px → 48.00px"
+    },
+    "7xs-6xs": {
+      "$value": "clamp(0.125rem, 0.0455rem + 0.4545cqi, 0.25rem)",
+      "$description": "2.00px → 4.00px"
+    },
+    "6xs-5xs": {
+      "$value": "clamp(0.25rem, 0.1705rem + 0.4545cqi, 0.375rem)",
+      "$description": "4.00px → 6.00px"
+    },
+    "5xs-4xs": {
+      "$value": "clamp(0.3125rem, 0.1932rem + 0.6818cqi, 0.5rem)",
+      "$description": "5.00px → 8.00px"
+    },
+    "4xs-3xs": {
+      "$value": "clamp(0.4375rem, 0.3182rem + 0.6818cqi, 0.625rem)",
+      "$description": "7.00px → 10.00px"
     },
     "3xs-2xs": {
-      "$value": "clamp(0.1875rem, -0.0114rem + 1.1364cqi, 0.5rem)",
-      "$description": "3.00px → 8.00px"
+      "$value": "clamp(0.5625rem, 0.4432rem + 0.6818cqi, 0.75rem)",
+      "$description": "9.00px → 12.00px"
     },
     "2xs-xs": {
-      "$value": "clamp(0.4375rem, 0.2784rem + 0.9091cqi, 0.6875rem)",
-      "$description": "7.00px → 11.00px"
+      "$value": "clamp(0.6875rem, 0.5682rem + 0.6818cqi, 0.875rem)",
+      "$description": "11.00px → 14.00px"
     },
     "xs-s": {
-      "$value": "clamp(0.625rem, 0.4261rem + 1.1364cqi, 0.9375rem)",
-      "$description": "10.00px → 15.00px"
+      "$value": "clamp(0.75rem, 0.5909rem + 0.9091cqi, 1rem)",
+      "$description": "12.00px → 16.00px"
     },
     "s-m": {
-      "$value": "clamp(0.8125rem, 0.4148rem + 2.2727cqi, 1.4375rem)",
-      "$description": "13.00px → 23.00px"
+      "$value": "clamp(0.875rem, 0.6364rem + 1.3636cqi, 1.25rem)",
+      "$description": "14.00px → 20.00px"
     },
     "m-l": {
-      "$value": "clamp(1.25rem, 0.8523rem + 2.2727cqi, 1.875rem)",
-      "$description": "20.00px → 30.00px"
+      "$value": "clamp(1.125rem, 0.8864rem + 1.3636cqi, 1.5rem)",
+      "$description": "18.00px → 24.00px"
     },
     "l-xl": {
-      "$value": "clamp(1.625rem, 0.8693rem + 4.3182cqi, 2.8125rem)",
-      "$description": "26.00px → 45.00px"
+      "$value": "clamp(1.3125rem, 0.875rem + 2.5cqi, 2rem)",
+      "$description": "21.00px → 32.00px"
     },
     "xl-2xl": {
-      "$value": "clamp(2.4375rem, 1.6023rem + 4.7727cqi, 3.75rem)",
-      "$description": "39.00px → 60.00px"
+      "$value": "clamp(1.75rem, 1.2727rem + 2.7273cqi, 2.5rem)",
+      "$description": "28.00px → 40.00px"
+    },
+    "2xl-3xl": {
+      "$value": "clamp(2.1875rem, 1.6705rem + 2.9545cqi, 3rem)",
+      "$description": "35.00px → 48.00px"
     }
   },
   "size": {
     "$type": "dimension",
     "$description": "Fluid control size scale (280px → 720px): multiples of the base font size, so a control scales with the type beside it",
     "sm": {
-      "$value": "clamp(1.625rem, 1.4659rem + 0.9091cqi, 1.875rem)",
-      "$description": "2× base font: 26.00px → 30.00px",
+      "$value": "clamp(1.75rem, 1.5909rem + 0.9091cqi, 2rem)",
+      "$description": "2× base font: 28.00px → 32.00px",
       "$extensions": {
         "com.figma.scopes": [
           "WIDTH_HEIGHT"
@@ -110,8 +150,8 @@
       }
     },
     "md": {
-      "$value": "clamp(2.2344rem, 2.0156rem + 1.25cqi, 2.5781rem)",
-      "$description": "2.75× base font: 35.75px → 41.25px",
+      "$value": "clamp(2.1875rem, 1.9886rem + 1.1364cqi, 2.5rem)",
+      "$description": "2.5× base font: 35.00px → 40.00px",
       "$extensions": {
         "com.figma.scopes": [
           "WIDTH_HEIGHT"
@@ -119,8 +159,8 @@
       }
     },
     "lg": {
-      "$value": "clamp(2.7625rem, 2.492rem + 1.5455cqi, 3.1875rem)",
-      "$description": "3.4× base font: 44.20px → 51.00px",
+      "$value": "clamp(2.625rem, 2.3864rem + 1.3636cqi, 3rem)",
+      "$description": "3× base font: 42.00px → 48.00px",
       "$extensions": {
         "com.figma.scopes": [
           "WIDTH_HEIGHT"

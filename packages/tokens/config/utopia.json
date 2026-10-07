@@ -1,21 +1,21 @@
 {
-  "description": "Utopia fluid type, space and control sizes. Design at utopia.fyi and paste the settings here. The range is the width of the container a view sits in, not the viewport.",
+  "description": "Utopia fluid type, space and control sizes. Design at utopia.fyi and paste the settings here. The range is the width of the container a view sits in, not the viewport. The space multipliers are chosen so the widest values are Spacefast's 4px spacing scale exactly (2, 4, 6 … 48); common.tokens.json names them spacing.0_5 to spacing.12.",
   "viewport": { "min": 280, "max": 720, "relativeTo": "container" },
   "typeScale": {
-    "minFontSize": 13,
-    "maxFontSize": 15,
+    "minFontSize": 14,
+    "maxFontSize": 16,
     "minRatio": 1.125,
     "maxRatio": 1.2,
     "positiveSteps": 4,
     "negativeSteps": 2
   },
   "spaceScale": {
-    "positiveSteps": [1.5, 2, 3, 4],
-    "negativeSteps": [0.75, 0.5, 0.25],
+    "positiveSteps": [1.25, 1.5, 2, 2.5, 3],
+    "negativeSteps": [0.875, 0.75, 0.625, 0.5, 0.375, 0.25, 0.125],
     "customPairs": []
   },
   "sizeScale": {
     "description": "Control heights as multiples of the base font size. Every step must stay at or above the 24px WCAG 2.5.8 pointer target at the narrowest container; the generator refuses one that does not.",
-    "steps": { "sm": 2, "md": 2.75, "lg": 3.4 }
+    "steps": { "sm": 2, "md": 2.5, "lg": 3 }
   }
 }

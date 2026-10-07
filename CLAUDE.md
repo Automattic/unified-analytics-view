@@ -20,7 +20,7 @@ There is no build step yet. Packages export their TypeScript source; a bundler a
 
 - `packages/core`: types, presets and `expand`, the plan (`resolve`), scene builders, the tldr prose, and JSON Schemas in `schema/`.
 - `packages/fixtures`: the catalog, the seeded fixture query engine (`typical`, `no-prior`, `empty`) and the six sample specs.
-- `packages/tokens`: build-time token generation, ported from the storybook repo. Leonardo makes the colour ramps and Utopia the type, space and control-size scales, from `config/` into `generated/` (DTCG JSON and `tokens.css`). Primitives only; nothing consumes them yet.
+- `packages/tokens`: build-time token generation, ported from the storybook repo. Base tier: Leonardo makes the colour ramps and Utopia the type, space and control-size scales; `config/base.tokens.json` holds the rest. Common tier: `config/common.tokens.json` (and `common.dark`) names the Spacefast library's variables as aliases into base. Style Dictionary compiles both to `generated/tokens.css`. Nothing consumes them yet.
 - `test/`: one suite across both packages. Golden scenes are in `test/__snapshots__`.
 - `prototype/`: read-only reference. The tests load `prototype-bench.js` and hold the port to it.
 - `packages/dom`, `packages/dots`, `apps/bench`: not started.

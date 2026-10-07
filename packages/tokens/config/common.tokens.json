@@ -1,0 +1,250 @@
+{
+  "color": {
+    "$type": "color",
+    "$description": "Spacefast's colour variables, by their names, as aliases into our ramps. Values here are the light theme; common.dark.tokens.json holds only the tokens that sit on a different step in dark. Translucent tokens are a color-mix() of another token, a deliberate deviation from the DTCG colour type so the alpha survives aliasing.",
+    "background": {
+      "$value": "{color.neutral.300}"
+    },
+    "foreground": {
+      "$value": "{color.neutral.1300}"
+    },
+    "card": {
+      "$value": "{color.neutral.200}"
+    },
+    "card-foreground": {
+      "$value": "{color.neutral.1300}"
+    },
+    "card-raised": {
+      "$value": "{color.neutral.100}"
+    },
+    "popover": {
+      "$value": "{color.neutral.100}"
+    },
+    "popover-foreground": {
+      "$value": "{color.neutral.1300}"
+    },
+    "primary": {
+      "$value": "{color.neutral.1300}"
+    },
+    "primary-foreground": {
+      "$value": "{color.neutral.200}"
+    },
+    "primary-text": {
+      "$value": "{color.neutral.1300}"
+    },
+    "primary-soft": {
+      "$value": "{color.neutral.600}"
+    },
+    "btn-primary-from": {
+      "$value": "{color.neutral.1200}"
+    },
+    "btn-primary-to": {
+      "$value": "{color.neutral.1300}"
+    },
+    "secondary": {
+      "$value": "{color.neutral.500}"
+    },
+    "secondary-foreground": {
+      "$value": "{color.neutral.1300}"
+    },
+    "muted": {
+      "$value": "{color.neutral.400}"
+    },
+    "muted-foreground": {
+      "$value": "{color.neutral.900}"
+    },
+    "accent": {
+      "$value": "{color.neutral.400}"
+    },
+    "accent-foreground": {
+      "$value": "{color.neutral.1300}"
+    },
+    "border": {
+      "$value": "{color.neutral.600}"
+    },
+    "input": {
+      "$value": "{color.neutral.700}"
+    },
+    "destructive": {
+      "$value": "{color.red.900}"
+    },
+    "destructive-text": {
+      "$value": "{color.red.900}"
+    },
+    "destructive-soft": {
+      "$value": "{color.red.600}"
+    },
+    "success": {
+      "$value": "{color.green.600}"
+    },
+    "success-text": {
+      "$value": "{color.green.900}"
+    },
+    "success-soft": {
+      "$value": "{color.green.200}"
+    },
+    "warning": {
+      "$value": "{color.amber.700}"
+    },
+    "warning-text": {
+      "$value": "{color.amber.1000}"
+    },
+    "warning-soft": {
+      "$value": "{color.amber.300}"
+    },
+    "info": {
+      "$value": "{color.blue.900}"
+    },
+    "info-soft": {
+      "$value": "{color.blue.400}"
+    },
+    "marker": {
+      "$value": "{color.lime.500}"
+    },
+    "live": {
+      "$value": "{color.lime.1000}"
+    },
+    "switch-thumb-on": {
+      "$value": "{color.neutral.300}"
+    },
+    "switch-thumb-off": {
+      "$value": "{color.neutral.300}"
+    },
+    "sidebar": {
+      "$value": "{color.neutral.300}"
+    },
+    "sidebar-foreground": {
+      "$value": "{color.neutral.1300}"
+    },
+    "sidebar-foreground-muted": {
+      "$value": "{color.neutral.900}"
+    },
+    "sidebar-accent": {
+      "$value": "{color.neutral.400}"
+    },
+    "sidebar-active": {
+      "$value": "{color.lime.500}"
+    },
+    "sidebar-active-foreground": {
+      "$value": "{color.neutral.1300}"
+    },
+    "sidebar-border": {
+      "$value": "{color.neutral.600}"
+    },
+    "skeleton": {
+      "$value": "{color.neutral.500}"
+    },
+    "raised": {
+      "$value": "{color.neutral.500}"
+    },
+    "raised-foreground": {
+      "$value": "{color.neutral.1300}"
+    },
+    "on-ink": {
+      "$value": "{color.neutral.100}"
+    },
+    "foreground-70": {
+      "$value": "color-mix(in srgb, {color.foreground} 70%, transparent)"
+    },
+    "foreground-60": {
+      "$value": "color-mix(in srgb, {color.foreground} 60%, transparent)"
+    },
+    "foreground-50": {
+      "$value": "color-mix(in srgb, {color.foreground} 50%, transparent)"
+    },
+    "foreground-8": {
+      "$value": "color-mix(in srgb, {color.foreground} 8%, transparent)"
+    },
+    "sidebar-foreground-70": {
+      "$value": "color-mix(in srgb, {color.sidebar-foreground} 70%, transparent)"
+    },
+    "separator-soft": {
+      "$value": "color-mix(in srgb, {color.foreground} 5%, transparent)"
+    },
+    "tint": {
+      "$value": "color-mix(in srgb, {color.muted-foreground} 6%, transparent)"
+    },
+    "tint-hover": {
+      "$value": "color-mix(in srgb, {color.muted-foreground} 10%, transparent)"
+    },
+    "well": {
+      "$value": "color-mix(in srgb, {color.muted-foreground} 3%, transparent)"
+    },
+    "muted-50": {
+      "$value": "color-mix(in srgb, {color.muted} 50%, transparent)"
+    },
+    "row-hover": {
+      "$value": "color-mix(in srgb, {color.muted} 40%, transparent)"
+    },
+    "input-soft": {
+      "$value": "color-mix(in srgb, {color.input} 50%, transparent)"
+    },
+    "card-raised-90": {
+      "$value": "color-mix(in srgb, {color.card-raised} 90%, transparent)"
+    },
+    "marker-soft": {
+      "$value": "color-mix(in srgb, {color.marker} 25%, transparent)"
+    },
+    "destructive-tint": {
+      "$value": "color-mix(in srgb, {color.destructive} 10%, transparent)"
+    },
+    "ring": {
+      "$value": "color-mix(in srgb, {color.primary} 50%, transparent)"
+    },
+    "overlay": {
+      "$value": "color-mix(in srgb, {color.neutral.1300} 50%, transparent)"
+    },
+    "kbd-on-inverse": {
+      "$value": "color-mix(in srgb, {color.background} 20%, transparent)"
+    }
+  },
+  "spacing": {
+    "$type": "dimension",
+    "$description": "Spacefast's spacing scale, by its names, as aliases into the Utopia space scale. Each is fluid and reaches the Spacefast pixel value at the widest container.",
+    "0": {
+      "$value": {
+        "value": 0,
+        "unit": "px"
+      }
+    },
+    "0_5": {
+      "$value": "{space.7xs}"
+    },
+    "1": {
+      "$value": "{space.6xs}"
+    },
+    "1_5": {
+      "$value": "{space.5xs}"
+    },
+    "2": {
+      "$value": "{space.4xs}"
+    },
+    "2_5": {
+      "$value": "{space.3xs}"
+    },
+    "3": {
+      "$value": "{space.2xs}"
+    },
+    "3_5": {
+      "$value": "{space.xs}"
+    },
+    "4": {
+      "$value": "{space.s}"
+    },
+    "5": {
+      "$value": "{space.m}"
+    },
+    "6": {
+      "$value": "{space.l}"
+    },
+    "8": {
+      "$value": "{space.xl}"
+    },
+    "10": {
+      "$value": "{space.2xl}"
+    },
+    "12": {
+      "$value": "{space.3xl}"
+    }
+  }
+}

@@ -1,0 +1,108 @@
+{
+  "color": {
+    "$type": "color",
+    "$description": "Dark-theme overrides for common.tokens.json. A ramp flips with the theme, so most tokens need none.",
+    "background": {
+      "$value": "{color.neutral.100}"
+    },
+    "card-raised": {
+      "$value": "{color.neutral.400}"
+    },
+    "popover": {
+      "$value": "{color.neutral.400}"
+    },
+    "primary-foreground": {
+      "$value": "{color.neutral.100}"
+    },
+    "btn-primary-from": {
+      "$value": "{color.neutral.1300}"
+    },
+    "btn-primary-to": {
+      "$value": "{color.neutral.1200}"
+    },
+    "secondary": {
+      "$value": "{color.neutral.600}"
+    },
+    "muted": {
+      "$value": "{color.neutral.600}"
+    },
+    "muted-foreground": {
+      "$value": "{color.neutral.1000}"
+    },
+    "accent": {
+      "$value": "{color.neutral.600}"
+    },
+    "destructive": {
+      "$value": "{color.red.800}"
+    },
+    "destructive-soft": {
+      "$value": "{color.red.200}"
+    },
+    "success": {
+      "$value": "{color.green.1200}"
+    },
+    "success-text": {
+      "$value": "{color.green.1200}"
+    },
+    "success-soft": {
+      "$value": "{color.green.600}"
+    },
+    "warning": {
+      "$value": "{color.amber.1100}"
+    },
+    "warning-text": {
+      "$value": "{color.amber.1100}"
+    },
+    "warning-soft": {
+      "$value": "{color.amber.500}"
+    },
+    "info": {
+      "$value": "{color.blue.1100}"
+    },
+    "marker": {
+      "$value": "{color.lime.1200}"
+    },
+    "live": {
+      "$value": "{color.lime.1200}"
+    },
+    "switch-thumb-on": {
+      "$value": "{color.neutral.100}"
+    },
+    "switch-thumb-off": {
+      "$value": "{color.neutral.1300}"
+    },
+    "sidebar": {
+      "$value": "{color.neutral.100}"
+    },
+    "sidebar-foreground-muted": {
+      "$value": "{color.neutral.1000}"
+    },
+    "sidebar-active": {
+      "$value": "{color.lime.1200}"
+    },
+    "sidebar-active-foreground": {
+      "$value": "{color.neutral.100}"
+    },
+    "skeleton": {
+      "$value": "{color.neutral.600}"
+    },
+    "raised": {
+      "$value": "{color.neutral.600}"
+    },
+    "well": {
+      "$value": "color-mix(in srgb, {color.foreground} 6%, transparent)"
+    },
+    "destructive-tint": {
+      "$value": "color-mix(in srgb, {color.destructive} 20%, transparent)"
+    },
+    "ring": {
+      "$value": "color-mix(in srgb, {color.primary} 60%, transparent)"
+    },
+    "overlay": {
+      "$value": "color-mix(in srgb, {color.neutral.100} 80%, transparent)"
+    },
+    "kbd-on-inverse": {
+      "$value": "color-mix(in srgb, {color.background} 10%, transparent)"
+    }
+  }
+}

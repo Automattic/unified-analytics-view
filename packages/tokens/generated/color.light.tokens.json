@@ -7,6 +7,19 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
+            1,
+            1,
+            1
+          ],
+          "alpha": 1,
+          "hex": "#ffffff"
+        },
+        "$description": "Contrast ratio: -1.07"
+      },
+      "200": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
             0.9882,
             0.9804,
             0.9608
@@ -16,7 +29,20 @@
         },
         "$description": "Contrast ratio: 1.00"
       },
-      "200": {
+      "300": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.9647,
+            0.9529,
+            0.9176
+          ],
+          "alpha": 1,
+          "hex": "#f6f3ea"
+        },
+        "$description": "Contrast ratio: 1.06"
+      },
+      "400": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -29,7 +55,20 @@
         },
         "$description": "Contrast ratio: 1.15"
       },
-      "300": {
+      "500": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.9176,
+            0.902,
+            0.8549
+          ],
+          "alpha": 1,
+          "hex": "#eae6da"
+        },
+        "$description": "Contrast ratio: 1.20"
+      },
+      "600": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -42,7 +81,7 @@
         },
         "$description": "Contrast ratio: 1.25"
       },
-      "400": {
+      "700": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -55,7 +94,7 @@
         },
         "$description": "Contrast ratio: 2.50"
       },
-      "500": {
+      "800": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -68,7 +107,7 @@
         },
         "$description": "Contrast ratio: 3.50"
       },
-      "600": {
+      "900": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -81,7 +120,7 @@
         },
         "$description": "Contrast ratio: 4.60"
       },
-      "700": {
+      "1000": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -94,7 +133,7 @@
         },
         "$description": "Contrast ratio: 6.50"
       },
-      "800": {
+      "1100": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -107,7 +146,7 @@
         },
         "$description": "Contrast ratio: 9.30"
       },
-      "900": {
+      "1200": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -120,7 +159,7 @@
         },
         "$description": "Contrast ratio: 13.20"
       },
-      "1000": {
+      "1300": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -139,6 +178,32 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
+            1,
+            1,
+            1
+          ],
+          "alpha": 1,
+          "hex": "#ffffff"
+        },
+        "$description": "Contrast ratio: -1.07"
+      },
+      "200": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.9529,
+            1,
+            0.7059
+          ],
+          "alpha": 1,
+          "hex": "#f3ffb4"
+        },
+        "$description": "Contrast ratio: 1.03"
+      },
+      "300": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
             0.9137,
             1,
             0.5137
@@ -146,9 +211,9 @@
           "alpha": 1,
           "hex": "#e9ff83"
         },
-        "$description": "Contrast ratio: 1.05"
+        "$description": "Contrast ratio: 1.06"
       },
-      "200": {
+      "400": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -161,7 +226,20 @@
         },
         "$description": "Contrast ratio: 1.15"
       },
-      "300": {
+      "500": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.851,
+            0.9529,
+            0.3059
+          ],
+          "alpha": 1,
+          "hex": "#d9f34e"
+        },
+        "$description": "Contrast ratio: 1.20"
+      },
+      "600": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -174,7 +252,7 @@
         },
         "$description": "Contrast ratio: 1.25"
       },
-      "400": {
+      "700": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -187,7 +265,7 @@
         },
         "$description": "Contrast ratio: 2.50"
       },
-      "500": {
+      "800": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -200,7 +278,7 @@
         },
         "$description": "Contrast ratio: 3.50"
       },
-      "600": {
+      "900": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -213,7 +291,7 @@
         },
         "$description": "Contrast ratio: 4.60"
       },
-      "700": {
+      "1000": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -226,7 +304,7 @@
         },
         "$description": "Contrast ratio: 6.50"
       },
-      "800": {
+      "1100": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -239,7 +317,7 @@
         },
         "$description": "Contrast ratio: 9.30"
       },
-      "900": {
+      "1200": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -252,7 +330,7 @@
         },
         "$description": "Contrast ratio: 13.20"
       },
-      "1000": {
+      "1300": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -271,16 +349,42 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.9137,
-            0.9725,
+            1,
+            1,
             1
           ],
           "alpha": 1,
-          "hex": "#e9f8ff"
+          "hex": "#ffffff"
         },
-        "$description": "Contrast ratio: 1.05"
+        "$description": "Contrast ratio: -1.07"
       },
       "200": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.9255,
+            0.9804,
+            1
+          ],
+          "alpha": 1,
+          "hex": "#ecfaff"
+        },
+        "$description": "Contrast ratio: 1.03"
+      },
+      "300": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.898,
+            0.9686,
+            1
+          ],
+          "alpha": 1,
+          "hex": "#e5f7ff"
+        },
+        "$description": "Contrast ratio: 1.06"
+      },
+      "400": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -293,7 +397,20 @@
         },
         "$description": "Contrast ratio: 1.15"
       },
-      "300": {
+      "500": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.7569,
+            0.9333,
+            1
+          ],
+          "alpha": 1,
+          "hex": "#c1eeff"
+        },
+        "$description": "Contrast ratio: 1.20"
+      },
+      "600": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -306,7 +423,7 @@
         },
         "$description": "Contrast ratio: 1.25"
       },
-      "400": {
+      "700": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -319,7 +436,7 @@
         },
         "$description": "Contrast ratio: 2.50"
       },
-      "500": {
+      "800": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -332,7 +449,7 @@
         },
         "$description": "Contrast ratio: 3.50"
       },
-      "600": {
+      "900": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -345,7 +462,7 @@
         },
         "$description": "Contrast ratio: 4.60"
       },
-      "700": {
+      "1000": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -358,7 +475,7 @@
         },
         "$description": "Contrast ratio: 6.50"
       },
-      "800": {
+      "1100": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -371,7 +488,7 @@
         },
         "$description": "Contrast ratio: 9.30"
       },
-      "900": {
+      "1200": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -384,7 +501,7 @@
         },
         "$description": "Contrast ratio: 13.20"
       },
-      "1000": {
+      "1300": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -404,15 +521,41 @@
           "colorSpace": "srgb",
           "components": [
             1,
+            1,
+            1
+          ],
+          "alpha": 1,
+          "hex": "#ffffff"
+        },
+        "$description": "Contrast ratio: -1.07"
+      },
+      "200": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            1,
+            0.9686,
+            0.9059
+          ],
+          "alpha": 1,
+          "hex": "#fff7e7"
+        },
+        "$description": "Contrast ratio: 1.03"
+      },
+      "300": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            1,
             0.9529,
             0.8549
           ],
           "alpha": 1,
           "hex": "#fff3da"
         },
-        "$description": "Contrast ratio: 1.05"
+        "$description": "Contrast ratio: 1.06"
       },
-      "200": {
+      "400": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -425,7 +568,20 @@
         },
         "$description": "Contrast ratio: 1.15"
       },
-      "300": {
+      "500": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            1,
+            0.8902,
+            0.6471
+          ],
+          "alpha": 1,
+          "hex": "#ffe3a5"
+        },
+        "$description": "Contrast ratio: 1.20"
+      },
+      "600": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -438,7 +594,7 @@
         },
         "$description": "Contrast ratio: 1.25"
       },
-      "400": {
+      "700": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -451,7 +607,7 @@
         },
         "$description": "Contrast ratio: 2.50"
       },
-      "500": {
+      "800": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -464,7 +620,7 @@
         },
         "$description": "Contrast ratio: 3.50"
       },
-      "600": {
+      "900": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -477,7 +633,7 @@
         },
         "$description": "Contrast ratio: 4.60"
       },
-      "700": {
+      "1000": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -490,7 +646,7 @@
         },
         "$description": "Contrast ratio: 6.50"
       },
-      "800": {
+      "1100": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -503,7 +659,7 @@
         },
         "$description": "Contrast ratio: 9.30"
       },
-      "900": {
+      "1200": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -516,7 +672,7 @@
         },
         "$description": "Contrast ratio: 13.20"
       },
-      "1000": {
+      "1300": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -535,6 +691,32 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
+            1,
+            1,
+            1
+          ],
+          "alpha": 1,
+          "hex": "#ffffff"
+        },
+        "$description": "Contrast ratio: -1.07"
+      },
+      "200": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.9059,
+            0.9922,
+            0.8941
+          ],
+          "alpha": 1,
+          "hex": "#e7fde4"
+        },
+        "$description": "Contrast ratio: 1.03"
+      },
+      "300": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
             0.8706,
             0.9882,
             0.8549
@@ -542,9 +724,9 @@
           "alpha": 1,
           "hex": "#defcda"
         },
-        "$description": "Contrast ratio: 1.05"
+        "$description": "Contrast ratio: 1.06"
       },
-      "200": {
+      "400": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -557,7 +739,20 @@
         },
         "$description": "Contrast ratio: 1.15"
       },
-      "300": {
+      "500": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.7098,
+            0.9647,
+            0.6824
+          ],
+          "alpha": 1,
+          "hex": "#b5f6ae"
+        },
+        "$description": "Contrast ratio: 1.20"
+      },
+      "600": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -570,7 +765,7 @@
         },
         "$description": "Contrast ratio: 1.25"
       },
-      "400": {
+      "700": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -583,7 +778,7 @@
         },
         "$description": "Contrast ratio: 2.50"
       },
-      "500": {
+      "800": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -596,7 +791,7 @@
         },
         "$description": "Contrast ratio: 3.50"
       },
-      "600": {
+      "900": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -609,7 +804,7 @@
         },
         "$description": "Contrast ratio: 4.60"
       },
-      "700": {
+      "1000": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -622,7 +817,7 @@
         },
         "$description": "Contrast ratio: 6.50"
       },
-      "800": {
+      "1100": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -635,7 +830,7 @@
         },
         "$description": "Contrast ratio: 9.30"
       },
-      "900": {
+      "1200": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -648,7 +843,7 @@
         },
         "$description": "Contrast ratio: 13.20"
       },
-      "1000": {
+      "1300": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -668,15 +863,41 @@
           "colorSpace": "srgb",
           "components": [
             1,
+            1,
+            1
+          ],
+          "alpha": 1,
+          "hex": "#ffffff"
+        },
+        "$description": "Contrast ratio: -1.07"
+      },
+      "200": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            1,
+            0.9608,
+            0.949
+          ],
+          "alpha": 1,
+          "hex": "#fff5f2"
+        },
+        "$description": "Contrast ratio: 1.03"
+      },
+      "300": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            1,
             0.949,
             0.9373
           ],
           "alpha": 1,
           "hex": "#fff2ef"
         },
-        "$description": "Contrast ratio: 1.05"
+        "$description": "Contrast ratio: 1.06"
       },
-      "200": {
+      "400": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -689,7 +910,20 @@
         },
         "$description": "Contrast ratio: 1.15"
       },
-      "300": {
+      "500": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            1,
+            0.8784,
+            0.8471
+          ],
+          "alpha": 1,
+          "hex": "#ffe0d8"
+        },
+        "$description": "Contrast ratio: 1.20"
+      },
+      "600": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -702,7 +936,7 @@
         },
         "$description": "Contrast ratio: 1.25"
       },
-      "400": {
+      "700": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -715,7 +949,7 @@
         },
         "$description": "Contrast ratio: 2.50"
       },
-      "500": {
+      "800": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -728,7 +962,7 @@
         },
         "$description": "Contrast ratio: 3.50"
       },
-      "600": {
+      "900": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -741,7 +975,7 @@
         },
         "$description": "Contrast ratio: 4.60"
       },
-      "700": {
+      "1000": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -754,7 +988,7 @@
         },
         "$description": "Contrast ratio: 6.50"
       },
-      "800": {
+      "1100": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -767,7 +1001,7 @@
         },
         "$description": "Contrast ratio: 9.30"
       },
-      "900": {
+      "1200": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -780,7 +1014,7 @@
         },
         "$description": "Contrast ratio: 13.20"
       },
-      "1000": {
+      "1300": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
@@ -796,21 +1030,21 @@
     },
     "qualitative": {
       "1": {
-        "$value": "{color.blue.600}"
+        "$value": "{color.blue.900}"
       },
       "2": {
-        "$value": "{color.amber.600}"
+        "$value": "{color.amber.900}"
       },
       "3": {
-        "$value": "{color.green.600}"
+        "$value": "{color.green.900}"
       },
       "4": {
-        "$value": "{color.red.600}"
+        "$value": "{color.red.900}"
       },
       "5": {
-        "$value": "{color.neutral.600}"
+        "$value": "{color.neutral.900}"
       },
-      "$description": "Qualitative series, each at step 600 of its ramp"
+      "$description": "Qualitative series, each at step 900 of its ramp"
     }
   }
 }

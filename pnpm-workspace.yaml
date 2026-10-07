@@ -1,3 +1,7 @@
 packages:
   - packages/*
   - apps/*
+# Both only run patch-package on install, which does nothing for a consumer.
+allowBuilds:
+  '@bundled-es-modules/glob': false
+  style-dictionary: false

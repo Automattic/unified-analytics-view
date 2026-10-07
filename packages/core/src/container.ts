@@ -6,7 +6,7 @@ import type { Container, ContainerRules, KeepPart, PainterName, ReductionId } fr
  * These are the defaults; a context passes its containers a different set. */
 export const CONTAINER_RULES: ContainerRules = {
   fit:       FIT_RULES,
-  axes:      { minHeight: 120, height: 184 },                  // a plot with axes: its least and its natural height
+  axes:      { height: 184 },                                  // a plot with axes: its natural height. Its least is the `axes` rule's block need
   bare:      { height: 46, numberWidth: 76 },                  // a plot with no guides, set beside the number, and the least width that number is given
   rows:      { rowHeight: 28, gap: 4 },
   tldrValue: { above: 'instant' },                             // above the marks only for an instant metric

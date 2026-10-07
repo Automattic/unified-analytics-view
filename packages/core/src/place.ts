@@ -133,7 +133,9 @@ export function place(scene: Scene, container: Container): PlacedScene {
       body = { height: h, nodes: scene.nodes.filter((n): n is TextNode => n.part === 'notice' && n.kind === 'text').map((n) => text(n, W / 2, h / 2, fit(n.text, W))) };
     } else if (scene.layout === 'cartesian') {
       const guided = scene.parts.includes('x-axis') || scene.parts.includes('y-axis');
-      const ph = !guided ? rules.bare.height : H ? Math.max(rules.axes.minHeight, Math.min(rules.axes.height, H - above)) : rules.axes.height;
+      // The least a plot with axes is built to is the `axes` rule's block need, so the two cannot be set apart.
+      const least = ruleFor(rules.fit, 'cartesian', 'axes')?.needs.block ?? 0;
+      const ph = !guided ? rules.bare.height : H ? Math.max(least, Math.min(rules.axes.height, H - above)) : rules.axes.height;
       body = { nodes: placePlot(scene, W, ph, narrow), height: ph }; plot = { w: W, h: ph };
     } else if (scene.layout === 'rows') {
       body = placeRows(scene, W);

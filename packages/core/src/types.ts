@@ -71,7 +71,7 @@ export interface ContainerRules {
   /** The room each part needs, and what is given up without it. */
   fit: FitRule[];
   /* Sizes the pixel scene is built to. */
-  axes: { minHeight: number; height: number };
+  axes: { height: number };
   bare: { height: number; numberWidth: number };
   rows: { rowHeight: number; gap: number };
   /** When the tldr value sits above the marks while there is room for both. */

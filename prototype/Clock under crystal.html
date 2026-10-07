@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Clock under crystal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=B612:wght@400;700&display=swap">
+<style>
+/* ───────── Tokens ─────────
+   Two palettes per theme. Neutral (n-) is the default: one grey surface, one ink.
+   Colour (k-) is the earlier look, LCD in light and VFD in dark, behind the Colour switch. */
+:root{
+  --font:"B612","DIN Alternate","Avenir Next","Helvetica Neue",Arial,sans-serif;
+  --grain-img:url(data:image/png;base64,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);
+
+  /* wide-gamut inks, sRGB first */
+  --vfd-ink:#3dffd2; --vfd-ink-dim:#1f9c82; --vfd-hand:#ff6b1f; --vfd-warn:#ffc51a; --vfd-poor:#ff4d33;
+  --lcd-hand:#e4470b;
+
+  --panel:#d4d4d2; --text:#1c1c1b; --text-dim:#51514f; --line:rgb(28 28 27/.2);
+  --n-ink:#1d1d1c; --n-ink-dim:#62625f; --n-hand-shadow:.26;
+  --k-plate:#b9c5af; --k-ink:#17211a; --k-ink-dim:#55634f; --k-hub:#17211a;
+  --k-hand:var(--lcd-hand); --k-warn:#a66f00; --k-poor:#c93a12;
+  --k-seg-off:.075; --k-seg-shadow:.17; --k-hand-shadow:.22;
+  --fringe-warm:rgb(255 122 26/.78); --fringe-cool:rgb(43 85 255/.78);
+  --seat:#a1a19f; --shadow:rgb(26 26 25/.26); --shadow-far:rgb(26 26 25/.14); --caustic:rgb(255 255 255/.8);
+  --glass:238 244 241; --a-body:.34; --sheen:240 246 255; --a-sheen:.16; --a-hi:1; --a-lo:1;
+  /* the dish: how dark its shaded side and how light its lit side get */
+  --bowl-lo:.1; --bowl-hi:.24; --lip-lo:.2; --lip-hi:.42; --edge-lo:.36; --edge-hi:.8; --dish-ao:.035;
+  color-scheme:light;
+}
+@supports (color:color(display-p3 1 1 1)){
+  :root{
+    --vfd-ink:color(display-p3 .2 1 .82); --vfd-ink-dim:color(display-p3 .14 .6 .5);
+    --vfd-hand:color(display-p3 1 .44 .1); --vfd-warn:color(display-p3 1 .78 .08); --vfd-poor:color(display-p3 1 .3 .2);
+    --lcd-hand:color(display-p3 .9 .3 .04);
+  }
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --panel:#1a1a1b; --text:#e3e3e0; --text-dim:#9d9d9a; --line:rgb(227 227 224/.2);
+    --n-ink:#ecece8; --n-ink-dim:#8f8f8b; --n-hand-shadow:.62;
+    --k-plate:#000; --k-ink:var(--vfd-ink); --k-ink-dim:var(--vfd-ink-dim); --k-hub:#1c2422;
+    --k-hand:var(--vfd-hand); --k-warn:var(--vfd-warn); --k-poor:var(--vfd-poor);
+    --k-seg-off:.07; --k-seg-shadow:0; --k-hand-shadow:0;
+    --fringe-warm:rgb(255 59 31/.9); --fringe-cool:rgb(61 77 255/.9);
+    --seat:#060606; --shadow:rgb(0 0 0/.6); --shadow-far:rgb(0 0 0/.4); --caustic:rgb(255 255 255/.1);
+    --glass:170 182 178; --a-body:.2; --sheen:196 214 255; --a-sheen:.1; --a-hi:.8; --a-lo:0;
+    --bowl-lo:.34; --bowl-hi:.07; --lip-lo:.5; --lip-hi:.12; --edge-lo:.7; --edge-hi:.26; --dish-ao:.14;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+    --panel:#1a1a1b; --text:#e3e3e0; --text-dim:#9d9d9a; --line:rgb(227 227 224/.2);
+    --n-ink:#ecece8; --n-ink-dim:#8f8f8b; --n-hand-shadow:.62;
+    --k-plate:#000; --k-ink:var(--vfd-ink); --k-ink-dim:var(--vfd-ink-dim); --k-hub:#1c2422;
+    --k-hand:var(--vfd-hand); --k-warn:var(--vfd-warn); --k-poor:var(--vfd-poor);
+    --k-seg-off:.07; --k-seg-shadow:0; --k-hand-shadow:0;
+    --fringe-warm:rgb(255 59 31/.9); --fringe-cool:rgb(61 77 255/.9);
+    --seat:#060606; --shadow:rgb(0 0 0/.6); --shadow-far:rgb(0 0 0/.4); --caustic:rgb(255 255 255/.1);
+    --glass:170 182 178; --a-body:.2; --sheen:196 214 255; --a-sheen:.1; --a-hi:.8; --a-lo:0;
+    --bowl-lo:.34; --bowl-hi:.07; --lip-lo:.5; --lip-hi:.12; --edge-lo:.7; --edge-hi:.26; --dish-ao:.14;
+    color-scheme:dark;
+}
+/* which palette the marks read from */
+:root{
+  --plate:var(--panel); --ink:var(--n-ink); --ink-dim:var(--n-ink-dim); --hub:var(--n-ink);
+  --hand:var(--n-ink); --hand2:var(--n-ink); --hand-main:var(--n-ink); --pin:var(--panel); --good:var(--n-ink); --warn:var(--n-ink); --poor:var(--n-ink);
+  --good-a:.3; --warn-a:.6; --seg-off:.06; --seg-shadow:0; --hand-shadow:var(--n-hand-shadow); --grain:.55;
+}
+:root[data-colour="on"]{
+  --plate:var(--k-plate); --ink:var(--k-ink); --ink-dim:var(--k-ink-dim); --hub:var(--k-hub);
+  --hand:var(--k-hand); --hand2:var(--k-ink); --hand-main:var(--k-ink); --pin:var(--k-hand); --good:var(--k-ink); --warn:var(--k-warn); --poor:var(--k-poor);
+  --good-a:1; --warn-a:1; --seg-off:var(--k-seg-off); --seg-shadow:var(--k-seg-shadow); --hand-shadow:var(--k-hand-shadow); --grain:0;
+}
+
+/* ───────── Page ───────── */
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);background:var(--panel)}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
+body{position:relative;min-height:100vh;margin:0;background:var(--panel);color:var(--text);font:400 15px/1.5 var(--font)}
+body::before{content:"";position:absolute;inset:0;z-index:0;background:var(--grain-img) 0 0/64px;opacity:.55;pointer-events:none}
+main{position:relative;z-index:1;max-width:940px;margin:0 auto;padding:28px 20px 72px}
+h1{font-size:24px;line-height:1.2;font-weight:700;margin:0 0 8px;letter-spacing:-.005em}
+h2{font-size:15px;font-weight:700;margin:0 0 4px}
+p{margin:0;max-width:34em;color:var(--text-dim)}
+.bench{display:grid;gap:8px 56px;margin-top:8px}
+.stage{display:grid;place-items:center;padding:44px 0 52px}
+@media (min-width:900px){
+  .bench{grid-template-columns:minmax(0,1fr) 340px;align-items:center}
+  .stage{padding:64px 0 72px}
+}
+
+.tweaks{border-top:1px solid var(--line);padding-top:12px;min-width:0}
+.row{display:grid;grid-template-columns:6.6em minmax(0,1fr) 3em;align-items:center;gap:12px;min-height:44px}
+.row label{color:var(--text)}
+.row output{text-align:right;font-variant-numeric:tabular-nums;color:var(--text-dim)}
+input[type=range]{width:100%;height:44px;margin:0;accent-color:var(--text);background:transparent}
+h2.group{border-top:1px solid var(--line);margin:8px 0 0;padding-top:14px}
+.row select{grid-column:2/4;min-height:44px;margin:3px 0;width:100%;font:inherit;color:var(--text);background:transparent;border:1px solid var(--line);border-radius:6px;padding:0 10px}
+.picks{display:flex;flex-wrap:wrap;gap:0 28px;border-top:1px solid var(--line);margin-top:8px;padding-top:8px}
+.pick{display:inline-flex;align-items:center;gap:10px;min-height:44px;cursor:pointer}
+.pick input{width:20px;height:20px;margin:0;accent-color:var(--text)}
+fieldset{border:0;margin:0;padding:0;display:flex;gap:0 20px;align-items:center}
+legend{float:left;padding:0;margin-right:16px;line-height:44px;color:var(--text)}
+:focus-visible{outline:2px solid var(--text);outline-offset:3px;border-radius:2px}
+
+.sizes{border-top:1px solid var(--line);margin-top:28px;padding-top:20px}
+.sizes .set{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:center;gap:40px 44px;padding:40px 0 8px}
+.sizes figure{margin:0;display:grid;justify-items:center;gap:28px}
+figcaption{font-size:13px;color:var(--text-dim)}
+
+/* ───────── Gauge ───────── */
+.gauge{--size:320px;--light:322deg;--lx:-.62;--ly:-.79;--rin:87%;--dish:1;
+  position:relative;width:var(--size);height:var(--size);font-size:calc(var(--size)/100);flex:none}
+.gauge svg{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:visible;will-change:transform}
+.gauge text{font-family:var(--font)}
+
+/* inks: every mark takes its colour from a token, so a copy can be re-inked */
+.k-plate{fill:var(--plate)}
+.k-tick{stroke:var(--ink);fill:none}
+.k-tick-minor{stroke:var(--ink-dim);fill:none}
+.k-edge{stroke:var(--ink-dim);fill:none}
+/* without colour, the three bands are three weights of the one ink */
+.k-good{stroke:var(--good);stroke-opacity:var(--good-a);fill:none}.k-warn{stroke:var(--warn);stroke-opacity:var(--warn-a);fill:none}.k-poor{stroke:var(--poor);fill:none}
+.k-text{fill:var(--ink)}.k-text-dim{fill:var(--ink-dim)}
+.k-hand{fill:var(--hand)}.k-hand-shadow{fill:#000;opacity:var(--hand-shadow)}
+.k-hand2{fill:var(--hand2)}
+.k-hand-main{fill:var(--hand-main)}
+.gauge[data-gmt="off"] .k-gmt,.gauge[data-digital="off"] .k-digital{display:none}
+.k-hub{fill:var(--hub)}.k-pin{fill:var(--pin)}
+.k-seg-on{fill:var(--ink)}.k-seg-off{fill:var(--ink);opacity:var(--seg-off)}.k-seg-shadow{fill:#000;opacity:var(--seg-shadow)}
+
+/* the dished dial: a shallow bowl in the surface. Shading only, drawn in black and white over the plate */
+.s-bowl-lo{stop-color:#000;stop-opacity:calc(var(--bowl-lo)*var(--dish))}.s-bowl-hi{stop-color:#fff;stop-opacity:calc(var(--bowl-hi)*var(--dish))}
+.s-lip-lo{stop-color:#000;stop-opacity:calc(var(--lip-lo)*var(--dish))}.s-lip-lo2{stop-color:#000;stop-opacity:calc(var(--lip-lo)*var(--dish)*.3)}
+.s-lip-hi{stop-color:#fff;stop-opacity:calc(var(--lip-hi)*var(--dish))}.s-lip-hi2{stop-color:#fff;stop-opacity:calc(var(--lip-hi)*var(--dish)*.3)}
+.s-edge-lo{stop-color:#000;stop-opacity:calc(var(--edge-lo)*min(1,var(--dish)))}.s-edge-hi{stop-color:#fff;stop-opacity:calc(var(--edge-hi)*min(1,var(--dish)))}
+.dish-ao{fill:#000;fill-opacity:calc(var(--dish-ao)*min(1,var(--dish)))}
+.s-0lo{stop-color:#000;stop-opacity:0}.s-0hi{stop-color:#fff;stop-opacity:0}
+.gauge[data-dial="flat"] .dish{display:none}
+.gauge[data-glass="on"] .lip{display:none}
+.g-grain{position:absolute;inset:2.5%;border-radius:50%;background:var(--grain-img) 0 0/64px;opacity:var(--grain);pointer-events:none}
+
+/* the bezel: a second scale printed straight onto the panel, outside the crystal. Always the panel's own ink */
+.b-tick{stroke:var(--n-ink-dim);fill:none}.b-major{stroke:var(--n-ink);fill:none}
+.b-ink{fill:var(--n-ink)}.b-dim{fill:var(--n-ink-dim)}
+.gauge[data-bezel="off"] .b-scale{display:none}
+
+/* dispersion ghosts: the same marks, re-inked warm and cool, sitting under the true copy */
+.gh{--hand-shadow:0;--seg-shadow:0;--seg-off:0}
+.gh.warm{--ink:var(--fringe-warm);--ink-dim:var(--fringe-warm);--hand:var(--fringe-warm);--hand2:var(--fringe-warm);--hand-main:var(--fringe-warm);--good:var(--fringe-warm);--warn:var(--fringe-warm);--poor:var(--fringe-warm);--hub:var(--fringe-warm)}
+.gh.cool{--ink:var(--fringe-cool);--ink-dim:var(--fringe-cool);--hand:var(--fringe-cool);--hand2:var(--fringe-cool);--hand-main:var(--fringe-cool);--good:var(--fringe-cool);--warn:var(--fringe-cool);--poor:var(--fringe-cool);--hub:var(--fringe-cool)}
+
+/* what the crystal does to the surface it sits on: seat, cast shadow, caustic */
+.g-shadow{position:absolute;inset:2.5%;border-radius:50%;will-change:transform;
+  box-shadow:0 0 0 .5em var(--seat),
+    calc(var(--lx)*-2em) calc(var(--ly)*-2em) 2.6em var(--shadow),
+    calc(var(--lx)*-5em) calc(var(--ly)*-5em) 9em var(--shadow-far)}
+.g-shadow::after{content:"";position:absolute;inset:-.8em;border-radius:50%;border:1.1em solid var(--caustic);
+  filter:blur(.9em);translate:calc(var(--lx)*-2.4em) calc(var(--ly)*-2.4em);
+  -webkit-mask:conic-gradient(from calc(var(--light) + 120deg),transparent 0deg,#000 60deg,transparent 120deg);
+          mask:conic-gradient(from calc(var(--light) + 120deg),transparent 0deg,#000 60deg,transparent 120deg)}
+
+/* the crystal itself: body tint, chamfer, inner edge, top-surface sheen, rim */
+.crystal{position:absolute;inset:2.5%;border-radius:50%;overflow:hidden;pointer-events:none;will-change:transform}
+.crystal i{position:absolute;inset:0;border-radius:50%}
+.c-body{background:radial-gradient(closest-side,transparent calc(var(--rin) - 9%),rgb(var(--glass)/calc(var(--a-body)*.3)) var(--rin),rgb(var(--glass)/var(--a-body)) 96%,rgb(var(--glass)/calc(var(--a-body)*.5)) 100%)}
+.c-chamfer{
+  background:conic-gradient(from var(--light),
+    rgb(255 255 255/calc(.62*var(--a-hi))) 0deg,rgb(255 255 255/calc(.16*var(--a-hi))) 26deg,rgb(255 255 255/0) 64deg,
+    rgb(0 0 0/calc(.14*var(--a-lo))) 118deg,rgb(255 255 255/calc(.2*var(--a-hi))) 166deg,rgb(255 255 255/calc(.36*var(--a-hi))) 180deg,rgb(255 255 255/calc(.2*var(--a-hi))) 194deg,
+    rgb(0 0 0/calc(.14*var(--a-lo))) 242deg,rgb(255 255 255/0) 296deg,rgb(255 255 255/calc(.16*var(--a-hi))) 334deg,rgb(255 255 255/calc(.62*var(--a-hi))) 360deg);
+  -webkit-mask:radial-gradient(closest-side,transparent calc(var(--rin) - .5%),#000 calc(var(--rin) + .5%),#000 99.3%,transparent 100%);
+          mask:radial-gradient(closest-side,transparent calc(var(--rin) - .5%),#000 calc(var(--rin) + .5%),#000 99.3%,transparent 100%)}
+.c-inner{
+  background:conic-gradient(from var(--light),
+    rgb(0 0 0/calc(.1 + .24*var(--a-lo))) 0deg,rgb(0 0 0/.04) 74deg,rgb(255 255 255/calc(.6*var(--a-hi))) 180deg,rgb(0 0 0/.04) 286deg,rgb(0 0 0/calc(.1 + .24*var(--a-lo))) 360deg);
+  -webkit-mask:radial-gradient(closest-side,transparent calc(var(--rin) - .9%),#000 calc(var(--rin) - .25%),#000 calc(var(--rin) + .25%),transparent calc(var(--rin) + .9%));
+          mask:radial-gradient(closest-side,transparent calc(var(--rin) - .9%),#000 calc(var(--rin) - .25%),#000 calc(var(--rin) + .25%),transparent calc(var(--rin) + .9%))}
+.c-sheen{rotate:var(--light);
+  background:radial-gradient(circle at 50% 150em,transparent 121.7em,rgb(var(--sheen)/var(--a-sheen)) 122em,rgb(var(--sheen)/calc(var(--a-sheen)*.2)) 158em);
+  -webkit-mask:radial-gradient(closest-side,#000 calc(var(--rin) - 2.2%),transparent calc(var(--rin) - 1%));
+          mask:radial-gradient(closest-side,#000 calc(var(--rin) - 2.2%),transparent calc(var(--rin) - 1%))}
+.c-rim{
+  background:conic-gradient(from var(--light),
+    rgb(255 255 255/.96) 0deg,rgb(255 255 255/.3) 34deg,rgb(0 0 0/calc(.08 + .2*var(--a-lo))) 104deg,
+    rgb(255 255 255/.46) 168deg,rgb(255 255 255/.72) 180deg,rgb(255 255 255/.46) 192deg,
+    rgb(0 0 0/calc(.08 + .2*var(--a-lo))) 256deg,rgb(255 255 255/.3) 326deg,rgb(255 255 255/.96) 360deg);
+  -webkit-mask:radial-gradient(closest-side,transparent 97.2%,#000 98.1%,#000 99.4%,transparent 100%);
+          mask:radial-gradient(closest-side,transparent 97.2%,#000 98.1%,#000 99.4%,transparent 100%)}
+
+/* crystal off: the bare mark */
+.gauge[data-glass="off"] .crystal{display:none}
+.gauge[data-glass="off"] .g-shadow{box-shadow:0 0 0 1px var(--line)}
+.gauge[data-glass="off"] .g-shadow::after{display:none}
+.gauge[data-glass="off"][data-dial="dished"] .g-shadow{box-shadow:none}
+</style>
+</head>
+<body>
+<main>
+  <h1>Clock under crystal</h1>
+  <p>The gauge, rebuilt as a clock. The hour, minute and seconds hands show your local time. The arrow hand goes round once a day and points at a second time zone on the 24-hour bezel. The digital readout at 6 gives that time and zone in figures.</p>
+
+  <div class="bench">
+    <div class="stage" id="stage"><div id="hero"></div></div>
+
+    <form class="tweaks" id="tweaks" onsubmit="return false">
+      <div class="row"><label for="t-zone">Second zone</label><select id="t-zone">
+        <option value="UTC" selected>UTC</option>
+        <option value="Pacific/Honolulu">Honolulu</option>
+        <option value="America/Los_Angeles">Los Angeles</option>
+        <option value="America/Denver">Denver</option>
+        <option value="America/New_York">New York</option>
+        <option value="America/Sao_Paulo">São Paulo</option>
+        <option value="Europe/London">London</option>
+        <option value="Europe/Amsterdam">Amsterdam</option>
+        <option value="Asia/Dubai">Dubai</option>
+        <option value="Asia/Kolkata">Mumbai</option>
+        <option value="Asia/Singapore">Singapore</option>
+        <option value="Asia/Tokyo">Tokyo</option>
+        <option value="Australia/Sydney">Sydney</option>
+      </select></div>
+      <div class="row"><label for="t-shows">Digital shows</label><select id="t-shows"><option value="zone" selected>Second zone</option><option value="local">Local time</option></select></div>
+      <div class="row"><label for="t-turn">Bezel turn</label><input id="t-turn" type="range" min="-12" max="12" step="1" value="0"><output for="t-turn" id="o-turn"></output></div>
+      <div class="row"><label for="t-thick">Thickness</label><input id="t-thick" type="range" min="0" max="1.6" step="0.02" value="1"><output for="t-thick" id="o-thick"></output></div>
+      <div class="row"><label for="t-bevel">Bevel width</label><input id="t-bevel" type="range" min="8" max="40" step="1" value="24"><output for="t-bevel" id="o-bevel"></output></div>
+      <div class="row"><label for="t-disp">Dispersion</label><input id="t-disp" type="range" min="0" max="1" step="0.02" value="0.6"><output for="t-disp" id="o-disp"></output></div>
+      <div class="row"><label for="t-dish">Dish depth</label><input id="t-dish" type="range" min="0" max="2" step="0.02" value="1"><output for="t-dish" id="o-dish"></output></div>
+      <div class="row"><label for="t-light">Light angle</label><input id="t-light" type="range" min="0" max="360" step="1" value="322"><output for="t-light" id="o-light"></output></div>
+      <div class="picks">
+        <fieldset>
+          <legend>Dial</legend>
+          <label class="pick"><input type="radio" name="dial" value="dished" checked> Dished</label>
+          <label class="pick"><input type="radio" name="dial" value="flat"> Flat</label>
+        </fieldset>
+        <label class="pick"><input type="checkbox" id="t-glass" checked> Crystal</label>
+        <label class="pick"><input type="checkbox" id="t-gmt" checked> GMT hand</label>
+        <label class="pick"><input type="checkbox" id="t-digital" checked> Digital</label>
+        <label class="pick"><input type="checkbox" id="t-bezel" checked> Bezel</label>
+        <label class="pick"><input type="checkbox" id="t-run" checked> Running</label>
+        <label class="pick"><input type="checkbox" id="t-colour"> Colour</label>
+        <fieldset>
+          <legend>Theme</legend>
+          <label class="pick"><input type="radio" name="display" value="light"> Light</label>
+          <label class="pick"><input type="radio" name="display" value="dark"> Dark</label>
+        </fieldset>
+      </div>
+    </form>
+  </div>
+
+  <section class="sizes">
+    <h2>Smaller sizes</h2>
+    <p>The same clock, smaller. The seconds hand, minute track and digital readout drop out first, along with the bezel numerals. At the smallest size only four hour marks and two hands are left.</p>
+    <div class="set">
+      <figure><div id="g-a"></div><figcaption>150 px</figcaption></figure>
+      <figure><div id="g-b"></div><figcaption>96 px</figcaption></figure>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+'use strict';
+const NS = 'http://www.w3.org/2000/svg';
+const S = (tag, attrs = {}, kids = []) => {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  kids.forEach(c => c && e.appendChild(c));
+  return e;
+};
+const n = v => +v.toFixed(2);
+const pol = (r, deg) => { const a = deg * Math.PI / 180; return [n(r * Math.cos(a)), n(r * Math.sin(a))]; };
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+
+/* ── Geometry, in dial units. The viewBox is 400 wide and centred on the pivot. ── */
+const R = 190;                 // outer edge of the crystal; the scale sits just inside the bevel
+
+/* What each size keeps. Hand-set here; in the library this would be derived per element.
+   hour and minute are [length, width] of the marks; hands are [width at the pivot, width near the tip]. */
+const LAYOUT = {
+  full:    { hour: [20, 4.6], minute: [5, 1], twelve: true, hands: { hour: [4.8, 3.4], minute: [3.5, 2.2], second: true, gmt: 1, hub: 8 },
+             digital: { d: 72, r: 40 }, bezel: { r: 205, odd: [8, 1.1], even: null, numerals: 13, pip: [15, 6.5] } },
+  compact: { hour: [22, 8], minute: null, twelve: true, hands: { hour: [9, 6.5], minute: [6.5, 4.2], second: false, gmt: 1.9, hub: 13 },
+             digital: null, bezel: { r: 207, odd: null, even: [14, 3.2], numerals: 0, pip: [19, 9] } },
+  mini:    { hour: [26, 12], minute: null, twelve: false, quarters: true, hands: { hour: [13, 9.5], minute: [9.5, 6], second: false, gmt: 0, hub: 18 },
+             digital: null, bezel: null }
+};
+
+/* Shared settings */
+const opt = { thick: 1, bevel: 24, disp: .6, light: 322, glass: true, dial: 'dished', dish: 1, bezel: true,
+  gmt: true, digital: true, run: true, zone: 'UTC', zoneName: 'UTC', shows: 'zone', turn: 0 };
+
+/* ── Time ──
+   Local time drives the hour, minute and seconds hands. The second zone drives the GMT hand and the digital readout. */
+const fmts = {};
+function parts(date, tz) {
+  const f = fmts[tz || ''] || (fmts[tz || ''] = new Intl.DateTimeFormat('en-US', Object.assign({ hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', timeZoneName: 'short' }, tz ? { timeZone: tz } : {})));
+  const o = {}; f.formatToParts(date).forEach(p => { o[p.type] = p.value; });
+  const h = +o.hour % 24, m = +o.minute, s = +o.second;
+  return { h, m, s, name: o.timeZoneName, wall: Date.UTC(+o.year, +o.month - 1, +o.day, h, m, s) };
+}
+const two = v => String(v).padStart(2, '0');
+let NOW = null;
+function readTime() {
+  const d = new Date();
+  if (!opt.run) d.setHours(10, 8, 36, 0);          // held: the pose every watch is photographed in
+  const loc = parts(d), far = parts(d, opt.zone), stamp = Math.floor(d.getTime() / 1000);
+  NOW = { loc, far, ahead: Math.round((far.wall - loc.wall) / 60000),
+    hour: -90 + ((loc.h % 12) + loc.m / 60 + loc.s / 3600) * 30,
+    minute: -90 + (loc.m + loc.s / 60) * 6,
+    second: -90 + loc.s * 6,
+    gmt: -90 + (far.h + far.m / 60 + far.s / 3600) * 15,
+    key1: stamp + opt.zone, key10: Math.floor(stamp / 10) + opt.zone };
+}
+
+/* ── Segmented digits: pointed ends, a small gap, drawn as two paths (lit and unlit) ── */
+const SEGMAP = { 0:'abcdef', 1:'bc', 2:'abged', 3:'abgcd', 4:'fgbc', 5:'afgcd', 6:'afgedc', 7:'abc', 8:'abcdefg', 9:'abcdfg', '-':'g' };
+function segments(str, { H, W, T, space }) {
+  const h = T / 2, G = T * .16, m = H / 2;
+  const hz = (ox, y) => { const x1 = ox + h + G, x2 = ox + W - h - G; return `M${n(x1)} ${n(y)}l${n(h)} ${n(-h)}H${n(x2 - h)}l${n(h)} ${n(h)}l${n(-h)} ${n(h)}H${n(x1 + h)}z`; };
+  const vt = (x, y1, y2) => `M${n(x)} ${n(y1)}l${n(h)} ${n(h)}V${n(y2 - h)}l${n(-h)} ${n(h)}l${n(-h)} ${n(-h)}V${n(y1 + h)}z`;
+  let on = '', off = '', x = 0;
+  [...str].forEach((ch, i) => {
+    if (ch === ':') { x -= space * .3; const sq = y => `M${n(x)} ${n(y)}h${n(T)}v${n(T)}h${n(-T)}z`; on += sq(H * .28) + sq(H * .72 - T); x += T + space * .7; return; }
+    if (ch === '.') { x -= space * .45; on += `M${n(x)} ${n(H - T)}h${n(T)}v${n(T)}h${n(-T)}z`; x += T + space * .55; return; }
+    const seg = { a: hz(x, h), g: hz(x, m), d: hz(x, H - h), f: vt(x + h, h + G, m - G), b: vt(x + W - h, h + G, m - G), e: vt(x + h, m + G, H - h - G), c: vt(x + W - h, m + G, H - h - G) };
+    const lit = SEGMAP[ch] || '';
+    for (const k in seg) (lit.includes(k) ? (on += seg[k]) : (off += seg[k]));
+    x += W + (i < str.length - 1 ? space : 0);
+  });
+  return { on, off, width: x };
+}
+
+/* ── One clock ── */
+function makeGauge(host, cfg) {
+  const g = { cfg, L: LAYOUT[cfg.density || 'full'] };
+  const fig = g.fig = host;
+  fig.className = 'gauge';
+  fig.innerHTML = '<div class="g-shadow"></div>';
+  // the bezel sits under the shadow layer, so the crystal's shadow and caustic fall across its marks
+  g.bScale = S('g', { class: 'b-scale' });
+  g.bezel = S('svg', { viewBox: '-200 -200 400 400', class: 'g-bezel', 'aria-hidden': 'true' }, [g.bScale]);
+  fig.prepend(g.bezel);
+  g.defs = S('defs'); g.view = S('g');
+  g.svg = S('svg', { viewBox: '-200 -200 400 400', role: 'img' }, [g.defs, g.view]);
+  fig.appendChild(g.svg);
+  const grain = document.createElement('div'); grain.className = 'g-grain'; fig.appendChild(grain);
+  const cr = document.createElement('div');
+  cr.className = 'crystal';
+  cr.innerHTML = '<i class="c-body"></i><i class="c-chamfer"></i><i class="c-inner"></i><i class="c-sheen"></i><i class="c-rim"></i>';
+  fig.appendChild(cr);
+  g.clips = S('g'); g.defs.appendChild(g.clips);
+
+  // The dial surface. Flat is a plain fill. Dished adds three layers of shading over it:
+  // a tone ramp across the bowl, a shadow under the lip nearest the light, a highlight inside the far lip.
+  const id = cfg.id, stop = (offset, cls) => S('stop', { offset, class: cls }), u = { gradientUnits: 'userSpaceOnUse' };
+  const d = 14, t0 = n((R - d) / (R + d));
+  g.bowl = S('linearGradient', { id: id + '-bowl', ...u }, [stop(0, 's-bowl-lo'), stop(.5, 's-0lo'), stop(.5, 's-0hi'), stop(1, 's-bowl-hi')]);
+  g.lipLo = S('radialGradient', { id: id + '-liplo', r: R + d, ...u }, [stop(t0, 's-0lo'), stop(.945, 's-lip-lo2'), stop(1, 's-lip-lo')]);
+  g.lipHi = S('radialGradient', { id: id + '-liphi', r: R + d, ...u }, [stop(t0, 's-0hi'), stop(.945, 's-lip-hi2'), stop(1, 's-lip-hi')]);
+  g.edge = S('linearGradient', { id: id + '-edge', ...u }, [stop(0, 's-edge-lo'), stop(.34, 's-0lo'), stop(.66, 's-0hi'), stop(1, 's-edge-hi')]);
+  g.lipD = d;
+  g.plate = S('g', { id: id + '-plate' }, [
+    S('circle', { r: R + 2, class: 'k-plate' }),
+    S('g', { class: 'dish' }, [S('circle', { r: R, class: 'dish-ao' }), ...['bowl', 'liplo', 'liphi'].map(k => S('circle', { r: R, fill: `url(#${id}-${k})` }))])
+  ]);
+  const f = .07, ts = n((.5 - f) / (.5 + f));
+  g.sBowl = S('linearGradient', { id: id + '-sb' }, [stop(0, 's-bowl-lo'), stop(.5, 's-0lo'), stop(.5, 's-0hi'), stop(1, 's-bowl-hi')]);
+  g.sLo = S('radialGradient', { id: id + '-sl', r: .5 + f }, [stop(ts, 's-0lo'), stop(.93, 's-lip-lo2'), stop(1, 's-lip-lo')]);
+  g.sHi = S('radialGradient', { id: id + '-sh', r: .5 + f }, [stop(ts, 's-0hi'), stop(.93, 's-lip-hi2'), stop(1, 's-lip-hi')]);
+  g.sEdge = S('linearGradient', { id: id + '-se' }, [stop(0, 's-edge-lo'), stop(.34, 's-0lo'), stop(.66, 's-0hi'), stop(1, 's-edge-hi')]);
+  g.sF = f;
+  g.subs = S('g', { class: 'dish' }); g.plate.appendChild(g.subs);
+  g.defs.append(g.bowl, g.lipLo, g.lipHi, g.edge, g.sBowl, g.sLo, g.sHi, g.sEdge, g.plate);
+  size(g, cfg.size);
+  return g;
+}
+
+function size(g, px) {
+  g.px = px;
+  g.fig.style.setProperty('--size', px + 'px');
+  g.rin = g.key = null;
+  lens(g); bezel(g);
+}
+
+/* The dial's marks, built once into <defs>. Everything on screen is a <use> of these groups. */
+function ink(g) {
+  const { cfg, L } = g, id = cfg.id, out = g.rin - 6;
+  (g.inks || []).forEach(e => e.remove());
+  const scale = [], face = [], subs = [];
+  const line = (r0, r1, a) => { const [x0, y0] = pol(r0, a), [x1, y1] = pol(r1, a); return `M${x0} ${y0}L${x1} ${y1}`; };
+
+  // hour marks and minute track
+  let hours = '', mins = '';
+  for (let i = 0; i < 60; i++) {
+    const a = -90 + i * 6, h = i / 5;
+    if (i % 5) { if (L.minute) mins += line(out - L.minute[0], out, a); continue; }
+    if (L.quarters && h % 3) continue;
+    if (h === 0 && L.twelve) continue;
+    hours += line(out - L.hour[0], out, a);
+  }
+  if (mins) scale.push(S('path', { d: mins, class: 'k-tick-minor', 'stroke-width': L.minute[1] }));
+  scale.push(S('path', { d: hours, class: 'k-tick', 'stroke-width': L.hour[1] }));
+  if (L.twelve) {                                    // twelve is a double mark, so the dial has a top
+    const s = n(L.hour[1] * .62), top = -out, bottom = -(out - L.hour[0]);
+    scale.push(S('path', { d: `M${-s} ${bottom}V${top}M${s} ${bottom}V${top}`, class: 'k-tick', 'stroke-width': n(L.hour[1] * .74) }));
+  }
+  g.faceR = out - L.hour[0];
+
+  // digital readout at 6, in its own recess
+  g.dig = null;
+  if (L.digital) {
+    const k = Math.min(1, (out - 48) / (L.digital.d + L.digital.r)), cy = n(L.digital.d * k), r = L.digital.r;
+    const text = (y, size, cls) => S('text', { x: 0, y: n(y), dy: '.36em', 'text-anchor': 'middle', 'font-size': size, class: cls });
+    const d = g.dig = { cap: text(-r * .5, 10.5, 'k-text'), sub: text(r * .72, 10, 'k-text-dim'), T: 2 * 400 / (g.px * k),
+      segShadow: S('path', { class: 'k-seg-shadow' }), segOff: S('path', { class: 'k-seg-off' }), segOn: S('path', { class: 'k-seg-on' }) };
+    d.read = S('g', {}, [d.segShadow, d.segOff, d.segOn]);
+    face.push(S('g', { class: 'k-digital', transform: `translate(0 ${cy}) scale(${k.toFixed(4)})` }, [d.cap, d.read, d.sub]));
+    const well = recess(id, 0, cy, n(r * k)); well.setAttribute('class', 'k-digital'); subs.push(well);
+  }
+  g.subs.replaceChildren(...subs);
+
+  // hands, lowest first: GMT, hour, minute, seconds. Each is a profile along its length: [position, half-width]
+  const H = L.hands, shadows = [], hands = [];
+  g.h = {};
+  const solid = (name, P, cls) => {
+    const h = g.h[name] = { P, sh: S('polygon', { class: 'k-hand-shadow' }), el: S('polygon', { class: cls }) };
+    shadows.push(h.sh); hands.push(h.el);
+  };
+  if (H.gmt) {
+    const h = g.h.gmt = { tip: out - 24, k: H.gmt, sh: S('path', { class: 'k-hand-shadow k-gmt', 'fill-rule': 'evenodd' }), el: S('path', { class: 'k-hand2 k-gmt', 'fill-rule': 'evenodd' }) };
+    shadows.push(h.sh); hands.push(h.el);
+  }
+  const hl = out * .59, ml = out - 21, sl = out - 9;
+  solid('hour', [[-hl * .1, H.hour[0] * .42], [0, H.hour[0] / 2], [hl - H.hour[1] * 2.2, H.hour[1] / 2], [hl, 0]], 'k-hand-main');
+  solid('minute', [[-ml * .1, H.minute[0] * .42], [0, H.minute[0] / 2], [ml - H.minute[1] * 2.6, H.minute[1] / 2], [ml, 0]], 'k-hand-main');
+  if (H.second) solid('second', [[-34, 1.5], [-13, 1.5], [-11, .8], [0, .95], [sl - 2, .45], [sl, 0]], 'k-hand');
+  g.hubShadow = S('circle', { r: H.hub, class: 'k-hand-shadow' });
+  g.poseKey = null;
+  const hand = [...shadows, g.hubShadow, ...hands, S('circle', { r: H.hub, class: 'k-hub' }), S('circle', { r: H.hub * .3, class: 'k-pin' })];
+
+  g.inks = [S('g', { id: id + '-scale' }, scale), S('g', { id: id + '-face' }, face), S('g', { id: id + '-hand' }, hand)];
+  g.inks.forEach(e => g.defs.appendChild(e));
+}
+
+/* Put the hands where the time says, and their shadows where the light says.
+   The hands sit above the surface. Over a flat dial a shadow is a plain offset copy.
+   Over the dish the floor falls away toward the centre, so each shadow peels off its hand there and meets it again at the tip. */
+function pose(g) {
+  const T = NOW, key = [g.L.hands.second ? T.key1 : T.key10, opt.light, opt.dial, opt.dish, g.rin, opt.shows].join();
+  if (key === g.poseKey) return;
+  g.poseKey = key;
+  const lx = opt_lx(), ly = opt_ly();
+  const drop = rho => opt.dial === 'dished' ? 1.2 + 10 * opt.dish * (1 - Math.pow(Math.min(1, Math.abs(rho) / R), 2)) : 3.2;
+  const solid = (P, deg, fall) => {
+    const a = deg * Math.PI / 180, ux = Math.cos(a), uy = Math.sin(a), left = [], right = [];
+    P.forEach(([r0, w0], i) => {
+      const next = P[i + 1], steps = next ? 4 : 1;
+      for (let j = 0; j < steps; j++) {
+        const f = j / 4, rho = next ? r0 + (next[0] - r0) * f : r0, hw = next ? w0 + (next[1] - w0) * f : w0, k = fall(rho);
+        const x = rho * ux - lx * k, y = rho * uy - ly * k;
+        left.push(`${n(x - uy * hw)},${n(y + ux * hw)}`); right.unshift(`${n(x + uy * hw)},${n(y - ux * hw)}`);
+      }
+    });
+    return left.concat(right).join(' ');
+  };
+  [['hour', .85], ['minute', 1], ['second', 1.15]].forEach(([name, lift]) => {
+    const h = g.h[name]; if (!h) return;
+    h.el.setAttribute('points', solid(h.P, T[name], () => 0));
+    h.sh.setAttribute('points', solid(h.P, T[name], rho => drop(rho) * lift));
+  });
+
+  // GMT hand: a thin stem, then an open triangle, so the marks show through it
+  if (g.h.gmt) {
+    const { tip, k, el, sh } = g.h.gmt, b = T.gmt * Math.PI / 180, vx = Math.cos(b), vy = Math.sin(b);
+    const len = 19 * k, hw = 7.5 * k, base = tip - len, w = 1 * k, t = 1.9 * k, sin = hw / Math.hypot(hw, len);
+    const tipIn = tip - t / sin, hwIn = (tipIn - base - t) * hw / len;
+    const outline = fall => {
+      const p = (rho, side) => { const q = fall(rho); return `${n(rho * vx - side * vy - lx * q)} ${n(rho * vy + side * vx - ly * q)}`; };
+      const there = [], back = [];
+      for (let i = 0; i <= 8; i++) { const rho = -20 + (base + 20) * i / 8; there.push(p(rho, -w)); back.unshift(p(rho, w)); }
+      return `M${there.concat(back).join('L')}ZM${p(base, -hw)}L${p(tip, 0)}L${p(base, hw)}ZM${p(base + t, -hwIn)}L${p(tipIn, 0)}L${p(base + t, hwIn)}Z`;
+    };
+    el.setAttribute('d', outline(() => 0));
+    sh.setAttribute('d', outline(rho => drop(rho) * .7));
+  }
+  g.hubShadow.setAttribute('cx', n(-lx * drop(0) * 1.15)); g.hubShadow.setAttribute('cy', n(-ly * drop(0) * 1.15));
+  digital(g); describe(g);
+}
+
+/* The digital readout: zone above, 24-hour time in segments, and how far that zone is from local time below. */
+function digital(g) {
+  const d = g.dig; if (!d) return;
+  const local = opt.shows === 'local', t = local ? NOW.loc : NOW.far, hrs = NOW.ahead / 60;
+  const cap = t.name || '', time = two(t.h) + ':' + two(t.m);
+  const sub = local ? 'local' : (hrs < 0 ? '\u2212' : '+') + String(Math.abs(Math.round(hrs * 100) / 100)) + ' h';
+  const key = cap + time + sub;
+  if (key === d.key) return;
+  d.key = key;
+  d.cap.textContent = cap; d.sub.textContent = sub;
+  const Hh = 24, skew = 9, lean = Math.tan(skew * Math.PI / 180) * Hh;
+  const s = segments(time, { H: Hh, W: 13, space: 4, T: d.T });
+  d.segOn.setAttribute('d', s.on);
+  d.segOff.setAttribute('d', s.off || 'M0 0');
+  d.segShadow.setAttribute('d', s.on);
+  d.segShadow.setAttribute('transform', `translate(${n(d.T * .3)} ${n(d.T * .42)})`);
+  d.read.setAttribute('transform', `translate(${n(-s.width / 2 + lean / 2)} -9) skewX(${-skew})`);
+}
+
+function describe(g) {
+  const say = `Clock. Local time ${two(NOW.loc.h)}:${two(NOW.loc.m)} ${NOW.loc.name || ''}. ${opt.zoneName} ${two(NOW.far.h)}:${two(NOW.far.m)}.`;
+  if (say !== g.say) g.svg.setAttribute('aria-label', g.say = say);
+}
+
+/* ── The bezel ──
+   A 24-hour scale printed on the panel, for the GMT hand. 24 is the triangle at the top.
+   Turning it by whole hours makes the same hand read a third zone. Numerals face outward. */
+function bezel(g) {
+  const B = g.L.bezel;
+  if (!B) return g.bScale.replaceChildren();
+  const kids = [], at = h => -90 + (h - opt.turn) * 15;
+  const tick = (a, len) => { const [x0, y0] = pol(B.r - len / 2, a), [x1, y1] = pol(B.r + len / 2, a); return `M${x0} ${y0}L${x1} ${y1}`; };
+  let odd = '', even = '';
+  for (let h = 1; h < 24; h++) {
+    const a = at(h);
+    if (h % 2) { if (B.odd) odd += tick(a, B.odd[0]); }
+    else if (B.numerals) {
+      const [x, y] = pol(B.r, a);
+      const t = S('text', { transform: `translate(${x} ${y}) rotate(${n(a + 90)})`, dy: '.36em', 'text-anchor': 'middle', 'font-size': B.numerals, 'font-weight': 700, class: 'b-ink' });
+      t.textContent = String(h); kids.push(t);
+    } else if (B.even) even += tick(a, B.even[0]);
+  }
+  if (odd) kids.push(S('path', { d: odd, class: 'b-tick', 'stroke-width': B.odd[1] }));
+  if (even) kids.push(S('path', { d: even, class: 'b-major', 'stroke-width': B.even[1] }));
+  const a0 = at(24), rad = a0 * Math.PI / 180, [h, hw] = B.pip;
+  const [tx, ty] = pol(B.r - h / 2, a0), [bx, by] = pol(B.r + h / 2, a0), px = -Math.sin(rad) * hw, py = Math.cos(rad) * hw;
+  kids.push(S('polygon', { points: `${tx},${ty} ${n(bx + px)},${n(by + py)} ${n(bx - px)},${n(by - py)}`, class: 'b-ink' }));
+  g.bScale.replaceChildren(...kids);
+}
+
+/* The digital readout's recess in the dial surface: the dish again, small. Only shows when the dial is dished. */
+function recess(id, cx, cy, r) {
+  const at = { cx, cy, r };
+  return S('g', {}, [
+    S('circle', { ...at, class: 'dish-ao' }),
+    ...['sb', 'sl', 'sh'].map(k => S('circle', { ...at, fill: `url(#${id}-${k})` })),
+    S('circle', { ...at, fill: 'none', stroke: `url(#${id}-se)`, 'stroke-width': .9 })
+  ]);
+}
+
+const opt_lx = () => Math.sin(opt.light * Math.PI / 180);
+const opt_ly = () => -Math.cos(opt.light * Math.PI / 180);
+
+/* ── The lens ──
+   Inside the bevel, a point at screen radius r shows the dial at radius g(r) = r − D·t^p.
+   Each thin ring of the bevel is its own copy of the marks, scaled by r / g(r) about the pivot,
+   so radial marks stay radial and stay vector-sharp. No filters involved.
+   Only the marks are bent. The surface shading is soft enough that bending it would not show.
+   Dispersion is two more copies per ring, re-inked warm and cool and bent a little less and a little more. */
+function lens(g) {
+  const id = g.cfg.id, w = opt.bevel, rin = R - w, lx = opt_lx(), ly = opt_ly();
+  const css = { '--light': opt.light + 'deg', '--lx': lx.toFixed(3), '--ly': ly.toFixed(3), '--rin': (rin / R * 100).toFixed(2) + '%', '--dish': String(opt.dish) };
+  g.css = g.css || {};
+  for (const k in css) if (g.css[k] !== css[k]) g.fig.style.setProperty(k, g.css[k] = css[k]);
+  const flags = { glass: opt.glass ? 'on' : 'off', dial: opt.dial, bezel: opt.bezel ? 'on' : 'off', gmt: opt.gmt ? 'on' : 'off', digital: opt.digital ? 'on' : 'off' };
+  for (const k in flags) if (g.fig.dataset[k] !== flags[k]) g.fig.dataset[k] = flags[k];
+
+  // dish shading runs along the light: dark on the side nearest it, light on the far side
+  const set = (e, o) => { for (const k in o) e.setAttribute(k, n(o[k])); };
+  set(g.bowl, { x1: lx * R, y1: ly * R, x2: -lx * R, y2: -ly * R });
+  set(g.edge, { x1: lx * R, y1: ly * R, x2: -lx * R, y2: -ly * R });
+  set(g.lipLo, { cx: -lx * g.lipD, cy: -ly * g.lipD });
+  set(g.lipHi, { cx: lx * g.lipD, cy: ly * g.lipD });
+  const along = { x1: .5 + lx / 2, y1: .5 + ly / 2, x2: .5 - lx / 2, y2: .5 - ly / 2 };
+  set(g.sBowl, along); set(g.sEdge, along);
+  set(g.sLo, { cx: .5 - lx * g.sF, cy: .5 - ly * g.sF });
+  set(g.sHi, { cx: .5 + lx * g.sF, cy: .5 + ly * g.sF });
+
+  if (g.rin !== rin) { g.rin = rin; ink(g); }   // the marks follow the flat
+  pose(g);
+
+  const D = opt.thick * w * 1.8, p = 1.7, spread = opt.disp * .12;
+  const at = (rm, k) => { const t = (rm - rin) / w; return Math.max(30, rm - D * k * Math.pow(t, p)); };
+  const N = opt.glass ? clamp(Math.round(w * g.px / 400 * Math.min(2, window.devicePixelRatio || 1)), 6, 56) : 0;
+  const deep = at(R, 1 + spread) < g.faceR + 4;      // does the bevel see as far in as the face?
+  const key = [N, spread > 0, deep].join();
+
+  if (key !== g.key) {
+    g.key = key;
+    g.clips.replaceChildren(); g.view.replaceChildren();
+    const copy = (cls, withFace) => S('g', cls ? { class: cls } : {},
+      ['scale', withFace && 'face', 'hand'].filter(Boolean).map(part => S('use', { href: `#${id}-${part}` })));
+    const clipped = (i, shape, kids) => {
+      g.clips.appendChild(S('clipPath', { id: `${id}-c${i}` }, [shape]));
+      g.view.appendChild(S('g', { 'clip-path': `url(#${id}-c${i})` }, kids));
+      return shape;
+    };
+    // the surface is painted once, under everything
+    clipped('s', S('circle', { r: R }), [S('use', { href: `#${id}-plate` })]);
+    // then the bevel, one thin annulus per ring, each showing its own scaled copy of the marks
+    g.rings = [];
+    for (let i = N - 1; i >= 0; i--) {
+      const ring = { main: copy('', deep) };
+      if (spread > 0) { ring.cool = copy('gh cool', deep); ring.warm = copy('gh warm', deep); }
+      ring.clip = clipped(i + 1, S('path', { 'clip-rule': 'evenodd' }), [ring.cool, ring.warm, ring.main]);
+      g.rings[i] = ring;
+    }
+    g.flat = clipped(0, S('circle'), [copy('', true)]);   // the flat of the crystal: untouched
+    g.view.appendChild(S('circle', { r: R + .5, class: 'dish lip', fill: 'none', stroke: `url(#${id}-edge)`, 'stroke-width': n(1.1 * 400 / g.px) }));
+  }
+
+  g.flat.setAttribute('r', n(opt.glass ? rin : R));
+  const circ = r => `M${n(r)} 0A${n(r)} ${n(r)} 0 1 0 ${n(-r)} 0A${n(r)} ${n(r)} 0 1 0 ${n(r)} 0Z`;
+  const lap = .6 * 400 / g.px;      // rings overlap by about half a pixel so no seam shows between them
+  const place = (u, rm, k, ox, oy) => u && u.setAttribute('transform', `translate(${n(ox * k)} ${n(oy * k)}) scale(${(rm / at(rm, k)).toFixed(4)})`);
+  g.rings.forEach((ring, i) => {
+    const r0 = rin + i * w / N, r1 = rin + (i + 1) * w / N, rm = (r0 + r1) / 2, t = (rm - rin) / w;
+    const slide = D * Math.pow(t, p) * .16, ox = lx * slide, oy = ly * slide;
+    ring.clip.setAttribute('d', circ(r1) + circ(r0 - lap));
+    place(ring.cool, rm, 1 + spread, ox, oy);
+    place(ring.warm, rm, 1 - spread, ox, oy);
+    place(ring.main, rm, 1, ox, oy);
+  });
+}
+
+/* ── Build ── */
+readTime();
+const $ = idn => document.getElementById(idn);
+const heroPx = () => (window.innerWidth >= 900 ? 440 : Math.min(320, window.innerWidth - 48));
+const hero = makeGauge($('hero'), { id: 'hero', size: heroPx(), density: 'full' });
+const all = [hero, makeGauge($('g-a'), { id: 'a', size: 150, density: 'compact' }), makeGauge($('g-b'), { id: 'b', size: 96, density: 'mini' })];
+
+/* ── Run ── */
+let timer = 0;
+function beat() {
+  readTime(); all.forEach(pose);
+  clearTimeout(timer);
+  timer = setTimeout(beat, opt.run ? 1004 - Date.now() % 1000 : 1000);
+}
+beat();
+
+/* ── Tweaks ── */
+let pend = 0, late = 0;
+const relens = () => {            // big clock on the next frame, small ones once the hand stops
+  if (!pend) pend = requestAnimationFrame(() => { pend = 0; lens(hero); });
+  clearTimeout(late); late = setTimeout(() => all.slice(1).forEach(lens), 140);
+};
+const show = () => {
+  $('o-turn').textContent = (opt.turn > 0 ? '+' : opt.turn < 0 ? '\u2212' : '') + Math.abs(opt.turn) + ' h';
+  $('o-thick').textContent = opt.thick.toFixed(2);
+  $('o-bevel').textContent = String(opt.bevel);
+  $('o-disp').textContent = opt.disp.toFixed(2);
+  $('o-dish').textContent = opt.dish.toFixed(2);
+  $('o-light').textContent = Math.round(opt.light) + '\u00b0';
+};
+[['t-thick', 'thick'], ['t-bevel', 'bevel'], ['t-disp', 'disp'], ['t-dish', 'dish'], ['t-light', 'light']].forEach(([idn, key]) =>
+  $(idn).addEventListener('input', e => { opt[key] = +e.target.value; relens(); show(); }));
+$('t-turn').addEventListener('input', e => { opt.turn = +e.target.value; all.forEach(bezel); show(); });
+$('t-zone').addEventListener('change', e => { opt.zone = e.target.value; opt.zoneName = e.target.selectedOptions[0].textContent; beat(); });
+$('t-shows').addEventListener('change', e => { opt.shows = e.target.value; all.forEach(pose); });
+$('t-run').addEventListener('change', e => { opt.run = e.target.checked; beat(); });
+[['t-glass', 'glass'], ['t-gmt', 'gmt'], ['t-digital', 'digital'], ['t-bezel', 'bezel']].forEach(([idn, key]) =>
+  $(idn).addEventListener('change', e => { opt[key] = e.target.checked; relens(); }));
+document.querySelectorAll('input[name=dial]').forEach(r => r.addEventListener('change', () => { opt.dial = r.value; relens(); }));
+$('t-colour').addEventListener('change', e => { document.documentElement.dataset.colour = e.target.checked ? 'on' : 'off'; });
+
+const root = document.documentElement;
+const dark = () => root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+const radios = [...document.querySelectorAll('input[name=display]')];
+const syncDisplay = () => radios.forEach(r => { r.checked = (r.value === 'dark') === dark(); });
+radios.forEach(r => r.addEventListener('change', () => { root.dataset.theme = r.value; }));
+syncDisplay();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', syncDisplay);
+new MutationObserver(syncDisplay).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+
+/* With a mouse, the light follows the pointer around the big clock. */
+const stage = $('stage');
+let raf = 0;
+stage.addEventListener('pointermove', e => {
+  if (e.pointerType !== 'mouse' || raf) return;
+  raf = requestAnimationFrame(() => {
+    raf = 0;
+    const b = hero.fig.getBoundingClientRect(), dx = e.clientX - (b.left + b.width / 2), dy = e.clientY - (b.top + b.height / 2);
+    if (Math.hypot(dx, dy) < 12) return;
+    opt.light = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
+    $('t-light').value = opt.light; relens(); show();
+  });
+});
+
+let rz = 0;
+addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { const px = heroPx(); if (px !== hero.px) size(hero, px); }, 120); });
+show();
+})();
+</script>
+</body>
+</html>

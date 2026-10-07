@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Glass drops</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=B612:wght@400;700&display=swap">
+<style>
+/* ───────── Tokens ─────────
+   Light is the LCD: dark ink on a grey-green plate, glass that filters the light passing through it.
+   Dark is the VFD: bright wide-gamut ink on black, glass that glows where light collects. */
+:root{
+  --font:"B612","DIN Alternate","Avenir Next","Helvetica Neue",Arial,sans-serif;
+
+  --panel:#cdd1cb; --text:#1b211c; --text-dim:#4a544c; --line:rgb(27 33 28/.2);
+  --plate:#b9c5af; --ink:#17211a; --ink-dim:#4d5a48;
+
+  /* the grid, and what its fringes look like through the bevel */
+  --g:rgb(23 33 26/.15); --G:rgb(23 33 26/.4); --ax:rgb(23 33 26/.78);
+  --warm:255 104 10; --cool:30 70 255; --fr-g:.5; --fr-G:.85; --fr-ax:.95;
+
+  /* one colour per drop; everything else about the glass is derived from it */
+  --h-cobalt:#1f4dff; --h-amber:#ff9d00; --h-ruby:#e8134f; --h-violet:#8f3df2; --h-smoke:#6f7d78;
+
+  /* how the colour is laid in: multiplied over the plate, pale in the flat, deep on the lit side of the bevel */
+  --blend:multiply; --mixwith:#fff; --p-flat:52%; --p-near:88%; --p-far:38%;
+  --p-glow:26%; --p-caustic:34%; --caustic-base:rgb(255 255 255/.6); --p-fill:62%;
+  --shadow:24 34 26; --a-shadow:.3; --a-shadow-far:.13; --p-shadow:24%;
+  --sheen:240 246 255; --a-sheen:.2; --a-hi:1; --a-lo:1;
+  color-scheme:light;
+}
+@supports (color:color(display-p3 1 1 1)){
+  :root{
+    --h-cobalt:color(display-p3 .14 .3 1); --h-amber:color(display-p3 1 .64 .04); --h-ruby:color(display-p3 .92 .1 .3);
+    --h-violet:color(display-p3 .56 .25 .96);
+  }
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --panel:#17191a; --text:#dfe4e0; --text-dim:#99a39c; --line:rgb(223 228 224/.2);
+    --plate:#000; --ink:#3dffd2; --ink-dim:#27b598;
+    --g:rgb(61 255 210/.17); --G:rgb(61 255 210/.42); --ax:rgb(61 255 210/.8);
+    --warm:255 59 31; --cool:70 86 255; --fr-g:.4; --fr-G:.75; --fr-ax:.9;
+    --h-cobalt:#4d72ff; --h-amber:#ffb81a; --h-ruby:#ff3366; --h-violet:#b866ff; --h-smoke:#c4d0cc;
+    --blend:normal; --mixwith:transparent; --p-flat:13%; --p-near:18%; --p-far:46%;
+    --p-glow:55%; --p-caustic:34%; --caustic-base:transparent; --p-fill:78%;
+    --shadow:0 0 0; --a-shadow:0; --a-shadow-far:0; --p-shadow:0%;
+    --sheen:196 214 255; --a-sheen:.1; --a-hi:.8; --a-lo:0;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --panel:#17191a; --text:#dfe4e0; --text-dim:#99a39c; --line:rgb(223 228 224/.2);
+  --plate:#000; --ink:#3dffd2; --ink-dim:#27b598;
+  --g:rgb(61 255 210/.17); --G:rgb(61 255 210/.42); --ax:rgb(61 255 210/.8);
+  --warm:255 59 31; --cool:70 86 255; --fr-g:.4; --fr-G:.75; --fr-ax:.9;
+  --h-cobalt:#4d72ff; --h-amber:#ffb81a; --h-ruby:#ff3366; --h-violet:#b866ff; --h-smoke:#c4d0cc;
+  --blend:normal; --mixwith:transparent; --p-flat:13%; --p-near:18%; --p-far:46%;
+  --p-glow:55%; --p-caustic:34%; --caustic-base:transparent; --p-fill:78%;
+  --shadow:0 0 0; --a-shadow:0; --a-shadow-far:0; --p-shadow:0%;
+  --sheen:196 214 255; --a-sheen:.1; --a-hi:.8; --a-lo:0;
+  color-scheme:dark;
+}
+@supports (color:color(display-p3 1 1 1)){
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --ink:color(display-p3 .2 1 .82); --ink-dim:color(display-p3 .16 .7 .58);
+      --h-cobalt:color(display-p3 .3 .44 1); --h-amber:color(display-p3 1 .72 .08); --h-ruby:color(display-p3 1 .2 .4); --h-violet:color(display-p3 .72 .4 1);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ink:color(display-p3 .2 1 .82); --ink-dim:color(display-p3 .16 .7 .58);
+    --h-cobalt:color(display-p3 .3 .44 1); --h-amber:color(display-p3 1 .72 .08); --h-ruby:color(display-p3 1 .2 .4); --h-violet:color(display-p3 .72 .4 1);
+  }
+}
+
+/* ───────── Page ───────── */
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);background:var(--panel);
+  --light:322deg;--lx:-.616;--ly:-.788;--tint:.85}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--panel);color:var(--text);font:400 15px/1.5 var(--font)}
+body::before{content:"";position:fixed;inset:0;z-index:-1;background:url(data:image/png;base64,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);opacity:.55;pointer-events:none}
+main{max-width:940px;margin:0 auto;padding:28px 20px 72px}
+h1{font-size:24px;line-height:1.2;font-weight:700;margin:0 0 8px;letter-spacing:-.005em}
+h2{font-size:15px;font-weight:700;margin:0 0 4px}
+p{margin:0;max-width:34em;color:var(--text-dim)}
+.bench{display:grid;gap:20px 56px;margin-top:24px}
+@media (min-width:900px){.bench{grid-template-columns:minmax(0,1fr) 340px;align-items:start}}
+.stage{margin:0;min-width:0}
+.stage figcaption{margin-bottom:12px}
+.stage figcaption b{display:block;color:var(--text)}
+.stage figcaption span{color:var(--text-dim);font-size:13px}
+
+.tweaks{border-top:1px solid var(--line);padding-top:12px;min-width:0}
+.row{display:grid;grid-template-columns:6.6em minmax(0,1fr) 3em;align-items:center;gap:12px;min-height:44px}
+.row label{color:var(--text)}
+.row output{text-align:right;font-variant-numeric:tabular-nums;color:var(--text-dim)}
+input[type=range]{width:100%;height:44px;margin:0;accent-color:var(--text);background:transparent}
+.picks{display:flex;flex-wrap:wrap;gap:0 28px;border-top:1px solid var(--line);margin-top:8px;padding-top:8px}
+.pick{display:inline-flex;align-items:center;gap:10px;min-height:44px;cursor:pointer}
+.pick input{width:20px;height:20px;margin:0;accent-color:var(--text)}
+fieldset{border:0;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:0 20px;align-items:center}
+legend{float:left;padding:0;margin-right:16px;line-height:44px;color:var(--text)}
+:focus-visible{outline:2px solid var(--text);outline-offset:3px;border-radius:2px}
+
+.legend{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--text-dim)}
+.legend li{display:inline-flex;align-items:center;gap:7px}
+.bead{width:13px;height:13px;border-radius:50%;flex:none;
+  background:radial-gradient(circle at 34% 30%,rgb(255 255 255/.75) 0 9%,transparent 24%),
+    radial-gradient(circle at 62% 66%,color-mix(in oklab,var(--hue) 55%,#fff),var(--hue) 62%);
+  box-shadow:inset 0 0 0 1px rgb(0 0 0/.14)}
+
+.closeup{border-top:1px solid var(--line);margin-top:32px;padding-top:20px}
+.closeup .scene{margin-top:16px}
+.closeup fieldset{margin-top:6px}
+.closeup .pick{gap:8px}
+
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+
+/* ───────── Scene: a gridded plate with drops on it ───────── */
+.scene{position:relative;background:var(--plate);border-radius:6px;overflow:hidden;box-shadow:0 0 0 1px var(--line)}
+.scene > svg{position:absolute;inset:0;display:block;overflow:visible}
+.scene text{font-family:var(--font)}
+.k-g{stroke:var(--g);fill:none}.k-G{stroke:var(--G);fill:none}.k-ax{stroke:var(--ax);fill:none}
+.k-num{fill:var(--ink-dim);font-size:11px}
+.k-under{fill:color-mix(in oklab,var(--hue) 42%,var(--plate));opacity:var(--under,1)}
+.k-cover{fill:none;stroke:var(--plate)}
+
+/* dispersion ghosts: the same lines, re-inked warm and cool, under the true copy */
+.gh{--under:0}
+.gh.warm{--g:rgb(var(--warm)/var(--fr-g));--G:rgb(var(--warm)/var(--fr-G));--ax:rgb(var(--warm)/var(--fr-ax))}
+.gh.cool{--g:rgb(var(--cool)/var(--fr-g));--G:rgb(var(--cool)/var(--fr-G));--ax:rgb(var(--cool)/var(--fr-ax))}
+
+/* labels: the plate colour knocks the grid out behind the letters */
+.lab{font-size:12px;font-weight:700;fill:var(--ink);paint-order:stroke;stroke:var(--plate);stroke-width:3.5px;stroke-linejoin:round}
+.lab-sub{font-size:11px;font-weight:400;fill:var(--ink-dim);paint-order:stroke;stroke:var(--plate);stroke-width:3px;stroke-linejoin:round}
+.lead{stroke:var(--ink-dim);stroke-width:.8px;fill:none}
+
+/* a drop: its box is the circle. --u is the hairline unit for rim details, set per drop. */
+.shade,.drop{position:absolute;left:calc(var(--x)*1px);top:calc(var(--y)*1px);width:calc(var(--d)*1px);height:calc(var(--d)*1px);
+  margin:calc(var(--d)*-.5px) 0 0 calc(var(--d)*-.5px);border-radius:50%;font-size:calc(var(--d)*.01px);pointer-events:none;
+  --glow:color-mix(in oklab,var(--hue) var(--p-glow),rgb(255 255 255/.92));
+  --caustic:color-mix(in oklab,var(--hue) var(--p-caustic),var(--caustic-base));
+  --flat-fill:color-mix(in oklab,var(--hue) var(--p-fill),var(--plate))}
+.drop svg{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:visible}
+.drop i{position:absolute;inset:0;border-radius:50%}
+
+/* what the drop does to the plate: a shadow that carries its colour, and a pool of coloured light on the far side */
+.shade{box-shadow:
+  calc(var(--lx)*-5em) calc(var(--ly)*-5em) 6em color-mix(in oklab,var(--hue) var(--p-shadow),rgb(var(--shadow)/var(--a-shadow))),
+  calc(var(--lx)*-11em) calc(var(--ly)*-11em) 18em rgb(var(--shadow)/var(--a-shadow-far))}
+.shade::after{content:"";position:absolute;inset:-.5em;border-radius:50%;border:3.2em solid var(--caustic);
+  filter:blur(2.2em);translate:calc(var(--lx)*-5.5em) calc(var(--ly)*-5.5em);
+  -webkit-mask:conic-gradient(from calc(var(--light) + 115deg),transparent 0deg,#000 65deg,transparent 130deg);
+          mask:conic-gradient(from calc(var(--light) + 115deg),transparent 0deg,#000 65deg,transparent 130deg)}
+
+/* the colour. Flat: a pale, even tint so what is under it stays readable. Bevel: deep toward the light, luminous away from it. */
+.c-flat,.c-bevel{mix-blend-mode:var(--blend);opacity:var(--tint)}
+.c-flat{background:color-mix(in oklab,var(--hue) var(--p-flat),var(--mixwith));
+  -webkit-mask:radial-gradient(closest-side,#000 calc(var(--rin) - 5%),transparent calc(var(--rin) + 5%));
+          mask:radial-gradient(closest-side,#000 calc(var(--rin) - 5%),transparent calc(var(--rin) + 5%))}
+.c-bevel{
+  background:conic-gradient(from var(--light),
+    color-mix(in oklab,var(--hue) var(--p-near),var(--mixwith)) 0deg,color-mix(in oklab,var(--hue) var(--p-near),var(--mixwith)) 55deg,
+    color-mix(in oklab,var(--hue) var(--p-far),var(--mixwith)) 180deg,
+    color-mix(in oklab,var(--hue) var(--p-near),var(--mixwith)) 305deg,color-mix(in oklab,var(--hue) var(--p-near),var(--mixwith)) 360deg);
+  -webkit-mask:radial-gradient(closest-side,transparent calc(var(--rin) - 5%),#000 calc(var(--rin) + 5%));
+          mask:radial-gradient(closest-side,transparent calc(var(--rin) - 5%),#000 calc(var(--rin) + 5%))}
+/* light that has crossed the drop and collects just inside the far rim */
+.c-glow{
+  background:conic-gradient(from calc(var(--light) + 112deg),transparent 0deg,var(--glow) 68deg,transparent 136deg,transparent 360deg);
+  -webkit-mask:radial-gradient(closest-side,transparent calc(100% - 11*var(--u)),#000 calc(100% - 6.5*var(--u)),#000 calc(100% - 4.5*var(--u)),transparent calc(100% - 2.6*var(--u)));
+          mask:radial-gradient(closest-side,transparent calc(100% - 11*var(--u)),#000 calc(100% - 6.5*var(--u)),#000 calc(100% - 4.5*var(--u)),transparent calc(100% - 2.6*var(--u)));
+  opacity:var(--tint)}
+
+/* the crystal itself, as on the gauge: chamfer, inner edge, top-surface sheen, rim */
+.c-chamfer{
+  background:conic-gradient(from var(--light),
+    rgb(255 255 255/calc(.62*var(--a-hi))) 0deg,rgb(255 255 255/calc(.16*var(--a-hi))) 26deg,rgb(255 255 255/0) 64deg,
+    rgb(0 0 0/calc(.14*var(--a-lo))) 118deg,rgb(255 255 255/calc(.2*var(--a-hi))) 166deg,rgb(255 255 255/calc(.36*var(--a-hi))) 180deg,rgb(255 255 255/calc(.2*var(--a-hi))) 194deg,
+    rgb(0 0 0/calc(.14*var(--a-lo))) 242deg,rgb(255 255 255/0) 296deg,rgb(255 255 255/calc(.16*var(--a-hi))) 334deg,rgb(255 255 255/calc(.62*var(--a-hi))) 360deg);
+  -webkit-mask:radial-gradient(closest-side,transparent calc(var(--rin) - .5%),#000 calc(var(--rin) + 2%),#000 calc(100% - .7*var(--u)),transparent 100%);
+          mask:radial-gradient(closest-side,transparent calc(var(--rin) - .5%),#000 calc(var(--rin) + 2%),#000 calc(100% - .7*var(--u)),transparent 100%);
+  opacity:.5}
+.c-inner{
+  background:conic-gradient(from var(--light),
+    rgb(0 0 0/calc(.1 + .24*var(--a-lo))) 0deg,rgb(0 0 0/.04) 74deg,rgb(255 255 255/calc(.6*var(--a-hi))) 180deg,rgb(0 0 0/.04) 286deg,rgb(0 0 0/calc(.1 + .24*var(--a-lo))) 360deg);
+  -webkit-mask:radial-gradient(closest-side,transparent calc(var(--rin) - 1.9*var(--u)),#000 calc(var(--rin) - .5*var(--u)),#000 calc(var(--rin) + .5*var(--u)),transparent calc(var(--rin) + 1.9*var(--u)));
+          mask:radial-gradient(closest-side,transparent calc(var(--rin) - 1.9*var(--u)),#000 calc(var(--rin) - .5*var(--u)),#000 calc(var(--rin) + .5*var(--u)),transparent calc(var(--rin) + 1.9*var(--u)));
+  opacity:.4}
+.c-sheen{rotate:var(--light);
+  background:radial-gradient(circle at 50% 150em,transparent 121.7em,rgb(var(--sheen)/var(--a-sheen)) 122em,rgb(var(--sheen)/calc(var(--a-sheen)*.2)) 158em);
+  -webkit-mask:radial-gradient(closest-side,#000 calc(var(--rin) - 2.2%),transparent calc(var(--rin) - 1%));
+          mask:radial-gradient(closest-side,#000 calc(var(--rin) - 2.2%),transparent calc(var(--rin) - 1%))}
+.c-rim{
+  background:conic-gradient(from var(--light),
+    rgb(255 255 255/.96) 0deg,rgb(255 255 255/.3) 34deg,rgb(0 0 0/calc(.08 + .2*var(--a-lo))) 104deg,
+    rgb(255 255 255/.46) 168deg,rgb(255 255 255/.72) 180deg,rgb(255 255 255/.46) 192deg,
+    rgb(0 0 0/calc(.08 + .2*var(--a-lo))) 256deg,rgb(255 255 255/.3) 326deg,rgb(255 255 255/.96) 360deg);
+  -webkit-mask:radial-gradient(closest-side,transparent calc(100% - 2.8*var(--u)),#000 calc(100% - 1.9*var(--u)),#000 calc(100% - .6*var(--u)),transparent 100%);
+          mask:radial-gradient(closest-side,transparent calc(100% - 2.8*var(--u)),#000 calc(100% - 1.9*var(--u)),#000 calc(100% - .6*var(--u)),transparent 100%)}
+
+/* the specular: a soft glint lying along the bevel on the lit side */
+.c-glint{rotate:var(--light);
+  background:radial-gradient(ellipse 17% var(--gh) at 50% var(--gy),rgb(255 255 255/calc(.9*var(--a-hi))) 0,rgb(255 255 255/calc(.5*var(--a-hi))) 42%,rgb(255 255 255/0) 100%)}
+
+/* each detail lets go on its own once the drop is too small to carry it */
+.drop[data-s~="no-sheen"] .c-sheen,.drop[data-s~="no-inner"] .c-inner,.drop[data-s~="no-inner"] .c-glow,.drop[data-s~="no-inner"] .c-glint{display:none}
+
+/* glass off: the plain mark */
+.scene[data-glass="off"] .shade,.scene[data-glass="off"] .drop i,.scene[data-glass="off"] .d-rings{display:none}
+.scene[data-glass="off"] .drop{background:var(--flat-fill)}
+.scene[data-glass="off"] .drop text{stroke:var(--flat-fill)}
+</style>
+</head>
+<body>
+<main>
+  <h1>Glass drops</h1>
+  <p>The dot mark as a drop of coloured glass on a gridded plate. The flat of each drop leaves the grid and the label alone. The bevel bends and fringes whatever lies under it.</p>
+
+  <div class="bench">
+    <figure class="stage">
+      <figcaption><b>Where visitors come from, last 30 days</b><span>Conversion rate against engaged time. Drop size is visitors.</span></figcaption>
+      <div class="scene" id="plot" role="img" aria-label="Bubble chart of 14 traffic sources. The same figures are in the table that follows."></div>
+      <ul class="legend" id="legend"></ul>
+      <table class="sr" id="table"></table>
+    </figure>
+
+    <form class="tweaks" id="tweaks" onsubmit="return false">
+      <div class="row"><label for="t-size">Drop size</label><input id="t-size" type="range" min="0.5" max="1.6" step="0.02" value="1"><output for="t-size" id="o-size"></output></div>
+      <div class="row"><label for="t-bevel">Bevel width</label><input id="t-bevel" type="range" min="12" max="70" step="1" value="36"><output for="t-bevel" id="o-bevel"></output></div>
+      <div class="row"><label for="t-thick">Thickness</label><input id="t-thick" type="range" min="0" max="1.6" step="0.02" value="0.44"><output for="t-thick" id="o-thick"></output></div>
+      <div class="row"><label for="t-disp">Dispersion</label><input id="t-disp" type="range" min="0" max="1" step="0.02" value="0.6"><output for="t-disp" id="o-disp"></output></div>
+      <div class="row"><label for="t-tint">Tint</label><input id="t-tint" type="range" min="0.2" max="1" step="0.01" value="0.85"><output for="t-tint" id="o-tint"></output></div>
+      <div class="row"><label for="t-light">Light angle</label><input id="t-light" type="range" min="0" max="360" step="1" value="322"><output for="t-light" id="o-light"></output></div>
+      <div class="picks">
+        <label class="pick"><input type="checkbox" id="t-glass" checked> Glass</label>
+        <fieldset>
+          <legend>Display</legend>
+          <label class="pick"><input type="radio" name="display" value="light"> LCD</label>
+          <label class="pick"><input type="radio" name="display" value="dark"> VFD</label>
+        </fieldset>
+      </div>
+    </form>
+  </div>
+
+  <section class="closeup">
+    <h2>Close up</h2>
+    <p>One drop, large enough to check the glass. With a mouse, the light follows the pointer.</p>
+    <fieldset id="hues"><legend class="sr">Colour</legend></fieldset>
+    <div class="scene" id="close" aria-hidden="true"></div>
+  </section>
+</main>
+
+<script>
+(() => {
+'use strict';
+const NS = 'http://www.w3.org/2000/svg';
+const S = (tag, attrs = {}, kids = []) => {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  kids.forEach(c => c && e.appendChild(c));
+  return e;
+};
+const H = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html) e.innerHTML = html; return e; };
+const n = v => +v.toFixed(2);
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const $ = id => document.getElementById(id);
+
+const opt = { size: 1, bevel: .36, thick: .44, disp: .6, tint: .85, light: 322, glass: true };
+
+/* ── Fixture: traffic sources. x is engaged seconds, y is conversion rate, v is visitors in thousands. ── */
+const CHANNELS = { search: ['Search', 'cobalt'], ai: ['AI assistants', 'amber'], social: ['Social', 'ruby'], email: ['Email', 'violet'], direct: ['Direct', 'smoke'] };
+const SOURCES = [
+  ['Google', 'search', 38.2, 58, 3.4], ['Direct', 'direct', 21.5, 104, 2.3], ['ChatGPT', 'ai', 9.8, 118, 5.3],
+  ['Reddit', 'social', 7.4, 41, 1.5], ['Bing', 'search', 6.1, 80, 4.0], ['Newsletter', 'email', 5.6, 146, 5.9],
+  ['YouTube', 'social', 5.0, 29, .8], ['LinkedIn', 'social', 4.2, 72, 1.9], ['Hacker News', 'social', 3.8, 133, 1.1],
+  ['DuckDuckGo', 'search', 3.4, 96, 5.0], ['Perplexity', 'ai', 2.9, 138, 6.6], ['Claude', 'ai', 2.2, 156, 7.2],
+  ['Gemini', 'ai', 1.6, 124, 3.9], ['Bluesky', 'social', 1.3, 22, 2.2]
+].map(([name, ch, v, x, y]) => ({ name, ch, v, x, y, hue: CHANNELS[ch][1], sub: v.toFixed(1) + 'k' }));
+
+/* ── Text measuring, for label fitting ── */
+const ctx = document.createElement('canvas').getContext('2d');
+const fam = getComputedStyle(document.documentElement).getPropertyValue('--font');
+const textW = (str, size, weight) => { ctx.font = `${weight} ${size}px ${fam}`; return ctx.measureText(str).width; };
+
+/* ── A scene: grid, then shadows, then drops (largest first, so small ones sit on top), then outside labels ── */
+let uid = 0;
+function scene(host, spec) {
+  const { W, Ht, area, vx, hy, dots, nums = [] } = spec, sid = 's' + (++uid);
+  host.style.height = Ht + 'px';
+  host.replaceChildren();
+  host.dataset.glass = opt.glass ? 'on' : 'off';
+
+  const defs = S('defs');
+  const base = S('svg', { width: W, height: Ht, viewBox: `0 0 ${W} ${Ht}`, 'aria-hidden': 'true' }, [defs]);
+  const cls = k => k === 2 ? 'k-ax' : k === 1 ? 'k-G' : 'k-g';
+  vx.forEach(([x, k]) => base.appendChild(S('line', { x1: n(x), x2: n(x), y1: area.y0, y2: area.y1, class: cls(k) })));
+  hy.forEach(([y, k]) => base.appendChild(S('line', { x1: area.x0, x2: area.x1, y1: n(y), y2: n(y), class: cls(k) })));
+  nums.forEach(t => { const e = S('text', { x: t.x, y: t.y, 'text-anchor': t.anchor, class: 'k-num' }); e.textContent = t.text; base.appendChild(e); });
+  host.appendChild(base);
+
+  const shades = H('div'), drops = H('div');
+  const top = S('svg', { width: W, height: Ht, viewBox: `0 0 ${W} ${Ht}`, 'aria-hidden': 'true' });
+  host.append(shades, drops, top);
+
+  const list = dots.slice().sort((a, b) => b.r - a.r);
+  const glassOn = opt.glass;
+  list.forEach((d, i) => {
+    d.w = d.r * opt.bevel;                                   // bevel width, in px
+    d.rin = glassOn ? d.r - d.w : d.r - 2;                   // the flat: what a label has to fit inside
+    d.u = clamp(d.r * .01, .45, 2.2);
+    const hue = `var(--h-${d.hue})`;
+
+    /* what lies under this drop, in its own coordinates: the grid lines that cross it, and any larger drop it overlaps */
+    const under = S('g', { id: `${sid}-u${i}` });
+    list.slice(0, i).forEach(o => {
+      if (Math.hypot(o.cx - d.cx, o.cy - d.cy) < o.r + d.r) under.appendChild(S('circle', { cx: n(o.cx - d.cx), cy: n(o.cy - d.cy), r: n(o.r), class: 'k-under', style: `--hue:var(--h-${o.hue})` }));
+    });
+    const m = d.r + 3;
+    vx.forEach(([x, k]) => { if (Math.abs(x - d.cx) < m) under.appendChild(S('line', { x1: n(x - d.cx), x2: n(x - d.cx), y1: n(Math.max(area.y0 - d.cy, -m)), y2: n(Math.min(area.y1 - d.cy, m)), class: cls(k) })); });
+    hy.forEach(([y, k]) => { if (Math.abs(y - d.cy) < m) under.appendChild(S('line', { y1: n(y - d.cy), y2: n(y - d.cy), x1: n(Math.max(area.x0 - d.cx, -m)), x2: n(Math.min(area.x1 - d.cx, m)), class: cls(k) })); });
+    defs.appendChild(under);
+
+    const pos = `--x:${n(d.cx)};--y:${n(d.cy)};--d:${n(d.r * 2)};--hue:${hue};--u:${n(d.u)}px;--rin:${n(d.rin / d.r * 100)}%;--gy:${n((1 - (d.rin / d.r + 1) / 2) * 50)}%;--gh:${n(opt.bevel * 11)}%`;
+    const sh = H('div', 'shade'); sh.style.cssText = pos; shades.appendChild(sh);
+    const el = d.el = H('div', 'drop'); el.style.cssText = pos;
+    const drop = [d.r < 14 && 'no-sheen', d.w < 5 && 'no-inner'].filter(Boolean).join(' ');
+    if (drop) el.dataset.s = drop;
+
+    /* the lens: thin rings of the bevel, each its own copy of what is underneath (see lens()) */
+    const ddefs = S('defs'), rings = S('g', { class: 'd-rings', 'clip-path': `url(#${sid}-a${i})` });
+    d.svg = S('svg', { viewBox: `${n(-d.r)} ${n(-d.r)} ${n(d.r * 2)} ${n(d.r * 2)}` }, [ddefs, rings]);
+    d.N = d.w >= 2 ? clamp(Math.round(d.w * Math.min(2, window.devicePixelRatio || 1)), 4, 96) : 0;
+    d.rings = [];
+    if (d.N) {
+      const ring = r => `M${n(r)} 0A${n(r)} ${n(r)} 0 1 0 ${n(-r)} 0A${n(r)} ${n(r)} 0 1 0 ${n(r)} 0Z`;
+      ddefs.appendChild(S('clipPath', { id: `${sid}-a${i}` }, [S('path', { d: ring(d.r) + ring(d.r - d.w), 'clip-rule': 'evenodd' })]));
+      const copy = c => S('use', Object.assign({ href: `#${sid}-u${i}` }, c ? { class: c } : {}));
+      for (let k = d.N - 1; k >= 0; k--) {                    // painted from the rim inward: each ring covers the one before
+        const clip = S('circle'), cover = S('circle', { class: 'k-cover' });
+        const R = { clip, cover, cool: copy('gh cool'), warm: copy('gh warm'), main: copy('') };
+        ddefs.appendChild(S('clipPath', { id: `${sid}-c${i}-${k}` }, [clip]));
+        rings.appendChild(S('g', { 'clip-path': `url(#${sid}-c${i}-${k})` }, [cover, R.cool, R.warm, R.main]));
+        d.rings[k] = R;
+      }
+    }
+    el.appendChild(d.svg);
+    el.insertAdjacentHTML('beforeend', '<i class="c-flat"></i><i class="c-bevel"></i><i class="c-glow"></i><i class="c-chamfer"></i><i class="c-inner"></i><i class="c-sheen"></i><i class="c-glint"></i><i class="c-rim"></i>');
+    drops.appendChild(el);
+  });
+
+  place(list, spec, top);
+  const sc = { host, list };
+  lens(sc);
+  return sc;
+}
+
+/* ── Labels ──
+   Largest drops choose first. Each tries, in order: name and value inside the flat, name inside the flat,
+   then outside: beside the drop, at its corners, tucked along its top or bottom edge, then further out on a leader.
+   A spot is refused if it leaves the plate, touches any drop, or touches a label, leader or axis number already placed.
+   If nothing is free, one neighbouring label may be moved to a free spot of its own. Failing that, the label is left out
+   of the picture (it is still in the table). */
+function place(list, spec, top) {
+  const { W, Ht, nums = [] } = spec, taken = [], PAD = 3, GAP = 5, LH = 14;
+  nums.forEach(t => { const w = textW(t.text, 11, 400); taken.push({ b: { x: t.anchor === 'end' ? t.x - w : t.anchor === 'middle' ? t.x - w / 2 : t.x, y: t.y - 10, w, h: 13 } }); });
+  const hitsRect = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+  const hitsDrop = (b, o, grow) => { const px = clamp(o.cx, b.x, b.x + b.w), py = clamp(o.cy, b.y, b.y + b.h); return Math.hypot(px - o.cx, py - o.cy) < o.r + grow; };
+  const text = (parent, str, x, y, anchor, c) => { const e = S('text', { x: n(x), y: n(y), 'text-anchor': anchor, class: c }); e.textContent = str; parent.appendChild(e); return e; };
+  let dropped = 0;
+  /* where a label may go, best first: beside the drop, then tucked along its top or bottom edge, then further out on a leader */
+  const DIRS = [['right', 1, 0], ['left', -1, 0], ['above', 0, -1], ['below', 0, 1], ['upper right', 1, -1], ['lower right', 1, 1], ['upper left', -1, -1], ['lower left', -1, 1]];
+  const spotsFor = d => {
+    const out = [], ring = (extra, far) => DIRS.forEach(([where, sx, sy]) => {
+      const k = sx && sy ? Math.SQRT1_2 : 1, e = d.r + GAP + extra, ux = sx * k, uy = sy * k;
+      out.push({ where: far ? where + ', on a leader' : where, x: d.cx + ux * e, y: d.cy + uy * e + (sx ? sy * 2 : sy * LH / 2),
+        anchor: sx > 0 ? 'start' : sx < 0 ? 'end' : 'middle', lead: far && [ux, uy, e], prime: !far && !(sx && sy) });
+    });
+    ring(0, false);
+    [['above, flush left', -1, -1], ['above, flush right', 1, -1], ['below, flush left', -1, 1], ['below, flush right', 1, 1]].forEach(([where, side, sy]) =>
+      out.push({ where, x: d.cx + side * d.r, y: d.cy + sy * (d.r + GAP + LH / 2), anchor: side < 0 ? 'start' : 'end' }));
+    ring(13, true); ring(26, true);
+    return out;
+  };
+  const box = (sp, w) => ({ x: sp.anchor === 'start' ? sp.x : sp.anchor === 'end' ? sp.x - w : sp.x - w / 2, y: sp.y - LH / 2, w, h: LH });
+  /* beside its own drop a label may sit close to a neighbour; anywhere else it keeps its distance, so it cannot be read as the neighbour's */
+  const open = (b, self, sp, strict) => b.x >= 2 && b.y >= 2 && b.x + b.w <= W - 2 && b.y + b.h <= Ht - 2 && !list.some(o => o !== self && hitsDrop(b, o, sp.prime || !strict ? 2 : 12));
+  const leadBox = (sp, d) => { const [ux, uy, e] = sp.lead, x1 = d.cx + ux * d.r, y1 = d.cy + uy * d.r, x2 = d.cx + ux * e, y2 = d.cy + uy * e;
+    return { x: Math.min(x1, x2) - 1.5, y: Math.min(y1, y2) - 1.5, w: Math.abs(x2 - x1) + 3, h: Math.abs(y2 - y1) + 3 }; };
+  const free = (sp, b, d, labels, strict) => open(b, d, sp, strict) && !labels.some(t => hitsRect(b, t.b)) &&
+    (!sp.lead || (lb => !list.some(o => o !== d && hitsDrop(lb, o, 1)) && !labels.some(t => hitsRect(lb, t.b)))(leadBox(sp, d)));
+  const put = (L, k, b) => {
+    const sp = L.spots[k], d = L.d, els = [];
+    if (sp.lead) { const [ux, uy, e] = sp.lead; els.push(top.insertBefore(S('line', { class: 'lead', x1: n(d.cx + ux * (d.r + 2)), y1: n(d.cy + uy * (d.r + 2)), x2: n(d.cx + ux * (e - 3)), y2: n(d.cy + uy * (e - 3)) }), top.firstChild)); }
+    els.push(text(top, d.name, sp.x, sp.y + 4.3, sp.anchor, 'lab'));
+    taken.push({ b, L, k, els }); d.at = sp.where;
+    if (sp.lead) taken.push({ b: leadBox(sp, d), lead: true, owner: L });
+  };
+
+  list.forEach((d, i) => {
+    if (!d.name) return;
+    const wn = textW(d.name, 12, 700), ws = d.sub ? textW(d.sub, 11, 400) : 0;
+    const above = list.slice(i + 1);                           // drops painted over this one
+    const clear = b => !above.some(o => hitsDrop(b, o, 1));
+    const fits = (w, h) => Math.hypot(w / 2, h / 2) <= d.rin - PAD;
+
+    if (d.sub && fits(Math.max(wn, ws), LH * 2 - 2) && clear({ x: d.cx - wn / 2, y: d.cy - LH, w: wn, h: LH * 2 })) {
+      text(d.svg, d.name, 0, -1.5, 'middle', 'lab'); text(d.svg, d.sub, 0, 12, 'middle', 'lab-sub'); d.at = 'inside, with value'; return;
+    }
+    if (fits(wn, 10) && clear({ x: d.cx - wn / 2, y: d.cy - LH / 2, w: wn, h: LH })) {
+      text(d.svg, d.name, 0, 4.3, 'middle', 'lab'); d.at = 'inside'; return;
+    }
+    const spots = spotsFor(d), L = { d, wn, spots };
+    const attempt = strict => {
+      for (let k = 0; k < spots.length; k++) {
+        const b = box(spots[k], wn);
+        if (free(spots[k], b, d, taken, strict)) { put(L, k, b); return true; }
+      }
+      /* nowhere free: see whether one neighbour's label can step aside to a free spot of its own */
+      for (let k = 0; k < spots.length; k++) {
+        const b = box(spots[k], wn);
+        if (spots[k].lead || !open(b, d, spots[k], strict)) continue;
+        const blockers = taken.filter(t => hitsRect(b, t.b));
+        if (blockers.length !== 1 || !blockers[0].L) continue;
+        const B = blockers[0], others = taken.filter(t => t !== B && t.owner !== B.L);
+        for (let j = 0; j < B.L.spots.length; j++) {
+          const nb = box(B.L.spots[j], B.L.wn);
+          if (j === B.k || hitsRect(nb, b) || !free(B.L.spots[j], nb, B.L.d, others, strict)) continue;
+          B.els.forEach(e => e.remove());
+          for (let z = taken.length - 1; z >= 0; z--) if (taken[z] === B || taken[z].owner === B.L) taken.splice(z, 1);
+          put(B.L, j, nb); put(L, k, b); return true;
+        }
+      }
+      return false;
+    };
+    if (attempt(true) || attempt(false)) return;   // second pass: allow a spot that crowds a neighbour over no label at all
+    d.at = 'left out'; dropped++;
+  });
+  spec.dropped = dropped;
+}
+
+/* ── The lens ──
+   The same recipe as the gauge crystal. Inside the bevel, a point at radius r shows what lies at g(r) = r − D·t^p.
+   Each thin ring of the bevel is its own copy of what is underneath, scaled by r / g(r) about the centre of the drop,
+   so lines stay vector-sharp and no filter is involved. Dispersion is two more copies per ring, re-inked warm and cool
+   and bent a little less and a little more. */
+function lens(sc) {
+  const lx = Math.sin(opt.light * Math.PI / 180), ly = -Math.cos(opt.light * Math.PI / 180);
+  const p = 1.7, spread = opt.disp * .12, show = spread > 0 ? 'inline' : 'none';
+  sc.list.forEach(d => {
+    if (!d.N) return;
+    const w = d.w, rin = d.r - w, D = opt.thick * w * 1.8, N = d.N;
+    const at = (rm, k) => Math.max(rm / 5, rm - D * k * Math.pow((rm - rin) / w, p));
+    const set = (u, rm, k, ox, oy) => u.setAttribute('transform', `translate(${n(ox * k)} ${n(oy * k)}) scale(${(rm / at(rm, k)).toFixed(4)})`);
+    d.rings.forEach((R, i) => {
+      const r1 = rin + (i + 1) * w / N, rm = r1 - w / N / 2, t = (rm - rin) / w;
+      const slide = D * Math.pow(t, p) * .16, ox = lx * slide, oy = ly * slide;
+      R.clip.setAttribute('r', n(r1 + .05));
+      R.cover.setAttribute('r', n(rm)); R.cover.setAttribute('stroke-width', n(w / N + 1));
+      R.cool.style.display = R.warm.style.display = show;
+      if (spread > 0) { set(R.cool, rm, 1 + spread, ox, oy); set(R.warm, rm, 1 - spread, ox, oy); }
+      set(R.main, rm, 1, ox, oy);
+    });
+  });
+}
+
+/* ── Scene specs ── */
+const nice = (px, target) => [1, 2, 4, 5, 10].reduce((a, b) => Math.abs(px / b - target) < Math.abs(px / a - target) ? b : a);
+
+function plotSpec() {
+  const W = $('plot').clientWidth, Ht = Math.round(W < 480 ? W * 1.16 : W * .82);
+  const area = { x0: 36, x1: W - 14, y0: 14, y1: Ht - 28 };
+  const X = v => area.x0 + v / 180 * (area.x1 - area.x0), Y = v => area.y1 - v / 8 * (area.y1 - area.y0);
+  const vx = [], hy = [], nums = [];
+  const sx = nice(X(30) - X(0), 12), sy = nice(Y(0) - Y(2), 12);
+  for (let i = 0; i <= 6 * sx; i++) vx.push([X(i * 30 / sx), i === 0 ? 2 : i % sx ? 0 : 1]);
+  for (let i = 0; i <= 4 * sy; i++) hy.push([Y(i * 2 / sy), i === 0 ? 2 : i % sy ? 0 : 1]);
+  for (let s = 0; s <= 180; s += 30) nums.push({ x: n(X(s)), y: Ht - 9, anchor: s === 180 ? 'end' : 'middle', text: s === 180 ? '180 s' : String(s) });
+  for (let c = 2; c <= 8; c += 2) nums.push({ x: 30, y: n(Y(c) + 4), anchor: 'end', text: c + '%' });
+  const rmax = clamp(W * .115, 34, 62) * opt.size;
+  const dots = SOURCES.map(s => ({ ...s, cx: X(s.x), cy: Y(s.y), r: Math.max(4, rmax * Math.sqrt(s.v / 38.2)) }));
+  return { W, Ht, area, vx, hy, nums, dots };
+}
+
+let closeHue = 'cobalt';
+function closeSpec() {
+  const W = $('close').clientWidth, r = clamp((W - 110) / 2, 70, 130) * clamp(opt.size, .6, 1.25), Ht = Math.round(r * 2 + 96);
+  const area = { x0: 0, x1: W, y0: 0, y1: Ht }, step = 12, vx = [], hy = [];
+  const cx = Math.round(W / 2 / step) * step + 4, cy = Math.round(Ht / 2 / step) * step - 3;   // a little off the grid, so no line runs dead through the centre
+  for (let i = 0, x = (W % step) / 2; x <= W; x += step, i++) vx.push([x, i % 5 ? 0 : 1]);
+  for (let i = 0, y = (Ht % step) / 2; y <= Ht; y += step, i++) hy.push([y, i % 5 ? 0 : 1]);
+  const ch = Object.values(CHANNELS).find(c => c[1] === closeHue), key = Object.keys(CHANNELS).find(k => CHANNELS[k][1] === closeHue);
+  const total = SOURCES.filter(s => s.ch === key).reduce((a, s) => a + s.v, 0);
+  return { W, Ht, area, vx, hy, dots: [{ cx, cy, r, hue: closeHue, name: ch[0], sub: total.toFixed(1) + 'k visitors' }] };
+}
+
+/* ── Build ── */
+let plot, close;
+const build = () => { plot = scene($('plot'), plotSpec()); close = scene($('close'), closeSpec()); };
+
+$('legend').innerHTML = Object.values(CHANNELS).map(([label, hue]) => `<li><span class="bead" style="--hue:var(--h-${hue})"></span>${label}</li>`).join('');
+$('table').innerHTML = '<caption>Traffic sources, last 30 days</caption><tr><th>Source</th><th>Channel</th><th>Visitors</th><th>Engaged time</th><th>Conversion rate</th></tr>' +
+  SOURCES.map(s => `<tr><td>${s.name}</td><td>${CHANNELS[s.ch][0]}</td><td>${Math.round(s.v * 1000)}</td><td>${s.x} seconds</td><td>${s.y}%</td></tr>`).join('');
+$('hues').insertAdjacentHTML('beforeend', Object.values(CHANNELS).map(([label, hue], i) =>
+  `<label class="pick"><input type="radio" name="hue" value="${hue}"${i ? '' : ' checked'}><span class="bead" style="--hue:var(--h-${hue})"></span>${label}</label>`).join(''));
+document.querySelectorAll('input[name=hue]').forEach(r => r.addEventListener('change', () => { closeHue = r.value; close = scene($('close'), closeSpec()); }));
+
+/* ── Tweaks ── */
+const root = document.documentElement;
+const light = () => {
+  root.style.setProperty('--light', opt.light + 'deg');
+  root.style.setProperty('--lx', Math.sin(opt.light * Math.PI / 180).toFixed(3));
+  root.style.setProperty('--ly', (-Math.cos(opt.light * Math.PI / 180)).toFixed(3));
+};
+const show = () => {
+  $('o-size').textContent = opt.size.toFixed(2) + '×';
+  $('o-bevel').textContent = Math.round(opt.bevel * 100) + '%';
+  $('o-thick').textContent = opt.thick.toFixed(2);
+  $('o-disp').textContent = opt.disp.toFixed(2);
+  $('o-tint').textContent = opt.tint.toFixed(2);
+  $('o-light').textContent = Math.round(opt.light) + '°';
+};
+let pend = 0, late = 0, again = 0;
+const rebuild = () => { if (!again) again = requestAnimationFrame(() => { again = 0; build(); }); };
+const relens = () => {            // the close-up on the next frame, the chart once the control stops moving
+  if (!pend) pend = requestAnimationFrame(() => { pend = 0; lens(close); });
+  clearTimeout(late); late = setTimeout(() => lens(plot), 90);
+};
+$('t-size').addEventListener('input', e => { opt.size = +e.target.value; rebuild(); show(); });
+$('t-bevel').addEventListener('input', e => { opt.bevel = e.target.value / 100; rebuild(); show(); });
+$('t-thick').addEventListener('input', e => { opt.thick = +e.target.value; relens(); show(); });
+$('t-disp').addEventListener('input', e => { opt.disp = +e.target.value; relens(); show(); });
+$('t-tint').addEventListener('input', e => { opt.tint = +e.target.value; root.style.setProperty('--tint', opt.tint); show(); });
+$('t-light').addEventListener('input', e => { opt.light = +e.target.value; light(); relens(); show(); });
+$('t-glass').addEventListener('change', e => { opt.glass = e.target.checked; build(); });
+
+const dark = () => root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+const radios = [...document.querySelectorAll('input[name=display]')];
+const syncDisplay = () => radios.forEach(r => { r.checked = (r.value === 'dark') === dark(); });
+radios.forEach(r => r.addEventListener('change', () => { root.dataset.theme = r.value; }));
+syncDisplay();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', syncDisplay);
+new MutationObserver(syncDisplay).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+
+/* With a mouse, the light follows the pointer around the close-up drop. */
+let raf = 0;
+$('close').addEventListener('pointermove', e => {
+  if (e.pointerType !== 'mouse' || raf) return;
+  raf = requestAnimationFrame(() => {
+    raf = 0;
+    const b = close.list[0].el.getBoundingClientRect(), dx = e.clientX - (b.left + b.width / 2), dy = e.clientY - (b.top + b.height / 2);
+    if (Math.hypot(dx, dy) < 12) return;
+    opt.light = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
+    $('t-light').value = opt.light; light(); relens(); show();
+  });
+});
+
+let rz = 0, lastW = 0;
+addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { if ($('plot').clientWidth !== lastW) { lastW = $('plot').clientWidth; build(); } }, 120); });
+light(); show(); build(); lastW = $('plot').clientWidth;
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(build);   // label widths depend on the face
+window.__drops = () => ({ plot: plot.list.map(d => [d.name, d.at, Math.round(d.r)]), close: close.list.map(d => [d.name, d.at]) });
+})();
+</script>
+</body>
+</html>

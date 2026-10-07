@@ -1,3 +1,3 @@
 import { defineConfig } from 'vite';
 
-export default defineConfig({ build: { rollupOptions: { input: ['index.html', 'tokens.html', 'spike.html'] } } });
+export default defineConfig({ build: { rollupOptions: { input: ['index.html', 'tokens.html', 'materials.html', 'spike.html'] } } });

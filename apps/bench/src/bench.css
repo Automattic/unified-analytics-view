@@ -89,3 +89,21 @@ h2 small { display: inline; }
 .dash::before, .dash::after { content: ''; position: absolute; }
 .dash::before { inset-inline-start: 0; inset-block-start: calc(20% + 4px); inline-size: 60%; block-size: 4px; background: repeating-linear-gradient(90deg, var(--ua-color-marker) 0 10px, transparent 10px 20px); }
 .dash::after { inset-inline-start: calc(90% + 4px); inset-block-start: 0; inline-size: 4px; block-size: 100%; background: repeating-linear-gradient(180deg, var(--ua-color-marker) 0 10px, transparent 10px 20px); }
+
+/* A grid to see a material against: 16 px lines, heavier every 80. */
+.gridded { background-image: linear-gradient(var(--ua-color-foreground-8) 1px, transparent 1px), linear-gradient(90deg, var(--ua-color-foreground-8) 1px, transparent 1px),
+    linear-gradient(var(--ua-color-foreground-8) 1px, transparent 1px), linear-gradient(90deg, var(--ua-color-foreground-8) 1px, transparent 1px);
+  background-size: 80px 80px, 80px 80px, 16px 16px, 16px 16px; }
+.defs { position: absolute; inline-size: 0; block-size: 0; }
+
+/* The materials page. A stage is a square with room around it for the light's dot; the plate is the surface under the material. */
+.stages { display: flex; flex-wrap: wrap; align-items: end; gap: var(--ua-space-xl); margin-block-end: var(--ua-space-l); }
+.stages figure { margin: 0; display: grid; justify-items: center; gap: var(--ua-space-s); }
+.stage { position: relative; aspect-ratio: 1; margin: var(--ua-space-m); }
+.plate { position: absolute; inset: 0; border-radius: 50%; display: grid; place-items: center; container-type: inline-size; }
+.plate b { font-size: 22cqi; }
+.sun { position: absolute; inline-size: 6px; block-size: 6px; margin: -3px; border-radius: 50%; background: var(--ua-color-foreground);
+  inset-inline-start: calc(50% + var(--ua-light-x) * 56%); inset-block-start: calc(50% + var(--ua-light-y) * 56%); }
+[data-crystal="off"] .ua-crystal { display: none; }
+/* Frost as a swatch: a disc over the plate, like the crystal. */
+.plate .ua-frost { position: absolute; inset: 0; border-radius: 50%; }

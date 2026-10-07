@@ -1,3 +1,5 @@
+import type { FitRule } from './fit.ts';
+
 /* Catalog: the slice of the semantic model the front end needs. */
 export type Polarity = 'up' | 'down' | 'none';
 export interface MetricDef {
@@ -66,12 +68,12 @@ export type PresetLibrary = Record<string, { layers: Layer[] }>;
  * durable behaviour a context hands to every container it holds. */
 export type ReductionId = 'drop-guides' | 'drop-secondary' | 'trim-rows' | 'collapse' | 'prose';
 export interface ContainerRules {
-  axes: { minWidth: number; minHeight: number; height: number };
-  secondary: { minPlotWidth: number; minPlotHeight: number };
-  bare: { minPlotWidth: number; height: number };
-  rows: { rowHeight: number; gap: number; minLabelWidth: number };
-  band: { minWidth: number; minWidthWithLegend: number };
-  notice: { minWidth: number };
+  /** The room each part needs, and what is given up without it. */
+  fit: FitRule[];
+  /* Sizes the pixel scene is built to. */
+  axes: { minHeight: number; height: number };
+  bare: { height: number };
+  rows: { rowHeight: number; gap: number };
   /** When the tldr value sits above the marks while there is room for both. */
   tldrValue: { above: 'instant' | 'always' };
   order: ReductionId[];

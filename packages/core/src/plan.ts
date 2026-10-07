@@ -1,4 +1,5 @@
 import { CONTAINER_RULES, KEEP } from './container.ts';
+import { applies, type FitRule } from './fit.ts';
 import { PRESETS, expand } from './presets.ts';
 import { buildScene, tldrValueText, tldrValue, isDim, valueRoomOf } from './scene.ts';
 import { tldrProse } from './prose.ts';
@@ -53,24 +54,31 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   }
 
   const valueLen = tldrValueText(catalog, q, result, true).length;
-  const sideMin = Math.max(76, container.displayWidth(valueLen));
+  const rule = (id: string) => rules.fit.find((r) => r.layout === p.layout && r.id === id);
+  // The view rule the layout stands on now, and the room beside its part that only measuring gives:
+  // a number wider than the 76 px the bare plot's rule allows it, or a row's widest value.
+  function guard(): { rule?: FitRule; measured: number } {
+    if (p.layout === 'cartesian') return p.side ? { rule: rule('marks'), measured: Math.max(0, container.displayWidth(valueLen) - 76) } : { rule: rule('axes'), measured: 0 };
+    if (p.layout === 'rows') return { rule: rule('marks'), measured: valueRoomOf(catalog, p.layers, result.rows) };
+    if (p.layout === 'band') return { rule: rule(p.guides.legend === 'full' ? 'legend' : 'marks'), measured: 0 };
+    return { rule: rule('notice'), measured: 0 };
+  }
+  // A number that stands alone or above the marks has to fit too. No rule can say so: the need is its own width.
+  const numberWidth = () => (p.layout === 'none' || (p.tldrValue && !p.side && p.layout !== 'prose') ? container.displayWidth(valueLen) : 0);
   function minWidth(): number {
-    let w = 0;
-    if (p.layout === 'none') w = container.displayWidth(valueLen);
-    else if (p.layout === 'notice') w = rules.notice.minWidth;
-    else if (p.layout === 'cartesian') w = p.side ? sideMin + 12 + rules.bare.minPlotWidth : (p.guides.x || p.guides.y) ? rules.axes.minWidth : rules.bare.minPlotWidth;
-    else if (p.layout === 'rows') w = valueRoomOf(catalog, p.layers, result.rows) + rules.rows.minLabelWidth;
-    else if (p.layout === 'band') w = p.guides.legend === 'full' ? rules.band.minWidthWithLegend : rules.band.minWidth;
-    return p.tldrValue && !p.side && p.layout !== 'prose' ? Math.max(w, container.displayWidth(valueLen)) : w;
+    const g = guard();
+    return Math.max(((g.rule && g.rule.needs.inline) || 0) + g.measured, numberWidth());
   }
   let scene!: Scene;
   function fits(): boolean {
     scene = buildScene(p, q, result, container, catalog);
     if (p.layout === 'prose') return true;
-    if (container.width < minWidth()) return false;
+    const g = guard(), view = { inline: container.width, block: container.height };
+    if (view.inline < numberWidth() || (g.rule && applies(g.rule, { view: { inline: view.inline - g.measured, block: view.block } }))) return false;
+    // A rule's block need is the least its part can take. What the view really takes depends on its content, so the scene is measured as well.
     if (container.height != null && scene.height > container.height) return false;
-    if (p.layout === 'cartesian' && scene.plot && p.layers.some((l) => roleOf(l) !== 'primary'))
-      return scene.plot.w >= rules.secondary.minPlotWidth && scene.plot.h >= rules.secondary.minPlotHeight;
+    const secondary = rule('secondary');
+    if (secondary && scene.plot && p.layers.some((l) => roleOf(l) !== 'primary')) return !applies(secondary, { view, plot: { inline: scene.plot.w, block: scene.plot.h } });
     return true;
   }
   const act: Record<ReductionId, () => string | null> = {
@@ -111,7 +119,8 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
     const what = act[st.id]();
     if (what) { st.state = 'applied'; dropped.push(what); done = fits(); } else st.state = 'nothing to drop';
   });
-  if (p.layout === 'cartesian' && p.guides.x && container.width < 380 && isDim(catalog, by) && catalog.dimensions[by]!.type === 'time') dropped.push('the middle date label');
+  const midTick = rule('mid-tick');
+  if (p.layout === 'cartesian' && p.guides.x && midTick && applies(midTick, { view: { inline: container.width } }) && isDim(catalog, by) && catalog.dimensions[by]!.type === 'time') dropped.push('the middle date label');
 
   return {
     preset: spec0.use && !spec0.layers ? spec0.use : null, layout: p.layout,

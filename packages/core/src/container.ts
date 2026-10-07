@@ -1,15 +1,14 @@
+import { FIT_RULES } from './fit.ts';
 import type { Container, ContainerRules, KeepPart, PainterName, ReductionId } from './types.ts';
 
-/* The container owns sizes. It states the least room each kind of part needs,
- * and the order in which parts are given up when a view does not fit.
+/* The container owns sizes. Its fit rules state the least room each part needs,
+ * and `order` the order in which parts are given up when a view does not fit.
  * These are the defaults; a context passes its containers a different set. */
 export const CONTAINER_RULES: ContainerRules = {
-  axes:      { minWidth: 280, minHeight: 120, height: 184 },   // a plot with axes
-  secondary: { minPlotWidth: 180, minPlotHeight: 90 },         // comparison and reference layers stay legible above this
-  bare:      { minPlotWidth: 64, height: 46 },                 // a plot with no guides, set beside the number
-  rows:      { rowHeight: 28, gap: 4, minLabelWidth: 90 },
-  band:      { minWidth: 110, minWidthWithLegend: 170 },
-  notice:    { minWidth: 150 },
+  fit:       FIT_RULES,
+  axes:      { minHeight: 120, height: 184 },                  // a plot with axes: its least and its natural height
+  bare:      { height: 46 },                                   // a plot with no guides, set beside the number
+  rows:      { rowHeight: 28, gap: 4 },
   tldrValue: { above: 'instant' },                             // above the marks only for an instant metric
   order:    ['drop-guides', 'drop-secondary', 'trim-rows', 'collapse', 'prose'],
 };

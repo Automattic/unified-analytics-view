@@ -56,7 +56,11 @@ export function keyed<N extends SceneNode>(parent: Element, nodes: N[], tag: (n:
   old.forEach((c) => c.remove());
 }
 
-const attr = (el: Element, name: string, v: string | number | null | undefined) => (v == null ? el.removeAttribute(name) : el.setAttribute(name, String(v)));
+/** Set, change or clear an attribute. An element that already says so is not touched. */
+export function attr(el: Element, name: string, v: string | number | null | undefined): void {
+  if (el.getAttribute(name) === (v == null ? null : String(v))) return;
+  if (v == null) el.removeAttribute(name); else el.setAttribute(name, String(v));
+}
 /** Set or clear one style property. Positions go in as the prefixed ratios: --vg-x, --vg-w, --vg-v, --vg-t. */
 export function prop(el: HTMLElement | SVGElement, name: string, v: string | number | null | undefined): void {
   if (v == null) el.style.removeProperty(name); else el.style.setProperty(name, String(v));

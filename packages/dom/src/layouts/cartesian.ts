@@ -2,6 +2,7 @@ import type { LineNode, PathNode, RectNode, SceneNode, TextNode } from '@univers
 import { ensure, ensureSvg, keyed, prop, text } from '../dom.ts';
 import type { LayoutPainter } from '../layout.ts';
 import { thin } from '../measure.ts';
+import { morph } from '../motion.ts';
 
 /* A dimension on x, a metric on y. The y axis is a column sized by its labels, the x axis a row under the plot,
  * and the plot a size container, so rules about roles can ask how much room the marks have.
@@ -60,10 +61,15 @@ export const cartesian: LayoutPainter = {
   // is above the plot. A `plot` rule in core, and the y axis inside that container, would say it properly.
   rules: [{ id: 'y-ticks', layout: 'cartesian', container: 'view', needs: { block: 152 }, hide: ['y-tick.ranked'] }],
 
-  // X labels that would collide, by their real widths. One a fit rule has hidden has no box and is passed over.
+  // X labels that would collide, by their real widths. One a fit rule has hidden has no box and is passed over, and
+  // so is one that is leaving. Each is placed from its ratio, not read where it stands: a label may be on its way.
   measure(body) {
-    const labels = Array.from(body.querySelectorAll<HTMLElement>('.vg-x-axis > span')).filter((el) => el.getClientRects().length);
-    const gone = thin(labels.map((el) => { const r = el.getBoundingClientRect(); return { lo: r.left, hi: r.right, rank: Number(el.dataset.rank) || 0 }; }));
+    const labels = Array.from(body.querySelectorAll<HTMLElement>('.vg-x-axis > span:not([data-exit])')).filter((el) => el.getClientRects().length);
+    const room = body.querySelector('.vg-x-axis')!.getBoundingClientRect().width;
+    const gone = thin(labels.map((el) => {
+      const w = el.getBoundingClientRect().width, lo = Number(el.style.getPropertyValue('--vg-x')) * room - (el.dataset.anchor === 'start' ? 0 : el.dataset.anchor === 'end' ? w : w / 2);
+      return { lo, hi: lo + w, rank: Number(el.dataset.rank) || 0 };
+    }));
     labels.forEach((el, i) => el.toggleAttribute('data-thin', gone[i]));
   },
 
@@ -86,7 +92,7 @@ export const cartesian: LayoutPainter = {
     keyed(grid, nodes.filter((n): n is LineNode => inPlot(n) && n.kind === 'line' && n.layer === 'guide'), () => 'i', line);
     keyed(bars, nodes.filter((n): n is RectNode => inPlot(n) && n.kind === 'rect'), () => 'i', (el, n) => { prop(el, '--vg-x', n.x); prop(el, '--vg-w', n.w); prop(el, '--vg-v', n.v); });
     keyed(svg, nodes.filter((n): n is PathNode => inPlot(n) && n.kind === 'path'), () => 'path', (el, n) => {
-      el.setAttribute('d', n.d ?? ''); el.toggleAttribute('data-fill', !!n.fill);
+      morph(el as SVGElement, n); el.toggleAttribute('data-fill', !!n.fill);
       prop(el, 'stroke-width', n.fill ? null : n.width || 2); prop(el, 'stroke-dasharray', n.dash);
     });
     keyed(refs, nodes.filter((n): n is LineNode | TextNode => inPlot(n) && ((n.kind === 'line' && n.layer === 'data') || n.kind === 'text')), (n) => (n.kind === 'line' ? 'i' : 'span'), (el, n) => {

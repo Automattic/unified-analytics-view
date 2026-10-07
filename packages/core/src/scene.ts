@@ -2,8 +2,7 @@ import { max, sum } from 'd3-array';
 import { scaleBand, scaleLinear, scalePoint } from 'd3-scale';
 import { area, curveMonotoneX, line } from 'd3-shape';
 import { CHAR_W, delta, fmt, fmtDay, fmtPct } from './format.ts';
-import { roleOf } from './plan.ts';
-import type { Catalog, Guides, Layer, Part, PathNode, PlanShape, Query, Result, Row, Scene, SceneNode } from './types.ts';
+import type { Catalog, Guides, Layer, Part, PathNode, PlanShape, Query, Result, Role, Row, Scene, SceneNode } from './types.ts';
 
 /* Node kinds: rect, path, line, circle, text. Every node has a stable key,
  * a part, a paint token (never a colour) and a layer: "data" or "guide".
@@ -11,6 +10,10 @@ import type { Catalog, Guides, Layer, Part, PathNode, PlanShape, Query, Result, 
 type Body = Pick<Scene, 'nodes' | 'rows' | 'scale'>;
 
 const num = (r: Row, f: string) => r[f] as number;
+/** The role a layer plays: the one it states, or the one its mark and series imply. */
+export function roleOf(l: Layer): Role {
+  return l.role || (l.series === 'previous' ? 'comparison' : l.mark === 'rule' ? 'reference' : 'primary');
+}
 export function isDim(catalog: Catalog, f: unknown): f is string { return typeof f === 'string' && f in catalog.dimensions; }
 
 /** How a plot shares x among its rows. The scene uses it on 0 to 1 and place() in pixels, so both divide the room the same way. */

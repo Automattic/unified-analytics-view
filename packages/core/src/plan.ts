@@ -2,17 +2,13 @@ import { CONTAINER_RULES, KEEP } from './container.ts';
 import { applies, ruleFor, type FitRule } from './fit.ts';
 import { PRESETS, expand } from './presets.ts';
 import { place } from './place.ts';
-import { buildScene, tldrValueText, isDim, valueRoomOf } from './scene.ts';
+import { buildScene, tldrValueText, isDim, roleOf, valueRoomOf } from './scene.ts';
 import { tldrProse } from './prose.ts';
 import type { Catalog, Container, Layer, Layout, Plan, PlanShape, PresetLibrary, Query, Reduction, ReductionId, Result, Role, PlacedScene, Spec } from './types.ts';
 
 /* Start from everything the spec asks for, then apply the container's reductions
  * in order until the view fits. Layers carry a role; reductions act on roles. */
 const ROLE_NAMES: Partial<Record<Role, string>> = { comparison: 'comparison series', reference: 'reference lines', context: 'context fill' };
-
-export function roleOf(l: Layer): Role {
-  return l.role || (l.series === 'previous' ? 'comparison' : l.mark === 'rule' ? 'reference' : 'primary');
-}
 
 function detectLayout(catalog: Catalog, layers: Layer[]): Layout {
   if (layers.some((l) => l.encode && isDim(catalog, l.encode.x))) return 'cartesian';

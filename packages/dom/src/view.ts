@@ -278,13 +278,18 @@ export class UaView extends Base {
     // Whether the number shows, and where, is the stylesheet's to say, and under the prose it has no box to read.
     // ponytail: so a view that is prose is laid out twice in a run. Keep both in the flow, hidden, if that ever costs.
     fig.removeAttribute('data-fit');
+    const note = number.querySelector<HTMLElement>(':scope > .vg-f-tick');
+    if (note) note.hidden = false;
     let fit: string | null = null, prose = false;
     if (number.getClientRects().length) {
       const beside = body.getClientRects().length > 0 && body.offsetTop < number.offsetTop + number.offsetHeight;
       if (beside) {
-        // Beside the marks the layout's own rules set the number, so it is measured as it stands.
+        // Beside the marks the layout's own rules set the number, so it is measured as it stands. A note that
+        // makes it taller than the box is given up before the number is, as fitNumber does for a number alone.
         number.removeAttribute('data-fit');
-        prose = number.offsetWidth > room.inline || (room.block != null && number.offsetHeight > room.block);
+        const tall = () => room.block != null && number.offsetHeight > room.block;
+        if (note && tall()) note.hidden = true;
+        prose = number.offsetWidth > room.inline || tall();
       } else { fit = fitNumber(room, sizes); prose = fit == null; }
     }
     attr(number, 'data-fit', fit);

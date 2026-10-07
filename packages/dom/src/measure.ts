@@ -23,13 +23,13 @@ export interface NumberSizes {
 export const NUMBER_FITS = ['', 'short', 'small short'];
 
 /** The number's `data-fit` for this room: the first form whose value fits, the delta's short form when the long
- * one does not fit, and no note when it would be cut. Null when no form fits the width, or the number is taller
+ * one does not fit, and no note when it would be cut or would make the number taller than the box. The note is
+ * given up before the number is. Null when no form fits the width, or that form without its note is still taller
  * than the box: the view then falls to its prose. */
 export function fitNumber(room: Room, sizes: NumberSizes): string | null {
   const form = sizes.forms.find((f) => f.inline <= room.inline);
-  if (!form) return null;
-  const note = !!sizes.note && sizes.note.inline <= room.inline;
-  if (room.block != null && form.block + (note ? sizes.note!.block : 0) > room.block) return null;
+  if (!form || (room.block != null && form.block > room.block)) return null;
+  const note = !!sizes.note && sizes.note.inline <= room.inline && (room.block == null || form.block + sizes.note.block <= room.block);
   return [form.fit, sizes.delta != null && sizes.delta > room.inline && 'delta-short', sizes.note && !note && 'no-note'].filter(Boolean).join(' ');
 }
 

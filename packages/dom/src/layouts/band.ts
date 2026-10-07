@@ -1,4 +1,57 @@
-import { unbuilt } from '../layout.ts';
+import type { RectNode, SceneNode, TextNode } from '@universal-analytics/core';
+import { ensure, keyed, prop, text } from '../dom.ts';
+import type { LayoutPainter } from '../layout.ts';
 
-/* Not built yet. The share band and its two legends: docs/dom-painter-plan.md section 4, and the seam in ../layout.ts. */
-export const band = unbuilt('band');
+/* One band, split by colour, and its legend. Segments are flex items that grow by their share, so the band needs no
+ * width. The scene holds both legends: the full one is a grid of swatch, label and share, the one-line one a line of
+ * text. The stylesheet shows one of them. Sizes are the pixel painter's: a 24 px bar and 24 px to a legend row. */
+const css = `
+.vg-band { display: flex; gap: 2px; block-size: 24px; }
+.vg-band i { flex: var(--vg-v) 1 0px; min-inline-size: 0; background: var(--vg-paint); border-radius: var(--a8c-charts-border-radius-bar, 2px); }
+.vg-legend { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; grid-auto-rows: 20px; gap: 4px 8px; align-items: center; margin-block-start: 10px; }
+.vg-legend i { grid-column: 1; block-size: 12px; border-radius: 2px; background: var(--vg-paint); }
+.vg-legend span, .vg-legend-top span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--vg-paint); }
+.vg-legend .vg-f-label { grid-column: 2; }
+.vg-legend .vg-f-value { grid-column: 3; justify-self: end; }
+.vg-legend-top { display: none; }
+.vg-legend-top span { display: block; padding-block-start: 3px; line-height: 21px; }
+/* The plan names one legend, and with no limits it is the full one. */
+.vg[data-layout="band"]:not([data-parts~="legend"]) .vg-legend { display: none; }
+.vg[data-layout="band"][data-parts~="legend-top"] .vg-legend-top { display: block; }
+/* In a box the body is a size container, so cqb is the room the band and its legend have. The full legend needs the
+ * bar, 10 px and 24 px a row less the last gap: a height that depends on the data, which a container query cannot
+ * hold, so paint() states the row count and a clamp does the swap. A box too short for either clips. */
+@container view (block-size >= 0px) {
+  .vg[data-layout="band"] .vg-body { container-type: size; overflow: hidden; --vg-legend-block: calc(30px + var(--vg-rows, 1) * 24px); }
+  .vg[data-layout="band"]:not([data-keep~="guides"]) .vg-legend { overflow: hidden; max-block-size: max(0px, (100cqb - var(--vg-legend-block) + 0.01px) * 999999); }
+  .vg[data-layout="band"]:not([data-keep~="guides"]) .vg-legend-top { display: block; overflow: hidden; max-block-size: max(0px, (var(--vg-legend-block) - 100cqb) * 999999); }
+}`;
+
+// The number alone. The body goes whole, the one-line legend with it, and so does its grid row.
+const alone = { '': 'grid-template: "number" auto / minmax(0, 1fr);', '.vg-body': 'display: none;', '.vg-number': 'margin: 0;' };
+
+export const band: LayoutPainter = {
+  layout: 'band',
+  css,
+  fit: {
+    // The rule's data only sets a switch. This is the swap, whatever the box's height says.
+    legend: { '.vg-legend': 'display: none;', '.vg-legend-top': 'display: block; max-block-size: none;' },
+    marks: alone,
+    'marks-block': alone,
+  },
+  // ponytail: core's `marks` rule for a band has no block need, so this holds the bar and the one-line legend, 24 px
+  // each. Wrong when the number is above the band. A block need on core's rule would say it properly.
+  rules: [{ id: 'marks-block', layout: 'band', container: 'view', needs: { block: 48 }, hide: ['band', 'legend'], show: ['number'], keep: 'marks' }],
+
+  paint(body, scene) {
+    const rows = scene.rows ?? [], nodes = (part: string) => scene.nodes.filter((n) => n.part === part);
+    const segs = ensure(body, 'div', 'vg-band'), legend = ensure(body, 'div', 'vg-legend'), top = ensure(body, 'div', 'vg-legend-top');
+    segs.setAttribute('aria-hidden', 'true');
+    prop(body, '--vg-rows', rows.length);
+    // A kept element is never moved, so a segment that enters between two others is put in its place by `order`.
+    const place = (el: HTMLElement | SVGElement, n: SceneNode) => prop(el, 'order', n.row == null ? null : rows.indexOf(n.row));
+    keyed(segs, nodes('band').filter((n): n is RectNode => n.kind === 'rect'), () => 'i', (el, n) => { prop(el, '--vg-v', n.v); place(el, n); });
+    keyed(legend, nodes('legend'), (n) => (n.kind === 'text' ? 'span' : 'i'), (el, n) => { if (n.kind === 'text') text(el, n); place(el, n); });
+    keyed(top, nodes('legend-top').filter((n): n is TextNode => n.kind === 'text'), () => 'span', text);
+  },
+};

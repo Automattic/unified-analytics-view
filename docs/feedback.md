@@ -19,7 +19,7 @@ The rules are data in `packages/core/src/fit.ts` and `resolve()` reads them. No 
    - A bar list: the rule holds the label's 90 px, and the widest value's room is added in code. Top pages collapses at 120 px where the rule alone keeps it.
    - Heights that depend on content: a full legend under a height limit, a number above rows, a number too tall for the view.
 3. **`keep` means two different things.** In the reducer a kept step is skipped and the next one is tried. A compiled rule would only be switched off. `resolve()` still takes `keep` from the `KEEP` map per reduction; the rule's own `keep` field is there for the CSS compiler.
-4. **The notice has no height need.** `resolve()` collapses it under 40 px, but 40 was never a `CONTAINER_RULES` number, so no rule carries it.
+4. **The notice had no height need.** `resolve()` collapses it under 40 px, but 40 was never a `CONTAINER_RULES` number, so no rule carried it. Fixed in `4f3d51b`: the `notice` rule has `block: 40`, and `place()` builds the notice to it. A notice never has the number above it, so the view's need is the notice's own.
 
 **To decide:** whether the DOM painter accepts these gaps as measured-pass work, or the rule shape grows a way to say "this part's need includes that part's size".
 
@@ -33,13 +33,13 @@ The rules are data in `packages/core/src/fit.ts` and `resolve()` reads them. No 
 4. **Four parts have no 0-to-1 coordinates:** `number`, `rows`, `legend` and `notice`. They are text in flow or fixed-height rows. Their nodes carry `row` and order, and `place()` supplies the pixel constants.
 5. **A `notice` part was added** for the empty state. The plan's fixed part sets lacked it.
 6. **The number's nodes are always in the scene,** even when the plan does not show it, because a rule's `show: ['number']` needs something to show. `scene.parts` says what the plan shows.
-7. **The band's one-line legend is not emitted beside the full legend.** Step 4 needs both if a rule swaps them.
+7. **The band's one-line legend was not emitted beside the full legend.** Fixed in `6b18cd5`: the scene carries both. The one-line legend is its own part, `legend-top`, and `scene.parts` names the one the plan shows, as it does for the number. `place()` draws only the parts named, so the pixel scenes are unchanged. Still open: the keys are the prototype's, `legend:` plus the segment and `legend:top`, so a segment called "top" would now meet the one-line legend's key. No fixture has one. Renaming either key changes every parity case for the band, so it is a deliberate departure to decide, not a quiet fix.
 8. **A bare sparkline will sit slightly lower in the DOM than in pixels.** The prototype rounds the y scale only when the y guides are on, so a bare plot fills its height. One unbounded scene always rounds. Kept for parity in pixels; not settled for the DOM.
 9. **The four-tick departure touches no swept case.** Under the default rules a plot with axes is never under 120 px tall. It is named in its own test, with a context that allows an 80 px plot.
 10. **The tick rank policy was the agent's choice.** A tick is unranked if a two-tick scale would also have it, otherwise `rank: 1`. "Keep only the ends" was tried and dropped, because it thinned the trend more than the prototype does.
 11. **The middle x tick uses `rank: 1`,** not a `mid` class. The fit rule's `x-tick.mid` has to map to it.
 12. **No scene nodes for the hit targets.** `scene.rows` gives the painter the list.
-13. **There is no "unbounded" container.** A browser caller passes `makeContainer(Infinity)`. It works and is tested, but it is a convention, not an API.
+13. **There was no "unbounded" container.** A browser caller passed `makeContainer(Infinity)`, a convention and not an API. Fixed in `cfab2cd`: `unboundedContainer(painter?, cell?)`. The convention still works and is still tested.
 
 ## Findings: step 3, the spike
 
@@ -68,10 +68,14 @@ How far the verdicts go:
 
 ## Bugs
 
-1. **Prototype: duplicate keys on a one-row time series.** A time series with exactly one row emits two `xtick` nodes with the same key. No swept case reaches it. Kept and flagged, as the parity rule asks. To fix it, change the behaviour and the test together, on purpose.
-2. **`scene.ts` hard-codes numbers the rules now own.** 380 for the middle tick, 76 for the number beside a bare plot, 40 as the notice's least height. A context that changes the `mid-tick` rule changes what is reported as dropped, but not what is drawn. Open.
-3. **One number held twice.** `axes.minHeight: 120` (the size `place()` builds to) and the `axes` rule's `block: 120`. A context that lowers one must lower the other, or the axes are dropped anyway. The y tick test hit exactly this at the merge. Open.
-4. **Import cycle between `scene.ts` and `plan.ts`.** `scene.ts` imports `roleOf` from `plan.ts`. It is safe, since each uses the other only inside functions. Moving `roleOf` out would remove it. Open.
+1. **Prototype: duplicate keys on a one-row time series.** A time series with exactly one row emits two `xtick` nodes with the same key. No swept case reaches it. Fixed in `37edd5d`, as a departure from the prototype on purpose: one row has one tick. It has its own test, which shows the prototype's two and says why ours differs. The prototype itself is unchanged.
+2. **`place.ts` and `plan.ts` hard-coded numbers the rules now own.** 380 for the middle tick, 76 for the number beside a bare plot, 40 as the notice's least height. A context that changed the `mid-tick` rule changed what was reported as dropped, but not what was drawn. Fixed in `4f3d51b`:
+   - `place()` asks the `mid-tick` rule, with the question `resolve()` asks.
+   - 40 is the `notice` rule's block need.
+   - 76 is `rules.bare.numberWidth`, read by both. A fit rule could not carry it: it is not a container's need but one term of the `marks` rule's 152 (76, a 12 px gap and a 64 px plot). So it is still held twice in that sense. A context that changes `numberWidth` should change the `marks` need with it.
+   - Not touched: 120 px, the plot height under which `place()` drops ranked y ticks. No rule carries it, and section 3 of the plan says one should. A `plot` rule with `block: 120` would say it.
+3. **One number held twice.** `axes.minHeight: 120` (the size `place()` builds to) and the `axes` rule's `block: 120`. A context that lowered one had to lower the other, or the axes were dropped anyway. Fixed in `5ee81d2`: `axes.minHeight` is removed and `place()` builds to the rule's block need. The y tick test lowers one number. The same pair remains for a bare plot, `bare.height: 46` and the cartesian `marks` rule's `block: 46`. There the first is the height the plot is drawn at, not only its least, so it was left. Open.
+4. **Import cycle between `scene.ts` and `plan.ts`.** `scene.ts` imported `roleOf` from `plan.ts`. Fixed in `112871a`: `roleOf` lives in `scene.ts`, beside `isDim`, and `plan.ts` imports it. The package index exports it as before.
 5. **The test run picked up agent worktrees.** `vitest run` globbed `.claude/worktrees/` and reported another agent's unfinished work as a failure here. Fixed in `898dd8e`: `pnpm test` runs `--dir test`, and the worktrees are ignored by git.
 6. **`tokens-generate` fails on the working copy.** Uncommitted token edits from another session, not a fault in the committed code. Two parts:
    - `generated/` did not match the edited config. Fixed: it has been regenerated, and "is what the config generates" passes.
@@ -80,7 +84,7 @@ How far the verdicts go:
 ## At the merge
 
 - The two branches merged with no text conflicts but did not typecheck together. `test/fit.test.ts` called the old `buildScene` signature and read `scene.plot`; it now places its scenes. Fixed in `23e8ebc`.
-- A branch that reads a removed `ContainerRules` field (`axes.minWidth`, `secondary`, `bare.minPlotWidth`, `rows.minLabelWidth`, `band`, `notice`) will fail typecheck after merging. The prototype still needs `axes.minWidth` in its own rules, so a test that hands our rules to the prototype must fill it in.
+- A branch that reads a removed `ContainerRules` field (`axes.minWidth`, `axes.minHeight`, `secondary`, `bare.minPlotWidth`, `rows.minLabelWidth`, `band`, `notice`) will fail typecheck after merging. So will one that builds a rule set without `bare.numberWidth`, or that switches on every `Part` without `legend-top`. The prototype still needs `axes.minWidth` in its own rules, so a test that hands our rules to the prototype must fill it in.
 
 ## Not yet verified
 

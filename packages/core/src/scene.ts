@@ -54,7 +54,8 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, rows:
   });
   if (guides.x && keys.length) {
     const last = keys.length - 1;
-    const idx = isTime ? (last < 2 ? [0, last] : [0, Math.floor(last / 2), last]) : keys.map((_, i) => i);
+    // First, middle and last, each once: one row has one tick. The prototype emits it twice, under one key.
+    const idx = isTime ? [...new Set([0, Math.floor(last / 2), last])] : keys.map((_, i) => i);
     idx.forEach((i, j) => {
       const mid = isTime && j > 0 && j < idx.length - 1;                  // given up on a narrow plot
       nodes.push({ key: 'xtick:' + keys[i], part: 'x-axis', kind: 'text', x: unit.cx(keys[i]!), row: keys[i]!, text: isTime ? fmtDay(keys[i]!) : String(keys[i]),

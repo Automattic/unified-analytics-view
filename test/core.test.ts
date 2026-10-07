@@ -289,6 +289,32 @@ describe('y ticks: a deliberate departure from the prototype (dom-painter-plan s
   });
 });
 
+describe('one row on a time axis: a deliberate departure from the prototype (feedback, Bugs 1)', () => {
+  // The prototype labels the first and the last row of a time axis. With one row they are the same row, so it emits two
+  // `xtick` nodes under one key. Keys are unique here, so ours emits one. No fixture query returns one row, so the sweep does not meet this.
+  const one = runQuery(trend.query), day = one.rows[0]![trend.query.by![0]!] as string;
+  one.rows = one.rows.slice(0, 1);
+  const xticks = (scene: { nodes: { key: string }[] }) => scene.nodes.map((n) => n.key).filter((k) => k.startsWith('xtick:'));
+  it('the prototype repeats the tick; ours has it once, and nothing else differs', () => {
+    const container = makeContainer(346), plan = resolve(trend, one, container, catalog);
+    const ratio = buildScene(plan, trend.query, one, catalog), scene = plain(place(ratio, container));
+    const host0 = proto.makeHost(346, null, 'svg', 8), plan0 = proto.resolve(toProto(trend), one, host0), scene0 = plain(proto.buildScene(plan0, trend.query, one, host0));
+    expect(xticks(scene0)).toEqual(['xtick:' + day, 'xtick:' + day]);
+    expect(xticks(ratio)).toEqual(['xtick:' + day]);
+    expect(xticks(scene)).toEqual(['xtick:' + day]);
+    expect(plain(plan)).toEqual({ ...fromProto(plain(plan0)), preset: plan.preset });
+    // The prototype's first copy is ours. Its second, anchored at the end, is the one dropped.
+    const second = scene0.nodes.findIndex((n: any, i: number) => n.key === 'xtick:' + day && scene0.nodes[i - 1].key === n.key);
+    expect(scene.nodes).toEqual(scene0.nodes.filter((_: unknown, i: number) => i !== second));
+  });
+  it('two rows still have two ticks, and three have three', () => {
+    for (const n of [2, 3]) {
+      const some = { ...runQuery(trend.query), rows: runQuery(trend.query).rows.slice(0, n) };
+      expect(xticks(buildScene(resolve(trend, some, unboundedContainer(), catalog), trend.query, some, catalog)).length).toBe(n);
+    }
+  });
+});
+
 describe('golden scenes', () => {
   const sizes: [number, number | null][] = [[346, null], [234, null], [346, 100]];
   for (const name of Object.keys(samples)) for (const [w, h] of sizes) {

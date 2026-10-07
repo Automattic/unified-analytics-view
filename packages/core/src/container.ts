@@ -30,3 +30,8 @@ export function makeContainer(width: number, height?: number | null, painter?: P
     displayWidth(len) { return p === 'dots' ? (len * 6 - 1) * 4 : Math.ceil(len * 14.5); },
   };
 }
+
+/** A container with no limits, for a caller that has no size to give: a plan for it drops nothing, and its scene is everything the spec asks for. */
+export function unboundedContainer(painter?: PainterName, cell?: number): Container {
+  return makeContainer(Infinity, null, painter, cell);
+}

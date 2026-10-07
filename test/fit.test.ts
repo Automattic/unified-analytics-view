@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, FIT_RULES, applies, buildScene, makeContainer, place, resolve, type FitRule, type PainterName, type Plan, type Spec } from '@universal-analytics/core';
+import { CONTAINER_RULES, FIT_RULES, applies, buildScene, makeContainer, place, resolve, unboundedContainer, type FitRule, type PainterName, type Plan, type Spec } from '@universal-analytics/core';
 import { catalog, runQuery, samples, scenarios } from '@universal-analytics/fixtures';
 
 // The sweep of core.test.ts, run again to hold the fit rules to what resolve() does.
@@ -37,7 +37,7 @@ function sweep(each: (c: Case) => void): void {
   if (cases.length) return cases.forEach(each);
   for (const [name, spec] of Object.entries(specs)) for (const sc of scenarios) for (const p of painters) {
     const rules = name === 'headed' ? ALWAYS : CONTAINER_RULES;
-    const unbounded = run(spec, 4000, null, sc, p, rules).plan;
+    const unbounded = resolve(spec, runQuery(spec.query, sc), { ...unboundedContainer(p, 8), rules }, catalog);
     const timeAxis = catalog.dimensions[(spec.query.by || [])[0]!]?.type === 'time';
     for (const r of FIT_RULES.filter((r) => r.layout === unbounded.layout && (r.id !== 'mid-tick' || timeAxis))) for (const w of widths) {
       const wide = gaveUp(r, run(spec, w, null, sc, p, rules).plan, unbounded);

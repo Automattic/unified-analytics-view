@@ -5,7 +5,7 @@ import * as d3array from 'd3-array';
 import * as d3scale from 'd3-scale';
 import * as d3shape from 'd3-shape';
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, buildScene, expand, makeContainer, place, resolve, type PainterName, type Spec } from '@universal-analytics/core';
+import { CONTAINER_RULES, buildScene, expand, makeContainer, place, resolve, unboundedContainer, type PainterName, type Spec } from '@universal-analytics/core';
 import catalogSchema from '@universal-analytics/core/schema/catalog.schema.json';
 import viewSchema from '@universal-analytics/core/schema/view.schema.json';
 import { catalog, runQuery, samples, scenarios } from '@universal-analytics/fixtures';
@@ -198,7 +198,7 @@ describe('the ratio scene (dom-painter-plan section 3)', () => {
     none: ['number'], notice: ['number', 'notice'], prose: [],
   };
   const unbounded = (spec: Spec) => {
-    const result = runQuery(spec.query), plan = resolve(spec, result, makeContainer(Infinity), catalog);
+    const result = runQuery(spec.query), plan = resolve(spec, result, unboundedContainer(), catalog);
     return { plan, ratio: buildScene(plan, spec.query, result, catalog) };
   };
   const numbers = (d: string) => (d.match(/-?[\d.]+/g) || []).map(Number);
@@ -226,6 +226,10 @@ describe('the ratio scene (dom-painter-plan section 3)', () => {
     expect(ratio.nodes.filter((n) => n.role).map((n) => n.key + ' ' + n.role)).toEqual(['L0:area context', 'L1:line comparison', 'L2:line primary', 'L2:line:partial primary']);
     // The number is there to be shown in compensation, though this plan does not show it.
     expect(ratio.nodes.filter((n) => n.part === 'number').map((n) => n.key)).toEqual(['value', 'delta', 'sub']);
+  });
+  it('the unbounded container is one of no width limit and no height, and the convention it names still works', () => {
+    expect(unboundedContainer()).toMatchObject({ width: Infinity, height: null, painter: 'svg' });
+    expect(resolve(trend, runQuery(trend.query), makeContainer(Infinity), catalog)).toEqual(unbounded(trend).plan);
   });
   it('agrees with the placed pixels: a ratio times its part is where place() puts it', () => {
     // Bars at 346 px. With axes the plot is x 36 to 340 and y 162 down to 10.

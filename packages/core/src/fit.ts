@@ -1,0 +1,53 @@
+import type { KeepPart, Layout } from './types.ts';
+
+/* Fit rules: one declaration per part. Each names a container, the room the part
+ * needs in it, and what happens otherwise. `resolve()` evaluates them in code;
+ * a browser container compiles the same data to container queries. */
+export interface FitRule {
+  /** Unique within a layout: 'axes', 'secondary', 'legend', 'marks', … */
+  id: string;
+  layout: Layout;
+  container: 'view' | 'plot';
+  /** In px. The part stays while the container has at least this in each. */
+  needs: { inline?: number; block?: number };
+  /** Parts or roles given up otherwise. */
+  hide: string[];
+  /** Parts that appear in compensation, under the same condition. */
+  show?: string[];
+  /** Layout switches under the same condition, as data-attributes. */
+  set?: Record<string, string>;
+  /** The spec's `keep` entry that disables this rule. */
+  keep?: KeepPart;
+}
+
+/** The room a container has. A view that takes its natural height has no `block`. */
+export interface Room { inline: number; block?: number | null }
+
+/* The defaults. A context passes its containers a different set, as `rules.fit`.
+ * What these cannot say is measured in `resolve()`: the width of the number,
+ * the width of a row's value, and anything that depends on how tall the content is. */
+export const FIT_RULES: FitRule[] = [
+  { id: 'axes',      layout: 'cartesian', container: 'view', needs: { inline: 280, block: 120 },      // a plot with axes
+    hide: ['x-axis', 'y-axis', 'grid'], show: ['number'], set: { arrange: 'side' }, keep: 'guides' },
+  { id: 'mid-tick',  layout: 'cartesian', container: 'view', needs: { inline: 380 }, hide: ['x-tick.mid'] },
+  { id: 'secondary', layout: 'cartesian', container: 'plot', needs: { inline: 180, block: 90 },       // comparison and reference layers stay legible above this
+    hide: ['role:comparison', 'role:reference', 'role:context'], keep: 'secondary' },
+  { id: 'marks',     layout: 'cartesian', container: 'view', needs: { inline: 152, block: 46 },       // 76 for the number, a 12 px gap and a 64 px bare plot
+    hide: ['plot'], show: ['number'], keep: 'marks' },
+  { id: 'marks',     layout: 'rows',      container: 'view', needs: { inline: 90 },                   // the label; the value's room is measured
+    hide: ['rows'], show: ['number'], keep: 'marks' },
+  { id: 'legend',    layout: 'band',      container: 'view', needs: { inline: 170 },                  // the full legend becomes the largest segment's label
+    hide: [], set: { legend: 'top' }, keep: 'guides' },
+  { id: 'marks',     layout: 'band',      container: 'view', needs: { inline: 110 },
+    hide: ['band', 'legend'], show: ['number'], keep: 'marks' },
+  { id: 'notice',    layout: 'notice',    container: 'view', needs: { inline: 150 },
+    hide: ['notice'], show: ['number'], keep: 'marks' },
+];
+
+/** True when the rule's container is short of the room its part needs, so its `hide`, `show` and `set` take effect.
+ * A size the container does not have never matches, as an unknown container query never does. */
+export function applies(rule: FitRule, room: { view: Room; plot?: Room | null }): boolean {
+  const c = room[rule.container];
+  const short = (need?: number, has?: number | null) => need != null && has != null && has < need;
+  return !!c && (short(rule.needs.inline, c.inline) || short(rule.needs.block, c.block));
+}

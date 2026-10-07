@@ -15,6 +15,19 @@ Six of the open items below were put to David and settled. Each is still marked 
 5. **The measured pass defers its write a frame,** so no "ResizeObserver loop" error can reach a host page. A view that crosses a threshold paints one frame in the old state.
 6. **The note is given up before prose.** When the number with its note is too tall for the box, the note goes first, in `resolve()` and in the measured pass together. This departs from the prototype, so the parity test changes on purpose for those cases.
 
+## Building the six decisions
+
+All six are built and merged into `dom-painter`. Checked in Chrome 155 and Playwright's WebKit 26.5 by the agents; the last follow-up in Chrome only.
+
+1. **The loop error is gone.** With a host observing each view's parent and widths swept 420 to 40 and back, Chrome raised 27 "ResizeObserver loop" errors before and none after; WebKit 15 and none. A resize now only requests a frame, and that frame reads once and writes once. The run after a paint is still synchronous, since a paint is not in an observer's callback, so new data is fitted before any frame. Not verified: a hidden tab, where the frame waits; and a host that sets a view's data inside its own observer callback.
+2. **The note rule holds at 60 and 40 px, and not between about 42 and 51 px.** At 46 px tall the trend still goes sparkline, prose at 151 px wide, number at 98, prose at 69: the full form without its note (52 px) is too tall, but the 26 px form (42 px) fits once the width forces it. The fix is to try the smaller forms before prose when the chosen one is too tall. Not built: it goes beyond the decision, and `resolve()` would need the same. **To decide.**
+3. **The note can come back while narrowing.** Channel mix in a 40 px box shows the number without its note down to 99 px wide, then with it from 98, because the smaller form leaves room. Not prose, but a flip.
+4. **Only a number standing alone gives up its note in core.** A spec with `keep: ['marks']` and the number above its marks still goes straight to prose. And any note goes, including an instant metric's "on the site right now". Both were the core agent's reading of the decision. **To confirm.**
+5. **`resolve()` and `<ua-view>` agree on the trend and the total in 60 and 40 px boxes,** at 346 to 80 px wide. Where they still differ there, the cause is older: `place()` counts the number about 8 px taller than the DOM sets it (channel mix and layers at 40 px: prose against the number), the number block above rows is shorter in the DOM (present now), and the widest value's room (top pages at 120 px).
+6. **A table needs exact numbers, and the readout does not.** With one formatter for both, the table's total read "10.5k" beside "9,437". `formatValue` now takes a form, `compact` or `exact`, and the table asks for exact. This was not in the decision.
+7. **"so far" is new wording** for the unfinished day; the tldr prose had none to match.
+8. Key names: `L2:line` is now `primary:line`, with `#2` for a second layer of the same role and mark. `apps/bench/src/spike-view.ts` still carries old-style literals of its own; harmless.
+
 ## Findings: step 1, fit rules
 
 The rules are data in `packages/core/src/fit.ts` and `resolve()` reads them. No plan, scene or prose changed.

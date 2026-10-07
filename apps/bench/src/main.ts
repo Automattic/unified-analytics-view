@@ -14,16 +14,16 @@ const state = () => Object.fromEntries(new FormData(controls)) as { scenario: Sc
 
 function paint(frame: HTMLElement) {
   const { scenario, height } = state(), spec = samples[frame.dataset.sample!]!.spec;
-  const svg = frame.querySelector('svg')!, caption = frame.querySelector('figcaption')!;
-  const width = Math.floor(frame.clientWidth - parseFloat(getComputedStyle(frame).paddingInline) * 2);
+  const svg = frame.querySelector('svg')!, caption = frame.nextElementSibling!;
+  const width = frame.clientWidth;
   try {
     const container = makeContainer(width, Number(height) || null), result = runQuery(spec.query, scenario);
     const plan = resolve(spec, result, container, catalog);
     paintSVG(svg, buildScene(plan, spec.query, result, container, catalog));
-    caption.className = '';
+    caption.className = 'meta';
     caption.textContent = width + ' px · ' + plan.layout + (plan.dropped.length ? ' · dropped: ' + plan.dropped.join(', ') : '') + ' · ' + plan.text;
   } catch (e) {
-    caption.className = 'error';
+    caption.className = 'meta error';
     caption.textContent = (e as Error).message;
   }
 }
@@ -34,10 +34,12 @@ for (const [name, sample] of Object.entries(samples)) {
   h2.textContent = sample.label + ' '; small.textContent = JSON.stringify(sample.spec); h2.append(small);
   sizes.className = 'sizes';
   for (const w of WIDTHS) {
-    const frame = document.createElement('figure');
-    frame.className = 'frame'; frame.dataset.sample = name; frame.style.inlineSize = w + 'px';
-    frame.append(document.createElementNS('http://www.w3.org/2000/svg', 'svg'), document.createElement('figcaption'));
-    sizes.append(frame);
+    // The frame is the container and holds nothing but the view. What the bench says about it sits outside.
+    const cell = document.createElement('div'), frame = document.createElement('div');
+    cell.className = 'cell'; frame.className = 'frame'; frame.dataset.sample = name; frame.style.inlineSize = w + 'px';
+    frame.append(document.createElementNS('http://www.w3.org/2000/svg', 'svg'));
+    cell.append(frame, document.createElement('p'));
+    sizes.append(cell);
     resized.observe(frame);
   }
   views.append(h2, sizes);

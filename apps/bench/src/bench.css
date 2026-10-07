@@ -26,20 +26,21 @@
 body { margin: 0; padding: var(--ua-space-m); font: 13px/1.4 system-ui, sans-serif; background: var(--ua-color-background); color: var(--ua-color-foreground); }
 #controls { display: flex; flex-wrap: wrap; gap: var(--ua-space-s); position: sticky; top: 0; z-index: 1; padding-block: var(--ua-space-2xs); background: var(--ua-color-background); }
 fieldset { display: flex; gap: var(--ua-space-xs); margin: 0; border: 1px solid var(--ua-color-border); border-radius: var(--ua-radius-sm); }
-legend, figcaption, h2 small { color: var(--ua-color-muted-foreground); }
+legend, h2 small { color: var(--ua-color-muted-foreground); }
 h2 { font-size: 13px; margin: var(--ua-space-l) 0 var(--ua-space-xs); }
 h2 small { font-weight: 400; }
 .sizes { display: flex; flex-wrap: wrap; align-items: start; gap: var(--ua-space-m); }
 
-/* A frame stands in for a container. Drag its corner; the view inside refits. */
-.frame { margin: 0; box-sizing: content-box; min-inline-size: 40px; max-inline-size: 100%; padding: var(--ua-space-xs); resize: horizontal; overflow: hidden;
-  background: var(--ua-color-card); border: 1px solid var(--ua-color-border); border-radius: var(--ua-radius-md); }
+/* A frame stands in for a container and adds nothing of its own: no fill, no edge, no padding,
+ * so a view looks here as it will where it is inserted. Its extent shows on hover; drag its corner. */
+.frame { min-inline-size: 40px; max-inline-size: 100%; resize: horizontal; overflow: hidden; }
+.cell:hover > .frame { outline: 1px dashed var(--ua-color-border); }
 .frame svg { display: block; font-family: inherit; }
-.frame figcaption { margin-block-start: var(--ua-space-xs); font-size: 11px; overflow-wrap: anywhere; }
-.frame .error { color: var(--ua-color-destructive-text); }
+.meta { inline-size: 0; min-inline-size: 100%; margin: var(--ua-space-xs) 0 0; font-size: 11px; color: var(--ua-color-muted-foreground); overflow-wrap: anywhere; }
+.meta.error { color: var(--ua-color-destructive-text); }
 
 .f-tick { font-size: 11px; }
 .f-label { font-size: 13px; }
 .f-value { font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .f-display { font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
-.halo { paint-order: stroke; stroke: var(--ua-color-card); stroke-width: 3px; }
+.halo { paint-order: stroke; stroke: var(--ua-color-background); stroke-width: 3px; }

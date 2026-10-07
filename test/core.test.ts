@@ -249,11 +249,13 @@ describe('y ticks: a deliberate departure from the prototype (dom-painter-plan s
   // The prototype rounds the y scale to 2 ticks when the plot is under 120 px tall, so its domain changes with the size.
   // A scene with no size cannot. We always round to 4, rank the ticks, and place() thins them on a short plot.
   // Under the default rules a plot with axes is never under 120 px, so the sweep does not meet this. A context that allows shorter plots does.
-  const rules = { ...CONTAINER_RULES, axes: { ...CONTAINER_RULES.axes, minHeight: 80 } };
+  // The least height of a plot with axes is held twice: as the size place() builds to, and as the axes rule's block need.
+  const rules = { ...CONTAINER_RULES, axes: { ...CONTAINER_RULES.axes, minHeight: 80 },
+    fit: CONTAINER_RULES.fit.map((r) => (r.layout === 'cartesian' && r.id === 'axes' ? { ...r, needs: { ...r.needs, block: 80 } } : r)) };
   const ticks = (scene: { nodes: { key: string }[] }) => scene.nodes.map((n) => n.key).filter((k) => /^(ytick|grid):/.test(k));
   const short = (spec: Spec) => {
     const ours = run(spec, 346, 100, 'typical', 'svg', rules);
-    const host0 = { ...proto.makeHost(346, 100, 'svg', 8), rules: { ...proto.HOST_RULES, axes: rules.axes } }, res0 = proto.runQuery(spec.query, 'typical');
+    const host0 = { ...proto.makeHost(346, 100, 'svg', 8), rules: { ...proto.HOST_RULES, axes: { ...proto.HOST_RULES.axes, minHeight: 80 } } }, res0 = proto.runQuery(spec.query, 'typical');
     const plan0 = proto.resolve(toProto(spec), res0, host0);
     expect(ours.scene.plot).toEqual({ w: 346, h: 100 });
     expect(plain(ours.plan), 'the plan is still the prototype\'s').toEqual({ ...fromProto(plain(plan0)), preset: ours.plan.preset });

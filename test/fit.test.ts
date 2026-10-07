@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, FIT_RULES, applies, buildScene, makeContainer, resolve, type FitRule, type PainterName, type Plan, type Spec } from '@universal-analytics/core';
+import { CONTAINER_RULES, FIT_RULES, applies, buildScene, makeContainer, place, resolve, type FitRule, type PainterName, type Plan, type Spec } from '@universal-analytics/core';
 import { catalog, runQuery, samples, scenarios } from '@universal-analytics/fixtures';
 
 // The sweep of core.test.ts, run again to hold the fit rules to what resolve() does.
@@ -16,7 +16,7 @@ const widths = [54, 80, 120, 170, 250, 290, 346, 500, 700];
 const run = (spec: Spec, w: number, h: number | null = null, sc: (typeof scenarios)[number] = 'typical', painter: PainterName = 'svg', rules = CONTAINER_RULES) => {
   const container = { ...makeContainer(w, h, painter, 8), rules }, result = runQuery(spec.query, sc);
   const plan = resolve(spec, result, container, catalog);
-  return { plan, scene: buildScene(plan, spec.query, result, container, catalog) };
+  return { plan, scene: place(buildScene(plan, spec.query, result, catalog), container) };
 };
 const rule = (layout: string, id: string) => FIT_RULES.find((r) => r.layout === layout && r.id === id)!;
 

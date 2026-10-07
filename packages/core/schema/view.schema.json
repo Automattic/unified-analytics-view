@@ -2,13 +2,13 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://universal-analytics.local/schema/view-0.json",
   "title": "View spec, view/0",
-  "description": "A view described once, in catalog names. It carries no sizes and no breakpoints; the host decides presentation.",
+  "description": "A view described once, in catalog names. It carries no sizes and no breakpoints; the container it lands in decides presentation.",
   "type": "object",
   "required": ["spec", "query"],
   "additionalProperties": false,
   "properties": {
     "spec": { "const": "view/0" },
-    "title": { "type": "string", "description": "Shown by the host's frame, not drawn in the scene." },
+    "title": { "type": "string", "description": "Shown by the container's frame, not drawn in the scene." },
     "use": { "type": "string", "description": "A preset name. Expands into layers. Ignored if layers is present." },
     "query": { "$ref": "#/definitions/query" },
     "layers": { "type": "array", "items": { "$ref": "#/definitions/layer" } },
@@ -25,7 +25,7 @@
     "headline": { "type": "boolean", "description": "Show the number above the marks." },
     "keep": {
       "type": "array",
-      "description": "Parts the host may not drop.",
+      "description": "Parts a container may not drop.",
       "items": { "enum": ["guides", "secondary", "rows", "marks"] },
       "uniqueItems": true
     }

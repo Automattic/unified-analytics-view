@@ -12,7 +12,7 @@ export interface UtopiaConfig {
   viewport: {
     min: number;
     max: number;
-    /** What the clamp tracks. A view is sized by its host, so this repo uses `container` (cqi). */
+    /** What the clamp tracks. A view is sized by its container, so this repo uses `container` (cqi). */
     relativeTo?: 'viewport' | 'container';
   };
   typeScale: {

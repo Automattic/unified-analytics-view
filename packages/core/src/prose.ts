@@ -3,7 +3,7 @@ import { delta, fmt, fmtPct, rangeLabel } from './format.ts';
 import type { Catalog, Query, Result } from './types.ts';
 
 /** The text sibling of a view, derived from the query and the transforms, not from a named chart type. */
-export function describe(q: Query, result: Result, share: boolean, catalog: Catalog): string {
+export function tldrProse(q: Query, result: Result, share: boolean, catalog: Catalog): string {
   const m = q.metrics[0]!, M = catalog.metrics[m]!, t = result.totals, rows = result.rows, by = (q.by || [])[0];
   const range = rangeLabel(result.meta.range), name = M.label.toLowerCase();
   if (M.instant) {

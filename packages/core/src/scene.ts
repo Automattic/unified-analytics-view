@@ -2,7 +2,7 @@ import { max, sum } from 'd3-array';
 import { scaleBand, scaleLinear, scalePoint } from 'd3-scale';
 import { area, curveMonotoneX, line } from 'd3-shape';
 import { CHAR_W, clip, delta, fmt, fmtDay, fmtPct, type Delta } from './format.ts';
-import type { Catalog, Guides, Host, Layer, PlanShape, Query, Result, Row, Scene, SceneNode } from './types.ts';
+import type { Catalog, Guides, Container, Layer, PlanShape, Query, Result, Row, Scene, SceneNode } from './types.ts';
 
 /* Node kinds: rect, path, line, circle, text. Every node has a stable key,
  * a paint token (never a colour) and a layer: "data" or "guide". */
@@ -145,9 +145,9 @@ function sceneBand(layer: Layer, rows: Row[], W: number, legend: Guides['legend'
 }
 
 // One big number, an optional delta and an optional note.
-function sceneStat(o: { value: string; delta?: Delta | null; sub?: string | null; W: number; host: Host; pulse?: boolean; small?: boolean }): Part {
+function sceneStat(o: { value: string; delta?: Delta | null; sub?: string | null; W: number; container: Container; pulse?: boolean; small?: boolean }): Part {
   const nodes: SceneNode[] = [], W = o.W, lead = o.pulse != null ? 20 : 0;
-  const disp = o.host.display(o.value.length, W - lead, o.small);
+  const disp = o.container.display(o.value.length, W - lead, o.small);
   if (o.pulse != null) nodes.push({ key: 'pulse', kind: 'circle', cx: 7, cy: disp.h / 2, r: 5, paint: o.pulse ? 'live' : 'ink.muted', pulse: !!o.pulse, layer: 'data' });
   nodes.push({ key: 'value', kind: 'text', x: lead, y: 0, h: disp.h, cell: disp.cell, text: o.value, anchor: 'start', font: 'display', paint: 'ink', layer: 'data' });
   let yy = disp.h + 18;
@@ -164,38 +164,38 @@ function sceneStat(o: { value: string; delta?: Delta | null; sub?: string | null
 }
 
 /** The value shown as the number, formatted. */
-export function headValue(catalog: Catalog, q: Query, result: Result, compact?: boolean): string {
+export function tldrValueText(catalog: Catalog, q: Query, result: Result, compact?: boolean): string {
   const m = q.metrics[0]!;
   if (catalog.metrics[m]!.instant) return String(result.totals[m] || 0);
   return result.meta.empty ? '0' : fmt(result.totals[m], compact);
 }
 
 /** The number: a total from the engine, a delta if the query compares, and a derived note. */
-export function headline(catalog: Catalog, q: Query, result: Result, share: boolean, host: Host, W: number, small: boolean): Part {
+export function tldrValue(catalog: Catalog, q: Query, result: Result, share: boolean, container: Container, W: number, small: boolean): Part {
   const m = q.metrics[0]!, M = catalog.metrics[m]!, t = result.totals, by = (q.by || [])[0], rows = result.rows;
-  if (M.instant) { const n = t[m] || 0; return sceneStat({ value: String(n), sub: n ? 'on the site right now' : 'Nobody is here right now', W, host, pulse: n > 0, small }); }
-  if (result.meta.empty) return sceneStat({ value: '0', sub: 'No visits yet', W, host, small });
+  if (M.instant) { const n = t[m] || 0; return sceneStat({ value: String(n), sub: n ? 'on the site right now' : 'Nobody is here right now', W, container, pulse: n > 0, small }); }
+  if (result.meta.empty) return sceneStat({ value: '0', sub: 'No visits yet', W, container, small });
   let note: string | null = M.rangeTotal === 'sum of daily' ? 'Sum of daily counts' : null;
   if (by && catalog.dimensions[by]!.type !== 'time' && rows.length) {
     note = share ? rows[0]![by] + ' ' + fmtPct(num(rows[0]!, m) / (sum(rows, (r) => num(r, m)) || 1)) : 'Top: ' + rows[0]![by];
   }
   const dl = q.compare === 'previous' ? delta(t[m] as number, t[m + '@previous'], M.polarity) : null;
-  return sceneStat({ value: fmt(t[m], small || W < 160), delta: dl, sub: small ? null : note, W, host, small });
+  return sceneStat({ value: fmt(t[m], small || W < 160), delta: dl, sub: small ? null : note, W, container, small });
 }
 
-export function buildScene(p: PlanShape, q: Query, result: Result, host: Host, catalog: Catalog): Scene {
-  const W = host.width, H = host.height, rules = host.rules;
-  if (p.layout === 'sentence') return { width: W, height: 0, nodes: [], text: p.text };
+export function buildScene(p: PlanShape, q: Query, result: Result, container: Container, catalog: Catalog): Scene {
+  const W = container.width, H = container.height, rules = container.rules;
+  if (p.layout === 'prose') return { width: W, height: 0, nodes: [], text: p.text };
   let out: Part, plot: Scene['plot'] | null = null;
   if (p.layout === 'none') {
-    out = headline(catalog, q, result, p.share, host, W, false);
+    out = tldrValue(catalog, q, result, p.share, container, W, false);
   } else if (p.layout === 'cartesian' && p.side) {             // a bare plot, set beside the number
-    const lw = Math.round(Math.max(host.displayWidth(headValue(catalog, q, result, true).length), Math.min(120, Math.max(76, W * 0.42))));
-    const s = headline(catalog, q, result, p.share, host, lw, true), h = Math.max(rules.bare.height, s.height), pw = Math.max(8, W - lw - 12);
+    const lw = Math.round(Math.max(container.displayWidth(tldrValueText(catalog, q, result, true).length), Math.min(120, Math.max(76, W * 0.42))));
+    const s = tldrValue(catalog, q, result, p.share, container, lw, true), h = Math.max(rules.bare.height, s.height), pw = Math.max(8, W - lw - 12);
     const c = sceneCartesian(catalog, p.layers, p.guides, result.rows, pw, h);
     out = { nodes: s.nodes.concat(shift(c.nodes, lw + 12, 0)), height: h }; plot = { w: pw, h };
   } else {
-    const hd = p.headline ? headline(catalog, q, result, p.share, host, W, false) : null, above = hd ? hd.height + 16 : 0;
+    const hd = p.tldrValue ? tldrValue(catalog, q, result, p.share, container, W, false) : null, above = hd ? hd.height + 16 : 0;
     let body: Part;
     if (p.layout === 'notice') {
       const h = H ? Math.max(40, Math.min(120, H - above)) : 120;

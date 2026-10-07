@@ -64,9 +64,9 @@ export interface Spec {
 }
 export type PresetLibrary = Record<string, { layers: Layer[] }>;
 
-/* Host: wherever a view renders. It owns sizes. */
-export type ReductionId = 'drop-guides' | 'drop-secondary' | 'trim-rows' | 'collapse' | 'sentence';
-export interface HostRules {
+/* Container: wherever a view renders. It owns sizes. */
+export type ReductionId = 'drop-guides' | 'drop-secondary' | 'trim-rows' | 'collapse' | 'prose';
+export interface ContainerRules {
   axes: { minWidth: number; minHeight: number; height: number };
   secondary: { minPlotWidth: number; minPlotHeight: number };
   bare: { minPlotWidth: number; height: number };
@@ -76,19 +76,19 @@ export interface HostRules {
   order: ReductionId[];
 }
 export type PainterName = 'svg' | 'dots';
-export interface Host {
+export interface Container {
   width: number;
   height: number | null;
   painter: PainterName;
   cell: number;
-  rules: HostRules;
+  rules: ContainerRules;
   /** Metrics of the big-number face at this length and available width. */
   display(len: number, avail: number, small?: boolean): { h: number; cell?: number };
   displayWidth(len: number): number;
 }
 
 /* Plan: what will be drawn at this size, and what was dropped. */
-export type Layout = 'cartesian' | 'rows' | 'band' | 'none' | 'notice' | 'sentence';
+export type Layout = 'cartesian' | 'rows' | 'band' | 'none' | 'notice' | 'prose';
 export interface Reduction {
   id: ReductionId;
   state: 'not needed' | 'applied' | 'kept by the spec' | 'nothing to drop';
@@ -98,7 +98,7 @@ export interface PlanShape {
   layout: Layout;
   layers: Layer[];
   guides: Guides;
-  headline: boolean;
+  tldrValue: boolean;
   side: boolean;
   rowLimit: number | null;
   share: boolean;

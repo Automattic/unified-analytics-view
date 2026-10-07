@@ -1,4 +1,70 @@
 {
+  "color": {
+    "$type": "color",
+    "$description": "The colours that sit outside the ramps, the same in both themes. White and black are for where a design means white or black and not the end of a ramp. The constants are Spacefast's signal fills, which keep one value in light and dark: its marker, success and warning.",
+    "white": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1,
+          1,
+          1
+        ],
+        "alpha": 1,
+        "hex": "#ffffff"
+      }
+    },
+    "black": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0,
+          0,
+          0
+        ],
+        "alpha": 1,
+        "hex": "#000000"
+      }
+    },
+    "constant": {
+      "lime": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.8471,
+            0.949,
+            0.2941
+          ],
+          "alpha": 1,
+          "hex": "#d8f24b"
+        }
+      },
+      "green": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.5451,
+            0.898,
+            0.5137
+          ],
+          "alpha": 1,
+          "hex": "#8be583"
+        }
+      },
+      "amber": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.9843,
+            0.7137,
+            0.0196
+          ],
+          "alpha": 1,
+          "hex": "#fbb605"
+        }
+      }
+    }
+  },
   "radius": {
     "$type": "dimension",
     "$description": "Corner radii. Spacefast's radius variables, taken as they are: a t-shirt scale of fixed values is already a primitive.",

@@ -14,8 +14,12 @@ describe('token output', () => {
 
   it('aliases the common tier to the ramps, per theme where the step differs', () => {
     const [light, dark] = generated('tokens.css').split('@media');
-    expect(light).toContain('--ua-color-background: var(--ua-color-neutral-300);');
-    expect(dark).toContain('--ua-color-background: var(--ua-color-neutral-100);');
+    expect(light).toContain('--ua-color-muted: var(--ua-color-neutral-300);');
+    expect(dark).toContain('--ua-color-muted: var(--ua-color-neutral-500);');
+    // A surface is one name in the common tier; the surface set holds its value per theme.
+    expect(light).toContain('--ua-color-surface-card: var(--ua-color-neutral-100);');
+    expect(dark).toContain('--ua-color-surface-card: var(--ua-color-neutral-300);');
+    expect(dark).toContain('--ua-color-card: var(--ua-color-surface-card);');
     expect(light).toContain('--ua-spacing-4: var(--ua-space-s);');
     expect(dark).not.toContain('--ua-spacing-4');
   });

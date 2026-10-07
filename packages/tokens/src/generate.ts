@@ -1,5 +1,5 @@
 /* Token generation. Reads config/, writes generated/:
- *   *.tokens.json  W3C DTCG primitives: the ramps and qualitative set per theme, the scales
+ *   *.tokens.json  W3C DTCG primitives: the ramps, surface set and qualitative set per theme, the scales
  *   tokens.css     primitives and the common tier as custom properties, light and dark
  * config/ is the source of truth. Never edit generated/ by hand.
  *
@@ -39,9 +39,11 @@ export async function primitives(root = ROOT): Promise<Record<string, Tree>> {
   const leonardo = await generateLeonardoTokens(join(root, 'config/leonardo.json'));
   const utopia = await generateUtopiaTokens(join(root, 'config/utopia.json'));
   const q = JSON.parse(readFileSync(join(root, 'config/qualitative.json'), 'utf-8')) as { series: string[]; step: { light: number; dark: number } };
+  const s = JSON.parse(readFileSync(join(root, 'config/surface.json'), 'utf-8')) as { description: string; set: Record<string, { light: string; dark: string }> };
   for (const theme of ['light', 'dark'] as const) {
     const ramps = leonardo[theme].color as Tree;
     ramps.qualitative = qualitative(q.series, q.step[theme], ramps);
+    ramps.surface = { $description: s.description, ...Object.fromEntries(Object.entries(s.set).map(([name, value]) => [name, { $value: value[theme] }])) };
   }
   return { 'color.light': leonardo.light, 'color.dark': leonardo.dark, 'scale.fluid': utopia.fluid, 'scale.min': utopia.min, 'scale.max': utopia.max };
 }

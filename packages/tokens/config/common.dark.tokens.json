@@ -2,92 +2,80 @@
   "color": {
     "$type": "color",
     "$description": "Dark-theme overrides for common.tokens.json. A ramp flips with the theme, so most tokens need none.",
-    "background": {
-      "$value": "{color.neutral.100}"
-    },
-    "card-raised": {
-      "$value": "{color.neutral.400}"
-    },
-    "popover": {
-      "$value": "{color.neutral.400}"
+    "primary": {
+      "$value": "{color.white}"
     },
     "primary-foreground": {
-      "$value": "{color.neutral.100}"
+      "$value": "{color.neutral.200}"
+    },
+    "primary-text": {
+      "$value": "{color.white}"
     },
     "btn-primary-from": {
-      "$value": "{color.neutral.1300}"
-    },
-    "btn-primary-to": {
-      "$value": "{color.neutral.1200}"
+      "$value": "{color.white}"
     },
     "secondary": {
-      "$value": "{color.neutral.600}"
+      "$value": "{color.neutral.500}"
     },
     "muted": {
-      "$value": "{color.neutral.600}"
+      "$value": "{color.neutral.500}"
     },
     "muted-foreground": {
-      "$value": "{color.neutral.1000}"
+      "$value": "{color.neutral.800}"
     },
     "accent": {
-      "$value": "{color.neutral.600}"
+      "$value": "{color.neutral.500}"
     },
-    "destructive": {
-      "$value": "{color.red.800}"
+    "border": {
+      "$value": "{color.neutral.500}"
     },
     "destructive-soft": {
-      "$value": "{color.red.200}"
-    },
-    "success": {
-      "$value": "{color.green.1200}"
+      "$value": "{color.red.300}"
     },
     "success-text": {
-      "$value": "{color.green.1200}"
+      "$value": "{color.green.900}"
     },
     "success-soft": {
-      "$value": "{color.green.600}"
-    },
-    "warning": {
-      "$value": "{color.amber.1100}"
+      "$value": "{color.green.500}"
     },
     "warning-text": {
-      "$value": "{color.amber.1100}"
+      "$value": "{color.amber.900}"
     },
     "warning-soft": {
       "$value": "{color.amber.500}"
     },
     "info": {
-      "$value": "{color.blue.1100}"
+      "$value": "{color.blue.900}"
     },
-    "marker": {
-      "$value": "{color.lime.1200}"
+    "info-soft": {
+      "$value": "{color.blue.500}"
     },
     "live": {
-      "$value": "{color.lime.1200}"
-    },
-    "switch-thumb-on": {
-      "$value": "{color.neutral.100}"
+      "$value": "{color.lime.1000}"
     },
     "switch-thumb-off": {
-      "$value": "{color.neutral.1300}"
-    },
-    "sidebar": {
-      "$value": "{color.neutral.100}"
-    },
-    "sidebar-foreground-muted": {
       "$value": "{color.neutral.1000}"
     },
-    "sidebar-active": {
-      "$value": "{color.lime.1200}"
+    "sidebar-foreground-muted": {
+      "$value": "{color.neutral.800}"
+    },
+    "sidebar-accent": {
+      "$value": "{color.neutral.400}"
     },
     "sidebar-active-foreground": {
-      "$value": "{color.neutral.100}"
+      "$value": "{color.neutral.200}"
+    },
+    "sidebar-border": {
+      "$value": "{color.neutral.500}"
     },
     "skeleton": {
-      "$value": "{color.neutral.600}"
+      "$value": "{color.neutral.500}"
     },
     "raised": {
-      "$value": "{color.neutral.600}"
+      "$value": "{color.neutral.500}"
+    },
+    "on-ink": {
+      "$value": "{color.neutral.200}"
     },
     "well": {
       "$value": "color-mix(in srgb, {color.foreground} 6%, transparent)"
@@ -99,7 +87,7 @@
       "$value": "color-mix(in srgb, {color.primary} 60%, transparent)"
     },
     "overlay": {
-      "$value": "color-mix(in srgb, {color.neutral.100} 80%, transparent)"
+      "$value": "color-mix(in srgb, {color.black} 80%, transparent)"
     },
     "kbd-on-inverse": {
       "$value": "color-mix(in srgb, {color.background} 10%, transparent)"

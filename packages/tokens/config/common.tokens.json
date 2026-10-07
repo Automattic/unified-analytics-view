@@ -3,145 +3,145 @@
     "$type": "color",
     "$description": "Spacefast's colour variables, by their names, as aliases into our ramps. Values here are the light theme; common.dark.tokens.json holds only the tokens that sit on a different step in dark. Translucent tokens are a color-mix() of another token, a deliberate deviation from the DTCG colour type so the alpha survives aliasing.",
     "background": {
-      "$value": "{color.neutral.300}"
+      "$value": "{color.surface.page}"
     },
     "foreground": {
-      "$value": "{color.neutral.1300}"
+      "$value": "{color.neutral.1000}"
     },
     "card": {
-      "$value": "{color.neutral.200}"
+      "$value": "{color.surface.card}"
     },
     "card-foreground": {
-      "$value": "{color.neutral.1300}"
+      "$value": "{color.neutral.1000}"
     },
     "card-raised": {
-      "$value": "{color.neutral.100}"
+      "$value": "{color.surface.raised}"
     },
     "popover": {
-      "$value": "{color.neutral.100}"
+      "$value": "{color.surface.raised}"
     },
     "popover-foreground": {
-      "$value": "{color.neutral.1300}"
+      "$value": "{color.neutral.1000}"
     },
     "primary": {
-      "$value": "{color.neutral.1300}"
+      "$value": "{color.neutral.1000}"
     },
     "primary-foreground": {
-      "$value": "{color.neutral.200}"
+      "$value": "{color.neutral.100}"
     },
     "primary-text": {
-      "$value": "{color.neutral.1300}"
+      "$value": "{color.neutral.1000}"
     },
     "primary-soft": {
-      "$value": "{color.neutral.600}"
-    },
-    "btn-primary-from": {
-      "$value": "{color.neutral.1200}"
-    },
-    "btn-primary-to": {
-      "$value": "{color.neutral.1300}"
-    },
-    "secondary": {
       "$value": "{color.neutral.500}"
     },
-    "secondary-foreground": {
-      "$value": "{color.neutral.1300}"
-    },
-    "muted": {
-      "$value": "{color.neutral.400}"
-    },
-    "muted-foreground": {
+    "btn-primary-from": {
       "$value": "{color.neutral.900}"
     },
-    "accent": {
+    "btn-primary-to": {
+      "$value": "{color.neutral.1000}"
+    },
+    "secondary": {
       "$value": "{color.neutral.400}"
     },
-    "accent-foreground": {
-      "$value": "{color.neutral.1300}"
+    "secondary-foreground": {
+      "$value": "{color.neutral.1000}"
     },
-    "border": {
-      "$value": "{color.neutral.600}"
+    "muted": {
+      "$value": "{color.neutral.300}"
     },
-    "input": {
+    "muted-foreground": {
       "$value": "{color.neutral.700}"
     },
+    "accent": {
+      "$value": "{color.neutral.300}"
+    },
+    "accent-foreground": {
+      "$value": "{color.neutral.1000}"
+    },
+    "border": {
+      "$value": "{color.neutral.400}"
+    },
+    "input": {
+      "$value": "{color.neutral.600}"
+    },
     "destructive": {
-      "$value": "{color.red.900}"
+      "$value": "{color.red.700}"
     },
     "destructive-text": {
-      "$value": "{color.red.900}"
+      "$value": "{color.red.700}"
     },
     "destructive-soft": {
-      "$value": "{color.red.600}"
+      "$value": "{color.red.400}"
     },
     "success": {
-      "$value": "{color.green.600}"
+      "$value": "{color.constant.green}"
     },
     "success-text": {
-      "$value": "{color.green.900}"
+      "$value": "{color.green.700}"
     },
     "success-soft": {
       "$value": "{color.green.200}"
     },
     "warning": {
-      "$value": "{color.amber.700}"
+      "$value": "{color.constant.amber}"
     },
     "warning-text": {
-      "$value": "{color.amber.1000}"
+      "$value": "{color.amber.700}"
     },
     "warning-soft": {
-      "$value": "{color.amber.300}"
+      "$value": "{color.amber.200}"
     },
     "info": {
-      "$value": "{color.blue.900}"
+      "$value": "{color.blue.700}"
     },
     "info-soft": {
-      "$value": "{color.blue.400}"
+      "$value": "{color.blue.300}"
     },
     "marker": {
-      "$value": "{color.lime.500}"
+      "$value": "{color.constant.lime}"
     },
     "live": {
-      "$value": "{color.lime.1000}"
+      "$value": "{color.lime.700}"
     },
     "switch-thumb-on": {
-      "$value": "{color.neutral.300}"
+      "$value": "{color.neutral.200}"
     },
     "switch-thumb-off": {
-      "$value": "{color.neutral.300}"
+      "$value": "{color.neutral.200}"
     },
     "sidebar": {
-      "$value": "{color.neutral.300}"
+      "$value": "{color.surface.page}"
     },
     "sidebar-foreground": {
-      "$value": "{color.neutral.1300}"
+      "$value": "{color.neutral.1000}"
     },
     "sidebar-foreground-muted": {
-      "$value": "{color.neutral.900}"
+      "$value": "{color.neutral.700}"
     },
     "sidebar-accent": {
-      "$value": "{color.neutral.400}"
+      "$value": "{color.neutral.300}"
     },
     "sidebar-active": {
-      "$value": "{color.lime.500}"
+      "$value": "{color.constant.lime}"
     },
     "sidebar-active-foreground": {
-      "$value": "{color.neutral.1300}"
+      "$value": "{color.neutral.1000}"
     },
     "sidebar-border": {
-      "$value": "{color.neutral.600}"
+      "$value": "{color.neutral.400}"
     },
     "skeleton": {
-      "$value": "{color.neutral.500}"
+      "$value": "{color.neutral.400}"
     },
     "raised": {
-      "$value": "{color.neutral.500}"
+      "$value": "{color.neutral.400}"
     },
     "raised-foreground": {
-      "$value": "{color.neutral.1300}"
+      "$value": "{color.neutral.1000}"
     },
     "on-ink": {
-      "$value": "{color.neutral.100}"
+      "$value": "{color.white}"
     },
     "foreground-70": {
       "$value": "color-mix(in srgb, {color.foreground} 70%, transparent)"
@@ -192,41 +192,27 @@
       "$value": "color-mix(in srgb, {color.primary} 50%, transparent)"
     },
     "overlay": {
-      "$value": "color-mix(in srgb, {color.neutral.1300} 50%, transparent)"
+      "$value": "color-mix(in srgb, {color.neutral.1000} 50%, transparent)"
     },
     "kbd-on-inverse": {
       "$value": "color-mix(in srgb, {color.background} 20%, transparent)"
     }
   },
   "spacing": {
-    "$type": "dimension",
-    "$description": "Spacefast's spacing scale, by its names, as aliases into the Utopia space scale. Each is fluid and reaches the Spacefast pixel value at the widest container.",
     "0": {
       "$value": {
         "value": 0,
         "unit": "px"
       }
     },
-    "0_5": {
-      "$value": "{space.7xs}"
-    },
     "1": {
       "$value": "{space.6xs}"
-    },
-    "1_5": {
-      "$value": "{space.5xs}"
     },
     "2": {
       "$value": "{space.4xs}"
     },
-    "2_5": {
-      "$value": "{space.3xs}"
-    },
     "3": {
       "$value": "{space.2xs}"
-    },
-    "3_5": {
-      "$value": "{space.xs}"
     },
     "4": {
       "$value": "{space.s}"
@@ -245,6 +231,20 @@
     },
     "12": {
       "$value": "{space.3xl}"
+    },
+    "$type": "dimension",
+    "$description": "Spacefast's spacing scale, by its names, as aliases into the Utopia space scale. Each is fluid and reaches the Spacefast pixel value at the widest container.",
+    "0_5": {
+      "$value": "{space.7xs}"
+    },
+    "1_5": {
+      "$value": "{space.5xs}"
+    },
+    "2_5": {
+      "$value": "{space.3xs}"
+    },
+    "3_5": {
+      "$value": "{space.xs}"
     }
   }
 }

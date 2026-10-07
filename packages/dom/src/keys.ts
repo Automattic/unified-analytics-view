@@ -86,8 +86,9 @@ export class Keys {
       this.#fresh = e.pointerType !== 'mouse' && k !== this.#at;
       this.#show(k);
     });
-    // A point chosen while the view has focus is the keyboard's too, and stays. A touch has no leaving to speak of.
-    body.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse' && !this.#box()?.matches(':focus')) this.#show(null); });
+    // As version 4: the point goes with the mouse, focus or none, and the next arrow starts from nothing. A touch has
+    // no leaving to speak of.
+    body.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') this.#show(null); });
     body.addEventListener('focusout', () => this.#show(null));
     body.addEventListener('click', (e) => { if (row(e) !== this.#at) return; if (this.#fresh) this.#fresh = false; else this.#activate(); });
     body.addEventListener('keydown', (e) => {

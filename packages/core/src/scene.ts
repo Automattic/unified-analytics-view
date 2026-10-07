@@ -129,22 +129,20 @@ function sceneRows(catalog: Catalog, layers: Layer[], rows: Row[]): Body {
 }
 
 // No positional dimension: one band, stacked and normalized, split by colour.
-function sceneBand(layer: Layer, rows: Row[], legend: Guides['legend']): Body {
+function sceneBand(layer: Layer, rows: Row[]): Body {
   const nodes: SceneNode[] = [], m = layer.encode!.x as string, dim = layer.encode!.color as string;
   const total = sum(rows, (r) => num(r, m)) || 1, k = (r: Row) => r[dim] as string;
   rows.forEach((r, i) => {
     nodes.push({ key: 'seg:' + k(r), part: 'band', kind: 'rect', v: num(r, m) / total, row: k(r), paint: 'series.' + ((i % 6) + 1), layer: 'data', role: roleOf(layer) });
   });
-  if (legend === 'full') {
-    rows.forEach((r, i) => {
-      nodes.push({ key: 'swatch:' + k(r), part: 'legend', kind: 'rect', row: k(r), paint: 'series.' + ((i % 6) + 1), layer: 'data' });
-      nodes.push({ key: 'legend:' + k(r), part: 'legend', kind: 'text', row: k(r), text: String(k(r)), anchor: 'start', baseline: 'middle', font: 'label', paint: 'ink', layer: 'guide' });
-      nodes.push({ key: 'share:' + k(r), part: 'legend', kind: 'text', row: k(r), text: fmtPct(num(r, m) / total), anchor: 'end', baseline: 'middle', font: 'value', paint: 'ink', layer: 'guide' });
-    });
-  } else if (legend === 'top' && rows.length) {
-    // One line for the whole band, so it names no row.
-    nodes.push({ key: 'legend:top', part: 'legend', kind: 'text', text: k(rows[0]!) + ' ' + fmtPct(num(rows[0]!, m) / total), anchor: 'start', font: 'label', paint: 'ink', layer: 'guide' });
-  }
+  // Both legends, each in its own part. The plan names one in `parts`; a fit rule swaps them.
+  rows.forEach((r, i) => {
+    nodes.push({ key: 'swatch:' + k(r), part: 'legend', kind: 'rect', row: k(r), paint: 'series.' + ((i % 6) + 1), layer: 'data' });
+    nodes.push({ key: 'legend:' + k(r), part: 'legend', kind: 'text', row: k(r), text: String(k(r)), anchor: 'start', baseline: 'middle', font: 'label', paint: 'ink', layer: 'guide' });
+    nodes.push({ key: 'share:' + k(r), part: 'legend', kind: 'text', row: k(r), text: fmtPct(num(r, m) / total), anchor: 'end', baseline: 'middle', font: 'value', paint: 'ink', layer: 'guide' });
+  });
+  // One line for the whole band, so it names no row.
+  if (rows.length) nodes.push({ key: 'legend:top', part: 'legend-top', kind: 'text', text: k(rows[0]!) + ' ' + fmtPct(num(rows[0]!, m) / total), anchor: 'start', font: 'label', paint: 'ink', layer: 'guide' });
   return { nodes, rows: rows.map(k) };
 }
 
@@ -201,8 +199,8 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
     body = sceneRows(catalog, p.layers, result.rows.slice(0, p.rowLimit || result.rows.length));
   } else if (p.layout === 'band') {
     parts.push('band');
-    if (p.guides.legend) parts.push('legend');
-    body = sceneBand(p.layers[0]!, result.rows, p.guides.legend);
+    if (p.guides.legend) parts.push(p.guides.legend === 'top' ? 'legend-top' : 'legend');
+    body = sceneBand(p.layers[0]!, result.rows);
   }
   return { layout: p.layout, parts, ...(side && { side }), ...body, nodes: number.concat(body.nodes) };
 }

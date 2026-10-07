@@ -194,7 +194,7 @@ describe('schemas', () => {
 
 describe('the ratio scene (dom-painter-plan section 3)', () => {
   const PARTS: Record<string, string[]> = {
-    cartesian: ['number', 'plot', 'x-axis', 'y-axis'], rows: ['number', 'rows'], band: ['number', 'band', 'legend'],
+    cartesian: ['number', 'plot', 'x-axis', 'y-axis'], rows: ['number', 'rows'], band: ['number', 'band', 'legend', 'legend-top'],
     none: ['number'], notice: ['number', 'notice'], prose: [],
   };
   const unbounded = (spec: Spec) => {
@@ -240,6 +240,16 @@ describe('the ratio scene (dom-painter-plan section 3)', () => {
     for (const n of lines.ratio.nodes) if (n.kind === 'path') {
       const px = numbers((lines.scene.nodes.find((m) => m.key === n.key) as any).d);
       numbers(n.d!).forEach((v, i) => expect(Math.abs((i % 2 ? 10 + v * 1.52 : 38 + v * 3) - px[i]!), n.key).toBeLessThan(0.01));
+    }
+  });
+  it('a band carries both legends, each in its own part, and `parts` names the one the plan shows', () => {
+    for (const [w, part] of [[346, 'legend'], [150, 'legend-top']] as const) {
+      const { ratio, scene } = run(specs.mix!, w);
+      expect(ratio.parts).toEqual(['band', part]);
+      expect(ratio.nodes.filter((n) => n.part === 'legend').length).toBe(18);
+      expect(ratio.nodes.filter((n) => n.part === 'legend-top').map((n) => n.key)).toEqual(['legend:top']);
+      // place() draws one of them, as before.
+      expect(scene.nodes.filter((n) => /^(legend|swatch|share):/.test(n.key)).length).toBe(part === 'legend' ? 18 : 1);
     }
   });
   for (const name of Object.keys(samples)) it(`${name}, with no size`, () => expect(unbounded(specs[name]!).ratio).toMatchSnapshot());

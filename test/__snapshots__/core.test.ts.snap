@@ -4567,6 +4567,16 @@ exports[`the ratio scene (dom-painter-plan section 3) > mix, with no size 1`] = 
       "row": "Other",
       "text": "3%",
     },
+    {
+      "anchor": "start",
+      "font": "label",
+      "key": "legend:top",
+      "kind": "text",
+      "layer": "guide",
+      "paint": "ink",
+      "part": "legend-top",
+      "text": "Search 41%",
+    },
   ],
   "parts": [
     "band",

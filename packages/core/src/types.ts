@@ -118,7 +118,7 @@ export interface Plan extends PlanShape {
 /* Scene: a flat list of shapes with stable keys and paint tokens, in ratios.
  * Every node names its part, and its coordinates run 0 to 1 within that part's
  * box. A scene needs no size to exist. Pixel painters get theirs from place(). */
-export type Part = 'number' | 'plot' | 'x-axis' | 'y-axis' | 'rows' | 'band' | 'legend' | 'notice';
+export type Part = 'number' | 'plot' | 'x-axis' | 'y-axis' | 'rows' | 'band' | 'legend' | 'legend-top' | 'notice';
 interface NodeBase {
   key: string;
   part: Part;
@@ -163,7 +163,8 @@ export interface TextNode extends NodeBase {
 export type SceneNode = RectNode | PathNode | LineNode | CircleNode | TextNode;
 export interface Scene {
   layout: Layout;
-  /** The parts the plan shows. The number's nodes are in the scene either way, so a fit rule can show it in compensation. */
+  /** The parts the plan shows. The number's nodes are in the scene either way, so a fit rule can show it in compensation.
+   * So are both forms of a band's legend, `legend` and `legend-top`, so a rule can swap them. place() draws only the parts named here. */
   parts: Part[];
   /** The number sits beside a bare plot. */
   side?: boolean;

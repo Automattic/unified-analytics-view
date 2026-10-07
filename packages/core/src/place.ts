@@ -86,17 +86,18 @@ function placeRows(scene: Scene, W: number): Block {
   return { nodes, height: Math.max(0, rows.length * (rowH + gap) - gap) };
 }
 
-// One band and its legend.
+// One band and its legend: whichever of the two the plan shows.
 function placeBand(scene: Scene, W: number): Block {
   const barH = 24, gap = 2, rows = scene.rows!, usable = W - gap * (rows.length - 1);
   const nodes: PlacedNode[] = [];
   let x0 = 0, h = barH;
   scene.nodes.forEach((n) => {
+    if (!scene.parts.includes(n.part)) return;
     if (n.part === 'band' && n.kind === 'rect') {
       const w = n.v! * usable;
       nodes.push(rect(n, x0, 0, w, barH, 2));
       x0 += w + gap;
-    } else if (n.part === 'legend' && n.kind === 'text' && n.row == null) {      // the one-line legend
+    } else if (n.part === 'legend-top' && n.kind === 'text') {
       nodes.push(text(n, 0, barH + 18, fit(n.text, W)));
       h = barH + 24;
     } else if (n.part === 'legend') {

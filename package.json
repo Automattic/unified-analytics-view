@@ -14,6 +14,7 @@
     "@types/d3-shape": "^3.2.0",
     "@types/node": "^26.6.4",
     "@universal-analytics/core": "workspace:*",
+    "@universal-analytics/dom": "workspace:*",
     "@universal-analytics/fixtures": "workspace:*",
     "@universal-analytics/tokens": "workspace:*",
     "ajv": "^8.20.0",

@@ -26,6 +26,9 @@ importers:
       '@universal-analytics/core':
         specifier: workspace:*
         version: link:packages/core
+      '@universal-analytics/dom':
+        specifier: workspace:*
+        version: link:packages/dom
       '@universal-analytics/fixtures':
         specifier: workspace:*
         version: link:packages/fixtures
@@ -59,6 +62,9 @@ importers:
       '@universal-analytics/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@universal-analytics/dom':
+        specifier: workspace:*
+        version: link:../../packages/dom
       '@universal-analytics/fixtures':
         specifier: workspace:*
         version: link:../../packages/fixtures
@@ -87,6 +93,12 @@ importers:
       d3-shape:
         specifier: ^3.2.0
         version: 3.2.0
+
+  packages/dom:
+    dependencies:
+      '@universal-analytics/core':
+        specifier: workspace:*
+        version: link:../core
 
   packages/fixtures:
     dependencies:

@@ -1,6 +1,6 @@
 # Feedback from the build
 
-As of October 7, 2026. What executing `docs/dom-painter-plan.md` has found so far: where the plan did not hold as written, bugs, and loose ends. Every step of the plan is built. Steps 1 to 4 and the measured pass are on `dom-painter`; transitions and the keyboard are on `dom-painter-step5`, waiting to be merged into it.
+As of October 7, 2026. What executing `docs/dom-painter-plan.md` has found so far: where the plan did not hold as written, bugs, and loose ends. Every step of the plan is built and merged into `dom-painter`.
 
 Each entry says what was found, what was done about it, and what is still to decide. Nothing here has been settled quietly.
 
@@ -192,7 +192,7 @@ Checked together in Chrome and WebKit: stepping, activation, and a change from 2
 
 - **Hit targets would have slid and faded with the marks,** since they carry the registered properties and a key. Fixed in the merge: the hit layer takes its new places at once and a leaving target goes at once.
 - **A leaving band segment keeps `role="option"` with the id `hit--1`** for the 150 ms it fades. It is skipped when stepping. Open.
-- **These two branches sit on `dom-painter-step5`,** not `dom-painter`. The main checkout has another session's uncommitted edits to `apps/bench/index.html`, which this merge also changes, so `dom-painter` could not be moved without touching that work.
+- **The two branches were merged on a side branch first,** `dom-painter-step5`, because the main checkout held another session's uncommitted edits to `apps/bench/index.html`. It was merged into `dom-painter` once that work was committed, with no conflict.
 
 ## Bugs
 

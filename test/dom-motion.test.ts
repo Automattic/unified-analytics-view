@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildScene, resolve, unboundedContainer, type PathNode } from '@universal-analytics/core';
 import { catalog, runQuery, samples } from '@universal-analytics/fixtures';
-import { mix, pathD, resample } from '../packages/dom/src/motion.ts';
+import { mix, resample } from '../packages/dom/src/motion.ts';
 
 // A path's morph is points in and a string out, so it is held here with no DOM. That it runs, and what a
 // stylesheet moves, is checked in a browser on the bench.
@@ -11,28 +11,6 @@ function paths(range: string, scenario: 'typical' | 'no-prior' = 'typical'): Pat
   return buildScene(resolve(spec, result, unboundedContainer(), catalog), spec.query, result, catalog).nodes.filter((n): n is PathNode => n.kind === 'path');
 }
 const numbers = (d: string) => d.split(/[A-Z,]/).filter(Boolean).map(Number), commands = (d: string) => d.replace(/[^A-Z]/g, '');
-
-describe('pathD', () => {
-  it('draws the trend at rest as core does: the same commands, and numbers within a rounding', () => {
-    const all = ['28d', '14d', '7d'].flatMap((r) => paths(r));
-    expect(all.map((n) => n.key).slice(0, 4)).toEqual(['context:area', 'comparison:line', 'primary:line', 'primary:line:partial']);
-    let same = 0;
-    for (const n of all) {
-      const d = pathD(n.points, n.curve, n.fill);
-      expect(commands(d)).toBe(commands(n.d!));
-      // Core draws x on a 0 to 100 scale and this from 100 times a ratio, which can differ in the last bit before rounding.
-      numbers(n.d!).forEach((v, i) => expect(Math.abs(numbers(d)[i]! - v)).toBeLessThan(0.0011));
-      if (d === n.d) same++;
-    }
-    expect(same + ' of ' + all.length).toBe('12 of 12');
-  });
-
-  it('draws one point as core does, and a straight tail', () => {
-    expect(pathD([{ x: 0.5, v: 0.25 }], 'monotone')).toBe('M50,75Z');
-    expect(pathD([{ x: 0.5, v: 0.25 }], 'monotone', true)).toBe('M50,75L50,100Z');
-    expect(pathD([{ x: 0, v: 0 }, { x: 1, v: 1 }])).toBe('M0,100L100,0');
-  });
-});
 
 describe('resample and mix', () => {
   const [, , line] = paths('28d'), [, , week] = paths('7d');

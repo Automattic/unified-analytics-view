@@ -1,4 +1,4 @@
-import type { PathNode } from '@universal-analytics/core';
+import { pathD, type PathNode } from '@universal-analytics/core';
 
 /* Motion: what a data change animates. A resize animates nothing, because nothing here runs on one and a ratio
  * does not change with the room.
@@ -46,38 +46,6 @@ export const MOTION_CSS = `
 }`;
 
 export interface XV { x: number; v: number }
-
-const sign = (n: number) => (n < 0 ? -1 : 1);
-// d3-shape writes three decimal places, rounding each number as it is written.
-const r = (n: number) => Math.round(n * 1000) / 1000;
-/* d3-shape's curveMonotoneX, kept to its arithmetic and its output, so that a path drawn here from a scene's
- * points is the `d` core drew. `cmd` opens it: M, or L for the way back along an area's baseline. */
-function monotone(pts: [number, number][], cmd: string): string {
-  let d = '', x0 = NaN, y0 = NaN, x1 = NaN, y1 = NaN, t0 = NaN, n = 0;
-  const slope2 = (t: number) => { const h = x1 - x0; return h ? (3 * (y1 - y0) / h - t) / 2 : t; };
-  const curve = (a: number, b: number) => { const dx = (x1 - x0) / 3; d += `C${r(x0 + dx)},${r(y0 + dx * a)},${r(x1 - dx)},${r(y1 - dx * b)},${r(x1)},${r(y1)}`; };
-  for (const [x, y] of pts) {
-    let t1 = NaN;
-    if (x === x1 && y === y1) continue;
-    if (n === 0) d += cmd + r(x) + ',' + r(y);
-    else if (n > 1) {
-      const h0 = x1 - x0, h1 = x - x1, s0 = (y1 - y0) / (h0 || (h1 < 0 ? -0 : 0)), s1 = (y - y1) / (h1 || (h0 < 0 ? -0 : 0)), p = (s0 * h1 + s1 * h0) / (h0 + h1);
-      t1 = (sign(s0) + sign(s1)) * Math.min(Math.abs(s0), Math.abs(s1), 0.5 * Math.abs(p)) || 0;
-      curve(n === 2 ? slope2(t1) : t0, t1);
-    }
-    n = Math.min(n + 1, 3); x0 = x1; x1 = x; y0 = y1; y1 = y; t0 = t1;
-  }
-  if (n === 2) d += 'L' + r(x1) + ',' + r(y1); else if (n === 3) curve(t0, slope2(t0));
-  return d;
-}
-
-/** The path through `points` in the scene's 100 by 100 box: a line, or an area down to the baseline. */
-export function pathD(points: XV[], curve?: 'monotone', fill?: boolean): string {
-  const pts = points.map((p): [number, number] => [100 * p.x, 100 * (1 - p.v)]);
-  const run = (ps: [number, number][], cmd: string) => (curve ? monotone(ps, cmd) : ps.map(([x, y], i) => (i ? 'L' : cmd) + r(x) + ',' + r(y)).join(''));
-  if (fill) return run(pts, 'M') + run(pts.map(([x]): [number, number] => [x, 100]).reverse(), 'L') + 'Z';
-  return run(pts, 'M') + (pts.length === 1 ? 'Z' : '');
-}
 
 /** `from`, read at each x of `to`. A morph moves values and never x, so the two sets need not share their rows:
  * when they do, this is `from` itself. */
@@ -135,9 +103,7 @@ const morphs = new WeakMap<Element, Morph>();
  * rule has hidden) the first frame is the last. At rest `d` is core's own string. */
 export function morph(el: SVGElement, n: PathNode): void {
   const m = morphs.get(el);
-  // ponytail: core's keys count layers, so when a layer drops out the next one takes its key. A path that changed
-  // role is treated as new. Keys that name the layer in core would remove this.
-  if (!m || m.to.role !== n.role || !el.closest('.vg[data-moving]')) {
+  if (!m || !el.closest('.vg[data-moving]')) {
     if (m) cancelAnimationFrame(m.frame);
     el.setAttribute('d', n.d ?? '');
     morphs.set(el, { now: n.points, from: n.points, to: n, frame: 0 });
@@ -151,6 +117,6 @@ function step(el: SVGElement, m: Morph): void {
   const clock = transitions(el).find((t) => (t as CSSTransition).transitionProperty === '--vg-p');
   const p = clock?.effect?.getComputedTiming().progress ?? 1;
   m.now = mix(m.from, m.to.points, p);
-  el.setAttribute('d', p < 1 ? pathD(m.now, m.to.curve, m.to.fill) : m.to.d ?? '');
+  el.setAttribute('d', (p < 1 ? pathD(m.now, m.to.curve, m.to.fill) : m.to.d) ?? '');
   m.frame = p < 1 ? requestAnimationFrame(() => step(el, m)) : 0;
 }

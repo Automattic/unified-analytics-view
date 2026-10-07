@@ -1,4 +1,4 @@
-import type { Catalog, Query, RectNode, Result, Row, Scene } from '@universal-analytics/core';
+import { formatDimension, formatValue, partialNote, type Catalog, Query, RectNode, Result, Row, Scene } from '@universal-analytics/core';
 import { attr, ensure, paintVar } from './dom.ts';
 
 /* Hit targets, the keyboard and the readout. A layout marks the element that holds its points with `data-hits`
@@ -10,16 +10,13 @@ import { attr, ensure, paintVar } from './dom.ts';
  * and Tab moves on. To assistive technology the holder is a listbox and each point an option named by its readout,
  * so the words on screen and the words announced are one string. */
 
-const NF = new Intl.NumberFormat('en-US');
-/** A value as the table sets it, which the readout shares. ponytail: core's `fmt` is not exported, and a date stays as it came. */
-export const cell = (v: unknown) => (v == null ? '–' : typeof v === 'number' ? NF.format(v) : String(v));
-
-/** What the readout says for one row of the result: the dimension value, each metric, and its comparison if the row has one. */
+/** What the readout says for one row of the result, in the catalog's formats: the dimension value, each metric
+ * (marked when its bucket is unfinished), and its comparison if the row has one. */
 export function readout(row: Row, q: Query, catalog: Catalog): string {
-  const dims = (q.by || []).map((d) => cell(row[d])).join(', ');
+  const dims = (q.by || []).map((d) => formatDimension(row[d], catalog.dimensions[d]!)).join(', '), partial = partialNote(row);
   const values = q.metrics.map((m) => {
-    const prev = q.compare === 'previous' ? row[m + '@previous'] : null;
-    return catalog.metrics[m]!.label + ' ' + cell(row[m]) + (prev == null ? '' : ', previous period ' + cell(prev));
+    const def = catalog.metrics[m]!, prev = q.compare === 'previous' ? row[m + '@previous'] : null;
+    return def.label + ' ' + formatValue(row[m] as number | null, def) + (partial && ' ' + partial) + (prev == null ? '' : ', previous period ' + formatValue(prev as number, def));
   }).join('; ');
   return dims ? dims + ': ' + values : values;
 }

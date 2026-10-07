@@ -1,8 +1,8 @@
-import { CONTAINER_RULES, buildScene, expand, resolve, unboundedContainer } from '@universal-analytics/core';
-import type { Catalog, ContainerRules, Layout, Query, Result, SceneNode, Spec } from '@universal-analytics/core';
+import { CONTAINER_RULES, buildScene, expand, formatDimension, formatValue, resolve, unboundedContainer } from '@universal-analytics/core';
+import type { Catalog, ContainerRules, Layout, Query, Result, Row, SceneNode, Spec } from '@universal-analytics/core';
 import { compileFitRules, type FitExtras } from './compile.ts';
 import { attr, ensure, keyed, paintVar, text } from './dom.ts';
-import { KEYS_CSS, Keys, cell } from './keys.ts';
+import { KEYS_CSS, Keys } from './keys.ts';
 import { LAYOUTS } from './layouts/index.ts';
 import { NUMBER_FITS, fitNumber, readNumber } from './measure.ts';
 import { MOTION_CSS, begin, register, settle } from './motion.ts';
@@ -136,8 +136,9 @@ function paintTable(table: HTMLTableElement, title: string | undefined, q: Query
   table.replaceChildren();
   if (title) table.createCaption().textContent = title;
   row(table.createTHead(), [...by.map((d): [string, 'th'] => [catalog.dimensions[d]!.label, 'th']), ...fields.map((f): [string, 'th', boolean] => [label(f), 'th', true])]);
-  const body = table.createTBody(), totals = fields.map((f): [string, 'td', boolean] => [cell(result.totals[f]), 'td', true]);
-  for (const r of result.rows) row(body, [...by.map((d): [string, 'th'] => [cell(r[d]), 'th']), ...fields.map((f): [string, 'td', boolean] => [cell(r[f]), 'td', true])]);
+  const value = (v: Row[string], f: string) => formatValue(v as number | null, catalog.metrics[f.replace('@previous', '')]!, 'exact');
+  const body = table.createTBody(), totals = fields.map((f): [string, 'td', boolean] => [value(result.totals[f], f), 'td', true]);
+  for (const r of result.rows) row(body, [...by.map((d): [string, 'th'] => [formatDimension(r[d], catalog.dimensions[d]!), 'th']), ...fields.map((f): [string, 'td', boolean] => [value(r[f], f), 'td', true])]);
   if (!by.length) row(body, totals);
   else row(table.createTFoot(), [['Total', 'th'], ...by.slice(1).map((): [string, 'td'] => ['', 'td']), ...totals]);
 }

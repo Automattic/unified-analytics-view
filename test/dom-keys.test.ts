@@ -34,13 +34,19 @@ describe('step', () => {
 
 describe('readout', () => {
   it('says the dimension value, the metric, and the comparison when the row has one', () => {
-    const { result, says } = of('trend'), r = result.rows[0]!;
-    expect(says[0]).toBe(r['date.day'] + ': Visitors ' + (r.visitors as number).toLocaleString('en-US') + ', previous period ' + (r['visitors@previous'] as number).toLocaleString('en-US'));
+    const { says } = of('trend');
+    expect(says[0]).toBe('Sep 8: Visitors 416, previous period 370');
     expect(says).toHaveLength(28);
+  });
+  it('marks the unfinished day, in core\'s words', () => {
+    const { result, says } = of('trend');
+    expect(result.rows[27]!.partial).toBe(true);
+    expect(says[27]).toBe('Oct 5: Visitors 175 so far, previous period 405');
+    expect(says.filter((s) => s.includes('so far'))).toHaveLength(1);
   });
   it('leaves the comparison out when there is no prior period', () => {
     const { says } = of('trend', 'no-prior');
-    for (const s of says) expect(s).toMatch(/^\d{4}-\d\d-\d\d: Visitors [\d,]+$/);
+    for (const s of says) expect(s).toMatch(/^[A-Z][a-z]{2} \d+: Visitors [\d,]+( so far)?$/);
   });
   it('reads a ranked list and a share the same way', () => {
     expect(of('pages').says[0]).toMatch(/^\/.*: Page views [\d,]+$/);

@@ -19,7 +19,7 @@ Packages export their TypeScript source and nothing is built for release yet. Vi
 
 ## Layout
 
-- `packages/core`: types, presets and `expand`, the plan (`resolve`), scene builders, the tldr prose, and JSON Schemas in `schema/`.
+- `packages/core`: types, presets and `expand`, the plan (`resolve`), scene builders (ratios) and `place` (pixels), the tldr prose, and JSON Schemas in `schema/`.
 - `packages/fixtures`: the catalog, the seeded fixture query engine (`typical`, `no-prior`, `empty`) and the six sample specs.
 - `packages/tokens`: build-time token generation, ported from the storybook repo. Base tier: Leonardo makes the colour ramps and Utopia the type, space and control-size scales; `config/base.tokens.json` holds the rest. Common tier: `config/common.tokens.json` (and `common.dark`) names the Spacefast library's variables as aliases into base. Style Dictionary compiles both to `generated/tokens.css`. Nothing consumes them yet.
 - `test/`: one suite across both packages. Golden scenes are in `test/__snapshots__`.

@@ -1,6 +1,6 @@
 # Feedback from the build
 
-As of October 7, 2026. What executing `docs/dom-painter-plan.md` has found so far: where the plan did not hold as written, bugs, and loose ends. Steps 1 to 3 and the cartesian part of step 4 are merged into `dom-painter`.
+As of October 7, 2026. What executing `docs/dom-painter-plan.md` has found so far: where the plan did not hold as written, bugs, and loose ends. Steps 1 to 4 and the measured pass of step 5 are merged into `dom-painter`. Transitions, keyboard navigation and the hit targets are not built.
 
 Each entry says what was found, what was done about it, and what is still to decide. Nothing here has been settled quietly.
 
@@ -101,6 +101,55 @@ Gaps:
 - Wanted from core: `fmt` is not exported, so the table formats numbers itself; the number's short-form widths (160, 200, 120) are constants in `place.ts`, copied into the base CSS.
 - The table is built but has only been checked by its row count.
 - A running dev server does not see a new workspace package. After `packages/dom` was merged the bench was blank until the server was restarted.
+
+## Findings: step 4, `rows` and `band`
+
+Both layouts are built, each in its own file under `packages/dom/src/layouts/`. Observed in Chrome 155 and Playwright's WebKit; not in Firefox or Safari itself.
+
+Rows:
+
+1. **The plan's height-limit trick needs a spacer.** A flex line always takes its first item, so when not even one row fits, the first row was cut mid-height. An empty `::before` as the first flex item, full width, with a negative margin that cancels the gap, makes the first row wrap away like any other. Still no script. With it, only whole rows show at every checked size.
+2. **Top pages at 120 px wide shows a squeezed list where `resolve()` shows the number.** Expected: the widest value's room depends on content and cannot be said in CSS. A container query on the label track can only style what is inside it. Open; it wants the measured hook.
+3. **Present now fits one more row in a box than the pixel pipeline,** because the number block is 50 px tall in the DOM and 58 px in pixels. The element owns that.
+4. **A box shorter than one row, with no number above, would be blank** where `resolve()` shows the number. Not observed; core has no block need for `rows`, and a layout's own rules are static, so it cannot write one from `rules.rows.rowHeight`.
+5. **A row has no node in the scene.** The layout makes a `RectNode` per row to reuse `keyed`. A row node in the scene, or a `keyed` that takes any `{ key }`, would be cleaner.
+6. **Bar radius fallbacks disagree:** rows fall back to 3 px and cartesian to 2 px on the same token.
+7. The `list` and `listitem` roles on the rows were the agent's addition, not the plan's.
+
+Band:
+
+1. **A full legend under a height limit is done in CSS, with no script.** The plan left it open for the DOM. The layout writes its row count as `--vg-rows`, and a `max-block-size` clamp on `100cqb` swaps the legends. It assumes fixed-height legend rows.
+2. **A rule local to the layout collapses the band under 48 px,** because core's band `marks` rule has no block need. It is wrong when the number sits above the band. A block need in core would remove it.
+3. **With `keep`, kept parts are clipped by the box** where `resolve()` would collapse. This is step 1's finding 3 again.
+4. **Reading order can drift.** A segment entering mid-list is placed with `order`, so DOM order and visual order differ until the layout is rebuilt. The legend is read by assistive technology. The fix belongs with transitions and keys, since moving a kept element cancels its transition. Open.
+5. **Bar and legend row heights (24 px) are held twice,** in `place.ts` and in the layout's CSS.
+6. One 404 in the bench's console, not chased.
+
+## Findings: step 5, the measured pass
+
+Built in `packages/dom/src/measure.ts` and `view.ts`. It settled in one run at every size swept (widths 420 to 40 and back, box heights 200 to 20 and back, 66 views), in Chrome and WebKit, with no hysteresis: nothing it reads depends on what it writes.
+
+**Decision 5 holds: the prose rung is measured.** The threshold is the number's own width, about 69 px for "10.5k", and it now follows the font and the data with no constant. It costs a hidden ruler that holds the number in each form, and a lift-and-reset of the attribute while a view is prose.
+
+What it writes: `data-fit` on the number (`small`, `short`, `delta-short`, `no-note`), `data-fit="prose"` on the figure, `data-thin` on x labels that would collide. The old fixed queries stay as the fallback where there is no `ResizeObserver`.
+
+The seam gained one optional member, `measure?(body, room)`, for a layout's own measured work. Cartesian uses it for tick thinning.
+
+Closed by it: the 40 px box and the trend at 120 by 60 now go to prose; at 120 px wide the number is 34 px with its note, as in pixels.
+
+New findings:
+
+1. **A "ResizeObserver loop" error can reach the host page.** The pass writes inside its observer callback. When that changes the view's natural height and the page itself observes an ancestor, the window gets "ResizeObserver loop completed with undelivered notifications". Benign, but an error tracker on a customer's page will see it. The alternative is to defer the write a frame, which paints one frame unfitted. The synchronous write was kept. **To decide.**
+2. **Prose appears in the middle of a narrowing sweep.** In a 60 px box the trend goes sparkline, then prose from about 152 to 104 px, then the number again once the note stops fitting, then prose. `resolve()` does the same at 120 and 80 px, so this is the reducer's behaviour, now visible live. Dropping the note for height before falling to prose would fix it. Not done, to stay with `resolve()`. **To decide.**
+3. **Prose overflows a small box.** At 40 or 60 px tall the sentence is clipped by whatever holds the view.
+4. **The `mid-tick` rule is more cautious than the labels need.** By measurement the middle label clears the others down to about 150 px; the rule drops it under 380. Kept, since it matches `resolve()`.
+5. **The ladder skips the full form at 26 px.** `place()` can show a long full number small; the pass goes to the short form at 37 px first.
+6. **Layers in a 40 px box shows the number where `resolve()` says prose.** `place()` counts a lone number as 42 px tall; the DOM sets it in 34, which fits.
+7. **The no-prior delta shows whole** where pixels clip it by character count.
+8. Still not measured: a bare plot beside a number wider than 76 px. Still left-to-right only.
+9. Not observed: a web font swapping in. The ruler is observed for it, but nothing loaded a font.
+
+Still differing from `resolve()` and not the measured pass's: at 346 by 100 the secondary layers stay, and a bare plot fills a box where pixels keep 46 px.
 
 ## Bugs
 

@@ -1,5 +1,0 @@
-{
-  "description": "The qualitative (categorical) set: which ramp fills each series slot, and at which step per theme. One step per theme gives the series equal weight. Light 700 is text-safe (5:1) and is where Spacefast's info, error and success-text sit; dark 900 (11.3:1) is where its bright info, warning and success sit. Lime is left out: it is the brand marker and the live signal.",
-  "step": { "light": 700, "dark": 900 },
-  "series": ["blue", "amber", "green", "red", "neutral"]
-}

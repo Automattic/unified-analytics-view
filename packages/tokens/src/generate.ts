@@ -1,5 +1,5 @@
 /* Token generation. Reads config/, writes generated/:
- *   *.tokens.json  W3C DTCG primitives: the ramps, surface set and qualitative set per theme, the scales
+ *   *.tokens.json  W3C DTCG primitives: the ramps and surface set per theme, the scales
  *   tokens.css     primitives and the common tier as custom properties, light and dark
  * config/ is the source of truth. Never edit generated/ by hand.
  *
@@ -22,27 +22,13 @@ export const ROOT = join(import.meta.dirname, '..');
 /** Primitives are namespaced so they cannot collide with a host page's own. */
 export const PREFIX = 'ua';
 
-/** The qualitative set for one theme, as aliases into that theme's ramps. */
-export function qualitative(series: string[], step: number, ramps: Tree): Tree {
-  const set: Tree = { $description: `Qualitative series, each at step ${step} of its ramp` };
-  series.forEach((name, i) => {
-    if (!(ramps[name] as Tree | undefined)?.[step]) {
-      throw new Error(`qualitative.json: series ${i + 1} names "${name}" at step ${step}, which the ramps do not have. Use one of: ${Object.keys(ramps).filter((k) => !k.startsWith('$')).join(', ')}`);
-    }
-    set[i + 1] = { $value: `{color.${name}.${step}}` };
-  });
-  return set;
-}
-
 /** Leonardo and Utopia output, keyed by the file each tree is written to. */
 export async function primitives(root = ROOT): Promise<Record<string, Tree>> {
   const leonardo = await generateLeonardoTokens(join(root, 'config/leonardo.json'));
   const utopia = await generateUtopiaTokens(join(root, 'config/utopia.json'));
-  const q = JSON.parse(readFileSync(join(root, 'config/qualitative.json'), 'utf-8')) as { series: string[]; step: { light: number; dark: number } };
   const s = JSON.parse(readFileSync(join(root, 'config/surface.json'), 'utf-8')) as { description: string; set: Record<string, { light: string; dark: string }> };
   for (const theme of ['light', 'dark'] as const) {
     const ramps = leonardo[theme].color as Tree;
-    ramps.qualitative = qualitative(q.series, q.step[theme], ramps);
     ramps.surface = { $description: s.description, ...Object.fromEntries(Object.entries(s.set).map(([name, value]) => [name, { $value: value[theme] }])) };
   }
   return { 'color.light': leonardo.light, 'color.dark': leonardo.dark, 'scale.fluid': utopia.fluid, 'scale.min': utopia.min, 'scale.max': utopia.max };

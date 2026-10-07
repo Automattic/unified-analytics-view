@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { buildCSS, primitives, qualitative, ROOT } from '../packages/tokens/src/generate.ts';
+import { buildCSS, primitives, ROOT } from '../packages/tokens/src/generate.ts';
 
 const generated = (name: string) => readFileSync(join(ROOT, 'generated', name), 'utf-8');
 
@@ -22,10 +22,5 @@ describe('token output', () => {
     expect(dark).toContain('--ua-color-card: var(--ua-color-surface-card);');
     expect(light).toContain('--ua-spacing-4: var(--ua-space-s);');
     expect(dark).not.toContain('--ua-spacing-4');
-  });
-
-  it('names the ramps to choose from when a series points at none', () => {
-    const ramps = { $type: 'color', blue: { 500: { $value: { hex: '#123456' } } } };
-    expect(() => qualitative(['teal'], 500, ramps)).toThrow(/Use one of: blue/);
   });
 });

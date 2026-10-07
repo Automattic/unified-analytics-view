@@ -56,7 +56,7 @@ function render() {
 
   const ramps = new Map<string, [string, string][]>();
   for (const [name, value] of [...all]) {
-    const m = /^--ua-color-([a-z]+)-(\d+)$/.exec(name);
+    const m = /^--ua-color-([a-z-]+)-(\d+)$/.exec(name);
     if (!m || value[0] !== '#') continue;
     if (!ramps.has(m[1]!)) ramps.set(m[1]!, []);
     ramps.get(m[1]!)!.push([name, value]);
@@ -88,7 +88,6 @@ function render() {
   };
   section('Outside the ramps', 'base tier: white, black and the constants, the same in both themes', chips(take(/^--ua-color-(white|black|constant-)/), '--ua-color-'));
   section('Surfaces', 'base tier: the page and the levels that rise from it, a value per theme', chips(take(/^--ua-color-surface-/), '--ua-color-'));
-  section('Qualitative', 'the series slots', chips(take(/^--ua-color-qualitative-/), '--ua-color-'));
   section('Common colours', 'named roles, aliased into the base tier', chips(take(/^--ua-color-/), '--ua-color-'));
   section('Chart paint', 'the @automattic/charts names, as the bench maps them', chips(take(/^--a8c-charts-color-/), '--a8c-charts-color-'));
 

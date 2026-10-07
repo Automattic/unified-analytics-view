@@ -86,6 +86,25 @@ describe('the rule set', () => {
   });
 });
 
+describe('the rules are what place() builds to', () => {
+  const swap = (id: string, needs: FitRule['needs']) => ({ ...CONTAINER_RULES, fit: FIT_RULES.map((r) => (r.id === id ? { ...r, needs } : r)) });
+  it('a context that moves the mid-tick rule moves what is drawn, as well as what is reported', () => {
+    const mid = (rules = CONTAINER_RULES) => { const { plan, scene } = run(trend, 346, null, 'typical', 'svg', rules); return [scene.nodes.some((n) => n.key === 'xtick:2026-09-21'), plan.dropped]; };
+    expect(mid()).toEqual([false, ['the middle date label']]);
+    expect(mid(swap('mid-tick', { inline: 300 }))).toEqual([true, []]);
+  });
+  it('the notice is as short as its rule allows', () => {
+    const at30 = (rules = CONTAINER_RULES) => { const { plan, scene } = run(trend, 346, 30, 'empty', 'svg', rules); return [plan.layout, scene.height]; };
+    expect(at30()[0]).toBe('prose');                                   // under 40 px the notice goes, and the number is too tall as well
+    expect(at30(swap('notice', { inline: 150, block: 20 }))).toEqual(['notice', 30]);
+  });
+  it('the number beside a bare plot is as narrow as the context says', () => {
+    const plot = (numberWidth: number) => run(trend, 170, null, 'typical', 'svg', { ...CONTAINER_RULES, bare: { ...CONTAINER_RULES.bare, numberWidth } }).scene.plot;
+    expect(plot(76)).toEqual({ w: 82, h: 50 });
+    expect(plot(100)).toEqual({ w: 58, h: 50 });
+  });
+});
+
 describe('the rules against resolve(), over the sweep', () => {
   it('a rule never hides what resolve() keeps', () => {
     const wrong: string[] = [];

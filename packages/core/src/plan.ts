@@ -1,5 +1,5 @@
 import { CONTAINER_RULES, KEEP } from './container.ts';
-import { applies, type FitRule } from './fit.ts';
+import { applies, ruleFor, type FitRule } from './fit.ts';
 import { PRESETS, expand } from './presets.ts';
 import { place } from './place.ts';
 import { buildScene, tldrValueText, isDim, valueRoomOf } from './scene.ts';
@@ -55,11 +55,11 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   }
 
   const valueLen = tldrValueText(catalog, q, result, true).length;
-  const rule = (id: string) => rules.fit.find((r) => r.layout === p.layout && r.id === id);
+  const rule = (id: string) => ruleFor(rules.fit, p.layout, id);
   // The view rule the layout stands on now, and the room beside its part that only measuring gives:
-  // a number wider than the 76 px the bare plot's rule allows it, or a row's widest value.
+  // a number wider than the bare plot's rule allows it, or a row's widest value.
   function guard(): { rule?: FitRule; measured: number } {
-    if (p.layout === 'cartesian') return p.side ? { rule: rule('marks'), measured: Math.max(0, container.displayWidth(valueLen) - 76) } : { rule: rule('axes'), measured: 0 };
+    if (p.layout === 'cartesian') return p.side ? { rule: rule('marks'), measured: Math.max(0, container.displayWidth(valueLen) - rules.bare.numberWidth) } : { rule: rule('axes'), measured: 0 };
     if (p.layout === 'rows') return { rule: rule('marks'), measured: valueRoomOf(catalog, p.layers, result.rows) };
     if (p.layout === 'band') return { rule: rule(p.guides.legend === 'full' ? 'legend' : 'marks'), measured: 0 };
     return { rule: rule('notice'), measured: 0 };

@@ -1,6 +1,7 @@
 import { scaleLinear } from 'd3-scale';
 import { area, curveMonotoneX, line } from 'd3-shape';
 import { CHAR_W, clip } from './format.ts';
+import { applies, ruleFor } from './fit.ts';
 import { xScale } from './scene.ts';
 import type { Container, PathNode, PlacedNode, PlacedRect, PlacedScene, PlacedText, RectNode, Scene, SceneNode, TextNode } from './types.ts';
 
@@ -12,7 +13,6 @@ interface Block { nodes: PlacedNode[]; height: number }
 type Point = PathNode['points'][number];
 
 const SHORT_PLOT = 120;   // px of plot height under which ranked y ticks go
-const NARROW_PLOT = 380;  // px of plot width under which the ranked x tick goes
 
 const rect = ({ part, role, row, rank, x: _x, w: _w, v, ...n }: RectNode, x: number, y: number, w: number, h: number, rx: number): PlacedRect => ({ ...n, x, y, w, h, rx });
 const text = ({ part, role, row, rank, x: _x, t, short, ...n }: TextNode, x: number, y: number, s: string = n.text): PlacedText => ({ ...n, x, y, text: s });
@@ -43,8 +43,8 @@ function placeNumber(nodes: SceneNode[], W: number, container: Container, small:
   return { nodes: out, height: yy - 10 };
 }
 
-// The plot with its axes. The gutters for the tick labels are constants.
-function placePlot(scene: Scene, W: number, H: number): PlacedNode[] {
+// The plot with its axes. The gutters for the tick labels are constants. `narrow` is the `mid-tick` rule's verdict on the view.
+function placePlot(scene: Scene, W: number, H: number, narrow: boolean): PlacedNode[] {
   const gy = scene.parts.includes('y-axis'), gx = scene.parts.includes('x-axis');
   const ml = gy ? 36 : 1, mr = gy ? 6 : 1, mt = gy ? 10 : 3, mb = gx ? 22 : 3, inset = scene.scale === 'point' ? 2 : 0;
   const y = scaleLinear().domain([0, 1]).range([H - mb, mt]);
@@ -53,7 +53,7 @@ function placePlot(scene: Scene, W: number, H: number): PlacedNode[] {
   const out: PlacedNode[] = [];
   scene.nodes.forEach((n) => {
     if (n.part === 'number') return;
-    if (n.rank && (n.part === 'x-axis' ? W < NARROW_PLOT : H < SHORT_PLOT)) return;
+    if (n.rank && (n.part === 'x-axis' ? narrow : H < SHORT_PLOT)) return;
     if (n.kind === 'line') {
       const { part, role, row, rank, t, ...rest } = n;
       out.push({ ...rest, x1: ml, x2: W - mr, y1: y(t), y2: y(t) });
@@ -114,24 +114,27 @@ export function place(scene: Scene, container: Container): PlacedScene {
   const W = container.width, H = container.height, rules = container.rules;
   if (scene.layout === 'prose') return { width: W, height: 0, nodes: [], text: scene.text };
   const number = (w: number, small: boolean) => placeNumber(scene.nodes.filter((n) => n.part === 'number'), w, container, small);
+  // What resolve() reports as dropped is what is left out here: both ask the same rule.
+  const midTick = ruleFor(rules.fit, 'cartesian', 'mid-tick'), narrow = !!midTick && applies(midTick, { view: { inline: W } });
   let out: Block, plot: PlacedScene['plot'] | null = null;
   if (scene.layout === 'none') {
     out = number(W, false);
   } else if (scene.side) {                                     // a bare plot, set beside the number
     const value = scene.nodes.find((n): n is TextNode => n.kind === 'text' && n.font === 'display')!;
-    const lw = Math.round(Math.max(container.displayWidth((value.short ?? value.text).length), Math.min(120, Math.max(76, W * 0.42))));
+    const lw = Math.round(Math.max(container.displayWidth((value.short ?? value.text).length), Math.min(120, Math.max(rules.bare.numberWidth, W * 0.42))));
     const s = number(lw, true), h = Math.max(rules.bare.height, s.height), pw = Math.max(8, W - lw - 12);
-    out = { nodes: s.nodes.concat(shift(placePlot(scene, pw, h), lw + 12, 0)), height: h }; plot = { w: pw, h };
+    out = { nodes: s.nodes.concat(shift(placePlot(scene, pw, h, narrow), lw + 12, 0)), height: h }; plot = { w: pw, h };
   } else {
     const hd = scene.parts.includes('number') ? number(W, false) : null, above = hd ? hd.height + 16 : 0;
     let body: Block;
     if (scene.layout === 'notice') {
-      const h = H ? Math.max(40, Math.min(120, H - above)) : 120;
+      // The least a notice is built to is its rule's block need. With no rule it has no least.
+      const least = ruleFor(rules.fit, 'notice', 'notice')?.needs.block ?? 0, h = H ? Math.max(least, Math.min(120, H - above)) : 120;
       body = { height: h, nodes: scene.nodes.filter((n): n is TextNode => n.part === 'notice' && n.kind === 'text').map((n) => text(n, W / 2, h / 2, fit(n.text, W))) };
     } else if (scene.layout === 'cartesian') {
       const guided = scene.parts.includes('x-axis') || scene.parts.includes('y-axis');
       const ph = !guided ? rules.bare.height : H ? Math.max(rules.axes.minHeight, Math.min(rules.axes.height, H - above)) : rules.axes.height;
-      body = { nodes: placePlot(scene, W, ph), height: ph }; plot = { w: W, h: ph };
+      body = { nodes: placePlot(scene, W, ph, narrow), height: ph }; plot = { w: W, h: ph };
     } else if (scene.layout === 'rows') {
       body = placeRows(scene, W);
     } else {

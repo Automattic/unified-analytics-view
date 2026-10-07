@@ -72,7 +72,7 @@ export interface ContainerRules {
   fit: FitRule[];
   /* Sizes the pixel scene is built to. */
   axes: { minHeight: number; height: number };
-  bare: { height: number };
+  bare: { height: number; numberWidth: number };
   rows: { rowHeight: number; gap: number };
   /** When the tldr value sits above the marks while there is room for both. */
   tldrValue: { above: 'instant' | 'always' };

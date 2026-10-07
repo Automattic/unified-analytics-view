@@ -40,9 +40,14 @@ export const FIT_RULES: FitRule[] = [
     hide: [], set: { legend: 'top' }, keep: 'guides' },
   { id: 'marks',     layout: 'band',      container: 'view', needs: { inline: 110 },
     hide: ['band', 'legend'], show: ['number'], keep: 'marks' },
-  { id: 'notice',    layout: 'notice',    container: 'view', needs: { inline: 150 },
+  { id: 'notice',    layout: 'notice',    container: 'view', needs: { inline: 150, block: 40 },
     hide: ['notice'], show: ['number'], keep: 'marks' },
 ];
+
+/** The rule a layout has under an id. A part with no rule needs no room. */
+export function ruleFor(rules: FitRule[], layout: Layout, id: string): FitRule | undefined {
+  return rules.find((r) => r.layout === layout && r.id === id);
+}
 
 /** True when the rule's container is short of the room its part needs, so its `hide`, `show` and `set` take effect.
  * A size the container does not have never matches, as an unknown container query never does. */

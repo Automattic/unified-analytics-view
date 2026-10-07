@@ -7,7 +7,7 @@ import type { Container, ContainerRules, KeepPart, PainterName, ReductionId } fr
 export const CONTAINER_RULES: ContainerRules = {
   fit:       FIT_RULES,
   axes:      { minHeight: 120, height: 184 },                  // a plot with axes: its least and its natural height
-  bare:      { height: 46 },                                   // a plot with no guides, set beside the number
+  bare:      { height: 46, numberWidth: 76 },                  // a plot with no guides, set beside the number, and the least width that number is given
   rows:      { rowHeight: 28, gap: 4 },
   tldrValue: { above: 'instant' },                             // above the marks only for an instant metric
   order:    ['drop-guides', 'drop-secondary', 'trim-rows', 'collapse', 'prose'],

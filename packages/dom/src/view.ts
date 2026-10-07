@@ -2,8 +2,10 @@ import { CONTAINER_RULES, buildScene, expand, resolve, unboundedContainer } from
 import type { Catalog, ContainerRules, Layout, Query, Result, SceneNode, Spec } from '@universal-analytics/core';
 import { compileFitRules, type FitExtras } from './compile.ts';
 import { attr, ensure, keyed, paintVar, text } from './dom.ts';
+import { KEYS_CSS, Keys, cell } from './keys.ts';
 import { LAYOUTS } from './layouts/index.ts';
 import { NUMBER_FITS, fitNumber, readNumber } from './measure.ts';
+import { MOTION_CSS, begin, register, settle } from './motion.ts';
 
 /* <ua-view>: one view, in whatever room it is handed. It plans once per data change, for a container with no
  * limits, builds the ratio scene and paints it. The stylesheet fits it. On resize only the measured pass runs
@@ -62,6 +64,8 @@ const BASE_CSS = `@layer vg {
 .vg-ruler > .vg-number > span { inline-size: max-content; }
 
 ${painters.map((p) => p.css).join('\n')}
+${MOTION_CSS}
+${KEYS_CSS}
 
 /* Only a size container answers a block-size query, so this matches exactly when a layout has handed the view a
  * box. The body then takes the height left over. No attribute on the view. */
@@ -119,8 +123,6 @@ function check(spec: Spec, result: Result, catalog: Catalog): void {
   (Array.isArray(q.by) ? q.by : []).forEach((d) => { if (!catalog.dimensions[d]) throw new Error('The catalog has no dimension "' + d + '". It has: ' + (Object.keys(catalog.dimensions).join(', ') || 'none') + '. Pass the catalog the query was run against.'); });
 }
 
-const NF = new Intl.NumberFormat('en-US');
-const cell = (v: unknown) => (v == null ? '–' : typeof v === 'number' ? NF.format(v) : String(v));
 /* The table is rebuilt whole: nothing in it moves, so there is nothing to keep. Totals are the engine's, never a sum of the rows. */
 function paintTable(table: HTMLTableElement, title: string | undefined, q: Query, result: Result, catalog: Catalog): void {
   const by = q.by || [], prev = q.compare === 'previous';
@@ -154,6 +156,7 @@ export class UaView extends Base {
   #layout: Layout | null = null;
   #root: ShadowRoot; #fig: HTMLElement; #prose: HTMLElement; #number: HTMLElement; #body: HTMLElement; #table: HTMLTableElement; #error: HTMLElement;
   #room: HTMLElement; #ruler: HTMLElement[]; #seen = '';
+  #keys: Keys;
   // The one observer of the measured pass. It watches the room and the ruler, whose sizes nothing it writes can change.
   #sizes = globalThis.ResizeObserver ? new ResizeObserver(() => this.#measure(false)) : null;
   // Markup can arrive after the element does, when a parser is still streaming its children.
@@ -168,6 +171,7 @@ export class UaView extends Base {
     this.#number = ensure(this.#fig, 'div', 'vg-number');
     this.#body = ensure(this.#fig, 'div', 'vg-body');
     this.#table = ensure(this.#fig, 'table', 'vg-table');
+    this.#keys = new Keys(this, this.#fig, this.#body);
     this.#error = ensure(this.#root as unknown as Element, 'p', 'vg-error');
     this.#error.setAttribute('role', 'alert'); this.#error.hidden = true;
     this.#room = ensure(this.#fig, 'div', 'vg-room');
@@ -233,12 +237,15 @@ export class UaView extends Base {
       if (spec.title) fig.setAttribute('aria-label', spec.title); else fig.removeAttribute('aria-label');
       // The plot's natural heights are the context's, read by the stylesheet. The painter hard-codes neither.
       fig.style.setProperty('--vg-axes-height', rules.axes.height + 'px'); fig.style.setProperty('--vg-bare-height', rules.bare.height + 'px');
+      begin(fig, this.#layout === scene.layout);
       this.#prose.textContent = plan.text;
       for (const el of [this.#number, ...this.#ruler]) paintNumber(el, scene.nodes.filter((n) => n.part === 'number'));
       if (this.#layout !== scene.layout) { this.#body.replaceChildren(); this.#body.removeAttribute('data-scale'); this.#layout = scene.layout; }
       LAYOUTS[scene.layout]?.paint(this.#body, scene, rules);
       paintTable(this.#table, spec.title, expand(spec).query, result, catalog);
+      this.#keys.paint(scene, expand(spec).query, result, catalog);
       fig.hidden = false; this.#error.hidden = true;
+      settle(fig);
       if (this.#sizes) this.#measure(true);
     } catch (e) {
       // Never out of a lifecycle callback: the view says what is wrong where it would have drawn.
@@ -277,10 +284,6 @@ export class UaView extends Base {
 /** Define <ua-view>, once. Called by the page, not at import, so a page can be ready for it first. */
 export function defineUaView(): void {
   if (customElements.get('ua-view')) return;
-  // @property is ignored in a shadow root, so the ratios are registered on the document, which is why they carry a
-  // prefix. Where this fails, values still apply and nothing animates.
-  for (const name of ['--vg-x', '--vg-w', '--vg-v', '--vg-t']) {
-    try { CSS.registerProperty({ name, syntax: '<number>', inherits: false, initialValue: '0' }); } catch { /* registered already, or unsupported */ }
-  }
+  register();
   customElements.define('ua-view', UaView);
 }

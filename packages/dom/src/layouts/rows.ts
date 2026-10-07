@@ -25,13 +25,13 @@ export const rows: LayoutPainter = {
 
   paint(body, scene, rules) {
     const list = ensure(body, 'div', 'vg-rows'), by = new Map<string, SceneNode[]>();
-    list.setAttribute('role', 'list');
+    list.setAttribute('data-hits', 'y');                                     // each row is its own hit target
     prop(list, '--vg-row-block', rules.rows.rowHeight + 'px'); prop(list, '--vg-row-gap', rules.rows.gap + 'px');
     for (const n of scene.nodes) if (n.part === 'rows' && n.row != null) by.set(n.row, (by.get(n.row) ?? []).concat(n));
     // A row has no node in the scene, so it is keyed here by its dimension value.
     const row = (k: string): RectNode => ({ key: 'row:' + k, part: 'rows', kind: 'rect', row: k, paint: 'ink', layer: 'data' });
     keyed(list, (scene.rows ?? []).map(row), () => 'div', (el, r) => {
-      el.classList.add('vg-row'); el.setAttribute('role', 'listitem');
+      el.classList.add('vg-row');
       keyed(el, by.get(r.row!) ?? [], (n) => (n.kind === 'text' ? 'span' : 'i'), (c, n) => {
         if (n.kind === 'text') { text(c, n); c.setAttribute('data-anchor', n.anchor); } else if (n.kind === 'rect') prop(c, '--vg-v', n.v);
       });

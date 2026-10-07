@@ -76,7 +76,9 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
     return { rows: by ? LIVE.map((d) => ({ ...d })) : [], totals, meta };
   }
   const sum = (ds: Counts[], m: string) => ds.reduce((s, d) => s + d[m as M], 0);
-  const cur = DAILY.slice(28), prev = DAILY.slice(0, 28);
+  // A shorter range is the last days of the same series, and a mix of its own. 28 days is the fixture as it always was.
+  const days = Math.min(28, parseInt(q.range || '') || 28), mix = seeded(days), vary = () => (days === 28 ? 1 : 0.5 + mix());
+  const cur = DAILY.slice(56 - days), prev = DAILY.slice(56 - 2 * days, 56 - days);
   metrics.forEach((m) => {
     totals[m] = sum(cur, m);
     if (wantPrev) totals[m + '@previous'] = hasPrev ? sum(prev, m) : null;
@@ -91,13 +93,13 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
   } else if (by === 'page') {
     rows = PAGES.map((p) => {
       const r: Row = { page: p.page };
-      metrics.forEach((m) => { r[m] = p[m as M]; if (wantPrev) r[m + '@previous'] = hasPrev && p.prev ? p.prev[m as M] : null; });
+      metrics.forEach((m) => { r[m] = Math.round(p[m as M] * days / 28 * vary()); if (wantPrev) r[m + '@previous'] = hasPrev && p.prev ? p.prev[m as M] : null; });
       return r;
     });
   } else if (by === 'channel') {
     rows = CHANNELS.map((c) => {
       const r: Row = { channel: c[0] };
-      metrics.forEach((m) => { r[m] = Math.round(totals[m]! * c[1]); if (wantPrev) r[m + '@previous'] = hasPrev ? Math.round(totals[m + '@previous']! * c[2]) : null; });
+      metrics.forEach((m) => { r[m] = Math.round(totals[m]! * c[1] * vary()); if (wantPrev) r[m + '@previous'] = hasPrev ? Math.round(totals[m + '@previous']! * c[2]) : null; });
       return r;
     });
   }

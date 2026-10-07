@@ -1,6 +1,6 @@
 # Feedback from the build
 
-As of October 7, 2026. What executing `docs/dom-painter-plan.md` has found so far: where the plan did not hold as written, bugs, and loose ends. Steps 1 to 4 and the measured pass of step 5 are merged into `dom-painter`. Transitions, keyboard navigation and the hit targets are not built.
+As of October 7, 2026. What executing `docs/dom-painter-plan.md` has found so far: where the plan did not hold as written, bugs, and loose ends. Every step of the plan is built. Steps 1 to 4 and the measured pass are on `dom-painter`; transitions and the keyboard are on `dom-painter-step5`, waiting to be merged into it.
 
 Each entry says what was found, what was done about it, and what is still to decide. Nothing here has been settled quietly.
 
@@ -150,6 +150,49 @@ New findings:
 9. Not observed: a web font swapping in. The ruler is observed for it, but nothing loaded a font.
 
 Still differing from `resolve()` and not the measured pass's: at 346 by 100 the secondary layers stay, and a bare plot fills a box where pixels keep 46 px.
+
+## Findings: step 5, transitions
+
+Built in `packages/dom/src/motion.ts`. Observed in real time in Chrome 155 and Playwright's WebKit 26.5.
+
+What moves, only on a data change within the same layout: positions transition as registered custom properties; entering nodes fade in by `@starting-style`, with bars and segments growing from nothing; leaving nodes placed by a ratio fade out, and anything that takes room in the flow leaves at once, so the measured pass never reads a leaving node. Paths are redrawn per frame. Nothing animates on resize, under reduced motion, or where registration fails. Three motion tokens are new: update, exit, and their easings, beside version 4's entrance.
+
+1. **Core's path keys are not stable between data states.** Keys count layers, so when the comparison layer drops, the primary line takes the comparison's key, `L1:line`. By key that would morph the dashed comparison into the primary line. Guarded locally: a path whose role changed is treated as new. Core's keys should name the layer. Open; it breaks "keys are stable".
+2. **`packages/dom` carries its own copy of d3-shape's monotone curve,** because core does not export a path function and the package may not add a dependency. A test holds it string-identical to core's `d` for the trend at 28, 14 and 7 days. Core should export one. Open.
+3. **When the row set changes, a path and a bar disagree.** Bars slide by key. A path is read at the new rows first, a small jump, then morphs vertically.
+4. **Reading order now follows the scene** (band finding 4, closed). `keyed` leaves children in scene order, and the band's `order` workaround is gone. The trade: WebKit has no `moveBefore`, so a kept element that changes place is re-inserted and re-enters, where Chrome slides it.
+5. **The first paint and a change of layout do not animate.** The agent's choice; one condition in `view.ts`.
+6. **The fixtures now honour `range`,** so the bench has a Range control to judge motion by. `28d` is unchanged and parity holds. This went beyond the brief.
+7. Smaller: a resize within about 300 ms of a data change can fade a returning part in; the band's 2 px gap beside a leaving segment closes in a jump; entering rows fade under a fading parent, so their opacity compounds briefly.
+8. The spike's warning that Chrome skips a transition at the end of a long task did not bite with 30 views changing in one handler. It would return if a host did much more work in the same task.
+9. Not verified: a browser without `@starting-style`, a web font swap during motion, and how the motion looks to a person.
+
+## Findings: step 5, keyboard, hit targets and the readout
+
+Built in `packages/dom/src/keys.ts`. Driven with real key and pointer events in Chrome 155 and Playwright's WebKit. **No screen reader was run,** and no touch device.
+
+The model is version 4's, read from `useKeyboardNavigation` on Jetpack trunk: one tab stop per view, on the element that holds its points; left and right step and stop at the ends; Enter or Space activates; Escape lets go; no Home or End. Activation dispatches `ua-activate` from the element, bubbling and composed, with the result's row in `detail.row`.
+
+Each layout's points sit in a `listbox` of `option`s, with the readout text as each option's name. Announcement is through `aria-activedescendant`, not a live region, so what is shown and what is spoken are one string. A view with no points showing (number only, prose) has no tab stop.
+
+1. **Three departures from version 4, all the agent's choice.** Up and down also step in the `rows` layout. A click activates, and on touch the second tap does. A chosen point stays when the mouse leaves a focused view. **To decide.**
+2. **The readout is not in catalog format.** Core's `fmt` and `fmtDay` are not exported, so dates read `2026-09-08` and numbers are grouped as the table groups them. The catalog's `unit` is unused. Open; export them.
+3. **The partial day is not marked in the readout.** The last trend row reads "Visitors 175" with no "so far".
+4. **Rows lost their list semantics** to become a listbox. A screen reader in browse mode may read it as one control. Unverified.
+5. **Rows clipped by a height limit are still options** in the accessibility tree: "1 of 8" when five show.
+6. **The plan's `vg-hits` layer is only needed in cartesian.** In rows the row is the target, in band the segment, which is no longer `aria-hidden`.
+7. **The readout covers the number in a sparkline tile,** since it has to stay inside the view's box, and sits over the x labels under a full trend. It is placed once and does not follow a resize or scroll. The look is the owner's.
+8. **No focus token exists** among version 4's names, so the focus ring is the browser's own.
+9. **Chrome makes a scrolling table focusable,** so in table mode nine narrow views become tab stops on the figure. Not a trap.
+10. `scene.rows[i]` is taken to match `result.rows[i]`. True of every builder today, and marked in the code.
+
+## At the merge of motion and keys
+
+Checked together in Chrome and WebKit: stepping, activation, and a change from 28 days to 7 mid-transition.
+
+- **Hit targets would have slid and faded with the marks,** since they carry the registered properties and a key. Fixed in the merge: the hit layer takes its new places at once and a leaving target goes at once.
+- **A leaving band segment keeps `role="option"` with the id `hit--1`** for the 150 ms it fades. It is skipped when stepping. Open.
+- **These two branches sit on `dom-painter-step5`,** not `dom-painter`. The main checkout has another session's uncommitted edits to `apps/bench/index.html`, which this merge also changes, so `dom-painter` could not be moved without touching that work.
 
 ## Bugs
 

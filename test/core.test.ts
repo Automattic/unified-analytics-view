@@ -222,6 +222,7 @@ describe('the ratio scene (dom-painter-plan section 3)', () => {
     const { ratio } = unbounded(trend);
     expect(ratio).toMatchObject({ layout: 'cartesian', parts: ['y-axis', 'plot', 'x-axis'], scale: 'point' });
     expect(ratio.nodes.filter((n) => n.rank).map((n) => n.key)).toEqual(['sub', 'xtick:2026-09-21']);
+    expect(unbounded(specs.layers!).ratio.nodes.filter((n) => n.rank).map((n) => n.key)).toEqual(['grid:500', 'ytick:500', 'grid:1500', 'ytick:1500', 'xtick:2026-09-21']);
     expect(ratio.nodes.filter((n) => n.role).map((n) => n.key + ' ' + n.role)).toEqual(['L0:area context', 'L1:line comparison', 'L2:line primary', 'L2:line:partial primary']);
     // The number is there to be shown in compensation, though this plan does not show it.
     expect(ratio.nodes.filter((n) => n.part === 'number').map((n) => n.key)).toEqual(['value', 'delta', 'sub']);
@@ -242,6 +243,36 @@ describe('the ratio scene (dom-painter-plan section 3)', () => {
     }
   });
   for (const name of Object.keys(samples)) it(`${name}, with no size`, () => expect(unbounded(specs[name]!).ratio).toMatchSnapshot());
+});
+
+describe('y ticks: a deliberate departure from the prototype (dom-painter-plan section 8, decision 3)', () => {
+  // The prototype rounds the y scale to 2 ticks when the plot is under 120 px tall, so its domain changes with the size.
+  // A scene with no size cannot. We always round to 4, rank the ticks, and place() thins them on a short plot.
+  // Under the default rules a plot with axes is never under 120 px, so the sweep does not meet this. A context that allows shorter plots does.
+  const rules = { ...CONTAINER_RULES, axes: { ...CONTAINER_RULES.axes, minHeight: 80 } };
+  const ticks = (scene: { nodes: { key: string }[] }) => scene.nodes.map((n) => n.key).filter((k) => /^(ytick|grid):/.test(k));
+  const short = (spec: Spec) => {
+    const ours = run(spec, 346, 100, 'typical', 'svg', rules);
+    const host0 = { ...proto.makeHost(346, 100, 'svg', 8), rules: { ...proto.HOST_RULES, axes: rules.axes } }, res0 = proto.runQuery(spec.query, 'typical');
+    const plan0 = proto.resolve(toProto(spec), res0, host0);
+    expect(ours.scene.plot).toEqual({ w: 346, h: 100 });
+    expect(plain(ours.plan), 'the plan is still the prototype\'s').toEqual({ ...fromProto(plain(plan0)), preset: ours.plan.preset });
+    return { ...ours, scene0: plain(proto.buildScene(plan0, spec.query, res0, host0)) };
+  };
+  it('on a 100 px plot the prototype draws bars against another scale; ours is the tall plot\'s, thinned', () => {
+    const { ratio, scene, scene0 } = short(specs.layers!), tall = run(specs.layers!, 346);
+    expect(ticks(scene0)).toEqual(['grid:0', 'ytick:0', 'grid:1000', 'ytick:1000', 'grid:2000', 'ytick:2000']);
+    expect(ticks(scene)).toEqual(['grid:0', 'ytick:0', 'grid:1000', 'ytick:1000']);
+    expect(ticks(tall.scene)).toEqual(['grid:0', 'ytick:0', 'grid:500', 'ytick:500', 'grid:1000', 'ytick:1000', 'grid:1500', 'ytick:1500']);
+    expect(ratio).toEqual(tall.ratio);
+    // Nothing off the y scale departs: every placed node with no y in it is the prototype's.
+    const off = (s: any) => s.nodes.filter((n: any) => n.key.startsWith('xtick:'));
+    expect(off(plain(scene))).toEqual(off(scene0));
+  });
+  it('where rounding to 2 and to 4 give one scale, the short plot is still the prototype\'s', () => {
+    const { scene, scene0 } = short(trend);
+    expect(plain(scene)).toEqual(scene0);
+  });
 });
 
 describe('golden scenes', () => {

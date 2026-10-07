@@ -50,18 +50,22 @@ The trend view's rules, carrying today's thresholds over unchanged:
 ]
 ```
 
-**Compiled** (by `packages/dom`, once, into a constructed stylesheet the shadow root adopts):
+**Compiled** (by `compileFitRules` in `packages/dom`, once per rule set, into a constructed stylesheet the shadow root adopts). Corrected at step 4 from what the spike found: one `@container` block per need, never an `or` across both axes, because a width-only container passes over a query that names its height, the inline half included.
 
 ```css
-@container view (inline-size < 280px) or (block-size < 120px) {
+@container view (inline-size < 280px) {
   .vg[data-layout="cartesian"]:not([data-keep~="guides"]) :is(.vg-x-axis, .vg-y-axis, .vg-grid) { display: none; }
   .vg[data-layout="cartesian"]:not([data-keep~="guides"]) .vg-number { display: block; }
-  .vg[data-layout="cartesian"]:not([data-keep~="guides"]) { --vg-arrange: side; grid-template-columns: auto minmax(0, 1fr); }
+  .vg[data-layout="cartesian"]:not([data-keep~="guides"]) { --vg-arrange: side; /* then what the layout module adds */ }
 }
-@container plot (inline-size < 180px) or (block-size < 90px) {
-  .vg:not([data-keep~="secondary"]) :is([data-role="comparison"], [data-role="reference"], [data-role="context"]) { display: none; }
+@container view (block-size < 120px) { /* the same three rules */ }
+@container plot (inline-size < 180px) {
+  .vg[data-layout="cartesian"]:not([data-keep~="secondary"]) :is([data-role="comparison"], [data-role="reference"], [data-role="context"]) { display: none; }
 }
+@container plot (block-size < 90px) { /* the same rule */ }
 ```
+
+A rule's data cannot say everything that changes with it: the grid areas, the gap and the bare plot height all switch with the axes. Each layout module supplies those declarations by rule id, and the compiler writes them under the same condition and `keep`. A `set` entry is written as a custom property (`--vg-arrange: side`), which nothing styles from; it is there to be read. `x-tick.mid` compiles to the ranked x label, `.vg-x-axis [data-rank]`. The base styles sit in a cascade layer, so a compiled rule beats them whatever its specificity, and rules are written in order, so a later rule beats an earlier one.
 
 **Height on the view.** A view in a row or a tile is handed a height as well as a width, so the `view` rules carry a `block` need too: 120 px for a plot with axes and 46 px for a bare one, both from `CONTAINER_RULES`. A view that takes its natural height is a width-only container, where a `block-size` query is unknown and never matches, so the same compiled rules serve both. Step 1's sweep checks that these numbers reproduce what `resolve()` does under its six height limits; if they do not, that is reported, not tuned quietly.
 
@@ -115,25 +119,29 @@ One custom element, `<ua-view>`, with an open shadow root. It takes `spec`, `res
   <figure class="vg" data-layout="cartesian" data-keep="" aria-describedby="s">
     <figcaption id="s" class="vg-prose">Visitors: 10.5k in the last 28 days, up 12%…</figcaption>
     <div class="vg-number">                   <!-- value, delta, note -->
-    <div class="vg-y-axis"> <span style="--vg-t:.25" data-rank="1">200</span> … </div>
-    <div class="vg-plot">                     <!-- the `plot` container; definite block size -->
-      <div class="vg-grid"> <i style="--vg-t:.25"></i> … </div>
-      <svg viewBox="0 0 100 100" preserveAspectRatio="none">
-        <path data-key="L0:area" data-role="context" />
-        <path data-key="L1:line" data-role="comparison" />
-        <path data-key="L2:line" data-role="primary" />
-        <path data-key="L2:line:partial" data-role="primary" />
-      </svg>
-      <div class="vg-hits"> <i data-row="2026-09-08" style="--vg-x:.0"></i> … </div>
+    <div class="vg-body">                     <!-- the layout's own: one module per layout paints into it -->
+      <div class="vg-y-axis"> <span style="--vg-t:.25" data-rank="1">200</span> … </div>
+      <div class="vg-plot">                   <!-- the `plot` container; definite block size -->
+        <div class="vg-grid"> <i style="--vg-t:.25"></i> … </div>
+        <div class="vg-bars"> <i data-row="2026-09-08" style="--vg-x:.01; --vg-w:.03; --vg-v:.6"></i> … </div>
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+          <path data-key="L0:area" data-role="context" />
+          <path data-key="L1:line" data-role="comparison" />
+          <path data-key="L2:line" data-role="primary" />
+          <path data-key="L2:line:partial" data-role="primary" />
+        </svg>
+        <div class="vg-refs"> … </div>        <!-- rules and their labels -->
+        <div class="vg-hits"> <i data-row="2026-09-08" style="--vg-x:.0"></i> … </div>   <!-- step 5; not built -->
+      </div>
+      <div class="vg-x-axis"> <span style="--vg-x:0">Sep 8</span> <span data-rank="1" style="--vg-x:.5">Sep 21</span> … </div>
     </div>
-    <div class="vg-x-axis"> <span style="--vg-x:0">Sep 8</span> <span class="mid" style="--vg-x:.5">Sep 21</span> … </div>
-    <table class="vg-table" hidden>…</table>  <!-- the same result as a table -->
+    <table class="vg-table">…</table>         <!-- the same result as a table; shown by the `table` attribute -->
   </figure>
 </ua-view>
 ```
 
 - **`view`** is the host element. By default it is `container-type: inline-size`: it fills the width it is handed and takes its natural height. It cannot collapse, whatever it is dropped into. A surface layout that hands out a box (section 4.2) makes it `container-type: size`, and the plot fills the height left over. Both behaviours have to exist, because an element whose height can be queried cannot also take its height from its content. The view is never told which it is: the layout sets it, in the layout's own CSS.
-- **`plot`** is `container-type: size`. Its height is always definite: the leftover when the view was handed a box, and otherwise a size from the context's rule set, read as a custom property (`axes.height` and `bare.height`, 184 and 46 px by default). The painter hard-codes neither. That definite height is what makes height queries on the plot legal.
+- **`plot`** is `container-type: size`. Its height is always definite: the leftover when the view was handed a box, and otherwise a size from the context's rule set, read as a custom property (`axes.height` and `bare.height`, 184 and 46 px by default). The painter hard-codes neither. That definite height is what makes height queries on the plot legal. As built at step 4, the stated `block-size` is on `.vg-body`, which holds the plot and its axes, so 184 px is the height of the whole view as it is in pixels; the plot takes what the x axis leaves. One rule, `@container view (block-size >= 0px) { .vg-body { block-size: auto; } }`, matches only when the view was handed a box, and the body then fills it.
 - A rule about axes queries `view`, never `plot`, because hiding the x axis changes the plot's size. A rule about roles queries `plot`, because those elements live inside it.
 - **Bars are HTML,** positioned by custom properties (`inset-inline-start: calc(var(--vg-x) * 100%)`, `block-size: calc(var(--vg-v) * 100%)`), so corner radii and hairlines stay true at any size. Lines and areas are the stretched SVG. Text is never inside the SVG.
 - **`rows`** is a grid per row: `minmax(0, 1fr) auto`, label ellipsized by CSS, the bar a background sized by `--vg-v`. No character-width estimates.
@@ -229,5 +237,5 @@ Reviewed October 7, under the principle at the top.
 1. Fit rules in `core`, with `resolve()` reading them, including the `block` needs on the view. The parity sweep must stay green.
 2. The ratio scene and `place()`. The golden pixel scenes must stay green, apart from call 3.
 3. The spike in section 7.
-4. `<ua-view>` for `cartesian`, then `rows`, then `band`, each on the bench in a stack at 346 px and in a row.
+4. `<ua-view>` for `cartesian`, then `rows`, then `band`, each on the bench in a stack at 346 px and in a row. `cartesian` is built, in `packages/dom`; `rows` and `band` are stubs behind the seam in `packages/dom/src/layout.ts`.
 5. The measured pass, then keys and transitions.

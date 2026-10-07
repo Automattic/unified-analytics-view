@@ -22,10 +22,11 @@ Packages export their TypeScript source and nothing is built for release yet. Vi
 - `packages/core`: types, presets and `expand`, the plan (`resolve`), scene builders (ratios) and `place` (pixels), the tldr prose, and JSON Schemas in `schema/`.
 - `packages/fixtures`: the catalog, the seeded fixture query engine (`typical`, `no-prior`, `empty`) and the six sample specs.
 - `packages/tokens`: build-time token generation, ported from the storybook repo. Base tier: Leonardo makes the colour ramps and Utopia the type, space and control-size scales; `config/base.tokens.json` holds the rest. Common tier: `config/common.tokens.json` (and `common.dark`) names the Spacefast library's variables as aliases into base. Style Dictionary compiles both to `generated/tokens.css`. Nothing consumes them yet.
-- `test/`: one suite across both packages. Golden scenes are in `test/__snapshots__`.
+- `test/`: one suite across the packages. There is no DOM in the run, so of `packages/dom` only the compiler is tested here; the element is checked on the bench. Golden scenes are in `test/__snapshots__`.
 - `prototype/`: read-only reference. The tests load `prototype-bench.js` and hold the port to it.
-- `apps/bench`: where work is looked at. Every sample in resizable frames, with data state, height limit and theme as controls. It paints the pixel scene with the prototype's SVG painter until `<ua-view>` exists; new painters, chrome and surfaces get a place here as they land.
-- `packages/dom`, `packages/dots`: not started.
+- `apps/bench`: where work is looked at. Every sample in resizable frames, with data state, height limit and theme as controls. A painter control picks the prototype's SVG painter on the pixel scene, or `<ua-view>`; new painters, chrome and surfaces get a place here as they land.
+- `packages/dom`: the `<ua-view>` custom element and the fit-rule compiler. It plans once with no limits, paints the ratio scene, and leaves the fitting to container queries. One module per layout in `src/layouts/`, behind the seam in `src/layout.ts`: `cartesian` is built, `rows` and `band` are stubs. Its only dependency is core.
+- `packages/dots`: not started.
 
 ## Rules
 

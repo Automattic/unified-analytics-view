@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tokens · Bench</title>
+  <link rel="stylesheet" href="/src/bench.css">
+</head>
+<body>
+  <nav><a href="/">Views</a> <a href="/tokens.html" aria-current="page">Tokens</a></nav>
+  <form id="controls">
+    <fieldset><legend>Theme</legend>
+      <label><input type="radio" name="theme" value="" checked> system</label>
+      <label><input type="radio" name="theme" value="light"> light</label>
+      <label><input type="radio" name="theme" value="dark"> dark</label>
+    </fieldset>
+  </form>
+  <main id="tokens"></main>
+  <script type="module" src="/src/tokens.ts"></script>
+</body>
+</html>

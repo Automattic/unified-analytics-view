@@ -44,3 +44,23 @@ h2 small { font-weight: 400; }
 .f-value { font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .f-display { font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
 .halo { paint-order: stroke; stroke: var(--ua-color-background); stroke-width: 3px; }
+
+nav { display: flex; gap: var(--ua-space-s); margin-block-end: var(--ua-space-xs); }
+nav a { color: var(--ua-color-muted-foreground); text-decoration: none; }
+nav a[aria-current] { color: var(--ua-color-foreground); font-weight: 600; }
+
+/* The tokens page. */
+small { display: block; font-size: 11px; color: var(--ua-color-muted-foreground); overflow-wrap: anywhere; }
+h2 small { display: inline; }
+.swatch { display: block; border-radius: var(--ua-radius-sm); border: 1px solid var(--ua-color-border);
+  background: linear-gradient(var(--c), var(--c)), repeating-conic-gradient(#8884 0 25%, transparent 0 50%) 0 0 / 12px 12px; }
+.ramps { display: grid; grid-template-columns: 5em repeat(13, minmax(0, 1fr)); gap: var(--ua-space-2xs); align-items: start; max-inline-size: 1100px; }
+.step .swatch { block-size: 40px; }
+.chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--ua-space-xs); }
+.chip { display: flex; gap: var(--ua-space-xs); align-items: center; min-inline-size: 0; }
+.chip .swatch, .radius { flex: none; inline-size: 36px; block-size: 36px; }
+.radius { background: var(--ua-color-foreground-50); }
+.fluid { container-type: inline-size; inline-size: 720px; padding: var(--ua-space-xs); border: 1px solid var(--ua-color-border); border-radius: var(--ua-radius-md); display: grid; gap: var(--ua-space-2xs); }
+.type span { display: block; line-height: 1.2; }
+.bar { display: grid; grid-template-columns: 9em auto 1fr; gap: var(--ua-space-xs); align-items: center; }
+.bar i { display: block; block-size: 12px; background: var(--ua-color-qualitative-1); border-radius: 2px; }

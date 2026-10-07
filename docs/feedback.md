@@ -1,6 +1,6 @@
 # Feedback from the build
 
-As of October 7, 2026. What executing `docs/dom-painter-plan.md` has found so far: where the plan did not hold as written, bugs, and loose ends. Steps 1 and 2 are merged into `dom-painter`. Step 3, the spike, is still running and has no entries yet.
+As of October 7, 2026. What executing `docs/dom-painter-plan.md` has found so far: where the plan did not hold as written, bugs, and loose ends. Steps 1, 2 and 3 are merged into `dom-painter`.
 
 Each entry says what was found, what was done about it, and what is still to decide. Nothing here has been settled quietly.
 
@@ -41,6 +41,31 @@ The rules are data in `packages/core/src/fit.ts` and `resolve()` reads them. No 
 12. **No scene nodes for the hit targets.** `scene.rows` gives the painter the list.
 13. **There is no "unbounded" container.** A browser caller passes `makeContainer(Infinity)`. It works and is tested, but it is a convention, not an API.
 
+## Findings: step 3, the spike
+
+The page is `/spike.html` in the bench. It computes its seven verdicts in whatever browser opens it and prints the user agent at the top.
+
+**Verdict: all seven pass in Chrome 155 and in Playwright's WebKit 26.4 build, so on this evidence the intrinsic painter goes ahead and the pixel fallback is not needed.** Firefox and Safari itself were not observed: no Firefox would launch on this machine, and Safari refuses automation until "Allow remote automation" is switched on. A person has to open the page in each. Items 1 and 4 are the ones the plan names for those browsers.
+
+What the spike changed from the plan, because the plan's CSS did not work:
+
+1. **Section 2's compiled `or` query is dead on a natural-height view.** The plan compiles `@container view (inline-size < 280px) or (block-size < 120px)` and says the block half is unknown on a width-only container, so the rule still serves. In Chrome and WebKit the whole rule never matches, the inline half included: a view at natural height never dropped its axes at any width. **Fix: one `@container` block per need.** The block-size one is inert until a layout makes the view a size container. The `plot` rule works with `or` as written, because the plot is always a size container.
+2. **The axes rule's `set` needs more than `grid-template-columns`.** The grid areas, the gap, the padding and the bare plot height all have to switch under the same condition. Nothing reads `--vg-arrange`.
+3. **The plot's height must be a stated `block-size`,** read from a custom property, with one added rule: `@container view (block-size >= 0px) { .vg-plot { block-size: auto; } }`, which matches only when the view was handed a box. `contain-intrinsic-block-size` and `min-block-size` lay out correctly in Chrome 155 but answer no `block-size` query. So one stylesheet does serve both sizings, and no `fit="box"` attribute is needed.
+4. **Smaller ones.** Axis labels are grid items in one cell moved by a percentage inset, not absolutely positioned, so the y-axis column is sized by its content. X labels carry `start`, `mid` and `end` classes. The SVG is inset 2 px each side for the point scale's padding. The natural view is 210 px tall, where the prototype's 184 includes its margins. The `translate` used is physical, so right-to-left is not handled.
+
+Two things the real painter has to respect:
+
+- **Chrome can skip a transition started at the end of a long task.** Wait a frame before the change.
+- **Reconciling by key must not re-append kept elements,** or their transitions are cancelled.
+
+How far the verdicts go:
+
+- Item 2 (no flicker) reads state after a forced layout. Nobody has watched a drag; the page has a "Play the sweep" button for that.
+- Item 3 (animated registered properties) uses a stand-in data change, the last 7 rows of the same result, because no fixture query moves a shared tick.
+- Item 5 (stretched path within a pixel: 0.054 px at worst) proves geometry, not rasterised pixels.
+- Not built in the spike: the hit targets, the table, tick ranks, the measured pass.
+
 ## Bugs
 
 1. **Prototype: duplicate keys on a one-row time series.** A time series with exactly one row emits two `xtick` nodes with the same key. No swept case reaches it. Kept and flagged, as the parity rule asks. To fix it, change the behaviour and the test together, on purpose.
@@ -48,7 +73,9 @@ The rules are data in `packages/core/src/fit.ts` and `resolve()` reads them. No 
 3. **One number held twice.** `axes.minHeight: 120` (the size `place()` builds to) and the `axes` rule's `block: 120`. A context that lowers one must lower the other, or the axes are dropped anyway. The y tick test hit exactly this at the merge. Open.
 4. **Import cycle between `scene.ts` and `plan.ts`.** `scene.ts` imports `roleOf` from `plan.ts`. It is safe, since each uses the other only inside functions. Moving `roleOf` out would remove it. Open.
 5. **The test run picked up agent worktrees.** `vitest run` globbed `.claude/worktrees/` and reported another agent's unfinished work as a failure here. Fixed in `898dd8e`: `pnpm test` runs `--dir test`, and the worktrees are ignored by git.
-6. **`tokens-generate` fails on the working copy.** `packages/tokens/config/leonardo.colors.js` and `leonardo.json` have uncommitted edits from another session, and `generated/` has not been rerun to match. Not a fault in the committed code. Open until that session regenerates or reverts.
+6. **`tokens-generate` fails on the working copy.** Uncommitted token edits from another session, not a fault in the committed code. Two parts:
+   - `generated/` did not match the edited config. Fixed: it has been regenerated, and "is what the config generates" passes.
+   - "aliases the common tier to the ramps, per theme where the step differs" now fails. It expects light `--ua-color-background` to be `neutral-300`; with the retuned ramps it is `neutral-100` in both themes. The test wants a token whose step still differs by theme, or a new expectation. Open, and that session's to settle.
 
 ## At the merge
 
@@ -58,4 +85,5 @@ The rules are data in `packages/core/src/fit.ts` and `resolve()` reads them. No 
 ## Not yet verified
 
 - The bench after the merge was checked by reading its DOM in headless Chrome: 30 frames, no errors. Nobody has looked at it.
-- Nothing has been checked in Safari or Firefox. The spike's verdicts for those browsers will need a person.
+- Nothing has been checked in Safari itself or in Firefox. Open `/spike.html` in each and read the seven badges.
+- After the merge the spike page was re-read in headless Chrome under virtual time: six items pass and item 3 reads fail, with no transition found. Virtual time fast-forwards transitions, so this is most likely the check and not the page, but it has not been re-run in real time here. Item 3 is the one to look at first when the page is opened by hand.

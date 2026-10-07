@@ -192,6 +192,58 @@ describe('schemas', () => {
   });
 });
 
+describe('the ratio scene (dom-painter-plan section 3)', () => {
+  const PARTS: Record<string, string[]> = {
+    cartesian: ['number', 'plot', 'x-axis', 'y-axis'], rows: ['number', 'rows'], band: ['number', 'band', 'legend'],
+    none: ['number'], notice: ['number', 'notice'], prose: [],
+  };
+  const unbounded = (spec: Spec) => {
+    const result = runQuery(spec.query), plan = resolve(spec, result, makeContainer(Infinity), catalog);
+    return { plan, ratio: buildScene(plan, spec.query, result, catalog) };
+  };
+  const numbers = (d: string) => (d.match(/-?[\d.]+/g) || []).map(Number);
+
+  it('has a part on every node, ratios from 0 to 1, unique keys, and the keys place() keeps', () => {
+    for (const [name, spec] of Object.entries(specs)) for (const sc of scenarios) for (const h of heights) for (const w of widths) {
+      const at = [name, sc, w, h].join(' '), { ratio, scene } = run(spec, w, h, sc), keys = ratio.nodes.map((n) => n.key);
+      expect(new Set(keys).size, 'duplicate keys: ' + at).toBe(keys.length);
+      expect(ratio.parts.every((p) => PARTS[ratio.layout]!.includes(p)), 'parts: ' + at).toBe(true);
+      for (const n of ratio.nodes as any[]) {
+        expect(PARTS[ratio.layout], 'part: ' + at + ' ' + n.key).toContain(n.part);
+        for (const f of ['x', 'w', 'v', 't']) if (n[f] != null) expect(n[f] >= 0 && n[f] <= 1, f + ': ' + at + ' ' + n.key).toBe(true);
+      }
+      // Placing changes no key and no order. It only leaves out what the size has no room for.
+      const placed = scene.nodes.map((n) => n.key);
+      expect(keys.filter((k) => placed.includes(k)), 'placed keys: ' + at).toEqual(placed);
+    }
+  });
+  it('needs no size: a plan for a container with no limits drops nothing', () => {
+    for (const name of Object.keys(samples)) expect(unbounded(specs[name]!).plan.dropped, name).toEqual([]);
+    const { ratio } = unbounded(trend);
+    expect(ratio).toMatchObject({ layout: 'cartesian', parts: ['y-axis', 'plot', 'x-axis'], scale: 'point' });
+    expect(ratio.nodes.filter((n) => n.rank).map((n) => n.key)).toEqual(['sub', 'xtick:2026-09-21']);
+    expect(ratio.nodes.filter((n) => n.role).map((n) => n.key + ' ' + n.role)).toEqual(['L0:area context', 'L1:line comparison', 'L2:line primary', 'L2:line:partial primary']);
+    // The number is there to be shown in compensation, though this plan does not show it.
+    expect(ratio.nodes.filter((n) => n.part === 'number').map((n) => n.key)).toEqual(['value', 'delta', 'sub']);
+  });
+  it('agrees with the placed pixels: a ratio times its part is where place() puts it', () => {
+    // Bars at 346 px. With axes the plot is x 36 to 340 and y 162 down to 10.
+    const bars = run(specs.layers!, 346);
+    for (const n of bars.ratio.nodes as any[]) {
+      const px = bars.scene.nodes.find((m) => m.key === n.key) as any;
+      if (n.kind === 'rect') { expect(px.x).toBeCloseTo(36 + n.x * 304, 9); expect(px.w).toBeCloseTo(n.w * 304, 9); expect(px.h).toBeCloseTo(n.v * 152, 9); }
+      if (n.part === 'y-axis') expect(px.y).toBeCloseTo(162 - n.t * 152, 9);
+    }
+    // Lines sit 2 px inside each edge. The 100 by 100 path, stretched to that box, is the placed path to well within a pixel.
+    const lines = run(trend, 346);
+    for (const n of lines.ratio.nodes) if (n.kind === 'path') {
+      const px = numbers((lines.scene.nodes.find((m) => m.key === n.key) as any).d);
+      numbers(n.d!).forEach((v, i) => expect(Math.abs((i % 2 ? 10 + v * 1.52 : 38 + v * 3) - px[i]!), n.key).toBeLessThan(0.01));
+    }
+  });
+  for (const name of Object.keys(samples)) it(`${name}, with no size`, () => expect(unbounded(specs[name]!).ratio).toMatchSnapshot());
+});
+
 describe('golden scenes', () => {
   const sizes: [number, number | null][] = [[346, null], [234, null], [346, 100]];
   for (const name of Object.keys(samples)) for (const [w, h] of sizes) {

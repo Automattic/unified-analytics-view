@@ -9,7 +9,8 @@ import { MOTION_CSS, begin, register, settle } from './motion.ts';
 
 /* <ua-view>: one view, in whatever room it is handed. It plans once per data change, for a container with no
  * limits, builds the ratio scene and paints it. The stylesheet fits it. On resize only the measured pass runs
- * (measure.ts), for what a stylesheet cannot see, and where there is no ResizeObserver the stylesheet stands alone.
+ * (measure.ts), a frame later, for what a stylesheet cannot see. Where there is no ResizeObserver, or no
+ * requestAnimationFrame, the stylesheet stands alone.
  * The host is the `view` container. By default it fills the width and takes its natural height; a surface
  * layout that hands out a box makes it `container-type: size`, and the body fills what is left. */
 
@@ -46,7 +47,7 @@ const BASE_CSS = `@layer vg {
 .vg-number[data-fit~="small"] > .vg-f-display { font-size: 26px; line-height: 24px; }
 .vg-number[data-fit~="no-note"] > .vg-f-tick { display: none; }
 /* A number the pass has not set carries no data-fit: one beside a bare plot, which its layout sets, or any number
- * where there is no ResizeObserver. For that one the widths at which place() takes the shorter forms stand in. */
+ * where the pass does not run. For that one the widths at which place() takes the shorter forms stand in. */
 @container view (inline-size < 200px) { .vg-number:not([data-fit]) > .vg-f-value > .vg-full { display: none; } .vg-number:not([data-fit]) > .vg-f-value > .vg-short { display: inline; } }
 @container view (inline-size < 160px) {
   .vg-number:not([data-fit]) > .vg-f-display > .vg-full { display: none; } .vg-number:not([data-fit]) > .vg-f-display > .vg-short { display: inline; }
@@ -157,8 +158,13 @@ export class UaView extends Base {
   #root: ShadowRoot; #fig: HTMLElement; #prose: HTMLElement; #number: HTMLElement; #body: HTMLElement; #table: HTMLTableElement; #error: HTMLElement;
   #room: HTMLElement; #ruler: HTMLElement[]; #seen = '';
   #keys: Keys;
+  #frame = 0;
   // The one observer of the measured pass. It watches the room and the ruler, whose sizes nothing it writes can change.
-  #sizes = globalThis.ResizeObserver ? new ResizeObserver(() => this.#measure(false)) : null;
+  // It only asks for a frame. A write in its callback can resize something the page observes, and the browser then
+  // reports a "ResizeObserver loop" error to the page's window. So a view that crosses a threshold paints one frame
+  // in the old state. However many callbacks come before the frame, it reads once, then, and writes once.
+  #sizes = globalThis.ResizeObserver && typeof requestAnimationFrame === 'function'
+    ? new ResizeObserver(() => { this.#frame ||= requestAnimationFrame(() => { this.#frame = 0; this.#measure(false); }); }) : null;
   // Markup can arrive after the element does, when a parser is still streaming its children.
   #children = new MutationObserver(() => this.#queue());
 
@@ -199,7 +205,10 @@ export class UaView extends Base {
     for (const el of [this.#room, ...this.#ruler]) this.#sizes?.observe(el);
     this.#queue();
   }
-  disconnectedCallback(): void { this.#children.disconnect(); this.#sizes?.disconnect(); }
+  disconnectedCallback(): void {
+    this.#children.disconnect(); this.#sizes?.disconnect();
+    if (this.#frame) { cancelAnimationFrame(this.#frame); this.#frame = 0; }
+  }
 
   #set(name: Input, v: unknown): void { this.#given[name] = v ?? undefined; this.#queue(); }
   // Inputs set one after another paint once.
@@ -246,6 +255,8 @@ export class UaView extends Base {
       this.#keys.paint(scene, expand(spec).query, result, catalog);
       fig.hidden = false; this.#error.hidden = true;
       settle(fig);
+      // At once, not a frame later: new data is never shown unfitted. This is not an observer's callback, so nothing
+      // it writes is reported as a loop. A frame already asked for reads the same sizes after it and writes nothing.
       if (this.#sizes) this.#measure(true);
     } catch (e) {
       // Never out of a lifecycle callback: the view says what is wrong where it would have drawn.
@@ -255,9 +266,9 @@ export class UaView extends Base {
     }
   }
 
-  /* The measured pass: after each paint, and when the room or the ruler changes size. It reads sizes and writes
-   * data-fit, on the number for its size and forms and on the figure for the prose rung, then hands the body to
-   * its layout. Nothing it reads depends on what it writes, so one run settles it. */
+  /* The measured pass: after each paint, and in the frame after the room or the ruler changes size. It reads sizes
+   * and writes data-fit, on the number for its size and forms and on the figure for the prose rung, then hands the
+   * body to its layout. Nothing it reads depends on what it writes, so one run settles it. */
   #measure(painted: boolean): void {
     const box = this.#room.getBoundingClientRect(), room = { inline: box.width, block: box.height || null }, sizes = readNumber(this.#ruler);
     const seen = JSON.stringify([room, sizes]);

@@ -1,6 +1,7 @@
 import type { LineNode, PathNode, RectNode, SceneNode, TextNode } from '@universal-analytics/core';
 import { ensure, ensureSvg, keyed, prop, text } from '../dom.ts';
 import type { LayoutPainter } from '../layout.ts';
+import { thin } from '../measure.ts';
 
 /* A dimension on x, a metric on y. The y axis is a column sized by its labels, the x axis a row under the plot,
  * and the plot a size container, so rules about roles can ask how much room the marks have.
@@ -17,6 +18,8 @@ const css = `
 .vg-x-axis span { grid-area: 1 / 1; justify-self: start; position: relative; inset-inline-start: calc(var(--vg-x) * 100%); translate: -50%; color: var(--a8c-charts-color-label-axis, var(--vg-paint)); }
 .vg-x-axis [data-anchor="start"] { translate: 0; }
 .vg-x-axis [data-anchor="end"] { translate: -100%; }
+/* A label the measured pass gave up keeps its box, so the next measurement reads the same. */
+.vg-x-axis [data-thin] { visibility: hidden; }
 .vg-plot { grid-area: plot; position: relative; container: plot / size; }
 .vg-grid, .vg-bars, .vg-refs { position: absolute; inset: 0; }
 .vg-line { position: absolute; inset-inline: 0; inset-block-start: calc((1 - var(--vg-t)) * 100%); block-size: var(--vg-stroke, 1px); background: var(--vg-paint); }
@@ -40,13 +43,14 @@ export const cartesian: LayoutPainter = {
   css,
   fit: {
     // Without its axes the plot is a sparkline beside the number, which takes its short forms and gives up its note.
+    // A number the measured pass has set carries data-fit and is left to it: that is the number alone, under `marks`.
     axes: {
       '': '--vg-body-block: var(--vg-bare-height, 46px); grid-template: "number body" minmax(0, 1fr) / auto minmax(0, 1fr); column-gap: 12px;',
       '.vg-body': 'grid-template: "plot" minmax(0, 1fr) / minmax(0, 1fr); padding-block: 3px;',
       '.vg-number': 'align-self: center; margin: 0;',
-      '.vg-number .vg-f-display': 'font-size: 26px; line-height: 24px;',
-      '.vg-number :is(.vg-full, [data-rank])': 'display: none;',
-      '.vg-number .vg-short': 'display: inline;',
+      '.vg-number:not([data-fit]) .vg-f-display': 'font-size: 26px; line-height: 24px;',
+      '.vg-number:not([data-fit]) :is(.vg-full, [data-rank])': 'display: none;',
+      '.vg-number:not([data-fit]) .vg-short': 'display: inline;',
     },
     // The number alone. The body goes whole, so kept axes do not stand with no plot between them.
     marks: { '': 'grid-template: "number" auto / minmax(0, 1fr);', '.vg-body': 'display: none;', '.vg-number': 'margin: 0;' },
@@ -55,6 +59,13 @@ export const cartesian: LayoutPainter = {
   // plot container, so this asks the view: 120 for the plot, 10 above it and 22 for the x axis. Wrong when the number
   // is above the plot. A `plot` rule in core, and the y axis inside that container, would say it properly.
   rules: [{ id: 'y-ticks', layout: 'cartesian', container: 'view', needs: { block: 152 }, hide: ['y-tick.ranked'] }],
+
+  // X labels that would collide, by their real widths. One a fit rule has hidden has no box and is passed over.
+  measure(body) {
+    const labels = Array.from(body.querySelectorAll<HTMLElement>('.vg-x-axis > span')).filter((el) => el.getClientRects().length);
+    const gone = thin(labels.map((el) => { const r = el.getBoundingClientRect(); return { lo: r.left, hi: r.right, rank: Number(el.dataset.rank) || 0 }; }));
+    labels.forEach((el, i) => el.toggleAttribute('data-thin', gone[i]));
+  },
 
   paint(body, scene) {
     body.dataset.scale = scene.scale;

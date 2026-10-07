@@ -1,0 +1,63 @@
+import { describe, expect, it } from 'vitest';
+import { buildScene, resolve, unboundedContainer, type PathNode } from '@universal-analytics/core';
+import { catalog, runQuery, samples } from '@universal-analytics/fixtures';
+import { mix, pathD, resample } from '../packages/dom/src/motion.ts';
+
+// A path's morph is points in and a string out, so it is held here with no DOM. That it runs, and what a
+// stylesheet moves, is checked in a browser on the bench.
+
+function paths(range: string, scenario: 'typical' | 'no-prior' = 'typical'): PathNode[] {
+  const spec = { ...samples.trend!.spec, query: { ...samples.trend!.spec.query, range } }, result = runQuery(spec.query, scenario);
+  return buildScene(resolve(spec, result, unboundedContainer(), catalog), spec.query, result, catalog).nodes.filter((n): n is PathNode => n.kind === 'path');
+}
+const numbers = (d: string) => d.split(/[A-Z,]/).filter(Boolean).map(Number), commands = (d: string) => d.replace(/[^A-Z]/g, '');
+
+describe('pathD', () => {
+  it('draws the trend at rest as core does: the same commands, and numbers within a rounding', () => {
+    const all = ['28d', '14d', '7d'].flatMap((r) => paths(r));
+    expect(all.map((n) => n.key).slice(0, 4)).toEqual(['L0:area', 'L1:line', 'L2:line', 'L2:line:partial']);
+    let same = 0;
+    for (const n of all) {
+      const d = pathD(n.points, n.curve, n.fill);
+      expect(commands(d)).toBe(commands(n.d!));
+      // Core draws x on a 0 to 100 scale and this from 100 times a ratio, which can differ in the last bit before rounding.
+      numbers(n.d!).forEach((v, i) => expect(Math.abs(numbers(d)[i]! - v)).toBeLessThan(0.0011));
+      if (d === n.d) same++;
+    }
+    expect(same + ' of ' + all.length).toBe('12 of 12');
+  });
+
+  it('draws one point as core does, and a straight tail', () => {
+    expect(pathD([{ x: 0.5, v: 0.25 }], 'monotone')).toBe('M50,75Z');
+    expect(pathD([{ x: 0.5, v: 0.25 }], 'monotone', true)).toBe('M50,75L50,100Z');
+    expect(pathD([{ x: 0, v: 0 }, { x: 1, v: 1 }])).toBe('M0,100L100,0');
+  });
+});
+
+describe('resample and mix', () => {
+  const [, , line] = paths('28d'), [, , week] = paths('7d');
+
+  it('leaves a set alone when the rows are the same, so a morph starts and ends on the two drawn shapes', () => {
+    // With no previous period the comparison layer goes, and core's keys, which count layers, move up one.
+    const to = paths('28d', 'no-prior').find((n) => n.role === 'primary')!;
+    expect(to.key).toBe('L1:line');
+    const from = resample(line!.points, to.points);
+    expect(from).toEqual(line!.points.map(({ x, v }) => ({ x, v })));
+    expect(mix(from, to.points, 0)).toEqual(from);
+    expect(mix(from, to.points, 1)).toEqual(to.points.map(({ x, v }) => ({ x, v })));
+  });
+
+  it('reads the old shape at the new rows when they differ, and holds the ends past the old ones', () => {
+    const from = resample(line!.points, week!.points);
+    expect(from.map((p) => p.x)).toEqual(week!.points.map((p) => p.x));
+    expect(from[0]!.v).toBe(line!.points[0]!.v);
+    const lo = Math.min(...line!.points.map((p) => p.v)), hi = Math.max(...line!.points.map((p) => p.v));
+    from.forEach((p) => { expect(p.v).toBeGreaterThanOrEqual(lo); expect(p.v).toBeLessThanOrEqual(hi); });
+    expect(resample([], week!.points).every((p) => p.v === 0)).toBe(true);
+    expect(resample([{ x: 0.2, v: 0.5 }, { x: 0.4, v: 0.7 }], [{ x: 0, v: 0 }, { x: 0.3, v: 0 }, { x: 1, v: 0 }]).map((p) => p.v)).toEqual([0.5, 0.6, 0.7]);
+  });
+
+  it('is half way at a half', () => {
+    expect(mix([{ x: 0, v: 0.2 }], [{ x: 0.5, v: 0.6 }], 0.5)).toEqual([{ x: 0.5, v: 0.4 }]);
+  });
+});

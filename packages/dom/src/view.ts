@@ -1,11 +1,13 @@
 import { CONTAINER_RULES, buildScene, expand, resolve, unboundedContainer } from '@universal-analytics/core';
 import type { Catalog, ContainerRules, Layout, Query, Result, SceneNode, Spec } from '@universal-analytics/core';
 import { compileFitRules, type FitExtras } from './compile.ts';
-import { ensure, keyed, paintVar, text } from './dom.ts';
+import { attr, ensure, keyed, paintVar, text } from './dom.ts';
 import { LAYOUTS } from './layouts/index.ts';
+import { NUMBER_FITS, fitNumber, readNumber } from './measure.ts';
 
 /* <ua-view>: one view, in whatever room it is handed. It plans once per data change, for a container with no
- * limits, builds the ratio scene and paints it. Nothing here runs on resize: the stylesheet fits it.
+ * limits, builds the ratio scene and paints it. The stylesheet fits it. On resize only the measured pass runs
+ * (measure.ts), for what a stylesheet cannot see, and where there is no ResizeObserver the stylesheet stands alone.
  * The host is the `view` container. By default it fills the width and takes its natural height; a surface
  * layout that hands out a box makes it `container-type: size`, and the body fills what is left. */
 
@@ -15,7 +17,7 @@ const painters = Object.values(LAYOUTS);
 const BASE_CSS = `@layer vg {
 :host { display: block; container: view / inline-size; font-size: 11px; line-height: 1.3; color: ${paintVar('ink')}; }
 :host([hidden]), [hidden] { display: none !important; }
-.vg { box-sizing: border-box; block-size: 100%; margin: 0; display: grid; grid-template: "number" auto "body" minmax(0, 1fr) / minmax(0, 1fr); }
+.vg { position: relative; box-sizing: border-box; block-size: 100%; margin: 0; display: grid; grid-template: "number" auto "body" minmax(0, 1fr) / minmax(0, 1fr); }
 .vg-prose { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .vg-body { grid-area: body; box-sizing: border-box; min-inline-size: 0; block-size: var(--vg-body-block, auto); }
 .vg-error { margin: 0; font-size: 13px; overflow-wrap: anywhere; color: ${paintVar('delta.bad')}; }
@@ -36,13 +38,28 @@ const BASE_CSS = `@layer vg {
 .vg-number > .vg-f-tick { line-height: 16px; }
 .vg-pulse { display: inline-block; vertical-align: middle; inline-size: 10px; block-size: 10px; margin-inline: 2px 8px; border-radius: 50%; background: var(--vg-paint); }
 .vg-short { display: none; }
-/* ponytail: the widths at which place() takes the shorter forms. They stand in for measuring the number, which is the measured pass's job. */
-@container view (inline-size < 200px) { .vg-f-value > .vg-full { display: none; } .vg-f-value > .vg-short { display: inline; } }
+/* What the measured pass found, as data-fit on the number: its size, its forms, and whether its note fits. */
+.vg-number[data-fit~="short"] > .vg-f-display > .vg-full, .vg-number[data-fit~="delta-short"] > .vg-f-value > .vg-full { display: none; }
+.vg-number[data-fit~="short"] > .vg-f-display > .vg-short, .vg-number[data-fit~="delta-short"] > .vg-f-value > .vg-short { display: inline; }
+.vg-number[data-fit~="small"] > .vg-f-display { font-size: 26px; line-height: 24px; }
+.vg-number[data-fit~="no-note"] > .vg-f-tick { display: none; }
+/* A number the pass has not set carries no data-fit: one beside a bare plot, which its layout sets, or any number
+ * where there is no ResizeObserver. For that one the widths at which place() takes the shorter forms stand in. */
+@container view (inline-size < 200px) { .vg-number:not([data-fit]) > .vg-f-value > .vg-full { display: none; } .vg-number:not([data-fit]) > .vg-f-value > .vg-short { display: inline; } }
 @container view (inline-size < 160px) {
-  .vg-f-display > .vg-full { display: none; } .vg-f-display > .vg-short { display: inline; }
-  .vg-number > .vg-f-display { font-size: 26px; line-height: 24px; }
+  .vg-number:not([data-fit]) > .vg-f-display > .vg-full { display: none; } .vg-number:not([data-fit]) > .vg-f-display > .vg-short { display: inline; }
+  .vg-number:not([data-fit]) > .vg-f-display { font-size: 26px; line-height: 24px; }
 }
-@container view (inline-size < 120px) { .vg-number > .vg-f-tick { display: none; } }
+@container view (inline-size < 120px) { .vg-number:not([data-fit]) > .vg-f-tick { display: none; } }
+
+/* What the measured pass reads. The room takes the view's width, and its height only when the view was handed a
+ * box, so nothing the pass writes can resize it. The ruler holds the number set in each of its forms, clipped to
+ * nothing so that it adds no overflow, and outside the figure so that no fit rule reaches it. */
+.vg-room { position: absolute; inset-inline: 0; inset-block-start: 0; block-size: 0; visibility: hidden; pointer-events: none; }
+@container view (block-size >= 0px) { .vg-room { block-size: 100%; } }
+.vg-ruler { position: absolute; inline-size: 0; block-size: 0; overflow: hidden; visibility: hidden; pointer-events: none; }
+.vg-ruler > .vg-number { display: block; position: absolute; inline-size: max-content; }
+.vg-ruler > .vg-number > span { inline-size: max-content; }
 
 ${painters.map((p) => p.css).join('\n')}
 
@@ -50,8 +67,8 @@ ${painters.map((p) => p.css).join('\n')}
  * box. The body then takes the height left over. No attribute on the view. */
 @container view (block-size >= 0px) { .vg-body { block-size: auto; } }
 
-/* The prose alone: the last rung, set by the plan or, later, by the measured pass. */
-.vg:is([data-layout="prose"], [data-fit="prose"]) > :not(.vg-prose) { display: none !important; }
+/* The prose alone: the last rung, set by the plan or, when the number itself does not fit, by the measured pass. */
+.vg:is([data-layout="prose"], [data-fit="prose"]) > :not(.vg-prose, .vg-room) { display: none !important; }
 .vg:is([data-layout="prose"], [data-fit="prose"]) > .vg-prose { position: static; inline-size: auto; block-size: auto; clip-path: none; white-space: normal; font-size: 13px; }
 
 /* The same result as a table, in place of the marks. The switch is public: the surface that offers it is outside the shadow root. */
@@ -59,7 +76,7 @@ ${painters.map((p) => p.css).join('\n')}
 .vg-table :is(th, td) { padding: 2px 8px 2px 0; text-align: start; font-weight: 400; border-block-end: 1px solid ${paintVar('grid')}; }
 .vg-table :is(thead th, tfoot td, tfoot th) { font-weight: 600; }
 .vg-table [data-num] { text-align: end; padding-inline: 8px 0; }
-:host([table]) .vg > :not(.vg-table, .vg-prose) { display: none !important; }
+:host([table]) .vg > :not(.vg-table, .vg-prose, .vg-room) { display: none !important; }
 :host([table]) .vg { display: block; overflow: auto; }
 :host([table]) .vg-table { display: table; }
 }`;
@@ -136,6 +153,9 @@ export class UaView extends Base {
   #queued = false;
   #layout: Layout | null = null;
   #root: ShadowRoot; #fig: HTMLElement; #prose: HTMLElement; #number: HTMLElement; #body: HTMLElement; #table: HTMLTableElement; #error: HTMLElement;
+  #room: HTMLElement; #ruler: HTMLElement[]; #seen = '';
+  // The one observer of the measured pass. It watches the room and the ruler, whose sizes nothing it writes can change.
+  #sizes = globalThis.ResizeObserver ? new ResizeObserver(() => this.#measure(false)) : null;
   // Markup can arrive after the element does, when a parser is still streaming its children.
   #children = new MutationObserver(() => this.#queue());
 
@@ -150,6 +170,10 @@ export class UaView extends Base {
     this.#table = ensure(this.#fig, 'table', 'vg-table');
     this.#error = ensure(this.#root as unknown as Element, 'p', 'vg-error');
     this.#error.setAttribute('role', 'alert'); this.#error.hidden = true;
+    this.#room = ensure(this.#fig, 'div', 'vg-room');
+    const ruler = ensure(this.#root as unknown as Element, 'div', 'vg-ruler');
+    ruler.setAttribute('aria-hidden', 'true');
+    this.#ruler = NUMBER_FITS.map((fit) => { const el = ruler.appendChild(document.createElement('div')); el.className = 'vg-number'; el.dataset.fit = fit; return el; });
   }
 
   /** The view spec. A property wins over the JSON in a child script. */
@@ -168,9 +192,10 @@ export class UaView extends Base {
     // A property set before the element was defined sits on the instance and hides the accessor.
     for (const name of INPUTS) if (Object.hasOwn(this, name)) { const v = this[name]; delete this[name]; this.#set(name, v); }
     this.#children.observe(this, { childList: true, characterData: true, subtree: true });
+    for (const el of [this.#room, ...this.#ruler]) this.#sizes?.observe(el);
     this.#queue();
   }
-  disconnectedCallback(): void { this.#children.disconnect(); }
+  disconnectedCallback(): void { this.#children.disconnect(); this.#sizes?.disconnect(); }
 
   #set(name: Input, v: unknown): void { this.#given[name] = v ?? undefined; this.#queue(); }
   // Inputs set one after another paint once.
@@ -209,17 +234,43 @@ export class UaView extends Base {
       // The plot's natural heights are the context's, read by the stylesheet. The painter hard-codes neither.
       fig.style.setProperty('--vg-axes-height', rules.axes.height + 'px'); fig.style.setProperty('--vg-bare-height', rules.bare.height + 'px');
       this.#prose.textContent = plan.text;
-      paintNumber(this.#number, scene.nodes.filter((n) => n.part === 'number'));
+      for (const el of [this.#number, ...this.#ruler]) paintNumber(el, scene.nodes.filter((n) => n.part === 'number'));
       if (this.#layout !== scene.layout) { this.#body.replaceChildren(); this.#body.removeAttribute('data-scale'); this.#layout = scene.layout; }
       LAYOUTS[scene.layout]?.paint(this.#body, scene, rules);
       paintTable(this.#table, spec.title, expand(spec).query, result, catalog);
       fig.hidden = false; this.#error.hidden = true;
+      if (this.#sizes) this.#measure(true);
     } catch (e) {
       // Never out of a lifecycle callback: the view says what is wrong where it would have drawn.
       this.#root.adoptedStyleSheets = [sheet(BASE_CSS)];
       this.#error.textContent = e instanceof Error ? e.message : String(e);
       this.#fig.hidden = true; this.#error.hidden = false;
     }
+  }
+
+  /* The measured pass: after each paint, and when the room or the ruler changes size. It reads sizes and writes
+   * data-fit, on the number for its size and forms and on the figure for the prose rung, then hands the body to
+   * its layout. Nothing it reads depends on what it writes, so one run settles it. */
+  #measure(painted: boolean): void {
+    const box = this.#room.getBoundingClientRect(), room = { inline: box.width, block: box.height || null }, sizes = readNumber(this.#ruler);
+    const seen = JSON.stringify([room, sizes]);
+    if (!painted && seen === this.#seen) return;
+    this.#seen = seen;
+    const fig = this.#fig, number = this.#number, body = this.#body;
+    // Whether the number shows, and where, is the stylesheet's to say, and under the prose it has no box to read.
+    // ponytail: so a view that is prose is laid out twice in a run. Keep both in the flow, hidden, if that ever costs.
+    fig.removeAttribute('data-fit');
+    let fit: string | null = null, prose = false;
+    if (number.getClientRects().length) {
+      const beside = body.getClientRects().length > 0 && body.offsetTop < number.offsetTop + number.offsetHeight;
+      if (beside) {
+        // Beside the marks the layout's own rules set the number, so it is measured as it stands.
+        number.removeAttribute('data-fit');
+        prose = number.offsetWidth > room.inline || (room.block != null && number.offsetHeight > room.block);
+      } else { fit = fitNumber(room, sizes); prose = fit == null; }
+    }
+    attr(number, 'data-fit', fit);
+    if (prose) fig.setAttribute('data-fit', 'prose'); else if (this.#layout) LAYOUTS[this.#layout]?.measure?.(body, room);
   }
 }
 

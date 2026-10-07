@@ -1,4 +1,4 @@
-import type { ContainerRules, FitRule, Layout, Scene } from '@universal-analytics/core';
+import type { ContainerRules, FitRule, Layout, Room, Scene } from '@universal-analytics/core';
 import { ensure } from './dom.ts';
 
 /* The seam between <ua-view> and a layout. A layout is one module in layouts/, exporting one LayoutPainter.
@@ -13,7 +13,10 @@ import { ensure } from './dom.ts';
  * What a layout is handed: `body`, the same element on every data change while the layout stays the same, and
  * empty the first time. It paints the scene's other parts into it, reconciling by key (`ensure` and `keyed` in
  * dom.ts), and gives each part's element the class `vg-<part>`, because that is what a fit rule's `hide` and
- * `show` compile to. It runs once per data change and never on resize. */
+ * `show` compile to. It runs once per data change and never on resize.
+ *
+ * What a stylesheet cannot see is the measured pass's (measure.ts). The element runs it after each paint and when
+ * the view's room changes, and owns the number and the prose rung. A layout joins it with `measure`. */
 export interface LayoutPainter {
   layout: Layout;
   /** Its stylesheet text. It joins the base sheet inside `@layer vg`, so every compiled fit rule beats it whatever
@@ -26,6 +29,11 @@ export interface LayoutPainter {
   /** Fit rules of its own, for what the context's set does not carry yet. Compiled after the context's. */
   rules?: FitRule[];
   paint(body: HTMLElement, scene: Scene, rules: ContainerRules): void;
+  /** Its share of the measured pass, if it has one: labels that collide, how many rows fit. `room` is the view's
+   * width, and its height when it was handed a box. Read sizes inside `body`, then write attributes there for
+   * `css` to answer. Nothing written may change a size that is read, here or by the element, or the pass will not
+   * settle: hide with `visibility`, never `display`. It is not called while the view shows only its prose. */
+  measure?(body: HTMLElement, room: Room): void;
 }
 
 /** A layout nobody has built: the number and the prose, and a line that says so. */

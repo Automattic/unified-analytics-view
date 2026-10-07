@@ -5,7 +5,7 @@ import * as d3array from 'd3-array';
 import * as d3scale from 'd3-scale';
 import * as d3shape from 'd3-shape';
 import { describe, expect, it } from 'vitest';
-import { buildScene, expand, makeContainer, resolve, type PainterName, type Spec } from '@universal-analytics/core';
+import { CONTAINER_RULES, buildScene, expand, makeContainer, resolve, type PainterName, type Spec } from '@universal-analytics/core';
 import catalogSchema from '@universal-analytics/core/schema/catalog.schema.json';
 import viewSchema from '@universal-analytics/core/schema/view.schema.json';
 import { catalog, runQuery, samples, scenarios } from '@universal-analytics/fixtures';
@@ -14,9 +14,15 @@ import { catalog, runQuery, samples, scenarios } from '@universal-analytics/fixt
 (globalThis as any).d3 = { ...d3array, ...d3scale, ...d3shape };
 vm.runInThisContext(readFileSync(new URL('../prototype/prototype-bench.js', import.meta.url), 'utf8'));
 const proto = (globalThis as any).VGB;
+// A context that always sets the tldr value above the marks.
+const ALWAYS = { ...CONTAINER_RULES, tldrValue: { above: 'always' as const } };
 // The prototype is read-only and keeps its own names. The deliberate differences are mapped here and nowhere else:
-// it calls the `line` preset `trend`, and its plan says `headline` and `sentence` where ours says `tldrValue` and `prose`.
-const toProto = (s: Spec): Spec => (s.use === 'line' ? { ...s, use: 'trend' } : s);
+// it calls the `line` preset `trend`; its spec asks for the number with `headline`, which is now a container rule;
+// and its plan says `headline` and `sentence` where ours says `tldrValue` and `prose`.
+const toProto = (s: Spec, rules = CONTAINER_RULES): object => ({
+  ...s, ...(s.use === 'line' && { use: 'trend' }),
+  ...((rules.tldrValue.above === 'always' || catalog.metrics[s.query.metrics[0]!]!.instant) && { headline: true }),
+});
 const fromProto = ({ headline, ...p }: any) => ({
   ...p, tldrValue: headline, layout: p.layout === 'sentence' ? 'prose' : p.layout,
   reductions: p.reductions.map((r: any) => (r.id === 'sentence' ? { ...r, id: 'prose' } : r)),
@@ -25,7 +31,7 @@ const fromProto = ({ headline, ...p }: any) => ({
 const trend = samples.trend!.spec;
 const specs: Record<string, Spec> = {
   ...Object.fromEntries(Object.entries(samples).map(([k, s]) => [k, s.spec])),
-  headed: { ...trend, headline: true },
+  headed: trend,                         // swept in the ALWAYS context
   kept: { ...trend, keep: ['guides'] },
 };
 const invalid: Record<string, Spec> = {
@@ -37,8 +43,8 @@ const painters: PainterName[] = ['svg', 'dots'];
 const heights = [null, 300, 160, 100, 60, 40];
 const widths = [54, 80, 120, 170, 250, 290, 346, 500, 700];
 const plain = (v: unknown) => JSON.parse(JSON.stringify(v));
-const run = (spec: Spec, w: number, h: number | null = null, scenario: (typeof scenarios)[number] = 'typical', painter: PainterName = 'svg') => {
-  const container = makeContainer(w, h, painter, 8), result = runQuery(spec.query, scenario);
+const run = (spec: Spec, w: number, h: number | null = null, scenario: (typeof scenarios)[number] = 'typical', painter: PainterName = 'svg', rules = CONTAINER_RULES) => {
+  const container = { ...makeContainer(w, h, painter, 8), rules }, result = runQuery(spec.query, scenario);
   const plan = resolve(spec, result, container, catalog);
   return { plan, scene: buildScene(plan, spec.query, result, container, catalog), result };
 };
@@ -46,15 +52,16 @@ const run = (spec: Spec, w: number, h: number | null = null, scenario: (typeof s
 describe('the sweep', () => {
   for (const [name, spec] of Object.entries(specs)) {
     it(name + ': matches the prototype, with unique keys, no NaN and nothing taller than the container allows', () => {
+    const rules = name === 'headed' ? ALWAYS : CONTAINER_RULES;
       for (const sc of scenarios) for (const p of painters) for (const h of heights) for (const w of widths) {
         const at = [name, sc, p, w, h].join(' ');
-        const { plan, scene } = run(spec, w, h, sc, p);
+        const { plan, scene } = run(spec, w, h, sc, p, rules);
         const keys = scene.nodes.map((n) => n.key);
         expect(new Set(keys).size, 'duplicate keys: ' + at).toBe(keys.length);
         expect(JSON.stringify(scene, (_, v) => (typeof v === 'number' && isNaN(v) ? 'NaN' : v)), 'NaN: ' + at).not.toMatch(/NaN/);
         if (h != null && plan.layout !== 'prose') expect(scene.height, 'too tall: ' + at).toBeLessThanOrEqual(h);
 
-        const host0 = proto.makeHost(w, h, p, 8), res0 = proto.runQuery(spec.query, sc), plan0 = proto.resolve(toProto(spec), res0, host0);
+        const host0 = proto.makeHost(w, h, p, 8), res0 = proto.runQuery(spec.query, sc), plan0 = proto.resolve(toProto(spec, rules), res0, host0);
         expect(plain(runQuery(spec.query, sc)), 'result: ' + at).toEqual(plain(res0));
         expect(plain(plan), 'plan: ' + at).toEqual({ ...fromProto(plain(plan0)), preset: plan.preset });
         expect(plain(scene), 'scene: ' + at).toEqual(plain(proto.buildScene(plan0, spec.query, res0, host0)));
@@ -140,6 +147,11 @@ describe('fitting the container (reference section 10.1)', () => {
     const marks = run({ ...trend, keep: ['marks'] }, 120).plan;
     expect(state(marks, 'collapse')).toBe('kept by the spec');
   });
+  it('the tldr value sits above the marks for an instant metric, or wherever the context says always', () => {
+    expect(applied('live', 346)).toMatchObject({ layout: 'rows', tldrValue: true });
+    expect(applied('pages', 346).tldrValue).toBe(false);
+    expect(run(trend, 346, null, 'typical', 'svg', ALWAYS).plan).toMatchObject({ layout: 'cartesian', side: false, tldrValue: true });
+  });
   it('reports a comparison it could not draw', () => {
     expect(run(trend, 346, null, 'no-prior').plan.dropped).toContain('comparison series (no prior data)');
   });
@@ -172,6 +184,10 @@ describe('schemas', () => {
     expect(view(invalid['dimension, no layers'])).toBe(false);
     expect(view(invalid['preset, no dimension'])).toBe(false);
     expect(view({ ...trend, width: 346 })).toBe(false);
+  });
+  it('reject presentation in a spec: the tldr value and the guides are the container\'s to decide', () => {
+    expect(view({ ...trend, headline: true })).toBe(false);
+    expect(view({ ...trend, guides: { x: false } })).toBe(false);
   });
 });
 

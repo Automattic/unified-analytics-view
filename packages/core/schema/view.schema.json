@@ -12,17 +12,6 @@
     "use": { "type": "string", "description": "A preset name. Expands into layers. Ignored if layers is present." },
     "query": { "$ref": "#/definitions/query" },
     "layers": { "type": "array", "items": { "$ref": "#/definitions/layer" } },
-    "guides": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "x": { "type": "boolean" },
-        "y": { "type": "boolean" },
-        "grid": { "type": "boolean" },
-        "legend": { "enum": ["full", "top"] }
-      }
-    },
-    "headline": { "type": "boolean", "description": "Show the number above the marks." },
     "keep": {
       "type": "array",
       "description": "Parts a container may not drop.",

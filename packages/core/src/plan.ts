@@ -43,10 +43,10 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
     if (!result.meta.empty) dropped.push(q.compare === 'previous' ? 'comparison series (no prior data)' : 'comparison series (the query has no "compare")');
   }
   const share = layers.some((l) => l.stack === 'normalize');
-  const p: PlanShape = { layout: layers.length ? detectLayout(catalog, layers) : 'none', layers, guides: {}, tldrValue: !!spec.headline || !layers.length, side: false, rowLimit: null,
+  const p: PlanShape = { layout: layers.length ? detectLayout(catalog, layers) : 'none', layers, guides: {}, tldrValue: rules.tldrValue.above === 'always' || !!M.instant || !layers.length, side: false, rowLimit: null,
                          share, text: tldrProse(q, result, share, catalog) };
-  if (p.layout === 'cartesian') p.guides = Object.assign({ x: true, y: true, grid: true }, spec.guides || {});
-  if (p.layout === 'band') p.guides = { legend: (spec.guides && spec.guides.legend) || 'full' };
+  if (p.layout === 'cartesian') p.guides = { x: true, y: true, grid: true };
+  if (p.layout === 'band') p.guides = { legend: 'full' };
   if (result.meta.empty || (M.instant && !result.rows.length)) {
     if (M.instant || !layers.length) { p.layout = 'none'; p.layers = []; p.tldrValue = true; p.guides = {}; }
     else { p.layout = 'notice'; p.layers = []; p.guides = {}; p.tldrValue = false; }

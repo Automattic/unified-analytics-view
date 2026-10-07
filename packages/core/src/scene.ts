@@ -170,7 +170,7 @@ export function tldrValueText(catalog: Catalog, q: Query, result: Result, compac
   return result.meta.empty ? '0' : fmt(result.totals[m], compact);
 }
 
-/** The number: a total from the engine, a delta if the query compares, and a derived note. */
+/** The tldr value: a total from the engine, a delta if the query compares, and a derived note. */
 export function tldrValue(catalog: Catalog, q: Query, result: Result, share: boolean, container: Container, W: number, small: boolean): Part {
   const m = q.metrics[0]!, M = catalog.metrics[m]!, t = result.totals, by = (q.by || [])[0], rows = result.rows;
   if (M.instant) { const n = t[m] || 0; return sceneStat({ value: String(n), sub: n ? 'on the site right now' : 'Nobody is here right now', W, container, pulse: n > 0, small }); }

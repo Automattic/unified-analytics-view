@@ -1,7 +1,8 @@
 import type { Container, ContainerRules, KeepPart, PainterName, ReductionId } from './types.ts';
 
 /* The container owns sizes. It states the least room each kind of part needs,
- * and the order in which parts are given up when a view does not fit. */
+ * and the order in which parts are given up when a view does not fit.
+ * These are the defaults; a context passes its containers a different set. */
 export const CONTAINER_RULES: ContainerRules = {
   axes:      { minWidth: 280, minHeight: 120, height: 184 },   // a plot with axes
   secondary: { minPlotWidth: 180, minPlotHeight: 90 },         // comparison and reference layers stay legible above this
@@ -9,7 +10,8 @@ export const CONTAINER_RULES: ContainerRules = {
   rows:      { rowHeight: 28, gap: 4, minLabelWidth: 90 },
   band:      { minWidth: 110, minWidthWithLegend: 170 },
   notice:    { minWidth: 150 },
-  order:     ['drop-guides', 'drop-secondary', 'trim-rows', 'collapse', 'prose'],
+  tldrValue: { above: 'instant' },                             // above the marks only for an instant metric
+  order:    ['drop-guides', 'drop-secondary', 'trim-rows', 'collapse', 'prose'],
 };
 
 /** Which `keep` entry in a spec blocks which reduction. */

@@ -58,13 +58,12 @@ export interface Spec {
   query: Query;
   use?: string;
   layers?: Layer[];
-  guides?: Guides;
-  headline?: boolean;
   keep?: KeepPart[];
 }
 export type PresetLibrary = Record<string, { layers: Layer[] }>;
 
-/* Container: wherever a view renders. It owns sizes. */
+/* Container: wherever a view renders. It owns sizes, and its rules are the
+ * durable behaviour a context hands to every container it holds. */
 export type ReductionId = 'drop-guides' | 'drop-secondary' | 'trim-rows' | 'collapse' | 'prose';
 export interface ContainerRules {
   axes: { minWidth: number; minHeight: number; height: number };
@@ -73,6 +72,8 @@ export interface ContainerRules {
   rows: { rowHeight: number; gap: number; minLabelWidth: number };
   band: { minWidth: number; minWidthWithLegend: number };
   notice: { minWidth: number };
+  /** When the tldr value sits above the marks while there is room for both. */
+  tldrValue: { above: 'instant' | 'always' };
   order: ReductionId[];
 }
 export type PainterName = 'svg' | 'dots';
@@ -82,7 +83,7 @@ export interface Container {
   painter: PainterName;
   cell: number;
   rules: ContainerRules;
-  /** Metrics of the big-number face at this length and available width. */
+  /** Metrics of the tldr value's face at this length and available width. */
   display(len: number, avail: number, small?: boolean): { h: number; cell?: number };
   displayWidth(len: number): number;
 }

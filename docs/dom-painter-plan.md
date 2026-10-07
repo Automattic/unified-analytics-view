@@ -125,10 +125,10 @@ One custom element, `<ua-view>`, with an open shadow root. It takes `spec`, `res
         <div class="vg-grid"> <i style="--vg-t:.25"></i> … </div>
         <div class="vg-bars"> <i data-row="2026-09-08" style="--vg-x:.01; --vg-w:.03; --vg-v:.6"></i> … </div>
         <svg viewBox="0 0 100 100" preserveAspectRatio="none">
-          <path data-key="L0:area" data-role="context" />
-          <path data-key="L1:line" data-role="comparison" />
-          <path data-key="L2:line" data-role="primary" />
-          <path data-key="L2:line:partial" data-role="primary" />
+          <path data-key="context:area" data-role="context" />
+          <path data-key="comparison:line" data-role="comparison" />
+          <path data-key="primary:line" data-role="primary" />
+          <path data-key="primary:line:partial" data-role="primary" />
         </svg>
         <div class="vg-refs"> … </div>        <!-- rules and their labels -->
         <div class="vg-hits"> <i data-row="2026-09-08" style="--vg-x:.0"></i> … </div>   <!-- step 5; not built -->

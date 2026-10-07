@@ -325,6 +325,8 @@ A central reducer. The plan starts with everything the spec asks for, checks whe
 4. **Collapse.** All marks go; the tldr value stays.
 5. **Tldr prose.** Only the text remains.
 
+The port departs from the prototype in one place (decided October 7): a tldr value that stands alone and is too tall for the container gives up its note before step 5.
+
 "Fits" means the container is at least the layout's minimum width, the scene is no taller than the container's height limit, and any secondary layers have a plot at least 180 by 90 px.
 
 Starting values, owned by the container's rules and not the spec:
@@ -411,13 +413,13 @@ A placed scene is `{ width, height, nodes, plot? }`. Nodes are flat and drawn in
 
 Every node also has:
 
-- `key`: stable across renders, for example `L2:line`, `L0:bar:2026-09-08`, `seg:Search`. Keys are what make transitions and keyboard navigation possible. Duplicate keys are a bug; the prototype test checks for them.
+- `key`: stable across renders, for example `primary:line`, `primary:bar:2026-09-08`, `seg:Search`. A layer's key is its role and mark, with `#2` for a second layer of the same role and mark; it does not count layers, so it holds when one drops. The prototype's keys do count them (`L2:line`), and the parity test maps them. Keys are what make transitions and keyboard navigation possible. Duplicate keys are a bug; the prototype test checks for them.
 - `paint`: a token, never a colour.
 - `layer`: `data` or `guide`.
 - Optional `opacity`, `tx`, `ty`, `note`.
 
 ```json
-{ "key": "L2:line:partial", "kind": "path", "d": "M326.9,83.5L338,117.7", "paint": "series.1",
+{ "key": "primary:line:partial", "kind": "path", "d": "M326.9,83.5L338,117.7", "paint": "series.1",
   "width": 2, "dash": "2 4", "opacity": 0.75, "layer": "data", "note": "incomplete bucket" }
 ```
 

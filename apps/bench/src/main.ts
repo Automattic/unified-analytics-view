@@ -11,7 +11,7 @@ const views = document.querySelector('#views')!;
 
 const params = new URLSearchParams(location.search);
 for (const [k, v] of params) { const input = controls.querySelector<HTMLInputElement>(`[name="${k}"][value="${v}"]`); if (input) input.checked = true; }
-const state = () => Object.fromEntries(new FormData(controls)) as { scenario: Scenario; height: string; theme: string; painter: 'svg' | 'ua-view' };
+const state = () => Object.fromEntries(new FormData(controls)) as { scenario: Scenario; range: string; height: string; theme: string; painter: 'svg' | 'ua-view' };
 
 // The surface layouts are the surface's to adopt. Here the page is the surface, and each frame a stack or a row of one.
 defineUaView();
@@ -27,7 +27,9 @@ function child<E extends Element>(frame: HTMLElement, tag: string, create: () =>
 }
 
 function paint(frame: HTMLElement) {
-  const { scenario, height, painter } = state(), spec = samples[frame.dataset.sample!]!.spec;
+  const { scenario, range, height, painter } = state(), sample = samples[frame.dataset.sample!]!.spec;
+  // The range changes how many rows come back, which is what shows keys entering and leaving. A query with none keeps none.
+  const spec = sample.query.range ? { ...sample, query: { ...sample.query, range } } : sample;
   const caption = frame.nextElementSibling!, boxed = painter === 'ua-view' && !!Number(height);
   // The pixel painter is told a height limit. <ua-view> is handed a box, as a row or a tile would hand it one.
   frame.classList.toggle('ua-row', boxed); frame.classList.toggle('ua-stack', painter === 'ua-view' && !boxed);

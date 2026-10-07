@@ -1,0 +1,18 @@
+{
+  "name": "@universal-analytics/bench",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@universal-analytics/core": "workspace:*",
+    "@universal-analytics/fixtures": "workspace:*",
+    "@universal-analytics/tokens": "workspace:*"
+  },
+  "devDependencies": {
+    "vite": "^8.3.3"
+  }
+}

@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "test": "vitest run",
+    "bench": "pnpm --filter @universal-analytics/bench dev",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

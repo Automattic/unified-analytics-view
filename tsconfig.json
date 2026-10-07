@@ -11,5 +11,5 @@
     "allowImportingTsExtensions": true,
     "types": ["node"]
   },
-  "include": ["packages/*/src", "test"]
+  "include": ["packages/*/src", "apps/*/src", "test"]
 }

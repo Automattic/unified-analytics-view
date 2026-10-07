@@ -1,0 +1,45 @@
+@import '@universal-analytics/tokens/generated/tokens.css';
+
+/* Paint tokens, under the @automattic/charts names (docs/dom-painter-plan.md, 4.1). */
+:root {
+  color-scheme: light dark;
+  --a8c-charts-color-label: var(--ua-color-foreground);
+  --a8c-charts-color-label-secondary: var(--ua-color-muted-foreground);
+  --a8c-charts-color-grid: var(--ua-color-border);
+  --a8c-charts-color-axis-x: var(--ua-color-foreground-50);
+  --a8c-charts-color-series-1: var(--ua-color-qualitative-1);
+  --a8c-charts-color-series-2: var(--ua-color-qualitative-2);
+  --a8c-charts-color-series-3: var(--ua-color-qualitative-3);
+  --a8c-charts-color-series-4: var(--ua-color-qualitative-4);
+  --a8c-charts-color-series-5: var(--ua-color-qualitative-5);
+  --a8c-charts-color-series-6: var(--ua-color-foreground-50);
+  --a8c-charts-color-annotation: var(--ua-color-marker);
+  --a8c-charts-color-comparison: var(--ua-color-foreground-50);
+  --a8c-charts-color-delta-good: var(--ua-color-success-text);
+  --a8c-charts-color-delta-bad: var(--ua-color-destructive-text);
+  --a8c-charts-color-trend-neutral: var(--ua-color-muted-foreground);
+  --a8c-charts-color-live: var(--ua-color-live);
+}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+
+body { margin: 0; padding: var(--ua-space-m); font: 13px/1.4 system-ui, sans-serif; background: var(--ua-color-background); color: var(--ua-color-foreground); }
+#controls { display: flex; flex-wrap: wrap; gap: var(--ua-space-s); position: sticky; top: 0; z-index: 1; padding-block: var(--ua-space-2xs); background: var(--ua-color-background); }
+fieldset { display: flex; gap: var(--ua-space-xs); margin: 0; border: 1px solid var(--ua-color-border); border-radius: var(--ua-radius-sm); }
+legend, figcaption, h2 small { color: var(--ua-color-muted-foreground); }
+h2 { font-size: 13px; margin: var(--ua-space-l) 0 var(--ua-space-xs); }
+h2 small { font-weight: 400; }
+.sizes { display: flex; flex-wrap: wrap; align-items: start; gap: var(--ua-space-m); }
+
+/* A frame stands in for a container. Drag its corner; the view inside refits. */
+.frame { margin: 0; box-sizing: content-box; min-inline-size: 40px; max-inline-size: 100%; padding: var(--ua-space-xs); resize: horizontal; overflow: hidden;
+  background: var(--ua-color-card); border: 1px solid var(--ua-color-border); border-radius: var(--ua-radius-md); }
+.frame svg { display: block; font-family: inherit; }
+.frame figcaption { margin-block-start: var(--ua-space-xs); font-size: 11px; overflow-wrap: anywhere; }
+.frame .error { color: var(--ua-color-destructive-text); }
+
+.f-tick { font-size: 11px; }
+.f-label { font-size: 13px; }
+.f-value { font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.f-display { font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.halo { paint-order: stroke; stroke: var(--ua-color-card); stroke-width: 3px; }

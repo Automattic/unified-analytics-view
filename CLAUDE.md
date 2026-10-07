@@ -11,10 +11,11 @@ pnpm install
 pnpm test         # vitest: sweep, parity with the prototype, plan, schema, golden scenes
 pnpm typecheck    # tsc --noEmit, strict
 pnpm test -u      # rewrite golden scenes; read the diff before committing it
+pnpm bench        # the bench at localhost:5173, on Vite
 pnpm --filter @universal-analytics/tokens generate   # rewrite packages/tokens/generated from its config
 ```
 
-There is no build step yet. Packages export their TypeScript source; a bundler arrives with the first thing that needs one.
+Packages export their TypeScript source and nothing is built for release yet. Vite serves the bench.
 
 ## Layout
 
@@ -23,7 +24,8 @@ There is no build step yet. Packages export their TypeScript source; a bundler a
 - `packages/tokens`: build-time token generation, ported from the storybook repo. Base tier: Leonardo makes the colour ramps and Utopia the type, space and control-size scales; `config/base.tokens.json` holds the rest. Common tier: `config/common.tokens.json` (and `common.dark`) names the Spacefast library's variables as aliases into base. Style Dictionary compiles both to `generated/tokens.css`. Nothing consumes them yet.
 - `test/`: one suite across both packages. Golden scenes are in `test/__snapshots__`.
 - `prototype/`: read-only reference. The tests load `prototype-bench.js` and hold the port to it.
-- `packages/dom`, `packages/dots`, `apps/bench`: not started.
+- `apps/bench`: where work is looked at. Every sample in resizable frames, with data state, height limit and theme as controls. It paints the pixel scene with the prototype's SVG painter until `<ua-view>` exists; new painters, chrome and surfaces get a place here as they land.
+- `packages/dom`, `packages/dots`: not started.
 
 ## Rules
 

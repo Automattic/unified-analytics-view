@@ -84,7 +84,7 @@ The first surface: a panel that slides in on the front end of a site for a recog
 
 **Done when:** a single script tag on an arbitrary page, not a Spacefast space, opens the panel on fixtures.
 
-Both ship (decided Oct 5). The dashboard page is the same views in wider containers, as `fit="box"` tiles, sharing the panel's params. It is a second shell and a layout, not a second set of views. If Thursday runs short, the dashboard is cut before the panel.
+Both ship (decided Oct 5). The dashboard page is the same views in wider containers, as tiles in a layout that hands each view a box, sharing the panel's params. It is a second shell and a layout, not a second set of views. If Thursday runs short, the dashboard is cut before the panel.
 
 ### 7. Live data and demo
 

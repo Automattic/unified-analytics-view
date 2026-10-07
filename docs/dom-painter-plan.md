@@ -1,8 +1,10 @@
 # DOM painter plan
 
-As of October 5, 2026. **For review. No DOM code is written until this is agreed.**
+As of October 7, 2026. **Reviewed October 7. Section 8 records what was decided and the one call still proposed.**
 
-The decision on record: browser containers degrade per element, from the start, with intrinsic layout and container queries. This note proposes how, with the trend view worked through. Five calls for you are at the end.
+The decision on record: browser containers degrade per element, from the start, with intrinsic layout and container queries. This note says how, with the trend view worked through.
+
+**The principle (decided October 7): intrinsic behaviour is the default.** A surface lays its containers out by a scheme of its own: a sidebar stacks them, a toolbar sets them small in a row. A container does not know or care where it is. It fills the room it is handed and renders itself for that room. Nothing in a view or a spec names a surface, a size or a mode.
 
 ## 1. The shape of it
 
@@ -26,7 +28,7 @@ interface FitRule {
   id: string;                                   // 'axes', 'secondary', 'legend', …
   layout: Layout;                               // which layout it applies to
   container: 'view' | 'plot';
-  needs: { inline?: number; block?: number };   // px; the part stays while the container has at least this
+  needs: { inline?: number; block?: number };   // px; the part stays while the container has at least this in each
   hide: string[];                               // parts or roles given up otherwise
   show?: string[];                              // parts that appear in compensation, under the same condition
   set?: Record<string, string>;                 // layout switches under the same condition, as data-attributes
@@ -38,12 +40,12 @@ The trend view's rules, carrying today's thresholds over unchanged:
 
 ```ts
 [
-  { id: 'axes',      layout: 'cartesian', container: 'view', needs: { inline: 280 },
+  { id: 'axes',      layout: 'cartesian', container: 'view', needs: { inline: 280, block: 120 },
     hide: ['x-axis', 'y-axis', 'grid'], show: ['number'], set: { arrange: 'side' }, keep: 'guides' },
   { id: 'mid-tick',  layout: 'cartesian', container: 'view', needs: { inline: 380 }, hide: ['x-tick.mid'] },
   { id: 'secondary', layout: 'cartesian', container: 'plot', needs: { inline: 180, block: 90 },
     hide: ['role:comparison', 'role:reference', 'role:context'], keep: 'secondary' },
-  { id: 'marks',     layout: 'cartesian', container: 'view', needs: { inline: 152 },
+  { id: 'marks',     layout: 'cartesian', container: 'view', needs: { inline: 152, block: 46 },
     hide: ['plot'], show: ['number'], keep: 'marks' },
 ]
 ```
@@ -51,7 +53,7 @@ The trend view's rules, carrying today's thresholds over unchanged:
 **Compiled** (by `packages/dom`, once, into the shadow root's stylesheet):
 
 ```css
-@container view (inline-size < 280px) {
+@container view (inline-size < 280px) or (block-size < 120px) {
   .vg[data-layout="cartesian"]:not([data-keep~="guides"]) :is(.vg-x-axis, .vg-y-axis, .vg-grid) { display: none; }
   .vg[data-layout="cartesian"]:not([data-keep~="guides"]) .vg-number { display: block; }
   .vg[data-layout="cartesian"]:not([data-keep~="guides"]) { --vg-arrange: side; grid-template-columns: auto minmax(0, 1fr); }
@@ -60,6 +62,8 @@ The trend view's rules, carrying today's thresholds over unchanged:
   .vg:not([data-keep~="secondary"]) :is([data-role="comparison"], [data-role="reference"], [data-role="context"]) { display: none; }
 }
 ```
+
+**Height on the view.** A view in a row or a tile is handed a height as well as a width, so the `view` rules carry a `block` need too: 120 px for a plot with axes and 46 px for a bare one, both from `CONTAINER_RULES`. A view that takes its natural height is a width-only container, where a `block-size` query is unknown and never matches, so the same compiled rules serve both. Step 1's sweep checks that these numbers reproduce what `resolve()` does under its six height limits; if they do not, that is reported, not tuned quietly.
 
 **Evaluated** (by `packages/core`): `applies(rule, { view, plot }) → boolean`. `resolve()` uses it in place of the numbers now in `CONTAINER_RULES`, and reports what was dropped exactly as it does today.
 
@@ -78,7 +82,7 @@ Rows under a height limit: a column flex container with `flex-wrap: wrap` and `o
 
 ## 3. The scene: ratios, by part
 
-**Proposal: one scene, in ratios, with a `part` on every node. Pixel painters get today's pixel scene from a pure function, `place(scene, size)`.**
+**Agreed October 7: one scene, in ratios, with a `part` on every node. Pixel painters get today's pixel scene from a pure function, `place(scene, size)`.** A pixel scene needs a size before it can exist, which is the opposite of intrinsic.
 
 - Each layout has a fixed set of parts: for `cartesian` they are `number`, `plot`, `x-axis`, `y-axis`; for `rows`, `number` and `rows`; for `band`, `number`, `band`, `legend`. The `number` part is the tldr value.
 - A node's coordinates are 0 to 1 within its part's box. A bar is `{ part: 'plot', x: 0.036, w: 0.026, v: 0.62 }`. A y tick is `{ part: 'y-axis', t: 0.25, text: '200' }`.
@@ -88,14 +92,14 @@ Rows under a height limit: a column flex container with `flex-wrap: wrap` and `o
 
 `place()` is held to the existing golden pixel scenes, so the dot-grid painter and the parity sweep keep working through the change.
 
-**One departure from the prototype.** Today the y scale is rounded to 2 ticks when the plot is under 120 px tall and 4 otherwise, which changes the scale's domain with the size. A ratio scene cannot do that. Proposal: always round to 4, mark each tick with a rank, and let a rule hide the lower-ranked ticks on short plots. Pixel output changes slightly for plots under 120 px tall.
+**One departure from the prototype.** Today the y scale is rounded to 2 ticks when the plot is under 120 px tall and 4 otherwise, which changes the scale's domain with the size. A ratio scene cannot do that. Agreed October 7: always round to 4, mark each tick with a rank, and let a rule hide the lower-ranked ticks on short plots. Pixel output changes slightly for plots under 120 px tall, so the parity test changes with it, on purpose.
 
 ## 4. Elements and containers
 
 One custom element, `<ua-view>`, with an open shadow root. It takes `spec`, `result` and `catalog` as properties.
 
 ```html
-<ua-view fit="width">                         <!-- :host is the `view` container -->
+<ua-view>                                     <!-- :host is the `view` container -->
   #shadow-root
   <figure class="vg" data-layout="cartesian" data-keep="" aria-describedby="s">
     <figcaption id="s" class="vg-prose">Visitors: 10.5k in the last 28 days, up 12%…</figcaption>
@@ -117,8 +121,8 @@ One custom element, `<ua-view>`, with an open shadow root. It takes `spec`, `res
 </ua-view>
 ```
 
-- **`view`** is the host element. `fit="width"` (the default) makes it `container-type: inline-size`: the view takes the width it is given and its natural height. `fit="box"` makes it `container-type: size` and the plot fills the height left over. The surface picks; a panel uses `width`, a dashboard tile uses `box`.
-- **`plot`** is `container-type: size`. Its height is always definite: 184 px with axes, 46 px bare, or the leftover in `box` mode. That is what makes height queries on it legal.
+- **`view`** is the host element. By default it is `container-type: inline-size`: it fills the width it is handed and takes its natural height. It cannot collapse, whatever it is dropped into. A surface layout that hands out a box (section 4.2) makes it `container-type: size`, and the plot fills the height left over. Both behaviours have to exist, because an element whose height can be queried cannot also take its height from its content. The view is never told which it is: the layout sets it, in the layout's own CSS.
+- **`plot`** is `container-type: size`. Its height is always definite: the leftover when the view was handed a box, and otherwise a size from the context's rule set, read as a custom property (`axes.height` and `bare.height`, 184 and 46 px by default). The painter hard-codes neither. That definite height is what makes height queries on the plot legal.
 - A rule about axes queries `view`, never `plot`, because hiding the x axis changes the plot's size. A rule about roles queries `plot`, because those elements live inside it.
 - **Bars are HTML,** positioned by custom properties (`inset-inline-start: calc(var(--x) * 100%)`, `block-size: calc(var(--v) * 100%)`), so corner radii and hairlines stay true at any size. Lines and areas are the stretched SVG. Text is never inside the SVG.
 - **`rows`** is a grid per row: `minmax(0, 1fr) auto`, label ellipsized by CSS, the bar a background sized by `--v`. No character-width estimates.
@@ -146,6 +150,21 @@ Names on the right were read from `src/styles/chart-scope.scss` on Jetpack trunk
 | tooltip | `--a8c-charts-color-tooltip-surface` | |
 | bar corner | `--a8c-charts-border-radius-bar` | |
 | entrance motion | `--a8c-charts-motion-duration-entrance`, `-motion-easing-entrance` | Update and exit motion tokens are new |
+
+### 4.2 Surface layouts
+
+The surface owns the layout scheme, and it is plain CSS on the surface, outside the shadow root and outside `packages/dom`. Two to start, both in the bench:
+
+- **Stack** (a sidebar or panel): a column. Each view fills the width and takes its natural height.
+- **Row** (a toolbar): a row of equal shares at the height the surface gives. Each view fills its box. Adding a view divides the room again and every view refits itself; no view is told.
+
+```css
+.ua-stack { display: grid; gap: var(--space); }
+.ua-row   { display: flex; gap: var(--space); }
+.ua-row > ua-view { flex: 1 1 0; min-inline-size: 0; block-size: 100%; container-type: size; }
+```
+
+A dashboard grid of tiles is the row's rule on a grid. A context that wants its containers fitted differently in one of these (a toolbar that keeps a bare plot at 24 px) passes them a different rule set, as today. Whether the one declaration above is enough for the shadow styles, or the layout must also set an attribute on its children, is spike item 6.
 
 ## 5. The measured pass
 
@@ -175,21 +194,24 @@ A half-day spike on the trend view, before the rest of the painter, to check:
 3. `CSS.registerProperty` animates custom properties used inside a shadow root.
 4. `container-type: size` on the plot behaves inside a grid in Safari.
 5. The stretched monotone path matches the pixel path from `place()` to within a pixel.
+6. One stylesheet serves both sizings: the same view takes its natural height in a stack and fills its box in a row, with only the layout's CSS differing. If it cannot, the layout also sets a `fit="box"` attribute on its children, and the view's styles key off that.
 
 If 1 or 2 fails, the fallback is the pixel scene painted as SVG and re-planned on resize, which is proven.
 
-## 8. Calls for you
+## 8. Decisions
 
-1. **Fit modes.** `fit="width"` and `fit="box"` as the two ways a surface sizes a view. Recommended.
-2. **The scene carries ratios and a `part`,** and pixel painters go through `place()`. Recommended over two scene forms.
-3. **Y ticks always round to 4,** with a rule thinning them on short plots. A small, deliberate departure from the prototype.
-4. **Bars as HTML, lines as stretched SVG.** Recommended. The alternative is everything in SVG with a script on resize.
-5. **The tldr prose rung is measured, not a container query.** I see no way around it.
+Reviewed October 7, under the principle at the top.
+
+1. **Sizing belongs to the surface layout, not the view.** Decided. Replaces the proposed `fit` attribute. With nothing said, a view fills the width and takes its natural height; a layout that hands out a box opts its children into filling it.
+2. **The scene carries ratios and a `part`,** and pixel painters go through `place()`. Agreed.
+3. **Y ticks always round to 4,** with a rule thinning them on short plots. Agreed, as a consequence of 2. A deliberate departure from the prototype.
+4. **Bars as HTML, lines as stretched SVG.** Agreed. The alternative was a script on resize.
+5. **The tldr prose rung is measured, not a container query.** Still proposed. It is the one place the fit is not intrinsic: the threshold is the width of the number itself. The pass reads sizes and sets an attribute; CSS still does the hiding.
 
 ## 9. Order of work, once agreed
 
-1. Fit rules in `core`, with `resolve()` reading them. The parity sweep must stay green.
+1. Fit rules in `core`, with `resolve()` reading them, including the `block` needs on the view. The parity sweep must stay green.
 2. The ratio scene and `place()`. The golden pixel scenes must stay green, apart from call 3.
 3. The spike in section 7.
-4. `<ua-view>` for `cartesian`, then `rows`, then `band`, each on the bench at 346 px.
+4. `<ua-view>` for `cartesian`, then `rows`, then `band`, each on the bench in a stack at 346 px and in a row.
 5. The measured pass, then keys and transitions.

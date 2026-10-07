@@ -68,7 +68,7 @@ Everything up to and including the scene is pure and has no DOM. d3 is used only
 | **Tldr value** | The numerical tl;dr of a view: the primary metric's total from the engine, an optional delta, an optional note. Formerly "headline" |
 | **Preset** | A named, saved fragment of a spec that expands into layers |
 | **Container** | Wherever a view renders. It supplies width, height, painter, type metrics and the rules a view is fitted by. Formerly "host" |
-| **Context** | The surface that holds containers: a panel, a dashboard, an agent. It hands its containers a durable rule set once, as it hands them a token set |
+| **Context** | The surface that holds containers: a panel, a toolbar, a dashboard, an agent. It lays its containers out by a scheme of its own, and hands them a durable rule set once, as it hands them a token set |
 | **Plan** | The resolved description of what will be drawn at this size, and what was dropped |
 | **Scene** | A flat JSON list of positioned shapes with stable keys and paint tokens |
 | **Painter** | Code that draws a scene |
@@ -307,6 +307,14 @@ This is the heart of the system and the part most in flux.
 
 **Who decides what (decided October 7).** The spec is the seed. An author writes it and decides where it renders; nobody writes a spec for a container. A container fits the view by a rule set. The defaults ship with the design system and have to be good at any size. A context that wants its containers to behave differently passes them its own rule set once, the way it passes them tokens. In the code today that rule set is `CONTAINER_RULES`, carried on each container as `rules`.
 
+**Intrinsic by default (decided October 7).** A surface lays its containers out by a scheme of its own: a sidebar stacks them, a toolbar sets them small in a row. As containers are added they divide the room by that scheme. A container does not know or care where it is. It fills the room it is handed and renders itself for that room. Nothing in a view or a spec names a surface, a size or a mode.
+
+- With nothing said, a container fills the width and takes its natural height, so it cannot collapse whatever it is dropped into.
+- A layout that hands out a box (a toolbar row, a dashboard tile) opts its children into filling the height too. That is set in the layout's own CSS, never on the view.
+- Both behaviours exist because of constraint 4 in section 10.3.
+
+The layouts and their CSS are in `docs/dom-painter-plan.md`, section 4.2.
+
 ### 10.1 What the prototype does (Proven)
 
 A central reducer. The plan starts with everything the spec asks for, checks whether it fits, and if not applies the container's reductions in a fixed order until it does:
@@ -352,7 +360,7 @@ For browser containers, each element should break only when it needs to, using i
 - **Each element owns its thresholds.** The axis, grid, legend, tick labels and each role carry their own container query. These rules belong to the design system's mark and chrome components, so the view spec stays free of sizes.
 - **Dependent changes share a condition.** The tldr value that appears when the axes go uses the same query as the axes.
 
-A sketch, untested:
+A sketch, untested. The worked rules are in `docs/dom-painter-plan.md`, section 2, where the axes rule queries the view and not the plot, because hiding an axis changes the plot's size:
 
 ```css
 .vg-plot { container: plot / size; }           /* needs a definite height; use inline-size otherwise */
@@ -375,7 +383,7 @@ A sketch, untested:
 - Top-N plus "other", coarser grain (daily to weekly), and downsampling to pixel resolution. These need new data, not new styles.
 - The tldr prose for an agent, a canvas or dot-grid painter, and a native shell cannot read container queries.
 
-**One source of truth.** Declare the per-element rules as data. Compile them to container queries for browser containers, and evaluate the same rules in code everywhere else. This rule set is what a context passes to its containers. The format for these rules is Open and is the first design task of the DOM painter.
+**One source of truth.** Declare the per-element rules as data. Compile them to container queries for browser containers, and evaluate the same rules in code everywhere else. This rule set is what a context passes to its containers. A format is Proposed in `docs/dom-painter-plan.md`, section 2: one declaration per part, naming a container, the room the part needs in width and height, and what is hidden or shown otherwise.
 
 ### 10.3 Constraints to design around
 
@@ -389,7 +397,7 @@ A sketch, untested:
 
 ## 11. The scene
 
-**Status: Proven in pixels. A ratio-based form is Proposed for the DOM painter.**
+**Status: Proven in pixels. The ratio-based form is decided (October 7) and not yet built; what follows describes the pixel scene as it is today.**
 
 A scene is `{ width, height, nodes, plot? }`. Nodes are flat and drawn in order.
 
@@ -415,7 +423,9 @@ Every node also has:
 
 Paint tokens in use: `ink`, `ink.muted`, `grid`, `axis`, `series.1` to `series.6`, `compare`, `rule`, `delta.good`, `delta.bad`, `live`.
 
-**Open:** with the per-element approach, the DOM painter wants ratios and structure, not pixels, while the dot-grid and canvas painters want pixels. Decide whether the scene carries ratios and pixel painters resolve them against a size, or whether there are two scene forms. Keep keys, paint tokens and roles identical either way.
+**Decided October 7: one scene, in ratios.** A pixel scene needs a size before it can exist, which is the opposite of intrinsic. Every node gets a `part` and coordinates from 0 to 1 within that part's box. The DOM painter lets CSS turn them into pixels. The dot-grid and canvas painters get today's pixel scene from a pure function, `place(scene, size)`, which is held to the existing golden scenes. Keys, paint tokens, roles and `layer` are identical in both. Detail is in `docs/dom-painter-plan.md`, section 3.
+
+One consequence, also agreed: a scene with no size cannot choose its tick count by height, so the y scale always rounds to 4 ticks and a rule thins them on short plots. This departs from the prototype, which rounds to 2 under 120 px, and the parity test changes with it on purpose.
 
 ---
 
@@ -425,6 +435,7 @@ Paint tokens in use: `ink`, `ink.muted`, `grid`, `axis`, `series.1` to `series.6
 
 - **Two layers per view.** Data marks go to whichever renderer fits. Axes, labels, tooltips, brush and focus rings always stay in the DOM, so text stays crisp, tokens apply through CSS and keyboard access survives.
 - **Tokens, not colours.** A painter maps paint tokens to CSS custom properties, using the `@automattic/charts` token names (`series.1` becomes `--a8c-charts-color-series-1`). The full map is in `docs/dom-painter-plan.md`. Light and dark are token sets.
+- **Intrinsic sizing.** The DOM painter plans once per data change and CSS fits the view on resize. Bars are HTML positioned by custom properties; lines and areas are a stretched SVG (decided October 7). The view carries no size or mode; see section 10.
 - **Isolation.** On a customer's site the view must not inherit or leak styles. Use a custom element with shadow DOM.
 - **Renderer choice by mark count.** HTML and SVG for up to a few thousand marks, canvas beyond, WebGPU later. Aggregating to pixel resolution first keeps most analytics views in the first tier.
 
@@ -574,11 +585,15 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 16. `headline` and `guides` are out of the spec. Whether the tldr value and the guides show is decided by the rules. (October 7)
 17. `keep` stays, provisionally, as the author's one lever. Uses are counted during testing and the field is removed if the defaults make it unnecessary. (October 7)
 18. Names: tldr value (was headline), tldr prose (was sentence), container (was host). The read-only prototype keeps the old names, and the parity test maps them. (October 7)
+19. Intrinsic behaviour is the default. A surface lays its containers out by its own scheme; a container fills the room it is handed and does not know where it is. With nothing said it fills the width and takes its natural height; a layout that hands out a box opts its children into filling it. (October 7)
+20. One scene, in ratios, with a `part` on every node. Pixel painters go through `place(scene, size)`. (October 7)
+21. Y ticks always round to 4, thinned by a rule on short plots. A deliberate departure from the prototype. (October 7)
+22. In the DOM, bars are HTML and lines and areas are a stretched SVG. (October 7)
 
 ### Open
 
-1. The format for per-element fit rules, such that they compile to container queries and also run in code.
-2. Ratio-based versus pixel-based scene, and how pixel painters share it.
+1. The format for per-element fit rules, such that they compile to container queries and also run in code. Now Proposed in `docs/dom-painter-plan.md`, section 2; it stays here until step 1 of that plan shows it holds.
+2. Settled October 7: see Decided 20. The number is kept so later items keep theirs.
 3. How a preset pins a hand-tuned form.
 4. Generalizing the three hard-coded layouts.
 5. Label collision: build or source.
@@ -591,6 +606,7 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 12. How a board composes views that share params.
 13. The name.
 14. Which survives at the smallest size, the marks or the tldr value. Today the tldr value does; a sparkline in a table cell wants the line alone. To settle in testing.
+15. Whether the tldr prose rung can be anything but measured. The plan proposes a measured pass, because the threshold is the width of the number itself. It is the one place the fit is not intrinsic.
 
 ---
 

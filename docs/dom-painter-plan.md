@@ -2,7 +2,7 @@
 
 As of October 5, 2026. **For review. No DOM code is written until this is agreed.**
 
-The decision on record: browser hosts degrade per element, from the start, with intrinsic layout and container queries. This note proposes how, with the trend view worked through. Five calls for you are at the end.
+The decision on record: browser containers degrade per element, from the start, with intrinsic layout and container queries. This note proposes how, with the trend view worked through. Five calls for you are at the end.
 
 ## 1. The shape of it
 
@@ -10,12 +10,12 @@ The decision on record: browser hosts degrade per element, from the start, with 
 spec ─► expand ─► plan (unbounded) ─► scene (ratios, by part) ─┬─► DOM painter: CSS fits it, live
                                                                └─► place(scene, size) ─► pixel scene ─► dots, canvas
 fit rules (data) ─► compiled to container queries for the DOM
-                 └► evaluated in code by resolve(), for hosts with no CSS
+                 └► evaluated in code by resolve(), for containers with no CSS
 ```
 
-- A browser host plans **once per data change**, for a host with no limits, and gets everything the spec asks for. CSS decides what shows. Nothing runs on resize except the measured pass in section 5.
-- Hosts with no CSS (the sentence for an agent, the dot grid, a native shell) keep calling `resolve()` with a size, as today.
-- Both read the same fit rules.
+- A browser container plans **once per data change**, for a container with no limits, and gets everything the spec asks for. CSS decides what shows. Nothing runs on resize except the measured pass in section 5.
+- Containers with no CSS (the tldr prose for an agent, the dot grid, a native shell) keep calling `resolve()` with a size, as today.
+- Both read the same fit rules. A context that wants its containers to behave differently passes them a different set (decided October 7; see section 10 of the reference).
 
 ## 2. Fit rules
 
@@ -61,7 +61,7 @@ The trend view's rules, carrying today's thresholds over unchanged:
 }
 ```
 
-**Evaluated** (by `packages/core`): `applies(rule, { view, plot }) → boolean`. `resolve()` uses it in place of the numbers now in `HOST_RULES`, and reports what was dropped exactly as it does today.
+**Evaluated** (by `packages/core`): `applies(rule, { view, plot }) → boolean`. `resolve()` uses it in place of the numbers now in `CONTAINER_RULES`, and reports what was dropped exactly as it does today.
 
 What makes this work is that the rules chain through layout, as the central reducer's steps do. Dropping the axes puts the number beside the plot, the plot gets narrower, and the plot's own query then drops the comparison. Nobody wrote "under 280 px, also drop the comparison".
 
@@ -69,7 +69,7 @@ What makes this work is that the rules chain through layout, as the central redu
 
 | Need | Why not CSS | Goes to |
 |---|---|---|
-| Sentence rung: the number itself does not fit | The threshold is the width of this number, and a container query cannot read a variable | Measured pass |
+| Tldr prose rung: the tldr value itself does not fit | The threshold is the width of this number, and a container query cannot read a variable | Measured pass |
 | Tick labels colliding | CSS cannot see collisions | Measured pass |
 | Top-N, coarser grain | Needs different data | The resolver, and a re-query |
 | Which rows fit under a height limit | Countable in CSS only by a trick | See below |
@@ -80,7 +80,7 @@ Rows under a height limit: a column flex container with `flex-wrap: wrap` and `o
 
 **Proposal: one scene, in ratios, with a `part` on every node. Pixel painters get today's pixel scene from a pure function, `place(scene, size)`.**
 
-- Each layout has a fixed set of parts: for `cartesian` they are `number`, `plot`, `x-axis`, `y-axis`; for `rows`, `number` and `rows`; for `band`, `number`, `band`, `legend`.
+- Each layout has a fixed set of parts: for `cartesian` they are `number`, `plot`, `x-axis`, `y-axis`; for `rows`, `number` and `rows`; for `band`, `number`, `band`, `legend`. The `number` part is the tldr value.
 - A node's coordinates are 0 to 1 within its part's box. A bar is `{ part: 'plot', x: 0.036, w: 0.026, v: 0.62 }`. A y tick is `{ part: 'y-axis', t: 0.25, text: '200' }`.
 - A line or area is a path in a 100 by 100 box. The painter stretches it with `preserveAspectRatio="none"` and `vector-effect: non-scaling-stroke`. Monotone-x curves are unchanged by stretching each axis, so the stretched path is the same curve as one computed at pixel size.
 - The pixel gutters the builders hard-code today (36 px for y labels, 22 px for x labels) leave the scene. In the DOM they are grid tracks sized by their content. In `place()` they are constants, as now.
@@ -98,7 +98,7 @@ One custom element, `<ua-view>`, with an open shadow root. It takes `spec`, `res
 <ua-view fit="width">                         <!-- :host is the `view` container -->
   #shadow-root
   <figure class="vg" data-layout="cartesian" data-keep="" aria-describedby="s">
-    <figcaption id="s" class="vg-sentence">Visitors: 10.5k in the last 28 days, up 12%…</figcaption>
+    <figcaption id="s" class="vg-prose">Visitors: 10.5k in the last 28 days, up 12%…</figcaption>
     <div class="vg-number">                   <!-- value, delta, note -->
     <div class="vg-y-axis"> <span style="--t:.25" data-rank="1">200</span> … </div>
     <div class="vg-plot">                     <!-- the `plot` container; definite block size -->
@@ -151,7 +151,7 @@ Names on the right were read from `src/styles/chart-scope.scss` on Jetpack trunk
 
 One `ResizeObserver` on the plot, and a run after each paint. It only reads sizes and writes attributes; CSS does the hiding.
 
-- `data-fit="sentence"` on the figure when the number is wider than the view.
+- `data-fit="prose"` on the figure when the number is wider than the view.
 - `data-thin` on x tick labels that would collide.
 - Later: label placement on points and lines, behind the same hook.
 
@@ -164,7 +164,7 @@ It never rebuilds the scene.
 - Path shapes cannot transition in CSS. On a data change the painter interpolates the values and regenerates `d` per frame. This is the one scripted animation.
 - No transition runs during a resize. Elements hidden by a container query simply go.
 - **Keyboard:** the `@automattic/charts` model, kept as is. One tab stop per view; left and right arrows step through points; Enter or Space activates the point; Tab and Escape leave; the tooltip is the readout. The arrows move across `vg-hits`, one per row of the result, which is also what hover and tooltips attach to. The readout announces the dimension value, the metric in its catalog format, and the comparison if present. Lines need this because a line is one path with no element per point.
-- The sentence is the figure's description. The table is the same result and is reachable by a control the surface provides.
+- The tldr prose is the figure's description. The table is the same result and is reachable by a control the surface provides.
 
 ## 7. Things to prove first
 
@@ -184,7 +184,7 @@ If 1 or 2 fails, the fallback is the pixel scene painted as SVG and re-planned o
 2. **The scene carries ratios and a `part`,** and pixel painters go through `place()`. Recommended over two scene forms.
 3. **Y ticks always round to 4,** with a rule thinning them on short plots. A small, deliberate departure from the prototype.
 4. **Bars as HTML, lines as stretched SVG.** Recommended. The alternative is everything in SVG with a script on resize.
-5. **The sentence rung is measured, not a container query.** I see no way around it.
+5. **The tldr prose rung is measured, not a container query.** I see no way around it.
 
 ## 9. Order of work, once agreed
 

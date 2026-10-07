@@ -25,8 +25,8 @@ Stats depends on `@automattic/charts` and wraps every chart it uses. Those wrapp
 | What Stats had to build on top | What the next version does instead |
 |---|---|
 | Comparison: fetch two periods, align them, mark one series as the comparison | Comparison is a role on a layer. The result carries the previous value beside the current one |
-| A chart that becomes a sparkline when its widget is short; lists that fit rows to height | Every view degrades by itself: guides go, then secondary layers, then rows, then marks, down to a number and a sentence |
-| A metric tile: label, number, trend, sparkline | The headline is part of every view. A tile is a trend view in a small space |
+| A chart that becomes a sparkline when its widget is short; lists that fit rows to height | Every view degrades by itself: guides go, then secondary layers, then rows, then marks, down to the tldr value and the tldr prose |
+| A metric tile: label, number, trend, sparkline | The tldr value is part of every view. A tile is a trend view in a small space |
 | Deltas, with direction passed in by each widget | The metric declares whether up is good, once. Every delta follows |
 | A summary number made by summing the buckets on screen | Totals come from the engine. A view never adds up its own rows |
 | Mapping each API response onto chart props, by hand, in every widget | A spec names the metric and the dimension. The mapping is the library's |
@@ -37,7 +37,7 @@ Stats depends on `@automattic/charts` and wraps every chart it uses. Those wrapp
 
 - **It has to run anywhere.** The first surface is a panel inside a customer's page. Version 4 needs React 18 or 19 and brings visx, react-spring and Google Charts with it; Jetpack's own rules forbid importing it per widget because of the weight. The next version's core has no framework and no DOM, and it draws inside a custom element that neither inherits nor leaks styles.
 - **Agents write the views.** Version 4's props include functions and React elements. A spec is plain JSON with a published schema, and an invalid one fails with a message that names the fix.
-- **Not every host can draw.** An agent answering a question, a Slack message and a screen reader all need the same view as words. Every view carries a sentence derived from its query.
+- **Not every container can draw.** An agent answering a question, a Slack message and a screen reader all need the same view as words. Every view carries a tldr prose derived from its query.
 - **One description across products.** A view refers to `visitors`, never to a formula or an endpoint. What `visitors` means, and how it differs between products, is declared once, outside the view.
 - **The look is designed, not inherited.** Structure and rendering are separated by a scene, so the appearance of every mark can be replaced without touching the grammar.
 

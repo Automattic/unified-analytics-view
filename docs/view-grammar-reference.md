@@ -1,8 +1,8 @@
 # View grammar: reference for the build
 
-As of October 5, 2026. Working name only; rename freely.
+As of October 7, 2026. Working name only; rename freely.
 
-This is the reference for building an analytics view system in which a view is described once, as data, and each host decides how to present it. It compiles the design work so far and the lessons from a working prototype (`prototype/prototype-bench.js`, 815 lines, plus `prototype-bench.html` and `prototype-test.js`).
+This is the reference for building an analytics view system in which a view is described once, as data, and the container it lands in decides how to present it. It compiles the design work so far and the lessons from a working prototype (`prototype/prototype-bench.js`, 815 lines, plus `prototype-bench.html` and `prototype-test.js`).
 
 **How to read the status labels.** Each section is marked one of:
 
@@ -16,13 +16,13 @@ This is the reference for building an analytics view system in which a view is d
 
 Build the front-end foundation for analytics views: a small grammar of marks, a spec format, and renderers. Collection and storage are out of scope and handled elsewhere.
 
-1. **A view is specified once. The context it is shown in decides how it is presented.** The spec carries no sizes and no breakpoints.
+1. **A view is specified once, and the spec is the seed for everything.** An author writes a spec and decides where to render it, and nothing else. The spec carries no sizes, no breakpoints and no presentation switches; the container it lands in decides how it is presented.
 2. **Chart types are presets, not primitives.** A "bar chart" is a saved combination of marks, encodings and transforms. The grammar never sees a chart-type name.
 3. **A valid spec always produces something meaningful,** even if it is odd. Odd may be what was asked for. An invalid spec fails with a message that names the fix.
 4. **Specs are mostly written by agents.** That means a small closed vocabulary, plain JSON, a published schema, and errors an agent can act on.
 5. **High visual control.** Structure and rendering are separated by a scene, so the look of every mark can be designed and replaced.
 6. **Polish is not optional.** Accessibility, transitions and label collision are requirements of the system, written once against the grammar and not once per chart.
-7. **The core is framework-free TypeScript with no DOM.** The first host is a browser, but the same spec must be usable by an agent (text only), a canvas painter and later a native shell.
+7. **The core is framework-free TypeScript with no DOM.** The first container is in a browser, but the same spec must be usable by an agent (text only), a canvas painter and later a native shell.
 8. **It must work on any site.** The first surface is a panel that slides in on a customer's own site, at sidebar width, in the site owner's browser. It cannot rely on the host page's styles, and it cannot depend on Chromium-only features without a fallback.
 
 ---
@@ -33,9 +33,9 @@ Build the front-end foundation for analytics views: a small grammar of marks, a 
             catalog ──────────────┐
                                   ▼
 spec ──► expand ──► plan ──► scene ──► painter
- ▲        (presets)  ▲  (fit the host)   (DOM, dot grid, canvas…)
+ ▲        (presets)  ▲  (fit the container)   (DOM, dot grid, canvas…)
  │                   │
- └─ query ──► result ┘        host context: width, height, painter, type metrics
+ └─ query ──► result ┘        container: width, height, painter, type metrics, rules
 ```
 
 | Step | Input | Output | Owns | Status |
@@ -43,8 +43,8 @@ spec ──► expand ──► plan ──► scene ──► painter
 | **Catalog** | — | Metric and dimension definitions | What names mean; units, polarity, additivity | Proven (as a stub) |
 | **Query** | `spec.query` | `{ rows, totals, meta }` | Fetching. Stubbed with fixtures today | Proven (fixtures only) |
 | **Expand** | Spec with `use` | Spec with `layers` | Preset library | Proven |
-| **Plan** | Expanded spec, result, host | A plan: layout, layers with roles, guides, what was dropped, the sentence | Fitting the view to the host | Proven for the central reducer; the per-element approach in section 10 is Proposed |
-| **Scene** | Plan, result, host | Flat list of positioned shapes with stable keys | Geometry | Proven |
+| **Plan** | Expanded spec, result, container | A plan: layout, layers with roles, guides, what was dropped, the tldr prose | Fitting the view to the container | Proven for the central reducer; the per-element approach in section 10 is Proposed |
+| **Scene** | Plan, result, container | Flat list of positioned shapes with stable keys | Geometry | Proven |
 | **Painter** | Scene | Pixels | Appearance | Proven: SVG and dot grid |
 
 Everything up to and including the scene is pure and has no DOM. d3 is used only for scales (`d3-scale`), path geometry (`d3-shape`) and array helpers (`d3-array`). No chart library.
@@ -63,15 +63,16 @@ Everything up to and including the scene is pure and has no DOM. d3 is used only
 | **Scale** | The function from data values to visual values |
 | **Transform** | How rows relate before drawing: stack, normalize (later bin) |
 | **Layer** | One mark with its encodings. A view is a stack of layers over shared scales |
-| **Role** | What a layer is for: `primary`, `comparison`, `reference`, `context`. The host gives up layers by role |
+| **Role** | What a layer is for: `primary`, `comparison`, `reference`, `context`. A container gives up layers by role |
 | **Guide** | Anything derived from scales, never authored: axes, grid, legend, tick labels |
-| **Headline** | The number: a total from the engine, an optional delta, an optional note |
+| **Tldr value** | The numerical tl;dr of a view: the primary metric's total from the engine, an optional delta, an optional note. Formerly "headline" |
 | **Preset** | A named, saved fragment of a spec that expands into layers |
-| **Host** | Wherever a view renders. It supplies width, height, painter and type metrics |
+| **Container** | Wherever a view renders. It supplies width, height, painter, type metrics and the rules a view is fitted by. Formerly "host" |
+| **Context** | The surface that holds containers: a panel, a dashboard, an agent. It hands its containers a durable rule set once, as it hands them a token set |
 | **Plan** | The resolved description of what will be drawn at this size, and what was dropped |
 | **Scene** | A flat JSON list of positioned shapes with stable keys and paint tokens |
 | **Painter** | Code that draws a scene |
-| **Sentence** | The text sibling every view has, derived from the query and transforms |
+| **Tldr prose** | The prose tl;dr of a view: the text sibling every view has, derived from the query and transforms. Formerly "sentence" |
 
 ---
 
@@ -165,13 +166,13 @@ The fixture engine has three data states: `typical`, `no-prior` (comparison requ
 | Field | Type | Meaning |
 |---|---|---|
 | `spec` | string | Format version |
-| `title` | string | Shown by the host's frame, not drawn in the scene |
+| `title` | string | Shown by the container's frame, not drawn in the scene |
 | `query` | object | Required. See section 5 |
 | `use` | string | A preset name. Expands into `layers`. Ignored if `layers` is present |
 | `layers` | array | Explicit layers. See below |
-| `guides` | object | Overrides for derived guides: `{ "x": false }`, `{ "legend": "top" }` |
-| `headline` | boolean | Show the number above the marks |
-| `keep` | array | Parts the host may not drop: `"guides"`, `"secondary"`, `"rows"`, `"marks"` |
+| `keep` | array | Parts a container may not drop: `"guides"`, `"secondary"`, `"rows"`, `"marks"`. Provisional; see section 10.1 |
+
+The spec says what to show and nothing about how. Whether the tldr value or a guide appears is decided by the container's rules (sections 8 and 10). `keep` is the one presentation lever an author has.
 
 A layer:
 
@@ -202,10 +203,11 @@ The same spec, written as layers:
 
 Rules:
 
-- A spec with no dimension and no layers is the number alone.
+- A spec with no dimension and no layers is the tldr value alone.
 - A spec with a dimension and no layers (and no `use`) is an error. There is no silent default.
 - A layer that encodes a field the query does not return is an error that lists what the query does return.
 - There is no `intent` field. An earlier version had one; it was a chart type under a new name and was removed.
+- There is no `headline` field and no `guides` field. Both were presentation switches and were removed on October 7; the schema rejects them. The container's rules decide what they used to.
 
 **To do:** publish a JSON Schema for the spec. It is the contract agents will write against.
 
@@ -247,15 +249,21 @@ These are chart types hiding in the scene builder. Generalizing them (facets, tw
 
 ---
 
-## 8. Roles, guides and the headline
+## 8. Roles, guides and the tldr value
 
-- **Roles** let the host reason about a view without knowing what chart it is. `primary` is the thing itself. `comparison` is the same metric for another period. `reference` is a target or threshold. `context` is supporting ink, such as the area under a line.
-- **Guides** are derived from scales. Axes, grid, tick labels and legends are never authored. A spec can only switch them off.
-- **The headline** is the primary metric's total from the engine, a delta if the query compares, and a derived note:
+- **Roles** let a container reason about a view without knowing what chart it is. `primary` is the thing itself. `comparison` is the same metric for another period. `reference` is a target or threshold. `context` is supporting ink, such as the area under a line.
+- **Guides** are derived from scales. Axes, grid, tick labels and legends are never authored, and a spec cannot switch them on or off. They start on (both axes and the grid on a cartesian layout, the full legend on a band), and the container's rules decide when they go.
+- **The tldr value** is the primary metric's total from the engine, a delta if the query compares, and a derived note:
   - time dimension: the range-total caveat, such as "Sum of daily counts"
   - categorical dimension: "Top: /pricing"
   - categorical with `stack: "normalize"`: "Search 41%"
   - instant metric: "on the site right now"
+
+Where the tldr value appears is the container's decision, never the spec's:
+
+- It is the whole view when there are no layers, and what remains at collapse.
+- It is added beside the plot when the axes drop.
+- It sits above the marks, when there is room for both, according to the rule `tldrValue.above`. The default is `instant`: only for an instant metric. A context can pass `always`.
 
 Delta states: up or down with a percentage, "No change" (under 0.5%), "New" (prior was zero), "No prior period" (prior is null). Colour follows the metric's polarity.
 
@@ -293,54 +301,56 @@ A preset is a saved fragment of a spec with two slots, `$by` and `$metric`, fill
 
 ---
 
-## 10. Fitting the host
+## 10. Fitting the container
 
 This is the heart of the system and the part most in flux.
 
+**Who decides what (decided October 7).** The spec is the seed. An author writes it and decides where it renders; nobody writes a spec for a container. A container fits the view by a rule set. The defaults ship with the design system and have to be good at any size. A context that wants its containers to behave differently passes them its own rule set once, the way it passes them tokens. In the code today that rule set is `CONTAINER_RULES`, carried on each container as `rules`.
+
 ### 10.1 What the prototype does (Proven)
 
-A central reducer. The plan starts with everything the spec asks for, checks whether it fits, and if not applies the host's reductions in a fixed order until it does:
+A central reducer. The plan starts with everything the spec asks for, checks whether it fits, and if not applies the container's reductions in a fixed order until it does:
 
-1. **Drop guides.** Axes and grid go; the number is added beside a bare plot to make up for them. A full legend becomes the largest segment's label.
+1. **Drop guides.** Axes and grid go; the tldr value is added beside a bare plot to make up for them. A full legend becomes the largest segment's label.
 2. **Drop secondary layers.** Everything whose role is not `primary`.
-3. **Trim rows.** Only when the host has a height limit.
-4. **Collapse.** All marks go; the number stays.
-5. **Sentence.** Only the text remains.
+3. **Trim rows.** Only when the container has a height limit.
+4. **Collapse.** All marks go; the tldr value stays.
+5. **Tldr prose.** Only the text remains.
 
-"Fits" means the host is at least the layout's minimum width, the scene is no taller than the host's height limit, and any secondary layers have a plot at least 180 by 90 px.
+"Fits" means the container is at least the layout's minimum width, the scene is no taller than the container's height limit, and any secondary layers have a plot at least 180 by 90 px.
 
-Starting values, owned by the host and not the spec:
+Starting values, owned by the container's rules and not the spec:
 
 | Part | Needs |
 |---|---|
 | Plot with axes | 280 px wide, 120 px tall (natural height 184) |
 | Secondary layers legible | Plot 180 by 90 px |
-| Bare plot beside the number | 64 px wide, 46 px tall |
+| Bare plot beside the tldr value | 64 px wide, 46 px tall |
 | Row in a bar list | 28 px plus a 4 px gap; 90 px for the label plus room for the value |
 | Share bar | 110 px, or 170 px with a full legend |
 
-A spec's `keep` stops a step from being applied.
+A spec's `keep` stops a step from being applied. It is provisional (decided October 7): showing and hiding parts is the main discretionary lever over how a view scales, so it stays while the defaults are tested. Count the specs that need it. Each use points at a default rule to fix, and the field goes when the count reaches zero.
 
-**What this got right.** Derived fallback reproduced a hand-designed ladder without being told: a trend steps from chart, to number beside sparkline, to number, to sentence. Bars with a target became a bar sparkline nobody designed. The comparison drops because of a legibility rule, not because a chart type said so.
+**What this got right.** Derived fallback reproduced a hand-designed ladder without being told: a trend steps from chart, to tldr value beside sparkline, to tldr value, to tldr prose. Bars with a target became a bar sparkline nobody designed. The comparison drops because of a legibility rule, not because a chart type said so.
 
 **Where it was weaker than hand tuning.**
 
-- The bar list keeps every row down to about 140 px wide and then jumps straight to the number. A hand-tuned version had a top-three step in between.
+- The bar list keeps every row down to about 140 px wide and then jumps straight to the tldr value. A hand-tuned version had a top-three step in between.
 - A collapsed bar list shows the metric total with "Top: /" as a note. For a view called "Top pages" that is arguably the wrong number.
 - The thresholds are still picked by hand. They moved from per chart type to per part.
-- "Add the number when the axes drop" is a hard-coded rule for one layout.
-- Everything switches at once. That is the model the next section replaces for browser hosts.
+- "Add the tldr value when the axes drop" is a hard-coded rule for one layout.
+- Everything switches at once. That is the model the next section replaces for browser containers.
 
 ### 10.2 The direction: degrade per element (Proposed)
 
-For browser hosts, each element should break only when it needs to, using intrinsic layout and container queries. Three tiers:
+For browser containers, each element should break only when it needs to, using intrinsic layout and container queries. Three tiers:
 
 **Tier 1: CSS, per element.** Handles hiding, restyling and reflow with no script on resize.
 
 - **Positions are ratios.** A scale outputs 0 to 1, written as a custom property on the element. CSS turns it into pixels: a bar's size is `calc(var(--v) * 100%)`, a tick sits at `calc(var(--t) * 100%)`, share segments use `flex-grow: var(--v)`.
 - **Lines and areas stretch.** An SVG with a fixed viewBox, `preserveAspectRatio="none"` and `vector-effect: non-scaling-stroke` resizes fluidly. Text is never inside the stretched SVG.
 - **Each element owns its thresholds.** The axis, grid, legend, tick labels and each role carry their own container query. These rules belong to the design system's mark and chrome components, so the view spec stays free of sizes.
-- **Dependent changes share a condition.** The number that appears when the axes go uses the same query as the axes.
+- **Dependent changes share a condition.** The tldr value that appears when the axes go uses the same query as the axes.
 
 A sketch, untested:
 
@@ -360,12 +370,12 @@ A sketch, untested:
 - Label placement on points and lines. Source or build properly; an occupancy-bitmap approach is the usual technique.
 - Any threshold that depends on the data, such as how many ticks there are or how long the labels run.
 
-**Tier 3: the resolver.** For what changes the data, and for hosts with no CSS.
+**Tier 3: the resolver.** For what changes the data, and for containers with no CSS.
 
 - Top-N plus "other", coarser grain (daily to weekly), and downsampling to pixel resolution. These need new data, not new styles.
-- The sentence for an agent, a canvas or dot-grid painter, and a native shell cannot read container queries.
+- The tldr prose for an agent, a canvas or dot-grid painter, and a native shell cannot read container queries.
 
-**One source of truth.** Declare the per-element rules as data. Compile them to container queries for browser hosts, and evaluate the same rules in code everywhere else. The format for these rules is Open and is the first design task of the DOM painter.
+**One source of truth.** Declare the per-element rules as data. Compile them to container queries for browser containers, and evaluate the same rules in code everywhere else. This rule set is what a context passes to its containers. The format for these rules is Open and is the first design task of the DOM painter.
 
 ### 10.3 Constraints to design around
 
@@ -454,7 +464,7 @@ Related visual directions not yet built: segmented display type for large numera
 
 Write these once against the scene and the plan, not per preset.
 
-- Every view exposes its **sentence** as its accessible name or description.
+- Every view exposes its **tldr prose** as its accessible name or description.
 - Every view offers the **same query as a table**. Chart and table read one result.
 - **Keyboard navigation** over data marks, driven by keys and the row each mark came from. Announce the dimension value, the metric value in its catalog format, and the comparison if present.
 - A **canvas or dot-grid painter needs a hidden DOM mirror** carrying the same structure.
@@ -466,10 +476,10 @@ Write these once against the scene and the plan, not per preset.
 
 ## 15. Transitions
 
-- **Stable keys give enter, update and exit** for any view, including when the host drops a part.
+- **Stable keys give enter, update and exit** for any view, including when a container drops a part.
 - With positions as registered custom properties, the **design system's motion tokens** animate them in plain CSS.
 - **Hard cases that need script:** discrete layout switches, and line shapes when the data changes (interpolate the values and regenerate the path).
-- Do not animate while the host is being resized continuously; animate on data and spec changes.
+- Do not animate while the container is being resized continuously; animate on data and spec changes.
 - The dot painter animates by interpolating the scene and re-rasterizing. Cells never move.
 - Respect reduced motion everywhere.
 
@@ -477,11 +487,11 @@ Transitions are a first-class requirement and should be refined, not incidental.
 
 ---
 
-## 16. The sentence
+## 16. The tldr prose
 
 Derived from the query and transforms. No chart type is consulted.
 
-| Query shape | Sentence |
+| Query shape | Tldr prose |
 |---|---|
 | Instant metric | "7 people are on the site right now; the busiest page is / (3)." |
 | Time dimension, or none | "Visitors: 10.5k in the last 28 days, up 12% on the previous period. This is a sum of daily counts, not unique people." |
@@ -489,7 +499,7 @@ Derived from the query and transforms. No chart type is consulted.
 | Categorical with `stack: "normalize"` | "Search is the largest channel at 41% of visitors, followed by Direct at 28%." |
 | Empty | "No visitors recorded in the last 28 days." |
 
-The sentence is the last rung of every view, the accessible description, and what an agent gets when it cannot render anything.
+The tldr prose is the last rung of every view, the accessible description, and what an agent gets when it cannot render anything.
 
 ---
 
@@ -502,13 +512,13 @@ The six sample specs in the prototype are the first acceptance tests. Port them 
 | Visitors over time | `use: "line"`, visitors by day, compare previous | Time series, comparison, partial bucket |
 | Top pages | `use: "bar-list"`, page views by page, limit 8 | Ranked list |
 | Channel mix | `use: "share-bar"`, visitors by channel | Part to whole |
-| Page views total | A query with no dimension and no layers | The number alone, with delta |
-| Present now | `use: "bar-list"`, `headline: true`, present by page | Instant metric, number plus list |
+| Page views total | A query with no dimension and no layers | The tldr value alone, with delta |
+| Present now | `use: "bar-list"`, present by page | Instant metric, so the tldr value sits above the list |
 | Bars and a target | Explicit layers: bar plus rule | Authored layers and roles |
 
 Fixture facts to assert: visitors total 10,531 against 9,437 previous (up 12%); page views 25,061 against 21,974 (up 14%); 28 daily rows, the last one partial; channel shares 41, 28, 14, 8, 6 and 3 percent; 7 people present across 4 pages.
 
-`prototype-test.js` sweeps every sample across three data states, two painters, six height limits and nine widths, and checks for duplicate keys, NaN values and scenes taller than the host allows. Port that sweep.
+`prototype-test.js` sweeps every sample across three data states, two painters, six height limits and nine widths, and checks for duplicate keys, NaN values and scenes taller than the container allows. Port that sweep.
 
 The v1 product also needs primitives the prototype does not have yet: a delta badge as its own part, scope and filter chips, a compact date and compare control, a detail table, and loading and stale notices.
 
@@ -527,12 +537,12 @@ The v1 product also needs primitives the prototype does not have yet: a delta ba
 
 ```
 packages/
-  core/       spec types and schema, validation, catalog types, presets and expand, plan, scene, sentence
+  core/       spec types and schema, validation, catalog types, presets and expand, plan, scene, tldr prose
   dom/        HTML, CSS and SVG painter; the custom element
   dots/       dot-grid painter (later)
   fixtures/   catalog, fixture query engine, sample specs
 apps/
-  bench/      the playground: spec editor, host width and height, data states, painter switch
+  bench/      the playground: spec editor, container width and height, data states, painter switch
 docs/
   view-grammar-reference.md
 prototype/    read-only reference: prototype-bench.js, prototype-bench.html, prototype-test.js
@@ -549,16 +559,21 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 1. Chart types are presets, not primitives.
 2. No `intent` in the spec.
 3. Comparison is a role on a layer (`series: "previous"`), not a second metric.
-4. Sizes and thresholds belong to the host and the design system. The spec has none; `keep` is the author's only lever.
+4. Sizes and thresholds belong to the container and the design system. The spec has none; `keep` is the author's only lever.
 5. Totals come from the engine, never from summing rows.
 6. `arc` will be its own mark. No general polar coordinates.
 7. The scene is the seam between structure and rendering. Paint tokens, never colours.
 8. Text stays in the DOM. Data marks may go to any renderer.
-9. Every view has a derived sentence.
+9. Every view has a derived tldr prose.
 10. The front end needs only a catalog. Computation and table mapping are server-side. Presentation hints may live with the design system, keyed to catalog names.
 11. A valid spec always draws something. An invalid one fails with a message naming the fix.
 12. Guardrails are the authoring agent's job plus validation, not a restricted component API.
-13. For browser hosts, degradation is per element with container queries, not one global switch.
+13. For browser containers, degradation is per element with container queries, not one global switch.
+14. The spec is the seed for everything. An author writes a spec and decides where to render it; nobody writes a spec for a container. (October 7)
+15. Presentation is intrinsic. A container fits a view by default rules, and a context that wants different behaviour passes its containers a durable rule set. (October 7)
+16. `headline` and `guides` are out of the spec. Whether the tldr value and the guides show is decided by the rules. (October 7)
+17. `keep` stays, provisionally, as the author's one lever. Uses are counted during testing and the field is removed if the defaults make it unnecessary. (October 7)
+18. Names: tldr value (was headline), tldr prose (was sentence), container (was host). The read-only prototype keeps the old names, and the parity test maps them. (October 7)
 
 ### Open
 
@@ -568,13 +583,14 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 4. Generalizing the three hard-coded layouts.
 5. Label collision: build or source.
 6. Bar list behaviour when narrow, and what a collapsed ranking should show.
-7. Whether a trend shows the number by default.
+7. Whether a trend shows the tldr value above the plot by default. This is now the container rule `tldrValue.above` and not a spec field; the default says no.
 8. Whether deltas exclude the partial day.
-9. Params and selections. Not started. The design intent: a selection is a filter predicate, not pixels or row IDs; three kinds (interval, point, set); several views combine by union, intersection or cross-filter; dragging is transient and local, releasing commits to the host.
+9. Params and selections. Not started. The design intent: a selection is a filter predicate, not pixels or row IDs; three kinds (interval, point, set); several views combine by union, intersection or cross-filter; dragging is transient and local, releasing commits to the context.
 10. More than one dimension in `by`.
 11. Catalog properties beyond the stub, and where polarity and thresholds are declared.
 12. How a board composes views that share params.
 13. The name.
+14. Which survives at the smallest size, the marks or the tldr value. Today the tldr value does; a sparkline in a table cell wants the line alone. To settle in testing.
 
 ---
 
@@ -586,4 +602,4 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 - **Cross-filtering and brushing.** Next after static views feel right.
 - **Semantic compiler.** Turning catalog names into SQL is server-side.
 - **Boards.** A board is a spec whose body is a layout of child specs sharing params. Not started.
-- **Agent surface.** Returning a view through an MCP server. The spec and sentence are designed for it; nothing is built.
+- **Agent surface.** Returning a view through an MCP server. The spec and the tldr prose are designed for it; nothing is built.

@@ -1,8 +1,9 @@
 import { CONTAINER_RULES, KEEP } from './container.ts';
 import { PRESETS, expand } from './presets.ts';
-import { buildScene, tldrValueText, tldrValue, isDim, valueRoomOf } from './scene.ts';
+import { place } from './place.ts';
+import { buildScene, tldrValueText, isDim, valueRoomOf } from './scene.ts';
 import { tldrProse } from './prose.ts';
-import type { Catalog, Container, Layer, Layout, Plan, PlanShape, PresetLibrary, Query, Reduction, ReductionId, Result, Role, Scene, Spec } from './types.ts';
+import type { Catalog, Container, Layer, Layout, Plan, PlanShape, PresetLibrary, Query, Reduction, ReductionId, Result, Role, PlacedScene, Spec } from './types.ts';
 
 /* Start from everything the spec asks for, then apply the container's reductions
  * in order until the view fits. Layers carry a role; reductions act on roles. */
@@ -63,9 +64,9 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
     else if (p.layout === 'band') w = p.guides.legend === 'full' ? rules.band.minWidthWithLegend : rules.band.minWidth;
     return p.tldrValue && !p.side && p.layout !== 'prose' ? Math.max(w, container.displayWidth(valueLen)) : w;
   }
-  let scene!: Scene;
+  let scene!: PlacedScene;
   function fits(): boolean {
-    scene = buildScene(p, q, result, container, catalog);
+    scene = place(buildScene(p, q, result, catalog), container);
     if (p.layout === 'prose') return true;
     if (container.width < minWidth()) return false;
     if (container.height != null && scene.height > container.height) return false;
@@ -89,7 +90,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
     'trim-rows': () => {
       if (p.layout !== 'rows' || container.height == null) return null;
       const n = result.rows.length, cur = p.rowLimit || n, rh = rules.rows.rowHeight + rules.rows.gap;
-      const above = p.tldrValue ? tldrValue(catalog, q, result, share, container, container.width, false).height + 16 : 0;
+      const above = p.tldrValue ? place(buildScene({ ...p, layout: 'none', layers: [] }, q, result, catalog), container).height + 16 : 0;
       const k = Math.max(1, Math.floor((container.height - above + rules.rows.gap) / rh));
       if (k >= cur) return null;
       p.rowLimit = k;

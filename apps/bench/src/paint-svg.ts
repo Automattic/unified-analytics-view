@@ -1,4 +1,4 @@
-import type { Scene } from '@universal-analytics/core';
+import type { PlacedScene } from '@universal-analytics/core';
 
 /* The prototype's SVG painter, ported as it stands. It draws the pixel scene,
  * so it needs a size and repaints on resize. It is the bench's stand-in until
@@ -13,7 +13,7 @@ const drawn = new WeakMap<SVGSVGElement, Map<string, SVGElement>>();
 
 type Attrs = Record<string, string | number | null | undefined>;
 
-export function paintSVG(svg: SVGSVGElement, scene: Scene): void {
+export function paintSVG(svg: SVGSVGElement, scene: PlacedScene): void {
   svg.setAttribute('width', String(scene.width)); svg.setAttribute('height', String(scene.height));
   svg.setAttribute('viewBox', '0 0 ' + scene.width + ' ' + scene.height);
   let els = drawn.get(svg);

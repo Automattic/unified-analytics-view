@@ -113,8 +113,68 @@ export interface Plan extends PlanShape {
   needs: { width: number; height: number };
 }
 
-/* Scene: a flat list of positioned shapes with stable keys and paint tokens. */
+/* Scene: a flat list of shapes with stable keys and paint tokens, in ratios.
+ * Every node names its part, and its coordinates run 0 to 1 within that part's
+ * box. A scene needs no size to exist. Pixel painters get theirs from place(). */
+export type Part = 'number' | 'plot' | 'x-axis' | 'y-axis' | 'rows' | 'band' | 'legend' | 'notice';
 interface NodeBase {
+  key: string;
+  part: Part;
+  paint: string;
+  layer: 'data' | 'guide';
+  role?: Role;
+  /** The dimension value the node came from. */
+  row?: string;
+  /** Absent stays. Ranked nodes are given up when room is short. */
+  rank?: number;
+  opacity?: number;
+  note?: string;
+}
+/** A bar in the plot (`x` and `w` across, `v` up from the baseline), a row's bar (`v` across), a band segment (`v` is its share) or a legend swatch. */
+export interface RectNode extends NodeBase { kind: 'rect'; x?: number; w?: number; v?: number }
+/** `d` is drawn in a 100 by 100 box, for the painter to stretch. `points` are what it was drawn from. */
+export interface PathNode extends NodeBase {
+  kind: 'path';
+  d: string | null;
+  points: { row: string; x: number; v: number }[];
+  curve?: 'monotone';
+  fill?: boolean;
+  width?: number;
+  dash?: string | null;
+}
+/** A line across the plot at height `t`. */
+export interface LineNode extends NodeBase { kind: 'line'; t: number; width?: number; dash?: string }
+export interface CircleNode extends NodeBase { kind: 'circle'; pulse: boolean }
+/** Text in the number, rows, legend and notice parts is set in order and carries no position. */
+export interface TextNode extends NodeBase {
+  kind: 'text';
+  text: string;
+  /** A shorter form, for when room is short. */
+  short?: string;
+  x?: number;
+  t?: number;
+  anchor: 'start' | 'middle' | 'end';
+  baseline?: 'middle';
+  font: 'tick' | 'label' | 'value' | 'display';
+  halo?: boolean;
+}
+export type SceneNode = RectNode | PathNode | LineNode | CircleNode | TextNode;
+export interface Scene {
+  layout: Layout;
+  /** The parts the plan shows. The number's nodes are in the scene either way, so a fit rule can show it in compensation. */
+  parts: Part[];
+  /** The number sits beside a bare plot. */
+  side?: boolean;
+  /** Dimension values in order: the x domain, the rows or the segments. */
+  rows?: string[];
+  /** How x is shared among the rows of a plot. With `point`, marks sit 2 px inside each edge; that inset is the painter's. */
+  scale?: 'band' | 'point';
+  nodes: SceneNode[];
+  text?: string;
+}
+
+/* Placed scene: the same nodes in pixels, for painters with no CSS. */
+interface PlacedBase {
   key: string;
   paint: string;
   layer: 'data' | 'guide';
@@ -123,11 +183,11 @@ interface NodeBase {
   ty?: number;
   note?: string;
 }
-export interface RectNode extends NodeBase { kind: 'rect'; x: number; y: number; w: number; h: number; rx: number }
-export interface PathNode extends NodeBase { kind: 'path'; d: string | null; fill?: boolean; width?: number; dash?: string | null }
-export interface LineNode extends NodeBase { kind: 'line'; x1: number; y1: number; x2: number; y2: number; width?: number; dash?: string }
-export interface CircleNode extends NodeBase { kind: 'circle'; cx: number; cy: number; r: number; pulse: boolean }
-export interface TextNode extends NodeBase {
+export interface PlacedRect extends PlacedBase { kind: 'rect'; x: number; y: number; w: number; h: number; rx: number }
+export interface PlacedPath extends PlacedBase { kind: 'path'; d: string | null; fill?: boolean; width?: number; dash?: string | null }
+export interface PlacedLine extends PlacedBase { kind: 'line'; x1: number; y1: number; x2: number; y2: number; width?: number; dash?: string }
+export interface PlacedCircle extends PlacedBase { kind: 'circle'; cx: number; cy: number; r: number; pulse: boolean }
+export interface PlacedText extends PlacedBase {
   kind: 'text';
   x: number;
   y: number;
@@ -139,11 +199,11 @@ export interface TextNode extends NodeBase {
   cell?: number;
   halo?: boolean;
 }
-export type SceneNode = RectNode | PathNode | LineNode | CircleNode | TextNode;
-export interface Scene {
+export type PlacedNode = PlacedRect | PlacedPath | PlacedLine | PlacedCircle | PlacedText;
+export interface PlacedScene {
   width: number;
   height: number;
-  nodes: SceneNode[];
+  nodes: PlacedNode[];
   plot?: { w: number; h: number };
   text?: string;
 }

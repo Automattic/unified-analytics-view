@@ -5,7 +5,7 @@ import * as d3array from 'd3-array';
 import * as d3scale from 'd3-scale';
 import * as d3shape from 'd3-shape';
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, buildScene, expand, makeContainer, resolve, type PainterName, type Spec } from '@universal-analytics/core';
+import { CONTAINER_RULES, buildScene, expand, makeContainer, place, resolve, type PainterName, type Spec } from '@universal-analytics/core';
 import catalogSchema from '@universal-analytics/core/schema/catalog.schema.json';
 import viewSchema from '@universal-analytics/core/schema/view.schema.json';
 import { catalog, runQuery, samples, scenarios } from '@universal-analytics/fixtures';
@@ -46,7 +46,8 @@ const plain = (v: unknown) => JSON.parse(JSON.stringify(v));
 const run = (spec: Spec, w: number, h: number | null = null, scenario: (typeof scenarios)[number] = 'typical', painter: PainterName = 'svg', rules = CONTAINER_RULES) => {
   const container = { ...makeContainer(w, h, painter, 8), rules }, result = runQuery(spec.query, scenario);
   const plan = resolve(spec, result, container, catalog);
-  return { plan, scene: buildScene(plan, spec.query, result, container, catalog), result };
+  const ratio = buildScene(plan, spec.query, result, catalog);
+  return { plan, ratio, scene: place(ratio, container), result };
 };
 
 describe('the sweep', () => {

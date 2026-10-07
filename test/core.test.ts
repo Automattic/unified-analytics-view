@@ -55,6 +55,14 @@ const painters: PainterName[] = ['svg', 'dots'];
 const heights = [null, 300, 160, 100, 60, 40];
 const widths = [54, 80, 120, 170, 250, 290, 346, 500, 700];
 const plain = (v: unknown) => JSON.parse(JSON.stringify(v));
+// The note is given up before prose: a deliberate departure from the prototype (feedback, decision 6 of October 7).
+// These are the swept cases it changes, and all of them: the prototype falls to prose, and ours keeps the number alone
+// without its note. The sweep passes over them and holds every other case to the prototype. They have their own describe below.
+const NOTE_FIRST = new Set((<[string[], PainterName, number[], number][]>[
+  [['trend', 'headed'], 'svg', [120], 60], [['trend', 'headed'], 'dots', [120, 170], 60],
+  [['kept'], 'svg', [120, 170, 250, 290, 346, 500, 700], 60], [['kept'], 'dots', [120, 170], 60],
+  [['pages'], 'dots', [120], 40], [['mix'], 'dots', [120, 170], 40],
+]).flatMap(([names, p, ws, h]) => names.flatMap((name) => ['typical', 'no-prior'].flatMap((sc) => ws.map((w) => [name, sc, p, w, h].join(' '))))));
 const run = (spec: Spec, w: number, h: number | null = null, scenario: (typeof scenarios)[number] = 'typical', painter: PainterName = 'svg', rules = CONTAINER_RULES) => {
   const container = { ...makeContainer(w, h, painter, 8), rules }, result = runQuery(spec.query, scenario);
   const plan = resolve(spec, result, container, catalog);
@@ -74,6 +82,7 @@ describe('the sweep', () => {
         expect(JSON.stringify(scene, (_, v) => (typeof v === 'number' && isNaN(v) ? 'NaN' : v)), 'NaN: ' + at).not.toMatch(/NaN/);
         if (h != null && plan.layout !== 'prose') expect(scene.height, 'too tall: ' + at).toBeLessThanOrEqual(h);
 
+        if (NOTE_FIRST.has(at)) continue;
         const host0 = proto.makeHost(w, h, p, 8), res0 = proto.runQuery(spec.query, sc), plan0 = proto.resolve(toProto(spec, rules), res0, host0);
         expect(plain(runQuery(spec.query, sc)), 'result: ' + at).toEqual(plain(res0));
         expect(plain(plan), 'plan: ' + at).toEqual({ ...fromProto(plain(plan0)), preset: plan.preset });
@@ -319,6 +328,43 @@ describe('layer keys: a deliberate departure from the prototype (feedback, decis
     expect(layerKeys(two)).toEqual(['primary:line#2', 'primary:line', 'reference:rule', 'reference:rule#2']);
     expect(layerKeys(two, 'no-prior')).toEqual(['primary:line', 'reference:rule', 'reference:rule#2']);
     expect(run(specs.pages!, 346).ratio.nodes.filter((n) => n.row === '/').map((n) => n.key)).toEqual(['primary:bar:/', 'primary:text:/', 'primary:text#2:/']);
+  });
+});
+
+describe('the note is given up before prose: a deliberate departure from the prototype (feedback, decision 6 of October 7)', () => {
+  // The prototype goes to prose as soon as the number, its delta and its note are taller than the box. Narrower, the note
+  // stops fitting by width, the number fits again, and then prose returns. Ours gives up the note first, and goes to
+  // prose only if the number without it is still too tall. The DOM's measured pass has the same rule.
+  it('in each such case the prototype is prose; ours is the prototype\'s number in a box 16 px taller, less the note', () => {
+    expect(NOTE_FIRST.size).toBe(36);
+    let held = 0;
+    for (const at of NOTE_FIRST) {
+      const [name, sc, p, w, h] = at.split(' ') as [string, (typeof scenarios)[number], PainterName, string, string];
+      const spec = specs[name!]!, rules = name === 'headed' ? ALWAYS : CONTAINER_RULES, { plan, scene } = run(spec, +w, +h, sc, p, rules);
+      const res0 = proto.runQuery(spec.query, sc), at0 = (height: number) => { const host0 = proto.makeHost(+w, height, p, 8), plan0 = proto.resolve(toProto(spec, rules), res0, host0); return { plan0, scene0: protoScene(plan0, spec.query, res0, host0) }; };
+      expect(at0(+h).plan0.layout, at).toBe('sentence');
+      expect(plan, at).toMatchObject({ layout: 'none', tldrValue: true });
+      expect(plan.dropped[plan.dropped.length - 1], at).toBe('the note under the number');
+      expect(plan.reductions.find((r) => r.id === 'prose')!.state, at).toBe('not needed');
+      expect(scene.nodes.map((n) => n.key).filter((k) => k === 'value' || k === 'sub'), at).toEqual(['value']);
+      expect(scene.height, at).toBeLessThanOrEqual(+h);
+      // 16 px is the note's line. With room for it the prototype shows the number alone, and that is ours but for the note.
+      const { plan0, scene0 } = at0(+h + 16), with0 = fromProto(plain(plan0));
+      if (plan0.layout !== 'none') continue;
+      expect(scene0.nodes.map((n: any) => n.key), at).toContain('sub');
+      expect(plain(scene), at).toEqual({ ...scene0, height: scene0.height - 16, nodes: scene0.nodes.filter((n: any) => n.key !== 'sub') });
+      expect(plain(plan), at).toEqual({ ...with0, preset: plan.preset, dropped: [...with0.dropped, 'the note under the number'], needs: { ...with0.needs, height: scene.height } });
+      held++;
+    }
+    // The share bar's four cases have no such twin: 16 px taller the band has room, so the prototype never shows that number alone.
+    expect(held).toBe(32);
+  });
+  it('narrowing a 60 px box no longer passes through prose and back', () => {
+    const layouts = (h: number) => [170, 120, 80, 54].map((w) => run(trend, w, h).plan.layout);
+    expect(layouts(60)).toEqual(['cartesian', 'none', 'none', 'prose']);
+    // Still prose where the number without its note is too tall.
+    expect(layouts(40)).toEqual(['prose', 'prose', 'prose', 'prose']);
+    expect(run(trend, 120, 40).plan.dropped).not.toContain('the note under the number');
   });
 });
 

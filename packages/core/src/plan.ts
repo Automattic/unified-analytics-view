@@ -66,6 +66,8 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
     const g = guard();
     return Math.max(((g.rule && g.rule.needs.inline) || 0) + g.measured, numberWidth());
   }
+  // The number alone with all it has, as tall as it would be with no height limit.
+  const alone = (shape: PlanShape) => place(buildScene(shape, q, result, catalog), { ...container, height: null }).height;
   let scene!: PlacedScene;
   function fits(): boolean {
     scene = place(buildScene(p, q, result, catalog), container);
@@ -94,7 +96,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
     'trim-rows': () => {
       if (p.layout !== 'rows' || container.height == null) return null;
       const n = result.rows.length, cur = p.rowLimit || n, rh = rules.rows.rowHeight + rules.rows.gap;
-      const above = p.tldrValue ? place(buildScene({ ...p, layout: 'none', layers: [] }, q, result, catalog), container).height + 16 : 0;
+      const above = p.tldrValue ? alone({ ...p, layout: 'none', layers: [] }) + 16 : 0;
       const k = Math.max(1, Math.floor((container.height - above + rules.rows.gap) / rh));
       if (k >= cur) return null;
       p.rowLimit = k;
@@ -116,6 +118,8 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
     const what = act[st.id]();
     if (what) { st.state = 'applied'; dropped.push(what); done = fits(); } else st.state = 'nothing to drop';
   });
+  // place() gives up the note of a number that stands alone before the reducer gives up the number. Said here, as the middle label is.
+  if (p.layout === 'none' && container.height != null && alone(p) > container.height) dropped.push('the note under the number');
   const midTick = rule('mid-tick');
   if (p.layout === 'cartesian' && p.guides.x && midTick && applies(midTick, { view: { inline: container.width } }) && isDim(catalog, by) && catalog.dimensions[by]!.type === 'time') dropped.push('the middle date label');
 

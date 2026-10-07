@@ -22,8 +22,8 @@ function shift(nodes: PlacedNode[], dx: number, dy: number): PlacedNode[] {
   return nodes;
 }
 
-// One big number, an optional delta and an optional note.
-function placeNumber(nodes: SceneNode[], W: number, container: Container, small: boolean): Block {
+// One big number, an optional delta and an optional note. `note` is false where the box is too short for it.
+function placeNumber(nodes: SceneNode[], W: number, container: Container, small: boolean, note = true): Block {
   const out: PlacedNode[] = [], pulse = nodes.find((n) => n.kind === 'circle'), lead = pulse ? 20 : 0;
   const face = (font: TextNode['font']) => nodes.find((n): n is TextNode => n.kind === 'text' && n.font === font);
   const value = face('display')!, dl = face('value'), sub = face('tick');
@@ -36,7 +36,7 @@ function placeNumber(nodes: SceneNode[], W: number, container: Container, small:
     out.push(text(dl, 0, yy, fit(!small && W >= 200 ? dl.text : dl.short ?? dl.text, W)));
     yy += 18;
   }
-  if (sub && W >= 120 && !(small && sub.rank)) {
+  if (sub && note && W >= 120 && !(small && sub.rank)) {
     out.push(text(sub, 0, yy, clip(sub.text, Math.floor(W / (CHAR_W - 0.8)))));
     yy += 16;
   }
@@ -112,12 +112,14 @@ function placeBand(scene: Scene, W: number): Block {
 export function place(scene: Scene, container: Container): PlacedScene {
   const W = container.width, H = container.height, rules = container.rules;
   if (scene.layout === 'prose') return { width: W, height: 0, nodes: [], text: scene.text };
-  const number = (w: number, small: boolean) => placeNumber(scene.nodes.filter((n) => n.part === 'number'), w, container, small);
+  const number = (w: number, small: boolean, note?: boolean) => placeNumber(scene.nodes.filter((n) => n.part === 'number'), w, container, small, note);
   // What resolve() reports as dropped is what is left out here: both ask the same rule.
   const midTick = ruleFor(rules.fit, 'cartesian', 'mid-tick'), narrow = !!midTick && applies(midTick, { view: { inline: W } });
   let out: Block, plot: PlacedScene['plot'] | null = null;
   if (scene.layout === 'none') {
     out = number(W, false);
+    // A number alone that is too tall for the box gives up its note before the view gives up the number. The prototype goes straight to prose.
+    if (H != null && out.height > H) out = number(W, false, false);
   } else if (scene.side) {                                     // a bare plot, set beside the number
     const value = scene.nodes.find((n): n is TextNode => n.kind === 'text' && n.font === 'display')!;
     const lw = Math.round(Math.max(container.displayWidth((value.short ?? value.text).length), Math.min(120, Math.max(rules.bare.numberWidth, W * 0.42))));

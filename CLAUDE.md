@@ -11,6 +11,7 @@ pnpm install
 pnpm test         # vitest: sweep, parity with the prototype, plan, schema, golden scenes
 pnpm typecheck    # tsc --noEmit, strict
 pnpm test -u      # rewrite golden scenes; read the diff before committing it
+pnpm --filter @universal-analytics/tokens generate   # rewrite packages/tokens/generated from its config
 ```
 
 There is no build step yet. Packages export their TypeScript source; a bundler arrives with the first thing that needs one.
@@ -19,6 +20,7 @@ There is no build step yet. Packages export their TypeScript source; a bundler a
 
 - `packages/core`: types, presets and `expand`, the plan (`resolve`), scene builders, the sentence, and JSON Schemas in `schema/`.
 - `packages/fixtures`: the catalog, the seeded fixture query engine (`typical`, `no-prior`, `empty`) and the six sample specs.
+- `packages/tokens`: build-time token generation, ported from the storybook repo. Leonardo makes the colour ramps and Utopia the type, space and control-size scales, from `config/` into `generated/` (DTCG JSON and `tokens.css`). Primitives only; nothing consumes them yet.
 - `test/`: one suite across both packages. Golden scenes are in `test/__snapshots__`.
 - `prototype/`: read-only reference. The tests load `prototype-bench.js` and hold the port to it.
 - `packages/dom`, `packages/dots`, `apps/bench`: not started.

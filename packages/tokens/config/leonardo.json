@@ -1,0 +1,8 @@
+{
+  "description": "Leonardo settings per theme. Defaults come from the pasted Theme in leonardo.colors.js; only overrides go here. Lightness is the lightness of the surface a view is painted on, so every ratio is true against it: Spacefast's card, paper (#FCFCFA) in light and dark/surface (#171512) in dark.",
+  "colors": "./leonardo.colors.js",
+  "themes": {
+    "light": { "lightness": 99 },
+    "dark": { "lightness": 7 }
+  }
+}

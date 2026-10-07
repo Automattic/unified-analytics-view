@@ -1,0 +1,206 @@
+{
+  "font": {
+    "size": {
+      "$type": "dimension",
+      "$description": "Static type scale at 720px viewport",
+      "3xl": {
+        "$value": {
+          "value": 31.1,
+          "unit": "px"
+        },
+        "$description": "31.1px at 720px viewport"
+      },
+      "2xl": {
+        "$value": {
+          "value": 25.92,
+          "unit": "px"
+        },
+        "$description": "25.92px at 720px viewport"
+      },
+      "xl": {
+        "$value": {
+          "value": 21.6,
+          "unit": "px"
+        },
+        "$description": "21.6px at 720px viewport"
+      },
+      "lg": {
+        "$value": {
+          "value": 18,
+          "unit": "px"
+        },
+        "$description": "18px at 720px viewport"
+      },
+      "base": {
+        "$value": {
+          "value": 15,
+          "unit": "px"
+        },
+        "$description": "15px at 720px viewport"
+      },
+      "sm": {
+        "$value": {
+          "value": 12.5,
+          "unit": "px"
+        },
+        "$description": "12.5px at 720px viewport"
+      },
+      "xs": {
+        "$value": {
+          "value": 10.42,
+          "unit": "px"
+        },
+        "$description": "10.42px at 720px viewport"
+      }
+    }
+  },
+  "space": {
+    "$type": "dimension",
+    "$description": "Static space scale at 720px viewport",
+    "3xs": {
+      "$value": {
+        "value": 4,
+        "unit": "px"
+      },
+      "$description": "4px at 720px viewport"
+    },
+    "2xs": {
+      "$value": {
+        "value": 8,
+        "unit": "px"
+      },
+      "$description": "8px at 720px viewport"
+    },
+    "xs": {
+      "$value": {
+        "value": 11,
+        "unit": "px"
+      },
+      "$description": "11px at 720px viewport"
+    },
+    "s": {
+      "$value": {
+        "value": 15,
+        "unit": "px"
+      },
+      "$description": "15px at 720px viewport"
+    },
+    "m": {
+      "$value": {
+        "value": 23,
+        "unit": "px"
+      },
+      "$description": "23px at 720px viewport"
+    },
+    "l": {
+      "$value": {
+        "value": 30,
+        "unit": "px"
+      },
+      "$description": "30px at 720px viewport"
+    },
+    "xl": {
+      "$value": {
+        "value": 45,
+        "unit": "px"
+      },
+      "$description": "45px at 720px viewport"
+    },
+    "2xl": {
+      "$value": {
+        "value": 60,
+        "unit": "px"
+      },
+      "$description": "60px at 720px viewport"
+    },
+    "3xs-2xs": {
+      "$value": {
+        "value": 8,
+        "unit": "px"
+      },
+      "$description": "8px at 720px viewport"
+    },
+    "2xs-xs": {
+      "$value": {
+        "value": 11,
+        "unit": "px"
+      },
+      "$description": "11px at 720px viewport"
+    },
+    "xs-s": {
+      "$value": {
+        "value": 15,
+        "unit": "px"
+      },
+      "$description": "15px at 720px viewport"
+    },
+    "s-m": {
+      "$value": {
+        "value": 23,
+        "unit": "px"
+      },
+      "$description": "23px at 720px viewport"
+    },
+    "m-l": {
+      "$value": {
+        "value": 30,
+        "unit": "px"
+      },
+      "$description": "30px at 720px viewport"
+    },
+    "l-xl": {
+      "$value": {
+        "value": 45,
+        "unit": "px"
+      },
+      "$description": "45px at 720px viewport"
+    },
+    "xl-2xl": {
+      "$value": {
+        "value": 60,
+        "unit": "px"
+      },
+      "$description": "60px at 720px viewport"
+    }
+  },
+  "size": {
+    "$type": "dimension",
+    "$description": "Static control size scale at 720px viewport",
+    "sm": {
+      "$value": {
+        "value": 30,
+        "unit": "px"
+      },
+      "$description": "30px at 720px viewport",
+      "$extensions": {
+        "com.figma.scopes": [
+          "WIDTH_HEIGHT"
+        ]
+      }
+    },
+    "md": {
+      "$value": {
+        "value": 41.25,
+        "unit": "px"
+      },
+      "$description": "41.25px at 720px viewport",
+      "$extensions": {
+        "com.figma.scopes": [
+          "WIDTH_HEIGHT"
+        ]
+      }
+    },
+    "lg": {
+      "$value": {
+        "value": 51,
+        "unit": "px"
+      },
+      "$description": "51px at 720px viewport",
+      "$extensions": {
+        "com.figma.scopes": [
+          "WIDTH_HEIGHT"
+        ]
+      }
+    }
+  }
+}

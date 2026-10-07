@@ -1,7 +1,7 @@
 import { max, sum } from 'd3-array';
 import { scaleBand, scaleLinear, scalePoint } from 'd3-scale';
-import { area, curveMonotoneX, line } from 'd3-shape';
 import { CHAR_W, delta, fmt, fmtDay, fmtPct } from './format.ts';
+import { pathD } from './path.ts';
 import type { Catalog, Guides, Layer, Part, PathNode, PlanShape, Query, Result, Role, Row, Scene, SceneNode } from './types.ts';
 
 /* Node kinds: rect, path, line, circle, text. Every node has a stable key,
@@ -56,7 +56,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, rows:
   const y = scaleLinear().domain([0, max(yVals) || 1]);
   if (guides.y) y.nice(4);
   const top = y.domain()[1]!, v = (n: number) => n / top;
-  const unit = xScale(keys, scale, 0, 1), box = xScale(keys, scale, 0, 100);
+  const unit = xScale(keys, scale, 0, 1);
 
   const coarse = y.ticks(2);
   if (guides.y) y.ticks(4).forEach((t) => {
@@ -83,14 +83,14 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, rows:
       const f = yField(l), pts = rows.filter((r) => r[f] != null);
       const whole = pts.filter((r) => prev || !r.partial);
       if (!whole.length) return;
-      const k = (r: Row) => r[xField] as string, px = (r: Row) => box.cx(k(r)), py = (r: Row) => 100 * (1 - v(num(r, f)));
+      const k = (r: Row) => r[xField] as string;
       const points = (rs: Row[]): PathNode['points'] => rs.map((r) => ({ row: k(r), x: unit.cx(k(r)), v: v(num(r, f)) }));
       if (l.mark === 'area') {
-        nodes.push({ key: id, part: 'plot', kind: 'path', d: area<Row>().x(px).y0(100).y1(py).curve(curveMonotoneX)(whole), points: points(whole), curve: 'monotone', fill: true, paint, opacity: 0.14, layer: 'data', role });
+        nodes.push({ key: id, part: 'plot', kind: 'path', d: pathD(points(whole), 'monotone', true), points: points(whole), curve: 'monotone', fill: true, paint, opacity: 0.14, layer: 'data', role });
       } else {
-        nodes.push({ key: id, part: 'plot', kind: 'path', d: line<Row>().x(px).y(py).curve(curveMonotoneX)(whole), points: points(whole), curve: 'monotone', paint, width: prev ? 1.5 : 2, dash: prev ? '3 3' : null, layer: 'data', role });
+        nodes.push({ key: id, part: 'plot', kind: 'path', d: pathD(points(whole), 'monotone'), points: points(whole), curve: 'monotone', paint, width: prev ? 1.5 : 2, dash: prev ? '3 3' : null, layer: 'data', role });
         const tail = prev ? [] : [whole[whole.length - 1]!].concat(pts.filter((r) => r.partial));
-        if (tail.length > 1) nodes.push({ key: id + ':partial', part: 'plot', kind: 'path', d: line<Row>().x(px).y(py)(tail), points: points(tail), paint, width: 2, dash: '2 4', opacity: 0.75, layer: 'data', role, note: 'incomplete bucket' });
+        if (tail.length > 1) nodes.push({ key: id + ':partial', part: 'plot', kind: 'path', d: pathD(points(tail)), points: points(tail), paint, width: 2, dash: '2 4', opacity: 0.75, layer: 'data', role, note: 'incomplete bucket' });
       }
     } else if (l.mark === 'bar') {
       const f = yField(l);

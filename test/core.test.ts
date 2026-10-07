@@ -5,7 +5,7 @@ import * as d3array from 'd3-array';
 import * as d3scale from 'd3-scale';
 import * as d3shape from 'd3-shape';
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, buildScene, expand, formatDimension, formatValue, makeContainer, partialNote, place, resolve, unboundedContainer, type PainterName, type Spec } from '@universal-analytics/core';
+import { CONTAINER_RULES, buildScene, expand, formatDimension, formatValue, makeContainer, partialNote, pathD, place, resolve, unboundedContainer, type PainterName, type Spec } from '@universal-analytics/core';
 import catalogSchema from '@universal-analytics/core/schema/catalog.schema.json';
 import viewSchema from '@universal-analytics/core/schema/view.schema.json';
 import { catalog, runQuery, samples, scenarios } from '@universal-analytics/fixtures';
@@ -126,6 +126,24 @@ describe('what a painter says with: values and dimensions in catalog format', ()
     expect(formatDimension('/pricing', catalog.dimensions.page!)).toBe('/pricing');
     expect(formatDimension(null, catalog.dimensions.page!)).toBe('–');
     expect([partialNote(rows[0]!), partialNote(last)]).toEqual(['', 'so far']);
+  });
+});
+
+describe('pathD: the one place a path string is made', () => {
+  it('is the scene\'s own `d` from the scene\'s points, and place()\'s in a pixel box', () => {
+    const { ratio, scene } = run(trend, 346), drawn = ratio.nodes.filter((n) => n.kind === 'path');
+    expect(drawn.length).toBe(4);
+    for (const n of drawn) expect(pathD(n.points, n.curve, n.fill), n.key).toBe(n.d);
+    // The trend at 346 px: x from 38 to 338 and y from 162 up to 10. A ratio and d3's point scale can differ in the last bit, so place() passes its own scale.
+    const line = drawn.find((n) => n.key === 'primary:line')!, px = pathD(line.points, line.curve, line.fill, { x: (p) => 38 + p.x * 300, y: (v) => 162 - v * 152 })!;
+    const nums = (d: string) => d.split(/[A-Z,]/).filter(Boolean).map(Number), placed = nums((scene.nodes.find((n) => n.key === line.key) as { d: string }).d);
+    nums(px).forEach((v, i) => expect(v).toBeCloseTo(placed[i]!, 2));
+  });
+  it('draws one point, a straight line, an area to the baseline, and nothing from no points', () => {
+    expect(pathD([{ x: 0.5, v: 0.25 }], 'monotone')).toBe('M50,75Z');
+    expect(pathD([{ x: 0, v: 0 }, { x: 1, v: 1 }])).toBe('M0,100L100,0');
+    expect(pathD([{ x: 0, v: 0.5 }, { x: 1, v: 1 }], undefined, true)).toBe('M0,50L100,0L100,100L0,100Z');
+    expect(pathD([])).toBe(null);
   });
 });
 

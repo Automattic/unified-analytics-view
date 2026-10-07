@@ -1,7 +1,7 @@
 import { scaleLinear } from 'd3-scale';
-import { area, curveMonotoneX, line } from 'd3-shape';
 import { CHAR_W, clip } from './format.ts';
 import { applies, ruleFor } from './fit.ts';
+import { pathD } from './path.ts';
 import { xScale } from './scene.ts';
 import type { Container, PathNode, PlacedNode, PlacedRect, PlacedScene, PlacedText, RectNode, Scene, SceneNode, TextNode } from './types.ts';
 
@@ -49,7 +49,7 @@ function placePlot(scene: Scene, W: number, H: number, narrow: boolean): PlacedN
   const ml = gy ? 36 : 1, mr = gy ? 6 : 1, mt = gy ? 10 : 3, mb = gx ? 22 : 3, inset = scene.scale === 'point' ? 2 : 0;
   const y = scaleLinear().domain([0, 1]).range([H - mb, mt]);
   const xs = xScale(scene.rows!, scene.scale!, ml + inset, W - mr - inset);
-  const px = (p: Point) => xs.cx(p.row), py = (p: Point) => y(p.v);
+  const box = { x: (p: Point) => xs.cx(p.row), y };
   const out: PlacedNode[] = [];
   scene.nodes.forEach((n) => {
     if (n.part === 'number') return;
@@ -59,9 +59,7 @@ function placePlot(scene: Scene, W: number, H: number, narrow: boolean): PlacedN
       out.push({ ...rest, x1: ml, x2: W - mr, y1: y(t), y2: y(t) });
     } else if (n.kind === 'path') {
       const { part, role, row, rank, points, curve, ...rest } = n;
-      const d = n.fill ? area<Point>().x(px).y0(y(0)).y1(py) : line<Point>().x(px).y(py);
-      if (curve) d.curve(curveMonotoneX);
-      out.push({ ...rest, d: d(points) });
+      out.push({ ...rest, d: pathD(points, curve, n.fill, box) });
     } else if (n.kind === 'rect') {
       out.push(rect(n, xs.x(n.row!), y(n.v!), xs.w, Math.max(0, y(0) - y(n.v!)), Math.min(2, xs.w / 4)));
     } else if (n.kind === 'text') {

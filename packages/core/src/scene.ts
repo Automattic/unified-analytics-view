@@ -1,27 +1,34 @@
 import { max, sum } from 'd3-array';
 import { scaleBand, scaleLinear, scalePoint } from 'd3-scale';
 import { area, curveMonotoneX, line } from 'd3-shape';
-import { CHAR_W, clip, delta, fmt, fmtDay, fmtPct, type Delta } from './format.ts';
-import type { Catalog, Guides, Container, Layer, PlanShape, Query, Result, Row, Scene, SceneNode } from './types.ts';
+import { CHAR_W, delta, fmt, fmtDay, fmtPct } from './format.ts';
+import { roleOf } from './plan.ts';
+import type { Catalog, Guides, Layer, Part, PathNode, PlanShape, Query, Result, Row, Scene, SceneNode } from './types.ts';
 
 /* Node kinds: rect, path, line, circle, text. Every node has a stable key,
- * a paint token (never a colour) and a layer: "data" or "guide". */
-interface Part { nodes: SceneNode[]; height: number }
+ * a part, a paint token (never a colour) and a layer: "data" or "guide".
+ * Nothing here is in pixels: positions are ratios of the part's box. */
+type Body = Pick<Scene, 'nodes' | 'rows' | 'scale'>;
 
 const num = (r: Row, f: string) => r[f] as number;
 export function isDim(catalog: Catalog, f: unknown): f is string { return typeof f === 'string' && f in catalog.dimensions; }
-function shift(nodes: SceneNode[], dx: number, dy: number): SceneNode[] {
-  nodes.forEach((n) => { n.tx = (n.tx || 0) + dx; n.ty = (n.ty || 0) + dy; });
-  return nodes;
+
+/** How a plot shares x among its rows. The scene uses it on 0 to 1 and place() in pixels, so both divide the room the same way. */
+export function xScale(rows: string[], scale: 'band' | 'point', lo: number, hi: number) {
+  const band = scaleBand<string>().domain(rows).range([lo, hi]).paddingInner(0.26).paddingOuter(0.1);
+  const point = scalePoint<string>().domain(rows).range([lo, hi]);
+  const x = (k: string) => (scale === 'band' ? band(k) : point(k)) as number;
+  const w = scale === 'band' ? band.bandwidth() : 0;
+  return { x, w, cx: (k: string) => x(k) + w / 2 };
 }
 
 // A dimension on x, a metric on y: line, area, bar, rule.
-function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, rows: Row[], W: number, H: number): Part {
+function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, rows: Row[]): Body {
   const nodes: SceneNode[] = [];
   const xField = layers.map((l) => l.encode && l.encode.x).find((f) => isDim(catalog, f)) as string;
   const keys = rows.map((r) => r[xField] as string);
   const isTime = catalog.dimensions[xField]!.type === 'time';
-  const hasBar = layers.some((l) => l.mark === 'bar');
+  const scale = layers.some((l) => l.mark === 'bar') ? 'band' : 'point';
   const yField = (l: Layer) => (l.series === 'previous' ? l.encode!.y + '@previous' : (l.encode!.y as string));
   const yVals: number[] = [];
   layers.forEach((l) => {
@@ -29,59 +36,60 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, rows:
     if (typeof y === 'number') yVals.push(y);
     else if (y) rows.forEach((r) => { const v = r[yField(l)]; if (v != null) yVals.push(v as number); });
   });
-  const nTicks = H < 120 ? 2 : 4;
-  const ml = guides.y ? 36 : 1, mr = guides.y ? 6 : 1, mt = guides.y ? 10 : 3, mb = guides.x ? 22 : 3;
-  const y = scaleLinear().domain([0, max(yVals) || 1]).range([H - mb, mt]);
-  if (guides.y) y.nice(nTicks);
-  const band = scaleBand<string>().domain(keys).range([ml, W - mr]).paddingInner(0.26).paddingOuter(0.1);
-  const point = scalePoint<string>().domain(keys).range([ml + 2, W - mr - 2]);
-  const x = (k: string) => (hasBar ? band(k) : point(k)) as number;
-  const bw = hasBar ? band.bandwidth() : 0;
-  const cx = (k: string) => x(k) + bw / 2;
+  // Always rounded to 4 ticks: a scene with no size cannot pick a tick count by height.
+  const y = scaleLinear().domain([0, max(yVals) || 1]);
+  if (guides.y) y.nice(4);
+  const top = y.domain()[1]!, v = (n: number) => n / top;
+  const unit = xScale(keys, scale, 0, 1), box = xScale(keys, scale, 0, 100);
 
-  if (guides.y) y.ticks(nTicks).forEach((t) => {
-    if (guides.grid) nodes.push({ key: 'grid:' + t, kind: 'line', x1: ml, x2: W - mr, y1: y(t), y2: y(t), paint: t === 0 ? 'axis' : 'grid', layer: 'guide' });
-    nodes.push({ key: 'ytick:' + t, kind: 'text', x: ml - 6, y: y(t), text: fmt(t, true), anchor: 'end', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' });
+  const coarse = y.ticks(2);
+  if (guides.y) y.ticks(4).forEach((t) => {
+    // A short plot keeps the ticks a count of 2 would give on this scale. The rest are ranked, to be given up there.
+    const rank = coarse.includes(t) ? {} : { rank: 1 };
+    if (guides.grid) nodes.push({ key: 'grid:' + t, part: 'plot', kind: 'line', t: v(t), paint: t === 0 ? 'axis' : 'grid', layer: 'guide', ...rank });
+    nodes.push({ key: 'ytick:' + t, part: 'y-axis', kind: 'text', t: v(t), text: fmt(t, true), anchor: 'end', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...rank });
   });
   if (guides.x && keys.length) {
     const last = keys.length - 1;
-    const idx = isTime ? (W < 380 || last < 2 ? [0, last] : [0, Math.floor(last / 2), last]) : keys.map((_, i) => i);
+    const idx = isTime ? (last < 2 ? [0, last] : [0, Math.floor(last / 2), last]) : keys.map((_, i) => i);
     idx.forEach((i, j) => {
-      nodes.push({ key: 'xtick:' + keys[i], kind: 'text', x: cx(keys[i]!), y: H - 5, text: isTime ? fmtDay(keys[i]!) : String(keys[i]),
-        anchor: !isTime ? 'middle' : j === 0 ? 'start' : j === idx.length - 1 ? 'end' : 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' });
+      const mid = isTime && j > 0 && j < idx.length - 1;                  // given up on a narrow plot
+      nodes.push({ key: 'xtick:' + keys[i], part: 'x-axis', kind: 'text', x: unit.cx(keys[i]!), row: keys[i]!, text: isTime ? fmtDay(keys[i]!) : String(keys[i]),
+        anchor: !isTime ? 'middle' : j === 0 ? 'start' : j === idx.length - 1 ? 'end' : 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...(mid && { rank: 1 }) });
     });
   }
   layers.forEach((l, i) => {
-    const id = 'L' + i + ':' + l.mark, prev = l.series === 'previous';
+    const id = 'L' + i + ':' + l.mark, prev = l.series === 'previous', role = roleOf(l);
     const paint = l.paint || (prev ? 'compare' : 'series.1');
     if (l.mark === 'line' || l.mark === 'area') {
       const f = yField(l), pts = rows.filter((r) => r[f] != null);
       const whole = pts.filter((r) => prev || !r.partial);
       if (!whole.length) return;
-      const px = (r: Row) => cx(r[xField] as string), py = (r: Row) => y(num(r, f));
+      const k = (r: Row) => r[xField] as string, px = (r: Row) => box.cx(k(r)), py = (r: Row) => 100 * (1 - v(num(r, f)));
+      const points = (rs: Row[]): PathNode['points'] => rs.map((r) => ({ row: k(r), x: unit.cx(k(r)), v: v(num(r, f)) }));
       if (l.mark === 'area') {
-        nodes.push({ key: id, kind: 'path', d: area<Row>().x(px).y0(y(0)).y1(py).curve(curveMonotoneX)(whole), fill: true, paint, opacity: 0.14, layer: 'data' });
+        nodes.push({ key: id, part: 'plot', kind: 'path', d: area<Row>().x(px).y0(100).y1(py).curve(curveMonotoneX)(whole), points: points(whole), curve: 'monotone', fill: true, paint, opacity: 0.14, layer: 'data', role });
       } else {
-        nodes.push({ key: id, kind: 'path', d: line<Row>().x(px).y(py).curve(curveMonotoneX)(whole), paint, width: prev ? 1.5 : 2, dash: prev ? '3 3' : null, layer: 'data' });
-        const tail = prev ? [] : pts.filter((r) => r.partial);
-        if (tail.length) nodes.push({ key: id + ':partial', kind: 'path', d: line<Row>().x(px).y(py)([whole[whole.length - 1]!].concat(tail)), paint, width: 2, dash: '2 4', opacity: 0.75, layer: 'data', note: 'incomplete bucket' });
+        nodes.push({ key: id, part: 'plot', kind: 'path', d: line<Row>().x(px).y(py).curve(curveMonotoneX)(whole), points: points(whole), curve: 'monotone', paint, width: prev ? 1.5 : 2, dash: prev ? '3 3' : null, layer: 'data', role });
+        const tail = prev ? [] : [whole[whole.length - 1]!].concat(pts.filter((r) => r.partial));
+        if (tail.length > 1) nodes.push({ key: id + ':partial', part: 'plot', kind: 'path', d: line<Row>().x(px).y(py)(tail), points: points(tail), paint, width: 2, dash: '2 4', opacity: 0.75, layer: 'data', role, note: 'incomplete bucket' });
       }
     } else if (l.mark === 'bar') {
       const f = yField(l);
       rows.forEach((r) => {
         if (r[f] == null) return;
-        nodes.push({ key: id + ':' + r[xField], kind: 'rect', x: x(r[xField] as string), y: y(num(r, f)), w: bw, h: Math.max(0, y(0) - y(num(r, f))), rx: Math.min(2, bw / 4),
-          paint, opacity: r.partial && !prev ? 0.4 : 1, layer: 'data' });
+        nodes.push({ key: id + ':' + r[xField], part: 'plot', kind: 'rect', x: unit.x(r[xField] as string), w: unit.w, v: v(num(r, f)), row: r[xField] as string,
+          paint, opacity: r.partial && !prev ? 0.4 : 1, layer: 'data', role });
       });
     } else if (l.mark === 'rule') {
-      const v = l.encode!.y as number;
-      nodes.push({ key: id, kind: 'line', x1: ml, x2: W - mr, y1: y(v), y2: y(v), paint: 'rule', dash: '5 3', width: 1.5, layer: 'data' });
-      if (l.label) nodes.push({ key: id + ':label', kind: 'text', x: W - mr, y: y(v) - 5, text: l.label, anchor: 'end', font: 'tick', paint: 'rule', halo: true, layer: 'guide' });
+      const t = v(l.encode!.y as number);
+      nodes.push({ key: id, part: 'plot', kind: 'line', t, paint: 'rule', dash: '5 3', width: 1.5, layer: 'data', role });
+      if (l.label) nodes.push({ key: id + ':label', part: 'plot', kind: 'text', t, text: l.label, anchor: 'end', font: 'tick', paint: 'rule', halo: true, layer: 'guide', role });
     } else {
       throw new Error('The "' + l.mark + '" mark has no rule for a time or category axis yet. Use line, area, bar or rule.');
     }
   });
-  return { nodes, height: H };
+  return { nodes, rows: keys, scale };
 }
 
 /** Room the widest value label needs in a bar list. */
@@ -95,72 +103,46 @@ export function valueRoomOf(catalog: Catalog, layers: Layer[], rows: Row[]): num
 }
 
 // A dimension on y, a metric on x: the ranked bar list.
-function sceneRows(catalog: Catalog, layers: Layer[], rows: Row[], W: number): Part {
-  const nodes: SceneNode[] = [], gap = 4, rowH = 28;
+function sceneRows(catalog: Catalog, layers: Layer[], rows: Row[]): Body {
+  const nodes: SceneNode[] = [];
   const dim = layers.map((l) => l.encode && l.encode.y).find((f) => isDim(catalog, f)) as string;
   const barL = layers.find((l) => l.mark === 'bar');
-  const x = scaleLinear().domain([0, barL ? max(rows, (r) => num(r, barL.encode!.x as string)) || 1 : 1]).range([0, W]);
-  const valueRoom = valueRoomOf(catalog, layers, rows);
-  rows.forEach((r, i) => {
-    const top = i * (rowH + gap), k = r[dim];
+  const top = barL ? max(rows, (r) => num(r, barL.encode!.x as string)) || 1 : 1;
+  rows.forEach((r) => {
+    const k = r[dim] as string;
     layers.forEach((l, li) => {
       if (l.mark === 'bar') {
-        nodes.push({ key: 'L' + li + ':bar:' + k, kind: 'rect', x: 0, y: top, w: Math.max(3, x(num(r, l.encode!.x as string))), h: rowH, rx: 3, paint: l.paint || 'series.1', opacity: 0.2, layer: 'data' });
+        nodes.push({ key: 'L' + li + ':bar:' + k, part: 'rows', kind: 'rect', v: num(r, l.encode!.x as string) / top, row: k, paint: l.paint || 'series.1', opacity: 0.2, layer: 'data', role: roleOf(l) });
       } else if (l.mark === 'text') {
-        const f = l.encode!.text as string, metric = f in catalog.metrics, end = l.align === 'end';
-        const raw = metric ? fmt(num(r, f)) : String(r[f]);
-        nodes.push({ key: 'L' + li + ':text:' + k, kind: 'text', x: end ? W - 8 : 8, y: top + rowH / 2, text: end ? raw : clip(raw, Math.floor((W - 16 - valueRoom) / CHAR_W)),
-          anchor: end ? 'end' : 'start', baseline: 'middle', font: metric ? 'value' : 'label', paint: 'ink', layer: 'data' });
+        const f = l.encode!.text as string, metric = f in catalog.metrics;
+        nodes.push({ key: 'L' + li + ':text:' + k, part: 'rows', kind: 'text', row: k, text: metric ? fmt(num(r, f)) : String(r[f]),
+          anchor: l.align === 'end' ? 'end' : 'start', baseline: 'middle', font: metric ? 'value' : 'label', paint: 'ink', layer: 'data', role: roleOf(l) });
       } else {
         throw new Error('The "' + l.mark + '" mark has no rule for rows yet. Use bar or text.');
       }
     });
   });
-  return { nodes, height: Math.max(0, rows.length * (rowH + gap) - gap) };
+  return { nodes, rows: rows.map((r) => r[dim] as string) };
 }
 
 // No positional dimension: one band, stacked and normalized, split by colour.
-function sceneBand(layer: Layer, rows: Row[], W: number, legend: Guides['legend']): Part {
-  const nodes: SceneNode[] = [], m = layer.encode!.x as string, dim = layer.encode!.color as string, barH = 24, gap = 2;
-  const total = sum(rows, (r) => num(r, m)) || 1, usable = W - gap * (rows.length - 1);
-  let x0 = 0, h = barH;
+function sceneBand(layer: Layer, rows: Row[], legend: Guides['legend']): Body {
+  const nodes: SceneNode[] = [], m = layer.encode!.x as string, dim = layer.encode!.color as string;
+  const total = sum(rows, (r) => num(r, m)) || 1, k = (r: Row) => r[dim] as string;
   rows.forEach((r, i) => {
-    const w = (num(r, m) / total) * usable;
-    nodes.push({ key: 'seg:' + r[dim], kind: 'rect', x: x0, y: 0, w, h: barH, rx: 2, paint: 'series.' + ((i % 6) + 1), layer: 'data' });
-    x0 += w + gap;
+    nodes.push({ key: 'seg:' + k(r), part: 'band', kind: 'rect', v: num(r, m) / total, row: k(r), paint: 'series.' + ((i % 6) + 1), layer: 'data', role: roleOf(layer) });
   });
   if (legend === 'full') {
     rows.forEach((r, i) => {
-      const yy = barH + 20 + i * 24;
-      nodes.push({ key: 'swatch:' + r[dim], kind: 'rect', x: 0, y: yy - 6, w: 12, h: 12, rx: 2, paint: 'series.' + ((i % 6) + 1), layer: 'data' });
-      nodes.push({ key: 'legend:' + r[dim], kind: 'text', x: 20, y: yy, text: clip(String(r[dim]), Math.floor((W - 70) / CHAR_W)), anchor: 'start', baseline: 'middle', font: 'label', paint: 'ink', layer: 'guide' });
-      nodes.push({ key: 'share:' + r[dim], kind: 'text', x: W, y: yy, text: fmtPct(num(r, m) / total), anchor: 'end', baseline: 'middle', font: 'value', paint: 'ink', layer: 'guide' });
-      h = yy + 10;
+      nodes.push({ key: 'swatch:' + k(r), part: 'legend', kind: 'rect', row: k(r), paint: 'series.' + ((i % 6) + 1), layer: 'data' });
+      nodes.push({ key: 'legend:' + k(r), part: 'legend', kind: 'text', row: k(r), text: String(k(r)), anchor: 'start', baseline: 'middle', font: 'label', paint: 'ink', layer: 'guide' });
+      nodes.push({ key: 'share:' + k(r), part: 'legend', kind: 'text', row: k(r), text: fmtPct(num(r, m) / total), anchor: 'end', baseline: 'middle', font: 'value', paint: 'ink', layer: 'guide' });
     });
   } else if (legend === 'top' && rows.length) {
-    nodes.push({ key: 'legend:top', kind: 'text', x: 0, y: barH + 18, text: clip(rows[0]![dim] + ' ' + fmtPct(num(rows[0]!, m) / total), Math.floor(W / CHAR_W)), anchor: 'start', font: 'label', paint: 'ink', layer: 'guide' });
-    h = barH + 24;
+    // One line for the whole band, so it names no row.
+    nodes.push({ key: 'legend:top', part: 'legend', kind: 'text', text: k(rows[0]!) + ' ' + fmtPct(num(rows[0]!, m) / total), anchor: 'start', font: 'label', paint: 'ink', layer: 'guide' });
   }
-  return { nodes, height: h };
-}
-
-// One big number, an optional delta and an optional note.
-function sceneStat(o: { value: string; delta?: Delta | null; sub?: string | null; W: number; container: Container; pulse?: boolean; small?: boolean }): Part {
-  const nodes: SceneNode[] = [], W = o.W, lead = o.pulse != null ? 20 : 0;
-  const disp = o.container.display(o.value.length, W - lead, o.small);
-  if (o.pulse != null) nodes.push({ key: 'pulse', kind: 'circle', cx: 7, cy: disp.h / 2, r: 5, paint: o.pulse ? 'live' : 'ink.muted', pulse: !!o.pulse, layer: 'data' });
-  nodes.push({ key: 'value', kind: 'text', x: lead, y: 0, h: disp.h, cell: disp.cell, text: o.value, anchor: 'start', font: 'display', paint: 'ink', layer: 'data' });
-  let yy = disp.h + 18;
-  if (o.delta) {
-    const long = !o.small && W >= 200 && o.delta.pct != null;
-    nodes.push({ key: 'delta', kind: 'text', x: 0, y: yy, text: clip(o.delta.text + (long ? ' on the previous period' : ''), Math.floor(W / CHAR_W)), anchor: 'start', font: 'value', paint: o.delta.paint, layer: 'guide' });
-    yy += 18;
-  }
-  if (o.sub && W >= 120) {
-    nodes.push({ key: 'sub', kind: 'text', x: 0, y: yy, text: clip(o.sub, Math.floor(W / (CHAR_W - 0.8))), anchor: 'start', font: 'tick', paint: 'ink.muted', layer: 'guide' });
-    yy += 16;
-  }
-  return { nodes, height: yy - 10 };
+  return { nodes, rows: rows.map(k) };
 }
 
 /** The value shown as the number, formatted. */
@@ -170,48 +152,54 @@ export function tldrValueText(catalog: Catalog, q: Query, result: Result, compac
   return result.meta.empty ? '0' : fmt(result.totals[m], compact);
 }
 
-/** The tldr value: a total from the engine, a delta if the query compares, and a derived note. */
-export function tldrValue(catalog: Catalog, q: Query, result: Result, share: boolean, container: Container, W: number, small: boolean): Part {
+/* The tldr value: a total from the engine, a delta if the query compares, and a derived note.
+ * It carries both forms of its text. Which one is set depends on the room, so that is not decided here. */
+function sceneNumber(catalog: Catalog, q: Query, result: Result, share: boolean): SceneNode[] {
   const m = q.metrics[0]!, M = catalog.metrics[m]!, t = result.totals, by = (q.by || [])[0], rows = result.rows;
-  if (M.instant) { const n = t[m] || 0; return sceneStat({ value: String(n), sub: n ? 'on the site right now' : 'Nobody is here right now', W, container, pulse: n > 0, small }); }
-  if (result.meta.empty) return sceneStat({ value: '0', sub: 'No visits yet', W, container, small });
+  const nodes: SceneNode[] = [];
+  const value = (text: string, short = text) => nodes.push({ key: 'value', part: 'number', kind: 'text', text, ...(short !== text && { short }), anchor: 'start', font: 'display', paint: 'ink', layer: 'data' });
+  const sub = (text: string, rank?: number) => nodes.push({ key: 'sub', part: 'number', kind: 'text', text, anchor: 'start', font: 'tick', paint: 'ink.muted', layer: 'guide', ...(rank && { rank }) });
+  if (M.instant) {
+    const n = t[m] || 0;
+    nodes.push({ key: 'pulse', part: 'number', kind: 'circle', paint: n > 0 ? 'live' : 'ink.muted', pulse: n > 0, layer: 'data' });
+    value(String(n)); sub(n ? 'on the site right now' : 'Nobody is here right now');
+    return nodes;
+  }
+  if (result.meta.empty) { value('0'); sub('No visits yet'); return nodes; }
   let note: string | null = M.rangeTotal === 'sum of daily' ? 'Sum of daily counts' : null;
   if (by && catalog.dimensions[by]!.type !== 'time' && rows.length) {
     note = share ? rows[0]![by] + ' ' + fmtPct(num(rows[0]!, m) / (sum(rows, (r) => num(r, m)) || 1)) : 'Top: ' + rows[0]![by];
   }
   const dl = q.compare === 'previous' ? delta(t[m] as number, t[m + '@previous'], M.polarity) : null;
-  return sceneStat({ value: fmt(t[m], small || W < 160), delta: dl, sub: small ? null : note, W, container, small });
+  value(fmt(t[m]), fmt(t[m], true));
+  if (dl) nodes.push({ key: 'delta', part: 'number', kind: 'text', text: dl.text + (dl.pct != null ? ' on the previous period' : ''), ...(dl.pct != null && { short: dl.text }), anchor: 'start', font: 'value', paint: dl.paint, layer: 'guide' });
+  if (note) sub(note, 1);                                                   // the note is given up beside a bare plot
+  return nodes;
 }
 
-export function buildScene(p: PlanShape, q: Query, result: Result, container: Container, catalog: Catalog): Scene {
-  const W = container.width, H = container.height, rules = container.rules;
-  if (p.layout === 'prose') return { width: W, height: 0, nodes: [], text: p.text };
-  let out: Part, plot: Scene['plot'] | null = null;
-  if (p.layout === 'none') {
-    out = tldrValue(catalog, q, result, p.share, container, W, false);
-  } else if (p.layout === 'cartesian' && p.side) {             // a bare plot, set beside the number
-    const lw = Math.round(Math.max(container.displayWidth(tldrValueText(catalog, q, result, true).length), Math.min(120, Math.max(76, W * 0.42))));
-    const s = tldrValue(catalog, q, result, p.share, container, lw, true), h = Math.max(rules.bare.height, s.height), pw = Math.max(8, W - lw - 12);
-    const c = sceneCartesian(catalog, p.layers, p.guides, result.rows, pw, h);
-    out = { nodes: s.nodes.concat(shift(c.nodes, lw + 12, 0)), height: h }; plot = { w: pw, h };
-  } else {
-    const hd = p.tldrValue ? tldrValue(catalog, q, result, p.share, container, W, false) : null, above = hd ? hd.height + 16 : 0;
-    let body: Part;
-    if (p.layout === 'notice') {
-      const h = H ? Math.max(40, Math.min(120, H - above)) : 120;
-      body = { height: h, nodes: [{ key: 'notice', kind: 'text', x: W / 2, y: h / 2, text: clip('No visits in this period yet', Math.floor(W / CHAR_W)), anchor: 'middle', baseline: 'middle', font: 'label', paint: 'ink.muted', layer: 'guide' }] };
-    } else if (p.layout === 'cartesian') {
-      const guided = p.guides.x || p.guides.y;
-      const ph = !guided ? rules.bare.height : H ? Math.max(rules.axes.minHeight, Math.min(rules.axes.height, H - above)) : rules.axes.height;
-      body = sceneCartesian(catalog, p.layers, p.guides, result.rows, W, ph); plot = { w: W, h: ph };
-    } else if (p.layout === 'rows') {
-      body = sceneRows(catalog, p.layers, result.rows.slice(0, p.rowLimit || result.rows.length), W);
-    } else {
-      body = sceneBand(p.layers[0]!, result.rows, W, p.guides.legend);
-    }
-    out = hd ? { nodes: hd.nodes.concat(shift(body.nodes, 0, above)), height: above + body.height } : body;
+/** The scene for a plan, in ratios. It takes no size: plan for a container with no limits and this is everything the spec asks for. */
+export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Catalog): Scene {
+  if (p.layout === 'prose') return { layout: 'prose', parts: [], nodes: [], text: p.text };
+  const number = sceneNumber(catalog, q, result, p.share);
+  const parts: Part[] = p.tldrValue || p.layout === 'none' ? ['number'] : [];
+  let body: Body = { nodes: [] }, side = false;
+  if (p.layout === 'notice') {
+    parts.push('notice');
+    body.nodes.push({ key: 'notice', part: 'notice', kind: 'text', text: 'No visits in this period yet', anchor: 'middle', baseline: 'middle', font: 'label', paint: 'ink.muted', layer: 'guide' });
+  } else if (p.layout === 'cartesian') {
+    side = p.side;                                                          // a bare plot, set beside the number
+    if (side && !parts.length) parts.push('number');
+    if (p.guides.y) parts.push('y-axis');
+    parts.push('plot');
+    if (p.guides.x) parts.push('x-axis');
+    body = sceneCartesian(catalog, p.layers, p.guides, result.rows);
+  } else if (p.layout === 'rows') {
+    parts.push('rows');
+    body = sceneRows(catalog, p.layers, result.rows.slice(0, p.rowLimit || result.rows.length));
+  } else if (p.layout === 'band') {
+    parts.push('band');
+    if (p.guides.legend) parts.push('legend');
+    body = sceneBand(p.layers[0]!, result.rows, p.guides.legend);
   }
-  const scene: Scene = { width: W, height: Math.ceil(out.height), nodes: out.nodes };
-  if (plot) scene.plot = plot;
-  return scene;
+  return { layout: p.layout, parts, ...(side && { side }), ...body, nodes: number.concat(body.nodes) };
 }

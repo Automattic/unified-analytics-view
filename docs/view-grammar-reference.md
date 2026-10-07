@@ -397,9 +397,9 @@ A sketch, untested. The worked rules are in `docs/dom-painter-plan.md`, section 
 
 ## 11. The scene
 
-**Status: Proven in pixels. The ratio-based form is decided (October 7) and not yet built; what follows describes the pixel scene as it is today.**
+**Status: Proven in pixels. The ratio form is built: `buildScene` returns it and `place(scene, container)` makes the pixel scene from it, held to the sweep and the golden scenes. No painter reads the ratios yet. What follows describes the placed scene; the ratio fields are in `packages/core/src/types.ts`.**
 
-A scene is `{ width, height, nodes, plot? }`. Nodes are flat and drawn in order.
+A placed scene is `{ width, height, nodes, plot? }`. Nodes are flat and drawn in order.
 
 | Kind | Fields |
 |---|---|

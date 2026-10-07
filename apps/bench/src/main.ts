@@ -1,4 +1,4 @@
-import { buildScene, makeContainer, resolve } from '@universal-analytics/core';
+import { buildScene, makeContainer, place, resolve } from '@universal-analytics/core';
 import { catalog, runQuery, samples, type Scenario } from '@universal-analytics/fixtures';
 import { paintSVG } from './paint-svg.ts';
 
@@ -19,7 +19,7 @@ function paint(frame: HTMLElement) {
   try {
     const container = makeContainer(width, Number(height) || null), result = runQuery(spec.query, scenario);
     const plan = resolve(spec, result, container, catalog);
-    paintSVG(svg, buildScene(plan, spec.query, result, container, catalog));
+    paintSVG(svg, place(buildScene(plan, spec.query, result, catalog), container));
     caption.className = 'meta';
     caption.textContent = width + ' px · ' + plan.layout + (plan.dropped.length ? ' · dropped: ' + plan.dropped.join(', ') : '') + ' · ' + plan.text;
   } catch (e) {

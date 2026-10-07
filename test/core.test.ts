@@ -5,7 +5,7 @@ import * as d3array from 'd3-array';
 import * as d3scale from 'd3-scale';
 import * as d3shape from 'd3-shape';
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, buildScene, expand, makeContainer, resolve, type PainterName, type Spec } from '@universal-analytics/core';
+import { CONTAINER_RULES, buildScene, expand, makeContainer, place, resolve, type PainterName, type Spec } from '@universal-analytics/core';
 import catalogSchema from '@universal-analytics/core/schema/catalog.schema.json';
 import viewSchema from '@universal-analytics/core/schema/view.schema.json';
 import { catalog, runQuery, samples, scenarios } from '@universal-analytics/fixtures';
@@ -46,7 +46,8 @@ const plain = (v: unknown) => JSON.parse(JSON.stringify(v));
 const run = (spec: Spec, w: number, h: number | null = null, scenario: (typeof scenarios)[number] = 'typical', painter: PainterName = 'svg', rules = CONTAINER_RULES) => {
   const container = { ...makeContainer(w, h, painter, 8), rules }, result = runQuery(spec.query, scenario);
   const plan = resolve(spec, result, container, catalog);
-  return { plan, scene: buildScene(plan, spec.query, result, container, catalog), result };
+  const ratio = buildScene(plan, spec.query, result, catalog);
+  return { plan, ratio, scene: place(ratio, container), result };
 };
 
 describe('the sweep', () => {
@@ -188,6 +189,89 @@ describe('schemas', () => {
   it('reject presentation in a spec: the tldr value and the guides are the container\'s to decide', () => {
     expect(view({ ...trend, headline: true })).toBe(false);
     expect(view({ ...trend, guides: { x: false } })).toBe(false);
+  });
+});
+
+describe('the ratio scene (dom-painter-plan section 3)', () => {
+  const PARTS: Record<string, string[]> = {
+    cartesian: ['number', 'plot', 'x-axis', 'y-axis'], rows: ['number', 'rows'], band: ['number', 'band', 'legend'],
+    none: ['number'], notice: ['number', 'notice'], prose: [],
+  };
+  const unbounded = (spec: Spec) => {
+    const result = runQuery(spec.query), plan = resolve(spec, result, makeContainer(Infinity), catalog);
+    return { plan, ratio: buildScene(plan, spec.query, result, catalog) };
+  };
+  const numbers = (d: string) => (d.match(/-?[\d.]+/g) || []).map(Number);
+
+  it('has a part on every node, ratios from 0 to 1, unique keys, and the keys place() keeps', () => {
+    for (const [name, spec] of Object.entries(specs)) for (const sc of scenarios) for (const h of heights) for (const w of widths) {
+      const at = [name, sc, w, h].join(' '), { ratio, scene } = run(spec, w, h, sc), keys = ratio.nodes.map((n) => n.key);
+      expect(new Set(keys).size, 'duplicate keys: ' + at).toBe(keys.length);
+      expect(ratio.parts.every((p) => PARTS[ratio.layout]!.includes(p)), 'parts: ' + at).toBe(true);
+      for (const n of ratio.nodes as any[]) {
+        expect(PARTS[ratio.layout], 'part: ' + at + ' ' + n.key).toContain(n.part);
+        for (const f of ['x', 'w', 'v', 't']) if (n[f] != null) expect(n[f] >= 0 && n[f] <= 1, f + ': ' + at + ' ' + n.key).toBe(true);
+      }
+      // Placing changes no key and no order. It only leaves out what the size has no room for.
+      const placed = scene.nodes.map((n) => n.key);
+      expect(keys.filter((k) => placed.includes(k)), 'placed keys: ' + at).toEqual(placed);
+    }
+  });
+  it('needs no size: a plan for a container with no limits drops nothing', () => {
+    for (const name of Object.keys(samples)) expect(unbounded(specs[name]!).plan.dropped, name).toEqual([]);
+    const { ratio } = unbounded(trend);
+    expect(ratio).toMatchObject({ layout: 'cartesian', parts: ['y-axis', 'plot', 'x-axis'], scale: 'point' });
+    expect(ratio.nodes.filter((n) => n.rank).map((n) => n.key)).toEqual(['sub', 'xtick:2026-09-21']);
+    expect(unbounded(specs.layers!).ratio.nodes.filter((n) => n.rank).map((n) => n.key)).toEqual(['grid:500', 'ytick:500', 'grid:1500', 'ytick:1500', 'xtick:2026-09-21']);
+    expect(ratio.nodes.filter((n) => n.role).map((n) => n.key + ' ' + n.role)).toEqual(['L0:area context', 'L1:line comparison', 'L2:line primary', 'L2:line:partial primary']);
+    // The number is there to be shown in compensation, though this plan does not show it.
+    expect(ratio.nodes.filter((n) => n.part === 'number').map((n) => n.key)).toEqual(['value', 'delta', 'sub']);
+  });
+  it('agrees with the placed pixels: a ratio times its part is where place() puts it', () => {
+    // Bars at 346 px. With axes the plot is x 36 to 340 and y 162 down to 10.
+    const bars = run(specs.layers!, 346);
+    for (const n of bars.ratio.nodes as any[]) {
+      const px = bars.scene.nodes.find((m) => m.key === n.key) as any;
+      if (n.kind === 'rect') { expect(px.x).toBeCloseTo(36 + n.x * 304, 9); expect(px.w).toBeCloseTo(n.w * 304, 9); expect(px.h).toBeCloseTo(n.v * 152, 9); }
+      if (n.part === 'y-axis') expect(px.y).toBeCloseTo(162 - n.t * 152, 9);
+    }
+    // Lines sit 2 px inside each edge. The 100 by 100 path, stretched to that box, is the placed path to well within a pixel.
+    const lines = run(trend, 346);
+    for (const n of lines.ratio.nodes) if (n.kind === 'path') {
+      const px = numbers((lines.scene.nodes.find((m) => m.key === n.key) as any).d);
+      numbers(n.d!).forEach((v, i) => expect(Math.abs((i % 2 ? 10 + v * 1.52 : 38 + v * 3) - px[i]!), n.key).toBeLessThan(0.01));
+    }
+  });
+  for (const name of Object.keys(samples)) it(`${name}, with no size`, () => expect(unbounded(specs[name]!).ratio).toMatchSnapshot());
+});
+
+describe('y ticks: a deliberate departure from the prototype (dom-painter-plan section 8, decision 3)', () => {
+  // The prototype rounds the y scale to 2 ticks when the plot is under 120 px tall, so its domain changes with the size.
+  // A scene with no size cannot. We always round to 4, rank the ticks, and place() thins them on a short plot.
+  // Under the default rules a plot with axes is never under 120 px, so the sweep does not meet this. A context that allows shorter plots does.
+  const rules = { ...CONTAINER_RULES, axes: { ...CONTAINER_RULES.axes, minHeight: 80 } };
+  const ticks = (scene: { nodes: { key: string }[] }) => scene.nodes.map((n) => n.key).filter((k) => /^(ytick|grid):/.test(k));
+  const short = (spec: Spec) => {
+    const ours = run(spec, 346, 100, 'typical', 'svg', rules);
+    const host0 = { ...proto.makeHost(346, 100, 'svg', 8), rules: { ...proto.HOST_RULES, axes: rules.axes } }, res0 = proto.runQuery(spec.query, 'typical');
+    const plan0 = proto.resolve(toProto(spec), res0, host0);
+    expect(ours.scene.plot).toEqual({ w: 346, h: 100 });
+    expect(plain(ours.plan), 'the plan is still the prototype\'s').toEqual({ ...fromProto(plain(plan0)), preset: ours.plan.preset });
+    return { ...ours, scene0: plain(proto.buildScene(plan0, spec.query, res0, host0)) };
+  };
+  it('on a 100 px plot the prototype draws bars against another scale; ours is the tall plot\'s, thinned', () => {
+    const { ratio, scene, scene0 } = short(specs.layers!), tall = run(specs.layers!, 346);
+    expect(ticks(scene0)).toEqual(['grid:0', 'ytick:0', 'grid:1000', 'ytick:1000', 'grid:2000', 'ytick:2000']);
+    expect(ticks(scene)).toEqual(['grid:0', 'ytick:0', 'grid:1000', 'ytick:1000']);
+    expect(ticks(tall.scene)).toEqual(['grid:0', 'ytick:0', 'grid:500', 'ytick:500', 'grid:1000', 'ytick:1000', 'grid:1500', 'ytick:1500']);
+    expect(ratio).toEqual(tall.ratio);
+    // Nothing off the y scale departs: every placed node with no y in it is the prototype's.
+    const off = (s: any) => s.nodes.filter((n: any) => n.key.startsWith('xtick:'));
+    expect(off(plain(scene))).toEqual(off(scene0));
+  });
+  it('where rounding to 2 and to 4 give one scale, the short plot is still the prototype\'s', () => {
+    const { scene, scene0 } = short(trend);
+    expect(plain(scene)).toEqual(scene0);
   });
 });
 

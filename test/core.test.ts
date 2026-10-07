@@ -5,7 +5,7 @@ import * as d3array from 'd3-array';
 import * as d3scale from 'd3-scale';
 import * as d3shape from 'd3-shape';
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, buildScene, expand, makeContainer, place, resolve, unboundedContainer, type PainterName, type Spec } from '@universal-analytics/core';
+import { CONTAINER_RULES, buildScene, expand, formatDimension, formatValue, makeContainer, partialNote, place, resolve, unboundedContainer, type PainterName, type Spec } from '@universal-analytics/core';
 import catalogSchema from '@universal-analytics/core/schema/catalog.schema.json';
 import viewSchema from '@universal-analytics/core/schema/view.schema.json';
 import { catalog, runQuery, samples, scenarios } from '@universal-analytics/fixtures';
@@ -115,6 +115,17 @@ describe('tldr prose', () => {
     expect(text('total')).toBe('Page views: 25.1k in the last 28 days, up 14% on the previous period.');
     expect(text('live')).toBe('7 people are on the site right now; the busiest page is / (3).');
     expect(text('trend', 'empty')).toBe('No visitors recorded in the last 28 days.');
+  });
+});
+
+describe('what a painter says with: values and dimensions in catalog format', () => {
+  it('a metric by its entry, a day as a date, a category as itself, and the unfinished bucket marked', () => {
+    const V = catalog.metrics.visitors!, rows = runQuery(trend.query).rows, last = rows[rows.length - 1]!;
+    expect([formatValue(1234, V), formatValue(10531, V), formatValue(1234, V, true), formatValue(null, V)]).toEqual(['1,234', '10.5k', '1.2k', '–']);
+    expect(formatDimension('2026-09-08', catalog.dimensions['date.day']!)).toBe('Sep 8');
+    expect(formatDimension('/pricing', catalog.dimensions.page!)).toBe('/pricing');
+    expect(formatDimension(null, catalog.dimensions.page!)).toBe('–');
+    expect([partialNote(rows[0]!), partialNote(last)]).toEqual(['', 'so far']);
   });
 });
 

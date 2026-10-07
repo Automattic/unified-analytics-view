@@ -1,6 +1,6 @@
 import { sum } from 'd3-array';
 import { delta, fmt, fmtPct, rangeLabel } from './format.ts';
-import type { Catalog, Query, Result } from './types.ts';
+import type { Catalog, Query, Result, Row } from './types.ts';
 
 /** The tldr prose: the text sibling of a view, derived from the query and the transforms, not from a named chart type. */
 export function tldrProse(q: Query, result: Result, share: boolean, catalog: Catalog): string {
@@ -29,4 +29,9 @@ export function tldrProse(q: Query, result: Result, share: boolean, catalog: Cat
   s += '.';
   if (M.rangeTotal === 'sum of daily') s += ' This is a sum of daily counts, not unique people.';
   return s;
+}
+
+/** What follows a value from the unfinished bucket, as in "Visitors 175 so far". Empty for a finished one, so it also answers whether the row is partial. */
+export function partialNote(row: Row): string {
+  return row.partial ? 'so far' : '';
 }

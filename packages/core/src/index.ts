@@ -5,5 +5,5 @@ export { PRESETS, expand } from './presets.ts';
 export { resolve } from './plan.ts';
 export { buildScene, roleOf } from './scene.ts';
 export { place } from './place.ts';
-export { tldrProse } from './prose.ts';
-export { rangeLabel } from './format.ts';
+export { partialNote, tldrProse } from './prose.ts';
+export { formatDimension, formatValue, rangeLabel } from './format.ts';

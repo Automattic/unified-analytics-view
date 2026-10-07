@@ -1,4 +1,4 @@
-import type { Polarity } from './types.ts';
+import type { DimensionDef, MetricDef, Polarity, Row } from './types.ts';
 
 const NF = new Intl.NumberFormat('en-US');
 const CF = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
@@ -14,6 +14,15 @@ export function fmtPct(p: number): string {
 }
 export function fmtDay(iso: string): string {
   return new Date(iso + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+}
+/** A metric's value as its catalog entry sets it: what a readout or a table cell says. `compact` is the short form, "10.5k".
+ * ponytail: every unit in the catalog is a count today, so `unit` picks nothing yet. A new unit gets its branch here. */
+export function formatValue(v: number | null | undefined, _metric: MetricDef, compact?: boolean): string {
+  return fmt(v, compact);
+}
+/** A dimension's value as its catalog entry sets it: a day as "Sep 8", a category as itself. */
+export function formatDimension(v: Row[string], dim: DimensionDef): string {
+  return v == null ? '–' : dim.type === 'time' ? fmtDay(String(v)) : String(v);
 }
 export function rangeLabel(r: string | null | undefined): string {
   const m = /^(\d+)d$/.exec(r || '');

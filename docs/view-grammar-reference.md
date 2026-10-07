@@ -305,7 +305,7 @@ A preset is a saved fragment of a spec with two slots, `$by` and `$metric`, fill
 
 This is the heart of the system and the part most in flux.
 
-**Who decides what (decided October 7).** The spec is the seed. An author writes it and decides where it renders; nobody writes a spec for a container. A container fits the view by a rule set. The defaults ship with the design system and have to be good at any size. A context that wants its containers to behave differently passes them its own rule set once, the way it passes them tokens. In the code today that rule set is `CONTAINER_RULES`, carried on each container as `rules`.
+**Who decides what (decided October 7).** The spec is the seed. An author writes it and decides where it renders; nobody writes a spec for a container. A container fits the view by a rule set. The defaults ship with the design system and have to be good at any size. A context that wants its containers to behave differently passes them its own rule set once, the way it passes them tokens. In the code today that rule set is `CONTAINER_RULES`, carried on each container as `rules`; the room each part needs is its `fit` list.
 
 **Intrinsic by default (decided October 7).** A surface lays its containers out by a scheme of its own: a sidebar stacks them, a toolbar sets them small in a row. As containers are added they divide the room by that scheme. A container does not know or care where it is. It fills the room it is handed and renders itself for that room. Nothing in a view or a spec names a surface, a size or a mode.
 
@@ -383,7 +383,7 @@ A sketch, untested. The worked rules are in `docs/dom-painter-plan.md`, section 
 - Top-N plus "other", coarser grain (daily to weekly), and downsampling to pixel resolution. These need new data, not new styles.
 - The tldr prose for an agent, a canvas or dot-grid painter, and a native shell cannot read container queries.
 
-**One source of truth.** Declare the per-element rules as data. Compile them to container queries for browser containers, and evaluate the same rules in code everywhere else. This rule set is what a context passes to its containers. A format is Proposed in `docs/dom-painter-plan.md`, section 2: one declaration per part, naming a container, the room the part needs in width and height, and what is hidden or shown otherwise.
+**One source of truth.** Declare the per-element rules as data. Compile them to container queries for browser containers, and evaluate the same rules in code everywhere else. This rule set is what a context passes to its containers. A format is Proposed in `docs/dom-painter-plan.md`, section 2, and evaluated in code by `packages/core/src/fit.ts`: one declaration per part, naming a container, the room the part needs in width and height, and what is hidden or shown otherwise.
 
 ### 10.3 Constraints to design around
 
@@ -592,7 +592,7 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 
 ### Open
 
-1. The format for per-element fit rules, such that they compile to container queries and also run in code. Now Proposed in `docs/dom-painter-plan.md`, section 2; it stays here until step 1 of that plan shows it holds.
+1. The format for per-element fit rules, such that they compile to container queries and also run in code. Proposed in `docs/dom-painter-plan.md`, section 2. Step 1 of that plan built it (`packages/core/src/fit.ts`) and it holds for running in code: `resolve()` reads the rules with no change to any plan. It stays here until the rules are compiled, and until the differences step 1 found are settled: the view's block needs when the number sits above the plot, and what `keep` means to a compiled rule.
 2. Settled October 7: see Decided 20. The number is kept so later items keep theirs.
 3. How a preset pins a hand-tuned form.
 4. Generalizing the three hard-coded layouts.

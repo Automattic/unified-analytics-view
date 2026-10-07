@@ -65,7 +65,15 @@ The trend view's rules, carrying today's thresholds over unchanged:
 
 **Height on the view.** A view in a row or a tile is handed a height as well as a width, so the `view` rules carry a `block` need too: 120 px for a plot with axes and 46 px for a bare one, both from `CONTAINER_RULES`. A view that takes its natural height is a width-only container, where a `block-size` query is unknown and never matches, so the same compiled rules serve both. Step 1's sweep checks that these numbers reproduce what `resolve()` does under its six height limits; if they do not, that is reported, not tuned quietly.
 
-**Evaluated** (by `packages/core`): `applies(rule, { view, plot }) → boolean`. `resolve()` uses it in place of the numbers now in `CONTAINER_RULES`, and reports what was dropped exactly as it does today.
+**Evaluated** (by `packages/core`): `applies(rule, { view, plot }) → boolean`, true when the container is short of the room. Built in step 1: the rules are `FIT_RULES` in `packages/core/src/fit.ts`, carried as `rules.fit`, and `resolve()` reads them in place of the thresholds that were in `CONTAINER_RULES`. It reports what was dropped exactly as before.
+
+**What step 1 found** (`test/fit.test.ts` holds each of these):
+
+- Over the sweep, no rule hides what `resolve()` keeps, and the `secondary` and `mid-tick` rules say exactly what it does.
+- The 120 px block need does not reproduce `resolve()` when the number sits above the plot. The number takes 92 px of the view (114 in the dot face), so the axes go under 212 px, not 120. In the sweep this is the trend in a context that always shows the number, at 160 px tall. Not tuned; to settle.
+- The 46 px block need holds at the six heights, but a bare plot beside a number with a delta is 50 px tall (54 in the dot face), so the two differ between 46 and 49 px. Not tuned; to settle.
+- `keep` means different things in the two evaluators. In `resolve()` a kept step is skipped and the next one is tried, so a trend that keeps its guides gives up all its marks under 280 px wide or 120 px tall. A compiled rule is only switched off, so the axes and marks both stay.
+- `resolve()` still measures what a rule cannot say. They are added to the table below.
 
 What makes this work is that the rules chain through layout, as the central reducer's steps do. Dropping the axes puts the number beside the plot, the plot gets narrower, and the plot's own query then drops the comparison. Nobody wrote "under 280 px, also drop the comparison".
 
@@ -77,6 +85,9 @@ What makes this work is that the rules chain through layout, as the central redu
 | Tick labels colliding | CSS cannot see collisions | Measured pass |
 | Top-N, coarser grain | Needs different data | The resolver, and a re-query |
 | Which rows fit under a height limit | Countable in CSS only by a trick | See below |
+| A bare plot beside a number wider than 76 px (found in step 1) | The `marks` need of 152 px allows the number 76 px; the dot face sets "10.5k" in 116 | Measured in `resolve()`; in the DOM the number is a content-sized track, so a `plot` query could say it |
+| A bar list's width (found in step 1) | The rule holds the label's 90 px; the widest value's room depends on the data | Measured in `resolve()`; in the DOM the value is a content-sized track |
+| A full legend, or a number above rows, under a height limit (found in step 1) | The height needed depends on how many segments or lines there are | The scene's height, in `resolve()`; open for the DOM |
 
 Rows under a height limit: a column flex container with `flex-wrap: wrap` and `overflow: hidden` clips whole rows that do not fit, with no script. I propose using it and reporting the count through the measured pass when something needs to know.
 

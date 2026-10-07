@@ -46,7 +46,7 @@ export const band: LayoutPainter = {
   paint(body, scene) {
     const rows = scene.rows ?? [], nodes = (part: string) => scene.nodes.filter((n) => n.part === part);
     const segs = ensure(body, 'div', 'vg-band'), legend = ensure(body, 'div', 'vg-legend'), top = ensure(body, 'div', 'vg-legend-top');
-    segs.setAttribute('aria-hidden', 'true');
+    segs.setAttribute('data-hits', 'x');                                     // each segment is its own hit target
     prop(body, '--vg-rows', rows.length);
     // A kept element is never moved, so a segment that enters between two others is put in its place by `order`.
     const place = (el: HTMLElement | SVGElement, n: SceneNode) => prop(el, 'order', n.row == null ? null : rows.indexOf(n.row));

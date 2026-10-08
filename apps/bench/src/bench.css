@@ -51,15 +51,8 @@ h2 small { font-weight: 400; }
  * so a view looks here as it will where it is inserted. Its extent shows on hover; drag its corner. */
 .frame { min-inline-size: 40px; max-inline-size: 100%; resize: horizontal; overflow: hidden; }
 .cell:hover > .frame { outline: 1px dashed var(--ua-color-border); }
-.frame svg { display: block; font-family: inherit; }
 .meta { inline-size: 0; min-inline-size: 100%; margin: var(--ua-space-xs) 0 0; font-size: 11px; color: var(--ua-color-muted-foreground); overflow-wrap: anywhere; }
 .meta.error { color: var(--ua-color-destructive-text); }
-
-.f-tick { font-size: 11px; }
-.f-label { font-size: 13px; }
-.f-value { font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; }
-.f-display { font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
-.halo { paint-order: stroke; stroke: var(--ua-color-background); stroke-width: 3px; }
 
 nav { display: flex; gap: var(--ua-space-s); margin-block-end: var(--ua-space-xs); }
 nav a { color: var(--ua-color-muted-foreground); text-decoration: none; }

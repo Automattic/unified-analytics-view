@@ -44,6 +44,8 @@ export function tldrProse(q: Query, result: Result, share: boolean, catalog: Cat
       s += d.pct != null ? ', ' + (d.pct > 0 ? 'up ' : 'down ') + fmtPct(Math.abs(d.pct)) + ' on the previous period'
          : d.state === 'flat' ? ', level with the previous period' : ', with no prior period to compare';
     }
+    // Against its target, where the catalog gives it one: what a gauge shows.
+    if (M.target && t[m] != null) s += ', ' + fmtPct(t[m]! / M.target) + ' of its target of ' + fmt(M.target);
     s += '.';
     if (M.rangeTotal === 'sum of daily') s += ' This is a sum of daily counts, not unique people.';
     return s;

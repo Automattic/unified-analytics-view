@@ -5,6 +5,6 @@ export { PRESETS, expand } from './presets.ts';
 export { resolve } from './plan.ts';
 export { buildScene, roleOf } from './scene.ts';
 export { place } from './place.ts';
-export { pathD, type PathBox } from './path.ts';
+export { arcD, pathD, type PathBox } from './path.ts';
 export { partialNote, tldrProse } from './prose.ts';
 export { formatDimension, formatValue, rangeLabel } from './format.ts';

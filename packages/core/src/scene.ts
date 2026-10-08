@@ -1,9 +1,9 @@
 import { max, min } from 'd3-array';
 import { scaleBand, scaleLinear, scalePoint } from 'd3-scale';
 import { CHAR_W, delta, fmt, fmtDay, fmtPct } from './format.ts';
-import { pathD } from './path.ts';
+import { arcD, pathD } from './path.ts';
 import { leader } from './prose.ts';
-import type { Catalog, Guides, Layer, Mark, Part, PathNode, PlanShape, Query, Result, Role, Row, Scene, SceneNode } from './types.ts';
+import type { ArcNode, Catalog, Guides, Layer, Mark, Part, PathNode, PlanShape, Query, Result, Role, Row, Scene, SceneNode } from './types.ts';
 
 /* Node kinds: rect, path, line, circle, text. Every node has a stable key,
  * a part, a paint token (never a colour) and a layer: "data" or "guide".
@@ -260,15 +260,73 @@ function sceneBand(layer: Layer, rows: Row[], totals: Result['totals']): Body {
   rows.forEach((r, i) => {
     nodes.push({ key: 'seg:' + k(r), part: 'band', kind: 'rect', v: num(r, m) / total, row: k(r), paint: 'series.' + ((i % 6) + 1), layer: 'data', role: roleOf(layer) });
   });
-  // Both legends, each in its own part. The plan names one in `parts`; a fit rule swaps them.
+  return { nodes: nodes.concat(shareLegend(rows, k, m, total, (i) => 'series.' + ((i % 6) + 1))), rows: rows.map(k) };
+}
+// The legends of a whole split by colour, for a band and for a circle of arcs: both of them, each in its own part.
+// The plan names one in `parts`; a fit rule swaps them.
+function shareLegend(rows: Row[], k: (r: Row) => string, m: string, total: number, paint: (i: number) => string): SceneNode[] {
+  const nodes: SceneNode[] = [];
   rows.forEach((r, i) => {
-    nodes.push({ key: 'swatch:' + k(r), part: 'legend', kind: 'rect', row: k(r), paint: 'series.' + ((i % 6) + 1), layer: 'data' });
+    nodes.push({ key: 'swatch:' + k(r), part: 'legend', kind: 'rect', row: k(r), paint: paint(i), layer: 'data' });
     nodes.push({ key: 'legend:' + k(r), part: 'legend', kind: 'text', row: k(r), text: String(k(r)), anchor: 'start', baseline: 'middle', font: 'label', paint: 'ink', layer: 'guide' });
     nodes.push({ key: 'share:' + k(r), part: 'legend', kind: 'text', row: k(r), text: fmtPct(num(r, m) / total), anchor: 'end', baseline: 'middle', font: 'value', paint: 'ink', layer: 'guide' });
   });
-  // One line for the whole band, so it names no row.
+  // One line for the whole of it, so it names no row.
   if (rows.length) nodes.push({ key: 'legend:top', part: 'legend-top', kind: 'text', text: k(rows[0]!) + ' ' + fmtPct(num(rows[0]!, m) / total), anchor: 'start', font: 'label', paint: 'ink', layer: 'guide' });
-  return { nodes, rows: rows.map(k) };
+  return nodes;
+}
+
+const GAP = 0.004;    // turns between one segment and the next
+const MARK = 0.004;   // turns to either side of a value that is marked on the circle, and not swept to
+/** The inner radius from which a circle of arcs has a hole the number sits in. */
+export const HOLE = 0.5;
+
+// A metric on angle: arcs about one centre. No positional dimension and no general polar coordinates.
+// With a dimension on color a layer is a segment per row, each its share of the engine's total, so with a `limit` the
+// circle stops short of closing, as a band stops short of its end. With none it reads the metric against its catalog
+// `domain`: its total swept from the start, or, as a `reference`, its `target` marked. A constant on angle is marked the
+// same way. A layer with nothing on angle is the whole sweep: the range behind the value.
+function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result): Body & Pick<Scene, 'aspect'> {
+  const half = layers.some((l) => l.sweep === 'half'), from = half ? -0.25 : 0, span = half ? 0.5 : 1;
+  const ids = layerKeys(layers), arcs: ArcNode[] = [], legend: SceneNode[] = [];
+  let keys: string[] | undefined;
+  const arc = (key: string, l: Layer, lo: number, hi: number, r0: number, paint: string, more?: Partial<ArcNode>): ArcNode => {
+    const a = { a0: from + lo * span, a1: from + hi * span, r0, r1: 1 };
+    return { key, part: 'radial', kind: 'arc', ...a, d: arcD(a), paint, layer: 'data', role: roleOf(l), ...more };
+  };
+  layers.forEach((l, i) => {
+    const enc = l.encode || {}, angle = enc.angle, r0 = enc.radius ?? 0, n = 'Layer ' + (i + 1);
+    if (l.mark !== 'arc') throw new Error('The "' + l.mark + '" mark has no rule about a centre yet. Use arc, or take "angle" off the other layers.');
+    if (typeof r0 !== 'number' || !(r0 >= 0 && r0 < 1)) throw new Error(n + ' has ' + JSON.stringify(r0) + ' on radius. It takes a number from 0 up to 1: the inner radius, as a share of the outer. 0.6 makes a donut.');
+    if (isDim(catalog, enc.color)) {
+      const m = angle as string, dim = enc.color, rows = result.rows, total = result.totals[m] || 1, k = (r: Row) => r[dim] as string;
+      if (!(m in catalog.metrics)) throw new Error(n + ' splits by "' + dim + '" with ' + JSON.stringify(angle) + ' on angle. Put a metric on angle: each segment is its share of that metric\'s total.');
+      if (keys) throw new Error(n + ' is a second layer split by color, and a circle is divided once. Remove one of them.');
+      if (rows.length > SERIES) throw new Error('Splitting by "' + dim + '" makes ' + rows.length + ' segments, and there are ' + SERIES + ' series colours. Add "limit": ' + SERIES + ' to the query, or less.');
+      // Each segment starts where the one before it ends, a hair apart.
+      let run = 0;
+      rows.forEach((r, j) => {
+        const lo = run / total, hi = (run += num(r, m)) / total;
+        arcs.push(arc(ids[i] + ':' + k(r), l, lo, Math.max(lo, hi - (rows.length > 1 ? GAP / span : 0)), r0, 'series.' + (j + 1), { row: k(r) }));
+      });
+      legend.push(...shareLegend(rows, k, m, total, (j) => 'series.' + (j + 1)));
+      keys = rows.map(k);
+      return;
+    }
+    if (angle == null) return arcs.push(arc(ids[i]!, l, 0, 1, r0, l.paint || 'series.1', { opacity: 0.14 }));
+    const marked = typeof angle === 'number' || roleOf(l) === 'reference', m = typeof angle === 'number' ? q.metrics[0]! : angle, M = catalog.metrics[m];
+    if (!M) throw new Error(n + ' has "' + m + '" on angle, which is not a metric. Put a metric on angle, and a dimension on color.');
+    if (!M.domain) throw new Error(n + ' reads "' + m + '" against a range, and the catalog gives that metric no "domain". Add "domain": [least, most] to it in the catalog, or encode a dimension on color to divide the circle by it.');
+    const v = typeof angle === 'number' ? angle : marked ? M.target : result.totals[m], [least, most] = M.domain;
+    if (v == null) return;                                                   // no target to mark, or no total to sweep to
+    const at = Math.min(1, Math.max(0, (v - least) / (most - least || 1)));
+    // ponytail: a mark is a thin arc, since there is no `tick` mark to draw it with yet (chart-coverage-plan, step 3).
+    arcs.push(marked ? arc(ids[i]!, l, Math.max(0, at - MARK / span), Math.min(1, at + MARK / span), r0, l.paint || 'rule') : arc(ids[i]!, l, 0, at, r0, l.paint || 'series.1'));
+  });
+  // The number sits in the hole of a donut: the short form, which is what fits. Whether it shows is a fit rule's to say.
+  const inner = arcs.filter((a) => a.role === 'primary').map((a) => a.r0), nodes: SceneNode[] = arcs;
+  if (inner.length && Math.min(...inner) >= HOLE) nodes.push({ key: 'hole', part: 'hole', kind: 'text', text: tldrValueText(catalog, q, result, true), anchor: 'middle', font: 'display', paint: 'ink', layer: 'data' });
+  return { nodes: nodes.concat(legend), ...(keys && { rows: keys }), aspect: half ? 2 : 1 };
 }
 
 /** The value shown as the number, formatted. */
@@ -292,7 +350,7 @@ function sceneNumber(catalog: Catalog, q: Query, result: Result, share: boolean)
     return nodes;
   }
   if (result.meta.empty) { value('0'); sub('No visits yet'); return nodes; }
-  let note: string | null = M.rangeTotal === 'sum of daily' ? 'Sum of daily counts' : null;
+  let note: string | null = M.rangeTotal === 'sum of daily' ? 'Sum of daily counts' : M.target != null ? 'Target ' + fmt(M.target) : null;
   if (by && catalog.dimensions[by]!.type !== 'time' && rows.length) {
     const top = leader(result, by, m)!;                                      // with two dimensions a row is a pair, so the leader is the engine's
     note = share ? top[by] + ' ' + fmtPct(num(top, m) / (t[m] || 1)) : 'Top: ' + top[by];
@@ -331,6 +389,12 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
     parts.push('band');
     if (p.guides.legend) parts.push(p.guides.legend === 'top' ? 'legend-top' : 'legend');
     body = sceneBand(p.layers[0]!, result.rows, result.totals);
+  } else if (p.layout === 'radial') {
+    body = sceneRadial(catalog, p.layers, q, result);
+    parts.push('radial');
+    // A number above the circle is not said again inside it.
+    if (!parts.includes('number') && body.nodes.some((n) => n.part === 'hole')) parts.push('hole');
+    if (p.guides.legend) parts.push(p.guides.legend === 'top' ? 'legend-top' : 'legend');
   }
   return { layout: p.layout, parts, ...(side && { side }), ...body, nodes: number.concat(body.nodes) };
 }

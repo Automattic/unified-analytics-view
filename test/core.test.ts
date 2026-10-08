@@ -47,7 +47,7 @@ const specs: Record<string, Spec> = {
   kept: { ...trend, keep: ['guides'] },
 };
 const invalid: Record<string, Spec> = {
-  'unknown preset': { spec: 'view/0', use: 'donut', query: { metrics: ['visitors'], by: ['channel'] } },
+  'unknown preset': { spec: 'view/0', use: 'treemap', query: { metrics: ['visitors'], by: ['channel'] } },
   'dimension, no layers': { spec: 'view/0', query: { metrics: ['visitors'], by: ['channel'] } },
   'preset, no dimension': { spec: 'view/0', use: 'line', query: { metrics: ['visitors'] } },
 };
@@ -211,8 +211,8 @@ describe('fitting the container (reference section 10.1)', () => {
 describe('validation', () => {
   it('names the fix', () => {
     const err = (s: Spec) => { try { resolve(s, runQuery(s.query), makeContainer(346), catalog); } catch (e) { return (e as Error).message; } };
-    expect(err(invalid['unknown preset']!)).toBe('Unknown preset "donut". The library has: line, bar-list, share-bar, grouped-bar, stacked-bar, stacked-area.');
-    expect(err(invalid['dimension, no layers']!)).toBe('This spec has a dimension but no layers, so there is nothing to draw it with. Add "layers", or "use" one of: line, bar-list, share-bar, grouped-bar, stacked-bar, stacked-area.');
+    expect(err(invalid['unknown preset']!)).toBe('Unknown preset "treemap". The library has: line, bar-list, share-bar, grouped-bar, stacked-bar, stacked-area, pie, donut, pie-semi-circle, gauge.');
+    expect(err(invalid['dimension, no layers']!)).toBe('This spec has a dimension but no layers, so there is nothing to draw it with. Add "layers", or "use" one of: line, bar-list, share-bar, grouped-bar, stacked-bar, stacked-area, pie, donut, pie-semi-circle, gauge.');
     expect(err(invalid['preset, no dimension']!)).toBe('The "line" preset needs a dimension in query.by.');
     expect(err({ query: { metrics: ['pageviews'], by: ['page'] }, layers: [{ mark: 'bar', encode: { y: 'page', x: 'visitors' } }] }))
       .toBe('Layer 1 encodes "visitors" on x, which the query does not return. It returns: page, pageviews.');

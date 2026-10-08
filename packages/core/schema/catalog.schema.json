@@ -18,7 +18,10 @@
           "unit": { "type": "string" },
           "polarity": { "enum": ["up", "down", "none"], "description": "Whether an increase is good. Drives delta colour." },
           "rangeTotal": { "enum": ["sum", "sum of daily"], "description": "How the engine forms a total over a range." },
-          "instant": { "type": "boolean", "description": "No range and no prior period, such as people present now." }
+          "instant": { "type": "boolean", "description": "No range and no prior period, such as people present now." },
+          "domain": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2, "description": "The range a value is read against, least then most: the two ends of a gauge." },
+          "target": { "type": "number", "description": "The value to reach." },
+          "bands": { "type": "array", "items": { "type": "number" }, "description": "Where the domain is divided, in ascending order: each is where one band ends and the next begins." }
         }
       }
     },

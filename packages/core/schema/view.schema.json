@@ -26,8 +26,8 @@
       "then": { "anyOf": [{ "required": ["use"] }, { "required": ["layers"] }] }
     },
     {
-      "description": "A preset needs a dimension in query.by.",
-      "if": { "required": ["use"] },
+      "description": "A preset needs a dimension in query.by. The gauge takes none: it reads a metric against its catalog domain.",
+      "if": { "required": ["use"], "properties": { "use": { "not": { "const": "gauge" } } } },
       "then": { "properties": { "query": { "type": "object", "required": ["by"], "properties": { "by": { "type": "array", "minItems": 1 } } } } }
     }
   ],
@@ -50,7 +50,7 @@
       "required": ["mark"],
       "additionalProperties": false,
       "properties": {
-        "mark": { "enum": ["line", "area", "bar", "rule", "text"] },
+        "mark": { "enum": ["line", "area", "bar", "rule", "text", "arc"] },
         "encode": {
           "type": "object",
           "additionalProperties": false,
@@ -58,12 +58,15 @@
             "x": { "$ref": "#/definitions/field" },
             "y": { "$ref": "#/definitions/field" },
             "color": { "$ref": "#/definitions/field" },
-            "text": { "$ref": "#/definitions/field" }
+            "text": { "$ref": "#/definitions/field" },
+            "angle": { "$ref": "#/definitions/field", "description": "For an arc: a metric. With a dimension on color each segment is its share of the total. With none the metric is read against its catalog domain." },
+            "radius": { "type": "number", "minimum": 0, "exclusiveMaximum": 1, "description": "For an arc: the inner radius, as a share of the outer. 0.6 makes a donut." }
           }
         },
         "series": { "const": "previous", "description": "Draw the comparison companion of the metric." },
         "role": { "enum": ["primary", "comparison", "reference", "context"] },
         "stack": { "enum": ["zero", "normalize", "center"], "description": "On a layer split by color: each series starts where the one under it ends. \"normalize\" makes each a share of the whole, and \"center\" sets each stack half on either side of zero. A bar split by color with no stack sits beside its neighbours." },
+        "sweep": { "const": "half", "description": "On an arc: the arcs run over the top half of the circle and not all the way round. The one layer field that is neither data nor role." },
         "label": { "type": "string", "description": "Text for a rule." },
         "align": { "const": "end" },
         "paint": { "type": "string", "description": "A paint token, never a colour." }

@@ -9,6 +9,7 @@ export const catalog: Catalog = {
     present:   { label: 'Present now', unit: 'count', polarity: 'none', instant: true },
     net_subscribers: { label: 'Net subscribers', unit: 'count', polarity: 'up', rangeTotal: 'sum' },
     revenue:   { label: 'Revenue',     unit: 'usd',   polarity: 'up',   rangeTotal: 'sum' },
+    signups:   { label: 'Sign-ups',    unit: 'count', polarity: 'up',   rangeTotal: 'sum', domain: [0, 500], target: 400, bands: [200, 400] },
   },
   dimensions: {
     'date.day': { label: 'Day',     type: 'time' },
@@ -28,11 +29,11 @@ function seeded(seed: number) {
 }
 type Counts = { visitors: number; pageviews: number };
 /** What a day has and a page does not: sign-ups less cancellations, which falls below zero, and takings, in another unit. */
-type Daily = Counts & { net_subscribers: number; revenue: number };
+type Daily = Counts & { net_subscribers: number; revenue: number; signups: number };
 const DAY = 86400000, TODAY = Date.UTC(2026, 9, 5);
 const DAILY = (function () {
   // The first is the prototype's, drawn from in its order. What the prototype does not know draws from the second.
-  const rand = seeded(11), more = seeded(23), spend = seeded(37);
+  const rand = seeded(11), more = seeded(23), spend = seeded(37), join = seeded(41);
   return Array.from({ length: 56 }, function (_, i) {
     const t = TODAY - (55 - i) * DAY, dow = new Date(t).getUTCDay();
     const season = [0.72, 1.06, 1.12, 1.1, 1.04, 0.96, 0.7][dow]!;
@@ -43,7 +44,8 @@ const DAILY = (function () {
     if (partial) { visitors = Math.round(visitors * 0.42); pageviews = Math.round(pageviews * 0.42); }
     const net_subscribers = Math.round((more() - 0.45) * 40 * (partial ? 0.42 : 1));
     const revenue = Math.round(visitors * (4 + spend() * 4));
-    return { iso: new Date(t).toISOString().slice(0, 10), visitors, pageviews, net_subscribers, revenue, partial };
+    const signups = Math.round(visitors * (0.02 + join() * 0.02));
+    return { iso: new Date(t).toISOString().slice(0, 10), visitors, pageviews, net_subscribers, revenue, signups, partial };
   });
 })();
 const PAGES: (Counts & { page: string; prev: Counts | null })[] = [
@@ -179,4 +181,8 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
   dual:    { label: 'Two units: visitors and revenue by day', spec: { spec: 'view/0', title: 'Visitors and revenue', query: { metrics: ['visitors', 'revenue'], by: ['date.day'], range: '28d' },
             layers: [{ mark: 'bar', encode: { x: 'date.day', y: 'visitors' } }, { mark: 'line', encode: { x: 'date.day', y: 'revenue' }, paint: 'series.2' }] } },
   area:    { label: 'Stacked areas: page views by day and channel', spec: { spec: 'view/0', title: 'Page views by channel', use: 'stacked-area', query: { metrics: ['pageviews'], by: ['date.day', 'channel'], range: '28d' } } },
+  donut:   { label: 'A donut: device share', spec: { spec: 'view/0', title: 'Devices', use: 'donut', query: { metrics: ['visitors'], by: ['device'], range: '28d' } } },
+  pie:     { label: 'A pie: channel mix', spec: { spec: 'view/0', title: 'Channels', use: 'pie', query: { metrics: ['visitors'], by: ['channel'], range: '28d' } } },
+  half:    { label: 'A half circle: page views by device', spec: { spec: 'view/0', title: 'Page views by device', use: 'pie-semi-circle', query: { metrics: ['pageviews'], by: ['device'], range: '28d' } } },
+  gauge:   { label: 'A gauge: sign-ups against a target', spec: { spec: 'view/0', title: 'Sign-ups', use: 'gauge', query: { metrics: ['signups'], range: '28d' } } },
 };

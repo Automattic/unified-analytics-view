@@ -21,6 +21,10 @@ describe('token output', () => {
     expect(light).toContain('--ua-color-surface-card: var(--ua-color-neutral-100);');
     expect(dark).toContain('--ua-color-surface-card: var(--ua-color-neutral-300);');
     expect(dark).toContain('--ua-color-card: var(--ua-color-surface-card);');
+    // The sequential ramp is named by step number; no data is a neutral of its own, not the lowest step.
+    for (const n of [1, 2, 3, 4, 5, 6, 7]) expect(light).toContain(`--ua-color-seq-${n}: var(--ua-color-seq-${n}00);`);
+    expect(light).toContain('--ua-color-seq-none: var(--ua-color-neutral-400);');
+    expect(dark).toContain('--ua-color-seq-none: var(--ua-color-neutral-500);');
     expect(light).toContain('--ua-spacing-4: var(--ua-space-s);');
     expect(dark).not.toContain('--ua-spacing-4');
   });

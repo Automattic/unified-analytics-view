@@ -53,6 +53,9 @@
     "live": {
       "$value": "{color.lime.1000}"
     },
+    "seq-none": {
+      "$value": "{color.neutral.500}"
+    },
     "switch-thumb-off": {
       "$value": "{color.neutral.1000}"
     },

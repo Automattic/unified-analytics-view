@@ -1,7 +1,7 @@
 {
   "color": {
     "$type": "color",
-    "$description": "Spacefast's colour variables, by their names, as aliases into our ramps. Values here are the light theme; common.dark.tokens.json holds only the tokens that sit on a different step in dark. Translucent tokens are a color-mix() of another token, a deliberate deviation from the DTCG colour type so the alpha survives aliasing.",
+    "$description": "Spacefast's colour variables, by their names, as aliases into our ramps. Values here are the light theme; common.dark.tokens.json holds only the tokens that sit on a different step in dark. Translucent tokens are a color-mix() of another token, a deliberate deviation from the DTCG colour type so the alpha survives aliasing. The seq-* names are ours, not Spacefast's: the sequential ramp by step number, lowest value first, and seq-none for a cell with no data, which is not a step.",
     "background": {
       "$value": "{color.surface.page}"
     },
@@ -103,6 +103,30 @@
     },
     "live": {
       "$value": "{color.lime.700}"
+    },
+    "seq-1": {
+      "$value": "{color.seq.100}"
+    },
+    "seq-2": {
+      "$value": "{color.seq.200}"
+    },
+    "seq-3": {
+      "$value": "{color.seq.300}"
+    },
+    "seq-4": {
+      "$value": "{color.seq.400}"
+    },
+    "seq-5": {
+      "$value": "{color.seq.500}"
+    },
+    "seq-6": {
+      "$value": "{color.seq.600}"
+    },
+    "seq-7": {
+      "$value": "{color.seq.700}"
+    },
+    "seq-none": {
+      "$value": "{color.neutral.400}"
     },
     "switch-thumb-on": {
       "$value": "{color.neutral.200}"

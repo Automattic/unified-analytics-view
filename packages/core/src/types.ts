@@ -56,7 +56,8 @@ export interface Guides {
   x?: boolean;
   y?: boolean;
   grid?: boolean;
-  legend?: 'full' | 'top';
+  /** On a band, `top` is the largest segment's label. On a split plot, `labels` is a label at the end of each line. */
+  legend?: 'full' | 'top' | 'labels';
 }
 export interface Spec {
   spec?: string;
@@ -122,7 +123,7 @@ export interface Plan extends PlanShape {
 /* Scene: a flat list of shapes with stable keys and paint tokens, in ratios.
  * Every node names its part, and its coordinates run 0 to 1 within that part's
  * box. A scene needs no size to exist. Pixel painters get theirs from place(). */
-export type Part = 'number' | 'plot' | 'x-axis' | 'y-axis' | 'rows' | 'band' | 'legend' | 'legend-top' | 'notice';
+export type Part = 'number' | 'plot' | 'x-axis' | 'y-axis' | 'labels' | 'rows' | 'band' | 'legend' | 'legend-top' | 'notice';
 interface NodeBase {
   key: string;
   part: Part;
@@ -153,7 +154,7 @@ export interface PathNode extends NodeBase {
 /** A line across the plot at height `t`. */
 export interface LineNode extends NodeBase { kind: 'line'; t: number; width?: number; dash?: string }
 export interface CircleNode extends NodeBase { kind: 'circle'; pulse: boolean }
-/** Text in the number, rows, legend and notice parts is set in order and carries no position. */
+/** Text in the number, rows, legend and notice parts is set in order and carries no position. In `labels` it sits beside the plot at height `t`. */
 export interface TextNode extends NodeBase {
   kind: 'text';
   text: string;
@@ -170,7 +171,8 @@ export type SceneNode = RectNode | PathNode | LineNode | CircleNode | TextNode;
 export interface Scene {
   layout: Layout;
   /** The parts the plan shows. The number's nodes are in the scene either way, so a fit rule can show it in compensation.
-   * So are both forms of a band's legend, `legend` and `legend-top`, so a rule can swap them. place() draws only the parts named here. */
+   * So are both forms of a band's legend, `legend` and `legend-top`, and of a split plot's, `legend` and `labels`, so a rule can swap them.
+   * place() draws only the parts named here. */
   parts: Part[];
   /** The number sits beside a bare plot. */
   side?: boolean;

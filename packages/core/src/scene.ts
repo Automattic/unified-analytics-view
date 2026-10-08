@@ -82,6 +82,11 @@ const PLOT_MARKS: Partial<Record<Mark, MarkFn>> = { line: path, area: path, bar,
 export function xDimOf(catalog: Catalog, layers: Layer[]): string | undefined {
   return layers.map((l) => l.encode && l.encode.x).find((f) => isDim(catalog, f)) as string | undefined;
 }
+/** Whether a plot's layers are split into series, and whether one of those is a line or an area, which has an end to label. */
+export function seriesOf(catalog: Catalog, layers: Layer[]): { lines: boolean } | null {
+  const x = xDimOf(catalog, layers), split = layers.filter((l) => splitOf(catalog, l, x));
+  return split.length ? { lines: split.some((l) => l.mark === 'line' || l.mark === 'area') } : null;
+}
 /** The dimension a layer in a plot is split into series by: the one on `color`, unless it is the one on x. */
 export function splitOf(catalog: Catalog, l: Layer, xField?: string): string | null {
   const c = l.encode && l.encode.color;
@@ -138,6 +143,20 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     if (!splitOf(catalog, l, xField)) return nodes.push(...draw(l, d));
     series.forEach((s, j) => nodes.push(...draw(l, { ...d, series: s, paint: prev ? d.paint : 'series.' + (j + 1), rows: rows.filter((r) => r[split!] === s) })));
   });
+  if (split) {
+    // Both keys to the series, each in its own part, as a band has. The plan names one in `parts`; a fit rule swaps them.
+    // A label sits beside the plot at the height its line ends. ponytail: two lines that end close have labels that
+    // collide. Nothing moves them apart yet (reference, Open 5).
+    const ends = new Map<string, number>();
+    nodes.forEach((n) => { if (n.kind === 'path' && n.series != null && n.points.length) ends.set(n.series, n.points[n.points.length - 1]!.v); });
+    series.forEach((s, j) => {
+      if (ends.has(s)) nodes.push({ key: 'label:' + s, part: 'labels', kind: 'text', series: s, t: ends.get(s)!, text: s, anchor: 'start', baseline: 'middle', font: 'tick', paint: 'series.' + (j + 1), layer: 'guide' });
+    });
+    series.forEach((s, j) => {
+      nodes.push({ key: 'swatch:' + s, part: 'legend', kind: 'rect', series: s, paint: 'series.' + (j + 1), layer: 'data' });
+      nodes.push({ key: 'legend:' + s, part: 'legend', kind: 'text', series: s, text: s, anchor: 'start', baseline: 'middle', font: 'label', paint: 'ink', layer: 'guide' });
+    });
+  }
   return { nodes, rows: keys, ...(split && { series }), scale };
 }
 
@@ -237,10 +256,13 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
   } else if (p.layout === 'cartesian') {
     side = p.side;                                                          // a bare plot, set beside the number
     if (side && !parts.length) parts.push('number');
+    body = sceneCartesian(catalog, p.layers, p.guides, result);
+    const key = body.series ? p.guides.legend : undefined;                 // layers that were split may have been given up
     if (p.guides.y) parts.push('y-axis');
     parts.push('plot');
+    if (key === 'labels') parts.push('labels');
     if (p.guides.x) parts.push('x-axis');
-    body = sceneCartesian(catalog, p.layers, p.guides, result);
+    if (key === 'full') parts.push('legend');
   } else if (p.layout === 'rows') {
     parts.push('rows');
     body = sceneRows(catalog, p.layers, result.rows.slice(0, p.rowLimit || result.rows.length));

@@ -156,3 +156,10 @@ export const samples: Record<string, { label: string; spec: Spec }> = {
   layers: { label: 'Written as layers: bars and a target', spec: { spec: 'view/0', title: 'Daily page views', query: { metrics: ['pageviews'], by: ['date.day'], range: '28d' },
             layers: [{ mark: 'bar', encode: { x: 'date.day', y: 'pageviews' } }, { mark: 'rule', encode: { y: 1000 }, label: 'Target 1,000', role: 'reference' }] } },
 };
+
+/* Samples the prototype does not know (docs/chart-coverage-plan.md). The parity sweep is held to `samples` and never
+ * meets these. They have a sweep and golden scenes of their own, in test/coverage.test.ts. */
+export const moreSamples: Record<string, { label: string; spec: Spec }> = {
+  series: { label: 'Three series: visitors by device', spec: { spec: 'view/0', title: 'Visitors by device', query: { metrics: ['visitors'], by: ['date.day', 'device'], range: '28d' },
+            layers: [{ mark: 'line', encode: { x: 'date.day', y: 'visitors', color: 'device' } }] } },
+};

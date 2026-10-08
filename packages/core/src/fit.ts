@@ -29,6 +29,10 @@ export interface Room { inline: number; block?: number | null }
 export const FIT_RULES: FitRule[] = [
   { id: 'axes',      layout: 'cartesian', container: 'view', needs: { inline: 280, block: 120 },      // a plot with axes
     hide: ['x-axis', 'y-axis', 'grid'], show: ['number'], set: { arrange: 'side' }, keep: 'guides' },
+  { id: 'legend',    layout: 'cartesian', container: 'view', needs: { inline: 320, block: 180 },      // a split plot's legend becomes a label at the end of each line
+    hide: ['legend'], show: ['labels'], keep: 'guides' },
+  { id: 'labels',    layout: 'cartesian', container: 'view', needs: { inline: 280, block: 120 },      // and those go when the axes do
+    hide: ['labels'], keep: 'guides' },
   { id: 'mid-tick',  layout: 'cartesian', container: 'view', needs: { inline: 380 }, hide: ['x-tick.mid'] },
   { id: 'secondary', layout: 'cartesian', container: 'plot', needs: { inline: 180, block: 90 },       // comparison and reference layers stay legible above this
     hide: ['role:comparison', 'role:reference', 'role:context'], keep: 'secondary' },

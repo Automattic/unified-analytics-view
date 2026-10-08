@@ -24,7 +24,9 @@ const rule = (layout: string, id: string) => FIT_RULES.find((r) => r.layout === 
 function gaveUp(r: FitRule, plan: Plan, unbounded: Plan): boolean | null {
   const here = plan.layout === r.layout;
   if (r.id === 'axes') return !(here && plan.guides.x);
-  if (r.id === 'legend') return !(here && plan.guides.legend === 'full');
+  // A plot has a legend, and labels at its line ends, only where it is split into series.
+  if (r.id === 'legend') return unbounded.guides.legend ? !(here && plan.guides.legend === 'full') : null;
+  if (r.id === 'labels') return unbounded.guides.legend ? !(here && !!plan.guides.legend) : null;
   if (r.id === 'mid-tick') return here && plan.guides.x ? plan.dropped.includes('the middle date label') : null;
   if (r.id === 'secondary') return here && unbounded.layers.some((l) => l.role !== 'primary') ? plan.layers.every((l) => l.role === 'primary') : null;
   return !here;

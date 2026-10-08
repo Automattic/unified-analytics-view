@@ -410,9 +410,9 @@ Merged. 225 tests pass and the typecheck is clean. `prototype/`, `packages/dom` 
 
 1. A bar starts at `min(v0, v)` and is `|v - v0|` tall. That covers stacks, the signed domain and centred stacks.
 2. Check that `morph` in `motion.ts` interpolates `points[].v0`.
-3. A `.vg-legend` for cartesian, reconciled with the band's use of the class.
-4. A `.vg-labels` column beside the plot, shown by the `legend` rule; the measured pass keeps labels a line apart.
-5. A `.vg-y-axis-2` column on the far side.
+3. A `.uav-legend` for cartesian, reconciled with the band's use of the class.
+4. A `.uav-labels` column beside the plot, shown by the `legend` rule; the measured pass keeps labels a line apart.
+5. A `.uav-y-axis-2` column on the far side.
 6. `hitNodes` centres a row's target on the last rect it sees, which is off-centre with dodge. The readout and the table need the pair, not the row.
 
 **Findings**
@@ -439,8 +439,8 @@ Merged. 263 tests pass and the typecheck is clean. All of it is inside `packages
 3. **The option's `aria-label` changes while a series is chosen.** Whether a screen reader announces a new name on the same active descendant is unchecked.
 4. **`ua-activate` gained `rows`,** every row at that x. `row` is as before for one dimension.
 5. **A chosen series is shown by dimming the others to 0.3** and underlining its legend entry. The pointer chooses only the x.
-6. **The cartesian layout states the plot's height, not the body's** (`--vg-plot-block`), so a legend adds its lines at natural height as `place()` does.
-7. **The band's legend CSS is untouched;** cartesian overrides `.vg-legend` under its own layout.
+6. **The cartesian layout states the plot's height, not the body's** (`--uav-plot-block`), so a legend adds its lines at natural height as `place()` does.
+7. **The band's legend CSS is untouched;** cartesian overrides `.uav-legend` under its own layout.
 8. **Three additions to the layout's fit map** that core's rules could not say: `legend` shows the labels as a grid; `axes` also hides the second axis, because `axis-2` has no block need; `y-ticks` thins the second axis too. The second is a block need missing in core.
 9. **Labels are kept a line apart** by `apart()` in `measure.ts`, following `place()`.
 10. **The pivoted table** puts the first dimension down the side and the second across, with the engine's totals in the last column and the footer.
@@ -518,7 +518,7 @@ Headless Chromium on the merged bench: all 25 samples, both painters, five width
 
 - **Heatmap:** the hidden last column label keeps its box about 10 px past the view's edge, so a host without `overflow: hidden` would scroll. And `<ua-view>` is 184 px tall where the pixel painter is 208: the ramp comes out of the grid, so cells are squatter than the reference.
 - **Scatter:** a label on a point near the top of the plot is cut by about 4 px. The pixel painter puts it under the point.
-- **Points:** `points.ts` still sets `--vg-body-block` where cartesian now states the plot's height. A plot with both a legend and a size key would come out short; no sample has both.
+- **Points:** `points.ts` still sets `--uav-body-block` where cartesian now states the plot's height. A plot with both a legend and a size key would come out short; no sample has both.
 - **Older, the six originals too:** in a 40 px box most cartesian views show a 42 px number, 2 px over, instead of prose.
 - **Bench only:** the pixel SVG painter raises a ResizeObserver loop notice during fast resizing.
 - **One test run in seven failed one test,** unidentified, in the run that also killed a dev server. The next five passed. An unexplained flake, not shown harmless.

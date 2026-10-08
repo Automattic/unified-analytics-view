@@ -37,8 +37,8 @@ const hue = (spec: Spec) => (spec.use === 'share-bar' || spec.use === 'bar-list'
  * ponytail: a stopgap for the demo. The grammar's way is a `color` channel on the layer, which the scene would
  * turn into a series colour per row; nothing outside a view should be styling its insides. */
 const rowColours = new CSSStyleSheet();
-rowColours.replaceSync([1, 2, 3, 4, 5, 6].map((n) => `.vg-row:nth-child(6n+${n}) > i { --vg-paint: var(--a8c-charts-color-series-${n}) !important; }`).join('\n')
-  + '\n.vg-row > i { opacity: var(--demo-row-opacity, .8) !important; }');
+rowColours.replaceSync([1, 2, 3, 4, 5, 6].map((n) => `.uav-row:nth-child(6n+${n}) > i { --uav-paint: var(--a8c-charts-color-series-${n}) !important; }`).join('\n')
+  + '\n.uav-row > i { opacity: var(--demo-row-opacity, .8) !important; }');
 
 /** The surface's range goes into every query that has one. */
 const ranged = (spec: Spec, range: string): Spec => (spec.query?.range ? { ...spec, query: { ...spec.query, range } } : spec);

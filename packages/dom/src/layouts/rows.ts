@@ -13,23 +13,23 @@ import { TRACK_CSS, TRACK_FIT, trackMark } from './track.ts';
  * it: a container query cannot hold a number that depends on the data. Only the need is estimated, never a width.
  *
  * Under a height limit only whole rows show: the list is as tall as the rows that fit, rounded down. */
-const short = '(100cqi - var(--vg-need) + 0.01px) * 999999';
+const short = '(100cqi - var(--uav-need) + 0.01px) * 999999';
 const css = `
-.vg[data-layout="rows"] .vg-body { display: grid; grid-template: auto minmax(0, 1fr) / var(--vg-tracks, minmax(0, 1fr)); }
-.vg-columns, .vg-rows, .vg-row { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; }
-.vg-columns { grid-row: 1; align-items: center; block-size: var(--vg-columns-block); max-block-size: max(0px, ${short}); overflow: hidden; }
-.vg[data-layout="rows"]:not([data-parts~="columns"]) .vg-columns { display: none; }
-.vg-rows { grid-row: 2; align-content: start; row-gap: var(--vg-row-gap); overflow: hidden; }
-.vg-row { position: relative; align-items: center; block-size: var(--vg-row-block); }
-.vg-row > i { position: absolute; grid-column: var(--vg-track, 1 / 3); inset-block: 0; inset-inline-start: calc(var(--vg-x, 0) * 100%); inline-size: max(3px, calc(var(--vg-v) * 100%));
-  background: var(--vg-paint); border-radius: var(--a8c-charts-border-radius-bar, 3px); }
-:is(.vg-row, .vg-columns) > span { position: relative; grid-row: 1; padding-inline: 8px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--vg-paint); }
-.vg-row > .vg-f-label { grid-column: var(--vg-col, 1); padding-inline-end: 0; }
-:is(.vg-row, .vg-columns) > span:not(.vg-f-label) { grid-column: var(--vg-col); }
-:is(.vg-row, .vg-columns) > [data-anchor="end"] { text-align: end; }
-:is(.vg-row, .vg-columns) > [data-rank] { max-inline-size: max(0px, ${short}); padding-inline: min(8px, max(0px, ${short})); }
-@container vg-view (block-size >= 0px) {
-  .vg-rows { max-block-size: calc(round(down, 100% + var(--vg-row-gap), var(--vg-row-block) + var(--vg-row-gap)) - var(--vg-row-gap)); }
+.uav[data-layout="rows"] .uav-body { display: grid; grid-template: auto minmax(0, 1fr) / var(--uav-tracks, minmax(0, 1fr)); }
+.uav-columns, .uav-rows, .uav-row { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; }
+.uav-columns { grid-row: 1; align-items: center; block-size: var(--uav-columns-block); max-block-size: max(0px, ${short}); overflow: hidden; }
+.uav[data-layout="rows"]:not([data-parts~="columns"]) .uav-columns { display: none; }
+.uav-rows { grid-row: 2; align-content: start; row-gap: var(--uav-row-gap); overflow: hidden; }
+.uav-row { position: relative; align-items: center; block-size: var(--uav-row-block); }
+.uav-row > i { position: absolute; grid-column: var(--uav-track, 1 / 3); inset-block: 0; inset-inline-start: calc(var(--uav-x, 0) * 100%); inline-size: max(3px, calc(var(--uav-v) * 100%));
+  background: var(--uav-paint); border-radius: var(--a8c-charts-border-radius-bar, 3px); }
+:is(.uav-row, .uav-columns) > span { position: relative; grid-row: 1; padding-inline: 8px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--uav-paint); }
+.uav-row > .uav-f-label { grid-column: var(--uav-col, 1); padding-inline-end: 0; }
+:is(.uav-row, .uav-columns) > span:not(.uav-f-label) { grid-column: var(--uav-col); }
+:is(.uav-row, .uav-columns) > [data-anchor="end"] { text-align: end; }
+:is(.uav-row, .uav-columns) > [data-rank] { max-inline-size: max(0px, ${short}); padding-inline: min(8px, max(0px, ${short})); }
+@container uav-view (block-size >= 0px) {
+  .uav-rows { max-block-size: calc(round(down, 100% + var(--uav-row-gap), var(--uav-row-block) + var(--uav-row-gap)) - var(--uav-row-gap)); }
 }`;
 
 export const rows: LayoutPainter = {
@@ -44,7 +44,7 @@ export const rows: LayoutPainter = {
   rules: (context) => [{ id: 'marks-block', layout: 'rows', container: 'view', needs: { block: context.rows.rowHeight }, hide: ['rows'], show: ['number'], keep: 'marks' }],
 
   paint(body, scene, rules) {
-    const head = ensure(body, 'div', 'vg-columns'), list = ensure(body, 'div', 'vg-rows'), by = new Map<string, SceneNode[]>();
+    const head = ensure(body, 'div', 'uav-columns'), list = ensure(body, 'div', 'uav-rows'), by = new Map<string, SceneNode[]>();
     const beside = scene.track === 'beside', room = (id: string) => rules.fit.find((r) => r.layout === 'rows' && r.id === id)?.needs.inline;
     const rooms = columnRooms(scene), label = (beside ? room('track') : undefined) ?? room('marks') ?? 0;
     // A row's labels stand side by side in the order they come, each before the last in a column as wide as its text.
@@ -55,25 +55,25 @@ export const rows: LayoutPainter = {
     // The room a view needs to show the column of this rank: the label's, by the `marks` rule, and each column's up to it.
     const need = (rank?: number) => (rank ? label + rooms.slice(0, rank + 1).reduce((s, w) => s + w, 0) + 'px' : null);
     list.setAttribute('data-hits', 'y');                                     // each row is its own hit target
-    prop(body, '--vg-tracks', 'auto '.repeat(lead) + (beside ? 'minmax(0, auto) ' : '') + 'minmax(0, 1fr)' + ' auto'.repeat(rooms.length));
-    prop(body, '--vg-track', beside ? first - 1 + ' / ' + first : lead ? '1 / ' + (first + 1) : null); attr(body, 'data-track', scene.track);
-    prop(body, '--vg-row-block', rules.rows.rowHeight + 'px'); prop(body, '--vg-row-gap', rules.rows.gap + 'px'); prop(body, '--vg-columns-block', COLUMNS_BLOCK + 'px');
+    prop(body, '--uav-tracks', 'auto '.repeat(lead) + (beside ? 'minmax(0, auto) ' : '') + 'minmax(0, 1fr)' + ' auto'.repeat(rooms.length));
+    prop(body, '--uav-track', beside ? first - 1 + ' / ' + first : lead ? '1 / ' + (first + 1) : null); attr(body, 'data-track', scene.track);
+    prop(body, '--uav-row-block', rules.rows.rowHeight + 'px'); prop(body, '--uav-row-gap', rules.rows.gap + 'px'); prop(body, '--uav-columns-block', COLUMNS_BLOCK + 'px');
     // A column's cell says which track is its own, so one that is given up leaves the others where they are.
     const cell = (c: HTMLElement | SVGElement, n: TextNode) => {
       text(c, n); c.setAttribute('data-anchor', n.anchor);
-      if (n.font !== 'label') { prop(c, '--vg-col', (n.rank || 0) + first); prop(c, '--vg-need', need(n.rank)); }
-      else prop(c, '--vg-col', lead ? col.get(n.key) : null);
+      if (n.font !== 'label') { prop(c, '--uav-col', (n.rank || 0) + first); prop(c, '--uav-need', need(n.rank)); }
+      else prop(c, '--uav-col', lead ? col.get(n.key) : null);
     };
     // Headers stand over more than one column, so they go with the second.
-    prop(head, '--vg-need', need(1));
+    prop(head, '--uav-need', need(1));
     keyed(head, scene.nodes.filter((n): n is TextNode => n.part === 'columns' && n.kind === 'text'), () => 'span', cell);
     for (const n of scene.nodes) if (n.part === 'rows' && n.kind !== 'row' && n.row != null) by.set(n.row, (by.get(n.row) ?? []).concat(n));
     keyed(list, scene.nodes.filter((n): n is RowNode => n.kind === 'row'), () => 'div', (el, r) => {
-      el.classList.add('vg-row');
+      el.classList.add('uav-row');
       keyed(el, by.get(r.row) ?? [], (n) => (n.kind === 'text' ? 'span' : 'i'), (c, n) => {
         if (n.kind === 'text') cell(c, n);
         // A bar lies from where its track has zero to its value.
-        else if (n.kind === 'rect') { const from = n.v0 ?? 0; prop(c, '--vg-x', Math.min(from, n.v!) || null); prop(c, '--vg-v', Math.abs(n.v! - from)); }
+        else if (n.kind === 'rect') { const from = n.v0 ?? 0; prop(c, '--uav-x', Math.min(from, n.v!) || null); prop(c, '--uav-v', Math.abs(n.v! - from)); }
         else if (n.kind === 'line' || n.kind === 'circle') trackMark(c, n);
       });
     });

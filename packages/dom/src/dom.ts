@@ -80,7 +80,7 @@ export function attr(el: Element, name: string, v: string | number | null | unde
   if (el.getAttribute(name) === (v == null ? null : String(v))) return;
   if (v == null) el.removeAttribute(name); else el.setAttribute(name, String(v));
 }
-/** Set or clear one style property. Positions go in as the prefixed ratios: --vg-x, --vg-w, --vg-v, --vg-t. */
+/** Set or clear one style property. Positions go in as the prefixed ratios: --uav-x, --uav-w, --uav-v, --uav-t. */
 export function prop(el: HTMLElement | SVGElement, name: string, v: string | number | null | undefined): void {
   if (v == null) el.style.removeProperty(name); else el.style.setProperty(name, String(v));
 }
@@ -95,17 +95,17 @@ export function nodePaint(n: Pick<SceneNode, 'paint' | 'kind' | 'tone' | 'opacit
 /** What every painted node carries: its key, what the fit rules select on, the row and series it came from, and its paint. */
 function mark(el: HTMLElement | SVGElement, n: SceneNode): void {
   attr(el, 'data-key', n.key); attr(el, 'data-role', n.role); attr(el, 'data-rank', n.rank); attr(el, 'data-row', n.row); attr(el, 'data-series', n.series);
-  prop(el, '--vg-paint', nodePaint(n));
+  prop(el, '--uav-paint', nodePaint(n));
   prop(el, 'opacity', n.tone === 'soft' ? null : n.opacity);
 }
 
 /** A text node's words. One with a shorter form holds both, and the stylesheet picks. */
 export function text(el: Element, n: TextNode): void {
-  const face = 'vg-f-' + n.font;
+  const face = 'uav-f-' + n.font;
   // A kept key can change its face, and would otherwise carry both.
-  if (!el.classList.contains(face)) { for (const c of Array.from(el.classList)) if (c.startsWith('vg-f-')) el.classList.remove(c); el.classList.add(face); }
+  if (!el.classList.contains(face)) { for (const c of Array.from(el.classList)) if (c.startsWith('uav-f-')) el.classList.remove(c); el.classList.add(face); }
   if (n.short == null) { el.textContent = n.text; return; }
-  if (!el.querySelector(':scope > .vg-full')) el.textContent = '';
-  ensure(el, 'span', 'vg-full').textContent = n.text;
-  ensure(el, 'span', 'vg-short').textContent = n.short;
+  if (!el.querySelector(':scope > .uav-full')) el.textContent = '';
+  ensure(el, 'span', 'uav-full').textContent = n.text;
+  ensure(el, 'span', 'uav-short').textContent = n.short;
 }

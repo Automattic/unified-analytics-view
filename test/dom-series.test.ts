@@ -20,8 +20,8 @@ const names = Object.keys(moreSamples).filter((k) => of(k).scene.layout === 'car
 
 describe('bars', () => {
   it('run from where they start to their value, whichever is the higher', () => {
-    expect(cartesian.css).toContain('inset-block-end: calc(min(var(--vg-v0, 0), var(--vg-v)) * 100%);');
-    expect(cartesian.css).toContain('block-size: calc(max(var(--vg-v) - var(--vg-v0, 0), var(--vg-v0, 0) - var(--vg-v)) * 100%);');
+    expect(cartesian.css).toContain('inset-block-end: calc(min(var(--uav-v0, 0), var(--uav-v)) * 100%);');
+    expect(cartesian.css).toContain('block-size: calc(max(var(--uav-v) - var(--uav-v0, 0), var(--uav-v0, 0) - var(--uav-v)) * 100%);');
   });
   it('have a start to read in a stack and below zero, and none in a group', () => {
     const rects = (sample: string) => of(sample).scene.nodes.filter((n): n is RectNode => n.part === 'plot' && n.kind === 'rect');
@@ -56,29 +56,29 @@ describe('a split path', () => {
 
 describe('the cartesian layout\'s guides', () => {
   const rules = (id: string) => CONTAINER_RULES.fit.filter((r) => r.layout === 'cartesian' && r.id === id);
-  const fig = '.vg[data-layout="cartesian"]:not([data-keep~="guides"])';
+  const fig = '.uav[data-layout="cartesian"]:not([data-keep~="guides"])';
 
   it('swaps the legend for the labels at the line ends, as a grid, and then gives those up', () => {
     expect(compileFitRules(rules('legend'), { cartesian: cartesian.fit! }).split('\n').slice(0, 6)).toEqual([
-      '/* cartesian legend */', '@container vg-view (inline-size < 319.5px) {',
-      '  ' + fig + ' .vg-legend { display: none; }', '  ' + fig + ' .vg-labels { display: block; }', '  ' + fig + ' .vg-labels { display: grid; }', '}',
+      '/* cartesian legend */', '@container uav-view (inline-size < 319.5px) {',
+      '  ' + fig + ' .uav-legend { display: none; }', '  ' + fig + ' .uav-labels { display: block; }', '  ' + fig + ' .uav-labels { display: grid; }', '}',
     ]);
     const css = compileFitRules(CONTAINER_RULES.fit, { cartesian: cartesian.fit! });
-    expect(css.indexOf(fig + ' .vg-labels { display: none; }')).toBeGreaterThan(css.lastIndexOf(fig + ' .vg-labels { display: grid; }'));
+    expect(css.indexOf(fig + ' .uav-labels { display: none; }')).toBeGreaterThan(css.lastIndexOf(fig + ' .uav-labels { display: grid; }'));
   });
   it('gives up the second axis before the first, and with it whenever the axes go', () => {
-    expect(compileFitRules(rules('axis-2'))).toBe('/* cartesian axis-2 */\n@container vg-view (inline-size < 339.5px) {\n  ' + fig + ' .vg-y-axis-2 { display: none; }\n}');
-    expect(compileFitRules(rules('axes'), { cartesian: cartesian.fit! })).toContain(fig + ' .vg-y-axis-2 { display: none; }');
+    expect(compileFitRules(rules('axis-2'))).toBe('/* cartesian axis-2 */\n@container uav-view (inline-size < 339.5px) {\n  ' + fig + ' .uav-y-axis-2 { display: none; }\n}');
+    expect(compileFitRules(rules('axes'), { cartesian: cartesian.fit! })).toContain(fig + ' .uav-y-axis-2 { display: none; }');
   });
   it('keeps the labels out until a rule brings them in, and the legend out of a plot that is not split', () => {
-    expect(cartesian.css).toContain('.vg-labels { grid-area: labels; display: none; }');
-    expect(cartesian.css).toContain('.vg[data-layout="cartesian"]:not([data-parts~="legend"]) .vg-legend { display: none; }');
+    expect(cartesian.css).toContain('.uav-labels { grid-area: labels; display: none; }');
+    expect(cartesian.css).toContain('.uav[data-layout="cartesian"]:not([data-parts~="legend"]) .uav-legend { display: none; }');
     expect(of('series').scene.parts).toContain('legend');
     expect(of('diverging').scene.parts).not.toContain('legend');
   });
   it('says the band\'s legend differently, under the same class, and leaves the band\'s alone', () => {
-    expect(cartesian.css).toContain('.vg[data-layout="cartesian"] .vg-legend { grid-area: legend; display: flex; flex-wrap: wrap;');
-    expect(band.css).toContain('.vg-legend { display: grid;');
+    expect(cartesian.css).toContain('.uav[data-layout="cartesian"] .uav-legend { grid-area: legend; display: flex; flex-wrap: wrap;');
+    expect(band.css).toContain('.uav-legend { display: grid;');
   });
 });
 

@@ -51,7 +51,7 @@ describe('fallback on a fit rule', () => {
     expect(err(() => fallbackRule([swap], 'band', [], ['band']))).toMatch(/^A fit rule's "fallback" leads back to the "band" layout \(band, then band\)/);
   });
   it('compiles to the swap: under the need the figure goes and the view beside it shows, unless the spec keeps the marks', () => {
-    const fig = '.vg[data-layout="band"]:not([data-keep~="marks"])', body = '  ' + fig + ' { display: none; }\n  ' + fig + ' ~ .vg-fallback { display: block; }\n}';
-    expect(compileFitRules([swap])).toBe('/* band swap */\n@container vg-view (inline-size < 199.5px) {\n' + body + '\n/* band swap */\n@container vg-view (block-size < 59.5px) {\n' + body);
+    const fig = '.uav[data-layout="band"]:not([data-keep~="marks"])', body = '  ' + fig + ' { display: none; }\n  ' + fig + ' ~ .uav-fallback { display: block; }\n}';
+    expect(compileFitRules([swap])).toBe('/* band swap */\n@container uav-view (inline-size < 199.5px) {\n' + body + '\n/* band swap */\n@container uav-view (block-size < 59.5px) {\n' + body);
   });
 });

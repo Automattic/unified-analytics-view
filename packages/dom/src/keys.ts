@@ -96,23 +96,23 @@ export function hitNodes(scene: Scene): (RectNode & { c: number })[] {
  * holds a view may clip at its edge. */
 export const KEYS_CSS = `
 [data-hits]:focus-visible { outline-offset: -2px; }
-.vg-readout { position: absolute; z-index: 1; left: 0; top: 0; box-sizing: border-box; inline-size: max-content; max-inline-size: 100%; padding: 2px 6px; border-radius: 2px;
+.uav-readout { position: absolute; z-index: 1; left: 0; top: 0; box-sizing: border-box; inline-size: max-content; max-inline-size: 100%; padding: 2px 6px; border-radius: 2px;
   pointer-events: none; font-size: 11px; font-variant-numeric: tabular-nums;
   color: var(--a8c-charts-color-label-inverse, Canvas); background: var(--a8c-charts-color-tooltip-surface, CanvasText); }
-.vg-hits { position: absolute; inset: 0; }
-.vg-body[data-scale="point"] .vg-hits { inset-inline: 2px; }
-.vg-hits i { position: absolute; inset-block: 0; inset-inline-start: calc(var(--vg-x) * 100%); inline-size: calc(var(--vg-w) * 100%); }
+.uav-hits { position: absolute; inset: 0; }
+.uav-body[data-scale="point"] .uav-hits { inset-inline: 2px; }
+.uav-hits i { position: absolute; inset-block: 0; inset-inline-start: calc(var(--uav-x) * 100%); inline-size: calc(var(--uav-w) * 100%); }
 /* Hit targets are not marks. On a data change they take their new places at once, and one whose row has gone
- * goes at once: motion.ts keeps a leaving node only while --vg-leaving is set. */
-.vg[data-moving] .vg-hits [data-key] { transition: none; }
-.vg[data-moving] .vg-plot .vg-hits [data-exit] { --vg-leaving: initial; transition: none; }
-.vg-hits [data-active]::before { content: ""; position: absolute; inset-block: 0; inset-inline-start: calc(var(--vg-c) * 100% - 0.5px); inline-size: 1px; background: var(--vg-paint); }
-.vg-row[data-active] { outline: 1px solid ${paintVar('rule')}; outline-offset: -1px; }
-.vg-band [data-active] { outline: 2px solid ${paintVar('ink')}; outline-offset: 1px; }
-.vg-legend span[data-active] { text-decoration: underline; }
+ * goes at once: motion.ts keeps a leaving node only while --uav-leaving is set. */
+.uav[data-moving] .uav-hits [data-key] { transition: none; }
+.uav[data-moving] .uav-plot .uav-hits [data-exit] { --uav-leaving: initial; transition: none; }
+.uav-hits [data-active]::before { content: ""; position: absolute; inset-block: 0; inset-inline-start: calc(var(--uav-c) * 100% - 0.5px); inline-size: 1px; background: var(--uav-paint); }
+.uav-row[data-active] { outline: 1px solid ${paintVar('rule')}; outline-offset: -1px; }
+.uav-band [data-active] { outline: 2px solid ${paintVar('ink')}; outline-offset: 1px; }
+.uav-legend span[data-active] { text-decoration: underline; }
 /* A series chosen at a point: the rest of the plot stands back, and its name is marked wherever it is written. */
-.vg-plot:has([data-chosen]) :is(.vg-bars i, path):not([data-chosen]) { opacity: 0.3 !important; }
-:is(.vg-legend, .vg-labels) span[data-chosen] { text-decoration: underline; }`;
+.uav-plot:has([data-chosen]) :is(.uav-bars i, path):not([data-chosen]) { opacity: 0.3 !important; }
+:is(.uav-legend, .uav-labels) span[data-chosen] { text-decoration: underline; }`;
 
 /** The interaction of one view. It listens on the body, which outlives every paint, so nothing is bound per point. */
 export class Keys {
@@ -126,7 +126,7 @@ export class Keys {
 
   constructor(host: HTMLElement, fig: HTMLElement, body: HTMLElement) {
     this.#host = host; this.#fig = fig; this.#body = body;
-    this.#tip = ensure(fig, 'div', 'vg-readout');
+    this.#tip = ensure(fig, 'div', 'uav-readout');
     this.#tip.setAttribute('aria-hidden', 'true'); this.#tip.hidden = true;
     const row = (e: Event) => { const k = (e.target as Element).closest?.('[data-row]')?.getAttribute('data-row'); return k != null && this.#keys.includes(k) ? k : null; };
     body.addEventListener('pointerover', (e) => {
@@ -218,7 +218,7 @@ export class Keys {
     // Rects are in the page's px and the readout is placed in the figure's own. Under a transform the two differ, by kx and ky.
     const f = this.#fig.getBoundingClientRect(), r = (point as HTMLElement).getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
     const W = this.#fig.offsetWidth, H = this.#fig.offsetHeight, kx = W > 0 && f.width > 0 ? W / f.width : 1, ky = H > 0 && f.height > 0 ? H / f.height : 1;
-    const c = parseFloat((point as HTMLElement).style.getPropertyValue('--vg-c')), x = (r.left + r.width * (Number.isFinite(c) ? c : 0.5) - f.left) * kx - w / 2;
+    const c = parseFloat((point as HTMLElement).style.getPropertyValue('--uav-c')), x = (r.left + r.width * (Number.isFinite(c) ? c : 0.5) - f.left) * kx - w / 2;
     const above = (r.top - f.top) * ky - h - 2, below = (r.bottom - f.top) * ky + 2;
     tip.style.setProperty('left', Math.max(0, Math.min(x, f.width * kx - w)) + 'px');
     tip.style.setProperty('top', (above >= 0 ? above : below + h <= f.height * ky ? below : 0) + 'px');

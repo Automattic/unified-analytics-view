@@ -67,7 +67,7 @@ function specimen(parent: Element, label: string, state: Omit<State, 'label'>, s
   box.append(view); cell.append(box, el('figcaption', '', label)); parent.append(cell);
   // A state held open: the pointer is said to be over a row in the middle, and nothing says it has left.
   // ponytail: reaches into the view's shadow root, after its first paint. A real pointer passing over lets it go.
-  if (state.active) setTimeout(() => { const hits = view.shadowRoot!.querySelectorAll('.vg-body [data-row]'); hits[Math.floor(hits.length / 2)]?.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerType: 'mouse' })); }, 200);
+  if (state.active) setTimeout(() => { const hits = view.shadowRoot!.querySelectorAll('.uav-body [data-row]'); hits[Math.floor(hits.length / 2)]?.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerType: 'mouse' })); }, 200);
 }
 
 if (theme === 'both') {

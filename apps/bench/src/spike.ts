@@ -67,9 +67,9 @@ function read(host: SpikeView) {
   const q = <E extends Element = HTMLElement>(s: string) => host.shadowRoot!.querySelector<E>(s)!;
   const seen = (s: string) => q(s).checkVisibility();
   return {
-    q, box: getComputedStyle(host).containerType === 'size', v: host.getBoundingClientRect(), p: q('.vg-plot').getBoundingClientRect(),
-    shows: { yAxis: seen('.vg-y-axis'), xAxis: seen('.vg-x-axis'), grid: seen('.vg-grid'), number: seen('.vg-number'), plot: seen('.vg-plot'),
-      mid: seen('.vg-x-axis .mid'), comparison: seen('[data-role="comparison"]'), context: seen('[data-role="context"]') },
+    q, box: getComputedStyle(host).containerType === 'size', v: host.getBoundingClientRect(), p: q('.uav-plot').getBoundingClientRect(),
+    shows: { yAxis: seen('.uav-y-axis'), xAxis: seen('.uav-x-axis'), grid: seen('.uav-grid'), number: seen('.uav-number'), plot: seen('.uav-plot'),
+      mid: seen('.uav-x-axis .mid'), comparison: seen('[data-role="comparison"]'), context: seen('[data-role="context"]') },
   };
 }
 type Read = ReturnType<typeof read>;
@@ -92,18 +92,18 @@ function againstRules(s: Read): string[] {
 function geometry(h: Held): string[] {
   const s = read(h.host), out: string[] = [], rect = (sel: string) => s.q(sel).getBoundingClientRect();
   const must = (ok: boolean, what: string) => { if (!ok) out.push(what + ' (' + describe(s) + ')'); };
-  const fig = rect('.vg'), axes = s.shows.xAxis;
+  const fig = rect('.uav'), axes = s.shows.xAxis;
   must(h.host.attributes.length === 0, 'the host carries an attribute');
   must(near(fig.height, s.v.height), 'the figure is ' + r1(fig.height) + ' tall in a host ' + r1(s.v.height) + ' tall');
   if (h.kind === 'row') must(s.box && near(s.v.height, h.frame.clientHeight), 'the view does not fill its box of ' + h.frame.clientHeight);
   else must(!s.box, 'a stacked view is a size container');
   if (!s.shows.plot) return out;
-  const side = axes ? rect('.vg-y-axis') : rect('.vg-number'), svg = rect('svg');
-  if (s.box) must(near((axes ? rect('.vg-x-axis') : s.p).bottom, s.v.bottom) && near(s.p.top, s.v.top + (axes ? 8 : 0)), 'the plot does not fill the height left over');
+  const side = axes ? rect('.uav-y-axis') : rect('.uav-number'), svg = rect('svg');
+  if (s.box) must(near((axes ? rect('.uav-x-axis') : s.p).bottom, s.v.bottom) && near(s.p.top, s.v.top + (axes ? 8 : 0)), 'the plot does not fill the height left over');
   else must(near(s.p.height, axes ? 184 : 46), 'the plot is ' + r1(s.p.height) + ' tall, not ' + (axes ? 184 : 46));
   must(near(s.p.right, s.v.right) && near(s.p.left, side.right + (axes ? 6 : 12)), 'the plot does not take the width the first column leaves');
   must(near(svg.left, s.p.left + 2) && near(svg.width, s.p.width - 4) && near(svg.top, s.p.top) && near(svg.height, s.p.height), 'the SVG does not fill the plot');
-  if (axes) s.q('.vg-y-axis').querySelectorAll('span').forEach((label) => {
+  if (axes) s.q('.uav-y-axis').querySelectorAll('span').forEach((label) => {
     const l = label.getBoundingClientRect(), line = rect('[data-key="grid:' + label.dataset.key!.slice(6) + '"]');
     must(near((l.top + l.bottom) / 2, line.top + 0.5, 1), 'the y label ' + label.textContent + ' is ' + r1((l.top + l.bottom) / 2 - line.top) + ' px off its grid line');
   });
@@ -225,23 +225,23 @@ async function item3(h: Held) {
   }).find((c) => c);
   if (!pick) return verdict(3, 'fail', 'No data change on offer moves a tick, so nothing was tested.');
   const line = h.host.shadowRoot!.querySelector<HTMLElement>('[data-key="grid:' + pick.tick + '"]')!;
-  const t = () => parseFloat(getComputedStyle(line).getPropertyValue('--vg-t')), y = () => line.getBoundingClientRect().top;
+  const t = () => parseFloat(getComputedStyle(line).getPropertyValue('--uav-t')), y = () => line.getBoundingClientRect().top;
   // A fresh frame first. Chrome stamps a transition with the time of the last frame, so one started at the end of a long task
   // (the sweep, here) is already over when it is first drawn.
   await frame();
   const y0 = y();
   setAll(pick.data);
   await sleep(300);
-  const tMid = t(), yMid = y(), running = line.getAnimations().some((a) => a instanceof CSSTransition && a.transitionProperty === '--vg-t');
+  const tMid = t(), yMid = y(), running = line.getAnimations().some((a) => a instanceof CSSTransition && a.transitionProperty === '--uav-t');
   await sleep(500);
   const tEnd = t(), y1 = y();
   setAll(A);
   await sleep(750);
   const between = (v: number, a: number, b: number) => v > Math.min(a, b) + 1e-4 && v < Math.max(a, b) - 1e-4;
   const ok = between(tMid, pick.from, pick.to) && between(yMid, y0, y1) && near(tEnd, pick.to, 1e-4);
-  verdict(3, ok ? 'pass' : 'fail', 'Data change: ' + pick.name + '. The ' + pick.tick + ' tick goes from --vg-t ' + r1(pick.from * 1000) / 1000 + ' to ' + r1(pick.to * 1000) / 1000
+  verdict(3, ok ? 'pass' : 'fail', 'Data change: ' + pick.name + '. The ' + pick.tick + ' tick goes from --uav-t ' + r1(pick.from * 1000) / 1000 + ' to ' + r1(pick.to * 1000) / 1000
     + '. At 300 ms of 600 the computed value was ' + tMid.toFixed(4) + ' and the grid line was at ' + r1(yMid) + ' px, between ' + r1(y0) + ' and ' + r1(y1)
-    + '. It ended at ' + tEnd.toFixed(4) + '. ' + (running ? 'A CSSTransition on --vg-t was running.' : 'No CSSTransition on --vg-t was found.')
+    + '. It ended at ' + tEnd.toFixed(4) + '. ' + (running ? 'A CSSTransition on --uav-t was running.' : 'No CSSTransition on --uav-t was found.')
     + ' CSS.registerProperty is ' + (typeof CSS.registerProperty === 'function' ? 'present.' : 'missing.'));
 }
 

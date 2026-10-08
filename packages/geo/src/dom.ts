@@ -9,13 +9,13 @@ import { GEO_RULES } from './index.ts';
  * ratios of the same box and sized in pixels, as a plot's dots are. Under it, the ramp a grid has and the key to
  * sizes a plot has, in their own styles.
  *
- *   .vg-plot
+ *   .uav-plot
  *     svg
- *       g.vg-land           regions the result has no row for, and every region where symbols stand on them
- *       g.vg-regions        regions with a row: the list a reader steps through
- *     .vg-points            a symbol for each region with a row, and then these are the list
- *   .vg-note                how many rows have no shape, where there are any
- *   .vg-ramp, .vg-size
+ *       g.uav-land           regions the result has no row for, and every region where symbols stand on them
+ *       g.uav-regions        regions with a row: the list a reader steps through
+ *     .uav-points            a symbol for each region with a row, and then these are the list
+ *   .uav-note                how many rows have no shape, where there are any
+ *   .uav-ramp, .uav-size
  *
  * Never colour alone: each region in the list is named by its readout, which says its value (keys.ts), and the table
  * is the query's own. The list runs in the result's order, and every arrow steps along it: there is no moving about
@@ -24,24 +24,24 @@ import { GEO_RULES } from './index.ts';
  * is the element's doing (view.ts), and nothing here knows of it. */
 const SVG = 'http://www.w3.org/2000/svg';
 const css = `
-.vg[data-layout="geo"] .vg-body { display: flex; flex-direction: column; }
-.vg[data-layout="geo"] .vg-plot { flex: none; align-self: center; inline-size: min(100%, 480px); aspect-ratio: var(--vg-aspect, 2); container-type: inline-size; }
-.vg[data-layout="geo"] .vg-plot path { fill: var(--vg-paint); stroke: var(--a8c-charts-color-background, Canvas); stroke-width: 0.5px; }
-.vg[data-layout="geo"] .vg-plot path[data-active] { stroke: ${paintVar('ink')}; stroke-width: 1.5px; }
-.vg[data-layout="geo"] .vg-regions:focus-visible { outline: none; }
-.vg[data-layout="geo"] .vg-plot:has(.vg-regions:focus-visible) { outline: auto; outline-offset: -2px; }
+.uav[data-layout="geo"] .uav-body { display: flex; flex-direction: column; }
+.uav[data-layout="geo"] .uav-plot { flex: none; align-self: center; inline-size: min(100%, 480px); aspect-ratio: var(--uav-aspect, 2); container-type: inline-size; }
+.uav[data-layout="geo"] .uav-plot path { fill: var(--uav-paint); stroke: var(--a8c-charts-color-background, Canvas); stroke-width: 0.5px; }
+.uav[data-layout="geo"] .uav-plot path[data-active] { stroke: ${paintVar('ink')}; stroke-width: 1.5px; }
+.uav[data-layout="geo"] .uav-regions:focus-visible { outline: none; }
+.uav[data-layout="geo"] .uav-plot:has(.uav-regions:focus-visible) { outline: auto; outline-offset: -2px; }
 /* The symbols' holder lies over the regions, and only a symbol takes the pointer from them. */
-.vg[data-layout="geo"] .vg-points { pointer-events: none; }
-.vg[data-layout="geo"] .vg-points i { pointer-events: auto; }
-.vg[data-layout="geo"] .vg-ramp:empty { display: none; }
-.vg[data-layout="geo"] .vg-note { block-size: 18px; line-height: 18px; overflow: hidden; white-space: nowrap; }
-.vg[data-layout="geo"] .vg-note span { color: var(--vg-paint); }
-.vg[data-layout="geo"] .vg-note:empty { display: none; }
+.uav[data-layout="geo"] .uav-points { pointer-events: none; }
+.uav[data-layout="geo"] .uav-points i { pointer-events: auto; }
+.uav[data-layout="geo"] .uav-ramp:empty { display: none; }
+.uav[data-layout="geo"] .uav-note { block-size: 18px; line-height: 18px; overflow: hidden; white-space: nowrap; }
+.uav[data-layout="geo"] .uav-note span { color: var(--uav-paint); }
+.uav[data-layout="geo"] .uav-note:empty { display: none; }
 /* In a box the part gives way to the height and its width follows, as a circle of arcs does. */
-@container vg-view (block-size >= 0px) {
-  .vg[data-layout="geo"] .vg-body { container-type: size; overflow: hidden; }
-  .vg[data-layout="geo"] .vg-plot { flex: 0 1 calc(min(100cqi, 480px) / var(--vg-aspect, 2)); min-block-size: 0; inline-size: auto; max-inline-size: 100%; }
-  .vg[data-layout="geo"] :is(.vg-note, .vg-ramp, .vg-size) { flex: none; }
+@container uav-view (block-size >= 0px) {
+  .uav[data-layout="geo"] .uav-body { container-type: size; overflow: hidden; }
+  .uav[data-layout="geo"] .uav-plot { flex: 0 1 calc(min(100cqi, 480px) / var(--uav-aspect, 2)); min-block-size: 0; inline-size: auto; max-inline-size: 100%; }
+  .uav[data-layout="geo"] :is(.uav-note, .uav-ramp, .uav-size) { flex: none; }
 }`;
 
 /** The group of the map's SVG with this class, made on first use. */
@@ -62,29 +62,29 @@ export const geoPainter: LayoutPainter = {
   rules: () => GEO_RULES,
 
   paint(body, scene) {
-    const part = ensure(body, 'div', 'vg-plot'), aspect = scene.aspect ?? 2;
+    const part = ensure(body, 'div', 'uav-plot'), aspect = scene.aspect ?? 2;
     let svg = part.querySelector<SVGSVGElement>(':scope > svg');
     if (!svg) svg = part.appendChild(document.createElementNS(SVG, 'svg'));
     svg.setAttribute('viewBox', '0 0 100 ' + 100 / aspect);
-    prop(part, '--vg-aspect', aspect);
+    prop(part, '--uav-aspect', aspect);
     const shapes = scene.nodes.filter((n): n is PathNode => n.part === 'plot' && n.kind === 'path');
     const symbols = scene.nodes.filter((n): n is CircleNode => n.part === 'points' && n.kind === 'circle');
     // A region is in the list when the result has a row for it, unless a symbol stands on it and is.
     const listed = (n: PathNode) => n.row != null && !symbols.length;
-    const land = group(svg, 'vg-land'), regions = group(svg, 'vg-regions'), points = ensure(part, 'div', 'vg-points');
+    const land = group(svg, 'uav-land'), regions = group(svg, 'uav-regions'), points = ensure(part, 'div', 'uav-points');
     land.setAttribute('aria-hidden', 'true');
     const shape = (el: HTMLElement | SVGElement, n: PathNode) => el.setAttribute('d', n.d ?? '');
     keyed(land, shapes.filter((n) => !listed(n)), () => 'path', shape);
     keyed(regions, shapes.filter(listed), () => 'path', shape);
-    keyed(points, symbols, () => 'i', (el, n) => { prop(el, '--vg-x', n.x); prop(el, '--vg-t', n.t); prop(el, '--vg-size', n.size); });
+    keyed(points, symbols, () => 'i', (el, n) => { prop(el, '--uav-x', n.x); prop(el, '--uav-t', n.t); prop(el, '--uav-size', n.size); });
     list(regions, shapes.some(listed)); list(points, symbols.length > 0);
 
     // The note is read: it says what the map does not. It is made whether or not there is one, so it stays above the keys.
-    keyed(ensure(body, 'div', 'vg-note'), scene.nodes.filter((n): n is TextNode => n.part === 'note' && n.kind === 'text'), () => 'span', text);
-    const ramp = ensure(body, 'div', 'vg-ramp'), sizes = ensure(body, 'div', 'vg-size');
+    keyed(ensure(body, 'div', 'uav-note'), scene.nodes.filter((n): n is TextNode => n.part === 'note' && n.kind === 'text'), () => 'span', text);
+    const ramp = ensure(body, 'div', 'uav-ramp'), sizes = ensure(body, 'div', 'uav-size');
     // The keys say again what each region's name says whole.
     for (const el of [ramp, sizes]) el.setAttribute('aria-hidden', 'true');
     keyed(ramp, scene.nodes.filter((n) => n.part === 'ramp'), (n) => (n.kind === 'text' ? 'span' : 'i'), (el, n) => { if (n.kind === 'text') text(el, n); });
-    keyed(sizes, scene.nodes.filter((n) => n.part === 'size'), (n) => (n.kind === 'text' ? 'span' : 'i'), (el, n) => { if (n.kind === 'text') text(el, n); else if (n.kind === 'circle') prop(el, '--vg-size', n.size); });
+    keyed(sizes, scene.nodes.filter((n) => n.part === 'size'), (n) => (n.kind === 'text' ? 'span' : 'i'), (el, n) => { if (n.kind === 'text') text(el, n); else if (n.kind === 'circle') prop(el, '--uav-size', n.size); });
   },
 };

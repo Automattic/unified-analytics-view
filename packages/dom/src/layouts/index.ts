@@ -11,12 +11,12 @@ import { rows } from './rows.ts';
 const notice: LayoutPainter = {
   layout: 'notice',
   css: `
-.vg[data-layout="notice"] { --vg-body-block: 120px; }
-.vg[data-layout="notice"] .vg-body { display: grid; }
-.vg-notice { place-self: center; text-align: center; color: var(--vg-paint); }`,
-  fit: { notice: { '.vg-body': 'display: none;' } },      // the room goes with the line
+.uav[data-layout="notice"] { --uav-body-block: 120px; }
+.uav[data-layout="notice"] .uav-body { display: grid; }
+.uav-notice { place-self: center; text-align: center; color: var(--uav-paint); }`,
+  fit: { notice: { '.uav-body': 'display: none;' } },      // the room goes with the line
   paint(body, scene) {
-    keyed(body, scene.nodes.filter((n): n is TextNode => n.part === 'notice' && n.kind === 'text'), () => 'div', (el, n) => { el.classList.add('vg-notice'); text(el, n); });
+    keyed(body, scene.nodes.filter((n): n is TextNode => n.part === 'notice' && n.kind === 'text'), () => 'div', (el, n) => { el.classList.add('uav-notice'); text(el, n); });
   },
 };
 

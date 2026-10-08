@@ -16,7 +16,7 @@ import { thin } from '../measure.ts';
  * ponytail: version 4 has no model for two dimensions, so this one is a proposal (chart-coverage-plan, section 6). */
 const css = `
 .vg[data-layout="matrix"] { --vg-body-block: var(--vg-axes-height, 184px); }
-.vg[data-layout="matrix"] .vg-body { display: grid; grid-template: "y plot" minmax(0, 1fr) ". x" auto "ramp ramp" auto / auto minmax(0, 1fr); column-gap: 6px; }
+.vg[data-layout="matrix"] .vg-body { display: grid; grid-template: "y plot" minmax(0, 1fr) ". x" auto "ramp ramp" auto / auto minmax(0, 1fr); }
 .vg[data-layout="matrix"] [data-thin] { visibility: hidden; }
 .vg-cells { position: absolute; inset: 0; display: grid; gap: 1px; grid-template: repeat(var(--vg-ny), minmax(0, 1fr)) / repeat(var(--vg-nx), minmax(0, 1fr)); }
 .vg-cells:focus-visible { outline-offset: 2px; }

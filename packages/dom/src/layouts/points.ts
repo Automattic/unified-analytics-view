@@ -17,7 +17,9 @@ const DOT = 'calc(4px + var(--vg-size, 0.4) * 5px)';
 export const POINTS_CSS = `
 .vg-dots, .vg-points, .vg-point-labels { position: absolute; inset: 0; }
 .vg-body[data-scale="point"] :is(.vg-dots, .vg-point-labels) { inset-inline: 2px; }
-.vg-dots, .vg-point-labels { pointer-events: none; }
+/* The holder of points lies over the plot's own hit targets, so only its dots take the pointer. */
+.vg-dots, .vg-points, .vg-point-labels { pointer-events: none; }
+.vg-points i { pointer-events: auto; }
 /* ponytail: physical translate, as the x axis has, so not right for right-to-left. */
 :is(.vg-dots, .vg-points) i { position: absolute; inset-inline-start: calc(var(--vg-x) * 100%); inset-block-start: calc((1 - var(--vg-t)) * 100%); translate: -50% -50%;
   inline-size: ${DOT}; block-size: ${DOT}; border-radius: 50%; background: var(--vg-paint); }

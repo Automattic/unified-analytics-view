@@ -1,6 +1,6 @@
 # Chart coverage: inventory and plan
 
-As of October 7, 2026. **Status: Proposed. Nothing here is built. Section 6 lists the calls that are Open and not this document's to settle.**
+As of October 7, 2026. **Status: Proposed. Nothing here is built. The calls it stood on were decided on October 7 and are recorded in section 6, with what is still open.**
 
 A catalog of 220 chart types (40 Common, 84 Uncommon, 38 Rare, 58 Specialist) was read against the grammar as it stands in `packages/core`. This note records what the grammar can draw today, what it would take to draw every Common type, and the order to build that in.
 
@@ -10,7 +10,7 @@ How common a type is, is the catalog's judgement. Which step a chart falls under
 
 - **The mark vocabulary scales.** No Common chart needs a mark beyond the four the reference already proposes: `dot`, `tick`, `cell` and `arc`.
 - **The shape around the marks does not, yet.** 4 of the 40 Common charts can be drawn today. Nearly every other one stops at `detectLayout` in `packages/core/src/plan.ts`, at a `throw` in `packages/core/src/scene.ts`, or at `maxItems: 1` on `query.by` in the schema.
-- **With the additions in section 3, 29 of the 40 are plain presets.** 2 more need a registered custom mark (`geo`). 9 are diagrams or continuous fields, not charts of rows, and stay out.
+- **With the additions in section 3, 29 of the 40 are plain presets.** 2 of those, Gantt and timeline, are deferred until the query contract can carry records. 2 more need a registered custom mark (`geo`). 9 are diagrams or continuous fields, not charts of rows, and stay out.
 - **The health check in section 9 of the reference holds.** None of the 29 needs a pin or a custom mark to exist.
 
 What the grammar cannot do today, read from the code:
@@ -48,11 +48,11 @@ Steps are those of section 5. Layer sketches leave out roles and the comparison 
 | League table with movement | 2 | rows: `text` columns and a delta per row |
 | Funnel chart | 2 | rows in stage order, `bar` plus a rate column from the engine |
 | Waterfall chart | 3 | `bar` y, y2 from engine running totals |
-| Gantt chart | 3 | rows on a time x: `bar` x, x2. Needs row-level data (Open B) |
+| Gantt chart | 3 | rows on a time x: `bar` x, x2. Deferred: needs row-level data |
 | Error bars | 3 | `rule` y, y2 over `dot` or `bar` |
 | Candlestick chart | 3 | `rule` low to high, `bar` open to close |
 | Box plot | 3 | `rule` min to max, `bar` p25 to p75, `tick` p50, quantiles from the engine |
-| Timeline | 3, 4 | rows on a time x: `dot` and `text`. Needs row-level data (Open B) |
+| Timeline | 3, 4 | rows on a time x: `dot` and `text`. Deferred: needs row-level data |
 | Scatterplot | 4 | `dot` x: metric, y: metric |
 | Bubble chart | 4 | `dot` with `size` |
 | Quadrant chart | 4 | `dot`, `text`, and a `rule` on each axis |
@@ -122,7 +122,7 @@ Changes to marks that exist:
 |---|---|---|
 | Stack | `stack: "zero" \| "normalize" \| "center"` on any layer with `color` | `normalize` exists, on the band only |
 | Dodge | No field. A `bar` with `color` and no `stack` sits beside its neighbours | Overlapping bars are never what was meant. Lines and areas with no `stack` overlay |
-| Bin, quantile, density, running total | **Not in core.** The engine returns them | See Open C |
+| Bin, quantile, density, running total | **Not in core.** The engine returns them | Decided October 7 |
 
 Statistics arrive as companion fields, the way `metric@previous` does today: `load_time@p25`, `revenue@lower`, `revenue@running`. `checkLayers` then validates a field against what the result returns, not only against the query.
 
@@ -143,15 +143,18 @@ Statistics arrive as companion fields, the way `metric@previous` does today: `lo
 
 | Addition | Where | Notes |
 |---|---|---|
-| Two dimensions in `by` | Query, schema | Open 10. Rows come back long: one per pair |
+| Two dimensions in `by` | Query, schema | Decided October 7: two, no more. Rows come back long: one per pair |
 | `facet` | Spec | Names a dimension. No column count; the container decides |
 | A third preset slot, `$split` | Presets | The second dimension |
 | Dimension type `number` | Catalog | For bins and density |
-| `domain`, `target` and `bands` on a metric | Catalog | Already on the reference's missing list. Gauge and bullet read one entry |
+| `domain`, `target` and `bands` on a metric | Catalog | Gauge and bullet read one entry |
+| `sweep: "half"` on a layer | Spec | For `arc`. The one layer field that is neither data nor role |
+| `series: "delta"` on a `text` layer | Spec | A delta per row, painted by polarity |
+| `fallback` on a fit rule | Fit rules | Names the preset a view becomes below the rule's need |
 | A colour role on a dimension's values | Catalog | So "Search" is one colour in every view. Until it lands, paint follows the domain's order, not the row's |
 | Totals per split | Result | So a normalized stack divides by an engine total |
 
-Nothing above is a size, a breakpoint or a presentation switch.
+Nothing above is a size, a breakpoint or a presentation switch. The four catalog and result rows are proposals to the API's owners, as the rest of the seam is.
 
 ### 3.6 Scene
 
@@ -223,13 +226,13 @@ Two rules for all of it:
 
 ### Step 1. Scales from fields, series, stacking
 
-Size: large. Unlocks grouped bar, stacked bar, stacked area, diverging bar, several-series line, dual-axis. Needs Open 4 and Open 10 answered first.
+Size: large. Unlocks grouped bar, stacked bar, stacked area, diverging bar, several-series line, dual-axis.
 
 1. **Refactor with no change in output.** In `scene.ts`, split `sceneCartesian` into scale derivation and one function per mark, looked up by mark name. Replace the three `if`s in `detectLayout` with a table from the field types on x, y and color to a layout. Done when the sweep, parity and golden scenes pass untouched.
 2. **Shares from the engine.** `Result.totals` is the divisor in `sceneBand` and `sceneNumber`. The fixture engine returns a total that includes rows past the `limit`. This changes the channel-mix golden scene only if the fixture limits it; say so in the commit either way.
 3. **Two dimensions.** `maxItems: 2` in the schema. The fixture engine answers `by: [a, b]` with one row per pair and totals per value of each. `checkLayers` lists both in its error.
 4. **`color` as a split on cartesian.** One series per value: a path per series for `line` and `area`, a rect per pair for `bar`. Keys gain the series. Paint follows the colour dimension's domain order. A `legend` part, and fit rules for it: full legend, then direct labels at the line ends, then nothing.
-5. **More than six series.** The resolver folds the tail into "Other" (already Proposed as tier 3 in section 10.2 of the reference). Until that lands, an error that names the fix: add a `limit`.
+5. **More than six series is an error that names the fix:** add a `limit`. The resolver's fold into "Other" (Proposed as tier 3 in section 10.2 of the reference) replaces the error when it is built; it is not part of this step.
 6. **`stack: "zero"`, `"normalize"`, `"center"` on an axis,** and dodge for an unstacked `bar`. `RectNode` gains `v0`.
 7. **Signed domain.** The domain covers negatives; the axis line moves to zero. `place()` and the cartesian layout's CSS read `v0`.
 8. **A scale per unit.** Layers whose metrics differ in catalog `unit` get their own y scale; a second `y-axis` part on the far side. Fit rule: the second axis goes before the first.
@@ -245,7 +248,7 @@ Size: medium. Unlocks table with in-cell bars, league table, funnel. The MVP vie
 
 1. **Columns.** Each `text` or `bar` layer that encodes a metric is a column, in layer order. A `columns` part carries header labels as guides.
 2. **Columns are ranked.** The first metric stays; the rest carry `rank` and are given up from the right when the row is short. The room a column needs is measured, as the value's room is today.
-3. **A delta per row.** Proposed form: a `text` layer with `series: "delta"`, painted by polarity as the tldr value's delta is. This adds a value to `series`; confirm the form before building.
+3. **A delta per row.** A `text` layer with `series: "delta"`, painted by polarity as the tldr value's delta is. It is left out on expansion when the query has no `compare`, as a `previous` layer is.
 4. **The track.** The `bar` layer's x gets a real scale (linear, signed). Nothing else draws in it until step 3.
 5. **Funnel preset:** rows in the query's order, a bar, the count, and a rate. The rate is an engine metric; the view does not divide.
 6. **DOM:** `layouts/rows.ts` becomes a grid with one track per column. The feedback note that a row has no node in the scene (step 5 of the painter work, finding 5) is fixed here: add the row node.
@@ -254,13 +257,13 @@ Done when conversions by event renders count, rate and value per row and drops c
 
 ### Step 3. Ranges and `tick`
 
-Size: medium. Unlocks waterfall, error bars, candlestick, box plot, and Gantt and timeline if Open B allows. Needs Open C answered first.
+Size: medium. Unlocks waterfall, error bars, candlestick and box plot. It also builds the ranged bar Gantt and timeline would use; those two are deferred.
 
 1. **Companion fields.** `checkLayers` accepts `metric@suffix` when the result returns it, and its error lists the companions that exist. The fixture engine gains `@min`, `@max`, `@p25`, `@p50`, `@p75`, `@lower`, `@upper` and `@running` for one metric each.
 2. **`x2` and `y2`** on `bar`, `rule` and `area`, in cartesian and in a row's track.
 3. **`rule` with fields,** and a constant on x.
 4. **`tick`.**
-5. **Paint by direction.** Proposed: a ranged bar whose end is below its start paints `delta.bad`, otherwise `delta.good`, turned by the metric's polarity, and neutral when polarity is `none`. Waterfall and candlestick both need it. Confirm before building.
+5. **Paint by direction and polarity.** A ranged bar whose end is below its start paints `delta.bad`, otherwise `delta.good`, turned by the metric's polarity, and neutral when polarity is `none`. Waterfall and candlestick both need it. No spec field.
 6. **Presets:** box-plot, error-bars, waterfall, candlestick, a fan (ranged `area` as `context`).
 7. **Fit rules.** Ranges are `context`; they go with the `secondary` rule and the central mark stays.
 
@@ -300,8 +303,8 @@ Size: medium. Unlocks pie, donut, gauge.
 
 1. **`ArcNode` and the `radial` layout,** triggered by a layer that encodes `angle`.
 2. **A part that holds its aspect ratio.** In the DOM, an SVG that is not stretched (`preserveAspectRatio` at its default). In `place()`, a square within the part's box.
-3. **Catalog `domain`, `target` and `bands`** on a metric, for the gauge. Needs Open 11.
-4. **Presets:** pie, donut, a half-circle form, gauge. The half-circle needs a shape parameter on the layer; propose `sweep: "half"` and raise it, since it is the first layer field that is neither data nor role.
+3. **Catalog `domain`, `target` and `bands`** on a metric, for the gauge.
+4. **Presets:** pie, donut, a half-circle form, gauge. The half-circle is `sweep: "half"` on the layer, the first layer field that is neither data nor role.
 5. **Fit rules.** The legend steps down as the band's does. In a donut the number sits in the hole, which is a rule and not a spec field. Below the `marks` need, the number alone.
 6. **Prose** is the share sentence the band already has.
 
@@ -316,7 +319,7 @@ Size: medium. Unlocks small multiples and, with step 6, the instrument panel. To
 3. **Shared guides.** The y axis shows on the first child of each row; the rest carry the grid only.
 4. **Fit rules** apply per child, which is what intrinsic sizing already gives.
 
-Build this after the board design is at least sketched, so facets and boards do not grow two layout mechanisms.
+Decided October 7: a facet is a small board. Build this after the board design is at least sketched, so the two share one layout mechanism.
 
 Done when visitors by day, faceted by channel, wraps from four columns to one with no script on resize.
 
@@ -325,9 +328,9 @@ Done when visitors by day, faceted by channel, wraps from four columns to one wi
 Size: large. Unlocks choropleth and proportional symbol map.
 
 1. **The registry.** A custom mark is registered in code under a name: a scene builder for core's side, a painter for the DOM's. The spec refers to it by name and passes encodings, nothing else.
-2. **`geo` lives in its own package.** Projection needs `d3-geo`, and core's dependencies are fixed at three. **This is a new dependency: ask first.** Boundary shapes are an input handed in, as the catalog is.
+2. **`geo` lives in its own package,** `packages/geo`, which depends on `d3-geo` (approved October 7, for that package only). Core stays at three dependencies. Boundary shapes are an input handed in, as the catalog is.
 3. **It reuses** the sequential ramp from step 5 and the size steps from step 4.
-4. **Its fallback is a different layout:** below the room a map needs, it becomes the `bar-list` of the same query. This is the first fit rule that swaps a layout, and the rule format has no word for it yet.
+4. **Its fallback is a different layout:** below the room a map needs, it becomes the `bar-list` of the same query. The rule says so with a new optional field, `fallback`, naming the preset. `resolve()` plans again with it; the DOM painter paints both and a container query shows one.
 
 Done when visitors by country renders as a map at dashboard width and as a ranked list at sidebar width, from one spec.
 
@@ -335,25 +338,38 @@ Done when visitors by country renders as a map at dashboard width and as a ranke
 
 The nine Common charts marked "out" in section 2, and the four Uncommon families. If one is wanted, it is a custom mark through step 8's registry, and it counts against the health check.
 
-## 6. Open, with a recommendation
+## 6. Decided, and still open
 
-These are raised, not settled.
+### Decided October 7
 
-| # | Question | Recommendation | Blocks |
-|---|---|---|---|
-| Open 4 | Generalizing the three layouts | Keep layouts as arrangements; derive the scale from the field on each channel; make `rows` a track per row; add `radial` | Step 1 |
-| Open 10 | More than one dimension in `by` | Allow two. The second goes to `color`, to `facet`, or to the other axis | Step 1 |
-| Open 11 | Catalog properties | Add type `number`, and `domain`, `target`, `bands` and a colour role | Steps 4, 6 |
-| Open 5 | Label collision | Ranked labels and the measured pass as a first cut in step 4; decide build or source after seeing it | — |
-| Open 12 | Boards | Sketch the board before step 7, so a facet is one | Step 7 |
-| A (new) | Where the half-circle and other shape parameters live | A closed set of layer fields, starting with `sweep`. The alternative is a preset pin (Open 3) | Step 6 |
-| B (new) | Row-level data | Gantt and timeline rows are records (a task, a start, an end), not a metric by a dimension. The query contract has no shape for them. For whoever owns the API. A scatter of pages is not affected: it is two metrics by one dimension | Gantt, timeline |
-| C (new) | Where statistics run | In the engine, returned as companion fields. A transform vocabulary in core is the expression language section 7 of the reference warns against | Step 3 |
-| D (new) | A fit rule that swaps a layout | Needed by `geo`. Extend `set`, or add a `fallback` to the rule | Step 8 |
+| # | Question | Decision |
+|---|---|---|
+| Open 4 | Generalizing the three layouts | Layouts stay, as arrangements of parts. A channel's scale comes from its field. `rows` is a track per row. `radial` is added for `arc` |
+| Open 10 | More than one dimension in `by` | Two. The second goes to `color`, to `facet`, or to the other axis |
+| Open 11 | Catalog properties | Propose to the API's owners: dimension type `number`; `domain`, `target` and `bands` on a metric; a colour role per dimension value; and, on the result, totals per split |
+| Open 12, in part | How a facet relates to a board | A facet is a small board: a plan per value, one shared domain, laid out by the container |
+| A | Shape parameters | A closed set of layer fields, starting with `sweep: "half"` |
+| B | Row-level data | Deferred. Gantt and timeline wait until the query contract can carry records. Step 3 still builds the ranged bar |
+| C | Where statistics run | In the engine, returned as companion fields. Core gains no transform for them |
+| D | A fit rule that swaps a layout | A `fallback` on the rule, naming a preset |
+| | A delta per row | `series: "delta"` on a `text` layer |
+| | Paint of a ranged bar | By direction and the metric's polarity. No spec field |
+| | More than six series | An error that names the fix, until the fold into "Other" is built |
+| | `d3-geo` | Approved, in `packages/geo` only |
+
+### Still open
+
+| # | Question | Where it bites |
+|---|---|---|
+| Open 5 | Label collision: build or source | Step 4 ships ranked labels and the measured pass as a first cut. Decide after seeing it |
+| Open 12 | The board itself | Step 7 waits for a sketch |
+| Open 3 | How a preset pins a hand-tuned form | Nothing here needs it. If a step finds it does, that is a finding for section 7 |
+| New | Keyboard over points in two dimensions | Scatter (step 4) and heatmap (step 5). Version 4 has no model for it; the proposal is nearest neighbour by arrow direction for points, and row and column for a grid |
+| New | Keyboard through series at one x | Step 1. Check against version 4's model before building |
 
 ## 7. What to count as it is built
 
 - **Presets that need a pin or a custom mark.** The claim is none of 29. Each exception is a hole in the grammar.
 - **Specs that need `keep`.** As today.
-- **Layer fields that are neither data nor role.** One is proposed (`sweep`). If the count grows, chart types are coming back as parameters.
+- **Layer fields that are neither data nor role.** There is one, `sweep`. If the count grows, chart types are coming back as parameters.
 - **Charts that need their own fit rules** rather than their layout's. The claim is that rules belong to arrangements and parts.

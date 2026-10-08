@@ -225,4 +225,5 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
   conversions: { label: 'Columns: count, rate and value by event', spec: { spec: 'view/0', title: 'Conversions', query: { metrics: ['conversions', 'conversion_rate', 'conversion_value'], by: ['event'], range: '28d' },
             layers: [{ mark: 'bar', encode: { y: 'event', x: 'conversions' } }, { mark: 'text', encode: { y: 'event', text: 'event' } }, { mark: 'text', encode: { y: 'event', text: 'conversions' }, align: 'end' },
                      { mark: 'text', encode: { y: 'event', text: 'conversion_rate' }, align: 'end' }, { mark: 'text', encode: { y: 'event', text: 'conversion_value' }, align: 'end' }] } },
+  funnel:  { label: 'Funnel: visitors by step, with the rate', spec: { spec: 'view/0', title: 'Checkout funnel', use: 'funnel', query: { metrics: ['visitors', 'conversion_rate'], by: ['step'], range: '28d' } } },
 };

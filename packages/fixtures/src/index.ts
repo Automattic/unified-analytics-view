@@ -1,4 +1,13 @@
 import type { Catalog, Query, Result, Row, Spec } from '@universal-analytics/core';
+import { registerGeo, type Shapes } from '@universal-analytics/geo';
+import shapes from './countries.json';
+
+/** Boundary shapes for the `geo` mark: 123 countries, each with its name as its id, which is the value the `country`
+ * dimension has for it. Natural Earth's 1:110m countries, by way of world-atlas 2.0.2, cut down for a fixture: borders
+ * simplified to within 1.5 degrees, islands and countries under 6 square degrees left out, and Antarctica. Not for a product. */
+export const countries: Shapes = shapes;
+// Handed to the mark here, as a product would at startup, so every sample resolves wherever the fixtures are loaded.
+registerGeo(countries);
 
 /* Stands in for the query layer and the engines. Totals come from the
  * "engine", never from summing the rows a view happens to receive. */
@@ -25,6 +34,7 @@ export const catalog: Catalog = {
     load_time:  { label: 'Load time', type: 'number' },
     event:      { label: 'Event',   type: 'categorical' },
     step:       { label: 'Step',    type: 'categorical' },
+    country:    { label: 'Country', type: 'categorical' },
   },
 };
 
@@ -75,6 +85,9 @@ const WEEKDAYS = shares(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], [1.06
 const HOURS = shares(Array.from({ length: 24 }, (_, h) => (h % 12 || 12) + (h < 12 ? 'am' : 'pm')), Array.from({ length: 24 }, (_, h) => 0.15 + Math.exp(-((h - 11) ** 2) / 18) + 0.6 * Math.exp(-((h - 20) ** 2) / 8)));
 // A dimension whose values divide a total: each value's share of it, now and in the period before.
 const MIX: Record<string, [string, number, number][]> = { channel: CHANNELS, device: DEVICES, weekday: WEEKDAYS, hour: HOURS };
+// Where visitors are, by the name the boundary shapes know each country by.
+MIX.country = [['United States', 0.31, 0.33], ['India', 0.12, 0.1], ['United Kingdom', 0.09, 0.1], ['Germany', 0.08, 0.08], ['Brazil', 0.07, 0.06], ['Canada', 0.06, 0.06], ['France', 0.05, 0.05],
+  ['Australia', 0.045, 0.05], ['Japan', 0.04, 0.04], ['Spain', 0.035, 0.035], ['Mexico', 0.03, 0.03], ['Indonesia', 0.025, 0.02], ['Nigeria', 0.02, 0.015], ['South Africa', 0.015, 0.015], ['Sweden', 0.01, 0.015]];
 // What a page has and a day does not: the share of its visitors who convert, in percent. A rate is the engine's to work out, and does not add up.
 const RATES: Record<string, number> = { '/': 2.1, '/pricing': 5.8, '/blog/launch-notes': 1.2, '/docs/getting-started': 3.4, '/changelog': 0.9, '/about': 1.6, '/blog/analytics-without-cookies': 2.7, '/contact': 4.4 };
 const RATE = 2.6;
@@ -276,4 +289,8 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
             layers: [{ mark: 'bar', encode: { y: 'event', x: 'conversions' } }, { mark: 'text', encode: { y: 'event', text: 'event' } }, { mark: 'text', encode: { y: 'event', text: 'conversions' }, align: 'end' },
                      { mark: 'text', encode: { y: 'event', text: 'conversion_rate' }, align: 'end' }, { mark: 'text', encode: { y: 'event', text: 'conversion_value' }, align: 'end' }] } },
   funnel:  { label: 'Funnel: visitors by step, with the rate', spec: { spec: 'view/0', title: 'Checkout funnel', use: 'funnel', query: { metrics: ['visitors', 'conversion_rate'], by: ['step'], range: '28d' } } },
+  map:     { label: 'A map: visitors by country', spec: { spec: 'view/0', title: 'Visitors by country', query: { metrics: ['visitors'], by: ['country'], range: '28d' },
+            layers: [{ mark: 'geo', encode: { x: 'country', color: 'visitors' } }] } },
+  symbols: { label: 'Symbols on a map: page views by country', spec: { spec: 'view/0', title: 'Page views by country', query: { metrics: ['pageviews'], by: ['country'], range: '28d' },
+            layers: [{ mark: 'geo', encode: { x: 'country', size: 'pageviews' } }] } },
 };

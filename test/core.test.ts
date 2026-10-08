@@ -138,6 +138,10 @@ describe('what a painter says with: values and dimensions in catalog format', ()
     const V = catalog.metrics.visitors!, rows = runQuery(trend.query).rows, last = rows[rows.length - 1]!;
     expect([formatValue(1234, V), formatValue(10531, V), formatValue(1234, V, 'compact'), formatValue(10531, V, 'exact'), formatValue(null, V), formatValue(null, V, 'exact')]).toEqual(['1,234', '10.5k', '1.2k', '10,531', '–', '–']);
     expect(formatDimension('2026-09-08', catalog.dimensions['date.day']!)).toBe('Sep 8');
+    // A bucket arrives as a bare date or as a full ISO datetime, and is read in UTC either way. One on an hour of the day says the hour.
+    const time = (v: string) => formatDimension(v, catalog.dimensions['date.day']!);
+    expect(['2026-09-08T00:00:00.000Z', '2026-09-08T00:00:00Z', '2026-09-08T15:00:00.000Z', '2026-09-08T15:00:00', '2026-09-08T23:00:00.000Z'].map(time)).toEqual(['Sep 8', 'Sep 8', 'Sep 8, 3 PM', 'Sep 8, 3 PM', 'Sep 8, 11 PM']);
+    expect(time('yesterday')).toBe('Invalid Date');
     expect(formatDimension('/pricing', catalog.dimensions.page!)).toBe('/pricing');
     expect(formatDimension(null, catalog.dimensions.page!)).toBe('–');
     expect([partialNote(rows[0]!), partialNote(last)]).toEqual(['', 'so far']);
@@ -461,6 +465,31 @@ describe('one row on a time axis: a deliberate departure from the prototype (fee
       expect(xticks(buildScene(resolve(trend, some, unboundedContainer(), catalog), trend.query, some, catalog)).length).toBe(n);
     }
   });
+});
+
+describe('a time dimension on rows and on a band: a deliberate departure from the prototype (feedback, review of October 7, finding 5)', () => {
+  // The prototype writes a row's label and a segment's name as the result holds them, "2026-09-29", where its own x axis
+  // and our readout say "Sep 29". Ours says the dimension as the catalog sets it, wherever it is written. No sample puts a
+  // time dimension on rows or on a band, so the sweep does not meet this. The prototype's texts are mapped here and nowhere else.
+  const day = /^\d{4}-\d{2}-\d{2}/, said = (text: string) => text.replace(day, (iso) => formatDimension(iso, catalog.dimensions['date.day']!));
+  const ourDays = (scene0: any) => ({ ...scene0, nodes: scene0.nodes.map((n: any) => (n.kind === 'text' ? { ...n, text: said(n.text) } : n)) });
+  const byDay: Record<string, Spec> = {
+    rows: { spec: 'view/0', title: 'Page views by day', use: 'bar-list', query: { metrics: ['pageviews'], by: ['date.day'], range: '28d', limit: 8 } },
+    band: { spec: 'view/0', title: 'Visitors by day', use: 'share-bar', query: { metrics: ['visitors'], by: ['date.day'], range: '28d', limit: 6 } },
+  };
+  for (const [name, spec] of Object.entries(byDay)) for (const w of [700, 346, 150]) {
+    it(name + ' at ' + w + ': the prototype says the date raw; ours says the day, and nothing else differs', () => {
+      const { plan, scene, result } = run(spec, w);
+      const host0 = proto.makeHost(w, null, 'svg', 8), res0 = proto.runQuery(spec.query, 'typical'), plan0 = proto.resolve(toProto(spec), res0, host0), scene0 = protoScene(plan0, spec.query, res0, host0);
+      const texts = (sc: any): string[] => sc.nodes.filter((n: any) => n.kind === 'text').map((n: any) => n.text);
+      expect(plain(result)).toEqual(plain(res0));
+      expect(plain(plan)).toEqual({ ...fromProto(plain(plan0)), preset: plan.preset });
+      expect(texts(scene0).some((t) => day.test(t))).toBe(true);
+      expect(texts(scene).some((t) => day.test(t))).toBe(false);
+      expect(texts(scene).some((t) => /^[A-Z][a-z]{2} \d/.test(t))).toBe(true);
+      expect(plain(scene)).toEqual(ourDays(scene0));
+    });
+  }
 });
 
 describe('golden scenes', () => {

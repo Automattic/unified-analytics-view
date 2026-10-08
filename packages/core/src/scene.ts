@@ -1,10 +1,10 @@
 import { max, min } from 'd3-array';
 import { scaleBand, scaleLinear, scalePoint, scaleQuantize } from 'd3-scale';
-import { CHAR_W, delta, fmt, fmtDay, fmtPct, formatDimension, formatUnit, formatValue } from './format.ts';
+import { CHAR_W, delta, fmt, fmtPct, fmtTime, formatDimension, formatUnit, formatValue } from './format.ts';
 import { arcD, pathD } from './path.ts';
 import { customMarks } from './marks.ts';
 import { leader } from './prose.ts';
-import type { ArcNode, Catalog, Guides, Layer, Mark, MetricDef, Part, PathNode, PlanShape, Polarity, Query, Result, Role, Row, Scene, SceneNode, TextNode } from './types.ts';
+import type { ArcNode, Catalog, DimensionDef, Guides, Layer, Mark, MetricDef, Part, PathNode, PlanShape, Polarity, Query, Result, Role, Row, Scene, SceneNode, TextNode } from './types.ts';
 
 /* Node kinds: rect, path, line, circle, text. Every node has a stable key,
  * a part, a paint token (never a colour) and a layer: "data" or "guide".
@@ -269,7 +269,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     const idx = isTime ? [...new Set([0, Math.floor(last / 2), last])] : keys.map((_, i) => i);
     idx.forEach((i, j) => {
       const mid = isTime && j > 0 && j < idx.length - 1;                  // given up on a narrow plot
-      nodes.push({ key: 'xtick:' + keys[i], part: 'x-axis', kind: 'text', x: unit.cx(keys[i]!), row: keys[i]!, text: isTime ? fmtDay(keys[i]!) : String(keys[i]),
+      nodes.push({ key: 'xtick:' + keys[i], part: 'x-axis', kind: 'text', x: unit.cx(keys[i]!), row: keys[i]!, text: isTime ? fmtTime(keys[i]!) : String(keys[i]),
         anchor: !isTime ? 'middle' : j === 0 ? 'start' : j === idx.length - 1 ? 'end' : 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...(mid && { rank: 1 }) });
     });
   }
@@ -331,8 +331,9 @@ export function columnLabel(catalog: Catalog, l: Layer): string {
 }
 // What a text layer says in one row.
 function cellOf(catalog: Catalog, l: Layer, r: Row): { text: string; paint: string } {
-  const f = l.encode!.text as string, M = catalog.metrics[f];
-  if (!M || l.series !== 'delta') return { text: M ? formatValue(num(r, f), M) : String(r[f]), paint: 'ink' };
+  const f = l.encode!.text as string, M = catalog.metrics[f], D = catalog.dimensions[f];
+  // A dimension is said as the readout says it, so a day is "Sep 29". The prototype writes it raw: a deliberate departure.
+  if (!M || l.series !== 'delta') return { text: M ? formatValue(num(r, f), M) : D ? formatDimension(r[f], D) : String(r[f]), paint: 'ink' };
   // The row's change, as the tldr value's delta says the total's. A row with nothing before it has a dash: a column has no room for the words.
   const d = delta(num(r, f), r[f + '@previous'] as number | null | undefined, M.polarity);
   return { text: d.state === 'none' ? '–' : d.text, paint: d.paint };
@@ -433,25 +434,26 @@ function sceneRows(catalog: Catalog, layers: Layer[], rows: Row[]): Body {
 
 // No positional dimension: one band, stacked and normalized, split by colour. A share is of the engine's total, so
 // with a `limit` the band stops short of its end by what the rows past the limit hold.
-function sceneBand(layer: Layer, rows: Row[], totals: Result['totals']): Body {
+function sceneBand(catalog: Catalog, layer: Layer, rows: Row[], totals: Result['totals']): Body {
   const nodes: SceneNode[] = [], m = layer.encode!.x as string, dim = layer.encode!.color as string;
   const total = totals[m] || 1, k = (r: Row) => str(r, dim);
   rows.forEach((r, i) => {
     nodes.push({ key: 'seg:' + k(r), part: 'band', kind: 'rect', v: num(r, m) / total, row: k(r), paint: 'series.' + ((i % 6) + 1), layer: 'data', role: roleOf(layer) });
   });
-  return { nodes: nodes.concat(shareLegend(rows, k, m, total, (i) => 'series.' + ((i % 6) + 1))), rows: rows.map(k) };
+  return { nodes: nodes.concat(shareLegend(rows, k, catalog.dimensions[dim]!, m, total, (i) => 'series.' + ((i % 6) + 1))), rows: rows.map(k) };
 }
 // The legends of a whole split by colour, for a band and for a circle of arcs: both of them, each in its own part.
 // The plan names one in `parts`; a fit rule swaps them.
-function shareLegend(rows: Row[], k: (r: Row) => string, m: string, total: number, paint: (i: number) => string): SceneNode[] {
-  const nodes: SceneNode[] = [];
+// A segment is named as the readout names it, so a day is "Sep 29". The prototype writes it raw: a deliberate departure.
+function shareLegend(rows: Row[], k: (r: Row) => string, dim: DimensionDef, m: string, total: number, paint: (i: number) => string): SceneNode[] {
+  const nodes: SceneNode[] = [], name = (r: Row) => formatDimension(k(r), dim);
   rows.forEach((r, i) => {
     nodes.push({ key: 'swatch:' + k(r), part: 'legend', kind: 'rect', row: k(r), paint: paint(i), layer: 'data' });
-    nodes.push({ key: 'legend:' + k(r), part: 'legend', kind: 'text', row: k(r), text: String(k(r)), anchor: 'start', baseline: 'middle', font: 'label', paint: 'ink', layer: 'guide' });
+    nodes.push({ key: 'legend:' + k(r), part: 'legend', kind: 'text', row: k(r), text: name(r), anchor: 'start', baseline: 'middle', font: 'label', paint: 'ink', layer: 'guide' });
     nodes.push({ key: 'share:' + k(r), part: 'legend', kind: 'text', row: k(r), text: fmtPct(num(r, m) / total), anchor: 'end', baseline: 'middle', font: 'value', paint: 'ink', layer: 'guide' });
   });
   // One line for the whole of it, so it names no row.
-  if (rows.length) nodes.push({ key: 'legend:top', part: 'legend-top', kind: 'text', text: k(rows[0]!) + ' ' + fmtPct(num(rows[0]!, m) / total), anchor: 'start', font: 'label', paint: 'ink', layer: 'guide' });
+  if (rows.length) nodes.push({ key: 'legend:top', part: 'legend-top', kind: 'text', text: name(rows[0]!) + ' ' + fmtPct(num(rows[0]!, m) / total), anchor: 'start', font: 'label', paint: 'ink', layer: 'guide' });
   return nodes;
 }
 
@@ -488,7 +490,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
         const lo = run / total, hi = (run += num(r, m)) / total;
         arcs.push(arc(ids[i] + ':' + k(r), l, lo, Math.max(lo, hi - (rows.length > 1 ? GAP / span : 0)), r0, 'series.' + (j + 1), { row: k(r) }));
       });
-      legend.push(...shareLegend(rows, k, m, total, (j) => 'series.' + (j + 1)));
+      legend.push(...shareLegend(rows, k, catalog.dimensions[dim]!, m, total, (j) => 'series.' + (j + 1)));
       keys = rows.map(k);
       return;
     }
@@ -624,7 +626,7 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
   } else if (p.layout === 'band') {
     parts.push('band');
     if (p.guides.legend) parts.push(p.guides.legend === 'top' ? 'legend-top' : 'legend');
-    body = sceneBand(p.layers[0]!, result.rows, result.totals);
+    body = sceneBand(catalog, p.layers[0]!, result.rows, result.totals);
   } else if (p.layout === 'radial') {
     body = sceneRadial(catalog, p.layers, q, result);
     parts.push('radial');

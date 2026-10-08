@@ -2,7 +2,8 @@ import type { DimensionDef, MetricDef, Polarity, Row, Unit } from './types.ts';
 
 const NF = new Intl.NumberFormat('en-US');
 const CF = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
-const DF = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+const DF = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });                    // Sep 8
+const HF = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', timeZone: 'UTC' });   // Sep 8, 3 PM
 export const CHAR_W = 6.6; // rough advance of the 13px label face, for clipping
 
 export function fmt(v: number | null | undefined, compact?: boolean): string {
@@ -12,10 +13,13 @@ export function fmt(v: number | null | undefined, compact?: boolean): string {
 export function fmtPct(p: number): string {
   return pct(p * 100);
 }
-// One formatter for every call: a readout and a table row each ask for a day, and toLocaleDateString builds its own each time.
-export function fmtDay(iso: string): string {
-  const day = new Date(iso + 'T00:00:00Z');
-  return isNaN(+day) ? String(day) : DF.format(day);                    // "Invalid Date", as toLocaleDateString says it
+/** A bucket of time, always in UTC: a bare date, "2026-09-08", or a full ISO datetime, "2026-09-08T15:00:00.000Z". A
+ * datetime with no offset is read as UTC too, never as local time. One that starts on the hour of a day reads "Sep 8, 3 PM".
+ * ponytail: the grain is read from the value, since neither the catalog nor the result states it. So the midnight bucket
+ * of an hourly result reads "Sep 8", as a day does. When the result says its grain, branch on that here. */
+export function fmtTime(iso: string): string {
+  const t = new Date(/T[\d:.]+$/.test(iso) ? iso + 'Z' : iso);
+  return isNaN(+t) ? String(t) : (+t % 86400000 ? HF : DF).format(t);     // "Invalid Date", as toLocaleDateString says it
 }
 // Percent points, as a rate is said: whole from ten, a decimal under it. Exact keeps two.
 const pct = (x: number, exact?: boolean) => (exact ? +x.toFixed(2) : x >= 10 ? Math.round(x) : Math.round(x * 10) / 10) + '%';
@@ -62,9 +66,9 @@ export function formatUnit(v: number | null | undefined, unit: string, form?: 'c
 export function formatValue(v: number | null | undefined, metric: MetricDef, form?: 'compact' | 'exact'): string {
   return formatUnit(v, metric.unit, form);
 }
-/** A dimension's value as its catalog entry sets it: a day as "Sep 8", a category as itself. */
+/** A dimension's value as its catalog entry sets it: a day as "Sep 8", an hour as "Sep 8, 3 PM", a category as itself. */
 export function formatDimension(v: Row[string], dim: DimensionDef): string {
-  return v == null ? '–' : dim.type === 'time' ? fmtDay(String(v)) : String(v);
+  return v == null ? '–' : dim.type === 'time' ? fmtTime(String(v)) : String(v);
 }
 export function rangeLabel(r: string | null | undefined): string {
   const m = /^(\d+)d$/.exec(r || '');

@@ -4,7 +4,7 @@ import { adapt, type ApiResult } from '@universal-analytics/spacefast';
 import trends from './fixtures/spacefast/trends.response.json';
 import breakdowns from './fixtures/spacefast/breakdowns.response.json';
 
-// The API's own examples (spacefast/monorepo#3816, at afd8faa), recorded from its store for a seeded site.
+// The API's own examples (spacefast/monorepo, at 23789af), recorded from its store for a seeded site.
 const answers = [...trends.data.results, ...breakdowns.data.results] as unknown as ApiResult[];
 const answer = (id: string) => answers.find((a) => a.id === id)!;
 
@@ -22,16 +22,20 @@ describe('one answer of the Spacefast query API, as a view takes it', () => {
     const { result } = adapt(answer('traffic'));
     expect(result.totals).toEqual({ page_views: 13397, visitors: null, bot_traffic: 996 });
   });
-  it('the catalog comes from the answer\'s columns: units, labels, and a rise in bots is neither good nor bad', () => {
-    const { catalog } = adapt(answer('pages'), { polarity: { engaged_time: 'up' } });
+  it('the catalog comes from the answer\'s columns: units, labels, and whether a rise is good', () => {
+    const { catalog } = adapt(answer('pages'));
     expect(catalog.metrics).toEqual({
-      page_views: { label: 'Page views', unit: 'count', polarity: 'up' },
-      engaged_time: { label: 'Engaged time', unit: 'ms', polarity: 'up' },
-      scroll_depth: { label: 'Scroll depth', unit: 'percent', polarity: 'up' },
+      page_views: { label: 'Page views', unit: 'count', polarity: 'up', definition: 'One page load or client-side route change.' },
+      engaged_time: { label: 'Engaged time', unit: 'ms', polarity: 'up', definition: expect.stringContaining('Median') },
+      scroll_depth: { label: 'Scroll depth', unit: 'percent', polarity: 'up', definition: expect.any(String) },
     });
+    // The caveat travels with the number: consented visitors only, in the API's own words.
+    expect(adapt(answer('headline')).catalog.metrics.unique_visitors_range!.definition).toMatch(/consented visitors only/);
     expect(formatValue(27632, catalog.metrics.engaged_time!)).toBe('27.6s');
     expect(formatValue(72.8, catalog.metrics.scroll_depth!)).toBe('73%');
     expect(adapt(answer('headline')).catalog.metrics.bot_traffic!.polarity).toBe('none');
+    const col = answer('countries').columns, down = adapt({ ...answer('countries'), columns: [col[0]!, { ...col[1]!, polarity: 'down_is_good' } as ApiResult['columns'][number]] });
+    expect(down.catalog.metrics.page_views!.polarity).toBe('down');
     expect(adapt(answer('headline')).catalog.metrics.visitor_days!.rangeTotal).toBe('sum of daily');
   });
   it('a list: rows keep the API\'s order and carry their place as a rank', () => {
@@ -70,7 +74,7 @@ describe('one answer of the Spacefast query API, as a view takes it', () => {
   it('money is a metric for each currency, in the currency\'s own units, and nothing is added across them', () => {
     const { query, result, catalog } = adapt(answer('goals'));
     expect(query.metrics).toEqual(['event_occurrences', 'revenue.eur', 'revenue.gbp', 'revenue.usd']);
-    expect(catalog.metrics['revenue.eur']).toEqual({ label: 'Revenue (EUR)', unit: 'eur', polarity: 'up', rangeTotal: 'sum' });
+    expect(catalog.metrics['revenue.eur']).toEqual({ label: 'Revenue (EUR)', unit: 'eur', polarity: 'up', rangeTotal: 'sum', definition: expect.any(String) });
     expect(result.rows[2]).toEqual({ event_label: 'purchase', event_occurrences: 203, 'revenue.eur': 418, 'revenue.gbp': 126, 'revenue.usd': 4333, 'event_occurrences@rank': 3 });
     expect(result.rows[0]!['revenue.usd']).toBeNull();                         // an event with no amount has none, not zero
     expect(result.totals).toEqual({ event_occurrences: 738, 'revenue.eur': 418, 'revenue.gbp': 126, 'revenue.usd': 4333 });
@@ -78,10 +82,17 @@ describe('one answer of the Spacefast query API, as a view takes it', () => {
     expect(result.meta.notes).toEqual([]);
     expect(result.meta.range).toBe('31d');                                     // whole days, as the answer's own since and until say
   });
-  it('a currency with no cents is not divided, and money with no amount anywhere is a note', () => {
-    const goals = answer('goals'), yen = [{ amountMinor: 5000, currency: 'jpy' }];
-    const jpy = adapt({ ...goals, rows: [{ event_label: 'purchase', event_occurrences: 1, revenue: yen }], totals: { event_occurrences: 1, revenue: yen } });
-    expect(jpy.result.totals['revenue.jpy']).toBe(5000);
+  it('minor units are ISO 4217\'s, by the tracker\'s table and not the browser\'s: yen whole, dinars in thousandths, forints in hundredths', () => {
+    const goals = answer('goals'), sold = [{ amountMinor: 5000, currency: 'jpy' }, { amountMinor: 1234, currency: 'kwd' }, { amountMinor: 123456, currency: 'huf' }];
+    const { result } = adapt({ ...goals, rows: [{ event_label: 'purchase', event_occurrences: 1, revenue: sold }], totals: { event_occurrences: 1, revenue: sold } });
+    expect([result.totals['revenue.jpy'], result.totals['revenue.kwd'], result.totals['revenue.huf']]).toEqual([5000, 1.234, 1234.56]);
+  });
+  it('money with no amount anywhere is a note, as is a code that is no currency, and empty revenue may be null', () => {
+    const goals = answer('goals'), typo = [{ amountMinor: 4999, currency: 'usx' }, { amountMinor: 4999, currency: 'usd' }];
+    const odd = adapt({ ...goals, rows: [{ event_label: 'purchase', event_occurrences: 1, revenue: typo }, { event_label: 'newsletter', event_occurrences: 2, revenue: null }], totals: { event_occurrences: 3, revenue: typo } });
+    expect(odd.query.metrics).toEqual(['event_occurrences', 'revenue.usd']);
+    expect(odd.result.rows.map((r) => r['revenue.usd'])).toEqual([49.99, null]);
+    expect(odd.result.meta.notes).toEqual(['Revenue in "usx" is left out: that is not a currency.']);
     const none = adapt({ ...goals, rows: goals.rows.slice(0, 2), totals: { event_occurrences: 535, revenue: [] } });
     expect(none.query.metrics).toEqual(['event_occurrences']);
     expect(none.result.meta.notes).toEqual(['Revenue has no amount in any currency over this range.']);
@@ -98,6 +109,7 @@ describe('one answer of the Spacefast query API, as a view takes it', () => {
     expect(() => adapt({ ...answer('goals'), columns: answer('goals').columns.filter((c) => c.id !== 'event_occurrences'), rows: [], totals: { revenue: [] } })).toThrow(/"revenue" has no amount in any currency over this range\. Ask for a count beside it, or a longer range/);
     const odd = answer('countries');
     expect(() => adapt({ ...odd, columns: [odd.columns[0]!, { ...odd.columns[1]!, unit: 'furlongs' } as ApiResult['columns'][number]] })).toThrow(/Add it to UNITS/);
+    expect(() => adapt({ ...odd, columns: [odd.columns[0]!, { ...odd.columns[1]!, polarity: 'sideways' } as ApiResult['columns'][number]] })).toThrow(/Add it to POLARITY/);
   });
 });
 
@@ -119,6 +131,20 @@ describe('the adapted answers draw', () => {
     const text = scene.nodes.flatMap((n) => ('text' in n && typeof n.text === 'string' ? [n.text] : []));
     expect(text).toContain('€418');
     expect(prose).toContain('€418');
+  });
+  it('a headline whose numbers are in the totals, with no rows', () => {
+    const { query, result, catalog } = adapt({ ...answer('headline'), rows: [], previous: { ...answer('headline').previous!, rows: [] } });
+    const spec = { query: { ...query, metrics: ['page_views'] } };
+    expect(result.rows).toEqual([]);
+    expect(result.meta.empty).toBeUndefined();
+    expect(tldrProse(spec.query, result, false, catalog)).toBe('Page views: 3,287 in the last 7 days, down 8.2% on the previous period.');
+  });
+  it('the number carries its metric\'s definition, for a painter to show when it is pointed at', () => {
+    const { query, result, catalog } = adapt(answer('headline'));
+    const spec = { spec: 'view/0', title: 'Visitors', query: { ...query, metrics: ['unique_visitors_range'] }, layers: [] } as unknown as Spec, container = makeContainer(346);
+    const scene = buildScene(resolve(spec, result, container, catalog), spec.query, result, catalog), value = scene.nodes.find((n) => n.key === 'value') as { text: string; note?: string };
+    expect(value.text).toBe('134');
+    expect(value.note).toMatch(/consented visitors only/);
   });
   it('a list of top pages', () => {
     const { scene } = draw('pages', 'bar-list', 'page_views');

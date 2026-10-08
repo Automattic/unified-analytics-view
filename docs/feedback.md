@@ -347,20 +347,26 @@ October 8. Six items above were picked as the ones that would make real data rea
 
 ## The adapter for Spacefast's query API
 
-October 8. `packages/spacefast` turns one answer of the API's contract (spacefast/monorepo#3816, a draft, read at `afd8faa`) into a query, a result and a catalog. Held to the API's two recorded examples in `test/spacefast.test.ts`. Not looked at in a browser: the bench has no page that feeds it.
+October 8. `packages/spacefast` turns one answer of the API's contract into a query, a result and a catalog. The contract is merged (spacefast/monorepo#3816 and #3827, read at `23789af`) and nothing serves it yet. Held to the API's two recorded examples in `test/spacefast.test.ts`. Not looked at in a browser: the bench has no page that feeds it.
 
-What it does: the bucket is the time dimension and `complete: false` is `partial`; `previous` is laid beside each value as `@previous`, bucket for bucket in a series and by value in a list; a list's rows carry their place as `@rank`; a scroll bucket is a `number` dimension; `percent_points` is `percent`; a country column sets `values: 'country'`; totals are the API's own.
+What it does: the bucket is the time dimension and `complete: false` is `partial`; `previous` is laid beside each value as `@previous`, bucket for bucket in a series and by value in a list; a list's rows carry their place as `@rank`; a scroll bucket is a `number` dimension; `percent_points` is `percent`; a country column sets `values: 'country'`; polarity is the column's; totals are the API's own. Money is a metric for each currency, `revenue.usd` and `revenue.eur`, in the currency's own units, and in core a currency's code is a unit of its own.
+
+What the API's owners answered, after the review on the PR:
+
+- **Polarity is in the catalog and in every column.** The adapter reads it; its own option is gone.
+- **Minor units are ISO 4217's, by a fixed table.** Chrome and Safari disagree on the digits of seventeen currencies, so the adapter carries the tracker's table and does not ask `Intl`.
+- **Any three letters are a currency,** so a typo arrives as one. The adapter leaves out a code core cannot write, with a note.
+- **Coming, not in the contract yet:** buckets snap to their start; a comparison's rows line up with the current rows; every column is in every row; empty revenue is null; a query with no time and no breakdown has its numbers in `totals` and no rows; time with a breakdown is refused. The adapter takes each of these as it is now and as it will be, with a test for the two that change a shape.
 
 Open:
 
-1. **Money was left out.** A revenue cell is a list of amounts, one per currency, in minor units. Decided October 8 and built: each currency is a metric, `revenue.usd` and `revenue.eur`, in the currency's own units, and a view names the one it shows. In core a currency's code is a unit of its own, so `usd` is no longer the one currency and two currencies never share an axis. The exponent from minor units is ISO 4217's, as `Intl` has it; the API has not said whether Sell's table differs.
-2. **Time with a breakdown is refused.** A view of two dimensions needs `totalsBy`, and the API has not said how `limit` and `other` work per bucket. Raised on the PR.
-3. **The first bucket of a series is cut by the window's start and marked complete,** so a trend over a preset window opens with a dip. Raised on the PR; the adapter passes it on as it comes.
-4. **Polarity is the caller's,** as an option: the API's catalog has none. Without one a metric is `up`, and a count of bots `none`.
+1. **A metric's definition had nowhere to go.** Every column carries one, caveats included: unique visitors over a range are consented visitors only. Decided October 8 and built: a catalog entry may carry `definition`, the tldr value carries it as its `note`, and `<ua-view>` shows it as the number's `title`. Seen in Chromium. It is not under the number, where the measured pass would drop a line that long at every width, and not in the tldr prose, which is also the prose rung and overflows a small box already. So it shows on hover and to assistive technology only: not on touch, not in the pixel painter, and not in the table's column heads. Whether a caveat this important needs a place that always shows is **to decide.**
+2. **Core writes money with the browser's digits.** The value is right in any browser, but Chrome writes forints with no decimals and Safari with two. The same seventeen currencies.
+3. **Time with a breakdown is refused,** here and by the API for now. A split or stacked series cannot be fed.
+4. **Until buckets snap, the first bucket of a series is cut by the window's start** and marked complete, and the adapter passes it on.
 5. **An answer whose every value is zero is `empty`,** so a quiet week on an old site reads "No visits yet".
 6. **`other` and `truncated` are dropped.** A result has no place for them.
 7. **A custom range reads as a count of days,** "last 31 days", whatever its ends. An hourly bucket at midnight still reads as a day: the answer states its grain and core does not take one.
-8. `unique_visitors_range` counts consented visitors only and is passed on under the API's label. Raised on the PR.
 
 ## Bugs
 

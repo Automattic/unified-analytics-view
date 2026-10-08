@@ -82,14 +82,14 @@ describe('cell', () => {
     // An engine that sends no totals by dimension leaves only the rows to order by, and it ranks them: Saturday is the quietest.
     expect(run(heatmap, 700, null, 'typical', 'svg', { ...turned, totalsBy: undefined }).ratio.ys![0]).toBe('Sat');
   });
-  it('quantizes its value to the seven steps of the ramp, between the least and the most of the cells drawn', () => {
+  it('quantizes its value to the ten steps of the ramp, between the least and the most of the cells drawn', () => {
     const value = (n: RectNode) => result.rows.find((r) => r.hour === n.pair![0] && r.weekday === n.pair![1])!.visitors as number | null;
     const drawn = cells(ratio).filter((n) => value(n) != null), vals = drawn.map(value) as number[], lo = Math.min(...vals), hi = Math.max(...vals);
     expect([lo, hi]).toEqual([10, 158]);
-    for (const n of drawn) expect(n.paint, n.key).toBe('seq.' + Math.min(7, 1 + Math.floor(((value(n)! - lo) / (hi - lo)) * 7)));
-    expect(new Set(drawn.map((n) => n.paint)).size).toBe(7);
+    for (const n of drawn) expect(n.paint, n.key).toBe('seq.' + Math.min(10, 1 + Math.floor(((value(n)! - lo) / (hi - lo)) * 10)));
+    expect(new Set(drawn.map((n) => n.paint)).size).toBe(10);
     // A scene carries tokens and never a colour.
-    expect(cells(ratio).every((n) => /^seq\.([1-7]|none)$/.test(n.paint))).toBe(true);
+    expect(cells(ratio).every((n) => /^seq\.(\d+|none)$/.test(n.paint))).toBe(true);
   });
   it('paints a cell with no value seq.none, not the lowest step, and so a pair the result has no row for', () => {
     const none = cells(ratio).filter((n) => n.paint === 'seq.none').map((n) => n.key);
@@ -99,7 +99,7 @@ describe('cell', () => {
   });
   it('measures from zero where every cell holds one value, and takes a domain the catalog states', () => {
     const flat = (v: number) => run(heatmap, 700, null, 'typical', 'svg', { ...result, rows: result.rows.map((r) => ({ ...r, visitors: v })) }).ratio;
-    expect([new Set(cells(flat(40)).map((n) => n.paint)), texts(flat(40), 'ramp:')]).toEqual([new Set(['seq.7']), ['0', '40']]);
+    expect([new Set(cells(flat(40)).map((n) => n.paint)), texts(flat(40), 'ramp:')]).toEqual([new Set(['seq.10']), ['0', '40']]);
     expect([new Set(cells(flat(0)).map((n) => n.paint)), texts(flat(0), 'ramp:')]).toEqual([new Set(['seq.1']), ['0', '1']]);
     const stated = { ...catalog, metrics: { ...catalog.metrics, visitors: { ...catalog.metrics.visitors!, domain: [0, 1000] as [number, number] } } };
     const scene = buildScene(resolve(heatmap, result, makeContainer(700), stated), heatmap.query, result, stated);
@@ -111,19 +111,19 @@ describe('cell', () => {
 describe('the ramp, and the labels', () => {
   it('the ramp is the low value, a swatch per step, the high value, and the swatch for no value where a cell has none', () => {
     const { ratio, result } = run(heatmap, 700), ramp = ratio.nodes.filter((n) => n.part === 'ramp');
-    expect(ramp.map((n) => n.key)).toEqual(['ramp:low', 'ramp:1', 'ramp:2', 'ramp:3', 'ramp:4', 'ramp:5', 'ramp:6', 'ramp:7', 'ramp:high', 'ramp:none', 'ramp:none:label']);
-    expect(ramp.filter((n) => n.kind === 'rect').map((n) => n.paint)).toEqual(['seq.1', 'seq.2', 'seq.3', 'seq.4', 'seq.5', 'seq.6', 'seq.7', 'seq.none']);
+    expect(ramp.map((n) => n.key)).toEqual(['ramp:low', ...Array.from({ length: 10 }, (_, i) => 'ramp:' + (i + 1)), 'ramp:high', 'ramp:none', 'ramp:none:label']);
+    expect(ramp.filter((n) => n.kind === 'rect').map((n) => n.paint)).toEqual([...Array.from({ length: 10 }, (_, i) => 'seq.' + (i + 1)), 'seq.none']);
     expect(texts(ratio, 'ramp:')).toEqual(['10', '158', 'No data']);
     const whole = { ...result, rows: result.rows.map((r) => ({ ...r, visitors: r.visitors ?? 12 })) };
     expect(run(heatmap, 700, null, 'typical', 'svg', whole).ratio.nodes.some((n) => n.key.startsWith('ramp:none'))).toBe(false);
   });
   it('the scene holds the ramp whether or not the plan shows it, and place() draws it under the grid only when it does', () => {
     const wide = run(heatmap, 346), narrow = run(heatmap, 234);
-    expect(narrow.ratio.nodes.filter((n) => n.part === 'ramp').length).toBe(11);
+    expect(narrow.ratio.nodes.filter((n) => n.part === 'ramp').length).toBe(14);
     expect([wide.scene.height, narrow.scene.height]).toEqual([184 + 24, 184]);
     expect(narrow.scene.nodes.some((n) => n.key.startsWith('ramp:'))).toBe(false);
-    const swatches = wide.scene.nodes.filter((n) => /^ramp:\d$/.test(n.key)) as unknown as { x: number; y: number; ty: number; w: number }[];
-    expect(swatches.map((n) => n.x)).toEqual([0, 1, 2, 3, 4, 5, 6].map((i) => 2 * 6.6 + 6 + i * 15));
+    const swatches = wide.scene.nodes.filter((n) => /^ramp:\d+$/.test(n.key)) as unknown as { x: number; y: number; ty: number; w: number }[];
+    expect(swatches.map((n) => n.x)).toEqual(Array.from({ length: 10 }, (_, i) => 2 * 6.6 + 6 + i * 15));
     expect(swatches[0]).toMatchObject({ y: 8, ty: 184, w: 14 });
   });
   it('every label is in the scene, ranked, and place() thins them by rank where they would meet', () => {

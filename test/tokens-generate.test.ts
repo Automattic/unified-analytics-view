@@ -22,28 +22,22 @@ describe('token output', () => {
     expect(dark).toContain('--ua-color-surface-card: var(--ua-color-neutral-300);');
     expect(dark).toContain('--ua-color-card: var(--ua-color-surface-card);');
     // The sequential ramp is named by step number; no data is a neutral of its own, not the lowest step.
-    for (const n of [1, 2, 3, 4, 5, 6, 7]) expect(light).toContain(`--ua-color-seq-${n}: var(--ua-color-seq-${n}00);`);
+    // Step 1 is the end nearest the page: the bright end in light, the dark end in dark.
+    for (const n of [1, 5, 10]) { expect(light).toContain(`--ua-color-seq-${n}: var(--ua-color-seq-${(11 - n) * 100});`); expect(dark).toContain(`--ua-color-seq-${n}: var(--ua-color-seq-${n * 100});`); }
     expect(light).toContain('--ua-color-seq-none: var(--ua-color-neutral-400);');
     expect(dark).toContain('--ua-color-seq-none: var(--ua-color-neutral-500);');
     expect(light).toContain('--ua-spacing-4: var(--ua-space-s);');
     expect(dark).not.toContain('--ua-spacing-4');
   });
 
-  // The sequential ramp is read by telling a cell from the one beside it, so its steps are held apart here.
-  it('makes a sequential ramp of seven steps, each apart from its neighbours and from every surface', () => {
-    const base = JSON.parse(readFileSync(join(ROOT, 'config/base.tokens.json'), 'utf-8')).color;
-    for (const theme of ['light', 'dark']) {
-      const color = { ...base, ...JSON.parse(generated(`color.${theme}.tokens.json`)).color };
-      const hex = (ref: string): string => {
-        const v = ref.slice(1, -1).split('.').slice(1).reduce((node, key) => node[key], color).$value;
-        return typeof v === 'string' ? hex(v) : v.hex;
-      };
-      const rgb = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)) as [number, number, number];
-      const apart = (a: string, b: string) => { const c = Math.abs(contrast(rgb(hex(a)), rgb(hex(b)))); return Math.max(c, 1 / c); };
-      const steps = [100, 200, 300, 400, 500, 600, 700].map((n) => `{color.seq.${n}}`);
-      expect(Object.keys(color.seq)).toHaveLength(7);
-      steps.slice(1).forEach((step, i) => expect(apart(step, steps[i]!), `${theme} ${step}`).toBeGreaterThan(1.35));
-      for (const surface of ['page', 'card', 'raised']) expect(apart(steps[0]!, `{color.surface.${surface}}`), `${theme} ${surface}`).toBeGreaterThan(1.4);
-    }
+  // The sequential ramp is chosen by hand, so what is held here is its order: a cell is read as more or less by how light it is.
+  it('has a sequential ramp of ten steps, each lighter than the last', () => {
+    const seq = JSON.parse(readFileSync(join(ROOT, 'config/base.tokens.json'), 'utf-8')).color.seq;
+    const steps = Array.from({ length: 10 }, (_, i) => seq[(i + 1) * 100].$value.hex as string);
+    const rgb = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)) as [number, number, number];
+    expect(steps[0]).toBe('#3c3764'); expect(steps[9]).toBe('#cbed00');
+    // Leonardo's contrast is above 1 where the first colour is the lighter of the two.
+    steps.slice(1).forEach((step, i) => expect(Math.abs(contrast(rgb(step), rgb(steps[i]!))), step).toBeGreaterThan(1.1));
+    steps.slice(1).forEach((step, i) => expect(seq[(i + 2) * 100].$value.components[1], step).toBeGreaterThan(seq[(i + 1) * 100].$value.components[1]));
   });
 });

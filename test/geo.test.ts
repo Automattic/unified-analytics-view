@@ -112,12 +112,12 @@ describe('geo, filled by a metric', () => {
     const turned = { ...result, rows: result.rows.slice().reverse() };
     expect(shapes(run(map, 346, null, 'typical', 'svg', turned).ratio)).toEqual(shapes(ratio));
   });
-  it('quantizes each region to the seven steps of the ramp, between the least and the most of the regions drawn, and never carries a colour', () => {
+  it('quantizes each region to the ten steps of the ramp, between the least and the most of the regions drawn, and never carries a colour', () => {
     const value = (n: PathNode) => result.rows.find((r) => r.country === n.row)!.visitors as number, drawn = shapes(ratio).filter((n) => n.row != null);
     const vals = drawn.map(value), lo = Math.min(...vals), hi = Math.max(...vals);
     expect(drawn.length).toBe(15);
-    for (const n of drawn) expect(n.paint, n.key).toBe('seq.' + Math.min(7, 1 + Math.floor(((value(n) - lo) / (hi - lo)) * 7)));
-    expect(shapes(ratio).every((n) => /^seq\.([1-7]|none)$/.test(n.paint))).toBe(true);
+    for (const n of drawn) expect(n.paint, n.key).toBe('seq.' + Math.min(10, 1 + Math.floor(((value(n) - lo) / (hi - lo)) * 10)));
+    expect(shapes(ratio).every((n) => /^seq\.(\d+|none)$/.test(n.paint))).toBe(true);
   });
   it('paints a region the result has no row for seq.none, and it has no row to be chosen by', () => {
     const none = shapes(ratio).filter((n) => n.paint === 'seq.none');
@@ -134,10 +134,10 @@ describe('geo, filled by a metric', () => {
     expect(scene.nodes.some((n) => n.key.includes('Atlantis'))).toBe(false);
   });
   it('has the ramp a grid has: the low value, a swatch for each step, the high value, and no data', () => {
-    expect(ratio.nodes.filter((n) => n.part === 'ramp').map((n) => n.key)).toEqual(['ramp:low', 'ramp:1', 'ramp:2', 'ramp:3', 'ramp:4', 'ramp:5', 'ramp:6', 'ramp:7', 'ramp:high', 'ramp:none', 'ramp:none:label']);
+    expect(ratio.nodes.filter((n) => n.part === 'ramp').map((n) => n.key)).toEqual(['ramp:low', ...Array.from({ length: 10 }, (_, i) => 'ramp:' + (i + 1)), 'ramp:high', 'ramp:none', 'ramp:none:label']);
     expect((ratio.nodes.filter((n) => n.part === 'ramp' && n.kind === 'text') as { text: string }[]).map((n) => n.text)).toEqual(['105', '3.3k', 'No data']);
     // The scene holds it whether or not the plan shows it.
-    expect(run(map, 300).ratio.nodes.filter((n) => n.part === 'ramp').length).toBe(11);
+    expect(run(map, 300).ratio.nodes.filter((n) => n.part === 'ramp').length).toBe(14);
   });
   it('place() fits a box of the shapes\' aspect inside the room, in the middle, and sets the ramp under it', () => {
     const wide = run(map, 346).scene, boxed = run(map, 346, 160).scene, most = run(map, 700).scene;
@@ -179,7 +179,7 @@ describe('geo, with a symbol for each region', () => {
   it('one layer may fill by one metric and size by another, and then it has both keys', () => {
     const { ratio, plan } = run(both, 346);
     expect(ratio.parts).toEqual(['plot', 'points', 'ramp', 'size']);
-    expect([shapes(ratio).filter((n) => /seq\.[1-7]/.test(n.paint)).length, dots(ratio).length]).toEqual([15, 15]);
+    expect([shapes(ratio).filter((n) => /seq\.\d+/.test(n.paint)).length, dots(ratio).length]).toEqual([15, 15]);
     expect(plan.dropped).toEqual([]);
     expect(run(both, 300).ratio.parts).toEqual(['plot', 'points']);
   });
@@ -208,7 +208,7 @@ describe('prose, the number and errors', () => {
     registerMark('south', geoMark(two));
     const spec: Spec = { ...map, layers: [{ mark: 'south', encode: { x: 'country', color: 'visitors' } }] }, result = runQuery(spec.query);
     const scene = buildScene(resolve(spec, result, makeContainer(700), catalog), spec.query, result, catalog);
-    expect(shapes(scene).map((n) => [n.key, n.paint])).toEqual([['primary:south:Argentina', 'seq.none'], ['primary:south:Brazil', 'seq.7']]);
+    expect(shapes(scene).map((n) => [n.key, n.paint])).toEqual([['primary:south:Argentina', 'seq.none'], ['primary:south:Brazil', 'seq.10']]);
     expect(scene.aspect).toBeLessThan(1);
     const bad = 'The geo mark needs boundary shapes: a GeoJSON FeatureCollection in which every feature has an "id", the value the region\'s dimension has for it. Hand one to geoMark() or registerGeo().';
     expect(err(() => geoMark({ type: 'FeatureCollection', features: [{ type: 'Feature', geometry: null }] }))).toBe(bad);

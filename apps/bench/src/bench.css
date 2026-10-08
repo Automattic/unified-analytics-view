@@ -22,6 +22,9 @@
   --a8c-charts-color-seq-5: var(--ua-color-seq-5);
   --a8c-charts-color-seq-6: var(--ua-color-seq-6);
   --a8c-charts-color-seq-7: var(--ua-color-seq-7);
+  --a8c-charts-color-seq-8: var(--ua-color-seq-8);
+  --a8c-charts-color-seq-9: var(--ua-color-seq-9);
+  --a8c-charts-color-seq-10: var(--ua-color-seq-10);
   --a8c-charts-color-seq-none: var(--ua-color-seq-none);
   /* Not the lime marker: an annotation is a thin rule and its label, and both have to hold contrast. */
   --a8c-charts-color-annotation: var(--ua-color-muted-foreground);

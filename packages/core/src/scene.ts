@@ -514,7 +514,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
   return { nodes: nodes.concat(legend), ...(keys && { rows: keys }), aspect: half ? 2 : 1 };
 }
 
-const SEQ = 7;      // paint tokens run from seq.1 to seq.7, and seq.none is a cell with no value
+const SEQ = 10;     // paint tokens run from seq.1 to seq.10, and seq.none is a cell with no value
 /** The sequential colour scale, which outputs tokens: a value is quantized to a step of the ramp, between the least and
  * the most of `vals`, or the ends of the domain the catalog states for the metric. No value is `seq.none` and not the
  * lowest step: nothing is not a little. `ramp` is its legend, set in order: the low value, a swatch for each step, the

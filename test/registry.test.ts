@@ -58,7 +58,7 @@ describe('a custom mark in a view', () => {
     expect(plan).toMatchObject({ layout: 'toy', preset: null, dropped: [], guides: { ramp: true, size: true } });
     expect(ratio).toMatchObject({ layout: 'toy', parts: ['plot', 'ramp'] });
     expect(ratio.rows).toEqual(runQuery(tiles.query).rows.map((r) => r.page));
-    expect(ratio.nodes.filter((n) => n.part === 'plot').map((n) => n.paint)).toEqual(['seq.7', 'seq.5', 'seq.3', 'seq.3', 'seq.2', 'seq.1', 'seq.1', 'seq.1']);
+    expect(ratio.nodes.filter((n) => n.part === 'plot').map((n) => n.paint)).toEqual(['seq.10', 'seq.6', 'seq.5', 'seq.4', 'seq.2', 'seq.1', 'seq.1', 'seq.1']);
     expect(ratio.nodes.filter((n) => n.part === 'number').map((n) => n.key)).toEqual(['value', 'sub']);
     expect(plan.text).toBe('Top pages by page views, last 28 days: / (4,820), /pricing (2,960), /blog/launch-notes (2,105).');
   });

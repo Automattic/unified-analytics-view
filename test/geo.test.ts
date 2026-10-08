@@ -223,10 +223,10 @@ describe('the painter\'s half, as strings', () => {
   });
   it('its rules compile to the keys going, and then to the swap for the ranked list, by width and by height', () => {
     const css = compileFitRules(GEO_RULES, { geo: geoPainter.fit ?? {} }), fig = (keep: string) => '.vg[data-layout="geo"]:not([data-keep~="' + keep + '"])';
-    expect(css).toContain('@container view (inline-size < 319.5px) {\n  ' + fig('guides') + ' :is(.vg-ramp, .vg-size) { display: none; }\n}');
-    expect(css).toContain('@container view (block-size < 169.5px) {\n  ' + fig('guides') + ' :is(.vg-ramp, .vg-size) { display: none; }\n}');
+    expect(css).toContain('@container vg-view (inline-size < 319.5px) {\n  ' + fig('guides') + ' :is(.vg-ramp, .vg-size) { display: none; }\n}');
+    expect(css).toContain('@container vg-view (block-size < 169.5px) {\n  ' + fig('guides') + ' :is(.vg-ramp, .vg-size) { display: none; }\n}');
     const swap = '  ' + fig('marks') + ' { display: none; }\n  ' + fig('marks') + ' ~ .vg-fallback { display: block; }\n}';
-    expect(css).toContain('@container view (inline-size < 279.5px) {\n' + swap);
-    expect(css).toContain('@container view (block-size < 119.5px) {\n' + swap);
+    expect(css).toContain('@container vg-view (inline-size < 279.5px) {\n' + swap);
+    expect(css).toContain('@container vg-view (block-size < 119.5px) {\n' + swap);
   });
 });

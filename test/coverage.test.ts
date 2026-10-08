@@ -1,6 +1,6 @@
 import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { buildScene, makeContainer, place, resolve, type PainterName, type Spec } from '@universal-analytics/core';
+import { buildScene, expand, makeContainer, place, resolve, type PainterName, type Spec } from '@universal-analytics/core';
 import viewSchema from '@universal-analytics/core/schema/view.schema.json';
 import { catalog, moreSamples, runQuery, samples, scenarios } from '@universal-analytics/fixtures';
 
@@ -194,7 +194,8 @@ describe('a split plot\'s legend', () => {
 describe('stacking, and bars side by side', () => {
   const plot = (spec: Spec, w = 700, result = runQuery(spec.query)) => { const container = makeContainer(w), ratio = buildScene(resolve(spec, result, container, catalog), spec.query, result, catalog); return { ratio, scene: place(ratio, container), result }; };
   const rects = (ratio: { nodes: any[] }, row: string) => ratio.nodes.filter((n) => n.kind === 'rect' && n.part === 'plot' && n.row === row) as { key: string; x: number; w: number; v: number; v0?: number; series: string }[];
-  const stacked = specs.stacked!, as = (stack: string | undefined, spec = stacked): Spec => ({ ...spec, layers: [{ ...spec.layers![0]!, stack } as any] });
+  // The samples are presets. These are their layers, with the stack swapped.
+  const stacked = expand(specs.stacked!), as = (stack: string | undefined, spec = stacked): Spec => { const laid = expand(spec); return { ...laid, layers: [{ ...laid.layers![0]!, stack } as any] }; };
   it('stack: "zero" starts each series where the one under it ends, in the series\' order', () => {
     const { ratio, result } = plot(stacked), [desktop, mobile, tablet] = rects(ratio, '2026-09-08');
     expect([desktop!.series, mobile!.series, tablet!.series]).toEqual(['Desktop', 'Mobile', 'Tablet']);
@@ -364,7 +365,21 @@ describe('tldr prose for two dimensions and for two metrics', () => {
   it('the note under the number names the leader the engine names, not the first pair', () => {
     const note = (spec: Spec) => (run(spec, 346).ratio.nodes.find((n) => n.key === 'sub') as { text: string }).text;
     expect(note(specs.grouped!)).toBe('Top: Search');
-    expect(note({ ...specs.grouped!, layers: [{ ...specs.grouped!.layers![0]!, stack: 'normalize' }] })).toBe('Search 41%');
+    expect(note({ ...specs.grouped!, layers: [{ ...expand(specs.grouped!).layers![0]!, stack: 'normalize' }] })).toBe('Search 41%');
     expect(note(specs.stacked!)).toBe('Sum of daily counts');
+  });
+});
+
+describe('presets with a second dimension', () => {
+  it('fill $split from the query\'s second dimension', () => {
+    const q = { metrics: ['visitors'], by: ['date.day', 'device'] }, encode = { x: 'date.day', y: 'visitors', color: 'device' };
+    expect(expand({ use: 'grouped-bar', query: q }).layers).toEqual([{ mark: 'bar', encode }]);
+    expect(expand({ use: 'stacked-bar', query: q }).layers).toEqual([{ mark: 'bar', encode, stack: 'zero' }]);
+    expect(expand({ use: 'stacked-area', query: q }).layers).toEqual([{ mark: 'area', encode, stack: 'zero' }]);
+    expect(run(specs.stacked!, 346).plan.preset).toBe('stacked-bar');
+  });
+  it('errors name the fix: a split preset with one dimension, and a one-dimension preset with two', () => {
+    expect(err({ use: 'stacked-bar', query: { metrics: ['visitors'], by: ['date.day'] } })).toBe('The "stacked-bar" preset needs two dimensions in query.by: the one on the axis, then the one to split by.');
+    expect(err({ use: 'line', query: { metrics: ['visitors'], by: ['date.day', 'device'] } })).toBe('The query is by "device", and no layer encodes it, so its rows would be drawn over each other. Encode it on color, or remove it from query.by.');
   });
 });

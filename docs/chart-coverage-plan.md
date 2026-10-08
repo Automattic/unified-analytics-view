@@ -504,3 +504,21 @@ Samples added to `moreSamples`: `donut`, `pie`, `half`, `gauge`; `heatmap`; `sca
 - A catalog `target` now shows in any metric's prose and note, not only a gauge's.
 - `radius` is a number only (the inner radius). A metric on radius is an error, so rose and radial bar are not built.
 - Preset names `pie` and `pie-semi-circle` follow the package from memory; `donut` and `gauge` are working names.
+
+### The merged tree in a browser (October 8)
+
+Headless Chromium on the merged bench: all 25 samples, both painters, five widths, the three data states, dark for typical, a resize in place through 19 widths, keyboard on ten samples, hover on 14, the table on 13, and data changes. No console or page errors, no overflow, nothing left behind after a transition. Not checked: WebKit, Firefox, a screen reader, touch, reduced motion, and the transitions as they move.
+
+**Fixed**
+
+1. **Hover and click were dead on every plot without points,** the trend among them. Step 4's holder for points lay over the whole plot and took the pointer when empty. It came from step 4 and not from the merge, and that agent's own check had not hovered a trend. Fixed in `layouts/points.ts`.
+2. **A heatmap's row labels stood 12 px from the cells, not 6.** A true merge interaction between step 1's label padding and the matrix's own gap.
+
+**Found and left, as each is a step's own design**
+
+- **Heatmap:** the hidden last column label keeps its box about 10 px past the view's edge, so a host without `overflow: hidden` would scroll. And `<ua-view>` is 184 px tall where the pixel painter is 208: the ramp comes out of the grid, so cells are squatter than the reference.
+- **Scatter:** a label on a point near the top of the plot is cut by about 4 px. The pixel painter puts it under the point.
+- **Points:** `points.ts` still sets `--vg-body-block` where cartesian now states the plot's height. A plot with both a legend and a size key would come out short; no sample has both.
+- **Older, the six originals too:** in a 40 px box most cartesian views show a 42 px number, 2 px over, instead of prose.
+- **Bench only:** the pixel SVG painter raises a ResizeObserver loop notice during fast resizing.
+- **One test run in seven failed one test,** unidentified, in the run that also killed a dev server. The next five passed. An unexplained flake, not shown harmless.

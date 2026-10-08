@@ -1,6 +1,6 @@
 import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, buildScene, customMarks, makeContainer, place, registerMark, resolve, type CircleNode, type PainterName, type PathNode, type Result, type Spec } from '@universal-analytics/core';
+import { CONTAINER_RULES, buildScene, customMarks, makeContainer, notShownNote, place, registerMark, resolve, type CircleNode, type PainterName, type PathNode, type Result, type Spec } from '@universal-analytics/core';
 import viewSchema from '@universal-analytics/core/schema/view.schema.json';
 import { compileFitRules } from '@universal-analytics/dom';
 import { catalog, countries, moreSamples, runQuery, scenarios } from '@universal-analytics/fixtures';
@@ -10,7 +10,7 @@ import { geoPainter } from '@universal-analytics/geo/dom';
 // Step 8 of docs/chart-coverage-plan.md: the `geo` mark, which is a custom mark, registered by the fixtures with their
 // boundary shapes. No prototype knows it, so it is held to a sweep, facts and golden scenes of its own. The registry
 // and `fallback` are in test/registry.test.ts.
-const map = moreSamples.map!.spec, symbols = moreSamples.symbols!.spec;
+const map = moreSamples.map!.spec, symbols = moreSamples.symbols!.spec, unmapped = moreSamples.unmapped!.spec;
 const both: Spec = { ...map, query: { ...map.query, metrics: ['visitors', 'pageviews'] }, layers: [{ mark: 'geo', encode: { x: 'country', color: 'visitors', size: 'pageviews' } }] };
 const run = (spec: Spec, w: number, h: number | null = null, scenario: (typeof scenarios)[number] = 'typical', painter: PainterName = 'svg', result: Result = runQuery(spec.query, scenario)) => {
   const container = makeContainer(w, h, painter, 8), plan = resolve(spec, result, container, catalog);
@@ -24,7 +24,7 @@ const dots = (ratio: { nodes: unknown[] }) => (ratio.nodes as CircleNode[]).filt
 const ASPECT = 1.886;   // Equal Earth, fitted to the fixture's shapes
 
 describe('the sweep', () => {
-  for (const [name, spec] of Object.entries({ map, symbols, both })) {
+  for (const [name, spec] of Object.entries({ map, symbols, both, unmapped })) {
     it(name + ': unique keys, no NaN, nothing taller than the container allows, symbols inside the box, and a part that holds its shape', () => {
       for (const sc of scenarios) for (const p of ['svg', 'dots'] as PainterName[]) for (const h of [null, 300, 160, 100, 60, 40]) for (const w of [54, 80, 120, 170, 250, 290, 346, 500, 700]) {
         const at = [name, sc, p, w, h].join(' ');
@@ -80,6 +80,7 @@ describe('the sweep', () => {
 describe('golden scenes', () => {
   for (const [w, h] of [[346, null], [300, null], [250, null]] as [number, number | null][]) it(`map at ${w} by ${h ?? 'any'}`, () => expect(run(map, w, h).scene).toMatchSnapshot());
   for (const [w, h] of [[346, null], [250, 100]] as [number, number | null][]) it(`symbols at ${w} by ${h ?? 'any'}`, () => expect(run(symbols, w, h).scene).toMatchSnapshot());
+  it('unmapped at 346 by any', () => expect(run(unmapped, 346).scene).toMatchSnapshot());
 });
 
 describe('the fixture: visitors by country', () => {
@@ -185,6 +186,50 @@ describe('geo, with a symbol for each region', () => {
   });
 });
 
+describe('rows the map has no shape for', () => {
+  const note = (s: { nodes: { key: string }[] }) => (s.nodes.find((n) => n.key === 'note:not-shown') as { text: string } | undefined)?.text;
+  const withRows = (rows: Result['rows']) => { const result = runQuery(map.query); return run(map, 346, null, 'typical', 'svg', { ...result, rows: [...result.rows, ...rows] }); };
+  it('the wording is core\'s, by the dimension\'s label: one, several, and nothing to say of none', () => {
+    expect([notShownNote(1, 'Country'), notShownNote(12, 'Country'), notShownNote(3, 'Page'), notShownNote(0, 'Country')]).toEqual(['1 country not shown', '12 countries not shown', '3 pages not shown', '']);
+  });
+  it('counts the rows whose value is no shape\'s id, an empty one and a null among them, and says so under the map', () => {
+    const { ratio, scene, result } = run(unmapped, 346);
+    expect(result.rows.filter((r) => !countries.features.some((f) => f.id === r.visitor_country)).map((r) => r.visitor_country)).toEqual(['Singapore', '', 'Malta', 'Bahrain']);
+    expect(ratio.nodes.find((n) => n.key === 'note:not-shown')).toEqual({ key: 'note:not-shown', part: 'note', kind: 'text', text: '4 countries not shown', anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' });
+    expect(ratio.parts).toEqual(['plot', 'note', 'ramp']);
+    expect([note(withRows([{ country: 'Atlantis', visitors: 12 }]).ratio), note(withRows([{ country: '', visitors: 12 }, { country: null, visitors: 3 }]).ratio)]).toEqual(['1 country not shown', '2 countries not shown']);
+    // Every row is still a row: the table's, and the list's a reader steps through. The shapes drawn are the same.
+    expect(ratio.rows!.length).toBe(19);
+    expect(shapes(ratio).filter((n) => n.row != null).length).toBe(15);
+    // In pixels it is a line under the map, at the start of the width, and the ramp is under it.
+    expect(scene.nodes.find((n) => n.key === 'note:not-shown')).toMatchObject({ kind: 'text', text: '4 countries not shown', x: 0, y: 346 / ASPECT + 11, paint: 'ink.muted' });
+    expect([scene.plot!.w, scene.height]).toEqual([346, Math.ceil(346 / ASPECT + 18 + 24)]);
+    expect(scene.nodes.find((n) => n.key === 'ramp:1')).toMatchObject({ ty: 346 / ASPECT + 18 });
+  });
+  it('says nothing when every row has a shape', () => {
+    for (const spec of [map, symbols, both]) { const { ratio, scene } = run(spec, 346); expect([note(ratio), note(scene), ratio.parts.includes('note')]).toEqual([undefined, undefined, false]); }
+  });
+  it('the note goes with the keys, so it takes no room from a small map, and is never beside the list, which has every row', () => {
+    const at = (w: number, h: number | null = null) => { const { plan, ratio, scene } = run(unmapped, w, h); return [plan.layout, ratio.parts.join(' '), note(scene)]; };
+    expect(at(700)).toEqual(['geo', 'plot note ramp', '4 countries not shown']);
+    expect(at(320)).toEqual(['geo', 'plot note ramp', '4 countries not shown']);
+    expect(at(346, 170)).toEqual(['geo', 'plot note ramp', '4 countries not shown']);
+    expect(run(unmapped, 346, 170).scene.plot!.h).toBe(170 - 18 - 24);
+    expect(at(319)).toEqual(['geo', 'plot', undefined]);
+    expect(at(346, 169)).toEqual(['geo', 'plot', undefined]);
+    expect(at(279)).toEqual(['rows', 'rows', undefined]);
+    // The list it becomes holds the rows the map could not draw.
+    expect(run(unmapped, 250).ratio.rows).toEqual(run(unmapped, 346).result.rows.map((r) => r.visitor_country));
+    // With symbols it is the same note, over the key to sizes.
+    const sym: Spec = { ...unmapped, layers: [{ mark: 'geo', encode: { x: 'visitor_country', size: 'visitors' } }] };
+    expect([run(sym, 346).ratio.parts, note(run(sym, 346).scene)]).toEqual([['plot', 'points', 'note', 'size'], '4 countries not shown']);
+  });
+  it('a result of rows with no value alone is a map with a note, and not the error for shapes that are the wrong ones', () => {
+    const result = runQuery(map.query), { ratio } = run(map, 346, null, 'typical', 'svg', { ...result, rows: [{ country: '', visitors: 40 }] });
+    expect([note(ratio), shapes(ratio).every((n) => n.paint === 'seq.none' && n.row == null)]).toEqual(['1 country not shown', true]);
+  });
+});
+
 describe('prose, the number and errors', () => {
   it('says what the ranked list says: the top regions by the metric', () => {
     expect(run(map, 346).plan.text).toBe('Top countries by visitors, last 28 days: United States (3,265), India (1,264), United Kingdom (948).');
@@ -223,8 +268,8 @@ describe('the painter\'s half, as strings', () => {
   });
   it('its rules compile to the keys going, and then to the swap for the ranked list, by width and by height', () => {
     const css = compileFitRules(GEO_RULES, { geo: geoPainter.fit ?? {} }), fig = (keep: string) => '.vg[data-layout="geo"]:not([data-keep~="' + keep + '"])';
-    expect(css).toContain('@container view (inline-size < 319.5px) {\n  ' + fig('guides') + ' :is(.vg-ramp, .vg-size) { display: none; }\n}');
-    expect(css).toContain('@container view (block-size < 169.5px) {\n  ' + fig('guides') + ' :is(.vg-ramp, .vg-size) { display: none; }\n}');
+    expect(css).toContain('@container view (inline-size < 319.5px) {\n  ' + fig('guides') + ' :is(.vg-ramp, .vg-size, .vg-note) { display: none; }\n}');
+    expect(css).toContain('@container view (block-size < 169.5px) {\n  ' + fig('guides') + ' :is(.vg-ramp, .vg-size, .vg-note) { display: none; }\n}');
     const swap = '  ' + fig('marks') + ' { display: none; }\n  ' + fig('marks') + ' ~ .vg-fallback { display: block; }\n}';
     expect(css).toContain('@container view (inline-size < 279.5px) {\n' + swap);
     expect(css).toContain('@container view (block-size < 119.5px) {\n' + swap);

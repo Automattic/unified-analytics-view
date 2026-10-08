@@ -1,6 +1,7 @@
 import { scaleLinear } from 'd3-scale';
 import { CHAR_W, clip } from './format.ts';
 import { applies, ruleFor } from './fit.ts';
+import { customMarks } from './marks.ts';
 import { arcD, pathD } from './path.ts';
 import { TICK_W, xScale } from './scene.ts';
 import type { CircleNode, Container, Part, PathNode, PlacedCircle, PlacedNode, PlacedRect, PlacedScene, PlacedText, RectNode, Scene, SceneNode, TextNode } from './types.ts';
@@ -321,6 +322,12 @@ export function place(scene: Scene, container: Container): PlacedScene {
     } else if (scene.layout === 'radial') {
       const radial = placeRadial(scene, W, H ? H - above : null, container);
       body = radial; plot = radial.plot;
+    } else if (customMarks().has(scene.layout)) {
+      // A custom mark places its own parts. Its ramp and its key to sizes are set under them, as a grid's and a plot's are.
+      const keys = [scene.parts.includes('ramp') && placeRamp(scene, W), scene.parts.includes('size') && placeSize(scene)].filter((b): b is Block => !!b), under = keys.reduce((s, b) => s + b.height, 0);
+      const own = customMarks().get(scene.layout)!.place(scene, W, H ? H - above - under : null, container);
+      body = { nodes: keys.reduce((nodes, b, i) => nodes.concat(shift(b.nodes, 0, own.height + keys.slice(0, i).reduce((s, k) => s + k.height, 0))), own.nodes), height: own.height + under };
+      if (own.plot) plot = own.plot;
     } else {
       body = placeBand(scene, W);
     }

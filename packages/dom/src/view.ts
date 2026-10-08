@@ -279,11 +279,13 @@ export class UaView extends Base {
       const rules: ContainerRules = { ...CONTAINER_RULES, ...(this.#input('rules', false) as Partial<ContainerRules> | undefined) };
       check(spec, result, catalog);
       if (!Array.isArray(rules.fit)) throw new Error('The rules need "fit", an array of fit rules. Leave it out to use the defaults.');
-      const fits = [...rules.fit, ...painters.flatMap((p) => p.rules ?? [])], fit = sheet(compileFitRules(fits, EXTRAS));
+      // Painters registered since this module loaded, for custom marks: their styles, extras and rules join the rest.
+      const more = Object.values(LAYOUTS).filter((p) => !painters.includes(p)), fits = [...rules.fit, ...painters.concat(more).flatMap((p) => p.rules ?? [])];
+      const fit = sheet(compileFitRules(fits, { ...EXTRAS, ...Object.fromEntries(more.map((p) => [p.layout, p.fit ?? {}])) }));
       const plan = resolve(spec, result, { ...unboundedContainer(), rules }, catalog);
       const scene = buildScene(plan, spec.query, result, catalog), fig = this.#fig;
 
-      this.#root.adoptedStyleSheets = [sheet(BASE_CSS), sheet(FALLBACK_CSS), fit];
+      this.#root.adoptedStyleSheets = [sheet(BASE_CSS), sheet(FALLBACK_CSS), ...more.map((p) => sheet('@layer vg {' + p.css + '}')), fit];
       fig.dataset.layout = scene.layout; fig.dataset.keep = (spec.keep || []).join(' '); fig.dataset.parts = scene.parts.join(' ');
       if (spec.title) fig.setAttribute('aria-label', spec.title); else fig.removeAttribute('aria-label');
       // The plot's natural heights are the context's, read by the stylesheet. The painter hard-codes neither.

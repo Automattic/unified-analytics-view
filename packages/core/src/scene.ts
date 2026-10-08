@@ -2,6 +2,7 @@ import { max, min } from 'd3-array';
 import { scaleBand, scaleLinear, scalePoint, scaleQuantize } from 'd3-scale';
 import { CHAR_W, delta, fmt, fmtDay, fmtPct, formatDimension, formatValue } from './format.ts';
 import { arcD, pathD } from './path.ts';
+import { customMarks } from './marks.ts';
 import { leader } from './prose.ts';
 import type { ArcNode, Catalog, Guides, Layer, Mark, Part, PathNode, PlanShape, Query, Result, Role, Row, Scene, SceneNode, TextNode } from './types.ts';
 
@@ -332,6 +333,8 @@ const trackBar: TrackFn = (l, { id, role, paint, row, k, v }) => {
 };
 /* The marks a row's track draws, by name. A new mark is a function here. Text is not among them: it is set in the row, not on the scale. */
 const TRACK_MARKS: Partial<Record<Mark, TrackFn>> = { bar: trackBar };
+/** The marks core draws itself, as an error lists them. Any other name is a custom mark's, registered in code (marks.ts). */
+export const BUILT_IN_MARKS: string[] = [...new Set(Object.keys(PLOT_MARKS).concat(Object.keys(TRACK_MARKS), 'arc', 'cell'))];
 
 // A dimension on y: a row for each of its values, with a track that has a metric on x. The ranked bar list is the first of these.
 // The track's scale is derived here, once, from what its layers put on x. It is linear and holds zero and whatever is on
@@ -569,6 +572,11 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
     // A number above the circle is not said again inside it.
     if (!parts.includes('number') && body.nodes.some((n) => n.part === 'hole')) parts.push('hole');
     if (p.guides.legend) parts.push(p.guides.legend === 'top' ? 'legend-top' : 'legend');
+  } else if (customMarks().has(p.layout)) {
+    // A custom mark builds its own scene, and says which of its parts the plan shows.
+    const { parts: own, ...rest } = customMarks().get(p.layout)!.scene({ layers: p.layers, guides: p.guides, query: q, result, catalog });
+    parts.push(...own);
+    body = rest;
   }
   return { layout: p.layout, parts, ...(side && { side }), ...body, nodes: number.concat(body.nodes) };
 }

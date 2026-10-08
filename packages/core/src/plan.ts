@@ -1,8 +1,9 @@
 import { CONTAINER_RULES, KEEP } from './container.ts';
 import { applies, fallbackRule, ruleFor, type FitRule } from './fit.ts';
+import { customMarks } from './marks.ts';
 import { PRESETS, expand } from './presets.ts';
 import { COLUMNS_BLOCK, place } from './place.ts';
-import { buildScene, columnLabel, columnsOf, tldrValueText, isDim, roleOf, seriesOf, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
+import { BUILT_IN_MARKS, buildScene, columnLabel, columnsOf, tldrValueText, isDim, roleOf, seriesOf, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
 import { gridProse, tldrProse } from './prose.ts';
 import type { Catalog, Container, Layer, Layout, Plan, PlanShape, PresetLibrary, Query, Reduction, ReductionId, Result, Role, PlacedScene, Spec } from './types.ts';
 
@@ -26,6 +27,10 @@ const isMetric = (catalog: Catalog, f: unknown): f is string => typeof f === 'st
 const isPoints = (catalog: Catalog, layers: Layer[]) => !xDimOf(catalog, layers) && !layers.some((l) => isDim(catalog, l.encode && l.encode.y)) && layers.some((l) => isMetric(catalog, l.encode && l.encode.x));
 
 function detectLayout(catalog: Catalog, layers: Layer[]): Layout {
+  // A custom mark is laid out by its own code, under its own name, and that code draws its layers alone.
+  const custom = layers.find((l) => customMarks().has(l.mark)), other = custom && layers.find((l) => l.mark !== custom.mark);
+  if (other) throw new Error('The "' + custom!.mark + '" mark is laid out by its own code, and layer ' + (layers.indexOf(other) + 1) + ' is a "' + other.mark + '". Keep the "' + custom!.mark + '" layers alone, and draw the others as a view of their own.');
+  if (custom) return custom.mark;
   const is = (kind: FieldKind, f: unknown) => kind === 'any' || (kind === 'metric' ? isMetric(catalog, f) : isDim(catalog, f));
   // Anything on angle is laid out about a centre, whatever else is encoded. It is not a row of the table: that asks about x, y and color.
   if (layers.some((l) => l.encode && l.encode.angle != null)) return 'radial';
@@ -38,6 +43,8 @@ function checkLayers(layers: Layer[], q: Query, catalog: Catalog, result: Result
   if (by.length > 2 || (by.length === 2 && by[0] === by[1])) throw new Error('A view is by one dimension or by two different ones, and query.by has: ' + by.join(', ') + '. Remove all but two.');
   layers.forEach((l, i) => {
     if (!l || !l.mark) throw new Error('Layer ' + (i + 1) + ' has no "mark". Use one of: line, area, bar, rule, text, arc, cell, dot.');
+    // A name the schema cannot check: it is one of core's marks or one registered in code, and anything else is an error here.
+    if (!BUILT_IN_MARKS.includes(l.mark) && !customMarks().has(l.mark)) throw new Error('Layer ' + (i + 1) + ' has the mark "' + l.mark + '", which is not built in and is not registered. Built in: ' + BUILT_IN_MARKS.join(', ') + '. Registered: ' + ([...customMarks().keys()].join(', ') || 'none') + '. Use one of those, or register it with registerMark("' + l.mark + '", …) before the view is resolved.');
     if (l.series === 'delta' && !(l.mark === 'text' && isDim(catalog, l.encode && l.encode.y) && typeof (l.encode && l.encode.text) === 'string' && (l.encode!.text as string) in catalog.metrics))
       throw new Error('Layer ' + (i + 1) + ' has series: "delta", which is a row\'s change in a metric. Make it a text layer with the dimension on y and the metric on text.');
     if (l.stack && !isDim(catalog, l.encode && l.encode.color)) throw new Error('Layer ' + (i + 1) + ' has "stack" and no dimension on color, so there is nothing to stack. Encode the query\'s second dimension on color, or remove "stack".');
@@ -73,6 +80,8 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
     layers = layers.filter((l) => !l.series);
   }
   const share = layers.some((l) => l.stack === 'normalize' || l.mark === 'arc');
+  // A custom mark brings the rules of its own layout. A context's rules for that layout come first.
+  const custom = layers.length ? customMarks().get(detectLayout(catalog, layers)) : undefined, fit = custom ? rules.fit.concat(custom.rules) : rules.fit;
   // A plot of points has no sparkline form: two metrics need both their axes to be read. So it has no bare rung, and
   // below the room its axes need it is the number alone. Its `points` rule says so, where the others' is `axes`.
   const points = !!layers.length && isPoints(catalog, layers);
@@ -80,9 +89,10 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
                          share, text: tldrProse(q, result, share, catalog, points) };
   if (p.layout === 'cartesian') p.guides = { x: true, y: true, grid: true };
   if (p.layout === 'matrix') { p.guides = { x: true, y: true, ramp: true }; p.text = gridProse(q, result, catalog) ?? p.text; }
+  if (custom) p.guides = { ramp: true, size: true };
   // A layout with a rule that names a `fallback` gives way to that preset, whole, where the rule applies: the same query,
   // planned again. Asked before the reductions, which have nothing to give up for a view that is not this one.
-  const swap = layers.length ? fallbackRule(rules.fit, p.layout, keep, via) : undefined;
+  const swap = layers.length ? fallbackRule(fit, p.layout, keep, via) : undefined;
   // A split plot starts with its legend. Its rules step that down to a label at the end of each line, where there
   // are lines, and then to nothing. They are asked once, of the view: unlike the reductions, they change no one else's room.
   const series = p.layout === 'cartesian' ? seriesOf(catalog, layers) : null;
@@ -107,7 +117,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   }
 
   const valueLen = tldrValueText(catalog, q, result, true).length;
-  const rule = (id: string) => ruleFor(rules.fit, p.layout, id);
+  const rule = (id: string) => ruleFor(fit, p.layout, id);
   // A row short of room gives up its ranked columns from the right: every column of values but the first. The room they
   // need is measured, so no rule can say it; the label's is the `marks` rule's. Headers stand over what is left, if that
   // is more than one column, and are a guide the view gives up when it is short. Both are asked once, as the legend is.
@@ -128,8 +138,11 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
     if (p.layout === 'band') return { rule: rule(p.guides.legend === 'full' ? 'legend' : 'marks'), measured: 0 };
     if (p.layout === 'radial') return { rule: rule(p.guides.legend === 'full' ? 'legend' : 'marks'), measured: 0 };
     if (p.layout === 'matrix') return { rule: rule(p.guides.ramp && keep.indexOf('guides') < 0 ? 'ramp' : 'marks'), measured: 0 };   // a ramp the spec keeps asks for no room of its own
+    if (customMarks().has(p.layout)) return { rule: rule(keyed() && keep.indexOf('guides') < 0 ? 'guides' : 'marks'), measured: 0 };
     return { rule: rule('notice'), measured: 0 };
   }
+  // Which of a custom mark's two keys its scene shows, if either.
+  const keyed = () => (['ramp', 'size'] as const).find((g) => p.guides[g] && buildScene(p, q, result, catalog).parts.includes(g));
   // A number that stands alone or above the marks has to fit too. No rule can say so: the need is its own width.
   const numberWidth = () => (p.layout === 'none' || (p.tldrValue && !p.side && p.layout !== 'prose') ? container.displayWidth(valueLen) : 0);
   function minWidth(): number {
@@ -162,6 +175,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
         return 'the legend';
       }
       if (p.layout === 'matrix' && p.guides.ramp) { p.guides = { ...p.guides, ramp: false }; return 'the colour ramp'; }
+      if (customMarks().has(p.layout)) { const key = keyed(); p.guides = {}; return key ? (key === 'ramp' ? 'the colour ramp' : 'the key to sizes') : null; }
       return null;
     },
     'drop-secondary': () => {

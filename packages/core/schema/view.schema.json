@@ -50,7 +50,9 @@
       "required": ["mark"],
       "additionalProperties": false,
       "properties": {
-        "mark": { "enum": ["line", "area", "bar", "rule", "text", "arc", "cell", "dot"] },
+        "mark": { "anyOf": [
+          { "enum": ["line", "area", "bar", "rule", "text", "arc", "cell", "dot"] },
+          { "type": "string", "pattern": "^[\\w-]+$", "description": "The name of a custom mark registered in code. A schema cannot list those: resolve() checks the name against the registry, and its error lists the marks there are." } ] },
         "encode": {
           "type": "object",
           "additionalProperties": false,

@@ -11,3 +11,4 @@ export { formatDimension, formatValue, rangeLabel } from './format.ts';
 export { SIZES, seqScale, sizeKey, sizeStep } from './scene.ts';
 export { radius as dotRadius } from './place.ts';
 export { fallbackRule } from './fit.ts';
+export { customMarks, registerMark, type CustomMark, type MarkView } from './marks.ts';

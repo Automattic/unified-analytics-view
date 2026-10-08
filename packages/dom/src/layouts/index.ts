@@ -1,4 +1,4 @@
-import type { Layout, TextNode } from '@universal-analytics/core';
+import type { TextNode } from '@universal-analytics/core';
 import { keyed, text } from '../dom.ts';
 import type { LayoutPainter } from '../layout.ts';
 import { band } from './band.ts';
@@ -21,4 +21,10 @@ const notice: LayoutPainter = {
 };
 
 /** One painter per layout. `none` and `prose` have no body, so the element paints them alone. */
-export const LAYOUTS: Partial<Record<Layout, LayoutPainter>> = { cartesian, rows, band, radial, matrix, notice };
+export const LAYOUTS: Record<string, LayoutPainter> = { cartesian, rows, band, radial, matrix, notice };
+
+/** Register the painter of a custom mark: the DOM's half of it. A custom mark is a layout of its own under its own
+ * name (core's marks.ts), so `painter.layout` is the name the mark was registered under there. */
+export function registerPainter(painter: LayoutPainter): void {
+  LAYOUTS[painter.layout] = painter;
+}

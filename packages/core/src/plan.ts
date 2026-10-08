@@ -3,7 +3,7 @@ import { applies, ruleFor, type FitRule } from './fit.ts';
 import { PRESETS, expand, usesPrevious } from './presets.ts';
 import { COLUMNS_BLOCK, place } from './place.ts';
 import { buildScene, columnLabel, columnsOf, tldrValueText, isDim, roleOf, seriesOf, trackBeside, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
-import { gridProse, tldrProse } from './prose.ts';
+import { gridProse, rangeProse, tldrProse } from './prose.ts';
 import type { Catalog, Container, Layer, Layout, Plan, PlanShape, PresetLibrary, Query, Reduction, ReductionId, Result, Role, PlacedScene, Spec } from './types.ts';
 
 /* Start from everything the spec asks for, then apply the container's reductions
@@ -85,6 +85,10 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
                          share, text: tldrProse(q, result, share, catalog, points) };
   if (p.layout === 'cartesian') p.guides = { x: true, y: true, grid: true };
   if (p.layout === 'matrix') { p.guides = { x: true, y: true, ramp: true }; p.text = gridProse(q, result, catalog) ?? p.text; }
+  // A range that supports the central mark is said after the view's own sentence: its least and its most. One that
+  // runs from the period before is the comparison, which is not a range.
+  const range = layers.filter((l) => roleOf(l) === 'context' && !usesPrevious(l)).map((l) => l.encode || {}).map((e) => (e.y2 != null ? [e.y, e.y2] : [e.x, e.x2])).find((ends): ends is [string, string] => ends.every((f) => typeof f === 'string'));
+  if (range) p.text += rangeProse(q, result, catalog, range);
   // A split plot starts with its legend. Its rules step that down to a label at the end of each line, where there
   // are lines, and then to nothing. They are asked once, of the view: unlike the reductions, they change no one else's room.
   const series = p.layout === 'cartesian' ? seriesOf(catalog, layers) : null;

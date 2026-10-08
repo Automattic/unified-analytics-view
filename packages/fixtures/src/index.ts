@@ -311,4 +311,12 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
             layers: [{ mark: 'bar', encode: { y: 'event', x: 'conversions' } }, { mark: 'text', encode: { y: 'event', text: 'event' } }, { mark: 'text', encode: { y: 'event', text: 'conversions' }, align: 'end' },
                      { mark: 'text', encode: { y: 'event', text: 'conversion_rate' }, align: 'end' }, { mark: 'text', encode: { y: 'event', text: 'conversion_value' }, align: 'end' }] } },
   funnel:  { label: 'Funnel: visitors by step, with the rate', spec: { spec: 'view/0', title: 'Checkout funnel', use: 'funnel', query: { metrics: ['visitors', 'conversion_rate'], by: ['step'], range: '28d' } } },
+  // Ranges and ticks (step 3). They are swept, and have their golden scenes, in test/ranges.test.ts.
+  box:     { label: 'Box plot: response time by page', spec: { spec: 'view/0', title: 'Response time by page', use: 'box-plot', query: { metrics: ['response_time'], by: ['page'], range: '28d', limit: 8 } } },
+  errors:  { label: 'Error bars: response time by page, and the interval its mean is known to', spec: { spec: 'view/0', title: 'Mean response time', use: 'error-bars', query: { metrics: ['response_time'], by: ['page'], range: '28d', limit: 8 } } },
+  waterfall: { label: 'Waterfall: net subscribers, day on day', spec: { spec: 'view/0', title: 'Net subscribers, running', use: 'waterfall', query: { metrics: ['net_subscribers'], by: ['date.day'], range: '28d' } } },
+  candlestick: { label: 'Candlestick: response time by day', spec: { spec: 'view/0', title: 'Response time by day', use: 'candlestick', query: { metrics: ['response_time'], by: ['date.day'], range: '28d' } } },
+  fan:     { label: 'Fan: response time by day, in the interval it is known to', spec: { spec: 'view/0', title: 'Response time', use: 'fan', query: { metrics: ['response_time'], by: ['date.day'], range: '28d' } } },
+  dumbbell: { label: 'Dumbbell: page views by page, this period against the one before', spec: { spec: 'view/0', title: 'Page views, then and now', use: 'dumbbell', query: { metrics: ['pageviews'], by: ['page'], range: '28d', compare: 'previous', limit: 8 } } },
+  bullet:  { label: 'Bullet: sign-ups by device, against the target', spec: { spec: 'view/0', title: 'Sign-ups against target', use: 'bullet', query: { metrics: ['signups'], by: ['device'], range: '28d' } } },
 };

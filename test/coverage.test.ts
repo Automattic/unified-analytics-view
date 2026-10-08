@@ -17,7 +17,9 @@ const err = (s: Spec, q = s.query) => { try { resolve(s, runQuery(q), makeContai
 const view = new Ajv().compile(viewSchema);
 
 // The plots and the rows among them. Another layout has a suite of its own: test/radial.test.ts, test/cell.test.ts.
-const specs = Object.fromEntries(Object.entries(moreSamples).map(([k, s]) => [k, s.spec] as const).filter(([, s]) => ['cartesian', 'rows'].includes(run(s, 700).plan.layout)));
+// Ranges and ticks have one too: test/ranges.test.ts.
+const ranges = ['box', 'errors', 'waterfall', 'candlestick', 'fan', 'dumbbell', 'bullet'];
+const specs = Object.fromEntries(Object.entries(moreSamples).map(([k, s]) => [k, s.spec] as const).filter(([k, s]) => !ranges.includes(k) && ['cartesian', 'rows'].includes(run(s, 700).plan.layout)));
 const painters: PainterName[] = ['svg', 'dots'];
 const heights = [null, 300, 160, 100, 60, 40];
 const widths = [54, 80, 120, 170, 250, 290, 346, 500, 700];

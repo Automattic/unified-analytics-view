@@ -72,6 +72,7 @@ export function hitNodes(scene: Scene): (RectNode & { c: number })[] {
     if (n.kind === 'rect' && n.row != null && n.x != null) { const b = bars.get(n.row); bars.set(n.row, [Math.min(b?.[0] ?? n.x, n.x), Math.max(b?.[1] ?? n.x, n.x + (n.w || 0))]); }
     else if (n.kind === 'path') for (const p of n.points) cx.set(p.row, p.x);
     else if (n.kind === 'circle' && n.row != null && n.x != null) cx.set(n.row, n.x);       // a dot on a time or category axis
+    else if (n.kind === 'line' && n.row != null && n.x != null) cx.set(n.row, (n.x + (n.x2 ?? n.x)) / 2);   // a row's rule, or its tick
   }
   bars.forEach(([lo, hi], row) => cx.set(row, lo + (hi - lo) / 2));
   const at = (scene.rows ?? []).filter((r) => cx.has(r)).map((r) => [r, cx.get(r)!] as const);

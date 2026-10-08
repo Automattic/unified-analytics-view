@@ -220,6 +220,8 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   // line and not from the bottom of the plot. Always rounded to 4 ticks: a scene with no size cannot pick a tick count
   // by height. Shares run to the whole.
   const units = unitsOf(catalog, layers), scaleOf = (l: Layer) => scales[Math.max(0, units.indexOf(unitOf(catalog, l, xField)!))]!;
+  // Where no layer has a metric itself on y, only companions of one (a box's quartiles), the ticks are in that metric's unit, as the readout says a companion.
+  const lone = metricOf(catalog, layers.map((l) => l.encode && l.encode.y).find((y) => typeof y === 'string'))?.unit || 'count';
   const scales = (units.length ? units : ['']).map((u, ui) => {
     const vals: number[] = [];
     layers.forEach((l, i) => {
@@ -232,7 +234,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     const [bottom, top] = y.domain() as [number, number];
     // A short plot keeps the ticks a count of 2 would give on this scale. Where the two counts share only zero (a top of 8, 80, 800: steps of 5 and of 2), every other tick stays instead.
     const fine = y.ticks(4), two = y.ticks(2).filter((t) => fine.includes(t));
-    return { v: (n: number) => (n - bottom) / (top - bottom), ticks: fine, coarse: two.length > 1 ? two : fine.filter((_, i) => i % 2 === 0), text: (t: number) => (share ? fmtPct(t) : formatUnit(t, u || 'count', 'compact')) };
+    return { v: (n: number) => (n - bottom) / (top - bottom), ticks: fine, coarse: two.length > 1 ? two : fine.filter((_, i) => i % 2 === 0), text: (t: number) => (share ? fmtPct(t) : formatUnit(t, u || lone, 'compact')) };
   });
   let unit: Draw['unit'] = xScale(keys, shared, 0, 1), xv: Draw['xv'];
   if (xOn) {

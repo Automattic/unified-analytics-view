@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Goals · Bench</title>
+  <link rel="stylesheet" href="/src/bench.css">
+  <link rel="stylesheet" href="/src/goals.css">
+</head>
+<body>
+  <nav><a href="/demo.html">Demo</a> <a href="/">Views</a> <a href="/marks.html">Marks</a> <a href="/sidebar.html">Sidebar</a> <a href="/goals.html" aria-current="page">Goals</a> <a href="/tokens.html">Tokens</a> <a href="/spike.html">Spike</a></nav>
+  <form id="controls">
+    <fieldset><legend>Goal</legend>
+      <select name="goal" aria-label="Goal"></select>
+    </fieldset>
+    <fieldset><legend>Data</legend>
+      <label><input type="radio" name="scenario" value="typical" checked> typical</label>
+      <label><input type="radio" name="scenario" value="no-prior"> no prior</label>
+      <label><input type="radio" name="scenario" value="empty"> empty</label>
+    </fieldset>
+    <fieldset><legend>Range</legend>
+      <label><input type="radio" name="range" value="28d" checked> 28 days</label>
+      <label><input type="radio" name="range" value="14d"> 14</label>
+      <label><input type="radio" name="range" value="7d"> 7</label>
+    </fieldset>
+    <fieldset><legend>Theme</legend>
+      <label><input type="radio" name="theme" value="" checked> system</label>
+      <label><input type="radio" name="theme" value="light"> light</label>
+      <label><input type="radio" name="theme" value="dark"> dark</label>
+    </fieldset>
+    <fieldset><legend>Show as</legend>
+      <label><input type="checkbox" name="table" value="on"> tables</label>
+      <label><input type="checkbox" name="config" value="on"> config</label>
+    </fieldset>
+  </form>
+  <main class="goals" id="goal"></main>
+  <script type="module" src="/src/goals.ts"></script>
+</body>
+</html>

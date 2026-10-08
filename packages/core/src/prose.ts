@@ -8,6 +8,9 @@ export function leader(result: Result, dim: string, m: string): Row | undefined 
   return by ? by.reduce<Row | undefined>((top, r) => (!top || (r[m] as number) > (top[m] as number) ? r : top), undefined) : result.rows[0];
 }
 
+/** More than one of a dimension's values, by its label: "pages", "countries". */
+const plural = (label: string) => label.replace(/([^aeiou])y$/, '$1ie') + 's';
+
 /** The tldr prose: the text sibling of a view, derived from the query and the transforms, not from a named chart type. */
 export function tldrProse(q: Query, result: Result, share: boolean, catalog: Catalog, points = false): string {
   const m = q.metrics[0]!, M = catalog.metrics[m]!, t = result.totals, rows = result.rows, dims = q.by || [], by = dims[0];
@@ -33,7 +36,7 @@ export function tldrProse(q: Query, result: Result, share: boolean, catalog: Cat
     // out a point is would be a statistic, and those are the engine's.
     const two = q.metrics.slice(0, 2), label = (f: string) => catalog.metrics[f]!.label.toLowerCase(), of = (f: string) => rows.map((r) => r[f] as number);
     const top = two.map((f) => rows.reduce((a, r) => ((r[f] as number) > (a[f] as number) ? r : a))[by]);
-    return 'Across ' + rows.length + ' ' + catalog.dimensions[by]!.label.toLowerCase() + 's in the ' + range + ', ' + 'the range of ' + two.map((f) => label(f) + ' is ' + fmt(Math.min(...of(f))) + ' to ' + fmt(Math.max(...of(f)))).join(' and of ') + '. '
+    return 'Across ' + rows.length + ' ' + plural(catalog.dimensions[by]!.label.toLowerCase()) + ' in the ' + range + ', ' + 'the range of ' + two.map((f) => label(f) + ' is ' + fmt(Math.min(...of(f))) + ' to ' + fmt(Math.max(...of(f)))).join(' and of ') + '. '
       + (top[0] === top[1] ? top[0] + ' is highest on both.' : top[0] + ' is highest on ' + label(two[0]!) + ' and ' + top[1] + ' on ' + label(two[1]!) + '.');
   }
   if (by && catalog.dimensions[by]!.type === 'number' && rows.length) {
@@ -49,7 +52,7 @@ export function tldrProse(q: Query, result: Result, share: boolean, catalog: Cat
     }
     // Several metrics by one dimension: the ranking is by the first, and the rest are said once, as the engine's totals. A metric it gives no total for is left out.
     const rest = q.metrics.slice(1).filter((x) => t[x] != null).map((x) => catalog.metrics[x]!.label.toLowerCase() + ' ' + formatValue(t[x], catalog.metrics[x]!));
-    return 'Top ' + label + 's by ' + name + ', ' + range + ': ' + rows.slice(0, 3).map((r) => r[by] + ' (' + fmt(r[m] as number) + ')').join(', ') + '.' + (rest.length ? ' Overall, ' + rest.join(' and ') + '.' : '');
+    return 'Top ' + plural(label) + ' by ' + name + ', ' + range + ': ' + rows.slice(0, 3).map((r) => r[by] + ' (' + fmt(r[m] as number) + ')').join(', ') + '.' + (rest.length ? ' Overall, ' + rest.join(' and ') + '.' : '');
   }
   // Each metric the query asks for, the first with the range.
   return q.metrics.map((m, i) => {

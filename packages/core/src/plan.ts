@@ -1,5 +1,5 @@
 import { CONTAINER_RULES, KEEP } from './container.ts';
-import { applies, ruleFor, type FitRule } from './fit.ts';
+import { applies, fallbackRule, ruleFor, type FitRule } from './fit.ts';
 import { PRESETS, expand } from './presets.ts';
 import { COLUMNS_BLOCK, place } from './place.ts';
 import { buildScene, columnLabel, columnsOf, tldrValueText, isDim, roleOf, seriesOf, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
@@ -58,8 +58,9 @@ function checkLayers(layers: Layer[], q: Query, catalog: Catalog, result: Result
   if (unused) throw new Error('The query is by "' + unused + '", and no layer encodes it, so its rows would be drawn over each other. Encode it on color, or remove it from query.by.');
 }
 
-/** Fit a spec to a container. Throws, with a message that names the fix, when the spec is invalid. */
-export function resolve(spec0: Spec, result: Result, container: Container, catalog: Catalog, presets: PresetLibrary = PRESETS): Plan {
+/** Fit a spec to a container. Throws, with a message that names the fix, when the spec is invalid.
+ * `via` is resolve()'s own: the layouts this view has given up for a rule's `fallback` on its way here. */
+export function resolve(spec0: Spec, result: Result, container: Container, catalog: Catalog, presets: PresetLibrary = PRESETS, via: Layout[] = []): Plan {
   const spec = expand(spec0, presets), q = spec.query || ({} as Query);
   if (!q.metrics || !q.metrics.length) throw new Error('A view needs query.metrics, for example ["visitors"].');
   const m = q.metrics[0]!, M = catalog.metrics[m]!, by = (q.by || [])[0], rules = container.rules || CONTAINER_RULES, keep = spec.keep || [], dropped: string[] = [];
@@ -79,6 +80,9 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
                          share, text: tldrProse(q, result, share, catalog, points) };
   if (p.layout === 'cartesian') p.guides = { x: true, y: true, grid: true };
   if (p.layout === 'matrix') { p.guides = { x: true, y: true, ramp: true }; p.text = gridProse(q, result, catalog) ?? p.text; }
+  // A layout with a rule that names a `fallback` gives way to that preset, whole, where the rule applies: the same query,
+  // planned again. Asked before the reductions, which have nothing to give up for a view that is not this one.
+  const swap = layers.length ? fallbackRule(rules.fit, p.layout, keep, via) : undefined;
   // A split plot starts with its legend. Its rules step that down to a label at the end of each line, where there
   // are lines, and then to nothing. They are asked once, of the view: unlike the reductions, they change no one else's room.
   const series = p.layout === 'cartesian' ? seriesOf(catalog, layers) : null;
@@ -97,6 +101,9 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   if (result.meta.empty || (M.instant && !result.rows.length)) {
     if (M.instant || !layers.length) { p.layout = 'none'; p.layers = []; p.tldrValue = true; p.guides = {}; }
     else { p.layout = 'notice'; p.layers = []; p.guides = {}; p.tldrValue = false; }
+  } else if (swap && applies(swap, { view: { inline: container.width, block: container.height } })) {
+    const { layers: _layers, ...rest } = spec0, plan = resolve({ ...rest, use: swap.fallback }, result, container, catalog, presets, via.concat(p.layout));
+    return { ...plan, dropped: ['the ' + p.layout + ' marks (drawn as "' + swap.fallback + '")'].concat(plan.dropped) };
   }
 
   const valueLen = tldrValueText(catalog, q, result, true).length;

@@ -37,6 +37,9 @@ export function compileFitRules(rules: FitRule[], extras: FitExtras = {}): strin
     const body = [
       r.hide?.length ? fig + ' ' + anyOf(r.hide.map((t) => target(t, r, 'the hide target'))) + ' { display: none; }' : '',
       r.show?.length ? fig + ' ' + anyOf(r.show.map((t) => target(t, r, 'the show target'))) + ' { display: block; }' : '',
+      // The view gives way, whole, to the one painted beside it for the rule's preset (view.ts).
+      r.fallback ? fig + ' { display: none; }' : '',
+      r.fallback ? fig + ' ~ .vg-fallback { display: block; }' : '',
       own ? fig + ' { ' + own + ' }' : '',
       ...Object.entries(more).filter(([sel]) => sel).map(([sel, decl]) => fig + ' ' + sel + ' { ' + decl + ' }'),
     ].filter(Boolean).map((line) => '  ' + line).join('\n');

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FIT_RULES } from '@universal-analytics/core';
+import { CONTAINER_RULES, FIT_RULES } from '@universal-analytics/core';
 import { compileFitRules } from '@universal-analytics/dom';
 import { rows } from '../packages/dom/src/layouts/rows.ts';
 
@@ -9,11 +9,22 @@ describe('the rows layout', () => {
     const css = compileFitRules(FIT_RULES.filter((r) => r.layout === 'rows'), { rows: rows.fit! });
     const fig = '.vg[data-layout="rows"]:not([data-keep~="marks"])';
     expect(css.split('\n')).toEqual([
-      '/* rows marks */', '@container view (inline-size < 90px) {',
+      '/* rows marks */', '@container view (inline-size < 89.5px) {',
       '  ' + fig + ' .vg-rows { display: none; }', '  ' + fig + ' .vg-number { display: block; }',
       '  ' + fig + ' { grid-template: "number" auto / minmax(0, 1fr); }', '  ' + fig + ' .vg-body { display: none; }', '  ' + fig + ' .vg-number { margin: 0; }',
       '}',
     ]);
+  });
+
+  it('gives up the list for the number in a box shorter than one row, at the context\'s row height', () => {
+    const css = (rowHeight: number) => compileFitRules(rows.rules!({ ...CONTAINER_RULES, rows: { ...CONTAINER_RULES.rows, rowHeight } }), { rows: rows.fit! });
+    const fig = '.vg[data-layout="rows"]:not([data-keep~="marks"])';
+    expect(css(28).split('\n').slice(0, 5)).toEqual([
+      '/* rows marks-block */', '@container view (block-size < 27.5px) {',
+      '  ' + fig + ' .vg-rows { display: none; }', '  ' + fig + ' .vg-number { display: block; }',
+      '  ' + fig + ' { grid-template: "number" auto / minmax(0, 1fr); }',
+    ]);
+    expect(css(40)).toContain('@container view (block-size < 39.5px) {');
   });
 
   it('takes its row height and gap from the rule set, never from its stylesheet', () => {

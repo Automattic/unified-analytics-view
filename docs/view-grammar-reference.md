@@ -399,7 +399,7 @@ A sketch, untested. The worked rules are in `docs/dom-painter-plan.md`, section 
 
 ## 11. The scene
 
-**Status: Proven in pixels. The ratio form is built: `buildScene` returns it and `place(scene, container)` makes the pixel scene from it, held to the sweep and the golden scenes. No painter reads the ratios yet. What follows describes the placed scene; the ratio fields are in `packages/core/src/types.ts`.**
+**Status: Proven in pixels. The ratio form is built: `buildScene` returns it and `place(scene, container)` makes the pixel scene from it, held to the sweep and the golden scenes. `<ua-view>` in `packages/dom` paints from the ratios. What follows describes the placed scene; the ratio fields are in `packages/core/src/types.ts`.**
 
 A placed scene is `{ width, height, nodes, plot? }`. Nodes are flat and drawn in order.
 

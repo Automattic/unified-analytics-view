@@ -10,6 +10,9 @@ import type { Catalog, Guides, Layer, Part, PathNode, PlanShape, Query, Result, 
 type Body = Pick<Scene, 'nodes' | 'rows' | 'scale'>;
 
 const num = (r: Row, f: string) => r[f] as number;
+/* A row's dimension value as its key. A result may hold a number or a boolean there, and a key is compared with
+ * what a painter wrote into an attribute, so it is a string from here on. */
+const str = (r: Row, f: string) => String(r[f]);
 /** The role a layer plays: the one it states, or the one its mark and series imply. */
 export function roleOf(l: Layer): Role {
   return l.role || (l.series === 'previous' ? 'comparison' : l.mark === 'rule' ? 'reference' : 'primary');
@@ -42,7 +45,7 @@ export function xScale(rows: string[], scale: 'band' | 'point', lo: number, hi: 
 function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, rows: Row[]): Body {
   const nodes: SceneNode[] = [];
   const xField = layers.map((l) => l.encode && l.encode.x).find((f) => isDim(catalog, f)) as string;
-  const keys = rows.map((r) => r[xField] as string);
+  const keys = rows.map((r) => str(r, xField));
   const isTime = catalog.dimensions[xField]!.type === 'time';
   const scale = layers.some((l) => l.mark === 'bar') ? 'band' : 'point';
   const yField = (l: Layer) => (l.series === 'previous' ? l.encode!.y + '@previous' : (l.encode!.y as string));
@@ -58,9 +61,10 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, rows:
   const top = y.domain()[1]!, v = (n: number) => n / top;
   const unit = xScale(keys, scale, 0, 1);
 
-  const coarse = y.ticks(2);
-  if (guides.y) y.ticks(4).forEach((t) => {
-    // A short plot keeps the ticks a count of 2 would give on this scale. The rest are ranked, to be given up there.
+  // A short plot keeps the ticks a count of 2 would give on this scale. The rest are ranked, to be given up there.
+  // Where the two counts share only zero (a top of 8, 80, 800: steps of 5 and of 2), every other tick stays instead.
+  const fine = y.ticks(4), two = y.ticks(2).filter((t) => fine.includes(t)), coarse = two.length > 1 ? two : fine.filter((_, i) => i % 2 === 0);
+  if (guides.y) fine.forEach((t) => {
     const rank = coarse.includes(t) ? {} : { rank: 1 };
     if (guides.grid) nodes.push({ key: 'grid:' + t, part: 'plot', kind: 'line', t: v(t), paint: t === 0 ? 'axis' : 'grid', layer: 'guide', ...rank });
     nodes.push({ key: 'ytick:' + t, part: 'y-axis', kind: 'text', t: v(t), text: fmt(t, true), anchor: 'end', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...rank });
@@ -83,7 +87,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, rows:
       const f = yField(l), pts = rows.filter((r) => r[f] != null);
       const whole = pts.filter((r) => prev || !r.partial);
       if (!whole.length) return;
-      const k = (r: Row) => r[xField] as string;
+      const k = (r: Row) => str(r, xField);
       const points = (rs: Row[]): PathNode['points'] => rs.map((r) => ({ row: k(r), x: unit.cx(k(r)), v: v(num(r, f)) }));
       if (l.mark === 'area') {
         nodes.push({ key: id, part: 'plot', kind: 'path', d: pathD(points(whole), 'monotone', true), points: points(whole), curve: 'monotone', fill: true, paint, opacity: 0.14, layer: 'data', role });
@@ -96,7 +100,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, rows:
       const f = yField(l);
       rows.forEach((r) => {
         if (r[f] == null) return;
-        nodes.push({ key: id + ':' + r[xField], part: 'plot', kind: 'rect', x: unit.x(r[xField] as string), w: unit.w, v: v(num(r, f)), row: r[xField] as string,
+        nodes.push({ key: id + ':' + str(r, xField), part: 'plot', kind: 'rect', x: unit.x(str(r, xField)), w: unit.w, v: v(num(r, f)), row: str(r, xField),
           paint, opacity: r.partial && !prev ? 0.4 : 1, layer: 'data', role });
       });
     } else if (l.mark === 'rule') {
@@ -127,7 +131,7 @@ function sceneRows(catalog: Catalog, layers: Layer[], rows: Row[]): Body {
   const barL = layers.find((l) => l.mark === 'bar');
   const top = barL ? max(rows, (r) => num(r, barL.encode!.x as string)) || 1 : 1, ids = layerKeys(layers);
   rows.forEach((r) => {
-    const k = r[dim] as string;
+    const k = str(r, dim);
     layers.forEach((l, li) => {
       if (l.mark === 'bar') {
         nodes.push({ key: ids[li] + ':' + k, part: 'rows', kind: 'rect', v: num(r, l.encode!.x as string) / top, row: k, paint: l.paint || 'series.1', opacity: 0.2, layer: 'data', role: roleOf(l) });
@@ -140,13 +144,13 @@ function sceneRows(catalog: Catalog, layers: Layer[], rows: Row[]): Body {
       }
     });
   });
-  return { nodes, rows: rows.map((r) => r[dim] as string) };
+  return { nodes, rows: rows.map((r) => str(r, dim)) };
 }
 
 // No positional dimension: one band, stacked and normalized, split by colour.
 function sceneBand(layer: Layer, rows: Row[]): Body {
   const nodes: SceneNode[] = [], m = layer.encode!.x as string, dim = layer.encode!.color as string;
-  const total = sum(rows, (r) => num(r, m)) || 1, k = (r: Row) => r[dim] as string;
+  const total = sum(rows, (r) => num(r, m)) || 1, k = (r: Row) => str(r, dim);
   rows.forEach((r, i) => {
     nodes.push({ key: 'seg:' + k(r), part: 'band', kind: 'rect', v: num(r, m) / total, row: k(r), paint: 'series.' + ((i % 6) + 1), layer: 'data', role: roleOf(layer) });
   });

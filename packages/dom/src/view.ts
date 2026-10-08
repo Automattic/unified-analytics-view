@@ -1,4 +1,4 @@
-import { CONTAINER_RULES, buildScene, expand, formatDimension, formatValue, resolve, unboundedContainer } from '@universal-analytics/core';
+import { CONTAINER_RULES, buildScene, formatDimension, formatValue, resolve, unboundedContainer } from '@universal-analytics/core';
 import type { Catalog, ContainerRules, Layout, Query, Result, Row, SceneNode, Spec } from '@universal-analytics/core';
 import { compileFitRules, type FitExtras } from './compile.ts';
 import { attr, ensure, keyed, paintVar, text } from './dom.ts';
@@ -18,9 +18,12 @@ const painters = Object.values(LAYOUTS);
 
 /* Everything the element owns, in one layer, so a compiled fit rule beats it whatever the specificity. */
 const BASE_CSS = `@layer vg {
-:host { display: block; container: view / inline-size; font-size: 11px; line-height: 1.3; color: ${paintVar('ink')}; }
+:host { display: block; container: view / inline-size; font-size: 11px; line-height: 1.3; text-align: start; text-indent: 0; color: ${paintVar('ink')}; }
 :host([hidden]), [hidden] { display: none !important; }
-.vg { position: relative; box-sizing: border-box; block-size: 100%; margin: 0; display: grid; grid-template: "number" auto "body" minmax(0, 1fr) / minmax(0, 1fr); }
+.vg { position: relative; box-sizing: border-box; block-size: 100%; margin: 0; display: grid; grid-template: "number" auto "body" minmax(0, 1fr) / minmax(0, 1fr); print-color-adjust: exact; }
+/* A bar, a segment, a swatch and a rule are backgrounds. A printer leaves those out unless told, and forced colours
+ * repaint them as the page, so both are told to leave a mark its paint. */
+.vg-body i, .vg-pulse { forced-color-adjust: none; }
 .vg-prose { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .vg-body { grid-area: body; box-sizing: border-box; min-inline-size: 0; block-size: var(--vg-body-block, auto); }
 .vg-error { margin: 0; font-size: 13px; overflow-wrap: anywhere; color: ${paintVar('delta.bad')}; }
@@ -98,10 +101,14 @@ export function surfaceSheet(): CSSStyleSheet {
 }
 
 const EXTRAS: FitExtras = Object.fromEntries(painters.map((p) => [p.layout, p.fit ?? {}]));
-const sheets = new Map<string, CSSStyleSheet>();
-function sheet(css: string): CSSStyleSheet {
-  let s = sheets.get(css);
-  if (!s) { s = new CSSStyleSheet(); s.replaceSync(css); sheets.set(css, s); }
+// One sheet per text and per document: a constructed sheet cannot be adopted outside the document it was made for,
+// and a view may be put into another one (a preview frame, a window opened from the page).
+const sheets = new WeakMap<Document, Map<string, CSSStyleSheet>>();
+function sheet(doc: Document, css: string): CSSStyleSheet {
+  let own = sheets.get(doc);
+  if (!own) sheets.set(doc, own = new Map());
+  let s = own.get(css);
+  if (!s) { s = new (doc.defaultView ?? globalThis).CSSStyleSheet(); s.replaceSync(css); own.set(css, s); }
   return s;
 }
 
@@ -115,13 +122,22 @@ const how = (name: Input) => 'Set the ' + name + ' property, or put <script type
 const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 
 /* The input is checked here because resolve() trusts its catalog and result, and its failures would not name a fix. */
-function check(spec: Spec, result: Result, catalog: Catalog): void {
+export function check(spec: Spec, result: Result, catalog: Catalog): void {
   if (!isObject(spec.query)) throw new Error('The spec has no "query". Add one, for example { "metrics": ["visitors"], "by": ["date.day"] }.');
+  // A list written as a bare value is the slip hand-written JSON makes, and core's failure for it names no fix.
+  for (const [name, v] of [['query.metrics', spec.query.metrics], ['query.by', spec.query.by], ['layers', spec.layers], ['keep', spec.keep]] as const)
+    if (v != null && !Array.isArray(v)) throw new Error('The spec gives "' + name + '" as ' + JSON.stringify(v) + '. It is a list: write ' + JSON.stringify([v]) + '.');
   if (!Array.isArray(result.rows) || !isObject(result.totals) || !isObject(result.meta)) throw new Error('The result needs "rows" (an array), "totals" and "meta". Pass what the query returned, whole.');
   if (!isObject(catalog.metrics) || !isObject(catalog.dimensions)) throw new Error('The catalog needs "metrics" and "dimensions". Pass the catalog the query was run against.');
   const q = spec.query;
-  (Array.isArray(q.metrics) ? q.metrics : []).forEach((m) => { if (!catalog.metrics[m]) throw new Error('The catalog has no metric "' + m + '". It has: ' + (Object.keys(catalog.metrics).join(', ') || 'none') + '. Pass the catalog the query was run against.'); });
-  (Array.isArray(q.by) ? q.by : []).forEach((d) => { if (!catalog.dimensions[d]) throw new Error('The catalog has no dimension "' + d + '". It has: ' + (Object.keys(catalog.dimensions).join(', ') || 'none') + '. Pass the catalog the query was run against.'); });
+  (q.metrics || []).forEach((m) => { if (!Object.hasOwn(catalog.metrics, m)) throw new Error('The catalog has no metric "' + m + '". It has: ' + (Object.keys(catalog.metrics).join(', ') || 'none') + '. Pass the catalog the query was run against.'); });
+  (q.by || []).forEach((d) => { if (!Object.hasOwn(catalog.dimensions, d)) throw new Error('The catalog has no dimension "' + d + '". It has: ' + (Object.keys(catalog.dimensions).join(', ') || 'none') + '. Pass the catalog the query was run against.'); });
+}
+
+/* A context's rule set over the defaults, one level down as well: one that gives only a row's height keeps the default gap. */
+export function rulesOver(given: Partial<ContainerRules> = {}): ContainerRules {
+  const d = CONTAINER_RULES;
+  return { ...d, ...given, axes: { ...d.axes, ...given.axes }, bare: { ...d.bare, ...given.bare }, rows: { ...d.rows, ...given.rows }, tldrValue: { ...d.tldrValue, ...given.tldrValue } };
 }
 
 /* The table is rebuilt whole: nothing in it moves, so there is nothing to keep. Totals are the engine's, never a sum of the rows. */
@@ -153,8 +169,12 @@ function paintNumber(el: HTMLElement, nodes: SceneNode[]): void {
 const Base = (globalThis.HTMLElement ?? class {}) as typeof HTMLElement;
 
 export class UaView extends Base {
+  // The table switch changes what shows and resizes neither the room nor the ruler, so no observer follows it: the view paints again.
+  static observedAttributes = ['table'];
   #given: Partial<Record<Input, unknown>> = {};
   #queued = false;
+  // Whether an input changed since the last paint. A view that is only moved in the page paints again, and nothing in it moves.
+  #changed = false;
   #layout: Layout | null = null;
   #root: ShadowRoot; #fig: HTMLElement; #prose: HTMLElement; #number: HTMLElement; #body: HTMLElement; #table: HTMLTableElement; #error: HTMLElement;
   #room: HTMLElement; #ruler: HTMLElement[]; #seen = '';
@@ -167,7 +187,7 @@ export class UaView extends Base {
   #sizes = globalThis.ResizeObserver && typeof requestAnimationFrame === 'function'
     ? new ResizeObserver(() => { this.#frame ||= requestAnimationFrame(() => { this.#frame = 0; this.#measure(false); }); }) : null;
   // Markup can arrive after the element does, when a parser is still streaming its children.
-  #children = new MutationObserver(() => this.#queue());
+  #children = new MutationObserver(() => { this.#changed = true; this.#queue(); });
 
   constructor() {
     super();
@@ -210,8 +230,10 @@ export class UaView extends Base {
     this.#children.disconnect(); this.#sizes?.disconnect();
     if (this.#frame) { cancelAnimationFrame(this.#frame); this.#frame = 0; }
   }
+  // No input changed, so nothing moves. The paint builds or drops the table, and the measured pass that follows it reads what now shows.
+  attributeChangedCallback(): void { this.#queue(); }
 
-  #set(name: Input, v: unknown): void { this.#given[name] = v ?? undefined; this.#queue(); }
+  #set(name: Input, v: unknown): void { this.#given[name] = v ?? undefined; this.#changed = true; this.#queue(); }
   // Inputs set one after another paint once.
   #queue(): void {
     if (this.#queued || !this.isConnected) return;
@@ -233,35 +255,42 @@ export class UaView extends Base {
   }
 
   #render(): void {
+    const changed = this.#changed;
+    this.#changed = false;
     try {
       const spec = this.#input('spec', true) as Spec, result = this.#input('result', true) as Result, catalog = this.#input('catalog', true) as Catalog;
-      const rules: ContainerRules = { ...CONTAINER_RULES, ...(this.#input('rules', false) as Partial<ContainerRules> | undefined) };
+      const rules = rulesOver(this.#input('rules', false) as Partial<ContainerRules> | undefined);
       check(spec, result, catalog);
       if (!Array.isArray(rules.fit)) throw new Error('The rules need "fit", an array of fit rules. Leave it out to use the defaults.');
-      const fit = sheet(compileFitRules([...rules.fit, ...painters.flatMap((p) => p.rules ?? [])], EXTRAS));
+      if (!Array.isArray(rules.order)) throw new Error('The rules need "order", a list of reductions such as ["drop-guides", "prose"]. Leave it out to use the defaults.');
+      const fit = sheet(this.ownerDocument, compileFitRules([...rules.fit, ...painters.flatMap((p) => p.rules?.(rules) ?? [])], EXTRAS));
       const plan = resolve(spec, result, { ...unboundedContainer(), rules }, catalog);
       const scene = buildScene(plan, spec.query, result, catalog), fig = this.#fig;
 
-      this.#root.adoptedStyleSheets = [sheet(BASE_CSS), fit];
+      this.#root.adoptedStyleSheets = [sheet(this.ownerDocument, BASE_CSS), fit];
       fig.dataset.layout = scene.layout; fig.dataset.keep = (spec.keep || []).join(' '); fig.dataset.parts = scene.parts.join(' ');
       if (spec.title) fig.setAttribute('aria-label', spec.title); else fig.removeAttribute('aria-label');
       // The plot's natural heights are the context's, read by the stylesheet. The painter hard-codes neither.
       fig.style.setProperty('--vg-axes-height', rules.axes.height + 'px'); fig.style.setProperty('--vg-bare-height', rules.bare.height + 'px');
-      begin(fig, this.#layout === scene.layout);
+      begin(fig, changed && this.#layout === scene.layout);
       this.#prose.textContent = plan.text;
       for (const el of [this.#number, ...this.#ruler]) paintNumber(el, scene.nodes.filter((n) => n.part === 'number'));
       if (this.#layout !== scene.layout) { this.#body.replaceChildren(); this.#body.removeAttribute('data-scale'); this.#layout = scene.layout; }
       LAYOUTS[scene.layout]?.paint(this.#body, scene, rules);
-      paintTable(this.#table, spec.title, expand(spec).query, result, catalog);
-      this.#keys.paint(scene, expand(spec).query, result, catalog);
+      // Only while it shows: nothing reads a hidden table, and it is a row per row of the result.
+      if (this.hasAttribute('table')) paintTable(this.#table, spec.title, spec.query, result, catalog); else this.#table.replaceChildren();
+      this.#keys.paint(scene, spec.query, result, catalog);
       fig.hidden = false; this.#error.hidden = true;
       settle(fig);
       // At once, not a frame later: new data is never shown unfitted. This is not an observer's callback, so nothing
       // it writes is reported as a loop. A frame already asked for reads the same sizes after it and writes nothing.
       if (this.#sizes) this.#measure(true);
     } catch (e) {
+      // A parser still on the page has not handed over every child, so a missing or half-written one is not yet a mistake.
+      const doc = this.ownerDocument;
+      if (doc.readyState === 'loading') { doc.addEventListener('DOMContentLoaded', () => this.#queue(), { once: true }); return; }
       // Never out of a lifecycle callback: the view says what is wrong where it would have drawn.
-      this.#root.adoptedStyleSheets = [sheet(BASE_CSS)];
+      this.#root.adoptedStyleSheets = [sheet(doc, BASE_CSS)];
       this.#error.textContent = e instanceof Error ? e.message : String(e);
       this.#fig.hidden = true; this.#error.hidden = false;
     }
@@ -287,10 +316,11 @@ export class UaView extends Base {
       if (beside) {
         // Beside the marks the layout's own rules set the number, so it is measured as it stands. A note that
         // makes it taller than the box is given up before the number is, as fitNumber does for a number alone.
+        // It is read as the room is, in the page's px: offsetWidth is in the element's own, and under a transform the two differ.
         number.removeAttribute('data-fit');
-        const tall = () => room.block != null && number.offsetHeight > room.block;
+        const size = () => number.getBoundingClientRect(), tall = () => room.block != null && size().height > room.block;
         if (note && tall()) note.hidden = true;
-        prose = number.offsetWidth > room.inline || tall();
+        prose = size().width > room.inline || tall();
       } else { fit = fitNumber(room, sizes); prose = fit == null; }
     }
     attr(number, 'data-fit', fit);

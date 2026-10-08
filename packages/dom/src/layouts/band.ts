@@ -1,6 +1,6 @@
 import type { RectNode, TextNode } from '@universal-analytics/core';
 import { ensure, keyed, prop, text } from '../dom.ts';
-import type { LayoutPainter } from '../layout.ts';
+import { NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
 
 /* One band, split by colour, and its legend. Segments are flex items that grow by their share, so the band needs no
  * width. The scene holds both legends: the full one is a grid of swatch, label and share, the one-line one a line of
@@ -20,15 +20,14 @@ const css = `
 .vg[data-layout="band"][data-parts~="legend-top"] .vg-legend-top { display: block; }
 /* In a box the body is a size container, so cqb is the room the band and its legend have. The full legend needs the
  * bar, 10 px and 24 px a row less the last gap: a height that depends on the data, which a container query cannot
- * hold, so paint() states the row count and a clamp does the swap. A box too short for either clips. */
+ * hold, so paint() states the row count and a clamp does the swap. The legend that goes gives up its gap as well, or
+ * the one-line legend would stand 10 px low and be cut. A box too short for either clips. */
 @container view (block-size >= 0px) {
   .vg[data-layout="band"] .vg-body { container-type: size; overflow: hidden; --vg-legend-block: calc(30px + var(--vg-rows, 1) * 24px); }
-  .vg[data-layout="band"]:not([data-keep~="guides"]) .vg-legend { overflow: hidden; max-block-size: max(0px, (100cqb - var(--vg-legend-block) + 0.01px) * 999999); }
+  .vg[data-layout="band"]:not([data-keep~="guides"]) .vg-legend { overflow: hidden; max-block-size: max(0px, (100cqb - var(--vg-legend-block) + 0.01px) * 999999);
+    margin-block-start: clamp(0px, (100cqb - var(--vg-legend-block) + 0.01px) * 999999, 10px); }
   .vg[data-layout="band"]:not([data-keep~="guides"]) .vg-legend-top { display: block; overflow: hidden; max-block-size: max(0px, (var(--vg-legend-block) - 100cqb) * 999999); }
 }`;
-
-// The number alone. The body goes whole, the one-line legend with it, and so does its grid row.
-const alone = { '': 'grid-template: "number" auto / minmax(0, 1fr);', '.vg-body': 'display: none;', '.vg-number': 'margin: 0;' };
 
 export const band: LayoutPainter = {
   layout: 'band',
@@ -36,12 +35,13 @@ export const band: LayoutPainter = {
   fit: {
     // The rule's data only sets a switch. This is the swap, whatever the box's height says.
     legend: { '.vg-legend': 'display: none;', '.vg-legend-top': 'display: block; max-block-size: none;' },
-    marks: alone,
-    'marks-block': alone,
+    // The number alone. The body goes whole, the one-line legend with it, and so does its grid row.
+    marks: NUMBER_ALONE,
+    'marks-block': NUMBER_ALONE,
   },
   // ponytail: core's `marks` rule for a band has no block need, so this holds the bar and the one-line legend, 24 px
   // each. Wrong when the number is above the band. A block need on core's rule would say it properly.
-  rules: [{ id: 'marks-block', layout: 'band', container: 'view', needs: { block: 48 }, hide: ['band', 'legend'], show: ['number'], keep: 'marks' }],
+  rules: () => [{ id: 'marks-block', layout: 'band', container: 'view', needs: { block: 48 }, hide: ['band', 'legend'], show: ['number'], keep: 'marks' }],
 
   paint(body, scene) {
     const rows = scene.rows ?? [], nodes = (part: string) => scene.nodes.filter((n) => n.part === part);

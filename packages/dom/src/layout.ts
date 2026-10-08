@@ -1,5 +1,4 @@
 import type { ContainerRules, FitRule, Layout, Room, Scene } from '@universal-analytics/core';
-import { ensure } from './dom.ts';
 
 /* The seam between <ua-view> and a layout. A layout is one module in layouts/, exporting one LayoutPainter.
  *
@@ -29,8 +28,9 @@ export interface LayoutPainter {
   /** What else changes when one of its fit rules applies, by rule id: a selector inside the figure ('' is the
    * figure itself), then declarations. They are written under the rule's own condition and `keep`. */
   fit?: Record<string, Record<string, string>>;
-  /** Fit rules of its own, for what the context's set does not carry yet. Compiled after the context's. */
-  rules?: FitRule[];
+  /** Fit rules of its own, for what the context's set does not carry yet. Compiled after the context's. It is handed
+   * the context's rule set, so a need that is one of its sizes is written from it. */
+  rules?(context: ContainerRules): FitRule[];
   paint(body: HTMLElement, scene: Scene, rules: ContainerRules): void;
   /** Its share of the measured pass, if it has one: labels that collide, how many rows fit. `room` is the view's
    * width, and its height when it was handed a box. Read sizes inside `body`, then write attributes there for
@@ -39,14 +39,6 @@ export interface LayoutPainter {
   measure?(body: HTMLElement, room: Room): void;
 }
 
-/** A layout nobody has built: the number and the prose, and a line that says so. */
-export function unbuilt(layout: Layout): LayoutPainter {
-  return {
-    layout,
-    css: `
-.vg:has(.vg-todo) .vg-number { display: block; }
-.vg:has(.vg-todo) .vg-prose { position: static; inline-size: auto; block-size: auto; clip-path: none; white-space: normal; }
-.vg-todo { margin: 0; font-style: italic; }`,
-    paint(body) { ensure(body, 'p', 'vg-todo').textContent = 'The "' + layout + '" layout is not built in <ua-view> yet.'; },
-  };
-}
+/** What changes with a rule that leaves the number alone: the figure's grid is the number's row, the body goes whole
+ * so that its row holds no gap, and the number gives up the margin that stood between them. For a layout's `fit`. */
+export const NUMBER_ALONE: Record<string, string> = { '': 'grid-template: "number" auto / minmax(0, 1fr);', '.vg-body': 'display: none;', '.vg-number': 'margin: 0;' };

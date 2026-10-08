@@ -50,19 +50,19 @@ The trend view's rules, carrying today's thresholds over unchanged:
 ]
 ```
 
-**Compiled** (by `compileFitRules` in `packages/dom`, once per rule set, into a constructed stylesheet the shadow root adopts). Corrected at step 4 from what the spike found: one `@container` block per need, never an `or` across both axes, because a width-only container passes over a query that names its height, the inline half included.
+**Compiled** (by `compileFitRules` in `packages/dom`, once per rule set, into a constructed stylesheet the shadow root adopts). Corrected at step 4 from what the spike found: one `@container` block per need, never an `or` across both axes, because a width-only container passes over a query that names its height, the inline half included. Corrected again in review: each query asks for half a pixel under its need, because at a fractional zoom a container laid out at exactly the need measures a hair under it, and the part would go at the very size its rule says it fits.
 
 ```css
-@container view (inline-size < 280px) {
+@container view (inline-size < 279.5px) {
   .vg[data-layout="cartesian"]:not([data-keep~="guides"]) :is(.vg-x-axis, .vg-y-axis, .vg-grid) { display: none; }
   .vg[data-layout="cartesian"]:not([data-keep~="guides"]) .vg-number { display: block; }
   .vg[data-layout="cartesian"]:not([data-keep~="guides"]) { --vg-arrange: side; /* then what the layout module adds */ }
 }
-@container view (block-size < 120px) { /* the same three rules */ }
-@container plot (inline-size < 180px) {
+@container view (block-size < 119.5px) { /* the same three rules */ }
+@container plot (inline-size < 179.5px) {
   .vg[data-layout="cartesian"]:not([data-keep~="secondary"]) :is([data-role="comparison"], [data-role="reference"], [data-role="context"]) { display: none; }
 }
-@container plot (block-size < 90px) { /* the same rule */ }
+@container plot (block-size < 89.5px) { /* the same rule */ }
 ```
 
 A rule's data cannot say everything that changes with it: the grid areas, the gap and the bare plot height all switch with the axes. Each layout module supplies those declarations by rule id, and the compiler writes them under the same condition and `keep`. A `set` entry is written as a custom property (`--vg-arrange: side`), which nothing styles from; it is there to be read. `x-tick.mid` compiles to the ranked x label, `.vg-x-axis [data-rank]`. The base styles sit in a cascade layer, so a compiled rule beats them whatever its specificity, and rules are written in order, so a later rule beats an earlier one.
@@ -131,7 +131,7 @@ One custom element, `<ua-view>`, with an open shadow root. It takes `spec`, `res
           <path data-key="primary:line:partial" data-role="primary" />
         </svg>
         <div class="vg-refs"> … </div>        <!-- rules and their labels -->
-        <div class="vg-hits"> <i data-row="2026-09-08" style="--vg-x:.0"></i> … </div>   <!-- step 5; not built -->
+        <div class="vg-hits"> <i data-row="2026-09-08" style="--vg-x:.0"></i> … </div>   <!-- step 5 -->
       </div>
       <div class="vg-x-axis"> <span style="--vg-x:0">Sep 8</span> <span data-rank="1" style="--vg-x:.5">Sep 21</span> … </div>
     </div>
@@ -237,5 +237,5 @@ Reviewed October 7, under the principle at the top.
 1. Fit rules in `core`, with `resolve()` reading them, including the `block` needs on the view. The parity sweep must stay green.
 2. The ratio scene and `place()`. The golden pixel scenes must stay green, apart from call 3.
 3. The spike in section 7.
-4. `<ua-view>` for `cartesian`, then `rows`, then `band`, each on the bench in a stack at 346 px and in a row. `cartesian` is built, in `packages/dom`; `rows` and `band` are stubs behind the seam in `packages/dom/src/layout.ts`.
+4. `<ua-view>` for `cartesian`, then `rows`, then `band`, each on the bench in a stack at 346 px and in a row. All three are built, in `packages/dom`, each a module behind the seam in `packages/dom/src/layout.ts`.
 5. The measured pass, then keys and transitions.

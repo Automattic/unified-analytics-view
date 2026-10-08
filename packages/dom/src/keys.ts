@@ -1,4 +1,4 @@
-import { formatDimension, formatValue, partialNote, type Catalog, Query, RectNode, Result, Row, Scene } from '@universal-analytics/core';
+import { formatDimension, formatValue, partialNote, type Catalog, type Query, type RectNode, type Result, type Row, type Scene } from '@universal-analytics/core';
 import { attr, ensure, paintVar } from './dom.ts';
 
 /* Hit targets, the keyboard and the readout. A layout marks the element that holds its points with `data-hits`
@@ -87,6 +87,8 @@ export class Keys {
     // no leaving to speak of.
     body.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') this.#show(null); });
     body.addEventListener('focusout', () => this.#show(null));
+    // A touch that turns into a scroll chose its point on the way down. The browser cancels it, and it lets go.
+    body.addEventListener('pointercancel', () => this.#show(null));
     body.addEventListener('click', (e) => { if (row(e) !== this.#at) return; if (this.#fresh) this.#fresh = false; else this.#activate(); });
     body.addEventListener('keydown', (e) => {
       const box = this.#box();
@@ -116,7 +118,10 @@ export class Keys {
         attr(el, 'role', 'option'); attr(el, 'id', 'hit-' + i); attr(el, 'aria-label', this.#says[i]);
       }
     }
-    this.#show(box?.matches(':focus') && this.#at != null && this.#keys.includes(this.#at) ? this.#at : null);
+    // Held by the keyboard, or by a mouse still over the view: no pointerover follows for an element that was kept, so a
+    // point let go here would take the readout, and the next click, with it.
+    const at = this.#at, held = at != null && this.#keys.includes(at) && !!box && (box.matches(':focus') || this.#body.matches(':hover'));
+    this.#show(held ? at : null);
   }
 
   #box(): HTMLElement | null { return this.#body.querySelector<HTMLElement>('[data-hits]'); }
@@ -143,11 +148,13 @@ export class Keys {
     // Above the point, or below it, or over the top of a view too small for either: always inside the view, because
     // whatever holds a view may clip at its edge.
     // ponytail: placed once, when chosen. It does not follow a resize or a scroll inside the view.
+    // Rects are in the page's px and the readout is placed in the figure's own. Under a transform the two differ, by kx and ky.
     const f = this.#fig.getBoundingClientRect(), r = (point as HTMLElement).getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
-    const c = parseFloat((point as HTMLElement).style.getPropertyValue('--vg-c')), x = r.left + r.width * (Number.isFinite(c) ? c : 0.5) - f.left - w / 2;
-    const above = r.top - f.top - h - 2, below = r.bottom - f.top + 2;
-    tip.style.setProperty('left', Math.max(0, Math.min(x, f.width - w)) + 'px');
-    tip.style.setProperty('top', (above >= 0 ? above : below + h <= f.height ? below : 0) + 'px');
+    const W = this.#fig.offsetWidth, H = this.#fig.offsetHeight, kx = W > 0 && f.width > 0 ? W / f.width : 1, ky = H > 0 && f.height > 0 ? H / f.height : 1;
+    const c = parseFloat((point as HTMLElement).style.getPropertyValue('--vg-c')), x = (r.left + r.width * (Number.isFinite(c) ? c : 0.5) - f.left) * kx - w / 2;
+    const above = (r.top - f.top) * ky - h - 2, below = (r.bottom - f.top) * ky + 2;
+    tip.style.setProperty('left', Math.max(0, Math.min(x, f.width * kx - w)) + 'px');
+    tip.style.setProperty('top', (above >= 0 ? above : below + h <= f.height * ky ? below : 0) + 'px');
   }
 
   #activate(): void {

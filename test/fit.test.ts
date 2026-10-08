@@ -98,6 +98,12 @@ describe('the rules are what place() builds to', () => {
     expect(at30()[0]).toBe('prose');                                   // under 40 px the notice goes, and the number is too tall as well
     expect(at30(swap('notice', { inline: 150, block: 20 }))).toEqual(['notice', 30]);
   });
+  it('rows are as tall as the context says, so what resolve() trims to is what fits', () => {
+    const pages = (h: number | null) => run(specs.pages!, 346, h, 'typical', 'svg', { ...CONTAINER_RULES, rows: { rowHeight: 20, gap: 2 } });
+    expect(pages(null).scene.height).toBe(8 * 22 - 2);
+    expect(pages(100).plan).toMatchObject({ layout: 'rows', rowLimit: 4, dropped: ['rows 5 to 8'] });
+    expect(pages(200).plan).toMatchObject({ layout: 'rows', rowLimit: null, dropped: [] });
+  });
   it('the number beside a bare plot is as narrow as the context says', () => {
     const plot = (numberWidth: number) => run(trend, 170, null, 'typical', 'svg', { ...CONTAINER_RULES, bare: { ...CONTAINER_RULES.bare, numberWidth } }).scene.plot;
     expect(plot(76)).toEqual({ w: 82, h: 50 });

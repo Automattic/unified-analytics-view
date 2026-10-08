@@ -69,9 +69,9 @@ function placePlot(scene: Scene, W: number, H: number, narrow: boolean): PlacedN
   return out;
 }
 
-// The ranked bar list: rows of a fixed height, labels clipped by character width.
-function placeRows(scene: Scene, W: number): Block {
-  const rowH = 28, gap = 4, rows = scene.rows!, x = scaleLinear().domain([0, 1]).range([0, W]);
+// The ranked bar list: rows of the context's height, labels clipped by character width.
+function placeRows(scene: Scene, W: number, { rowHeight: rowH, gap }: Container['rules']['rows']): Block {
+  const rows = scene.rows!, x = scaleLinear().domain([0, 1]).range([0, W]);
   const values = scene.nodes.filter((n): n is TextNode => n.part === 'rows' && n.kind === 'text' && n.font === 'value');
   const valueRoom = values.length ? Math.max(...values.map((n) => n.text.length)) * CHAR_W + 14 : 0;
   const nodes: PlacedNode[] = [];
@@ -139,7 +139,7 @@ export function place(scene: Scene, container: Container): PlacedScene {
       const ph = !guided ? rules.bare.height : H ? Math.max(least, Math.min(rules.axes.height, H - above)) : rules.axes.height;
       body = { nodes: placePlot(scene, W, ph, narrow), height: ph }; plot = { w: W, h: ph };
     } else if (scene.layout === 'rows') {
-      body = placeRows(scene, W);
+      body = placeRows(scene, W, rules.rows);
     } else {
       body = placeBand(scene, W);
     }

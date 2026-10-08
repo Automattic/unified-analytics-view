@@ -48,4 +48,4 @@ export interface LayoutPainter {
 
 /** What changes with a rule that leaves the number alone: the figure's grid is the number's row, the body goes whole
  * so that its row holds no gap, and the number gives up the margin that stood between them. For a layout's `fit`. */
-export const NUMBER_ALONE: Record<string, string> = { '': 'grid-template: "number" auto / minmax(0, 1fr);', '.uav-body': 'display: none;', '.uav-number': 'margin: 0;' };
+export const NUMBER_ALONE: Record<string, string> = { '': 'grid-template: "number" auto / minmax(0, 1fr);', '.uav-body': 'display: none;', '.uav-number': 'align-self: start; margin: 0;' };

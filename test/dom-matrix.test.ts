@@ -35,7 +35,7 @@ describe('the matrix layout', () => {
     expect(css).toContain('@container uav-view (inline-size < 239.5px) {\n  ' + fig('guides') + ' .uav-ramp { display: none; }\n}');
     expect(css).toContain('@container uav-view (block-size < 149.5px) {\n  ' + fig('guides') + ' .uav-ramp { display: none; }\n}');
     const alone = ['  ' + fig('marks') + ' :is(.uav-plot, .uav-ramp) { display: none; }', '  ' + fig('marks') + ' .uav-number { display: block; }',
-      '  ' + fig('marks') + ' { grid-template: "number" auto / minmax(0, 1fr); }', '  ' + fig('marks') + ' .uav-body { display: none; }', '  ' + fig('marks') + ' .uav-number { margin: 0; }', '}'].join('\n');
+      '  ' + fig('marks') + ' { grid-template: "number" auto / minmax(0, 1fr); }', '  ' + fig('marks') + ' .uav-body { display: none; }', '  ' + fig('marks') + ' .uav-number { align-self: start; margin: 0; }', '}'].join('\n');
     expect(css).toContain('@container uav-view (inline-size < 149.5px) {\n' + alone);
     expect(css).toContain('@container uav-view (block-size < 89.5px) {\n' + alone);
   });

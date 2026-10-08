@@ -11,7 +11,7 @@ describe('the rows layout', () => {
     expect(css.split('\n')).toEqual([
       '/* rows marks */', '@container uav-view (inline-size < 89.5px) {',
       '  ' + fig + ' .uav-rows { display: none; }', '  ' + fig + ' .uav-number { display: block; }',
-      '  ' + fig + ' { grid-template: "number" auto / minmax(0, 1fr); }', '  ' + fig + ' .uav-body { display: none; }', '  ' + fig + ' .uav-number { margin: 0; }',
+      '  ' + fig + ' { grid-template: "number" auto / minmax(0, 1fr); }', '  ' + fig + ' .uav-body { display: none; }', '  ' + fig + ' .uav-number { align-self: start; margin: 0; }',
       '}',
     ]);
   });

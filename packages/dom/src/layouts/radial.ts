@@ -70,7 +70,7 @@ export const radial: LayoutPainter = {
     // As the band's: the rule's data only sets a switch, and this is the swap.
     legend: { '.uav-legend': 'display: none;', '.uav-legend-top': 'display: block; max-block-size: none;' },
     // The number alone. The body goes whole, and so does its grid row.
-    marks: { '': 'grid-template: "number" auto / minmax(0, 1fr);', '.uav-body': 'display: none;', '.uav-number': 'margin: 0;' },
+    marks: { '': 'grid-template: "number" auto / minmax(0, 1fr);', '.uav-body': 'display: none;', '.uav-number': 'align-self: start; margin: 0;' },
   },
 
   paint(body, scene) {

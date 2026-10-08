@@ -26,8 +26,8 @@
       "then": { "anyOf": [{ "required": ["use"] }, { "required": ["layers"] }] }
     },
     {
-      "description": "A preset needs a dimension in query.by.",
-      "if": { "required": ["use"] },
+      "description": "A preset needs a dimension in query.by. The gauge takes none: it reads a metric against its catalog domain.",
+      "if": { "required": ["use"], "properties": { "use": { "not": { "const": "gauge" } } } },
       "then": { "properties": { "query": { "type": "object", "required": ["by"], "properties": { "by": { "type": "array", "minItems": 1 } } } } }
     }
   ],

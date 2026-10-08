@@ -21,6 +21,18 @@ export const PRESETS: PresetLibrary = {
     { mark: 'bar', encode: { x: '$by', y: '$metric', color: '$split' }, stack: 'zero' } ] },
   'stacked-area': { layers: [
     { mark: 'area', encode: { x: '$by', y: '$metric', color: '$split' }, stack: 'zero' } ] },
+  // Arcs about one centre. `pie` and `pie-semi-circle` follow PieChart and PieSemiCircleChart. `donut` and `gauge` are working names.
+  'pie': { layers: [
+    { mark: 'arc', encode: { angle: '$metric', color: '$by' } } ] },
+  'donut': { layers: [
+    { mark: 'arc', encode: { angle: '$metric', color: '$by', radius: 0.6 } } ] },
+  'pie-semi-circle': { layers: [
+    { mark: 'arc', encode: { angle: '$metric', color: '$by', radius: 0.6 }, sweep: 'half' } ] },
+  // No dimension: the metric against its catalog domain. The range, the value swept to, and the target marked.
+  'gauge': { layers: [
+    { mark: 'arc', encode: { radius: 0.7 }, sweep: 'half', role: 'context' },
+    { mark: 'arc', encode: { angle: '$metric', radius: 0.7 }, sweep: 'half' },
+    { mark: 'arc', encode: { angle: '$metric', radius: 0.7 }, sweep: 'half', role: 'reference' } ] },
 };
 
 export function expand(spec: Spec, presets: PresetLibrary = PRESETS): Spec {
@@ -28,7 +40,7 @@ export function expand(spec: Spec, presets: PresetLibrary = PRESETS): Spec {
   const p = presets[spec.use];
   if (!p) throw new Error('Unknown preset "' + spec.use + '". The library has: ' + Object.keys(presets).join(', ') + '.');
   const q = spec.query || {}, [by, split] = q.by || [], m = (q.metrics || [])[0];
-  if (!by) throw new Error('The "' + spec.use + '" preset needs a dimension in query.by.');
+  if (!by && p.layers.some((l) => Object.values(l.encode || {}).indexOf('$by') >= 0)) throw new Error('The "' + spec.use + '" preset needs a dimension in query.by.');
   if (!split && p.layers.some((l) => Object.values(l.encode || {}).indexOf('$split') >= 0)) throw new Error('The "' + spec.use + '" preset needs two dimensions in query.by: the one on the axis, then the one to split by.');
   const { use: _use, ...out } = spec;
   if (spec.layers) return out;                               // layers written in the spec win over the preset

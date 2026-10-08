@@ -1,4 +1,4 @@
-import { max, sum } from 'd3-array';
+import { max } from 'd3-array';
 import { scaleBand, scaleLinear, scalePoint } from 'd3-scale';
 import { CHAR_W, delta, fmt, fmtDay, fmtPct } from './format.ts';
 import { pathD } from './path.ts';
@@ -153,10 +153,11 @@ function sceneRows(catalog: Catalog, layers: Layer[], rows: Row[]): Body {
   return { nodes, rows: rows.map((r) => r[dim] as string) };
 }
 
-// No positional dimension: one band, stacked and normalized, split by colour.
-function sceneBand(layer: Layer, rows: Row[]): Body {
+// No positional dimension: one band, stacked and normalized, split by colour. A share is of the engine's total, so
+// with a `limit` the band stops short of its end by what the rows past the limit hold.
+function sceneBand(layer: Layer, rows: Row[], totals: Result['totals']): Body {
   const nodes: SceneNode[] = [], m = layer.encode!.x as string, dim = layer.encode!.color as string;
-  const total = sum(rows, (r) => num(r, m)) || 1, k = (r: Row) => r[dim] as string;
+  const total = totals[m] || 1, k = (r: Row) => r[dim] as string;
   rows.forEach((r, i) => {
     nodes.push({ key: 'seg:' + k(r), part: 'band', kind: 'rect', v: num(r, m) / total, row: k(r), paint: 'series.' + ((i % 6) + 1), layer: 'data', role: roleOf(layer) });
   });
@@ -194,7 +195,7 @@ function sceneNumber(catalog: Catalog, q: Query, result: Result, share: boolean)
   if (result.meta.empty) { value('0'); sub('No visits yet'); return nodes; }
   let note: string | null = M.rangeTotal === 'sum of daily' ? 'Sum of daily counts' : null;
   if (by && catalog.dimensions[by]!.type !== 'time' && rows.length) {
-    note = share ? rows[0]![by] + ' ' + fmtPct(num(rows[0]!, m) / (sum(rows, (r) => num(r, m)) || 1)) : 'Top: ' + rows[0]![by];
+    note = share ? rows[0]![by] + ' ' + fmtPct(num(rows[0]!, m) / (t[m] || 1)) : 'Top: ' + rows[0]![by];
   }
   const dl = q.compare === 'previous' ? delta(t[m] as number, t[m + '@previous'], M.polarity) : null;
   value(fmt(t[m]), fmt(t[m], true));
@@ -225,7 +226,7 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
   } else if (p.layout === 'band') {
     parts.push('band');
     if (p.guides.legend) parts.push(p.guides.legend === 'top' ? 'legend-top' : 'legend');
-    body = sceneBand(p.layers[0]!, result.rows);
+    body = sceneBand(p.layers[0]!, result.rows, result.totals);
   }
   return { layout: p.layout, parts, ...(side && { side }), ...body, nodes: number.concat(body.nodes) };
 }

@@ -1,4 +1,3 @@
-import { sum } from 'd3-array';
 import { delta, fmt, fmtPct, rangeLabel } from './format.ts';
 import type { Catalog, Query, Result, Row } from './types.ts';
 
@@ -15,7 +14,7 @@ export function tldrProse(q: Query, result: Result, share: boolean, catalog: Cat
   if (by && catalog.dimensions[by]!.type !== 'time' && rows.length) {
     const label = catalog.dimensions[by]!.label.toLowerCase();
     if (share && rows.length > 1) {
-      const tot = sum(rows, (r) => r[m] as number) || 1;
+      const tot = t[m] || 1;
       return rows[0]![by] + ' is the largest ' + label + ' at ' + fmtPct((rows[0]![m] as number) / tot) + ' of ' + name + ', followed by ' + rows[1]![by] + ' at ' + fmtPct((rows[1]![m] as number) / tot) + '.';
     }
     return 'Top ' + label + 's by ' + name + ', ' + range + ': ' + rows.slice(0, 3).map((r) => r[by] + ' (' + fmt(r[m] as number) + ')').join(', ') + '.';

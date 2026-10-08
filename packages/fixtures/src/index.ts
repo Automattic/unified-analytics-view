@@ -97,9 +97,11 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
       return r;
     });
   } else if (by === 'channel') {
-    rows = CHANNELS.map((c) => {
+    // The mix moves with the range and still adds up to the engine's total: channels divide the whole of it.
+    const mixes = CHANNELS.map((c) => metrics.map(() => c[1] * vary())), whole = metrics.map((_, j) => mixes.reduce((s, w) => s + w[j]!, 0));
+    rows = CHANNELS.map((c, i) => {
       const r: Row = { channel: c[0] };
-      metrics.forEach((m) => { r[m] = Math.round(totals[m]! * c[1] * vary()); if (wantPrev) r[m + '@previous'] = hasPrev ? Math.round(totals[m + '@previous']! * c[2]) : null; });
+      metrics.forEach((m, j) => { r[m] = Math.round(totals[m]! * mixes[i]![j]! / whole[j]!); if (wantPrev) r[m + '@previous'] = hasPrev ? Math.round(totals[m + '@previous']! * c[2]) : null; });
       return r;
     });
   }

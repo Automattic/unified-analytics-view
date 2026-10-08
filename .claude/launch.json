@@ -4,9 +4,7 @@
     {
       "name": "bench",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": [
-        "bench"
-      ],
+      "runtimeArgs": ["bench"],
       "port": 5173,
       "autoPort": true
     }

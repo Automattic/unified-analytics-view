@@ -124,7 +124,7 @@ A query is written in catalog names:
 | Field | Notes |
 |---|---|
 | `metrics` | Required. The first is the primary metric |
-| `by` | Zero or one dimension today. Two is decided and not built (section 19, Decided 24) |
+| `by` | Zero, one or two dimensions. With two, rows come back long, one per pair, and the result carries `totalsBy`: the engine's totals per value of each dimension |
 | `range` | `"28d"` style. Presets and custom ranges are Open |
 | `compare` | `"previous"` or absent. Other modes (year over year, baseline) are Open |
 | `limit` | Top-N for categorical dimensions |
@@ -143,6 +143,7 @@ A result is:
 ```
 
 - A comparison is delivered as a companion field, `metric@previous`, aligned row by row. It is null when there is no prior data.
+- Statistics arrive the same way, as companions the engine returns: `metric@p25`, `metric@lower`, `metric@running`, `metric@rank`, and `dimension@end` for a bin. Core computes none of them. A query cannot yet ask for one by name; that is Open.
 - `partial: true` marks an incomplete bucket (today).
 - `meta.empty: true` marks a period with no data at all.
 
@@ -178,11 +179,12 @@ A layer:
 
 | Field | Meaning |
 |---|---|
-| `mark` | `line`, `area`, `bar`, `rule`, `text` |
-| `encode` | Channel to field: `x`, `y`, `color`, `text`. A field is a dimension name, a metric name, or a number (for a rule) |
-| `series` | `"previous"` draws the comparison companion of the metric. Comparison is a property of a layer, not a second metric |
+| `mark` | `line`, `area`, `bar`, `rule`, `text`, `dot`, `tick`, `cell`, `arc`, or the name of a custom mark registered in code |
+| `encode` | Channel to field: `x`, `y`, `x2`, `y2`, `color`, `size`, `text`, `angle`, `radius`. A field is a dimension name, a metric name, a companion the result returns (`metric@p25`), or a number (for a rule, or an arc's inner radius) |
+| `series` | `"previous"` draws the comparison companion of the metric. Comparison is a property of a layer, not a second metric. `"delta"`, on a `text` layer in rows, is the row's change, painted by polarity |
 | `role` | `primary`, `comparison`, `reference`, `context`. Defaults: a `previous` series is `comparison`, a `rule` is `reference`, everything else is `primary` |
-| `stack` | `"normalize"` for share of whole |
+| `stack` | `"zero"`, `"normalize"` for share of whole, or `"center"`, on a layer split by `color`. A `bar` split by `color` with no `stack` sits beside its neighbours |
+| `sweep` | `"half"` for an `arc`. The one layer field that is neither data nor role |
 | `label` | Text for a rule |
 | `align` | `"end"` for right-aligned text |
 | `paint` | Override the paint token |
@@ -219,33 +221,41 @@ Rules:
 
 | Mark | Channels today | What comes with it | Status |
 |---|---|---|---|
-| `line` | x, y | Connects neighbouring rows, so x must be ordered | Proven |
-| `area` | x, y | Fills to a zero baseline | Proven |
-| `bar` | x, y (and color when stacked) | Has a baseline, so the scale starts at zero | Proven |
-| `rule` | y (a constant) | A reference line with an optional label | Proven |
-| `text` | y, text | A label per row | Proven (rows layout only) |
-| `arc` | angle, radius, color | Its own mark. No general polar coordinate system | Proposed |
-| `dot`, `cell`, `tick` | — | Scatter, heatmap, strip | Proposed |
+| `line` | x, y, color | Connects neighbouring rows, so x must be ordered | Proven |
+| `area` | x, y, y2, color | Fills to a zero baseline, or between two ends | Proven; split, stacked and ranged forms built October 8 |
+| `bar` | x, y, x2, y2, color | Has a baseline, so the scale holds zero. With two ends it floats | Proven; split, stacked, signed and ranged forms built October 8 |
+| `rule` | x or y (a constant), or fields per row with x2 or y2 | A reference line with an optional label, or a segment per row | Proven; constant on x and the per-row form built October 8 |
+| `text` | y, text; in a plot x, y, text | A label per row, a column of values, or a label on a point | Proven in rows; in the plot built October 8 |
+| `dot` | x, y, size, color | A point. Its radius is the painter's, in pixels | Built October 8 |
+| `tick` | x, y | A short stroke across its band at a value | Built October 8 |
+| `cell` | x, y, color | Both positions discrete; colour quantized to the `seq` ramp | Built October 8 |
+| `arc` | angle, radius (a number), color | Its own mark. No general polar coordinate system | Built October 8 |
+
+"Built October 8" means built, tested and looked at in headless Chromium by the agent that built it. What each one found is in `docs/chart-coverage-plan.md`, section 8.
 
 A mark carries only its shape and those constraints. Relationships between marks (stacked, overlaid, normalized) are transforms or layering, never part of the mark.
 
-A custom mark registered in code and referenced by name is the escape hatch for anything the grammar cannot express (maps, funnels, Sankeys). Keep the spec small; do not let it grow an expression language.
+A custom mark registered in code and referenced by name is the escape hatch for anything the grammar cannot express (maps, Sankeys). Keep the spec small; do not let it grow an expression language. The registry is `registerMark` in `packages/core/src/marks.ts`, and the first custom mark is `geo`, in `packages/geo`.
 
 ### Transforms
 
-`stack: "normalize"` is the only one today. Stacking on a time axis, binning and windowing are Proposed.
+`stack` is the only one: `"zero"`, `"normalize"` and `"center"`, on any axis. Binning, quantiles, density and running totals are not transforms: the engine returns them (section 19, Decided 25).
 
 ### Layouts
 
-**This is the thinnest part of the prototype.** The scene builder detects one of three hard-coded layouts from the layers:
+**This was the thinnest part of the prototype.** It detected one of three hard-coded layouts from the layers. A layout is now an arrangement of parts, chosen from a table of what is on x, y and color (`LAYOUTS` in `plan.ts`), and each mark is a function looked up by name:
 
 | Layout | Trigger | Draws |
 |---|---|---|
 | `cartesian` | A dimension on x | line, area, bar, rule over a category or time axis |
 | `rows` | A dimension on y | The ranked bar list: a bar behind a label and a value per row |
 | `band` | A dimension on color only | One stacked, normalized bar with a legend |
+| `cartesian` | A metric on x and on y | Points: `dot`, `text`, rules on either axis |
+| `matrix` | A dimension on x and on y | A grid of `cell`s with a ramp |
+| `radial` | Anything on `angle` | `arc`s about one centre |
+| a custom mark's name | A layer with that mark | Whatever the mark draws, alone |
 
-These are chart types hiding in the scene builder. Generalizing them (facets, two dimensions, a metric on both axes) is the most important structural work after the port. How was decided on October 7 (section 19, Decided 23) and is planned in `docs/chart-coverage-plan.md`.
+`rows` is a track per row: a label, a track with a linear scale that bars, dots, rules and ticks draw in, and columns of values. Facets are not built (section 19, Decided 26). The plan and what building it found are in `docs/chart-coverage-plan.md`.
 
 ---
 
@@ -605,18 +615,19 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 1. The format for per-element fit rules, such that they compile to container queries and also run in code. Proposed in `docs/dom-painter-plan.md`, section 2. Step 1 of that plan built it (`packages/core/src/fit.ts`) and it holds for running in code: `resolve()` reads the rules with no change to any plan. It stays here until the rules are compiled, and until the differences step 1 found are settled: the view's block needs when the number sits above the plot, and what `keep` means to a compiled rule.
 2. Settled October 7: see Decided 20. The number is kept so later items keep theirs.
 3. How a preset pins a hand-tuned form.
-4. Settled October 7: see Decided 23. Not built.
+4. Settled October 7: see Decided 23. Built October 8.
 5. Label collision: build or source.
 6. Bar list behaviour when narrow, and what a collapsed ranking should show.
 7. Whether a trend shows the tldr value above the plot by default. This is now the container rule `tldrValue.above` and not a spec field; the default says no.
 8. Whether deltas exclude the partial day.
 9. Params and selections. Not started. The design intent: a selection is a filter predicate, not pixels or row IDs; three kinds (interval, point, set); several views combine by union, intersection or cross-filter; dragging is transient and local, releasing commits to the context.
-10. Settled October 7: see Decided 24. Not built.
+10. Settled October 7: see Decided 24. Built October 8.
 11. Catalog properties beyond the stub, and where polarity and thresholds are declared. What this repo will propose to the API's owners is listed in `docs/chart-coverage-plan.md`, section 3.5: a `number` dimension type; `domain`, `target` and `bands` on a metric; a colour role per dimension value; and totals per split on the result.
 12. How a board composes views that share params. A facet is a small board (Decided 26), so a facet waits for this.
 13. The name.
 14. Which survives at the smallest size, the marks or the tldr value. Today the tldr value does; a sparkline in a table cell wants the line alone. To settle in testing.
 15. Whether the tldr prose rung can be anything but measured. The plan proposes a measured pass, because the threshold is the width of the number itself. It is the one place the fit is not intrinsic.
+16. What building the chart coverage plan left to decide. Listed in `docs/chart-coverage-plan.md`, section 9.
 
 ---
 

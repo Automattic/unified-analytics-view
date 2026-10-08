@@ -2,7 +2,7 @@
 
 The charting and UI layer for the analytics MVP. A view is described once, as JSON, in marks, encodings and roles; the container it lands in decides how to present it. Tracking, storage and retrieval are built elsewhere, and this repo starts at the query result.
 
-Read `docs/view-grammar-reference.md` before changing the grammar, and `docs/milestones.md` for the course. Sections of the reference are labelled Proven, Proposed or Open.
+Read `docs/view-grammar-reference.md` before changing the grammar, and `docs/milestones.md` for the course. `docs/chart-coverage-plan.md` is the plan that added the marks and layouts beyond the prototype's, and section 8 of it records what building each step found. Sections of the reference are labelled Proven, Proposed or Open.
 
 ## Commands
 
@@ -19,19 +19,22 @@ Packages export their TypeScript source and nothing is built for release yet. Vi
 
 ## Layout
 
-- `packages/core`: types, presets and `expand`, the plan (`resolve`), scene builders (ratios) and `place` (pixels), the tldr prose, and JSON Schemas in `schema/`.
-- `packages/fixtures`: the catalog, the seeded fixture query engine (`typical`, `no-prior`, `empty`) and the six sample specs.
+- `packages/core`: types, presets and `expand`, the plan (`resolve`), scene builders (ratios) and `place` (pixels), the tldr prose, the registry for custom marks (`marks.ts`), and JSON Schemas in `schema/`.
+- `packages/fixtures`: the catalog, the seeded fixture query engine (`typical`, `no-prior`, `empty`), the six sample specs the prototype knows (`samples`) and the ones it does not (`moreSamples`). It registers the `geo` mark on import, with a small file of country shapes.
 - `packages/tokens`: build-time token generation, ported from the storybook repo. Base tier: Leonardo makes the colour ramps and Utopia the type, space and control-size scales; `config/base.tokens.json` holds the rest. Common tier: `config/common.tokens.json` (and `common.dark`) names the Spacefast library's variables as aliases into base. Style Dictionary compiles both to `generated/tokens.css`. Nothing consumes them yet.
 - `test/`: one suite across the packages. There is no DOM in the run, so of `packages/dom` only the compiler is tested here; the element is checked on the bench. Golden scenes are in `test/__snapshots__`.
 - `prototype/`: read-only reference. The tests load `prototype-bench.js` and hold the port to it.
 - `apps/bench`: where work is looked at. Every sample in resizable frames, with data state, height limit and theme as controls. A painter control picks the prototype's SVG painter on the pixel scene, or `<ua-view>`; new painters, chrome and surfaces get a place here as they land.
-- `packages/dom`: the `<ua-view>` custom element and the fit-rule compiler. It plans once with no limits, paints the ratio scene, and leaves the fitting to container queries. One module per layout in `src/layouts/`, behind the seam in `src/layout.ts`: `cartesian` is built, `rows` and `band` are stubs. Its only dependency is core.
+- `packages/dom`: the `<ua-view>` custom element and the fit-rule compiler. It plans once with no limits, paints the ratio scene, and leaves the fitting to container queries. One module per layout in `src/layouts/`, behind the seam in `src/layout.ts`: `cartesian`, `rows`, `band`, `radial` and `matrix`, with `points`, `ranges` and `track` painting what those marks add. A custom mark's painter joins through `registerPainter`. Its only dependency is core.
+- `packages/geo`: the `geo` custom mark, for a choropleth and symbols on a map. The one package that depends on `d3-geo`. Its scene half loads with no DOM.
 - `packages/dots`: not started.
 
 ## Rules
 
 - **The core has no DOM and no framework.** Runtime dependencies are `d3-scale`, `d3-shape` and `d3-array`. Ask before adding any other.
-- **Do not add chart types.** A new shape is a mark. A new combination is a preset, named after the `@automattic/charts` component it replaces where one exists.
+- **Do not add chart types.** A new shape is a mark. A new combination is a preset, named after the `@automattic/charts` component it replaces where one exists. What the grammar cannot say is a custom mark, registered in code (`registerMark`), and each one counts against the grammar.
+- **New samples go in `moreSamples`.** The parity tests sweep every entry of `samples` against the prototype.
+- **Statistics come from the engine,** as companion fields (`metric@p25`). Core computes no quantile, bin or running total.
 - **This is the candidate next major of `@automattic/charts`.** Keep its token names (`--a8c-charts-*`) and its keyboard model. See `docs/positioning.md`.
 - **No sizes, breakpoints or presentation switches in a spec.** They belong to the container and its rules. `keep` is the author's one lever, and it is provisional.
 - **Scenes carry paint tokens, never colours.**

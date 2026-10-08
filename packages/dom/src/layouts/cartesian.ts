@@ -26,7 +26,10 @@ const css = `
 .vg-grid, .vg-bars, .vg-refs { position: absolute; inset: 0; }
 .vg-line { position: absolute; inset-inline: 0; inset-block-start: calc((1 - var(--vg-t)) * 100%); block-size: var(--vg-stroke, 1px); background: var(--vg-paint); }
 .vg-line[data-dash] { background: repeating-linear-gradient(90deg, var(--vg-paint) 0 var(--vg-dash), transparent 0 calc(var(--vg-dash) + var(--vg-gap))); }
-.vg-bars i { position: absolute; inset-block-end: 0; inset-inline-start: calc(var(--vg-x) * 100%); inline-size: calc(var(--vg-w) * 100%); block-size: calc(var(--vg-v) * 100%);
+/* A bar runs from where it starts to its value, whichever is the higher: a stack's segment starts on the one under
+ * it, and a value below zero hangs from the zero line. With no start it rises from the bottom. */
+.vg-bars i { position: absolute; inset-inline-start: calc(var(--vg-x) * 100%); inline-size: calc(var(--vg-w) * 100%);
+  inset-block-end: calc(min(var(--vg-v0, 0), var(--vg-v)) * 100%); block-size: calc(max(var(--vg-v) - var(--vg-v0, 0), var(--vg-v0, 0) - var(--vg-v)) * 100%);
   background: var(--vg-paint); border-radius: var(--a8c-charts-border-radius-bar, 2px); }
 .vg-plot svg { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; overflow: visible; }
 /* A point scale puts its first and last marks 2 px inside the plot. */
@@ -91,7 +94,7 @@ export const cartesian: LayoutPainter = {
     keyed(yAxis, texts('y-axis'), () => 'span', (el, n) => { text(el, n); prop(el, '--vg-t', n.t); });
     keyed(xAxis, texts('x-axis'), () => 'span', (el, n) => { text(el, n); prop(el, '--vg-x', n.x); el.setAttribute('data-anchor', n.anchor); });
     keyed(grid, nodes.filter((n): n is LineNode => inPlot(n) && n.kind === 'line' && n.layer === 'guide'), () => 'i', line);
-    keyed(bars, nodes.filter((n): n is RectNode => inPlot(n) && n.kind === 'rect'), () => 'i', (el, n) => { prop(el, '--vg-x', n.x); prop(el, '--vg-w', n.w); prop(el, '--vg-v', n.v); });
+    keyed(bars, nodes.filter((n): n is RectNode => inPlot(n) && n.kind === 'rect'), () => 'i', (el, n) => { prop(el, '--vg-x', n.x); prop(el, '--vg-w', n.w); prop(el, '--vg-v', n.v); prop(el, '--vg-v0', n.v0); });
     keyed(svg, nodes.filter((n): n is PathNode => inPlot(n) && n.kind === 'path'), () => 'path', (el, n) => {
       morph(el as SVGElement, n); el.toggleAttribute('data-fill', !!n.fill);
       prop(el, 'stroke-width', n.fill ? null : n.width || 2); prop(el, 'stroke-dasharray', n.dash);

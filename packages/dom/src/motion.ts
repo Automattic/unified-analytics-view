@@ -16,7 +16,7 @@ const TOKEN = (kind: string, duration: string, easing: string) =>
   `var(--a8c-charts-motion-duration-${kind}, ${duration}) var(--a8c-charts-motion-easing-${kind}, ${easing})`;
 const UPDATE = TOKEN('update', '300ms', 'cubic-bezier(0.4, 0, 0.2, 1)'), EXIT = TOKEN('exit', '150ms', 'cubic-bezier(0.4, 0, 1, 1)');
 /** The ratios, and `--vg-p`, which a path's morph is timed by. */
-const MOVED = ['--vg-x', '--vg-w', '--vg-v', '--vg-t', '--vg-p'];
+const MOVED = ['--vg-x', '--vg-w', '--vg-v', '--vg-v0', '--vg-t', '--vg-p'];
 
 let registered = false;
 /** Register them as numbers, which is what lets them animate. `@property` is ignored in a shadow root, so this is
@@ -32,32 +32,39 @@ export function register(): void {
 export const MOTION_CSS = `
 @media (prefers-reduced-motion: no-preference) {
   .vg[data-moving] [data-key] { transition: ${MOVED.map((p) => p + ' ' + UPDATE).join(', ')}, opacity ${TOKEN('entrance', '200ms', 'cubic-bezier(0, 0, 0.2, 1)')}; }
-  /* Inline values are the end state, so the start has to outrank them. A bar grows from the baseline, a segment from nothing. */
+  /* Inline values are the end state, so the start has to outrank them. A bar grows from where it starts, a segment from nothing. */
   @starting-style {
     .vg[data-moving] [data-key] { opacity: 0 !important; }
-    .vg[data-moving] :is(.vg-bars, .vg-band, .vg-row) > i { --vg-v: 0 !important; }
+    .vg[data-moving] :is(.vg-bars, .vg-band, .vg-row) > i { --vg-v: var(--vg-v0, 0) !important; }
   }
   /* Leaving. Only what is placed by a ratio is kept to fade: --vg-leaving says so, and settle() reads it. */
   .vg[data-moving] :is(.vg-plot, .vg-x-axis, .vg-y-axis, .vg-band) [data-exit] { --vg-leaving: 1; opacity: 0 !important; pointer-events: none; transition: opacity ${EXIT}, --vg-v ${EXIT}; }
-  .vg[data-moving] :is(.vg-bars, .vg-band) [data-exit] { --vg-v: 0 !important; }
+  .vg[data-moving] :is(.vg-bars, .vg-band) [data-exit] { --vg-v: var(--vg-v0, 0) !important; }
   /* A y label sizes its column, so one that is leaving is taken out of the flow and the column is the new labels'. */
   .vg-y-axis { position: relative; }
   .vg[data-moving] .vg-y-axis [data-exit] { position: absolute; inset-inline-end: 0; }
 }`;
 
-export interface XV { x: number; v: number }
+/** A point of a path: where it is, and for an area where it starts when that is not the bottom. */
+export interface XV { x: number; v: number; v0?: number }
 
 /** `from`, read at each x of `to`. A morph moves values and never x, so the two sets need not share their rows:
  * when they do, this is `from` itself. */
 export function resample(from: XV[], to: XV[]): XV[] {
+  const based = from.some((p) => p.v0 != null);
   return to.map(({ x }) => {
     const i = from.findIndex((p) => p.x >= x), a = from[i - 1], b = from[i] ?? from[from.length - 1];
-    return { x, v: !b ? 0 : !a || b.x <= x ? b.v : a.v + (b.v - a.v) * (x - a.x) / (b.x - a.x) };
+    const at = (of: (p: XV) => number) => (!b ? 0 : !a || b.x <= x ? of(b) : of(a) + (of(b) - of(a)) * (x - a.x) / (b.x - a.x));
+    return { x, v: at((p) => p.v), ...(based && { v0: at((p) => p.v0 || 0) }) };
   });
 }
-/** The points `p` of the way from one set to the other, x taken from `to`. */
+/** The points `p` of the way from one set to the other, x taken from `to`. Where either has a start, that moves too:
+ * a stacked area's floor is the series under it, which is on its way as well. */
 export function mix(from: XV[], to: XV[], p: number): XV[] {
-  return to.map((t, i) => ({ x: t.x, v: from[i]!.v + (t.v - from[i]!.v) * p }));
+  return to.map((t, i) => {
+    const f = from[i]!, f0 = f.v0 || 0, t0 = t.v0 || 0;
+    return { x: t.x, v: f.v + (t.v - f.v) * p, ...((f0 || t0) && { v0: f0 + (t0 - f0) * p }) };
+  });
 }
 
 let turn = 0;

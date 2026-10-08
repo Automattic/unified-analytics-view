@@ -240,6 +240,79 @@ What it found and left, all open:
 12. Efficiency, not taken: transitions on registered properties restyle every node each frame (plan section 6); one forced layout per view per data change; the hidden table's inputs are not stored, so it cannot be skipped; `resolve()` builds the scene twice and places it at Infinity; the fit rules are compiled on every render.
 13. Cleanups, not taken: `test/fit.test.ts` copies the sweep harness; `paint-svg.ts` duplicates the paint table; `.stage` is defined in both `bench.css` and `demo.css`; `surface.json` is unvalidated; the token generator lost its validation, and `{color.white}` is unresolved in the light primitives.
 
+## Defects: chart coverage, steps 1 to 8
+
+Found while building `docs/chart-coverage-plan.md` on October 8, by the agents that built each step and by two browser checks of the merged tree (headless Chromium, and WebKit for the second). Design questions the build raised are not here: they are in section 9 of that plan. Each step's own findings are in its section 8.
+
+### Fixed
+
+1. **Shares divided by the sum of the rows received.** `sceneBand`, the share note under the number and the share sentence in `prose.ts` all did. With a `limit` they added to 100% of the top N. They divide by the engine's total now.
+2. **The fixture's channel rows did not add up to its total** at any range but 28 days. They are shares of it now.
+3. **Hover and click were dead on every plot without points,** the trend among them. The holder for a scatter's points lay over the whole plot and took the pointer when empty. Fixed in `layouts/points.ts`. The agent that built it had not hovered a trend; the first browser check of the merged tree caught it.
+4. **A map's symbol holder took the pointer from its regions** the same way. Fixed in `packages/geo`.
+5. **A heatmap's row labels stood 12 px from the cells, not 6:** one step's label padding met another's column gap at the merge.
+6. **A row's bar was taken for a plot of points,** since both have a metric on x and no dimension there. A plot of points now needs no dimension on y either.
+7. **Core named two metrics in an error's example.** The example is generic now.
+8. **A rule with no number on either axis drew at NaN.** It is an error that names the fix.
+9. **The pixel painter clipped the first letter of each weekday in a heatmap,** and the DOM's last column label ran past the edge.
+10. **"Top countrys".** A small `plural()` in `prose.ts`.
+11. **A test timed out now and then.** `fit.test.ts`'s sweep runs about 4.6 s in one test, against a 5 s limit. It has a longer one.
+12. **Two steps each added a `conversion_rate` to the fixtures,** one a ratio and one in percent points. The second is `page_conversion` now. Both units still exist for one idea.
+
+### Open
+
+**Overflow and clipping**
+
+1. **The quadrant at 7 days overflows the view by 74 px.** The upright rule lands on the plot's right edge and its label sits to its right with no flip (`.vg-refs span[data-upright]` in `layouts/points.ts`). The pixel painter clips the same label. Seen again after the merge with `dom-painter`.
+2. **A heatmap's hidden last column label keeps its box** 9 to 13 px past the view's edge. A host without `overflow: hidden` would scroll.
+3. **A label on a point near the top of a scatter is cut by about 4 px.** The pixel painter puts it under the point.
+4. **The first x label of the box plot and the error bars is cut at the left edge.** It is centred under its band with no start anchor. The pixel painter cuts it too, and overlaps all its categorical x labels where `<ua-view>` thins them.
+5. **A rule's label can sit over a point** (the quadrant's "1,000 visitors" over `/pricing`). Labels are kept clear of each other only.
+
+**Where `<ua-view>` and `resolve()` disagree**
+
+6. **Rows ignore the value's room in `<ua-view>`.** Top pages at 120 px, the dumbbell and the bullet at 170, and the map's fallback list at 120 show rows where `resolve()` gives the number. With the rank column the league table at 120 px is rank, "/…" and a value.
+7. **A heatmap is 184 px tall in `<ua-view>` and 208 in pixels.** The ramp's 24 px comes out of the grid, so the cells are squatter.
+8. **The number in a donut's hole** shows in `<ua-view>` and not in pixels between about 120 and 145 px across.
+9. **A half circle uses the circle's needs:** it collapses to the number when it would still fit, and between 64 and 87 px tall the DOM drops its one-line legend where pixels keep it.
+10. **Donut, pie and half go from marks straight to prose** in `<ua-view>`, with no number-alone rung.
+11. **A bare box plot's ticks sit on the full scale** in `<ua-view>`, which plans once. `resolve()` rescales to the medians.
+12. **With `keep`,** a kept ramp or a kept map stays in `<ua-view>` where `resolve()` ends at the number or the prose. The same difference as for the band.
+13. **A legend that wraps to three lines** in a box near 290 by 185 px falls to the bare plot and skips the labels at the line ends.
+
+**Hit targets, readout and keyboard**
+
+14. **A stacked area has no hit target on the unfinished day.** Core draws the stack only to the last whole day.
+15. **A companion the view did not ask for is in the readout and the table.** The dumbbell says "rank 2", because both list every companion the result carries.
+16. **A bin's readout and table say its start, not its range** ("0: Page views 317").
+17. **`aria-orientation` on the listbox of points in two dimensions is `horizontal`.**
+18. **Regions with no row have no readout** and are not in the map's keyboard list. A row with no matching shape is not on the map, and nothing says so.
+19. **One series cannot be chosen with the pointer;** hover gives the whole point.
+
+**Painting**
+
+20. **One-pixel range segments look grey in `<ua-view>`** and black in pixels. Whiskers, wicks and error bars sit at fractional positions and are antialiased.
+21. **`seq.none` and `seq.1` differ by hue only in dark** (contrast 1.27). Clear at 346 px, faint at 170, and likely to merge in greyscale.
+22. **Leaving labels, second-axis ticks and arcs go at once.** They are not in the motion sheet's fade list.
+23. **`points.ts` still sets `--vg-body-block`** where cartesian now states the plot's height. A plot with both a legend and a key to sizes would come out short. No sample has both.
+24. **A heatmap's `marks` rule does not know its column count:** 24 columns at 150 px are about 5 px each.
+25. **Units are not formatted.** Revenue reads "63.5k", a rate's ticks read "2, 4, 6", and load time has no "s".
+26. **Symbols on a map sit at the centroid of the whole shape,** off the mainland for a country with far-flung parts. The map's fallback list has no limit: 15 countries is 476 px tall.
+
+**To fix before it bites**
+
+27. **`ensure()` in `dom.ts` is called on the shadow root with a `:scope >` selector, which returns null there in Chromium.** It does no harm today, since it is called on the root only in the constructor. A later call outside it would add a second element each time.
+28. **The pixel SVG painter on the bench raises "ResizeObserver loop completed with undelivered notifications"** during fast resizing: `main.ts` repaints inside the observer's callback.
+29. **In a 40 px box most cartesian views showed a 42 px number,** 2 px over, where they should fall to prose. Seen on the six originals before the review fixes were merged in, and not looked at since.
+
+### Not verified
+
+- Firefox and Safari itself. WebKit through Playwright for parts of steps 2 and 3 and for the second check.
+- A screen reader, touch, reduced motion, right-to-left. Whether a changed `aria-label` on the same active descendant is announced.
+- The motion as it moves. Only its end state was read, and three frames mid-transition.
+- The colours, by a person.
+- After the merge with `dom-painter`: a structural pass of all 34 samples in both painters, the table on twelve, hover and data changes, in headless Chromium. No errors but item 1. Screenshots were not read again.
+
 ## Bugs
 
 1. **Prototype: duplicate keys on a one-row time series.** A time series with exactly one row emits two `xtick` nodes with the same key. No swept case reaches it. Fixed in `37edd5d`, as a departure from the prototype on purpose: one row has one tick. It has its own test, which shows the prototype's two and says why ours differs. The prototype itself is unchanged.

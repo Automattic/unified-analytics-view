@@ -4,7 +4,7 @@ import { token } from '../tokens.ts';
 import { hitNodes } from '../keys.ts';
 import { NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
 import { apart, thin } from '../measure.ts';
-import { morph } from '../motion.ts';
+import { morph, once } from '../motion.ts';
 import { POINTS_CSS, POINTS_FIT, measurePoints, paintPoints } from './points.ts';
 import { RANGES_CSS, paintRanges } from './ranges.ts';
 
@@ -64,6 +64,12 @@ const css = `
 .uav-body[data-scale="point"] .uav-x-axis { margin-inline: 2px; }
 .uav-plot path { fill: none; stroke: var(--uav-paint); stroke-width: ${token('stroke-width-line')}; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke-linecap: round; }
 .uav-plot path[data-fill] { fill: var(--uav-paint); stroke: none; }
+/* When a plot first shows, its lines and the fills under them draw in from the start of x to its end, as the readout
+ * sketch's curve does. Only then: paint() marks the SVG it has just made, and the mark comes off when the drawing is
+ * done (motion.ts). A change of data moves the line that is there, and does not draw it again.
+ * ponytail: from the left, so not right for right-to-left, as the x axis is not. */
+@media (prefers-reduced-motion: no-preference) { .uav-plot svg[data-draw] { animation: uav-draw ${token('motion-duration-draw')} linear both; } }
+@keyframes uav-draw { from { clip-path: inset(-8px 100% -8px -8px); } to { clip-path: inset(-8px); } }
 /* ponytail: a label in the plot is set above its line at the inline end, the one anchor a scene asks for today. */
 .uav-refs span { position: absolute; inset-inline-end: 0; inset-block-start: calc((1 - var(--uav-t)) * 100%); translate: 0 -100%; padding-block-end: 2px; white-space: nowrap; color: var(--uav-paint); }
 .uav-refs [data-halo] { -webkit-text-stroke: 3px ${token('color-background')}; paint-order: stroke fill; }`;
@@ -126,7 +132,9 @@ export const cartesian: LayoutPainter = {
     const yAxis2 = ensure(body, 'div', 'uav-y-axis-2'), labels = ensure(body, 'div', 'uav-labels'), legend = ensure(body, 'div', 'uav-legend');
     // ponytail: paint order is fixed at grid, bars, paths, then rules and labels, whatever the layer order.
     // One SVG per run of paths if a spec ever draws an area over bars.
+    const loads = !plot.querySelector(':scope > svg');
     const grid = ensure(plot, 'div', 'uav-grid'), bars = ensure(plot, 'div', 'uav-bars'), svg = ensureSvg(plot), refs = ensure(plot, 'div', 'uav-refs');
+    if (loads) { svg.setAttribute('data-draw', ''); once(svg, ['data-draw']); }
     for (const el of [yAxis, yAxis2, xAxis, labels]) el.setAttribute('aria-hidden', 'true');
     const nodes = scene.nodes, texts = (part: string) => nodes.filter((n): n is TextNode => n.part === part && n.kind === 'text');
     const line = (el: HTMLElement | SVGElement, n: LineNode) => {

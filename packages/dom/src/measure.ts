@@ -17,17 +17,22 @@ export interface NumberSizes {
   /** The width of the delta's long form. Null when it has no shorter one, or there is no delta. */
   delta: number | null;
   note: { inline: number; block: number } | null;
+  /** The number is in dots, on a screen, which is cut to its room where no form fits (dots.ts). */
+  screen?: boolean;
 }
 
 /** The ways the number is set, as `data-fit` tokens on it, fullest first. The ruler holds one of each. */
 export const NUMBER_FITS = ['', 'short', 'small short'];
+/** The least room a number in dots is cut to, in px: two glyphs and the screen about them, at the least cell. */
+export const SCREEN_LEAST = 52;
 
 /** The number's `data-fit` for this room: the first form whose value fits, the delta's short form when the long
  * one does not fit, and no note when it would be cut or would make the number taller than the box. The note is
  * given up before the number is. Null when no form fits the width, or that form without its note is still taller
- * than the box: the view then falls to its prose. */
+ * than the box: the view then falls to its prose. A number on a screen is not given up for its width while the room
+ * holds a screen at all: its last form stands, cut to the room, and the pointer runs the rest of it past. */
 export function fitNumber(room: Room, sizes: NumberSizes): string | null {
-  const form = sizes.forms.find((f) => f.inline <= room.inline);
+  const form = sizes.forms.find((f) => f.inline <= room.inline) ?? (sizes.screen && room.inline >= SCREEN_LEAST ? sizes.forms.at(-1) : undefined);
   if (!form || (room.block != null && form.block > room.block)) return null;
   const note = !!sizes.note && sizes.note.inline <= room.inline && (room.block == null || form.block + sizes.note.block <= room.block);
   return [form.fit, sizes.delta != null && sizes.delta > room.inline && 'delta-short', sizes.note && !note && 'no-note'].filter(Boolean).join(' ');
@@ -72,6 +77,7 @@ export function readNumber(ruler: HTMLElement[]): NumberSizes {
       return value ? [{ fit: el.dataset.fit || '', inline: value.getBoundingClientRect().right - box.left, block: box.height - (sub ? size(sub).block : 0) }] : [];
     }),
     delta: delta && child(delta, 'uav-short') ? size(delta).inline : null,
+    screen: !!first.querySelector('.uav-glyphs'),
     note: note && size(note),
   };
 }

@@ -2,6 +2,7 @@ import { CONTAINER_RULES, buildScene, expand, fallbackRule, formatDimension, for
 import type { Catalog, ContainerRules, Layer, Layout, Query, Result, Row, SceneNode, Spec } from '@universal-analytics/core';
 import { compileFitRules, type FitExtras } from './compile.ts';
 import { attr, ensure, keyed, paintVar, text } from './dom.ts';
+import { DOTS_CSS } from './dots.ts';
 import { KEYS_CSS, Keys, companions } from './keys.ts';
 import { LAYOUTS } from './layouts/index.ts';
 import { NUMBER_FITS, fitNumber, readNumber } from './measure.ts';
@@ -48,7 +49,7 @@ export const BASE_CSS = `@layer uav {
 .uav[data-parts~="number"] .uav-number { display: block; }
 .uav[data-parts~="number"]:not([data-layout="none"]) .uav-number { margin-block-end: 16px; }
 .uav-number > * { color: var(--uav-paint); }
-.uav-number > b { display: inline-block; vertical-align: middle; }
+.uav-number > b { display: inline-block; vertical-align: middle; max-inline-size: 100%; }
 .uav-number > span { display: block; line-height: calc(18 / 13); overflow: hidden; text-overflow: ellipsis; }
 .uav-number > .uav-f-tick { line-height: calc(16 / 11); }
 .uav-pulse { display: inline-block; vertical-align: middle; inline-size: 10px; block-size: 10px; margin-inline: 2px 8px; border-radius: 50%; background: var(--uav-paint); }
@@ -79,6 +80,7 @@ export const BASE_CSS = `@layer uav {
 ${painters.map((p) => p.css).join('\n')}
 ${MOTION_CSS}
 ${KEYS_CSS}
+${DOTS_CSS}
 
 /* Only a size container answers a block-size query, so this matches exactly when a layout has handed the view a
  * box. The body then takes the height left over. No attribute on the view. */

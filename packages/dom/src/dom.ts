@@ -1,4 +1,5 @@
 import type { SceneNode, TextNode } from '@universal-analytics/core';
+import { dots } from './dots.ts';
 import { leave } from './motion.ts';
 import { token } from './tokens.ts';
 
@@ -90,13 +91,15 @@ function mark(el: HTMLElement | SVGElement, n: SceneNode): void {
   prop(el, 'opacity', n.tone === 'soft' ? null : n.opacity);
 }
 
-/** A text node's words. One with a shorter form holds both, and the stylesheet picks. */
+/** A text node's words. One with a shorter form holds both, and the stylesheet picks. The number's face is the dot
+ * matrix (dots.ts), wherever a scene sets text in it: above the marks, beside them, alone, and in a donut's hole. */
 export function text(el: Element, n: TextNode): void {
   const face = 'uav-f-' + n.font;
   // A kept key can change its face, and would otherwise carry both.
   if (!el.classList.contains(face)) { for (const c of Array.from(el.classList)) if (c.startsWith('uav-f-')) el.classList.remove(c); el.classList.add(face); }
-  if (n.short == null) { el.textContent = n.text; return; }
-  if (!el.querySelector(':scope > .uav-full')) el.textContent = '';
-  ensure(el, 'span', 'uav-full').textContent = n.text;
-  ensure(el, 'span', 'uav-short').textContent = n.short;
+  const set = n.font === 'display' ? dots : (to: Element, s: string) => { to.textContent = s; };
+  if (n.short == null) { set(el, n.text); return; }
+  if (!el.querySelector(':scope > .uav-full')) { el.removeAttribute('data-dots'); el.textContent = ''; }
+  set(ensure(el, 'span', 'uav-full'), n.text);
+  set(ensure(el, 'span', 'uav-short'), n.short);
 }

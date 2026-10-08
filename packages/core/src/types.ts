@@ -2,11 +2,12 @@ import type { FitRule } from './fit.ts';
 
 /* Catalog: the slice of the semantic model the front end needs. */
 export type Polarity = 'up' | 'down' | 'none';
-export type Unit = 'count' | 'ratio' | 'percent' | 'usd' | 'ms' | 's' | 'bytes';
+/** A currency is its ISO 4217 code in lower case, `usd` or `eur`: each is a unit of its own, so two currencies never share an axis. */
+export type Unit = 'count' | 'ratio' | 'percent' | 'ms' | 's' | 'bytes' | (string & {});
 export interface MetricDef {
   label: string;
   /** What the metric is measured in, which is how its values are written (format.ts). `ratio` is a rate from 0 to 1 and
-   * `percent` one from 0 to 100; `usd` is in dollars, not cents; `ms` and `s` are lengths of time. */
+   * `percent` one from 0 to 100; money is in its currency's own units, dollars and not cents; `ms` and `s` are lengths of time. */
   unit: Unit;
   polarity: Polarity;
   rangeTotal?: 'sum' | 'sum of daily';

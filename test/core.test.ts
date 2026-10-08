@@ -154,7 +154,8 @@ describe('what a painter says with: values and dimensions in catalog format', ()
   });
   it('a value in each unit the catalog may give: as a readout says it, short, and exact', () => {
     const say = (unit: Unit, v: number) => ([undefined, 'compact', 'exact'] as const).map((form) => formatValue(v, { label: '', unit, polarity: 'none' }, form));
-    // Money is in dollars, not cents.
+    // Money is in dollars, not cents, and each currency is a unit of its own, written its own way.
+    expect([say('eur', 49.5), say('gbp', 63512), say('jpy', 5000)]).toEqual([['€49.50', '€49.5', '€49.50'], ['£63.5k', '£63.5k', '£63,512.00'], ['¥5,000', '¥5k', '¥5,000']]);
     expect([49, 49.5, 63512, -5].map((v) => say('usd', v))).toEqual([['$49', '$49', '$49.00'], ['$49.50', '$49.5', '$49.50'], ['$63.5k', '$63.5k', '$63,512.00'], ['-$5', '-$5', '-$5.00']]);
     // A rate from 0 to 1 and one in percent points read the same.
     expect([say('ratio', 0.1244), say('percent', 12.44), say('percent', 2.4)]).toEqual([['12%', '12%', '12.44%'], ['12%', '12%', '12.44%'], ['2.4%', '2.4%', '2.4%']]);
@@ -165,7 +166,7 @@ describe('what a painter says with: values and dimensions in catalog format', ()
     expect(UNITS.map((u) => formatValue(null, { label: '', unit: u, polarity: 'none' }))).toEqual(UNITS.map(() => '–'));
   });
   it('a unit with no format is an error that names the units there are', () => {
-    expect(() => formatValue(1, { label: '', unit: 'eur' as Unit, polarity: 'none' })).toThrow(/The unit "eur" has no format\. Give the metric one of count, ratio, percent, usd, ms, s, bytes/);
+    expect(() => formatValue(1, { label: '', unit: 'sec' as Unit, polarity: 'none' })).toThrow(/The unit "sec" has no format\. Give the metric one of count, ratio, percent, ms, s, bytes in the catalog, or a currency's ISO 4217 code in lower case/);
   });
 });
 
@@ -272,8 +273,9 @@ describe('schemas', () => {
     expect(view({ ...trend, guides: { x: false } })).toBe(false);
   });
   it('the catalog\'s units are the ones the formatter has, and no other', () => {
-    expect((catalogSchema as any).properties.metrics.additionalProperties.properties.unit.enum).toEqual(UNITS);
-    expect(cat({ metrics: { m: { label: 'M', unit: 'eur', polarity: 'up' } }, dimensions: {} })).toBe(false);
+    expect((catalogSchema as any).properties.metrics.additionalProperties.properties.unit.anyOf[0].enum).toEqual(UNITS);
+    expect(cat({ metrics: { m: { label: 'M', unit: 'eur', polarity: 'up' } }, dimensions: {} })).toBe(true);     // a currency's code
+    expect(cat({ metrics: { m: { label: 'M', unit: 'furlongs', polarity: 'up' } }, dimensions: {} })).toBe(false);
   });
 });
 

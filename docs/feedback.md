@@ -353,7 +353,7 @@ What it does: the bucket is the time dimension and `complete: false` is `partial
 
 Open:
 
-1. **Money is left out, with a note in `meta.notes`.** A revenue cell is a list of amounts, one per currency, in minor units. Core has one currency, in dollars. **To decide.**
+1. **Money was left out.** A revenue cell is a list of amounts, one per currency, in minor units. Decided October 8 and built: each currency is a metric, `revenue.usd` and `revenue.eur`, in the currency's own units, and a view names the one it shows. In core a currency's code is a unit of its own, so `usd` is no longer the one currency and two currencies never share an axis. The exponent from minor units is ISO 4217's, as `Intl` has it; the API has not said whether Sell's table differs.
 2. **Time with a breakdown is refused.** A view of two dimensions needs `totalsBy`, and the API has not said how `limit` and `other` work per bucket. Raised on the PR.
 3. **The first bucket of a series is cut by the window's start and marked complete,** so a trend over a preset window opens with a dip. Raised on the PR; the adapter passes it on as it comes.
 4. **Polarity is the caller's,** as an option: the API's catalog has none. Without one a metric is `up`, and a count of bots `none`.

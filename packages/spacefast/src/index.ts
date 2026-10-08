@@ -22,8 +22,12 @@ export interface AdaptOptions {
 export interface Adapted { query: Query; result: Result; catalog: Catalog }
 
 const UNITS: Record<string, Unit> = { count: 'count', ms: 'ms', percent_points: 'percent' };
+type Money = { amountMinor: number; currency: string }[];
+// An amount in its currency's own units, from its minor ones: cents to dollars, and yen as they are.
+// ponytail: the exponent is ISO 4217's, as Intl has it. The API has not said whether Sell's table differs; if it does, it goes here.
+const major = (amount: number, currency: string) => amount / 10 ** (new Intl.NumberFormat('en-US', { style: 'currency', currency }).resolvedOptions().maximumFractionDigits ?? 2);
 const DAY = 86_400_000;
-const number = (v: Cell | undefined): number | null => (typeof v === 'number' ? v : null);
+
 
 /** One answer as a view's query, result and catalog.
  * - The bucket is the time dimension `bucket`, and a row of the bucket still filling is `partial`.
@@ -33,20 +37,29 @@ const number = (v: Cell | undefined): number | null => (typeof v === 'number' ? 
  * - A list's rows carry their place as `<metric>@rank`, since the API says rank is row order.
  * - A scroll bucket is a `number` dimension, ten points wide.
  * - Totals are the API's own. `other` and `truncated` have no place in a result and are left behind.
- * ponytail: a money metric is left out, and a note says so. The API sends an amount per currency in each cell, and core has one
- * currency, in dollars. When the catalog can say a metric's currency, each currency becomes a metric here. */
+ * - Money is a metric for each currency, `revenue.usd` and `revenue.eur`: the API never adds currencies together, and a view
+ *   has one unit a metric. Its unit is the currency, its values are in the currency's own units, and a row with no amount in a
+ *   currency has null there. Currencies come in the order of the totals.
+ */
 export function adapt(api: ApiResult, options: AdaptOptions = {}): Adapted {
   if (!api || !Array.isArray(api.columns) || !Array.isArray(api.rows)) throw new Error('adapt() takes one answer of the analytics query API, with its `columns` and `rows`. A failed query has a `problem` and no rows: show that, or ask again.');
   const time = api.columns.some((c) => c.kind === 'time'), dim = api.columns.find((c) => c.kind === 'dimension');
-  const all = api.columns.filter((c) => c.kind === 'metric'), money = all.filter((c) => c.type === 'money'), metrics = all.filter((c) => c.type !== 'money');
+  const all = api.columns.filter((c) => c.kind === 'metric'), periods = [api, ...(api.previous ? [api.previous] : [])];
+  const amounts = (r: ApiRow | null | undefined, id: string) => (Array.isArray(r?.[id]) ? (r![id] as Money) : []);
+  // Each column a view can draw: a metric as it is, and a money metric once for each currency any cell of it holds.
+  const metrics = all.flatMap((c) => (c.type !== 'money' ? [{ ...c, of: c.id, currency: '' }]
+    : [...new Set(periods.flatMap((p) => [p.totals, ...p.rows, p.other]).flatMap((r) => amounts(r, c.id).map((a) => a.currency)))]
+      .map((currency) => ({ ...c, of: c.id, id: c.id + '.' + currency, label: c.label + ' (' + currency.toUpperCase() + ')', unit: currency, currency }))));
+  const bare = all.filter((c) => c.type === 'money' && !metrics.some((m) => m.of === c.id));
   if (time && dim) throw new Error('This answer is bucketed by time and broken down by "' + dim.id + '", which is not adapted: a view needs each one\'s totals over the other, and the API does not send them. Ask for the series and the breakdown as two queries in the batch.');
-  const strange = metrics.find((c) => !UNITS[c.unit]);
+  const strange = metrics.find((c) => !c.currency && !UNITS[c.unit]);
   if (strange) throw new Error('The metric "' + strange.id + '" is in "' + strange.unit + '", a unit this adapter has no match for. Add it to UNITS in packages/spacefast, with the core unit its values are written in.');
-  if (!metrics.length) throw new Error('This answer has no metric a view can draw' + (money.length ? ': "' + money[0]!.id + '" is money, which is split by currency and not adapted yet. Ask for a count beside it.' : '. Ask for at least one metric.'));
+  if (!metrics.length) throw new Error('This answer has no metric a view can draw' + (bare.length ? ': "' + bare[0]!.id + '" has no amount in any currency over this range. Ask for a count beside it, or a longer range.' : '. Ask for at least one metric.'));
 
   const catalog: Catalog = { metrics: {}, dimensions: {} };
   for (const c of metrics) {
-    const def: MetricDef = { label: c.label, unit: UNITS[c.unit]!, polarity: options.polarity?.[c.id] ?? (c.bots === 'only' ? 'none' : 'up') };
+    const def: MetricDef = { label: c.label, unit: c.currency || UNITS[c.unit]!, polarity: options.polarity?.[c.id] ?? options.polarity?.[c.of] ?? (c.bots === 'only' ? 'none' : 'up') };
+    if (c.currency) def.rangeTotal = 'sum';
     if (c.id === 'visitor_days') def.rangeTotal = 'sum of daily';
     catalog.metrics[c.id] = def;
   }
@@ -54,6 +67,12 @@ export function adapt(api: ApiResult, options: AdaptOptions = {}): Adapted {
   const bins = dim?.valueType === 'scroll_bucket';
   if (dim) catalog.dimensions[dim.id] = { label: dim.label, type: bins ? 'number' : 'categorical', ...(dim.valueType === 'country' ? { values: 'country' as const } : {}) };
 
+  // A metric's value in a row: the number, or the amount in the metric's currency. Null where there is none.
+  const value = (r: ApiRow | undefined, c: (typeof metrics)[number]): number | null => {
+    if (!c.currency) return typeof r?.[c.id] === 'number' ? (r[c.id] as number) : null;
+    const a = amounts(r, c.of).find((m) => m.currency === c.currency);
+    return a ? major(a.amountMinor, c.currency) : null;
+  };
   const before = api.previous, ranked = dim && !bins ? options.rankedBy ?? metrics[0]!.id : null;
   const was = (r: ApiRow, i: number) => (!before ? undefined : dim ? before.rows.find((p) => p[dim.id] === r[dim.id]) : before.rows[i]);
   const rows = api.rows.map((r, i): Row => {
@@ -65,21 +84,21 @@ export function adapt(api: ApiResult, options: AdaptOptions = {}): Adapted {
       if (bins) row[dim.id + '@end'] = v == null ? null : Number(v) + 10;
     }
     for (const c of metrics) {
-      row[c.id] = number(r[c.id]);
-      if (before) row[c.id + '@previous'] = prev ? number(prev[c.id]) : null;
+      row[c.id] = value(r, c);
+      if (before) row[c.id + '@previous'] = value(prev, c);
     }
     if (ranked) row[ranked + '@rank'] = i + 1;
     return row;
   });
   const totals: Result['totals'] = {};
   for (const c of metrics) {
-    totals[c.id] = number(api.totals[c.id]);
-    if (before) totals[c.id + '@previous'] = number(before.totals[c.id]);
+    totals[c.id] = value(api.totals, c);
+    if (before) totals[c.id + '@previous'] = value(before.totals, c);
   }
 
   const days = Math.max(1, Math.round((Date.parse(api.until) - Date.parse(api.since)) / DAY));
-  const empty = [...api.rows, api.totals].every((r) => metrics.every((c) => !number(r[c.id])));
-  const notes = money.map((c) => c.label + ' is left out: it is split by currency, which a view cannot show yet.');
+  const empty = [...api.rows, api.totals].every((r) => metrics.every((c) => !value(r, c)));
+  const notes = bare.map((c) => c.label + ' has no amount in any currency over this range.');
   if (time && api.rows.some((r) => r.complete === false)) notes.push((api.granularity === 'hour' ? 'This hour' : 'Today') + ' is still in progress.');
   const query: Query = { metrics: metrics.map((c) => c.id), range: days + 'd' };
   const by = [...(time ? ['bucket'] : []), ...(dim ? [dim.id] : [])];

@@ -1,6 +1,7 @@
 import { buildScene, makeContainer, place, resolve, unboundedContainer } from '@universal-analytics/core';
-import { UaView, defineUaView, surfaceSheet } from '@universal-analytics/dom';
+import { UaView, defineUaView, registerPainter, surfaceSheet } from '@universal-analytics/dom';
 import { catalog, moreSamples, runQuery, samples as known, type Scenario } from '@universal-analytics/fixtures';
+import { geoPainter } from '@universal-analytics/geo/dom';
 import { paintSVG } from './paint-svg.ts';
 
 /* The bench: every sample, in frames that stand in for containers.
@@ -16,6 +17,8 @@ const state = () => Object.fromEntries(new FormData(controls)) as { scenario: Sc
 
 // The surface layouts are the surface's to adopt. Here the page is the surface, and each frame a stack or a row of one.
 defineUaView();
+// The `geo` mark is registered in code, in two halves. The fixtures hand core's half its boundary shapes; this is the DOM's.
+registerPainter(geoPainter);
 document.adoptedStyleSheets.push(surfaceSheet());
 
 /** The frame's one child, swapped when the painter changes. */

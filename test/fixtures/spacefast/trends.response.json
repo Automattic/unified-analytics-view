@@ -15,31 +15,37 @@
             "kind": "metric",
             "id": "page_views",
             "label": "Page views",
+            "definition": "One page load or client-side route change.",
             "unit": "count",
             "type": "count",
             "additive": true,
             "bots": "excluded",
-            "wholeDays": false
+            "wholeDays": false,
+            "polarity": "up_is_good"
           },
           {
             "kind": "metric",
             "id": "visitors",
             "label": "Visitors",
+            "definition": "Distinct people per day, from a daily-rotating hash. No cookie.",
             "unit": "count",
             "type": "unique",
             "additive": false,
             "bots": "excluded",
-            "wholeDays": false
+            "wholeDays": false,
+            "polarity": "up_is_good"
           },
           {
             "kind": "metric",
             "id": "bot_traffic",
             "label": "Bot traffic",
+            "definition": "Non-human visits that were filtered out of the counts, by kind of bot. v1 serves page views by crawlers and other bots, the only metric that counts them; the split by kind of bot comes later.",
             "unit": "count",
             "type": "count",
             "additive": true,
             "bots": "only",
-            "wholeDays": false
+            "wholeDays": false,
+            "polarity": "neutral"
           }
         ],
         "since": "2026-09-07T18:38:05.950Z",
@@ -280,61 +286,73 @@
             "kind": "metric",
             "id": "page_views",
             "label": "Page views",
+            "definition": "One page load or client-side route change.",
             "unit": "count",
             "type": "count",
             "additive": true,
             "bots": "excluded",
-            "wholeDays": false
+            "wholeDays": false,
+            "polarity": "up_is_good"
           },
           {
             "kind": "metric",
             "id": "unique_visitors_range",
-            "label": "Unique visitors over a range",
+            "label": "Consented unique visitors",
+            "definition": "One deduplicated count across a week or a month, not the sum of daily counts. Needs an identifier that outlives the daily hash, so v1 counts consented visitors only: the ones whose id lasts across days. Not additive.",
             "unit": "count",
             "type": "unique",
             "additive": false,
             "bots": "excluded",
-            "wholeDays": false
+            "wholeDays": false,
+            "polarity": "up_is_good"
           },
           {
             "kind": "metric",
             "id": "visitor_days",
             "label": "Visitor-days",
+            "definition": "Each day's unique visitors, consented or not, summed over the range: a visitor seen on three days counts three times. Not a count of people, and not additive.",
             "unit": "count",
             "type": "unique",
             "additive": false,
             "bots": "excluded",
-            "wholeDays": false
+            "wholeDays": false,
+            "polarity": "up_is_good"
           },
           {
             "kind": "metric",
             "id": "engaged_time",
             "label": "Engaged time",
+            "definition": "Median engaged time per page view: milliseconds a visitor kept the page in the foreground, from the tracker heartbeat. Null when no page view reported any.",
             "unit": "ms",
             "type": "duration",
             "additive": false,
             "bots": "excluded",
-            "wholeDays": false
+            "wholeDays": false,
+            "polarity": "up_is_good"
           },
           {
             "kind": "metric",
             "id": "scroll_depth",
             "label": "Scroll depth",
+            "definition": "How far down the page visitors reached: the average deepest scroll in percentage points (0-100), and page views by deepest scroll in ten buckets. Null when no page view reported one.",
             "unit": "percent_points",
             "type": "rate",
             "additive": false,
             "bots": "excluded",
-            "wholeDays": false
+            "wholeDays": false,
+            "polarity": "up_is_good"
           },
           {
             "kind": "metric",
             "id": "bot_traffic",
             "label": "Bot traffic",
+            "definition": "Non-human visits that were filtered out of the counts, by kind of bot. v1 serves page views by crawlers and other bots, the only metric that counts them; the split by kind of bot comes later.",
             "unit": "count",
             "type": "count",
             "additive": true,
             "bots": "only",
-            "wholeDays": false
+            "wholeDays": false,
+            "polarity": "neutral"
           }
         ],
         "since": "2026-09-30T18:38:05.873Z",

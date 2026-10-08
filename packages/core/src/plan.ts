@@ -2,7 +2,7 @@ import { CONTAINER_RULES, KEEP } from './container.ts';
 import { applies, ruleFor, type FitRule } from './fit.ts';
 import { PRESETS, expand } from './presets.ts';
 import { COLUMNS_BLOCK, place } from './place.ts';
-import { buildScene, columnLabel, columnsOf, tldrValueText, isDim, roleOf, seriesOf, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
+import { buildScene, columnLabel, columnsOf, tldrValueText, isDim, roleOf, seriesOf, trackBeside, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
 import { gridProse, tldrProse } from './prose.ts';
 import type { Catalog, Container, Layer, Layout, Plan, PlanShape, PresetLibrary, Query, Reduction, ReductionId, Result, Role, PlacedScene, Spec } from './types.ts';
 
@@ -110,8 +110,10 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   // A row short of room gives up its ranked columns from the right: every column of values but the first. The room they
   // need is measured, so no rule can say it; the label's is the `marks` rule's. Headers stand over what is left, if that
   // is more than one column, and are a guide the view gives up when it is short. Both are asked once, as the legend is.
+  // A track that stands beside its label asks for room of its own, by its own rule, as a plot of points does.
+  const beside = () => (p.layout === 'rows' && trackBeside(p.layers) && rule('track')) || undefined;
   if (p.layout === 'rows') {
-    const label = rule('marks')?.needs.inline ?? 0;
+    const label = (beside() || rule('marks'))?.needs.inline ?? 0;
     for (let cols = columnsOf(catalog, p.layers); cols.length > 1 && container.width < label + valueRoomOf(catalog, p.layers, result.rows); cols = columnsOf(catalog, p.layers)) {
       const last = cols[cols.length - 1]!;
       p.layers = p.layers.filter((l) => l !== last);
@@ -123,7 +125,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   // a number wider than the bare plot's rule allows it, or a row's widest value.
   function guard(): { rule?: FitRule; measured: number } {
     if (p.layout === 'cartesian') return p.side ? { rule: rule('marks'), measured: Math.max(0, container.displayWidth(valueLen) - rules.bare.numberWidth) } : { rule: (points && rule('points')) || rule('axes'), measured: 0 };
-    if (p.layout === 'rows') return { rule: rule('marks'), measured: valueRoomOf(catalog, p.layers, result.rows) };
+    if (p.layout === 'rows') return { rule: beside() || rule('marks'), measured: valueRoomOf(catalog, p.layers, result.rows) };
     if (p.layout === 'band') return { rule: rule(p.guides.legend === 'full' ? 'legend' : 'marks'), measured: 0 };
     if (p.layout === 'radial') return { rule: rule(p.guides.legend === 'full' ? 'legend' : 'marks'), measured: 0 };
     if (p.layout === 'matrix') return { rule: rule(p.guides.ramp && keep.indexOf('guides') < 0 ? 'ramp' : 'marks'), measured: 0 };   // a ramp the spec keeps asks for no room of its own
@@ -164,6 +166,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
       return null;
     },
     'drop-secondary': () => {
+      if (p.layout === 'rows') return null;                                // rows have no rule about roles: giving one up would win a row no room
       const gone = p.layers.filter((l) => roleOf(l) !== 'primary');
       if (!gone.length) return null;
       p.layers = p.layers.filter((l) => roleOf(l) === 'primary');

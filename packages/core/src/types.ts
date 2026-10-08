@@ -235,6 +235,8 @@ export interface Scene {
   /** How x is shared among the rows of a plot. With `point`, marks sit 2 px inside each edge; that inset is the painter's.
    * With `linear`, x is a metric or a numeric dimension, and every node in the plot carries its own `x`. */
   scale?: 'band' | 'point' | 'linear';
+  /** In `rows`: the track stands beside the label and the values, and not behind them, because its marks are read by where they are: a dot, a rule, a tick, or a bar with two ends. */
+  track?: 'beside';
   /** Where a part holds its shape, its width over its height: 1 for a circle of arcs, 2 for the top half of one.
    * A painter fits a box of that shape inside the room the part has, and never stretches it. */
   aspect?: number;

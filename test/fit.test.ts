@@ -37,6 +37,8 @@ function gaveUp(r: FitRule, plan: Plan, unbounded: Plan): boolean | null {
   if (r.id === 'columns') return unbounded.guides.columns ? !(here && !!plan.guides.columns) : null;
   if (r.id === 'mid-tick') return here && plan.guides.x ? plan.dropped.includes('the middle date label') : null;
   if (r.id === 'secondary') return here && unbounded.layers.some((l) => l.role !== 'primary') ? plan.layers.every((l) => l.role === 'primary') : null;
+  // And a track that stands beside its label only where a row's marks are read by where they are.
+  if (r.id === 'track') return unbounded.layers.some((l) => ['rule', 'tick', 'dot'].includes(l.mark) || l.encode?.x2 != null) ? !here : null;
   return !here;
 }
 

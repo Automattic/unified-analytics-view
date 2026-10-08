@@ -8,7 +8,7 @@ import type { ArcNode, Catalog, Guides, Layer, Mark, Part, PathNode, PlanShape, 
 /* Node kinds: rect, path, line, circle, text. Every node has a stable key,
  * a part, a paint token (never a colour) and a layer: "data" or "guide".
  * Nothing here is in pixels: positions are ratios of the part's box. */
-type Body = Pick<Scene, 'nodes' | 'rows' | 'series' | 'ys' | 'scale'>;
+type Body = Pick<Scene, 'nodes' | 'rows' | 'series' | 'ys' | 'scale' | 'track'>;
 
 const num = (r: Row, f: string) => r[f] as number;
 /** The role a layer plays: the one it states, or the one its mark and series imply. */
@@ -333,25 +333,42 @@ export function valueRoomOf(catalog: Catalog, layers: Layer[], rows: Row[]): num
   return cols.reduce((room, l) => room + Math.max((max(rows, (r) => cellOf(catalog, l, r).text.length) || 0) * CHAR_W, cols.length > 1 ? columnLabel(catalog, l).length * TICK_W : 0) + 14, 0);
 }
 
-/* What a mark in a row's track is drawn with: its layer's key, role and paint, the row, and the track's scale. */
+/* What a mark in a row's track is drawn with: its layer's key, role and paint, the row's key, its value and its second end, and the track's scale. */
 interface Track {
   id: string;
   role: Role;
   paint: string;
-  row: Row;
   k: string;
+  /** The row's value on the track. */
+  at: number;
+  /** Its second end, where the layer has one. */
+  to?: number;
   /** A value on the track's x, as a ratio of its width. */
   v: (n: number) => number;
+  /** The track stands beside the label, so its marks are not behind any text. */
+  beside: boolean;
+  /** For a bar with two ends: its metric's polarity. */
+  polarity?: Polarity;
 }
 type TrackFn = (l: Layer, d: Track) => SceneNode[];
 
-// A bar runs from zero to its value, so one below zero lies to the left of where the others start.
-const trackBar: TrackFn = (l, { id, role, paint, row, k, v }) => {
-  const v0 = v(0);
-  return [{ key: id + ':' + k, part: 'rows', kind: 'rect', v: v(num(row, l.encode!.x as string)), ...(v0 && { v0 }), row: k, paint, opacity: 0.2, layer: 'data', role }];
+// A bar runs from zero to its value, so one below zero lies to the left of where the others start. With a second end
+// it runs from its value to that, and is painted by which way it goes. Behind a label it is a tint.
+const trackBar: TrackFn = (_l, { id, role, paint, k, at, to, v, beside, polarity }) => {
+  const v0 = v(to == null ? 0 : at), v1 = v(to ?? at);
+  return [{ key: id + ':' + k, part: 'rows', kind: 'rect', v: v1, ...(v0 && { v0 }), row: k, paint: toned(polarity, v0, v1, paint), ...(!beside && { opacity: 0.2 }), layer: 'data', role }];
 };
+// A rule lies along the track from one of the row's values to another, or from zero where it has one end.
+const trackRule: TrackFn = (l, { id, role, k, at, to, v }) => [{ key: id + ':' + k, part: 'rows', kind: 'line', x: v(at), x2: v(to ?? 0), t: 0.5, row: k, paint: l.paint || 'ink', layer: 'data', role }];
+// A tick stands across the row at its value.
+const trackTick: TrackFn = (l, { id, role, k, at, v }) => [{ key: id + ':' + k, part: 'rows', kind: 'line', x: v(at), x2: v(at), t: 0, t2: 1, row: k, paint: l.paint || 'ink', width: 2, layer: 'data', role }];
+const trackDot: TrackFn = (_l, { id, role, paint, k, at, v }) => [{ key: id + ':' + k, part: 'rows', kind: 'circle', pulse: false, x: v(at), t: 0.5, row: k, paint, layer: 'data', role }];
 /* The marks a row's track draws, by name. A new mark is a function here. Text is not among them: it is set in the row, not on the scale. */
-const TRACK_MARKS: Partial<Record<Mark, TrackFn>> = { bar: trackBar };
+const TRACK_MARKS: Partial<Record<Mark, TrackFn>> = { bar: trackBar, rule: trackRule, tick: trackTick, dot: trackDot };
+/** Whether a row's track is read by where its marks are, and so stands beside the label and not behind it: any mark but a bar from zero. */
+export function trackBeside(layers: Layer[]): boolean {
+  return layers.some((l) => TRACK_MARKS[l.mark] && (l.mark !== 'bar' || (l.encode && l.encode.x2 != null)));
+}
 
 // A dimension on y: a row for each of its values, with a track that has a metric on x. The ranked bar list is the first of these.
 // The track's scale is derived here, once, from what its layers put on x. It is linear and holds zero and whatever is on
@@ -359,9 +376,16 @@ const TRACK_MARKS: Partial<Record<Mark, TrackFn>> = { bar: trackBar };
 function sceneRows(catalog: Catalog, layers: Layer[], rows: Row[]): Body {
   const nodes: SceneNode[] = [];
   const dim = layers.map((l) => l.encode && l.encode.y).find((f) => isDim(catalog, f)) as string;
-  const tracked = layers.filter((l) => TRACK_MARKS[l.mark]), units = [...new Set(tracked.map((l) => catalog.metrics[l.encode!.x as string]?.unit))];
+  const tracked = layers.filter((l) => TRACK_MARKS[l.mark]), units = [...new Set(tracked.map((l) => metricOf(catalog, l.encode!.x)?.unit))];
   if (units.length > 1) throw new Error('These rows have marks that measure in ' + units.length + ' units (' + units.join(', ') + '), and a row has one track. Keep the marks of one unit, and show the other metric as a text layer.');
-  const vals = tracked.flatMap((l) => rows.map((r) => num(r, l.encode!.x as string)));
+  // What a layer puts on the track in one row: its value, and its second end where it has one. A layer of the previous
+  // series reads the metric's companion. A tick that is a `reference` stands at the metric's catalog `target`, as a gauge's mark does.
+  const on = (l: Layer, r: Row): (number | null | undefined)[] => {
+    const { x, x2 } = l.encode!, f = l.series === 'previous' ? x + '@previous' : (x as string);
+    const at = typeof x === 'number' ? x : l.mark === 'tick' && roleOf(l) === 'reference' ? metricOf(catalog, f)?.target : (r[f] as number | null | undefined);
+    return x2 == null ? [at] : [at, typeof x2 === 'number' ? x2 : (r[x2] as number | null | undefined)];
+  };
+  const vals = tracked.flatMap((l) => rows.flatMap((r) => on(l, r) as number[])), beside = trackBeside(layers);
   const lo = Math.min(0, min(vals) ?? 0), hi = Math.max(0, max(vals) ?? 0) || (lo ? 0 : 1), v = (n: number) => (n - lo) / (hi - lo);
   const ids = layerKeys(layers), cols = columnsOf(catalog, layers);
   // A column after the first is ranked by its place, so the last goes first. One column of values needs no header: the view's title says what it is.
@@ -376,17 +400,20 @@ function sceneRows(catalog: Catalog, layers: Layer[], rows: Row[]): Body {
     layers.forEach((l, li) => {
       const draw = TRACK_MARKS[l.mark];
       if (draw) {
-        nodes.push(...draw(l, { id: ids[li]!, role: roleOf(l), paint: l.paint || 'series.1', row: r, k, v }));
+        const [at, to] = on(l, r), ranged = l.encode!.x2 != null;
+        if (at == null || (ranged && to == null)) return;                  // a row with nothing to mark has no mark
+        nodes.push(...draw(l, { id: ids[li]!, role: roleOf(l), paint: l.paint || (l.series === 'previous' ? 'compare' : 'series.1'), k, at, ...(ranged && { to: to! }), v, beside,
+          ...(l.mark === 'bar' && ranged && !l.paint && { polarity: metricOf(catalog, l.encode!.x)?.polarity }) }));
       } else if (l.mark === 'text') {
         const cell = cellOf(catalog, l, r);
         nodes.push({ key: ids[li] + ':' + k, part: 'rows', kind: 'text', row: k, text: cell.text,
           anchor: l.align === 'end' ? 'end' : 'start', baseline: 'middle', font: cols.includes(l) ? 'value' : 'label', paint: cell.paint, layer: 'data', role: roleOf(l), ...rank(l) });
       } else {
-        throw new Error('The "' + l.mark + '" mark has no rule for rows yet. Use bar or text.');
+        throw new Error('The "' + l.mark + '" mark has no rule for rows yet. Use bar, text, rule, tick or dot.');
       }
     });
   });
-  return { nodes, rows: rows.map((r) => r[dim] as string) };
+  return { nodes, rows: rows.map((r) => r[dim] as string), ...(beside && { track: 'beside' as const }) };
 }
 
 // No positional dimension: one band, stacked and normalized, split by colour. A share is of the engine's total, so

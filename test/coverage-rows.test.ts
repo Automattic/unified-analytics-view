@@ -173,7 +173,7 @@ describe('the track', () => {
   it('errors name the fix: marks in two units, and a mark the track has no rule for', () => {
     const two: Spec = { query: conversions.query, layers: [...conversions.layers!, { mark: 'bar', encode: { y: 'event', x: 'conversion_value' } }] };
     expect(err(two)).toBe('These rows have marks that measure in 2 units (count, usd), and a row has one track. Keep the marks of one unit, and show the other metric as a text layer.');
-    expect(err({ query: conversions.query, layers: [{ mark: 'line', encode: { y: 'event', x: 'conversions' } }] })).toBe('The "line" mark has no rule for rows yet. Use bar or text.');
+    expect(err({ query: conversions.query, layers: [{ mark: 'line', encode: { y: 'event', x: 'conversions' } }] })).toBe('The "line" mark has no rule for rows yet. Use bar, text, rule, tick or dot.');
   });
 });
 

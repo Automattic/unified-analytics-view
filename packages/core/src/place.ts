@@ -198,19 +198,31 @@ export const COLUMNS_BLOCK = 20;   // px the headers take over the rows
 
 // Rows of a fixed height. The track, with the bar in it, lies behind the label and the first column of values, and each
 // ranked column stands beyond its end. Labels are clipped by character width.
+// A track that is read by where its marks are stands beside the label instead: after it, and short of the first column
+// of values. The label then has its own width, up to LABEL characters and no more than 45% of the room the two share.
 function placeRows(scene: Scene, W: number): Block {
   const rowH = 28, gap = 4, rows = scene.rows!, room = columnRooms(scene), head = scene.parts.includes('columns') ? COLUMNS_BLOCK : 0;
   // Where a column's text ends, and where the track does: short of the right edge by the ranked columns' room.
   const edge = (i: number) => W - 8 - room.slice(i + 1).reduce((s, w) => s + w, 0), track = edge(0) + 8;
-  const x = scaleLinear().domain([0, 1]).range([0, track]), valueRoom = room[0] || 0;
+  const valueRoom = room[0] || 0, beside = scene.track === 'beside';
+  // A row's labels are set from the start in the order they come. Each before the last is as wide as its longest text.
+  const labels = scene.nodes.filter((n): n is TextNode => n.part === 'rows' && n.kind === 'text' && n.anchor !== 'end');
+  const col = new Map(labels.map((n) => [n.key, labels.filter((o) => o.row === n.row).indexOf(n)])), last = Math.max(0, ...col.values());
+  const wide = (j: number) => Math.max(0, ...labels.filter((n) => col.get(n.key) === j).map((n) => n.text.length)) * CHAR_W;
+  const left = (j: number) => 8 + Array.from({ length: j }, (_, i) => wide(i) + 8).reduce((s, w) => s + w, 0);
+  const own = beside ? Math.min(Math.min(LABEL * CHAR_W, wide(last)), (track - valueRoom - left(last)) * 0.45) : track - valueRoom - left(last) - 8;
+  // Beside the label a mark keeps 4 px inside each end of its track, so a dot at either end is whole.
+  const x = scaleLinear().domain([0, 1]).range(beside ? [left(last) + own + 12, track - valueRoom - 4] : [0, track]);
   const nodes: PlacedNode[] = [];
   scene.nodes.forEach((n) => {
     if (head && n.part === 'columns' && n.kind === 'text') nodes.push(text(n, edge(n.rank || 0), head / 2));
     if (n.part !== 'rows' || n.kind === 'row') return;
     const top = head + rows.indexOf(n.row!) * (rowH + gap);
-    // A bar lies from where its track has zero to its value, and is never thinner than 3 px.
-    if (n.kind === 'rect') { const from = x(n.v0 ?? 0), to = x(n.v!); nodes.push(rect(n, Math.min(from, to), top, Math.max(3, Math.abs(to - from)), rowH, 3)); }
-    else if (n.kind === 'text') nodes.push(n.anchor === 'end' ? text(n, edge(n.rank || 0), top + rowH / 2) : text(n, 8, top + rowH / 2, fit(n.text, track - 16 - valueRoom)));
+    // A bar lies from where its track has zero to its value, and is never thinner than 3 px. Beside the label it is a band through the middle of the row.
+    if (n.kind === 'rect') { const from = x(n.v0 ?? 0), to = x(n.v!), thin = beside ? 8 : 0; nodes.push(rect(n, Math.min(from, to), top + thin, Math.max(3, Math.abs(to - from)), rowH - 2 * thin, 3)); }
+    else if (n.kind === 'text') nodes.push(n.anchor === 'end' ? text(n, edge(n.rank || 0), top + rowH / 2) : text(n, left(col.get(n.key)!), top + rowH / 2, col.get(n.key)! < last ? n.text : fit(n.text, own)));
+    else if (n.kind === 'line') { const { part, role, row, series, rank, t, x: x1, x2, t2, ...rest } = n; nodes.push({ ...rest, x1: x(x1!), x2: x(x2!), y1: top + (1 - t) * rowH, y2: top + (1 - (t2 ?? t)) * rowH }); }
+    else if (n.kind === 'circle') nodes.push(circle(n, x(n.x!), top + (1 - n.t!) * rowH));
   });
   return { nodes, height: head + Math.max(0, rows.length * (rowH + gap) - gap) };
 }

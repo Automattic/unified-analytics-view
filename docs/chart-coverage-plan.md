@@ -522,3 +522,25 @@ Headless Chromium on the merged bench: all 25 samples, both painters, five width
 - **Older, the six originals too:** in a 40 px box most cartesian views show a 42 px number, 2 px over, instead of prose.
 - **Bench only:** the pixel SVG painter raises a ResizeObserver loop notice during fast resizing.
 - **One test run in seven failed one test,** unidentified, in the run that also killed a dev server. The next five passed. An unexplained flake, not shown harmless.
+
+### Step 3, ranges and `tick` (built October 8)
+
+Merged with no conflict. 497 tests pass and the typecheck is clean. Golden scenes changed in the three `league` entries only, which gained the rank column on purpose. Samples added: `box`, `errors`, `waterfall`, `candlestick`, `fan`, `dumbbell`, `bullet`. Checked on the bench in headless Chromium, and five of the samples in WebKit.
+
+The flake two agents reported is found and fixed: the fit sweep runs about 4.6 s in one test and timed out at 5 s on a busy machine. It has a longer limit now.
+
+**Departures and findings**
+
+1. **The direction rule has a hole.** As decided, every bar with two ends is painted by direction and polarity. A box (p75 above p25) of a metric that is better when it falls would then always be `delta.bad`. The preset states `paint: "series.1"` to avoid it, but a hand-written box plot is still caught. The rule needs a narrower trigger: a bar whose ends are a before and an after. **To decide.**
+2. **The box plot's box is `context`, not primary,** or "medians alone at 180 px" cannot hold.
+3. **A waterfall needs two numbers a row:** `@before` as well as `@running`. It has no closing total bar.
+4. **A query cannot ask for a companion.** `pageviews@rank` comes back only with `compare`, because the parity sweep holds the plain result exactly. The league spec with no `compare` errors on its rank layer. For the API's owners: a way to name companions in the query.
+5. **`drop-secondary` now does nothing in `rows`,** so the rank column (a `context` layer, to keep keys still) is not dropped by role. The consequence: ranges in rows are never given up by role either.
+6. **A track with a dot, rule, tick or ranged bar stands beside the label, not behind it,** by `Scene.track: "beside"` and a fit rule of its own, `track`. The second count against section 7's claim.
+7. **A `tick` with `role: "reference"` stands at the catalog `target`.** The same lean on role as the gauge's. **To decide,** with that one.
+8. **A layer that names a `…@previous` field is a comparison layer:** left out with no `compare`, dropped with no prior data. Without `compare` the dumbbell is the Cleveland dot plot.
+9. **Scales still hold zero,** so a candlestick and a fan sit in the top half of the plot. Built as written. **To look at:** a ranged mark probably should not force zero.
+10. **All quantile and interval companions are on one fixture metric,** `response_time`.
+11. **The bullet is sign-ups by device against the total's target,** which is not a real bullet. One with no dimension has no layout to land in.
+12. Prose for a range: "Between 100 and 2,600 across 8 pages."
+13. Not done: `bands`, in-cell bars per column, a waterfall total, Gantt and timeline (deferred). In `<ua-view>` the rows rules still ignore the measured value room, and a bare box plot's ticks sit on the full scale where `resolve()` rescales to the medians.

@@ -78,6 +78,8 @@ const rule: MarkFn = (l, { id, role, v }) => {
 /* The marks a plot draws, by name. A new mark is a function here. */
 const PLOT_MARKS: Partial<Record<Mark, MarkFn>> = { line: path, area: path, bar, rule };
 
+const SERIES = 6;   // paint tokens run from series.1 to series.6
+
 /** The dimension a plot's layers put on x. */
 export function xDimOf(catalog: Catalog, layers: Layer[]): string | undefined {
   return layers.map((l) => l.encode && l.encode.x).find((f) => isDim(catalog, f)) as string | undefined;
@@ -103,6 +105,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   // paint follows it, so a value keeps its colour when the ranking moves.
   const split = layers.map((l) => splitOf(catalog, l, xField)).find(Boolean) || null;
   const series = split ? [...new Set(((result.totalsBy && result.totalsBy[split]) || rows).map((r) => r[split] as string))] : [];
+  if (series.length > SERIES) throw new Error('Splitting by "' + split + '" makes ' + series.length + ' series, and there are ' + SERIES + ' series colours. Add "limit": ' + SERIES + ' to the query, or less.');
   const isTime = catalog.dimensions[xField]!.type === 'time';
   const scale = layers.some((l) => l.mark === 'bar') ? 'band' : 'point';
   const yField = (l: Layer) => (l.series === 'previous' ? l.encode!.y + '@previous' : (l.encode!.y as string));

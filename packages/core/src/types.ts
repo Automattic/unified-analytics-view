@@ -47,8 +47,9 @@ export interface Result {
 }
 
 /* The view spec. */
-export type Mark = 'line' | 'area' | 'bar' | 'rule' | 'text' | 'arc' | 'cell' | 'dot';
-export type Channel = 'x' | 'y' | 'color' | 'text' | 'angle' | 'radius' | 'size';
+export type Mark = 'line' | 'area' | 'bar' | 'rule' | 'text' | 'arc' | 'cell' | 'dot' | 'tick';
+/** `x2` and `y2` are the second end of a `bar`, a `rule` or an `area`: it runs from the value on `x` or `y` to the one there. */
+export type Channel = 'x' | 'y' | 'color' | 'text' | 'angle' | 'radius' | 'size' | 'x2' | 'y2';
 export type Role = 'primary' | 'comparison' | 'reference' | 'context';
 export type KeepPart = 'guides' | 'secondary' | 'rows' | 'marks';
 export interface Layer {
@@ -168,7 +169,8 @@ interface NodeBase {
   note?: string;
 }
 /** A bar in the plot (`x` and `w` across, and up the plot from `v0` to `v`), a row's bar (across its track from `v0` to `v`), a band segment (`v` is its share) or a legend swatch.
- * `v0` is absent where a bar starts at the bottom of the plot, or at the start of the track. A bar that hangs below its start has `v` under `v0`. */
+ * `v0` is absent where a bar starts at the bottom of the plot, or at the start of the track. A bar that hangs below its start has `v` under `v0`.
+ * A bar with a second end runs from the first, `v0`, to it, `v`, and is painted by which way it goes. */
 export interface RectNode extends NodeBase {
   kind: 'rect'; x?: number; w?: number; v?: number; v0?: number;
   /** A cell of a grid: `y` and `h` down the plot from its top, as `x` and `w` run across it. */
@@ -187,9 +189,11 @@ export interface PathNode extends NodeBase {
   dash?: string | null;
 }
 /** A line across the plot at height `t`. The one at zero is painted `axis`, and sits above the bottom of the plot where values go below zero.
- * With `x`, `x2` and `t2` it is the segment from (`x`, `t`) to (`x2`, `t2`): a rule at a value on x stands from 0 to 1 at one `x`. */
+ * With `x`, `x2` and `t2` it is the segment from (`x`, `t`) to (`x2`, `t2`): a rule at a value on x stands from 0 to 1 at one `x`.
+ * One with a `row` is that row's own: a rule from one of its values to another, or a tick across its band at one. In `rows` it is in the row's
+ * track: `x` and `x2` run along the track and `t` up the row, so a rule lies at 0.5 and a tick stands from 0 to 1. */
 export interface LineNode extends NodeBase { kind: 'line'; t: number; x?: number; x2?: number; t2?: number; width?: number; dash?: string }
-/** The pulse beside the number, or a dot at `x` and `t`: in `plot` on a time or category axis, and in `points` where x is a metric too. `size` is a step from 1 up, not a radius: how big a step is, in pixels, is the painter's. */
+/** The pulse beside the number, or a dot at `x` and `t`: in `plot` on a time or category axis, in `points` where x is a metric too, and in `rows` along a row's track, half way up it. `size` is a step from 1 up, not a radius: how big a step is, in pixels, is the painter's. */
 export interface CircleNode extends NodeBase { kind: 'circle'; pulse: boolean; x?: number; t?: number; size?: number }
 /** One row of the `rows` part: the thing a painter keys and a reader chooses. It draws nothing itself, and place() leaves it out. */
 export interface RowNode extends NodeBase { kind: 'row'; row: string }

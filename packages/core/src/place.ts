@@ -75,7 +75,8 @@ function placePlot(scene: Scene, W: number, H: number, narrow: boolean): PlacedN
   const ml = gy ? 36 : 1, mr = (gy ? 6 : 1) + g2 + lw, mt = gy ? 10 : 3, mb = gx ? 22 : 3, inset = scene.scale === 'point' ? 2 : 0;
   const y = scaleLinear().domain([0, 1]).range([H - mb, mt]);
   // On a linear x every node has its own ratio of the plot's width. Otherwise a node is placed by its row, on the scale the scene used.
-  const lin = scene.scale === 'linear', pw = W - ml - mr, px = (x: number) => ml + x * pw;
+  // A ratio of the plot's width is taken inside the inset, which is where the scale the scene used runs.
+  const lin = scene.scale === 'linear', pw = W - ml - mr, px = (x: number) => ml + inset + x * (pw - 2 * inset);
   const xs = xScale(scene.rows!, scene.scale === 'linear' ? 'point' : scene.scale!, ml + inset, W - mr - inset);
   const at = (n: { x?: number; row?: string }) => (lin || n.row == null ? px(n.x!) : xs.cx(n.row));
   const box = { x: (p: Point) => at(p), y };

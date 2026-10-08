@@ -16,8 +16,8 @@ const run = (spec: Spec, w: number, h: number | null = null, scenario: (typeof s
 const err = (s: Spec, q = s.query) => { try { resolve(s, runQuery(q), makeContainer(346), catalog); } catch (e) { return (e as Error).message; } };
 const view = new Ajv().compile(viewSchema);
 
-// The plots among them. A layout of its own has a suite of its own: test/radial.test.ts, test/cell.test.ts.
-const specs = Object.fromEntries(Object.entries(moreSamples).map(([k, s]) => [k, s.spec] as const).filter(([, s]) => run(s, 700).plan.layout === 'cartesian'));
+// The plots and the rows among them. Another layout has a suite of its own: test/radial.test.ts, test/cell.test.ts.
+const specs = Object.fromEntries(Object.entries(moreSamples).map(([k, s]) => [k, s.spec] as const).filter(([, s]) => ['cartesian', 'rows'].includes(run(s, 700).plan.layout)));
 const painters: PainterName[] = ['svg', 'dots'];
 const heights = [null, 300, 160, 100, 60, 40];
 const widths = [54, 80, 120, 170, 250, 290, 346, 500, 700];
@@ -44,10 +44,12 @@ describe('the sweep, for what the prototype does not know', () => {
       const points = ['scatter', 'bubble', 'quadrant'].includes(name);
       for (const sc of scenarios) {
         // 10 px is narrower than any number, "0" included.
-        const layouts = [346, 250, 120, 10].map((w) => run(spec, w, null, sc).plan.layout);
-        expect(layouts, sc).toEqual(sc === 'empty' ? ['notice', 'notice', 'none', 'prose'] : ['cartesian', points ? 'none' : 'cartesian', 'none', 'prose']);
-        if (!points) expect(run(spec, 250, null, sc).plan.dropped[0], sc).toBe(sc === 'empty' ? undefined : 'axes and grid (added the number to make up for them)');
-        expect(run(spec, 700, null, sc).plan.dropped, sc).toEqual([]);
+        const layouts = [346, 250, 120, 10].map((w) => run(spec, w, null, sc).plan.layout), marks = run(spec, 700).plan.layout;
+        expect(layouts, sc).toEqual(sc === 'empty' ? ['notice', 'notice', 'none', 'prose'] : [marks, points ? 'none' : marks, 'none', 'prose']);
+        // What rows give up first is their own, and is held in test/coverage-rows.test.ts.
+        if (marks === 'cartesian' && !points) expect(run(spec, 250, null, sc).plan.dropped[0], sc).toBe(sc === 'empty' ? undefined : 'axes and grid (added the number to make up for them)');
+        // With room for everything, all that is missing is what there is no prior period to say.
+        expect(run(spec, 700, null, sc).plan.dropped, sc).toEqual(sc === 'no-prior' && spec.query.compare ? [expect.stringContaining('(no prior data)')] : []);
       }
     });
   }

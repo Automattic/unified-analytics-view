@@ -64,7 +64,7 @@
             "size": { "$ref": "#/definitions/field", "description": "A metric. A dot's size is one of a few steps, and the painter says how big each is." }
           }
         },
-        "series": { "const": "previous", "description": "Draw the comparison companion of the metric." },
+        "series": { "enum": ["previous", "delta"], "description": "\"previous\" draws the comparison companion of the metric. On a text layer in rows, \"delta\" says each row's change on the previous period, painted by the metric's polarity. Either needs \"compare\" in the query." },
         "role": { "enum": ["primary", "comparison", "reference", "context"] },
         "stack": { "enum": ["zero", "normalize", "center"], "description": "On a layer split by color: each series starts where the one under it ends. \"normalize\" makes each a share of the whole, and \"center\" sets each stack half on either side of zero. A bar split by color with no stack sits beside its neighbours." },
         "sweep": { "const": "half", "description": "On an arc: the arcs run over the top half of the circle and not all the way round. The one layer field that is neither data nor role." },

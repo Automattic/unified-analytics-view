@@ -17,8 +17,10 @@ export function fmtDay(iso: string): string {
 }
 /** A metric's value as its catalog entry sets it. With no form it is what a readout says: whole under ten thousand,
  * "10.5k" from there. `compact` is always the short form, and `exact` never is: a table cell, where the digits matter.
- * ponytail: every unit in the catalog is a count today, so `unit` picks nothing yet. A new unit gets its branch here. */
-export function formatValue(v: number | null | undefined, _metric: MetricDef, form?: 'compact' | 'exact'): string {
+ * A `ratio` is a share of a whole and reads as a percentage in every form.
+ * ponytail: every other unit is set as a count, `usd` too. A new unit gets its branch here. */
+export function formatValue(v: number | null | undefined, metric: MetricDef, form?: 'compact' | 'exact'): string {
+  if (metric.unit === 'ratio' && v != null) return fmtPct(v);
   return form === 'exact' && v != null ? NF.format(v) : fmt(v, form === 'compact');
 }
 /** A dimension's value as its catalog entry sets it: a day as "Sep 8", a category as itself. */

@@ -10,7 +10,10 @@ export const catalog: Catalog = {
     net_subscribers: { label: 'Net subscribers', unit: 'count', polarity: 'up', rangeTotal: 'sum' },
     revenue:   { label: 'Revenue',     unit: 'usd',   polarity: 'up',   rangeTotal: 'sum' },
     signups:   { label: 'Sign-ups',    unit: 'count', polarity: 'up',   rangeTotal: 'sum', domain: [0, 500], target: 400, bands: [200, 400] },
-    conversion_rate: { label: 'Conversion rate', unit: 'percent', polarity: 'up' },
+    page_conversion: { label: 'Conversion rate', unit: 'percent', polarity: 'up' },
+    conversions:      { label: 'Conversions',     unit: 'count', polarity: 'up', rangeTotal: 'sum' },
+    conversion_rate:  { label: 'Conversion rate', unit: 'ratio', polarity: 'up' },
+    conversion_value: { label: 'Value',           unit: 'usd',   polarity: 'up', rangeTotal: 'sum' },
   },
   dimensions: {
     'date.day': { label: 'Day',     type: 'time' },
@@ -20,6 +23,8 @@ export const catalog: Catalog = {
     weekday:    { label: 'Weekday', type: 'categorical' },
     hour:       { label: 'Hour',    type: 'categorical' },
     load_time:  { label: 'Load time', type: 'number' },
+    event:      { label: 'Event',   type: 'categorical' },
+    step:       { label: 'Step',    type: 'categorical' },
   },
 };
 
@@ -75,6 +80,26 @@ const RATES: Record<string, number> = { '/': 2.1, '/pricing': 5.8, '/blog/launch
 const RATE = 2.6;
 // Load time in seconds, in bins half a second wide: the weight of each, with a long tail.
 const LOAD = { width: 0.5, weights: [2, 9, 21, 30, 27, 20, 14, 10, 7, 5, 4, 3, 2, 2, 1, 1] };
+// Dimensions held as a table: a row per value, each metric now and in the period before, and the engine's own totals.
+// A rate is the engine's, row by row and over the whole: no view divides to get one, and it is not the sum of its rows.
+// Events are ranked as pages are. Steps come back in their own order, which is what makes them a funnel.
+type Cell = [now: number, before: number | null];
+const TABLES: Record<string, { fields: string[]; ranked: boolean; rows: [string, ...Cell[]][]; totals: Record<string, Cell> }> = {
+  event: { fields: ['conversions', 'conversion_rate', 'conversion_value'], ranked: true, rows: [
+    ['Add to cart',       [1310, 1180], [0.124, 0.125], [48200, 43100]],
+    ['Newsletter signup', [842, 610],   [0.08, 0.065],  [4210, 3050]],
+    ['Checkout started',  [655, 690],   [0.062, 0.073], [39800, 41900]],
+    ['Purchase',          [412, 371],   [0.039, 0.039], [31650, 27900]],
+    ['Trial started',     [198, null],  [0.019, null],  [9900, null]],
+    ['Contact form',      [96, 104],    [0.009, 0.011], [960, 1040]],
+  ], totals: { conversions: [3513, 2955], conversion_rate: [0.212, 0.198], conversion_value: [134720, 116990] } },
+  step: { fields: ['visitors', 'conversion_rate'], ranked: false, rows: [
+    ['Visited the site',  [10531, 9437], [1, 1]],
+    ['Viewed pricing',    [1705, 1390],  [0.162, 0.147]],
+    ['Started checkout',  [655, 690],    [0.062, 0.073]],
+    ['Purchased',         [412, 371],    [0.039, 0.039]],
+  ], totals: { conversion_rate: [0.039, 0.039] } },
+};
 const LIVE = [{ page: '/', present: 3 }, { page: '/pricing', present: 2 }, { page: '/blog/launch-notes', present: 1 }, { page: '/docs/getting-started', present: 1 }];
 
 export type Scenario = 'typical' | 'no-prior' | 'empty';
@@ -99,8 +124,8 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
   const meta: Result['meta'] = { range: q.range || '28d', compare: q.compare || null, notes: [] };
   const totals: Result['totals'] = {}; let rows: Row[] = [];
   const live = metrics.indexOf('present') >= 0;
-  if (metrics.indexOf('conversion_rate') >= 0 && dims.length && (dims.length > 1 || by !== 'page')) throw new Error('The fixture has "conversion_rate" page by page, and not by anything else. Query it by page alone.');
-  if (dims.indexOf('load_time') >= 0 && (dims.length > 1 || live || metrics.indexOf('conversion_rate') >= 0)) throw new Error('The fixture bins a count by "load_time" and nothing more. Query a count by it alone.');
+  if (metrics.indexOf('page_conversion') >= 0 && dims.length && (dims.length > 1 || by !== 'page')) throw new Error('The fixture has "page_conversion" page by page, and not by anything else. Query it by page alone.');
+  if (dims.indexOf('load_time') >= 0 && (dims.length > 1 || live || metrics.indexOf('page_conversion') >= 0)) throw new Error('The fixture bins a count by "load_time" and nothing more. Query a count by it alone.');
   if (live && (metrics.length > 1 || dims.length > 1 || (by && by !== 'page'))) throw new Error('"present" is an instantaneous count. Query it alone, optionally by page.');
 
   if (scenario === 'empty') {
@@ -117,10 +142,16 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
   // A shorter range is the last days of the same series, and a mix of its own. 28 days is the fixture as it always was.
   const days = Math.min(28, parseInt(q.range || '') || 28), mix = seeded(days), vary = () => (days === 28 ? 1 : 0.5 + mix());
   const cur = DAILY.slice(56 - days), prev = DAILY.slice(56 - 2 * days, 56 - days);
+  // A table's counts follow the range. A rate does not.
+  const table = TABLES[by || ''], held = (m: string, n: number | null) => (n == null || catalog.metrics[m]!.unit === 'ratio' ? n : Math.round(n * days / 28));
+  const elsewhere = metrics.find((m) => m !== 'page_conversion' && !(m in DAILY[0]!) && !(table && table.fields.indexOf(m) >= 0));
+  if (elsewhere) throw new Error('The fixture has "' + elsewhere + '" by ' + Object.keys(TABLES).filter((d) => TABLES[d]!.fields.indexOf(elsewhere) >= 0).join(' or ') + ' only. Query it by that.');
+  if (table && dims.length > 1) throw new Error('The fixture has "' + by + '" on its own, and not with a second dimension. Remove "' + dims[1] + '" from by.');
   metrics.forEach((m) => {
-    const rate = m === 'conversion_rate';
-    totals[m] = rate ? RATE : sum(cur, m);
-    if (wantPrev) totals[m + '@previous'] = !hasPrev ? null : rate ? RATE - 0.2 : sum(prev, m);
+    const rate = m === 'page_conversion';
+    const [now, before] = table && table.totals[m] ? table.totals[m]!.map((n) => held(m, n)) : rate ? [RATE, RATE - 0.2] : [sum(cur, m), sum(prev, m)];
+    totals[m] = now!;
+    if (wantPrev) totals[m + '@previous'] = hasPrev ? before! : null;
   });
   // One row per value of a dimension, in the dimension's own order, before any sort or limit.
   function rowsBy(dim: string): Row[] {
@@ -129,12 +160,21 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
       metrics.forEach((m) => { r[m] = d[m as D]; if (wantPrev) r[m + '@previous'] = hasPrev ? prev[i]![m as D] : null; });
       return r;
     });
-    const perPage = metrics.find((m) => m !== 'conversion_rate' && !(m in PAGES[0]!));
+    if (table) {
+      const missing = metrics.find((m) => table.fields.indexOf(m) < 0);
+      if (missing) throw new Error('The fixture has "' + dim + '" with ' + table.fields.join(', ') + ', and not "' + missing + '". Query one of those.');
+      return table.rows.map(([name, ...cells]) => {
+        const r: Row = { [dim]: name };
+        metrics.forEach((m) => { const [now, before] = cells[table.fields.indexOf(m)]!; r[m] = held(m, now); if (wantPrev) r[m + '@previous'] = hasPrev ? held(m, before) : null; });
+        return r;
+      });
+    }
+    const perPage = metrics.find((m) => m !== 'page_conversion' && !(m in PAGES[0]!));
     if (dim === 'page' && perPage) throw new Error('The fixture has "' + perPage + '" by day, channel or device, and not page by page. Query it by one of those.');
     if (dim === 'page') return PAGES.map((p) => {
       const r: Row = { page: p.page };
       metrics.forEach((m) => {
-        if (m === 'conversion_rate') { r[m] = Math.round(RATES[p.page]! * vary() * 10) / 10; if (wantPrev) r[m + '@previous'] = null; return; }
+        if (m === 'page_conversion') { r[m] = Math.round(RATES[p.page]! * vary() * 10) / 10; if (wantPrev) r[m + '@previous'] = null; return; }
         r[m] = Math.round(p[m as M] * days / 28 * vary()); if (wantPrev) r[m + '@previous'] = hasPrev && p.prev ? p.prev[m as M] : null;
       });
       return r;
@@ -162,6 +202,7 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
   const m0 = metrics[0]!;
   // A categorical dimension is ranked by the first metric, and `limit` keeps its first values. Days and bins keep their own order.
   const top = (rs: Row[]) => { const ranked = rs.slice().sort((a, b) => (b[m0] as number) - (a[m0] as number)); return q.limit ? ranked.slice(0, q.limit) : ranked; };
+  if (table && !table.ranked) return { rows: rowsBy(by!).slice(0, q.limit || undefined), totals, meta };
   if (dims.length < 2) return { rows: !by ? rows : catalog.dimensions[by]!.type !== 'categorical' ? rowsBy(by) : top(rowsBy(by)), totals, meta };
 
   // Two dimensions: one row per pair. Each value of the outer one is divided among the inner one's, unevenly from one
@@ -218,15 +259,21 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
   pie:     { label: 'A pie: channel mix', spec: { spec: 'view/0', title: 'Channels', use: 'pie', query: { metrics: ['visitors'], by: ['channel'], range: '28d' } } },
   half:    { label: 'A half circle: page views by device', spec: { spec: 'view/0', title: 'Page views by device', use: 'pie-semi-circle', query: { metrics: ['pageviews'], by: ['device'], range: '28d' } } },
   gauge:   { label: 'A gauge: sign-ups against a target', spec: { spec: 'view/0', title: 'Sign-ups', use: 'gauge', query: { metrics: ['signups'], range: '28d' } } },
-  scatter: { label: 'Scatter: traffic against conversion rate by page', spec: { spec: 'view/0', title: 'Traffic against conversion', query: { metrics: ['visitors', 'conversion_rate'], by: ['page'], range: '28d' },
-            layers: [{ mark: 'dot', encode: { x: 'visitors', y: 'conversion_rate' } }, { mark: 'text', encode: { x: 'visitors', y: 'conversion_rate', text: 'page' } }] } },
-  bubble:  { label: 'Bubbles: traffic against conversion rate, sized by page views', spec: { spec: 'view/0', title: 'Traffic, conversion and page views', query: { metrics: ['visitors', 'conversion_rate', 'pageviews'], by: ['page'], range: '28d' },
-            layers: [{ mark: 'dot', encode: { x: 'visitors', y: 'conversion_rate', size: 'pageviews' } }] } },
-  quadrant: { label: 'Quadrants: traffic against conversion rate, with a rule on each axis', spec: { spec: 'view/0', title: 'Where to look', query: { metrics: ['visitors', 'conversion_rate'], by: ['page'], range: '28d' },
+  scatter: { label: 'Scatter: traffic against conversion rate by page', spec: { spec: 'view/0', title: 'Traffic against conversion', query: { metrics: ['visitors', 'page_conversion'], by: ['page'], range: '28d' },
+            layers: [{ mark: 'dot', encode: { x: 'visitors', y: 'page_conversion' } }, { mark: 'text', encode: { x: 'visitors', y: 'page_conversion', text: 'page' } }] } },
+  bubble:  { label: 'Bubbles: traffic against conversion rate, sized by page views', spec: { spec: 'view/0', title: 'Traffic, conversion and page views', query: { metrics: ['visitors', 'page_conversion', 'pageviews'], by: ['page'], range: '28d' },
+            layers: [{ mark: 'dot', encode: { x: 'visitors', y: 'page_conversion', size: 'pageviews' } }] } },
+  quadrant: { label: 'Quadrants: traffic against conversion rate, with a rule on each axis', spec: { spec: 'view/0', title: 'Where to look', query: { metrics: ['visitors', 'page_conversion'], by: ['page'], range: '28d' },
             layers: [{ mark: 'rule', encode: { x: 1000 }, label: '1,000 visitors', role: 'reference' }, { mark: 'rule', encode: { y: 3 }, label: 'Converts at 3', role: 'reference' },
-                     { mark: 'dot', encode: { x: 'visitors', y: 'conversion_rate' } }, { mark: 'text', encode: { x: 'visitors', y: 'conversion_rate', text: 'page' } }] } },
+                     { mark: 'dot', encode: { x: 'visitors', y: 'page_conversion' } }, { mark: 'text', encode: { x: 'visitors', y: 'page_conversion', text: 'page' } }] } },
   histogram: { label: 'Histogram: page views by load time', spec: { spec: 'view/0', title: 'Load time', query: { metrics: ['pageviews'], by: ['load_time'], range: '28d' },
             layers: [{ mark: 'bar', encode: { x: 'load_time', y: 'pageviews' } }] } },
   density: { label: 'Density: page views along load time', spec: { spec: 'view/0', title: 'Load time, as a density', query: { metrics: ['pageviews'], by: ['load_time'], range: '28d' },
             layers: [{ mark: 'area', encode: { x: 'load_time', y: 'pageviews@density' }, role: 'context' }, { mark: 'line', encode: { x: 'load_time', y: 'pageviews@density' } }] } },
+  league:  { label: 'League table: pages, with their change', spec: { spec: 'view/0', title: 'Top pages', query: { metrics: ['pageviews'], by: ['page'], range: '28d', compare: 'previous', limit: 8 },
+            layers: [{ mark: 'text', encode: { y: 'page', text: 'page' } }, { mark: 'text', encode: { y: 'page', text: 'pageviews' }, align: 'end' }, { mark: 'text', encode: { y: 'page', text: 'pageviews' }, series: 'delta', align: 'end' }] } },
+  conversions: { label: 'Columns: count, rate and value by event', spec: { spec: 'view/0', title: 'Conversions', query: { metrics: ['conversions', 'conversion_rate', 'conversion_value'], by: ['event'], range: '28d' },
+            layers: [{ mark: 'bar', encode: { y: 'event', x: 'conversions' } }, { mark: 'text', encode: { y: 'event', text: 'event' } }, { mark: 'text', encode: { y: 'event', text: 'conversions' }, align: 'end' },
+                     { mark: 'text', encode: { y: 'event', text: 'conversion_rate' }, align: 'end' }, { mark: 'text', encode: { y: 'event', text: 'conversion_value' }, align: 'end' }] } },
+  funnel:  { label: 'Funnel: visitors by step, with the rate', spec: { spec: 'view/0', title: 'Checkout funnel', use: 'funnel', query: { metrics: ['visitors', 'conversion_rate'], by: ['step'], range: '28d' } } },
 };

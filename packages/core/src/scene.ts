@@ -1,6 +1,6 @@
 import { max, min } from 'd3-array';
 import { scaleBand, scaleLinear, scalePoint, scaleQuantize } from 'd3-scale';
-import { CHAR_W, delta, fmt, fmtDay, fmtPct, formatDimension } from './format.ts';
+import { CHAR_W, delta, fmt, fmtDay, fmtPct, formatDimension, formatValue } from './format.ts';
 import { arcD, pathD } from './path.ts';
 import { leader } from './prose.ts';
 import type { ArcNode, Catalog, Guides, Layer, Mark, Part, PathNode, PlanShape, Query, Result, Role, Row, Scene, SceneNode, TextNode } from './types.ts';
@@ -17,12 +17,12 @@ export function roleOf(l: Layer): Role {
 }
 /* A layer's key names it by role and mark, and does not count the layers before it, so it holds when another layer
  * drops. Two layers of one role and mark are told apart by a count among themselves alone: `primary:text`, then
- * `primary:text#2`. Layers of the previous series are counted last. A reduction drops whole roles, and missing prior
+ * `primary:text#2`. Layers of the previous series, and of a row's delta, are counted last. A reduction drops whole roles, and missing prior
  * data drops the whole previous series, so neither can move a count. */
 function layerKeys(layers: Layer[]): string[] {
   const seen: Record<string, number> = {}, keys: string[] = [];
   for (const prev of [false, true]) layers.forEach((l, i) => {
-    if ((l.series === 'previous') !== prev) return;
+    if (!!l.series !== prev) return;
     const base = roleOf(l) + ':' + l.mark, n = (seen[base] = (seen[base] || 0) + 1);
     keys[i] = n > 1 ? base + '#' + n : base;
   });
@@ -113,7 +113,7 @@ const dot: MarkFn = (l, { id, series, role, paint, rows, k, unit, ends, size, po
 // the ones that collide from the last, since only it knows how wide a label is (reference, Open 5).
 const label: MarkFn = (l, { id, series, role, rows, k, unit, ends, size }) => {
   const { y, text: f } = l.encode || {};
-  if (typeof y !== 'string' || typeof f !== 'string') throw new Error('A "text" layer in a plot needs a field on y, for where each label sits, and one on text, for what it says: for example { "x": "visitors", "y": "conversion_rate", "text": "page" }.');
+  if (typeof y !== 'string' || typeof f !== 'string') throw new Error('A "text" layer in a plot needs a field on y, for where each label sits, and one on text, for what it says: for example { "x": "<a metric>", "y": "<a metric>", "text": "<the dimension>" }.');
   const by = size ? size.field : y, order = rows.slice().sort((a, b) => num(b, by) - num(a, by));
   return rows.map((r): TextNode => ({ key: id + ':' + k(r) + (series == null ? '' : ':' + series), part: 'point-labels', kind: 'text', x: unit.cx(k(r)), t: ends(r)[1], text: typeof r[f] === 'number' ? fmt(r[f] as number) : String(r[f]),
     anchor: 'middle', font: 'tick', paint: 'ink', halo: true, row: k(r), ...(series != null && { series }), rank: order.indexOf(r) + 1, layer: 'guide', role }));
@@ -286,31 +286,79 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   return { nodes, rows: keys, ...(split && { series }), scale };
 }
 
-/** Room the widest value label needs in a bar list. */
+/** A row's columns: its `text` layers that show a metric, in layer order. The first stays. The rest are ranked, and given up from the right. */
+export function columnsOf(catalog: Catalog, layers: Layer[]): Layer[] {
+  return layers.filter((l) => l.mark === 'text' && typeof (l.encode && l.encode.text) === 'string' && (l.encode!.text as string) in catalog.metrics);
+}
+/** What heads a column. */
+export function columnLabel(catalog: Catalog, l: Layer): string {
+  return l.series === 'delta' ? 'Change' : catalog.metrics[l.encode!.text as string]!.label;
+}
+// What a text layer says in one row.
+function cellOf(catalog: Catalog, l: Layer, r: Row): { text: string; paint: string } {
+  const f = l.encode!.text as string, M = catalog.metrics[f];
+  if (!M || l.series !== 'delta') return { text: M ? formatValue(num(r, f), M) : String(r[f]), paint: 'ink' };
+  // The row's change, as the tldr value's delta says the total's. A row with nothing before it has a dash: a column has no room for the words.
+  const d = delta(num(r, f), r[f + '@previous'] as number | null | undefined, M.polarity);
+  return { text: d.state === 'none' ? '–' : d.text, paint: d.paint };
+}
+export const TICK_W = CHAR_W - 0.8;   // rough advance of the 11px tick face, which a column's header is set in
+
+/** Room a row's columns need between them: for each, its widest value, or its header where there are headers.
+ * Measured in characters, as place() sets them. */
 export function valueRoomOf(catalog: Catalog, layers: Layer[], rows: Row[]): number {
-  let room = 0;
-  layers.forEach((l) => {
-    const f = l.encode && l.encode.text;
-    if (l.mark === 'text' && typeof f === 'string' && f in catalog.metrics) room = Math.max(room, (max(rows, (r) => fmt(num(r, f)).length) || 0) * CHAR_W + 14);
-  });
-  return room;
+  const cols = columnsOf(catalog, layers);
+  return cols.reduce((room, l) => room + Math.max((max(rows, (r) => cellOf(catalog, l, r).text.length) || 0) * CHAR_W, cols.length > 1 ? columnLabel(catalog, l).length * TICK_W : 0) + 14, 0);
 }
 
-// A dimension on y, a metric on x: the ranked bar list.
+/* What a mark in a row's track is drawn with: its layer's key, role and paint, the row, and the track's scale. */
+interface Track {
+  id: string;
+  role: Role;
+  paint: string;
+  row: Row;
+  k: string;
+  /** A value on the track's x, as a ratio of its width. */
+  v: (n: number) => number;
+}
+type TrackFn = (l: Layer, d: Track) => SceneNode[];
+
+// A bar runs from zero to its value, so one below zero lies to the left of where the others start.
+const trackBar: TrackFn = (l, { id, role, paint, row, k, v }) => {
+  const v0 = v(0);
+  return [{ key: id + ':' + k, part: 'rows', kind: 'rect', v: v(num(row, l.encode!.x as string)), ...(v0 && { v0 }), row: k, paint, opacity: 0.2, layer: 'data', role }];
+};
+/* The marks a row's track draws, by name. A new mark is a function here. Text is not among them: it is set in the row, not on the scale. */
+const TRACK_MARKS: Partial<Record<Mark, TrackFn>> = { bar: trackBar };
+
+// A dimension on y: a row for each of its values, with a track that has a metric on x. The ranked bar list is the first of these.
+// The track's scale is derived here, once, from what its layers put on x. It is linear and holds zero and whatever is on
+// either side of it, and it is not rounded: a row's track has no axis to read against.
 function sceneRows(catalog: Catalog, layers: Layer[], rows: Row[]): Body {
   const nodes: SceneNode[] = [];
   const dim = layers.map((l) => l.encode && l.encode.y).find((f) => isDim(catalog, f)) as string;
-  const barL = layers.find((l) => l.mark === 'bar');
-  const top = barL ? max(rows, (r) => num(r, barL.encode!.x as string)) || 1 : 1, ids = layerKeys(layers);
+  const tracked = layers.filter((l) => TRACK_MARKS[l.mark]), units = [...new Set(tracked.map((l) => catalog.metrics[l.encode!.x as string]?.unit))];
+  if (units.length > 1) throw new Error('These rows have marks that measure in ' + units.length + ' units (' + units.join(', ') + '), and a row has one track. Keep the marks of one unit, and show the other metric as a text layer.');
+  const vals = tracked.flatMap((l) => rows.map((r) => num(r, l.encode!.x as string)));
+  const lo = Math.min(0, min(vals) ?? 0), hi = Math.max(0, max(vals) ?? 0) || (lo ? 0 : 1), v = (n: number) => (n - lo) / (hi - lo);
+  const ids = layerKeys(layers), cols = columnsOf(catalog, layers);
+  // A column after the first is ranked by its place, so the last goes first. One column of values needs no header: the view's title says what it is.
+  const rank = (l: Layer) => { const j = cols.indexOf(l); return j > 0 && { rank: j }; };
+  if (cols.length > 1) cols.forEach((l) => {
+    nodes.push({ key: 'column:' + ids[layers.indexOf(l)], part: 'columns', kind: 'text', text: columnLabel(catalog, l), anchor: 'end', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...rank(l) });
+  });
   rows.forEach((r) => {
     const k = r[dim] as string;
+    // The row itself: what a painter keys, and what is chosen and named when the row is.
+    nodes.push({ key: 'row:' + k, part: 'rows', kind: 'row', row: k, paint: 'ink', layer: 'data' });
     layers.forEach((l, li) => {
-      if (l.mark === 'bar') {
-        nodes.push({ key: ids[li] + ':' + k, part: 'rows', kind: 'rect', v: num(r, l.encode!.x as string) / top, row: k, paint: l.paint || 'series.1', opacity: 0.2, layer: 'data', role: roleOf(l) });
+      const draw = TRACK_MARKS[l.mark];
+      if (draw) {
+        nodes.push(...draw(l, { id: ids[li]!, role: roleOf(l), paint: l.paint || 'series.1', row: r, k, v }));
       } else if (l.mark === 'text') {
-        const f = l.encode!.text as string, metric = f in catalog.metrics;
-        nodes.push({ key: ids[li] + ':' + k, part: 'rows', kind: 'text', row: k, text: metric ? fmt(num(r, f)) : String(r[f]),
-          anchor: l.align === 'end' ? 'end' : 'start', baseline: 'middle', font: metric ? 'value' : 'label', paint: 'ink', layer: 'data', role: roleOf(l) });
+        const cell = cellOf(catalog, l, r);
+        nodes.push({ key: ids[li] + ':' + k, part: 'rows', kind: 'text', row: k, text: cell.text,
+          anchor: l.align === 'end' ? 'end' : 'start', baseline: 'middle', font: cols.includes(l) ? 'value' : 'label', paint: cell.paint, layer: 'data', role: roleOf(l), ...rank(l) });
       } else {
         throw new Error('The "' + l.mark + '" mark has no rule for rows yet. Use bar or text.');
       }
@@ -498,6 +546,7 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
     if (p.guides.x) parts.push('x-axis');
     if (p.guides.ramp) parts.push('ramp');
   } else if (p.layout === 'rows') {
+    if (p.guides.columns) parts.push('columns');
     parts.push('rows');
     body = sceneRows(catalog, p.layers, result.rows.slice(0, p.rowLimit || result.rows.length));
   } else if (p.layout === 'band') {

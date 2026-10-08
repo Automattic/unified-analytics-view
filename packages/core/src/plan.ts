@@ -1,8 +1,8 @@
 import { CONTAINER_RULES, KEEP } from './container.ts';
 import { applies, ruleFor, type FitRule } from './fit.ts';
 import { PRESETS, expand } from './presets.ts';
-import { place } from './place.ts';
-import { buildScene, tldrValueText, isDim, roleOf, seriesOf, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
+import { COLUMNS_BLOCK, place } from './place.ts';
+import { buildScene, columnLabel, columnsOf, tldrValueText, isDim, roleOf, seriesOf, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
 import { gridProse, tldrProse } from './prose.ts';
 import type { Catalog, Container, Layer, Layout, Plan, PlanShape, PresetLibrary, Query, Reduction, ReductionId, Result, Role, PlacedScene, Spec } from './types.ts';
 
@@ -23,7 +23,7 @@ const LAYOUTS: [x: FieldKind, y: FieldKind, color: FieldKind, layout: Layout][] 
 /** A metric, or a companion the engine returns with one, such as "pageviews@density". */
 const isMetric = (catalog: Catalog, f: unknown): f is string => typeof f === 'string' && f.split('@')[0]! in catalog.metrics;
 /** Whether a plot sets one metric against another: a point for each row. It has a dimension to key its rows by, and none on x. */
-const isPoints = (catalog: Catalog, layers: Layer[]) => !xDimOf(catalog, layers) && layers.some((l) => isMetric(catalog, l.encode && l.encode.x));
+const isPoints = (catalog: Catalog, layers: Layer[]) => !xDimOf(catalog, layers) && !layers.some((l) => isDim(catalog, l.encode && l.encode.y)) && layers.some((l) => isMetric(catalog, l.encode && l.encode.x));
 
 function detectLayout(catalog: Catalog, layers: Layer[]): Layout {
   const is = (kind: FieldKind, f: unknown) => kind === 'any' || (kind === 'metric' ? isMetric(catalog, f) : isDim(catalog, f));
@@ -38,6 +38,8 @@ function checkLayers(layers: Layer[], q: Query, catalog: Catalog, result: Result
   if (by.length > 2 || (by.length === 2 && by[0] === by[1])) throw new Error('A view is by one dimension or by two different ones, and query.by has: ' + by.join(', ') + '. Remove all but two.');
   layers.forEach((l, i) => {
     if (!l || !l.mark) throw new Error('Layer ' + (i + 1) + ' has no "mark". Use one of: line, area, bar, rule, text, arc, cell, dot.');
+    if (l.series === 'delta' && !(l.mark === 'text' && isDim(catalog, l.encode && l.encode.y) && typeof (l.encode && l.encode.text) === 'string' && (l.encode!.text as string) in catalog.metrics))
+      throw new Error('Layer ' + (i + 1) + ' has series: "delta", which is a row\'s change in a metric. Make it a text layer with the dimension on y and the metric on text.');
     if (l.stack && !isDim(catalog, l.encode && l.encode.color)) throw new Error('Layer ' + (i + 1) + ' has "stack" and no dimension on color, so there is nothing to stack. Encode the query\'s second dimension on color, or remove "stack".');
     Object.entries(l.encode || {}).forEach(([ch, f]) => {
       if (typeof f === 'number') return;
@@ -64,9 +66,10 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   let layers = (spec.layers || []).slice();
   if (!layers.length && by) throw new Error('This spec has a dimension but no layers, so there is nothing to draw it with. Add "layers", or "use" one of: ' + Object.keys(presets).join(', ') + '.');
   checkLayers(layers, q, catalog, result);
-  if (layers.some((l) => l.series === 'previous') && (q.compare !== 'previous' || result.totals[m + '@previous'] == null)) {
-    layers = layers.filter((l) => l.series !== 'previous');
-    if (!result.meta.empty) dropped.push(q.compare === 'previous' ? 'comparison series (no prior data)' : 'comparison series (the query has no "compare")');
+  if (layers.some((l) => l.series) && (q.compare !== 'previous' || result.totals[m + '@previous'] == null)) {
+    const why = q.compare === 'previous' ? ' (no prior data)' : ' (the query has no "compare")';
+    if (!result.meta.empty) [['previous', 'comparison series'], ['delta', 'the change on the previous period']].forEach(([series, what]) => { if (layers.some((l) => l.series === series)) dropped.push(what + why); });
+    layers = layers.filter((l) => !l.series);
   }
   const share = layers.some((l) => l.stack === 'normalize' || l.mark === 'arc');
   // A plot of points has no sparkline form: two metrics need both their axes to be read. So it has no bare rung, and
@@ -79,7 +82,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   // A split plot starts with its legend. Its rules step that down to a label at the end of each line, where there
   // are lines, and then to nothing. They are asked once, of the view: unlike the reductions, they change no one else's room.
   const series = p.layout === 'cartesian' ? seriesOf(catalog, layers) : null;
-  const short = (id: string) => { const r = ruleFor(rules.fit, 'cartesian', id); return !!r && !(r.keep && keep.indexOf(r.keep) >= 0) && applies(r, { view: { inline: container.width, block: container.height } }); };
+  const short = (id: string, layout: Layout = 'cartesian') => { const r = ruleFor(rules.fit, layout, id); return !!r && !(r.keep && keep.indexOf(r.keep) >= 0) && applies(r, { view: { inline: container.width, block: container.height } }); };
   if (series) { if (!short('legend')) p.guides.legend = 'full'; else if (series.lines && !short('labels')) p.guides.legend = 'labels'; }
   // Layers that measure in two units have a y axis on each side, and the second is given up first.
   const twoUnits = p.layout === 'cartesian' && unitsOf(catalog, layers).length > 1;
@@ -98,6 +101,18 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
 
   const valueLen = tldrValueText(catalog, q, result, true).length;
   const rule = (id: string) => ruleFor(rules.fit, p.layout, id);
+  // A row short of room gives up its ranked columns from the right: every column of values but the first. The room they
+  // need is measured, so no rule can say it; the label's is the `marks` rule's. Headers stand over what is left, if that
+  // is more than one column, and are a guide the view gives up when it is short. Both are asked once, as the legend is.
+  if (p.layout === 'rows') {
+    const label = rule('marks')?.needs.inline ?? 0;
+    for (let cols = columnsOf(catalog, p.layers); cols.length > 1 && container.width < label + valueRoomOf(catalog, p.layers, result.rows); cols = columnsOf(catalog, p.layers)) {
+      const last = cols[cols.length - 1]!;
+      p.layers = p.layers.filter((l) => l !== last);
+      dropped.push('the "' + columnLabel(catalog, last) + '" column');
+    }
+    if (columnsOf(catalog, p.layers).length > 1 && !short('columns', 'rows')) p.guides.columns = true;
+  }
   // The view rule the layout stands on now, and the room beside its part that only measuring gives:
   // a number wider than the bare plot's rule allows it, or a row's widest value.
   function guard(): { rule?: FitRule; measured: number } {
@@ -153,7 +168,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
       if (p.layout !== 'rows' || container.height == null) return null;
       const n = result.rows.length, cur = p.rowLimit || n, rh = rules.rows.rowHeight + rules.rows.gap;
       const above = p.tldrValue ? alone({ ...p, layout: 'none', layers: [] }) + 16 : 0;
-      const k = Math.max(1, Math.floor((container.height - above + rules.rows.gap) / rh));
+      const k = Math.max(1, Math.floor((container.height - above - (p.guides.columns ? COLUMNS_BLOCK : 0) + rules.rows.gap) / rh));
       if (k >= cur) return null;
       p.rowLimit = k;
       return k + 1 === n ? 'row ' + n : 'rows ' + (k + 1) + ' to ' + n;
@@ -182,6 +197,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   if (p.layout === 'radial' && buildScene(p, q, result, catalog).parts.includes('hole') && !scene.nodes.some((n) => n.key === 'hole')) dropped.push('the number in the hole');
   if (p.layout === 'cartesian' && p.guides.x && labelled && !p.guides.pointLabels) dropped.push('the labels on the points');
   if (p.layout === 'cartesian' && p.guides.x && sized && !p.guides.size) dropped.push('the key to sizes');
+  if (p.layout === 'rows' && columnsOf(catalog, p.layers).length > 1 && !p.guides.columns) dropped.push('the column headers');
   const midTick = rule('mid-tick');
   if (p.layout === 'cartesian' && p.guides.x && midTick && applies(midTick, { view: { inline: container.width } }) && catalog.dimensions[xDimOf(catalog, p.layers)!]?.type === 'time') dropped.push('the middle date label');
 

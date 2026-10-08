@@ -40,6 +40,12 @@ const ourKeys = (scene0: any, layers: { role: string; mark: string }[]) => {
 /** The prototype's scene as plain data, its layer keys mapped to ours. */
 const protoScene = (plan0: any, q: Spec['query'], res0: unknown, host0: unknown) => ourKeys(plain(proto.buildScene(plan0, q, res0, host0)), plan0.layers);
 
+// The row node: a deliberate addition (chart-coverage-plan, step 2, part 6; feedback, rows, finding 5). A `rows` scene
+// holds a node per row, of kind `row`, for a painter to key. place() leaves it out, so no placed scene has one and the
+// sweep against the prototype does not meet it. The ratio scenes recorded before it are held to what they were by
+// leaving it out, here and nowhere else.
+const lessRows = <S extends { nodes: { kind: string }[] }>(scene: S): S => ({ ...scene, nodes: scene.nodes.filter((n) => n.kind !== 'row') });
+
 const trend = samples.trend!.spec;
 const specs: Record<string, Spec> = {
   ...Object.fromEntries(Object.entries(samples).map(([k, s]) => [k, s.spec])),
@@ -211,8 +217,8 @@ describe('fitting the container (reference section 10.1)', () => {
 describe('validation', () => {
   it('names the fix', () => {
     const err = (s: Spec) => { try { resolve(s, runQuery(s.query), makeContainer(346), catalog); } catch (e) { return (e as Error).message; } };
-    expect(err(invalid['unknown preset']!)).toBe('Unknown preset "treemap". The library has: line, bar-list, share-bar, grouped-bar, stacked-bar, stacked-area, pie, donut, pie-semi-circle, gauge, heatmap.');
-    expect(err(invalid['dimension, no layers']!)).toBe('This spec has a dimension but no layers, so there is nothing to draw it with. Add "layers", or "use" one of: line, bar-list, share-bar, grouped-bar, stacked-bar, stacked-area, pie, donut, pie-semi-circle, gauge, heatmap.');
+    expect(err(invalid['unknown preset']!)).toBe('Unknown preset "treemap". The library has: line, bar-list, share-bar, grouped-bar, stacked-bar, stacked-area, pie, donut, pie-semi-circle, gauge, heatmap, funnel.');
+    expect(err(invalid['dimension, no layers']!)).toBe('This spec has a dimension but no layers, so there is nothing to draw it with. Add "layers", or "use" one of: line, bar-list, share-bar, grouped-bar, stacked-bar, stacked-area, pie, donut, pie-semi-circle, gauge, heatmap, funnel.');
     expect(err(invalid['preset, no dimension']!)).toBe('The "line" preset needs a dimension in query.by.');
     expect(err({ query: { metrics: ['pageviews'], by: ['page'] }, layers: [{ mark: 'bar', encode: { y: 'page', x: 'visitors' } }] }))
       .toBe('Layer 1 encodes "visitors" on x, which the query does not return. It returns: page, pageviews.');
@@ -306,7 +312,13 @@ describe('the ratio scene (dom-painter-plan section 3)', () => {
       expect(scene.nodes.filter((n) => /^(legend|swatch|share):/.test(n.key)).length).toBe(part === 'legend' ? 18 : 1);
     }
   });
-  for (const name of Object.keys(samples)) it(`${name}, with no size`, () => expect(unbounded(specs[name]!).ratio).toMatchSnapshot());
+  for (const name of Object.keys(samples)) it(`${name}, with no size`, () => expect(lessRows(unbounded(specs[name]!).ratio)).toMatchSnapshot());
+  it('a `rows` scene has a node for each row, ahead of what is drawn in it, and place() leaves it out', () => {
+    const { ratio, scene } = run(specs.pages!, 346), mine = ratio.nodes.filter((n) => n.row === '/blog/launch-notes').map((n) => n.key);
+    expect(ratio.nodes.filter((n) => n.kind === 'row').map((n) => n.key)).toEqual(ratio.rows!.map((k) => 'row:' + k));
+    expect(mine).toEqual(['row:/blog/launch-notes', 'primary:bar:/blog/launch-notes', 'primary:text:/blog/launch-notes', 'primary:text#2:/blog/launch-notes']);
+    expect(scene.nodes.some((n) => n.key.startsWith('row:'))).toBe(false);
+  });
 });
 
 describe('layer keys: a deliberate departure from the prototype (feedback, decision 1 of October 7)', () => {
@@ -327,7 +339,7 @@ describe('layer keys: a deliberate departure from the prototype (feedback, decis
     const two: Spec = { query: trend.query, layers: [{ mark: 'line', encode: y, series: 'previous', role: 'primary' }, { mark: 'line', encode: y }, { mark: 'rule', encode: { y: 300 } }, { mark: 'rule', encode: { y: 400 } }] };
     expect(layerKeys(two)).toEqual(['primary:line#2', 'primary:line', 'reference:rule', 'reference:rule#2']);
     expect(layerKeys(two, 'no-prior')).toEqual(['primary:line', 'reference:rule', 'reference:rule#2']);
-    expect(run(specs.pages!, 346).ratio.nodes.filter((n) => n.row === '/').map((n) => n.key)).toEqual(['primary:bar:/', 'primary:text:/', 'primary:text#2:/']);
+    expect(lessRows(run(specs.pages!, 346).ratio).nodes.filter((n) => n.row === '/').map((n) => n.key)).toEqual(['primary:bar:/', 'primary:text:/', 'primary:text#2:/']);
   });
 });
 

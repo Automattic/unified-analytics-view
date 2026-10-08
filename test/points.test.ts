@@ -23,9 +23,9 @@ describe('the fixture engine', () => {
   it('has a rate page by page, which does not add up, and refuses it by anything else', () => {
     const { rows, totals } = runQuery(scatter!.query);
     expect(rows.length).toBe(8);
-    expect(rows[0]).toEqual({ page: '/', visitors: 2610, conversion_rate: 2.1 });
-    expect(totals).toEqual({ visitors: 10531, conversion_rate: 2.6 });
-    expect(() => runQuery({ metrics: ['conversion_rate'], by: ['date.day'] })).toThrow('The fixture has "conversion_rate" page by page, and not by anything else. Query it by page alone.');
+    expect(rows[0]).toEqual({ page: '/', visitors: 2610, page_conversion: 2.1 });
+    expect(totals).toEqual({ visitors: 10531, page_conversion: 2.6 });
+    expect(() => runQuery({ metrics: ['page_conversion'], by: ['date.day'] })).toThrow('The fixture has "page_conversion" page by page, and not by anything else. Query it by page alone.');
   });
   it('bins a numeric dimension itself: each row has its bin\'s two ends, in order, and the bins divide the total', () => {
     const { rows, totals } = runQuery(histogram!.query);
@@ -41,7 +41,7 @@ describe('the fixture engine', () => {
     const ajv = new Ajv();
     expect(ajv.validate(catalogSchema, catalog), JSON.stringify(ajv.errors)).toBe(true);
     for (const s of [scatter, bubble, quadrant, histogram, density]) expect(ajv.validate(viewSchema, s), JSON.stringify(ajv.errors)).toBe(true);
-    expect(ajv.validate(viewSchema, { ...scatter, layers: [{ mark: 'dot', encode: { x: 'visitors', y: 'conversion_rate', radius: 4 } }] })).toBe(false);
+    expect(ajv.validate(viewSchema, { ...scatter, layers: [{ mark: 'dot', encode: { x: 'visitors', y: 'page_conversion', radius: 4 } }] })).toBe(false);
   });
 });
 
@@ -122,8 +122,8 @@ describe('size', () => {
     expect((run(bubble!, 319).scene.nodes.find((n) => n.key === 'primary:dot:/') as any).r).toBe(12);
   });
   it('takes a metric, and the error names the fix', () => {
-    expect(err({ ...bubble!, layers: [{ mark: 'dot', encode: { x: 'visitors', y: 'conversion_rate', size: 'page' } }] }))
-      .toBe('Layer 1 encodes "page" on size, and a size is a quantity. Encode one of the query\'s metrics: visitors, conversion_rate, pageviews.');
+    expect(err({ ...bubble!, layers: [{ mark: 'dot', encode: { x: 'visitors', y: 'page_conversion', size: 'page' } }] }))
+      .toBe('Layer 1 encodes "page" on size, and a size is a quantity. Encode one of the query\'s metrics: visitors, page_conversion, pageviews.');
   });
 });
 
@@ -150,7 +150,7 @@ describe('text in the plot', () => {
     expect(at('primary:text:/about')).toMatchObject({ text: '/about', anchor: 'middle', x: at('primary:dot:/about').cx, y: at('primary:dot:/about').cy - 7 });
     expect(at('primary:text:/blog/analytics-without-cookies').text).toBe('/blog/analyti…');
     // The same pages with their points pulled together: the top label by rank stays, and what it covers goes.
-    const result = runQuery(scatter!.query), close = { ...result, rows: result.rows.map((r, i) => ({ ...r, visitors: 1200 + i * 30, conversion_rate: 3 + i * 0.05 })) };
+    const result = runQuery(scatter!.query), close = { ...result, rows: result.rows.map((r, i) => ({ ...r, visitors: 1200 + i * 30, page_conversion: 3 + i * 0.05 })) };
     const container = makeContainer(346), crowded = place(buildScene(resolve(scatter!, close, container, catalog), scatter!.query, close, catalog), container);
     const shown = crowded.nodes.filter((n) => n.key.startsWith('primary:text:')).map((n) => (n as any).text);
     expect(shown[shown.length - 1]).toBe('/contact');                               // the highest y, so the first in rank
@@ -167,8 +167,8 @@ describe('text in the plot', () => {
     expect(run(scatter!, 339).ratio.nodes.filter((n) => n.part === 'point-labels').length).toBe(8);
   });
   it('errors name the fix: a text layer with nothing to say', () => {
-    expect(err({ ...scatter!, layers: [{ mark: 'text', encode: { x: 'visitors', y: 'conversion_rate' } }] }))
-      .toBe('A "text" layer in a plot needs a field on y, for where each label sits, and one on text, for what it says: for example { "x": "visitors", "y": "conversion_rate", "text": "page" }.');
+    expect(err({ ...scatter!, layers: [{ mark: 'text', encode: { x: 'visitors', y: 'page_conversion' } }] }))
+      .toBe('A "text" layer in a plot needs a field on y, for where each label sits, and one on text, for what it says: for example { "x": "<a metric>", "y": "<a metric>", "text": "<the dimension>" }.');
   });
 });
 
@@ -234,7 +234,7 @@ describe('a numeric dimension', () => {
       .toBe('Layer 1 encodes "visitors@density" on y, which the query does not return. It returns: load_time, pageviews.');
     const result = runQuery(histogram!.query), raw = { ...result, rows: result.rows.map(({ 'load_time@end': _end, ...r }) => r) };
     expect(err(histogram!, raw)).toBe('Bars on the number dimension "load_time" need its bins, and this result has no "load_time@end". Return where each bin ends from the query layer, or use line or dot.');
-    expect(err({ ...scatter!, layers: [{ mark: 'bar', encode: { x: 'visitors', y: 'conversion_rate' } }] }))
+    expect(err({ ...scatter!, layers: [{ mark: 'bar', encode: { x: 'visitors', y: 'page_conversion' } }] }))
       .toBe('Layer 1 is a bar with the metric "visitors" on x, and a bar needs a dimension there to stand on. Use "dot" for a point at two metrics, or put a dimension on x.');
     expect(err({ query: { metrics: ['visitors', 'pageviews'] }, layers: [{ mark: 'dot', encode: { x: 'visitors', y: 'pageviews' } }] }))
       .toBe('These layers set one metric against another, and the query has no dimension, so there is no row to draw a point for. Add one to query.by, for example ["page"].');

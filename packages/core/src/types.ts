@@ -54,7 +54,8 @@ export type KeepPart = 'guides' | 'secondary' | 'rows' | 'marks';
 export interface Layer {
   mark: Mark;
   encode?: Partial<Record<Channel, string | number>>;
-  series?: 'previous';
+  /** `previous` draws the metric's comparison companion. On a `text` layer in rows, `delta` says the row's change on it instead, painted by the metric's polarity. */
+  series?: 'previous' | 'delta';
   role?: Role;
   /** On a layer split by `color`: each series starts where the one under it ends. `normalize` makes each a share of the whole,
    * and `center` sets each stack half on either side of zero. */
@@ -80,6 +81,8 @@ export interface Guides {
   pointLabels?: boolean;
   /** The key to the sizes of a plot's dots. */
   size?: boolean;
+  /** The headers over a row's columns, where it has more than one column of values. */
+  columns?: boolean;
 }
 export interface Spec {
   spec?: string;
@@ -145,7 +148,7 @@ export interface Plan extends PlanShape {
 /* Scene: a flat list of shapes with stable keys and paint tokens, in ratios.
  * Every node names its part, and its coordinates run 0 to 1 within that part's
  * box. A scene needs no size to exist. Pixel painters get theirs from place(). */
-export type Part = 'number' | 'plot' | 'x-axis' | 'y-axis' | 'y-axis-2' | 'labels' | 'rows' | 'band' | 'legend' | 'legend-top' | 'radial' | 'hole' | 'ramp' | 'notice'
+export type Part = 'number' | 'plot' | 'x-axis' | 'y-axis' | 'y-axis-2' | 'labels' | 'columns' | 'rows' | 'band' | 'legend' | 'legend-top' | 'radial' | 'hole' | 'ramp' | 'notice'
   /* `points` holds the dots of a plot that sets one metric against another, and `point-labels` the labels on a plot's
    * points. Both lie over the plot and share its box. `size` is the key to the sizes of its dots. */
   | 'points' | 'point-labels' | 'size';
@@ -164,8 +167,8 @@ interface NodeBase {
   opacity?: number;
   note?: string;
 }
-/** A bar in the plot (`x` and `w` across, and up the plot from `v0` to `v`), a row's bar (`v` across), a band segment (`v` is its share) or a legend swatch.
- * `v0` is absent where a bar starts at the bottom of the plot. A bar that hangs below its start has `v` under `v0`. */
+/** A bar in the plot (`x` and `w` across, and up the plot from `v0` to `v`), a row's bar (across its track from `v0` to `v`), a band segment (`v` is its share) or a legend swatch.
+ * `v0` is absent where a bar starts at the bottom of the plot, or at the start of the track. A bar that hangs below its start has `v` under `v0`. */
 export interface RectNode extends NodeBase {
   kind: 'rect'; x?: number; w?: number; v?: number; v0?: number;
   /** A cell of a grid: `y` and `h` down the plot from its top, as `x` and `w` run across it. */
@@ -188,8 +191,12 @@ export interface PathNode extends NodeBase {
 export interface LineNode extends NodeBase { kind: 'line'; t: number; x?: number; x2?: number; t2?: number; width?: number; dash?: string }
 /** The pulse beside the number, or a dot at `x` and `t`: in `plot` on a time or category axis, and in `points` where x is a metric too. `size` is a step from 1 up, not a radius: how big a step is, in pixels, is the painter's. */
 export interface CircleNode extends NodeBase { kind: 'circle'; pulse: boolean; x?: number; t?: number; size?: number }
+/** One row of the `rows` part: the thing a painter keys and a reader chooses. It draws nothing itself, and place() leaves it out. */
+export interface RowNode extends NodeBase { kind: 'row'; row: string }
 /** Text in the number, rows, legend and notice parts is set in order and carries no position. In `labels` it sits beside the plot at height `t`.
- * In `point-labels` it sits on the point at `x` and `t`, and its `rank` is its place among them, the largest point first. */
+ * In `point-labels` it sits on the point at `x` and `t`, and its `rank` is its place among them, the largest point first.
+ * In `rows`, text in the `value` face is a column: the first has no `rank`, and each one after it has its place among them as its rank,
+ * so the last is given up first. A header in `columns` has the rank of the column it is over. */
 export interface TextNode extends NodeBase {
   kind: 'text';
   text: string;
@@ -206,7 +213,7 @@ export interface TextNode extends NodeBase {
  * left of it. `r0` and `r1` are ratios of the part's radius. `d` is drawn about the origin at a radius of 50, so the
  * part's box runs from -50 to 50: `arcD(node)`. A painter with a size draws `arcD(node, radius)`. */
 export interface ArcNode extends NodeBase { kind: 'arc'; a0: number; a1: number; r0: number; r1: number; d: string }
-export type SceneNode = RectNode | PathNode | LineNode | CircleNode | TextNode | ArcNode;
+export type SceneNode = RectNode | PathNode | LineNode | CircleNode | TextNode | ArcNode | RowNode;
 export interface Scene {
   layout: Layout;
   /** The parts the plan shows. The number's nodes are in the scene either way, so a fit rule can show it in compensation.

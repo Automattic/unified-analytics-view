@@ -153,7 +153,7 @@ export interface PathNode extends NodeBase {
   width?: number;
   dash?: string | null;
 }
-/** A line across the plot at height `t`. */
+/** A line across the plot at height `t`. The one at zero is painted `axis`, and sits above the bottom of the plot where values go below zero. */
 export interface LineNode extends NodeBase { kind: 'line'; t: number; width?: number; dash?: string }
 export interface CircleNode extends NodeBase { kind: 'circle'; pulse: boolean }
 /** Text in the number, rows, legend and notice parts is set in order and carries no position. In `labels` it sits beside the plot at height `t`. */

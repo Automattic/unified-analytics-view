@@ -40,9 +40,9 @@ describe('the sweep, for what the prototype does not know', () => {
     it(name + ': resolves in every data state, and steps down to the number and then the prose', () => {
       expect(view(spec), JSON.stringify(view.errors)).toBe(true);
       for (const sc of scenarios) {
-        const layouts = [346, 250, 120, 54].map((w) => run(spec, w, null, sc).plan.layout);
-        // With no data the number is "0", which is narrow enough to stay.
-        expect(layouts, sc).toEqual(sc === 'empty' ? ['notice', 'notice', 'none', 'none'] : ['cartesian', 'cartesian', 'none', 'prose']);
+        // 10 px is narrower than any number, "0" included.
+        const layouts = [346, 250, 120, 10].map((w) => run(spec, w, null, sc).plan.layout);
+        expect(layouts, sc).toEqual(sc === 'empty' ? ['notice', 'notice', 'none', 'prose'] : ['cartesian', 'cartesian', 'none', 'prose']);
         expect(run(spec, 250, null, sc).plan.dropped[0], sc).toBe(sc === 'empty' ? undefined : 'axes and grid (added the number to make up for them)');
         expect(run(spec, 700, null, sc).plan.dropped, sc).toEqual([]);
       }
@@ -250,5 +250,41 @@ describe('stacking, and bars side by side', () => {
     const shares = as('normalize'), result = { ...runQuery(shares.query), totalsBy: undefined };
     expect(() => resolve(shares, result, makeContainer(346), catalog)).toThrow('stack: "normalize" divides by the engine\'s total for each "date.day", and this result has no totalsBy. Return it from the query layer, or use stack: "zero".');
     expect(view({ ...stacked, layers: [{ ...stacked.layers![0]!, stack: 'pile' }] })).toBe(false);
+  });
+});
+
+describe('a signed domain', () => {
+  const diverging = specs.diverging!, at = (w: number) => run(diverging, w);
+  it('the fixture has days below zero', () => {
+    const { rows, totals } = runQuery(diverging.query), below = rows.filter((r) => (r.net_subscribers as number) < 0);
+    expect([rows.length, below.length, totals.net_subscribers]).toEqual([28, 8, 180]);
+    expect(() => runQuery({ metrics: ['net_subscribers'], by: ['page'] })).toThrow('The fixture has "net_subscribers" by day, channel or device, and not page by page. Query it by one of those.');
+  });
+  it('the scale covers what is below zero, and the axis line sits at zero', () => {
+    const { ratio, scene, result } = at(346), ticks = ratio.nodes.filter((n) => n.part === 'y-axis') as { text: string; t: number }[];
+    expect(ticks.map((n) => n.text)).toEqual(['-20', '-10', '0', '10', '20']);
+    const zero = ticks.find((n) => n.text === '0')!.t, axis = ratio.nodes.filter((n) => n.paint === 'axis');
+    expect(zero).toBe(0.5);
+    expect(axis.map((n) => [n.key, (n as { t: number }).t])).toEqual([['grid:0', zero]]);
+    // Every bar starts at zero. One for a day below it hangs down from there.
+    const bars = ratio.nodes.filter((n) => n.kind === 'rect') as { row: string; v: number; v0: number }[];
+    expect(bars.every((n) => n.v0 === zero)).toBe(true);
+    for (const r of result.rows) expect(bars.find((n) => n.row === r['date.day'])!.v < zero, String(r['date.day'])).toBe((r.net_subscribers as number) < 0);
+    // In pixels the zero line is half way up a plot that runs from 162 to 10, and bars meet it from either side.
+    const y0 = 162 - zero * 152, placed = scene.nodes.filter((n) => n.kind === 'rect') as { key: string; y: number; h: number }[];
+    expect((scene.nodes.find((n) => n.key === 'grid:0') as { y1: number }).y1).toBeCloseTo(y0, 9);
+    for (const r of result.rows) {
+      const px = placed.find((n) => n.key === 'primary:bar:' + r['date.day'])!, n = r.net_subscribers as number;
+      expect(n < 0 ? px.y : px.y + px.h, px.key).toBeCloseTo(y0, 9);
+      expect(px.h, px.key).toBeCloseTo(Math.abs(n) / 40 * 152, 9);
+    }
+  });
+  it('an area fills to zero, and a scale of nothing but values below zero ends there', () => {
+    const area = run({ ...diverging, layers: [{ mark: 'area', encode: diverging.layers![0]!.encode }] }, 346).ratio.nodes.find((n) => n.kind === 'path')!;
+    expect(new Set(area.points.map((p) => p.v0))).toEqual(new Set([0.5]));
+    const result = runQuery(diverging.query), down = { ...result, rows: result.rows.map((r) => ({ ...r, net_subscribers: -Math.abs(r.net_subscribers as number) - 1 })) };
+    const ratio = buildScene(resolve(diverging, down, makeContainer(346), catalog), diverging.query, down, catalog);
+    expect((ratio.nodes.filter((n) => n.part === 'y-axis') as { text: string }[]).map((n) => n.text).pop()).toBe('0');
+    expect((ratio.nodes.filter((n) => n.kind === 'rect') as { v0: number }[]).every((n) => n.v0 === 1)).toBe(true);
   });
 });

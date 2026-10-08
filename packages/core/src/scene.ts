@@ -1,4 +1,4 @@
-import { max } from 'd3-array';
+import { max, min } from 'd3-array';
 import { scaleBand, scaleLinear, scalePoint } from 'd3-scale';
 import { CHAR_W, delta, fmt, fmtDay, fmtPct } from './format.ts';
 import { pathD } from './path.ts';
@@ -140,12 +140,15 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   layers.forEach((l, i) => {
     const y = l.encode && l.encode.y;
     if (typeof y === 'number') yVals.push(y);
-    else spans[i]!.forEach(([, hi]) => yVals.push(hi));
+    else spans[i]!.forEach((ends) => yVals.push(...ends));
   });
-  // Always rounded to 4 ticks: a scene with no size cannot pick a tick count by height. Shares run to the whole.
-  const y = scaleLinear().domain([0, share ? 1 : max(yVals) || 1]);
+  // The scale holds zero and whatever is on either side of it, so a mark below zero hangs from the zero line and not
+  // from the bottom of the plot. Always rounded to 4 ticks: a scene with no size cannot pick a tick count by height.
+  // Shares run to the whole.
+  const lo = Math.min(0, min(yVals) ?? 0), hi = share ? 1 : Math.max(0, max(yVals) ?? 0) || (lo ? 0 : 1);
+  const y = scaleLinear().domain([lo, hi]);
   if (guides.y) y.nice(4);
-  const top = y.domain()[1]!, v = (n: number) => n / top;
+  const [bottom, top] = y.domain() as [number, number], v = (n: number) => (n - bottom) / (top - bottom);
   const unit = xScale(keys, scale, 0, 1);
 
   const coarse = y.ticks(2);

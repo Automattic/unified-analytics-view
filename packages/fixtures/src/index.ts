@@ -7,6 +7,7 @@ export const catalog: Catalog = {
     visitors:  { label: 'Visitors',    unit: 'count', polarity: 'up',   rangeTotal: 'sum of daily' },
     pageviews: { label: 'Page views',  unit: 'count', polarity: 'up',   rangeTotal: 'sum' },
     present:   { label: 'Present now', unit: 'count', polarity: 'none', instant: true },
+    net_subscribers: { label: 'Net subscribers', unit: 'count', polarity: 'up', rangeTotal: 'sum' },
   },
   dimensions: {
     'date.day': { label: 'Day',     type: 'time' },
@@ -25,9 +26,12 @@ function seeded(seed: number) {
   };
 }
 type Counts = { visitors: number; pageviews: number };
+/** What a day has and a page does not: sign-ups less cancellations, which falls below zero. */
+type Daily = Counts & { net_subscribers: number };
 const DAY = 86400000, TODAY = Date.UTC(2026, 9, 5);
 const DAILY = (function () {
-  const rand = seeded(11);
+  // The first is the prototype's, drawn from in its order. What the prototype does not know draws from the second.
+  const rand = seeded(11), more = seeded(23);
   return Array.from({ length: 56 }, function (_, i) {
     const t = TODAY - (55 - i) * DAY, dow = new Date(t).getUTCDay();
     const season = [0.72, 1.06, 1.12, 1.1, 1.04, 0.96, 0.7][dow]!;
@@ -36,7 +40,8 @@ const DAILY = (function () {
     let pageviews = Math.round(visitors * (2.1 + rand() * 0.5));
     const partial = i === 55;
     if (partial) { visitors = Math.round(visitors * 0.42); pageviews = Math.round(pageviews * 0.42); }
-    return { iso: new Date(t).toISOString().slice(0, 10), visitors, pageviews, partial };
+    const net_subscribers = Math.round((more() - 0.45) * 40 * (partial ? 0.42 : 1));
+    return { iso: new Date(t).toISOString().slice(0, 10), visitors, pageviews, net_subscribers, partial };
   });
 })();
 const PAGES: (Counts & { page: string; prev: Counts | null })[] = [
@@ -58,6 +63,7 @@ const LIVE = [{ page: '/', present: 3 }, { page: '/pricing', present: 2 }, { pag
 export type Scenario = 'typical' | 'no-prior' | 'empty';
 export const scenarios: Scenario[] = ['typical', 'no-prior', 'empty'];
 type M = keyof Counts;
+type D = keyof Daily;
 
 /** `total` divided among weights in whole numbers that add up to it: the largest remainders take what rounding down leaves. */
 function apportion(total: number, weights: number[]): number[] {
@@ -88,7 +94,7 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
     meta.range = 'now';
     return { rows: by ? LIVE.map((d) => ({ ...d })) : [], totals, meta };
   }
-  const sum = (ds: Counts[], m: string) => ds.reduce((s, d) => s + d[m as M], 0);
+  const sum = (ds: Daily[], m: string) => ds.reduce((s, d) => s + d[m as D], 0);
   // A shorter range is the last days of the same series, and a mix of its own. 28 days is the fixture as it always was.
   const days = Math.min(28, parseInt(q.range || '') || 28), mix = seeded(days), vary = () => (days === 28 ? 1 : 0.5 + mix());
   const cur = DAILY.slice(56 - days), prev = DAILY.slice(56 - 2 * days, 56 - days);
@@ -100,9 +106,11 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
   function rowsBy(dim: string): Row[] {
     if (dim === 'date.day') return cur.map((d, i) => {
       const r: Row = { 'date.day': d.iso, partial: d.partial };
-      metrics.forEach((m) => { r[m] = d[m as M]; if (wantPrev) r[m + '@previous'] = hasPrev ? prev[i]![m as M] : null; });
+      metrics.forEach((m) => { r[m] = d[m as D]; if (wantPrev) r[m + '@previous'] = hasPrev ? prev[i]![m as D] : null; });
       return r;
     });
+    const perPage = metrics.find((m) => !(m in PAGES[0]!));
+    if (dim === 'page' && perPage) throw new Error('The fixture has "' + perPage + '" by day, channel or device, and not page by page. Query it by one of those.');
     if (dim === 'page') return PAGES.map((p) => {
       const r: Row = { page: p.page };
       metrics.forEach((m) => { r[m] = Math.round(p[m as M] * days / 28 * vary()); if (wantPrev) r[m + '@previous'] = hasPrev && p.prev ? p.prev[m as M] : null; });
@@ -166,6 +174,8 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
             layers: [{ mark: 'bar', encode: { x: 'date.day', y: 'visitors', color: 'device' }, stack: 'zero' }] } },
   grouped: { label: 'Grouped bars: channels by device', spec: { spec: 'view/0', title: 'Channels by device', query: { metrics: ['visitors'], by: ['channel', 'device'], range: '28d' },
             layers: [{ mark: 'bar', encode: { x: 'channel', y: 'visitors', color: 'device' } }] } },
+  diverging: { label: 'Diverging bars: net subscribers by day', spec: { spec: 'view/0', title: 'Net subscribers', query: { metrics: ['net_subscribers'], by: ['date.day'], range: '28d' },
+            layers: [{ mark: 'bar', encode: { x: 'date.day', y: 'net_subscribers' } }] } },
   area:    { label: 'Stacked areas: page views by day and channel', spec: { spec: 'view/0', title: 'Page views by channel', query: { metrics: ['pageviews'], by: ['date.day', 'channel'], range: '28d' },
             layers: [{ mark: 'area', encode: { x: 'date.day', y: 'pageviews', color: 'channel' }, stack: 'zero' }] } },
 };

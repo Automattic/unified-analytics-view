@@ -181,4 +181,8 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
   dual:    { label: 'Two units: visitors and revenue by day', spec: { spec: 'view/0', title: 'Visitors and revenue', query: { metrics: ['visitors', 'revenue'], by: ['date.day'], range: '28d' },
             layers: [{ mark: 'bar', encode: { x: 'date.day', y: 'visitors' } }, { mark: 'line', encode: { x: 'date.day', y: 'revenue' }, paint: 'series.2' }] } },
   area:    { label: 'Stacked areas: page views by day and channel', spec: { spec: 'view/0', title: 'Page views by channel', use: 'stacked-area', query: { metrics: ['pageviews'], by: ['date.day', 'channel'], range: '28d' } } },
+  donut:   { label: 'A donut: device share', spec: { spec: 'view/0', title: 'Devices', use: 'donut', query: { metrics: ['visitors'], by: ['device'], range: '28d' } } },
+  pie:     { label: 'A pie: channel mix', spec: { spec: 'view/0', title: 'Channels', use: 'pie', query: { metrics: ['visitors'], by: ['channel'], range: '28d' } } },
+  half:    { label: 'A half circle: page views by device', spec: { spec: 'view/0', title: 'Page views by device', use: 'pie-semi-circle', query: { metrics: ['pageviews'], by: ['device'], range: '28d' } } },
+  gauge:   { label: 'A gauge: sign-ups against a target', spec: { spec: 'view/0', title: 'Sign-ups', use: 'gauge', query: { metrics: ['signups'], range: '28d' } } },
 };

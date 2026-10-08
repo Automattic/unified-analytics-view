@@ -16,7 +16,8 @@ const run = (spec: Spec, w: number, h: number | null = null, scenario: (typeof s
 const err = (s: Spec, q = s.query) => { try { resolve(s, runQuery(q), makeContainer(346), catalog); } catch (e) { return (e as Error).message; } };
 const view = new Ajv().compile(viewSchema);
 
-const specs = Object.fromEntries(Object.entries(moreSamples).map(([k, s]) => [k, s.spec]));
+// The plots among them. A layout of its own has a suite of its own: test/radial.test.ts.
+const specs = Object.fromEntries(Object.entries(moreSamples).map(([k, s]) => [k, s.spec] as const).filter(([, s]) => run(s, 700).plan.layout === 'cartesian'));
 const painters: PainterName[] = ['svg', 'dots'];
 const heights = [null, 300, 160, 100, 60, 40];
 const widths = [54, 80, 120, 170, 250, 290, 346, 500, 700];

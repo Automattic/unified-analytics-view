@@ -16,7 +16,7 @@ const of = (sample: string, scenario: Scenario = 'typical', range = '28d') => {
   const spec = { ...moreSamples[sample]!.spec, query: { ...moreSamples[sample]!.spec.query, range } }, result = runQuery(spec.query, scenario);
   return { spec, result, scene: buildScene(resolve(spec, result, unboundedContainer(), catalog), spec.query, result, catalog) };
 };
-const names = Object.keys(moreSamples);
+const names = Object.keys(moreSamples).filter((k) => of(k).scene.layout === 'cartesian');   // the split plots; other layouts have their own tests
 
 describe('bars', () => {
   it('run from where they start to their value, whichever is the higher', () => {

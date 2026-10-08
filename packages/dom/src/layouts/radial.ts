@@ -1,5 +1,6 @@
 import { arcD, type ArcNode } from '@universal-analytics/core';
 import { ensure, keyed, paintVar, prop, text } from '../dom.ts';
+import { token } from '../tokens.ts';
 import type { LayoutPainter } from '../layout.ts';
 import { paintLegend } from './band.ts';
 
@@ -14,10 +15,10 @@ const css = `
 .uav-radial { position: relative; flex: none; align-self: center; inline-size: min(100%, 160px); aspect-ratio: var(--uav-aspect, 1); container: uav-plot / inline-size; }
 .uav-radial svg { display: block; inline-size: 100%; block-size: 100%; overflow: visible; }
 .uav-radial path { fill: var(--uav-paint); }
-.uav-radial path[data-active] { stroke: ${paintVar('ink')}; stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.uav-radial path[data-active] { stroke: ${paintVar('ink')}; stroke-width: ${token('stroke-width-active')}; vector-effect: non-scaling-stroke; }
 .uav-hole { position: absolute; inset: 0; display: none; place-items: center; overflow: hidden; pointer-events: none; color: var(--uav-paint); }
 /* The small face of the number, and smaller with the circle: there is no measuring the hole from a stylesheet. */
-.uav-hole.uav-f-display { font-size: clamp(14px, 18cqi, 26px); line-height: 0.92; }
+.uav-hole.uav-f-display { font-size: clamp(14px, 18cqi, var(--uav-font-display-small)); line-height: 0.92; }
 .uav-radial[data-half] .uav-hole { place-items: end center; }
 .uav[data-layout="radial"][data-parts~="hole"] .uav-hole { display: grid; }
 /* The plan names one legend, as it does for a band, or neither. */
@@ -25,10 +26,10 @@ const css = `
 .uav[data-layout="radial"][data-parts~="legend-top"] .uav-legend-top { display: block; }
 /* In a box the part gives way to the height, down to nothing, and its width follows; it is no taller than the body's
  * width allows its shape, which cqi is here, the part being a container itself. The legends swap as a band's do:
- * the full one needs the least circle of 64 px, 10 px and 24 px a row less the last gap. Under the one-line legend's
+ * the full one needs the least circle of 64 px, 10 px and a line and its 4 px gap for each row, less the last gap. Under the one-line legend's
  * need the \`legend-top\` rule takes both away. */
 @container uav-view (block-size >= 0px) {
-  .uav[data-layout="radial"] .uav-body { container-type: size; overflow: hidden; --uav-legend-block: calc(70px + var(--uav-rows, 1) * 24px); }
+  .uav[data-layout="radial"] .uav-body { container-type: size; overflow: hidden; --uav-legend-block: calc(70px + var(--uav-rows, 1) * (var(--uav-legend-line) + 4px)); }
   .uav[data-layout="radial"] .uav-radial { flex: 0 1 calc(160px / var(--uav-aspect, 1)); min-block-size: 0; max-block-size: calc(100cqi / var(--uav-aspect, 1)); inline-size: auto; max-inline-size: 100%; }
   .uav[data-layout="radial"] :is(.uav-legend, .uav-legend-top) { flex: none; }
   .uav[data-layout="radial"]:not([data-keep~="guides"]) .uav-legend { overflow: hidden; max-block-size: max(0px, (100cqb - var(--uav-legend-block) + 0.01px) * 999999);

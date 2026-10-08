@@ -1,5 +1,6 @@
 import type { CircleNode, LineNode } from '@universal-analytics/core';
 import { attr, prop } from '../dom.ts';
+import { token } from '../tokens.ts';
 
 /* What a row's track gains with a rule, a tick and a dot, and with a bar that has two ends. It is the rows layout's,
  * kept in a file of its own: rows.ts adds TRACK_CSS to its own, and calls trackMark for a mark that is not a bar.
@@ -19,7 +20,7 @@ export const TRACK_CSS = `
 .uav-body[data-track] .uav-row > i[data-mark] { border-radius: 0; inset-inline-start: ${at('min(var(--uav-x), var(--uav-x2))')}; }
 /* ponytail: physical translate, as a plot's dots have, so not right for right-to-left. */
 .uav-body[data-track] .uav-row > i[data-mark="rule"] { inset-block: calc(50% - 0.5px); inline-size: max(1px, calc(max(var(--uav-x2) - var(--uav-x), var(--uav-x) - var(--uav-x2)) * ${along})); }
-.uav-body[data-track] .uav-row > i[data-mark="tick"] { inset-block: 0; inline-size: var(--uav-stroke, 1px); translate: -50%; }
+.uav-body[data-track] .uav-row > i[data-mark="tick"] { inset-block: 0; inline-size: var(--uav-stroke, ${token('stroke-width-rule')}); translate: -50%; }
 .uav-body[data-track] .uav-row > i[data-mark="dot"] { inset-block: calc(50% - 3px); inline-size: 6px; border-radius: 50%; translate: -50%; }`;
 
 export const TRACK_FIT: Record<string, Record<string, string>> = {

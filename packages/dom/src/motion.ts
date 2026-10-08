@@ -1,4 +1,5 @@
 import { pathD, type PathNode } from '@universal-analytics/core';
+import { FACES, token } from './tokens.ts';
 
 /* Motion: what a data change animates. A resize animates nothing, because nothing here runs on one and a ratio
  * does not change with the room.
@@ -12,26 +13,29 @@ import { pathD, type PathNode } from '@universal-analytics/core';
  * What takes room in the flow (the number's lines, a row, a legend entry) leaves at once. So nothing kept for a
  * fade can change a size the measured pass reads. */
 
-const TOKEN = (kind: string, duration: string, easing: string) =>
-  `var(--ua-charts-motion-duration-${kind}, ${duration}) var(--ua-charts-motion-easing-${kind}, ${easing})`;
-const UPDATE = TOKEN('update', '300ms', 'cubic-bezier(0.4, 0, 0.2, 1)'), EXIT = TOKEN('exit', '150ms', 'cubic-bezier(0.4, 0, 1, 1)');
+const TOKEN = (kind: string) => token('motion-duration-' + kind) + ' ' + token('motion-easing-' + kind);
+const UPDATE = TOKEN('update'), EXIT = TOKEN('exit');
 /** The ratios, and `--uav-p`, which a path's morph is timed by. */
 const MOVED = ['--uav-x', '--uav-w', '--uav-v', '--uav-v0', '--uav-t', '--uav-p', '--uav-x2', '--uav-t2'];
 
 let registered = false;
 /** Register them as numbers, which is what lets them animate. `@property` is ignored in a shadow root, so this is
- * on the document, which is why they carry a prefix. Where it fails, values still apply and nothing moves. */
+ * on the document, which is why they carry a prefix. Where it fails, values still apply and nothing moves.
+ * The faces are registered with them, as lengths that inherit: a face is then worked out where it is set, against
+ * the view, and handed down as a size (view.ts). Where that fails each part works the token out for itself. */
 export function register(): void {
-  registered = MOVED.every((name) => {
-    try { CSS.registerProperty({ name, syntax: '<number>', inherits: false, initialValue: '0' }); return true; }
+  const add = (name: string, syntax: string, inherits: boolean, initialValue: string) => {
+    try { CSS.registerProperty({ name, syntax, inherits, initialValue }); return true; }
     catch (e) { return (e as Error).name === 'InvalidModificationError'; }           // registered already
-  });
+  };
+  registered = MOVED.every((name) => add(name, '<number>', false, '0'));
+  for (const face of FACES) add('--uav-font-' + face, '<length>', true, '0px');
 }
 
 /** It joins the base sheet inside `@layer uav`. With reduced motion none of it applies, so nothing moves. */
 export const MOTION_CSS = `
 @media (prefers-reduced-motion: no-preference) {
-  .uav[data-moving] [data-key] { transition: ${MOVED.map((p) => p + ' ' + UPDATE).join(', ')}, opacity ${TOKEN('entrance', '200ms', 'cubic-bezier(0, 0, 0.2, 1)')}; }
+  .uav[data-moving] [data-key] { transition: ${MOVED.map((p) => p + ' ' + UPDATE).join(', ')}, opacity ${TOKEN('entrance')}; }
   /* Inline values are the end state, so the start has to outrank them. A bar grows from where it starts, a segment from nothing. */
   @starting-style {
     .uav[data-moving] [data-key] { opacity: 0 !important; }

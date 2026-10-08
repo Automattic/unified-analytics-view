@@ -6,6 +6,7 @@ import { KEYS_CSS, Keys, companions } from './keys.ts';
 import { LAYOUTS } from './layouts/index.ts';
 import { NUMBER_FITS, fitNumber, readNumber } from './measure.ts';
 import { MOTION_CSS, begin, register, settle } from './motion.ts';
+import { FACES, token } from './tokens.ts';
 
 /* <ua-view>: one view, in whatever room it is handed. It plans once per data change, for a container with no
  * limits, builds the ratio scene and paints it. The stylesheet fits it. On resize only the measured pass runs
@@ -18,20 +19,28 @@ const painters = Object.values(LAYOUTS);
 
 /* Everything the element owns, in one layer, so a compiled fit rule beats it whatever the specificity. */
 export const BASE_CSS = `@layer uav {
-:host { display: block; container: uav-view / inline-size; font-size: 11px; line-height: 1.3; text-align: start; text-indent: 0; color: ${paintVar('ink')}; }
+:host { display: block; container: uav-view / inline-size; line-height: 1.3; text-align: start; text-indent: 0; color: ${paintVar('ink')}; }
 :host([hidden]), [hidden] { display: none !important; }
+/* The faces, worked out here and nowhere else. A page's type tokens may be fluid, in cqi, and these are the view's
+ * children: the view is their container, so a face is one size across the whole of it. Read inside the plot, which
+ * is a container itself, the same token would give another. They are registered as lengths (motion.ts), which is what
+ * makes each a size here and not a formula handed down. Where that fails a part reads the token for itself.
+ * What follows from a face is written from it: a line of the legend, and the x axis, are as tall as their text needs. */
+.uav, .uav-ruler, .uav-error { ${FACES.map((f) => `--uav-font-${f}: ${token('font-size-' + f)};`).join(' ')} font-size: var(--uav-font-tick);
+  --uav-legend-line: calc(var(--uav-font-label) * 20 / 13); --uav-x-axis-block: calc(5px + var(--uav-font-tick) * 17 / 11); }
 .uav { position: relative; box-sizing: border-box; block-size: 100%; margin: 0; display: grid; grid-template: "number" auto "body" minmax(0, 1fr) / minmax(0, 1fr); print-color-adjust: exact; }
 /* A bar, a segment, a swatch and a rule are backgrounds. A printer leaves those out unless told, and forced colours
  * repaint them as the page, so both are told to leave a mark its paint. */
 .uav-body i, .uav-pulse { forced-color-adjust: none; }
 .uav-prose { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .uav-body { grid-area: body; box-sizing: border-box; min-inline-size: 0; block-size: var(--uav-body-block, auto); }
-.uav-error { margin: 0; font-size: 13px; overflow-wrap: anywhere; color: ${paintVar('delta.bad')}; }
+.uav-error { margin: 0; font-size: var(--uav-font-label); overflow-wrap: anywhere; color: ${paintVar('delta.bad')}; }
 
-.uav-f-tick { font-size: 11px; }
-.uav-f-label { font-size: 13px; }
-.uav-f-value { font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; }
-.uav-f-display { font-size: 37px; line-height: 34px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+/* A line's height is a ratio of its face, so it follows a face that a token has moved. */
+.uav-f-tick { font-size: var(--uav-font-tick); }
+.uav-f-label { font-size: var(--uav-font-label); }
+.uav-f-value { font-size: var(--uav-font-value); font-weight: ${token('font-weight-value')}; font-variant-numeric: tabular-nums; }
+.uav-f-display { font-size: var(--uav-font-display); line-height: calc(34 / 37); font-weight: ${token('font-weight-display')}; font-variant-numeric: tabular-nums; letter-spacing: ${token('letter-spacing-display')}; }
 
 /* The number: a value, then a delta and a note, each on its own line. It is in every scene and shows when the
  * plan names it or a fit rule brings it in. */
@@ -40,21 +49,21 @@ export const BASE_CSS = `@layer uav {
 .uav[data-parts~="number"]:not([data-layout="none"]) .uav-number { margin-block-end: 16px; }
 .uav-number > * { color: var(--uav-paint); }
 .uav-number > b { display: inline-block; vertical-align: middle; }
-.uav-number > span { display: block; line-height: 18px; overflow: hidden; text-overflow: ellipsis; }
-.uav-number > .uav-f-tick { line-height: 16px; }
+.uav-number > span { display: block; line-height: calc(18 / 13); overflow: hidden; text-overflow: ellipsis; }
+.uav-number > .uav-f-tick { line-height: calc(16 / 11); }
 .uav-pulse { display: inline-block; vertical-align: middle; inline-size: 10px; block-size: 10px; margin-inline: 2px 8px; border-radius: 50%; background: var(--uav-paint); }
 .uav-short { display: none; }
 /* What the measured pass found, as data-fit on the number: its size, its forms, and whether its note fits. */
 .uav-number[data-fit~="short"] > .uav-f-display > .uav-full, .uav-number[data-fit~="delta-short"] > .uav-f-value > .uav-full { display: none; }
 .uav-number[data-fit~="short"] > .uav-f-display > .uav-short, .uav-number[data-fit~="delta-short"] > .uav-f-value > .uav-short { display: inline; }
-.uav-number[data-fit~="small"] > .uav-f-display { font-size: 26px; line-height: 24px; }
+.uav-number[data-fit~="small"] > .uav-f-display { font-size: var(--uav-font-display-small); line-height: calc(24 / 26); }
 .uav-number[data-fit~="no-note"] > .uav-f-tick { display: none; }
 /* A number the pass has not set carries no data-fit: one beside a bare plot, which its layout sets, or any number
  * where the pass does not run. For that one the widths at which place() takes the shorter forms stand in. */
 @container uav-view (inline-size < 200px) { .uav-number:not([data-fit]) > .uav-f-value > .uav-full { display: none; } .uav-number:not([data-fit]) > .uav-f-value > .uav-short { display: inline; } }
 @container uav-view (inline-size < 160px) {
   .uav-number:not([data-fit]) > .uav-f-display > .uav-full { display: none; } .uav-number:not([data-fit]) > .uav-f-display > .uav-short { display: inline; }
-  .uav-number:not([data-fit]) > .uav-f-display { font-size: 26px; line-height: 24px; }
+  .uav-number:not([data-fit]) > .uav-f-display { font-size: var(--uav-font-display-small); line-height: calc(24 / 26); }
 }
 @container uav-view (inline-size < 120px) { .uav-number:not([data-fit]) > .uav-f-tick { display: none; } }
 
@@ -77,12 +86,12 @@ ${KEYS_CSS}
 
 /* The prose alone: the last rung, set by the plan or, when the number itself does not fit, by the measured pass. */
 .uav:is([data-layout="prose"], [data-fit="prose"]) > :not(.uav-prose, .uav-room) { display: none !important; }
-.uav:is([data-layout="prose"], [data-fit="prose"]) > .uav-prose { position: static; inline-size: auto; block-size: auto; clip-path: none; white-space: normal; font-size: 13px; }
+.uav:is([data-layout="prose"], [data-fit="prose"]) > .uav-prose { position: static; inline-size: auto; block-size: auto; clip-path: none; white-space: normal; font-size: var(--uav-font-label); }
 
 /* The same result as a table, in place of the marks. The switch is public: the surface that offers it is outside the shadow root. */
-.uav-table { display: none; inline-size: 100%; border-collapse: collapse; font-size: 11px; font-variant-numeric: tabular-nums; }
+.uav-table { display: none; inline-size: 100%; border-collapse: collapse; font-size: var(--uav-font-tick); font-variant-numeric: tabular-nums; }
 .uav-table :is(th, td) { padding: 2px 8px 2px 0; text-align: start; font-weight: 400; border-block-end: 1px solid ${paintVar('grid')}; }
-.uav-table :is(thead th, tfoot td, tfoot th) { font-weight: 600; }
+.uav-table :is(thead th, tfoot td, tfoot th) { font-weight: ${token('font-weight-heading')}; }
 .uav-table [data-num] { text-align: end; padding-inline: 8px 0; }
 :host([table]) .uav > :not(.uav-table, .uav-prose, .uav-room) { display: none !important; }
 :host([table]) .uav { display: block; overflow: auto; }

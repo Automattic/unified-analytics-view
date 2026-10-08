@@ -1,5 +1,6 @@
 import { formatDimension, formatValue, type RectNode, type Row, type TextNode } from '@universal-analytics/core';
 import { attr, ensure, keyed, paintVar, prop, text } from '../dom.ts';
+import { token } from '../tokens.ts';
 import { readout } from '../keys.ts';
 import type { LayoutPainter } from '../layout.ts';
 import { thin } from '../measure.ts';
@@ -21,10 +22,10 @@ const css = `
 .uav-cells { position: absolute; inset: 0; display: grid; gap: 1px; grid-template: repeat(var(--uav-ny), minmax(0, 1fr)) / repeat(var(--uav-nx), minmax(0, 1fr)); }
 .uav-cells:focus-visible { outline-offset: 2px; }
 .uav-cells > div { display: contents; }
-.uav-cells i { grid-area: var(--uav-cy) / var(--uav-cx); background: var(--uav-paint); border-radius: 1px; }
-.uav-cells [data-active] { z-index: 1; outline: 2px solid ${paintVar('ink')}; outline-offset: 1px; }
+.uav-cells i { grid-area: var(--uav-cy) / var(--uav-cx); background: var(--uav-paint); border-radius: ${token('border-radius-cell')}; }
+.uav-cells [data-active] { z-index: 1; outline: ${token('stroke-width-active')} solid ${paintVar('ink')}; outline-offset: 1px; }
 .uav-ramp { grid-area: ramp; display: flex; align-items: center; gap: 1px; block-size: 24px; overflow: hidden; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.uav-ramp i { flex: none; inline-size: 14px; block-size: 10px; border-radius: 1px; background: var(--uav-paint); }
+.uav-ramp i { flex: none; inline-size: 14px; block-size: 10px; border-radius: ${token('border-radius-cell')}; background: var(--uav-paint); }
 .uav-ramp span { color: var(--uav-paint); margin-inline: 5px; }
 .uav-ramp span:first-child { margin-inline-start: 0; }
 .uav-ramp [data-key="ramp:none"] { margin-inline-start: 5px; }`;

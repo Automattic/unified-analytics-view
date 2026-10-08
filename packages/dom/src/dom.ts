@@ -1,29 +1,20 @@
 import type { SceneNode, TextNode } from '@universal-analytics/core';
 import { leave } from './motion.ts';
+import { token } from './tokens.ts';
 
 /* How the painter touches the document. Everything goes through the object model, as a strict content
  * security policy asks: createElement, never innerHTML; style.setProperty, never a style attribute in markup. */
 const SVG = 'http://www.w3.org/2000/svg';
 
-/* Paint tokens under the @automattic/charts names, with our prefix for its `--a8c-charts-` (docs/dom-painter-plan.md, 4.1). A page that sets none of them
- * still gets a legible view: the fallbacks are system colours, so they follow light and dark. */
-const PAINT: Record<string, [name: string, fallback: string]> = {
-  ink: ['label', 'CanvasText'],
-  'ink.muted': ['label-secondary', 'GrayText'],
-  grid: ['grid', 'color-mix(in srgb, currentColor 15%, transparent)'],
-  axis: ['axis-x', 'GrayText'],
-  rule: ['annotation', 'currentColor'],
-  compare: ['comparison', 'GrayText'],
-  'delta.good': ['delta-good', 'var(--ua-charts-color-trend-up, currentColor)'],
-  'delta.bad': ['delta-bad', 'var(--ua-charts-color-trend-down, currentColor)'],
-  delta: ['trend-neutral', 'GrayText'],
-  live: ['live', 'currentColor'],
+/* A scene's paint tokens, as the public tokens they read (tokens.ts). */
+const PAINT: Record<string, string> = {
+  ink: 'label', 'ink.muted': 'label-secondary', grid: 'grid', axis: 'axis-x', rule: 'annotation', compare: 'comparison',
+  'delta.good': 'delta-good', 'delta.bad': 'delta-bad', delta: 'trend-neutral', live: 'live',
 };
 /** The custom property a paint token reads. A token the table does not know maps by name: `series.2` is `--ua-charts-color-series-2`. */
-export function paintVar(token: string): string {
+export function paintVar(paint: string): string {
   // A spec can name its own paint, so the name is reduced to what a custom property may hold.
-  const [name, fallback] = Object.hasOwn(PAINT, token) ? PAINT[token]! : [String(token).replace(/[^\w-]/g, '-'), 'currentColor'];
-  return 'var(--ua-charts-color-' + name + ', ' + fallback + ')';
+  return Object.hasOwn(PAINT, paint) ? token('color-' + PAINT[paint]) : token('color-' + String(paint).replace(/[^\w-]/g, '-'), 'currentColor');
 }
 
 /** The child of `parent` with this class, made on first use. Children stay in the order they were first asked for. */

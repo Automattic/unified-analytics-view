@@ -1,29 +1,31 @@
 import type { RectNode, Scene, TextNode } from '@universal-analytics/core';
 import { ensure, keyed, prop, text } from '../dom.ts';
+import { token } from '../tokens.ts';
 import { NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
 
 /* One band, split by colour, and its legend. Segments are flex items that grow by their share, so the band needs no
  * width. The scene holds both legends: the full one is a grid of swatch, label and share, the one-line one a line of
- * text. The stylesheet shows one of them. Sizes are the pixel painter's: a 24 px bar and 24 px to a legend row. */
+ * text. The stylesheet shows one of them. Sizes are the pixel painter's: a 24 px bar and 24 px to a legend row, of which
+ * 20 are the line's where a label is 13 px. The line follows the label's face from there (--uav-legend-line, view.ts). */
 const css = `
 .uav-band { display: flex; gap: 2px; block-size: 24px; }
-.uav-band i { flex: var(--uav-v) 1 0px; min-inline-size: 0; background: var(--uav-paint); border-radius: var(--ua-charts-border-radius-bar, 2px); }
-.uav-legend { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; grid-auto-rows: 20px; gap: 4px 8px; align-items: center; margin-block-start: 10px; }
-.uav-legend i { grid-column: 1; block-size: 12px; border-radius: 2px; background: var(--uav-paint); }
+.uav-band i { flex: var(--uav-v) 1 0px; min-inline-size: 0; background: var(--uav-paint); border-radius: ${token('border-radius-bar')}; }
+.uav-legend { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; grid-auto-rows: var(--uav-legend-line); gap: 4px 8px; align-items: center; margin-block-start: 10px; }
+.uav-legend i { grid-column: 1; block-size: 12px; border-radius: ${token('border-radius-swatch')}; background: var(--uav-paint); }
 .uav-legend span, .uav-legend-top span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--uav-paint); }
 .uav-legend .uav-f-label { grid-column: 2; }
 .uav-legend .uav-f-value { grid-column: 3; justify-self: end; }
 .uav-legend-top { display: none; }
-.uav-legend-top span { display: block; padding-block-start: 3px; line-height: 21px; }
+.uav-legend-top span { display: block; padding-block-start: 3px; line-height: calc(21 / 13); }
 /* The plan names one legend, and with no limits it is the full one. */
 .uav[data-layout="band"]:not([data-parts~="legend"]) .uav-legend { display: none; }
 .uav[data-layout="band"][data-parts~="legend-top"] .uav-legend-top { display: block; }
 /* In a box the body is a size container, so cqb is the room the band and its legend have. The full legend needs the
- * bar, 10 px and 24 px a row less the last gap: a height that depends on the data, which a container query cannot
+ * bar, 10 px and a line and its 4 px gap for each row, less the last gap: a height that depends on the data, which a container query cannot
  * hold, so paint() states the row count and a clamp does the swap. The legend that goes gives up its gap as well, or
  * the one-line legend would stand 10 px low and be cut. A box too short for either clips. */
 @container uav-view (block-size >= 0px) {
-  .uav[data-layout="band"] .uav-body { container-type: size; overflow: hidden; --uav-legend-block: calc(30px + var(--uav-rows, 1) * 24px); }
+  .uav[data-layout="band"] .uav-body { container-type: size; overflow: hidden; --uav-legend-block: calc(30px + var(--uav-rows, 1) * (var(--uav-legend-line) + 4px)); }
   .uav[data-layout="band"]:not([data-keep~="guides"]) .uav-legend { overflow: hidden; max-block-size: max(0px, (100cqb - var(--uav-legend-block) + 0.01px) * 999999);
     margin-block-start: clamp(0px, (100cqb - var(--uav-legend-block) + 0.01px) * 999999, 10px); }
   .uav[data-layout="band"]:not([data-keep~="guides"]) .uav-legend-top { display: block; overflow: hidden; max-block-size: max(0px, (var(--uav-legend-block) - 100cqb) * 999999); }

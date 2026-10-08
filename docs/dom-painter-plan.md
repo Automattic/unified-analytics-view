@@ -170,6 +170,15 @@ Names on the right were read from `src/styles/chart-scope.scss` on Jetpack trunk
 | tooltip | `--ua-charts-color-tooltip-surface` | |
 | bar corner | `--ua-charts-border-radius-bar` | |
 | entrance motion | `--ua-charts-motion-duration-entrance`, `-motion-easing-entrance` | Update and exit motion tokens are new |
+| cell corner | `--ua-charts-border-radius-cell` | Theirs. A grid's cells and the swatches of its ramp |
+| swatch and readout corners | `--ua-charts-border-radius-swatch`, `-border-radius-tooltip` | **New** |
+| strokes | `--ua-charts-stroke-width-line`, `-rule`, `-active` | **New.** A line whose layer gives no width, a rule or grid line, and the outline of a chosen mark |
+| type faces | `--ua-charts-font-size-tick`, `-label`, `-value`, `-display`, `-display-small` | **New.** Each may be fluid, in `cqi`: the element works a face out once, against the view's width, so it is one size in every part |
+| weights and tracking | `--ua-charts-font-weight-value`, `-display`, `-heading`, `--ua-charts-letter-spacing-display` | **New** |
+
+The list the element reads from, with the value each token falls back to, is `packages/dom/src/tokens.ts`. `packages/tokens` declares the same names as its charts tier (`config/charts.tokens.json`), and `test/dom-tokens.test.ts` holds the two together: the tier declares every token the element reads and none it cannot.
+
+**Structure is not a token.** Gaps, gutters and the heights of rows, bars and axes are what the fit rules' needs are worked out from, so a theme that moved them would move what fits. What follows from a face is written from it instead: a line of a legend and the height of the x axis are ratios of the face they hold, so they follow a token that moves it. The fit rules' needs are still px, written for the faces at their least: every need across is under 380 px, where the fluid scale has hardly begun to climb, and ticks and labels are the two steps of it that hardly move at all (11.06 to 11.11 px, 12.4 to 13.3 px). The number is the face that grows, and it is measured.
 
 ### 4.2 Surface layouts
 

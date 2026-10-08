@@ -1,5 +1,6 @@
 import { formatDimension, formatValue, partialNote, type Catalog, type Layer, type Query, type RectNode, type Result, type Row, type Scene } from '@universal-analytics/core';
 import { attr, ensure, paintVar } from './dom.ts';
+import { token } from './tokens.ts';
 import { nearest } from './layouts/points.ts';
 
 /* Hit targets, the keyboard and the readout. A layout marks the element that holds its points with `data-hits`
@@ -96,9 +97,9 @@ export function hitNodes(scene: Scene): (RectNode & { c: number })[] {
  * holds a view may clip at its edge. */
 export const KEYS_CSS = `
 [data-hits]:focus-visible { outline-offset: -2px; }
-.uav-readout { position: absolute; z-index: 1; left: 0; top: 0; box-sizing: border-box; inline-size: max-content; max-inline-size: 100%; padding: 2px 6px; border-radius: 2px;
-  pointer-events: none; font-size: 11px; font-variant-numeric: tabular-nums;
-  color: var(--ua-charts-color-label-inverse, Canvas); background: var(--ua-charts-color-tooltip-surface, CanvasText); }
+.uav-readout { position: absolute; z-index: 1; left: 0; top: 0; box-sizing: border-box; inline-size: max-content; max-inline-size: 100%; padding: 2px 6px; border-radius: ${token('border-radius-tooltip')};
+  pointer-events: none; font-size: var(--uav-font-tick); font-variant-numeric: tabular-nums;
+  color: ${token('color-label-inverse')}; background: ${token('color-tooltip-surface')}; }
 .uav-hits { position: absolute; inset: 0; }
 .uav-body[data-scale="point"] .uav-hits { inset-inline: 2px; }
 .uav-hits i { position: absolute; inset-block: 0; inset-inline-start: calc(var(--uav-x) * 100%); inline-size: calc(var(--uav-w) * 100%); }
@@ -108,7 +109,7 @@ export const KEYS_CSS = `
 .uav[data-moving] .uav-plot .uav-hits [data-exit] { --uav-leaving: initial; transition: none; }
 .uav-hits [data-active]::before { content: ""; position: absolute; inset-block: 0; inset-inline-start: calc(var(--uav-c) * 100% - 0.5px); inline-size: 1px; background: var(--uav-paint); }
 .uav-row[data-active] { outline: 1px solid ${paintVar('rule')}; outline-offset: -1px; }
-.uav-band [data-active] { outline: 2px solid ${paintVar('ink')}; outline-offset: 1px; }
+.uav-band [data-active] { outline: ${token('stroke-width-active')} solid ${paintVar('ink')}; outline-offset: 1px; }
 .uav-legend span[data-active] { text-decoration: underline; }
 /* A series chosen at a point: the rest of the plot stands back, and its name is marked wherever it is written. */
 .uav-plot:has([data-chosen]) :is(.uav-bars i, path):not([data-chosen]) { opacity: 0.3 !important; }

@@ -1,3 +1,4 @@
 import { defineConfig } from 'vite';
 
-export default defineConfig({ build: { rollupOptions: { input: ['index.html', 'demo.html', 'marks.html', 'sidebar.html', 'tokens.html', 'spike.html'] } } });
+// The port is 5173 unless the launcher hands one over: a second session's bench takes the next free one.
+export default defineConfig({ server: { port: Number(process.env.PORT) || 5173 }, build: { rollupOptions: { input: ['index.html', 'demo.html', 'marks.html', 'sidebar.html', 'tokens.html', 'spike.html'] } } });

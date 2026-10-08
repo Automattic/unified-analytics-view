@@ -28,7 +28,7 @@ const css = `
 :is(.vg-row, .vg-columns) > span:not(.vg-f-label) { grid-column: var(--vg-col); }
 :is(.vg-row, .vg-columns) > [data-anchor="end"] { text-align: end; }
 :is(.vg-row, .vg-columns) > [data-rank] { max-inline-size: max(0px, ${short}); padding-inline: min(8px, max(0px, ${short})); }
-@container view (block-size >= 0px) {
+@container vg-view (block-size >= 0px) {
   .vg-rows { max-block-size: calc(round(down, 100% + var(--vg-row-gap), var(--vg-row-block) + var(--vg-row-gap)) - var(--vg-row-gap)); }
 }`;
 

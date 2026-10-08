@@ -54,7 +54,7 @@ describe('a metric on x', () => {
     const ticks = ratio.nodes.filter((n) => n.part === 'x-axis') as any[];
     expect(ticks.map((n) => [n.key, n.text, n.x, n.anchor, n.rank])).toEqual([
       ['xtick:0', '0', 0, 'start', undefined], ['xtick:1000', '1k', 1 / 3, 'middle', 1], ['xtick:2000', '2k', 2 / 3, 'middle', 1], ['xtick:3000', '3k', 1, 'end', undefined]]);
-    expect(texts(ratio, 'y-axis')).toEqual(['0', '2', '4', '6']);
+    expect(texts(ratio, 'y-axis')).toEqual(['0%', '2%', '4%', '6%']);
   });
   it('place() gives up the ranked x ticks where the middle date goes', () => {
     const at = (w: number) => run(scatter!, w).scene.nodes.filter((n) => n.key.startsWith('xtick:')).map((n) => (n as any).text);
@@ -187,7 +187,7 @@ describe('a rule at a constant on x', () => {
     const far: Spec = { ...quadrant!, layers: [{ mark: 'rule', encode: { x: 5000 } }, { mark: 'rule', encode: { y: 9 } }, quadrant!.layers![2]!] };
     const { ratio } = run(far, 700);
     expect(texts(ratio, 'x-axis').pop()).toBe('5k');
-    expect(texts(ratio, 'y-axis').pop()).toBe('10');
+    expect(texts(ratio, 'y-axis').pop()).toBe('10%');
   });
   it('errors name the fix: no scale on x to measure along, and a rule at no number', () => {
     const byDay = { metrics: ['visitors'], by: ['date.day'] };
@@ -244,7 +244,7 @@ describe('a numeric dimension', () => {
 describe('tldr prose', () => {
   const text = (spec: Spec, sc?: (typeof scenarios)[number]) => run(spec, 346, null, sc).plan.text;
   it('for two metrics set against each other: the range of each, and the point furthest out on each by name', () => {
-    expect(text(scatter!)).toBe('Across 8 pages in the last 28 days, the range of visitors is 244 to 2,610 and of conversion rate is 0.9 to 5.8. / is highest on visitors and /pricing on conversion rate.');
+    expect(text(scatter!)).toBe('Across 8 pages in the last 28 days, the range of visitors is 244 to 2,610 and of conversion rate is 0.9% to 5.8%. / is highest on visitors and /pricing on conversion rate.');
     expect(text(bubble!)).toBe(text(scatter!));
     expect(text(scatter!, 'empty')).toBe('No visitors recorded in the last 28 days.');
     const flipped: Spec = { ...scatter!, query: { ...scatter!.query, metrics: ['visitors', 'pageviews'] }, layers: [{ mark: 'dot', encode: { x: 'visitors', y: 'pageviews' } }] };

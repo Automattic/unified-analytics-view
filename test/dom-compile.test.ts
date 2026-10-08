@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { CONTAINER_RULES, FIT_RULES, type FitRule, type Spec } from '@universal-analytics/core';
 import { compileFitRules } from '@universal-analytics/dom';
 import { catalog, runQuery, samples } from '@universal-analytics/fixtures';
-import { check, rulesOver } from '../packages/dom/src/view.ts';
+import { GEO_RULES } from '@universal-analytics/geo';
+import { geoPainter } from '@universal-analytics/geo/dom';
+import { LAYOUTS } from '../packages/dom/src/layouts/index.ts';
+import { BASE_CSS, FALLBACK_CSS, check, rulesOver } from '../packages/dom/src/view.ts';
 
 // The compiler is string work, so it is held here with no DOM. What the browser makes of the CSS is checked on the bench.
 const only = (layout: string, id: string) => FIT_RULES.filter((r) => r.layout === layout && r.id === id);
@@ -12,13 +15,13 @@ describe('compileFitRules', () => {
     const css = compileFitRules(only('cartesian', 'axes'));
     expect(css).toBe([
       '/* cartesian axes */',
-      '@container view (inline-size < 279.5px) {',
+      '@container vg-view (inline-size < 279.5px) {',
       '  .vg[data-layout="cartesian"]:not([data-keep~="guides"]) :is(.vg-x-axis, .vg-y-axis, .vg-grid) { display: none; }',
       '  .vg[data-layout="cartesian"]:not([data-keep~="guides"]) .vg-number { display: block; }',
       '  .vg[data-layout="cartesian"]:not([data-keep~="guides"]) { --vg-arrange: side; }',
       '}',
       '/* cartesian axes */',
-      '@container view (block-size < 119.5px) {',
+      '@container vg-view (block-size < 119.5px) {',
       '  .vg[data-layout="cartesian"]:not([data-keep~="guides"]) :is(.vg-x-axis, .vg-y-axis, .vg-grid) { display: none; }',
       '  .vg[data-layout="cartesian"]:not([data-keep~="guides"]) .vg-number { display: block; }',
       '  .vg[data-layout="cartesian"]:not([data-keep~="guides"]) { --vg-arrange: side; }',
@@ -29,29 +32,40 @@ describe('compileFitRules', () => {
 
   it('maps roles to data-role, on the plot container', () => {
     expect(compileFitRules(only('cartesian', 'secondary'))).toContain(
-      '@container plot (block-size < 89.5px) {\n  .vg[data-layout="cartesian"]:not([data-keep~="secondary"]) :is([data-role="comparison"], [data-role="reference"], [data-role="context"]) { display: none; }\n}');
+      '@container vg-plot (block-size < 89.5px) {\n  .vg[data-layout="cartesian"]:not([data-keep~="secondary"]) :is([data-role="comparison"], [data-role="reference"], [data-role="context"]) { display: none; }\n}');
   });
 
   it('maps the middle tick to the ranked x label, and a rule with no keep to a bare figure', () => {
     expect(compileFitRules(only('cartesian', 'mid-tick'))).toBe(
-      '/* cartesian mid-tick */\n@container view (inline-size < 379.5px) {\n  .vg[data-layout="cartesian"] .vg-x-axis [data-rank] { display: none; }\n}');
+      '/* cartesian mid-tick */\n@container vg-view (inline-size < 379.5px) {\n  .vg[data-layout="cartesian"] .vg-x-axis [data-rank] { display: none; }\n}');
   });
 
   it('writes a set with nothing hidden, as the band legend has', () => {
     expect(compileFitRules(only('band', 'legend'))).toBe(
-      '/* band legend */\n@container view (inline-size < 169.5px) {\n  .vg[data-layout="band"]:not([data-keep~="guides"]) { --vg-legend: top; }\n}');
+      '/* band legend */\n@container vg-view (inline-size < 169.5px) {\n  .vg[data-layout="band"]:not([data-keep~="guides"]) { --vg-legend: top; }\n}');
   });
 
   it('adds what a layout says changes with a rule, under the same condition and keep', () => {
     const css = compileFitRules(only('cartesian', 'marks'), { cartesian: { marks: { '': 'grid-template: none;', '.vg-body': 'display: none;' } } });
     const fig = '.vg[data-layout="cartesian"]:not([data-keep~="marks"])';
     expect(css.split('\n').slice(0, 6)).toEqual([
-      '/* cartesian marks */', '@container view (inline-size < 151.5px) {',
+      '/* cartesian marks */', '@container vg-view (inline-size < 151.5px) {',
       '  ' + fig + ' .vg-plot { display: none; }', '  ' + fig + ' .vg-number { display: block; }',
       '  ' + fig + ' { grid-template: none; }', '  ' + fig + ' .vg-body { display: none; }',
     ]);
   });
 
+  // A page may name a container of its own "view" or "plot". Ours are `vg-view` and `vg-plot`, so its does not answer our queries.
+  it('names its containers vg-view and vg-plot wherever one is declared or queried', () => {
+    const painters = [...Object.values(LAYOUTS).filter((p) => p.layout !== 'geo'), geoPainter];
+    const compiled = compileFitRules([...FIT_RULES, ...GEO_RULES, ...painters.flatMap((p) => (p === geoPainter ? [] : p.rules?.(CONTAINER_RULES) ?? []))], Object.fromEntries(painters.map((p) => [p.layout, p.fit ?? {}])));
+    const css = [BASE_CSS, FALLBACK_CSS, ...painters.map((p) => p.css), compiled].join('\n');
+    expect(css).toContain(':host { display: block; container: vg-view / inline-size;');
+    expect(css).toContain('container: vg-plot / size;');
+    expect(compiled).toContain('@container vg-plot (');
+    expect(css.match(/@container (?!vg-(view|plot) \()[^{]*/g)).toBeNull();
+    expect(css.match(/container(-name)?:\s*(?!\s|vg-(view|plot)\b)[^;]*/g)).toBeNull();
+  });
   it('handles every default rule, in order, one block per need', () => {
     const css = compileFitRules(FIT_RULES);
     const needs = FIT_RULES.reduce((n, r) => n + Object.keys(r.needs).length, 0);

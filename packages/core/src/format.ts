@@ -1,8 +1,10 @@
-import type { DimensionDef, MetricDef, Polarity, Row } from './types.ts';
+import type { DimensionDef, MetricDef, Polarity, Row, Unit } from './types.ts';
 
 const NF = new Intl.NumberFormat('en-US');
 const CF = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
-const DF = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+const DF = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });                    // Sep 8
+const HF = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', timeZone: 'UTC' });   // Sep 8, 3 PM
+const RN = new Intl.DisplayNames('en-US', { type: 'region' });                                                        // US: United States
 export const CHAR_W = 6.6; // rough advance of the 13px label face, for clipping
 
 export function fmt(v: number | null | undefined, compact?: boolean): string {
@@ -10,32 +12,74 @@ export function fmt(v: number | null | undefined, compact?: boolean): string {
   return compact || Math.abs(v) >= 10000 ? CF.format(v).replace('K', 'k') : NF.format(v);
 }
 export function fmtPct(p: number): string {
-  const x = p * 100;
-  return (x >= 10 ? Math.round(x) : Math.round(x * 10) / 10) + '%';
+  return pct(p * 100);
 }
-/** A length of time in seconds, in its two largest parts: "48s", "3m 48s", "1h 5m". A part that is nothing is left out. */
-export function fmtDuration(seconds: number): string {
-  const n = Math.round(Math.abs(seconds)), parts = [[Math.floor(n / 3600), 'h'], [Math.floor(n % 3600 / 60), 'm'], [n % 60, 's']].filter(([x]) => x);
-  return (seconds < 0 && n ? '-' : '') + (parts.slice(0, 2).map(([x, u]) => x + '' + u).join(' ') || '0s');
+/** A bucket of time, always in UTC: a bare date, "2026-09-08", or a full ISO datetime, "2026-09-08T15:00:00.000Z". A
+ * datetime with no offset is read as UTC too, never as local time. One that starts on the hour of a day reads "Sep 8, 3 PM".
+ * ponytail: the grain is read from the value, since neither the catalog nor the result states it. So the midnight bucket
+ * of an hourly result reads "Sep 8", as a day does. When the result says its grain, branch on that here. */
+export function fmtTime(iso: string): string {
+  const t = new Date(/T[\d:.]+$/.test(iso) ? iso + 'Z' : iso);
+  return isNaN(+t) ? String(t) : (+t % 86400000 ? HF : DF).format(t);     // "Invalid Date", as toLocaleDateString says it
 }
-// One formatter for every call: a readout and a table row each ask for a day, and toLocaleDateString builds its own each time.
-export function fmtDay(iso: string): string {
-  const day = new Date(iso + 'T00:00:00Z');
-  return isNaN(+day) ? String(day) : DF.format(day);                    // "Invalid Date", as toLocaleDateString says it
+// Percent points, as a rate is said: whole from ten, a decimal under it. Exact keeps two.
+const pct = (x: number, exact?: boolean) => (exact ? +x.toFixed(2) : x >= 10 ? Math.round(x) : Math.round(x * 10) / 10) + '%';
+// Money is in its currency's own units, dollars and not cents, and its unit is the currency's ISO 4217 code in lower case.
+// One set of formatters a currency, made when first asked for: $1,234.50, then $49 and $49.50, then $63.5K.
+const CURRENCIES = new Set(Intl.supportedValuesOf('currency').map((c) => c.toLowerCase()));
+const MONEY = new Map<string, [Intl.NumberFormat, Intl.NumberFormat, Intl.NumberFormat]>();
+function money(v: number, unit: string, form?: 'compact' | 'exact'): string {
+  const cur = { style: 'currency', currency: unit.toUpperCase() } as const;
+  if (!MONEY.has(unit)) MONEY.set(unit, [new Intl.NumberFormat('en-US', cur),
+    new Intl.NumberFormat('en-US', { ...cur, trailingZeroDisplay: 'stripIfInteger' } as Intl.NumberFormatOptions),         // ES2023, so not in this target's types
+    new Intl.NumberFormat('en-US', { ...cur, notation: 'compact', maximumFractionDigits: 1 })]);
+  const [full, whole, short] = MONEY.get(unit)!;
+  return form === 'exact' ? full.format(v) : form === 'compact' || Math.abs(v) >= 10000 ? short.format(v).replace('K', 'k') : whole.format(v);
 }
-/** A metric's value as its catalog entry sets it. With no form it is what a readout says: whole under ten thousand,
- * "10.5k" from there. `compact` is always the short form, and `exact` never is: a table cell, where the digits matter.
- * A `ratio` is a share of a whole and reads as a percentage in every form, and `seconds` is a length of time and reads
- * as one: "3m 48s".
- * ponytail: every other unit is set as a count, `usd` and `ms` too. A new unit gets its branch here. */
-export function formatValue(v: number | null | undefined, metric: Pick<MetricDef, 'unit'>, form?: 'compact' | 'exact'): string {
-  if (metric.unit === 'ratio' && v != null) return fmtPct(v);
-  if (metric.unit === 'seconds' && v != null) return fmtDuration(v);
-  return form === 'exact' && v != null ? NF.format(v) : fmt(v, form === 'compact');
+const two = (n: number) => String(n).padStart(2, '0');
+// A length of time, from milliseconds, in the largest terms that read: "340ms", "1.2s", "2m 05s", "1h 05m".
+function duration(ms: number): string {
+  const sign = ms < 0 ? '-' : '', a = Math.abs(ms), s = a / 1000, t = Math.round(s);
+  if (a < 999.5) return sign + +a.toFixed(a < 10 ? 1 : 0) + 'ms';
+  if (s < 59.95) return sign + +s.toFixed(1) + 's';
+  return sign + (t < 3600 ? Math.floor(t / 60) + 'm ' + two(t % 60) + 's' : Math.floor(t / 3600) + 'h ' + two(Math.floor((t % 3600) / 60)) + 'm');
 }
-/** A dimension's value as its catalog entry sets it: a day as "Sep 8", a category as itself. */
+const BYTES = ['B', 'kB', 'MB', 'GB', 'TB', 'PB'];
+// Bytes in steps of a thousand, as the SI prefixes mean: "1.2 MB".
+function bytes(v: number): string {
+  let a = Math.abs(v), i = 0;
+  while (a >= 999.95 && i < BYTES.length - 1) { a /= 1000; i++; }
+  return (v < 0 ? '-' : '') + +a.toFixed(i ? 1 : 0) + ' ' + BYTES[i];
+}
+/** The units a catalog may give a metric, beside a currency's code. The `Unit` type, the catalog schema's enum and `formatUnit` are kept in step: a new unit is added to all three. */
+export const UNITS: Unit[] = ['count', 'ratio', 'percent', 'ms', 's', 'bytes'];
+/** A value in a unit, where there is a unit and no one metric to hand: a tick on a scale that several metrics share. */
+export function formatUnit(v: number | null | undefined, unit: string, form?: 'compact' | 'exact'): string {
+  if (v == null) return '–';
+  const exact = form === 'exact';
+  switch (unit) {
+    case 'count': return exact ? NF.format(v) : fmt(v, form === 'compact');
+    case 'ratio': return pct(v * 100, exact);                             // a rate from 0 to 1
+    case 'percent': return pct(v, exact);                                 // percent points already, 0 to 100
+    case 'ms': return exact ? NF.format(v) + ' ms' : duration(v);
+    case 's': return exact ? NF.format(v) + ' s' : duration(v * 1000);
+    case 'bytes': return exact ? NF.format(v) + ' B' : bytes(v);
+  }
+  if (CURRENCIES.has(unit)) return money(v, unit, form);
+  throw new Error('The unit "' + unit + '" has no format. Give the metric one of ' + UNITS.join(', ') + ' in the catalog, or a currency\'s ISO 4217 code in lower case ("usd"), or add a branch for it to formatUnit in packages/core/src/format.ts.');
+}
+/** A metric's value as its catalog entry sets it: in its unit. With no form it is what a readout says: a count whole
+ * under ten thousand and "10.5k" from there, money as "$49.50" and "$63.5k" in its own currency, a rate as "12%", a time as "340ms" or
+ * "2m 05s", bytes as "1.2 MB". `compact` is always the short form, and `exact` never is: a table cell, where the digits matter. */
+export function formatValue(v: number | null | undefined, metric: MetricDef, form?: 'compact' | 'exact'): string {
+  return formatUnit(v, metric.unit, form);
+}
+/** A dimension's value as its catalog entry sets it: a day as "Sep 8", an hour as "Sep 8, 3 PM", a country's code as its
+ * name, a category as itself. A code the engine left empty is no value, and one that is not a code is said as it came. */
 export function formatDimension(v: Row[string], dim: DimensionDef): string {
-  return v == null ? '–' : dim.type === 'time' ? fmtDay(String(v)) : String(v);
+  if (v == null || (dim.values && v === '')) return '–';
+  if (dim.values === 'country') return /^[A-Z]{2}$/.test(String(v)) ? RN.of(String(v)) ?? String(v) : String(v);
+  return dim.type === 'time' ? fmtTime(String(v)) : String(v);
 }
 export function rangeLabel(r: string | null | undefined): string {
   const m = /^(\d+)d$/.exec(r || '');

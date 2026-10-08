@@ -53,16 +53,16 @@ The trend view's rules, carrying today's thresholds over unchanged:
 **Compiled** (by `compileFitRules` in `packages/dom`, once per rule set, into a constructed stylesheet the shadow root adopts). Corrected at step 4 from what the spike found: one `@container` block per need, never an `or` across both axes, because a width-only container passes over a query that names its height, the inline half included. Corrected again in review: each query asks for half a pixel under its need, because at a fractional zoom a container laid out at exactly the need measures a hair under it, and the part would go at the very size its rule says it fits.
 
 ```css
-@container view (inline-size < 279.5px) {
+@container vg-view (inline-size < 279.5px) {
   .vg[data-layout="cartesian"]:not([data-keep~="guides"]) :is(.vg-x-axis, .vg-y-axis, .vg-grid) { display: none; }
   .vg[data-layout="cartesian"]:not([data-keep~="guides"]) .vg-number { display: block; }
   .vg[data-layout="cartesian"]:not([data-keep~="guides"]) { --vg-arrange: side; /* then what the layout module adds */ }
 }
-@container view (block-size < 119.5px) { /* the same three rules */ }
-@container plot (inline-size < 179.5px) {
+@container vg-view (block-size < 119.5px) { /* the same three rules */ }
+@container vg-plot (inline-size < 179.5px) {
   .vg[data-layout="cartesian"]:not([data-keep~="secondary"]) :is([data-role="comparison"], [data-role="reference"], [data-role="context"]) { display: none; }
 }
-@container plot (block-size < 89.5px) { /* the same rule */ }
+@container vg-plot (block-size < 89.5px) { /* the same rule */ }
 ```
 
 A rule's data cannot say everything that changes with it: the grid areas, the gap and the bare plot height all switch with the axes. Each layout module supplies those declarations by rule id, and the compiler writes them under the same condition and `keep`. A `set` entry is written as a custom property (`--vg-arrange: side`), which nothing styles from; it is there to be read. `x-tick.mid` compiles to the ranked x label, `.vg-x-axis [data-rank]`. The base styles sit in a cascade layer, so a compiled rule beats them whatever its specificity, and rules are written in order, so a later rule beats an earlier one.
@@ -140,8 +140,8 @@ One custom element, `<ua-view>`, with an open shadow root. It takes `spec`, `res
 </ua-view>
 ```
 
-- **`view`** is the host element. By default it is `container-type: inline-size`: it fills the width it is handed and takes its natural height. It cannot collapse, whatever it is dropped into. A surface layout that hands out a box (section 4.2) makes it `container-type: size`, and the plot fills the height left over. Both behaviours have to exist, because an element whose height can be queried cannot also take its height from its content. The view is never told which it is: the layout sets it, in the layout's own CSS.
-- **`plot`** is `container-type: size`. Its height is always definite: the leftover when the view was handed a box, and otherwise a size from the context's rule set, read as a custom property (`axes.height` and `bare.height`, 184 and 46 px by default). The painter hard-codes neither. That definite height is what makes height queries on the plot legal. As built at step 4, the stated `block-size` is on `.vg-body`, which holds the plot and its axes, so 184 px is the height of the whole view as it is in pixels; the plot takes what the x axis leaves. One rule, `@container view (block-size >= 0px) { .vg-body { block-size: auto; } }`, matches only when the view was handed a box, and the body then fills it.
+- **`view`** is the host element. In CSS the container is named `vg-view`, and the plot's `vg-plot`: a rule's data keeps the plain names and the compiler writes the prefix, so a page that names a container of its own `view` does not answer the view's queries. By default it is `container-type: inline-size`: it fills the width it is handed and takes its natural height. It cannot collapse, whatever it is dropped into. A surface layout that hands out a box (section 4.2) makes it `container-type: size`, and the plot fills the height left over. Both behaviours have to exist, because an element whose height can be queried cannot also take its height from its content. The view is never told which it is: the layout sets it, in the layout's own CSS.
+- **`plot`** is `container-type: size`. Its height is always definite: the leftover when the view was handed a box, and otherwise a size from the context's rule set, read as a custom property (`axes.height` and `bare.height`, 184 and 46 px by default). The painter hard-codes neither. That definite height is what makes height queries on the plot legal. As built at step 4, the stated `block-size` is on `.vg-body`, which holds the plot and its axes, so 184 px is the height of the whole view as it is in pixels; the plot takes what the x axis leaves. One rule, `@container vg-view (block-size >= 0px) { .vg-body { block-size: auto; } }`, matches only when the view was handed a box, and the body then fills it.
 - A rule about axes queries `view`, never `plot`, because hiding the x axis changes the plot's size. A rule about roles queries `plot`, because those elements live inside it.
 - **Bars are HTML,** positioned by custom properties (`inset-inline-start: calc(var(--vg-x) * 100%)`, `block-size: calc(var(--vg-v) * 100%)`), so corner radii and hairlines stay true at any size. Lines and areas are the stretched SVG. Text is never inside the SVG.
 - **`rows`** is a grid per row: `minmax(0, 1fr) auto`, label ellipsized by CSS, the bar a background sized by `--vg-v`. No character-width estimates.

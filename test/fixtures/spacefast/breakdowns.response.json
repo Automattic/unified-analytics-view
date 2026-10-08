@@ -1,0 +1,282 @@
+{
+  "data": {
+    "results": [
+      {
+        "id": "pages",
+        "timezone": "UTC",
+        "granularity": "none",
+        "columns": [
+          {
+            "kind": "dimension",
+            "id": "path",
+            "label": "Page",
+            "valueType": "path"
+          },
+          {
+            "kind": "metric",
+            "id": "page_views",
+            "label": "Page views",
+            "unit": "count",
+            "type": "count",
+            "additive": true,
+            "bots": "excluded",
+            "wholeDays": false
+          },
+          {
+            "kind": "metric",
+            "id": "engaged_time",
+            "label": "Engaged time",
+            "unit": "ms",
+            "type": "duration",
+            "additive": false,
+            "bots": "excluded",
+            "wholeDays": false
+          },
+          {
+            "kind": "metric",
+            "id": "scroll_depth",
+            "label": "Scroll depth",
+            "unit": "percent_points",
+            "type": "rate",
+            "additive": false,
+            "bots": "excluded",
+            "wholeDays": false
+          }
+        ],
+        "since": "2026-09-30T18:38:05.873Z",
+        "until": "2026-10-07T18:38:05.873Z",
+        "rows": [
+          {
+            "path": "/",
+            "page_views": 817,
+            "engaged_time": 27014,
+            "scroll_depth": 68
+          },
+          {
+            "path": "/trails/easy-loops-under-5-miles",
+            "page_views": 405,
+            "engaged_time": 28800,
+            "scroll_depth": 81.4
+          },
+          {
+            "path": "/trails/waterfall-hikes-with-kids",
+            "page_views": 310,
+            "engaged_time": 26250,
+            "scroll_depth": 78.1
+          },
+          {
+            "path": "/guides/camping-checklist",
+            "page_views": 296,
+            "engaged_time": 23370,
+            "scroll_depth": 77.7
+          },
+          {
+            "path": "/gear/kid-carrier-packs",
+            "page_views": 242,
+            "engaged_time": 31623,
+            "scroll_depth": 68.7
+          },
+          {
+            "path": "/guides/national-parks-with-toddlers",
+            "page_views": 227,
+            "engaged_time": 24922,
+            "scroll_depth": 74.6
+          },
+          {
+            "path": "/gear/rain-layers",
+            "page_views": 192,
+            "engaged_time": 26300,
+            "scroll_depth": 68
+          },
+          {
+            "path": "/trails/first-backpacking-trip",
+            "page_views": 186,
+            "engaged_time": 24906,
+            "scroll_depth": 77.5
+          },
+          {
+            "path": "/shop",
+            "page_views": 136,
+            "engaged_time": 26094,
+            "scroll_depth": 71.5
+          },
+          {
+            "path": "/watch/how-to-pack-a-daypack",
+            "page_views": 134,
+            "engaged_time": 70856,
+            "scroll_depth": 76.1
+          }
+        ],
+        "totals": {
+          "page_views": 3287,
+          "engaged_time": 27632,
+          "scroll_depth": 72.8
+        },
+        "truncated": true,
+        "other": {
+          "page_views": 342,
+          "engaged_time": null,
+          "scroll_depth": null
+        }
+      },
+      {
+        "id": "countries",
+        "timezone": "UTC",
+        "granularity": "none",
+        "columns": [
+          {
+            "kind": "dimension",
+            "id": "country",
+            "label": "Country",
+            "valueType": "country"
+          },
+          {
+            "kind": "metric",
+            "id": "page_views",
+            "label": "Page views",
+            "unit": "count",
+            "type": "count",
+            "additive": true,
+            "bots": "excluded",
+            "wholeDays": false
+          }
+        ],
+        "since": "2026-09-07T18:38:05.950Z",
+        "until": "2026-10-07T18:38:05.950Z",
+        "rows": [
+          {
+            "country": "US",
+            "page_views": 6935
+          },
+          {
+            "country": "CA",
+            "page_views": 1240
+          },
+          {
+            "country": "GB",
+            "page_views": 1235
+          },
+          {
+            "country": "AU",
+            "page_views": 850
+          },
+          {
+            "country": "DE",
+            "page_views": 687
+          },
+          {
+            "country": null,
+            "page_views": 623
+          },
+          {
+            "country": "IN",
+            "page_views": 577
+          },
+          {
+            "country": "NZ",
+            "page_views": 415
+          },
+          {
+            "country": "FR",
+            "page_views": 333
+          },
+          {
+            "country": "IE",
+            "page_views": 273
+          }
+        ],
+        "totals": {
+          "page_views": 13397
+        },
+        "truncated": true,
+        "other": {
+          "page_views": 229
+        }
+      },
+      {
+        "id": "goals",
+        "timezone": "UTC",
+        "granularity": "none",
+        "columns": [
+          {
+            "kind": "dimension",
+            "id": "event_label",
+            "label": "Event label",
+            "valueType": "text"
+          },
+          {
+            "kind": "metric",
+            "id": "event_occurrences",
+            "label": "Events",
+            "unit": "count",
+            "type": "count",
+            "additive": true,
+            "bots": "excluded",
+            "wholeDays": true
+          },
+          {
+            "kind": "metric",
+            "id": "revenue",
+            "label": "Revenue",
+            "unit": "minor_units",
+            "type": "money",
+            "additive": true,
+            "bots": "excluded",
+            "wholeDays": true
+          }
+        ],
+        "since": "2026-09-07T00:00:00.000Z",
+        "until": "2026-10-08T00:00:00.000Z",
+        "rows": [
+          {
+            "event_label": "newsletter",
+            "event_occurrences": 278,
+            "revenue": []
+          },
+          {
+            "event_label": "checklist_download",
+            "event_occurrences": 257,
+            "revenue": []
+          },
+          {
+            "event_label": "purchase",
+            "event_occurrences": 203,
+            "revenue": [
+              {
+                "amountMinor": 41800,
+                "currency": "eur"
+              },
+              {
+                "amountMinor": 12600,
+                "currency": "gbp"
+              },
+              {
+                "amountMinor": 433300,
+                "currency": "usd"
+              }
+            ]
+          }
+        ],
+        "totals": {
+          "event_occurrences": 738,
+          "revenue": [
+            {
+              "amountMinor": 41800,
+              "currency": "eur"
+            },
+            {
+              "amountMinor": 12600,
+              "currency": "gbp"
+            },
+            {
+              "amountMinor": 433300,
+              "currency": "usd"
+            }
+          ]
+        },
+        "truncated": false,
+        "other": null
+      }
+    ]
+  }
+}

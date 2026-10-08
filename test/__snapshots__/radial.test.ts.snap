@@ -50,7 +50,7 @@ exports[`golden scenes > donut at 150 by any 1`] = `
     {
       "anchor": "start",
       "font": "label",
-      "key": "legend:top",
+      "key": "legend-top",
       "kind": "text",
       "layer": "guide",
       "paint": "ink",
@@ -104,7 +104,7 @@ exports[`golden scenes > donut at 346 by 100 1`] = `
     {
       "anchor": "start",
       "font": "label",
-      "key": "legend:top",
+      "key": "legend-top",
       "kind": "text",
       "layer": "guide",
       "paint": "ink",
@@ -503,7 +503,7 @@ exports[`golden scenes > half at 150 by any 1`] = `
     {
       "anchor": "start",
       "font": "label",
-      "key": "legend:top",
+      "key": "legend-top",
       "kind": "text",
       "layer": "guide",
       "paint": "ink",
@@ -570,7 +570,7 @@ exports[`golden scenes > half at 346 by 100 1`] = `
     {
       "anchor": "start",
       "font": "label",
-      "key": "legend:top",
+      "key": "legend-top",
       "kind": "text",
       "layer": "guide",
       "paint": "ink",
@@ -815,7 +815,7 @@ exports[`golden scenes > pie at 150 by any 1`] = `
     {
       "anchor": "start",
       "font": "label",
-      "key": "legend:top",
+      "key": "legend-top",
       "kind": "text",
       "layer": "guide",
       "paint": "ink",
@@ -899,7 +899,7 @@ exports[`golden scenes > pie at 346 by 100 1`] = `
     {
       "anchor": "start",
       "font": "label",
-      "key": "legend:top",
+      "key": "legend-top",
       "kind": "text",
       "layer": "guide",
       "paint": "ink",
@@ -1376,7 +1376,7 @@ exports[`golden scenes > the donut's ratio scene 1`] = `
     {
       "anchor": "start",
       "font": "label",
-      "key": "legend:top",
+      "key": "legend-top",
       "kind": "text",
       "layer": "guide",
       "paint": "ink",

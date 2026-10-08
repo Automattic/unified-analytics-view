@@ -55,7 +55,7 @@ describe('columns', () => {
     expect(ratio.parts).toEqual(['columns', 'rows']);
     expect(mine.map((n) => [n.key, n.kind, (n as { text?: string }).text, n.rank])).toEqual([
       ['row:Purchase', 'row', undefined, undefined], ['primary:bar:Purchase', 'rect', undefined, undefined], ['primary:text:Purchase', 'text', 'Purchase', undefined],
-      ['primary:text#2:Purchase', 'text', '412', undefined], ['primary:text#3:Purchase', 'text', '3.9%', 1], ['primary:text#4:Purchase', 'text', '31.7k', 2],
+      ['primary:text#2:Purchase', 'text', '412', undefined], ['primary:text#3:Purchase', 'text', '3.9%', 1], ['primary:text#4:Purchase', 'text', '$31.7k', 2],
     ]);
     expect(mine.slice(2).map((n) => (n as { font: string }).font)).toEqual(['label', 'value', 'value', 'value']);
   });
@@ -74,10 +74,10 @@ describe('columns', () => {
   it('a row short of room gives up its columns from the right, in every data state, and then its marks', () => {
     const shown = (w: number, sc: (typeof scenarios)[number]) => { const { plan, scene } = run(conversions, w, null, sc); return [plan.layout, texts(scene.nodes, /^column:/).length || texts(scene.nodes, /^primary:text.*:Purchase$/).length - 1, plan.dropped] as const; };
     for (const sc of ['typical', 'no-prior'] as const) {
-      // The label needs 90 px, by the `marks` rule. The columns need 77.8, 101 and 47 px: a header or a value, and 14 px.
+      // The label needs 90 px, by the `marks` rule. The columns need 77.8, 101 and 53.6 px: a header or a value, and 14 px.
       expect(shown(700, sc), sc).toEqual(['rows', 3, []]);
-      expect(shown(316, sc), sc).toEqual(['rows', 3, []]);
-      expect(shown(315, sc), sc).toEqual(['rows', 2, ['the "Value" column']]);
+      expect(shown(323, sc), sc).toEqual(['rows', 3, []]);
+      expect(shown(322, sc), sc).toEqual(['rows', 2, ['the "Value" column']]);
       expect(shown(269, sc), sc).toEqual(['rows', 2, ['the "Value" column']]);
       // With one column left there is no header, so it needs only its widest value: 5 characters.
       expect(shown(268, sc), sc).toEqual(['rows', 1, ['the "Value" column', 'the "Conversion rate" column']]);
@@ -93,12 +93,12 @@ describe('columns', () => {
   });
   it('place() sets each column to its widest text, the track behind the label and the first, and the rest beyond its end', () => {
     const { ratio, scene } = run(conversions, 346), px = <T,>(k: string) => at<T>(scene.nodes, k);
-    expect(columnRooms(ratio).map((n) => +n.toFixed(1))).toEqual([77.8, 101, 47]);
-    // The track ends 148 px short of the right edge. The longest bar fills it, and the first column's text ends 8 px inside it.
-    expect(px<{ x: number; w: number }>('primary:bar:Add to cart')).toMatchObject({ x: 0, w: 346 - 148 });
-    expect(['primary:text#2:Purchase', 'primary:text#3:Purchase', 'primary:text#4:Purchase'].map((k) => px<{ x: number }>(k).x)).toEqual([346 - 148 - 8, 346 - 47 - 8, 346 - 8]);
+    expect(columnRooms(ratio).map((n) => +n.toFixed(1))).toEqual([77.8, 101, 53.6]);
+    // The track ends 154.6 px short of the right edge. The longest bar fills it, and the first column's text ends 8 px inside it.
+    expect(px<{ x: number; w: number }>('primary:bar:Add to cart')).toMatchObject({ x: 0, w: 346 - 154.6 });
+    expect(['primary:text#2:Purchase', 'primary:text#3:Purchase', 'primary:text#4:Purchase'].map((k) => px<{ x: number }>(k).x)).toEqual([346 - 154.6 - 8, 346 - 53.6 - 8, 346 - 8]);
     expect(texts(scene.nodes, /^column:/).length).toBe(3);
-    expect(['column:primary:text#2', 'column:primary:text#3', 'column:primary:text#4'].map((k) => px<{ x: number; y: number }>(k))).toMatchObject([{ x: 190, y: 10 }, { x: 291, y: 10 }, { x: 338, y: 10 }]);
+    expect(['column:primary:text#2', 'column:primary:text#3', 'column:primary:text#4'].map((k) => px<{ x: number; y: number }>(k))).toMatchObject([{ x: 346 - 154.6 - 8, y: 10 }, { x: 346 - 53.6 - 8, y: 10 }, { x: 338, y: 10 }]);
     // Headers take 20 px, and each row is 28 px with 4 px between.
     expect(px<{ y: number }>('primary:bar:Add to cart').y).toBe(20);
     expect(scene.height).toBe(20 + 6 * 28 + 5 * 4);
@@ -202,7 +202,7 @@ describe('the funnel preset', () => {
 describe('tldr prose for several metrics by one dimension', () => {
   const text = (spec: Spec, sc?: (typeof scenarios)[number]) => run(spec, 346, null, sc).plan.text;
   it('ranks by the first metric and says the rest once, as the engine\'s totals', () => {
-    expect(text(conversions)).toBe('Top events by conversions, last 28 days: Add to cart (1,310), Newsletter signup (842), Checkout started (655). Overall, conversion rate 21% and value 134.7k.');
+    expect(text(conversions)).toBe('Top events by conversions, last 28 days: Add to cart (1,310), Newsletter signup (842), Checkout started (655). Overall, conversion rate 21% and value $134.7k.');
     expect(text(funnel)).toBe('Top steps by visitors, last 28 days: Visited the site (10.5k), Viewed pricing (1,705), Started checkout (655). Overall, conversion rate 3.9%.');
     expect(text(league)).toBe('Top pages by page views, last 28 days: / (4,820), /pricing (2,960), /blog/launch-notes (2,105).');
     expect(text(conversions, 'empty')).toBe('No conversions recorded in the last 28 days.');

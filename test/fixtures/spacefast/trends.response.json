@@ -1,0 +1,389 @@
+{
+  "data": {
+    "results": [
+      {
+        "id": "traffic",
+        "timezone": "UTC",
+        "granularity": "day",
+        "columns": [
+          {
+            "kind": "time",
+            "id": "bucket",
+            "label": "Time"
+          },
+          {
+            "kind": "metric",
+            "id": "page_views",
+            "label": "Page views",
+            "unit": "count",
+            "type": "count",
+            "additive": true,
+            "bots": "excluded",
+            "wholeDays": false
+          },
+          {
+            "kind": "metric",
+            "id": "visitors",
+            "label": "Visitors",
+            "unit": "count",
+            "type": "unique",
+            "additive": false,
+            "bots": "excluded",
+            "wholeDays": false
+          },
+          {
+            "kind": "metric",
+            "id": "bot_traffic",
+            "label": "Bot traffic",
+            "unit": "count",
+            "type": "count",
+            "additive": true,
+            "bots": "only",
+            "wholeDays": false
+          }
+        ],
+        "since": "2026-09-07T18:38:05.950Z",
+        "until": "2026-10-07T18:38:05.950Z",
+        "rows": [
+          {
+            "bucket": "2026-09-07T00:00:00Z",
+            "complete": true,
+            "page_views": 108,
+            "visitors": 83,
+            "bot_traffic": 10
+          },
+          {
+            "bucket": "2026-09-08T00:00:00Z",
+            "complete": true,
+            "page_views": 372,
+            "visitors": 171,
+            "bot_traffic": 22
+          },
+          {
+            "bucket": "2026-09-09T00:00:00Z",
+            "complete": true,
+            "page_views": 398,
+            "visitors": 177,
+            "bot_traffic": 17
+          },
+          {
+            "bucket": "2026-09-10T00:00:00Z",
+            "complete": true,
+            "page_views": 335,
+            "visitors": 164,
+            "bot_traffic": 22
+          },
+          {
+            "bucket": "2026-09-11T00:00:00Z",
+            "complete": true,
+            "page_views": 343,
+            "visitors": 159,
+            "bot_traffic": 22
+          },
+          {
+            "bucket": "2026-09-12T00:00:00Z",
+            "complete": true,
+            "page_views": 974,
+            "visitors": 459,
+            "bot_traffic": 101
+          },
+          {
+            "bucket": "2026-09-13T00:00:00Z",
+            "complete": true,
+            "page_views": 277,
+            "visitors": 132,
+            "bot_traffic": 19
+          },
+          {
+            "bucket": "2026-09-14T00:00:00Z",
+            "complete": true,
+            "page_views": 352,
+            "visitors": 174,
+            "bot_traffic": 32
+          },
+          {
+            "bucket": "2026-09-15T00:00:00Z",
+            "complete": true,
+            "page_views": 387,
+            "visitors": 175,
+            "bot_traffic": 31
+          },
+          {
+            "bucket": "2026-09-16T00:00:00Z",
+            "complete": true,
+            "page_views": 366,
+            "visitors": 173,
+            "bot_traffic": 25
+          },
+          {
+            "bucket": "2026-09-17T00:00:00Z",
+            "complete": true,
+            "page_views": 421,
+            "visitors": 203,
+            "bot_traffic": 32
+          },
+          {
+            "bucket": "2026-09-18T00:00:00Z",
+            "complete": true,
+            "page_views": 393,
+            "visitors": 191,
+            "bot_traffic": 24
+          },
+          {
+            "bucket": "2026-09-19T00:00:00Z",
+            "complete": true,
+            "page_views": 316,
+            "visitors": 148,
+            "bot_traffic": 27
+          },
+          {
+            "bucket": "2026-09-20T00:00:00Z",
+            "complete": true,
+            "page_views": 319,
+            "visitors": 153,
+            "bot_traffic": 16
+          },
+          {
+            "bucket": "2026-09-21T00:00:00Z",
+            "complete": true,
+            "page_views": 445,
+            "visitors": 211,
+            "bot_traffic": 22
+          },
+          {
+            "bucket": "2026-09-22T00:00:00Z",
+            "complete": true,
+            "page_views": 429,
+            "visitors": 204,
+            "bot_traffic": 34
+          },
+          {
+            "bucket": "2026-09-23T00:00:00Z",
+            "complete": true,
+            "page_views": 418,
+            "visitors": 196,
+            "bot_traffic": 27
+          },
+          {
+            "bucket": "2026-09-24T00:00:00Z",
+            "complete": true,
+            "page_views": 452,
+            "visitors": 215,
+            "bot_traffic": 37
+          },
+          {
+            "bucket": "2026-09-25T00:00:00Z",
+            "complete": true,
+            "page_views": 1031,
+            "visitors": 480,
+            "bot_traffic": 42
+          },
+          {
+            "bucket": "2026-09-26T00:00:00Z",
+            "complete": true,
+            "page_views": 331,
+            "visitors": 155,
+            "bot_traffic": 20
+          },
+          {
+            "bucket": "2026-09-27T00:00:00Z",
+            "complete": true,
+            "page_views": 324,
+            "visitors": 151,
+            "bot_traffic": 38
+          },
+          {
+            "bucket": "2026-09-28T00:00:00Z",
+            "complete": true,
+            "page_views": 469,
+            "visitors": 215,
+            "bot_traffic": 46
+          },
+          {
+            "bucket": "2026-09-29T00:00:00Z",
+            "complete": true,
+            "page_views": 488,
+            "visitors": 235,
+            "bot_traffic": 39
+          },
+          {
+            "bucket": "2026-09-30T00:00:00Z",
+            "complete": true,
+            "page_views": 524,
+            "visitors": 249,
+            "bot_traffic": 40
+          },
+          {
+            "bucket": "2026-10-01T00:00:00Z",
+            "complete": true,
+            "page_views": 505,
+            "visitors": 241,
+            "bot_traffic": 49
+          },
+          {
+            "bucket": "2026-10-02T00:00:00Z",
+            "complete": true,
+            "page_views": 504,
+            "visitors": 240,
+            "bot_traffic": 53
+          },
+          {
+            "bucket": "2026-10-03T00:00:00Z",
+            "complete": true,
+            "page_views": 372,
+            "visitors": 177,
+            "bot_traffic": 38
+          },
+          {
+            "bucket": "2026-10-04T00:00:00Z",
+            "complete": true,
+            "page_views": 331,
+            "visitors": 163,
+            "bot_traffic": 21
+          },
+          {
+            "bucket": "2026-10-05T00:00:00Z",
+            "complete": true,
+            "page_views": 517,
+            "visitors": 237,
+            "bot_traffic": 32
+          },
+          {
+            "bucket": "2026-10-06T00:00:00Z",
+            "complete": true,
+            "page_views": 559,
+            "visitors": 270,
+            "bot_traffic": 28
+          },
+          {
+            "bucket": "2026-10-07T00:00:00Z",
+            "complete": false,
+            "page_views": 337,
+            "visitors": 209,
+            "bot_traffic": 30
+          }
+        ],
+        "totals": {
+          "page_views": 13397,
+          "visitors": null,
+          "bot_traffic": 996
+        },
+        "truncated": false,
+        "other": null
+      },
+      {
+        "id": "headline",
+        "timezone": "UTC",
+        "granularity": "none",
+        "columns": [
+          {
+            "kind": "metric",
+            "id": "page_views",
+            "label": "Page views",
+            "unit": "count",
+            "type": "count",
+            "additive": true,
+            "bots": "excluded",
+            "wholeDays": false
+          },
+          {
+            "kind": "metric",
+            "id": "unique_visitors_range",
+            "label": "Unique visitors over a range",
+            "unit": "count",
+            "type": "unique",
+            "additive": false,
+            "bots": "excluded",
+            "wholeDays": false
+          },
+          {
+            "kind": "metric",
+            "id": "visitor_days",
+            "label": "Visitor-days",
+            "unit": "count",
+            "type": "unique",
+            "additive": false,
+            "bots": "excluded",
+            "wholeDays": false
+          },
+          {
+            "kind": "metric",
+            "id": "engaged_time",
+            "label": "Engaged time",
+            "unit": "ms",
+            "type": "duration",
+            "additive": false,
+            "bots": "excluded",
+            "wholeDays": false
+          },
+          {
+            "kind": "metric",
+            "id": "scroll_depth",
+            "label": "Scroll depth",
+            "unit": "percent_points",
+            "type": "rate",
+            "additive": false,
+            "bots": "excluded",
+            "wholeDays": false
+          },
+          {
+            "kind": "metric",
+            "id": "bot_traffic",
+            "label": "Bot traffic",
+            "unit": "count",
+            "type": "count",
+            "additive": true,
+            "bots": "only",
+            "wholeDays": false
+          }
+        ],
+        "since": "2026-09-30T18:38:05.873Z",
+        "until": "2026-10-07T18:38:05.873Z",
+        "rows": [
+          {
+            "page_views": 3287,
+            "unique_visitors_range": 134,
+            "visitor_days": 1660,
+            "engaged_time": 27632,
+            "scroll_depth": 72.8,
+            "bot_traffic": 266
+          }
+        ],
+        "totals": {
+          "page_views": 3287,
+          "unique_visitors_range": 134,
+          "visitor_days": 1660,
+          "engaged_time": 27632,
+          "scroll_depth": 72.8,
+          "bot_traffic": 266
+        },
+        "truncated": false,
+        "other": null,
+        "previous": {
+          "since": "2026-09-23T18:38:05.873Z",
+          "until": "2026-09-30T18:38:05.873Z",
+          "rows": [
+            {
+              "page_views": 3582,
+              "unique_visitors_range": 141,
+              "visitor_days": 1756,
+              "engaged_time": 28104,
+              "scroll_depth": 72.1,
+              "bot_traffic": 257
+            }
+          ],
+          "totals": {
+            "page_views": 3582,
+            "unique_visitors_range": 141,
+            "visitor_days": 1756,
+            "engaged_time": 28104,
+            "scroll_depth": 72.1,
+            "bot_traffic": 257
+          },
+          "truncated": false,
+          "other": null
+        }
+      }
+    ]
+  }
+}

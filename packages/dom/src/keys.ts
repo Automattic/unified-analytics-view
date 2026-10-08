@@ -1,4 +1,4 @@
-import { formatDimension, formatValue, partialNote, type Catalog, type Query, type RectNode, type Result, type Row, type Scene } from '@universal-analytics/core';
+import { formatDimension, formatValue, partialNote, type Catalog, type Layer, type Query, type RectNode, type Result, type Row, type Scene } from '@universal-analytics/core';
 import { attr, ensure, paintVar } from './dom.ts';
 import { nearest } from './layouts/points.ts';
 
@@ -15,14 +15,21 @@ import { nearest } from './layouts/points.ts';
  * step through the series there: up from the whole point to the first series, which is the foot of a stack, and
  * down again to the whole. Left and right keep the series. Version 4 was not read for this; it is ours until it is. */
 
+/** The companions of a metric the view asked for: the fields of `row` that came with `m` and that one of the plan's
+ * layers encodes, in the engine's order. A result may carry more, and those are not the view's to say. The comparison
+ * is not one of these: the query asks for it. The readout and the table both list by this. */
+export function companions(m: string, row: Row | undefined, layers: Layer[]): string[] {
+  return Object.keys(row ?? {}).filter((f) => f.startsWith(m + '@') && f !== m + '@previous' && layers.some((l) => Object.values(l.encode || {}).includes(f)));
+}
+
 /** What the readout says for one row of the result, in the catalog's formats: the dimension value, each metric
- * (marked when its bucket is unfinished), its comparison if the row has one, and each companion the engine returned
- * with it, under its suffix: what a range or a tick is drawn from is said as well as shown. */
-export function readout(row: Row, q: Query, catalog: Catalog): string {
+ * (marked when its bucket is unfinished), its comparison if the row has one, and each companion of it that a layer
+ * encodes, under its suffix: what a range or a tick is drawn from is said as well as shown. */
+export function readout(row: Row, q: Query, catalog: Catalog, layers: Layer[]): string {
   const dims = (q.by || []).map((d) => formatDimension(row[d], catalog.dimensions[d]!)).join(', '), partial = partialNote(row);
   const values = q.metrics.map((m) => {
     const def = catalog.metrics[m]!, prev = q.compare === 'previous' ? row[m + '@previous'] : null;
-    const more = Object.keys(row).filter((f) => f.startsWith(m + '@') && f !== m + '@previous' && row[f] != null).map((f) => ', ' + f.slice(m.length + 1) + ' ' + formatValue(row[f] as number, def)).join('');
+    const more = companions(m, row, layers).filter((f) => row[f] != null).map((f) => ', ' + f.slice(m.length + 1) + ' ' + formatValue(row[f] as number, def)).join('');
     return def.label + ' ' + formatValue(row[m] as number | null, def) + (partial && ' ' + partial) + (prev == null ? '' : ', previous period ' + formatValue(prev as number, def)) + more;
   }).join('; ');
   return dims ? dims + ': ' + values : values;
@@ -113,7 +120,7 @@ export class Keys {
   #keys: string[] = []; #rows: Row[][] = []; #says: string[] = [];
   #at: string | null = null;
   // The series of a split plot, the one chosen at the point, and what a readout of one needs.
-  #order: string[] = []; #series: string | null = null; #split: string | undefined; #q: Query | null = null; #catalog: Catalog | null = null;
+  #order: string[] = []; #series: string | null = null; #split: string | undefined; #q: Query | null = null; #catalog: Catalog | null = null; #layers: Layer[] = [];
   // A touch that has only just chosen a point shows its readout. The next one activates it.
   #fresh = false;
 
@@ -158,10 +165,10 @@ export class Keys {
   }
 
   /** After each paint: name the points the layout made, and keep the chosen one if it is still there. */
-  paint(scene: Scene, q: Query, result: Result, catalog: Catalog): void {
+  paint(scene: Scene, q: Query, result: Result, catalog: Catalog, layers: Layer[]): void {
     const { rows, x, split } = rowsAt(scene, q, result), totals = (x != null && split != null && result.totalsBy?.[x]) || [];
-    this.#keys = scene.rows ?? []; this.#rows = rows; this.#order = split == null ? [] : scene.series ?? []; this.#split = split; this.#q = q; this.#catalog = catalog;
-    this.#says = this.#keys.map((k, i) => (split == null ? readout(rows[i]![0] ?? {}, q, catalog) : readoutAt(rows[i]!, totals.find((t) => String(t[x!]) === k), q, catalog, x!, split)));
+    this.#keys = scene.rows ?? []; this.#rows = rows; this.#order = split == null ? [] : scene.series ?? []; this.#split = split; this.#q = q; this.#catalog = catalog; this.#layers = layers;
+    this.#says = this.#keys.map((k, i) => (split == null ? readout(rows[i]![0] ?? {}, q, catalog, layers) : readoutAt(rows[i]!, totals.find((t) => String(t[x!]) === k), q, catalog, x!, split)));
     const box = this.#box();
     if (box) {
       attr(box, 'role', 'listbox'); attr(box, 'tabindex', this.#keys.length ? 0 : null);
@@ -200,7 +207,7 @@ export class Keys {
     tip.hidden = !point;
     if (!point) return;
     const i = this.#keys.indexOf(key!), pair = this.#pair(i);
-    const says = pair ? readout(pair, this.#q!, this.#catalog!) : this.#says[i] ?? '';
+    const says = pair ? readout(pair, this.#q!, this.#catalog!, this.#layers) : this.#says[i] ?? '';
     // The option is named by what is read out, so a series chosen inside it is announced as it is shown.
     // ponytail: the name of the option in focus changes under it. Whether a screen reader says so is not checked.
     if (this.#order.length) for (const el of Array.from(box!.children)) attr(el, 'aria-label', el === point ? says : this.#says[this.#keys.indexOf(el.getAttribute('data-row') ?? '')]);

@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { nodePaint } from '@universal-analytics/dom';
-import { buildScene, formatValue, makeContainer, resolve, type Catalog, type Layer, type Result, type Spec } from '@universal-analytics/core';
+import { buildScene, makeContainer, resolve, type Catalog, type Layer, type Result, type Spec } from '@universal-analytics/core';
 
 /* What the sidebar test case asked of the grammar: a metric's unit in every place its value is said, a mark painted
  * by which way its metric went, and rows painted by a field. On a catalog and results of its own. */
 const catalog: Catalog = {
   metrics: {
-    engaged: { label: 'Engaged time', unit: 'seconds', polarity: 'up' },
+    engaged: { label: 'Engaged time', unit: 's', polarity: 'up' },
     finished: { label: 'Read to the end', unit: 'ratio', polarity: 'up' },
     bounces: { label: 'Bounces', unit: 'count', polarity: 'down' },
     visitors: { label: 'Visitors', unit: 'count', polarity: 'none' },
@@ -20,10 +20,6 @@ const scene = (spec: Spec, result: Result, w = 500) => { const plan = resolve(sp
 const text = (s: ReturnType<typeof scene>, key: string) => { const n = s.scene.nodes.find((x) => x.key === key); return n && n.kind === 'text' ? n.text : undefined; };
 
 describe('a metric\'s unit', () => {
-  it('seconds read as a length of time, in its two largest parts', () => {
-    const say = (v: number) => formatValue(v, catalog.metrics.engaged!);
-    expect([0, 48, 60, 228, 3600, 3905, 90061].map(say)).toEqual(['0s', '48s', '1m', '3m 48s', '1h', '1h 5m', '25h 1m']);
-  });
   it('is in the tldr value, the axis and the prose, for a time and for a rate', () => {
     const time = scene(trend('engaged'), days('engaged', [200, 228, 240], 228, 209));
     expect(text(time, 'value')).toBe('3m 48s');

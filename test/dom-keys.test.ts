@@ -9,8 +9,8 @@ import { Keys, hitNodes, readout, step } from '../packages/dom/src/keys.ts';
 
 const of = (sample: string, scenario: Scenario = 'typical') => {
   const spec = samples[sample]!.spec, result = runQuery(spec.query, scenario), q = spec.query;
-  const scene = buildScene(resolve(spec, result, unboundedContainer(), catalog), spec.query, result, catalog);
-  return { result, scene, says: result.rows.map((r) => readout(r, q, catalog)) };
+  const plan = resolve(spec, result, unboundedContainer(), catalog), scene = buildScene(plan, spec.query, result, catalog);
+  return { result, scene, says: result.rows.map((r) => readout(r, q, catalog, plan.layers)) };
 };
 
 describe('step', () => {
@@ -105,7 +105,7 @@ describe('the mouse leaving', () => {
     const points: ReturnType<typeof el>[] = [], body = el({ dataset: { hits: 'x' }, children: points, matches: (sel: string) => (sel === ':hover' ? hovered : focused), querySelector: () => body, querySelectorAll: () => points, closest: () => points[1] });
     for (const row of ['a', 'b', 'c']) { const p = el({ parentElement: body }); p.setAttribute('data-row', row); points.push(p); }
     const keys = new Keys(host as unknown as HTMLElement, fig as unknown as HTMLElement, body as unknown as HTMLElement);
-    const paint = () => keys.paint({ rows: ['a', 'b', 'c'] } as never, { metrics: [], by: [] } as never, { rows: [{}, {}, {}] } as never, { metrics: {}, dimensions: {} } as never);
+    const paint = () => keys.paint({ rows: ['a', 'b', 'c'] } as never, { metrics: [], by: [] } as never, { rows: [{}, {}, {}] } as never, { metrics: {}, dimensions: {} } as never, []);
     paint();
     let activated = 0; host.addEventListener('ua-activate', () => activated++);
     const send = (type: string, init: object) => body.dispatchEvent(Object.assign(new Event(type, { cancelable: true }), init));

@@ -70,7 +70,7 @@ describe('shares are of the engine\'s total', () => {
     const { ratio, plan } = run(top3, 346), text = (key: string) => (ratio.nodes.find((n) => n.key === key) as { text: string }).text;
     const band = ratio.nodes.filter((n) => n.part === 'band').map((n) => (n as { v: number }).v);
     expect(band.map((v) => Math.round(v * 100))).toEqual([41, 28, 14]);
-    expect(['share:Search', 'share:Direct', 'share:Social', 'legend:top', 'sub'].map(text)).toEqual(['41%', '28%', '14%', 'Search 41%', 'Search 41%']);
+    expect(['share:Search', 'share:Direct', 'share:Social', 'legend-top', 'sub'].map(text)).toEqual(['41%', '28%', '14%', 'Search 41%', 'Search 41%']);
     expect(plan.text).toBe('Search is the largest channel at 41% of visitors, followed by Direct at 28%.');
   });
   it('the fixture\'s channels add up to its total at any range', () => {
@@ -320,7 +320,7 @@ describe('a scale per unit', () => {
     expect(plan.guides).toEqual({ x: true, y: true, y2: true, grid: true });
     expect(ratio.parts).toEqual(['y-axis', 'plot', 'y-axis-2', 'x-axis']);
     expect(ticks(ratio, 'y-axis')).toEqual(['0', '200', '400', '600']);
-    expect(ticks(ratio, 'y-axis-2')).toEqual(['0', '1k', '2k', '3k', '4k']);
+    expect(ticks(ratio, 'y-axis-2')).toEqual(['$0', '$1k', '$2k', '$3k', '$4k']);
     expect(ratio.nodes.filter((n) => n.part === 'y-axis-2').map((n) => [n.key, (n as { anchor: string }).anchor])[1]).toEqual(['ytick:usd:1000', 'start']);
     // Each mark is on its own scale. The grid is the first scale's.
     const first = result.rows[0]!, bar = ratio.nodes.find((n) => n.key === 'primary:bar:' + first['date.day']) as { v: number }, line = ratio.nodes.find((n) => n.key === 'primary:line') as { points: { v: number }[] };
@@ -369,9 +369,9 @@ describe('tldr prose for two dimensions and for two metrics', () => {
     expect(text('grouped', 'empty')).toBe('No visitors recorded in the last 28 days.');
   });
   it('says each metric of two, the first with the range', () => {
-    expect(text('dual')).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not unique people. Revenue: 63.5k.');
+    expect(text('dual')).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not unique people. Revenue: $63.5k.');
     expect(run({ ...specs.dual!, query: { ...specs.dual!.query, compare: 'previous' } }, 346).plan.text)
-      .toBe('Visitors: 10.5k in the last 28 days, up 12% on the previous period. This is a sum of daily counts, not unique people. Revenue: 63.5k, up 8.1% on the previous period.');
+      .toBe('Visitors: 10.5k in the last 28 days, up 12% on the previous period. This is a sum of daily counts, not unique people. Revenue: $63.5k, up 8.1% on the previous period.');
     expect(text('diverging')).toBe('Net subscribers: 180 in the last 28 days.');
   });
   it('the note under the number names the leader the engine names, not the first pair', () => {

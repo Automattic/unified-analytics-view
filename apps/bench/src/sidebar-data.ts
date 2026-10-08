@@ -10,7 +10,7 @@ export const catalog: Catalog = {
   metrics: {
     visitors:        { label: 'Visitors',        unit: 'count',   polarity: 'up' },
     views:           { label: 'Views',           unit: 'count',   polarity: 'up', rangeTotal: 'sum' },
-    engaged_time:    { label: 'Engaged time',    unit: 'seconds', polarity: 'up' },
+    engaged_time:    { label: 'Engaged time',    unit: 's', polarity: 'up' },
     read_through:    { label: 'Read to the end', unit: 'ratio',   polarity: 'up' },
     new_subscribers: { label: 'New subscribers', unit: 'count',   polarity: 'up', rangeTotal: 'sum' },
     reached:         { label: 'Reached',         unit: 'ratio',   polarity: 'up' },

@@ -2142,7 +2142,7 @@ exports[`golden scenes > mix at 346 by 100 1`] = `
     {
       "anchor": "start",
       "font": "label",
-      "key": "legend:top",
+      "key": "legend-top",
       "kind": "text",
       "layer": "guide",
       "paint": "ink",
@@ -4574,7 +4574,7 @@ exports[`the ratio scene (dom-painter-plan section 3) > mix, with no size 1`] = 
     {
       "anchor": "start",
       "font": "label",
-      "key": "legend:top",
+      "key": "legend-top",
       "kind": "text",
       "layer": "guide",
       "paint": "ink",

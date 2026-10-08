@@ -101,6 +101,9 @@ Rules the front end relies on:
 
 - **Each name is defined exactly once,** outside both the data and the views. A view refers to `visitors`; it never carries a formula.
 - **Totals come from the engine.** A view never sums the rows it happens to receive, because many metrics are not additive. Visitors in v1 are counted per day, so a range total is a sum of daily counts and must be labelled as one (`rangeTotal: "sum of daily"`).
+- **The unit says how a value is written,** wherever it is written: the tldr value, a tick, a row, the readout, the table, the prose. The units are `count`, `ratio` (a rate from 0 to 1), `percent` (one from 0 to 100), `ms`, `s` and `bytes`, and a currency's ISO 4217 code in lower case (`usd`, `eur`) for money in that currency's own units: dollars, not cents. Each currency is a unit of its own, so two never share an axis and nothing adds them. An unknown unit is an error. A `number` dimension has no unit yet, so load time is still a bare number.
+- **A time value is a bare date or a full ISO datetime, read in UTC,** and written the same wherever it is: "Sep 8" on an axis, a row, a legend and in the readout. A bucket on an hour of the day reads "Sep 8, 3 PM". The grain is read from the value, because neither the catalog nor the result states it, so the midnight bucket of an hourly result reads as a day. Valid grains are among the properties below.
+- **A dimension whose values are codes says so,** with `values`. `country` is the one kind: an ISO 3166-1 alpha-2 code in capitals, written as the country's name wherever a value is written. An empty code reads as no value, and what is not a code is written as it came.
 - **Polarity drives delta colour.** `up` means an increase is good, `down` the reverse, `none` means no judgement.
 - **`instant`** marks a metric with no range and no prior period, such as people present now.
 - **`unit` sets how a value reads** wherever it is said: the tldr value, an axis, a row, a readout and the prose. `ratio` is a percentage and `seconds` a length of time ("3m 48s"). Every other unit still reads as a count; currency is not built.
@@ -376,11 +379,11 @@ For browser containers, each element should break only when it needs to, using i
 A sketch, untested. The worked rules are in `docs/dom-painter-plan.md`, section 2, where the axes rule queries the view and not the plot, because hiding an axis changes the plot's size:
 
 ```css
-.vg-plot { container: plot / size; }           /* needs a definite height; use inline-size otherwise */
-@container plot (inline-size < 280px) or (block-size < 120px) {
+.vg-plot { container: vg-plot / size; }           /* needs a definite height; use inline-size otherwise */
+@container vg-plot (inline-size < 280px) or (block-size < 120px) {
   .vg-axis, .vg-grid { display: none; }
 }
-@container plot (inline-size < 180px) or (block-size < 90px) {
+@container vg-plot (inline-size < 180px) or (block-size < 90px) {
   [data-role="comparison"], [data-role="reference"], [data-role="context"] { display: none; }
 }
 ```

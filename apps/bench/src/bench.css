@@ -1,41 +1,7 @@
 @import '@universal-analytics/tokens/generated/tokens.css';
 
-/* Paint tokens, under the @automattic/charts names (docs/dom-painter-plan.md, 4.1). */
-:root {
-  color-scheme: light dark;
-  --ua-charts-color-label: var(--ua-color-foreground);
-  --ua-charts-color-label-secondary: var(--ua-color-muted-foreground);
-  --ua-charts-color-grid: var(--ua-color-border);
-  --ua-charts-color-axis-x: var(--ua-color-foreground-50);
-  /* A series colour is three: the mark, its text, and its tint. The tokens choose each per theme: the hue at its
-   * brightest where that holds the contrast the element needs, and the ramp's step for that contrast where not. */
-  --ua-charts-color-series-1: var(--ua-color-mark-chartreuse); --ua-charts-color-series-1-text: var(--ua-color-mark-chartreuse-text); --ua-charts-color-series-1-soft: var(--ua-color-mark-chartreuse-soft);
-  --ua-charts-color-series-2: var(--ua-color-mark-grass); --ua-charts-color-series-2-text: var(--ua-color-mark-grass-text); --ua-charts-color-series-2-soft: var(--ua-color-mark-grass-soft);
-  --ua-charts-color-series-3: var(--ua-color-mark-teal); --ua-charts-color-series-3-text: var(--ua-color-mark-teal-text); --ua-charts-color-series-3-soft: var(--ua-color-mark-teal-soft);
-  --ua-charts-color-series-4: var(--ua-color-mark-steel); --ua-charts-color-series-4-text: var(--ua-color-mark-steel-text); --ua-charts-color-series-4-soft: var(--ua-color-mark-steel-soft);
-  --ua-charts-color-series-5: var(--ua-color-mark-rose); --ua-charts-color-series-5-text: var(--ua-color-mark-rose-text); --ua-charts-color-series-5-soft: var(--ua-color-mark-rose-soft);
-  --ua-charts-color-series-6: var(--ua-color-mark-orange); --ua-charts-color-series-6-text: var(--ua-color-mark-orange-text); --ua-charts-color-series-6-soft: var(--ua-color-mark-orange-soft);
-  /* The sequential ramp, for a grid of cells, and the cell with no value. */
-  --ua-charts-color-seq-1: var(--ua-color-seq-1);
-  --ua-charts-color-seq-2: var(--ua-color-seq-2);
-  --ua-charts-color-seq-3: var(--ua-color-seq-3);
-  --ua-charts-color-seq-4: var(--ua-color-seq-4);
-  --ua-charts-color-seq-5: var(--ua-color-seq-5);
-  --ua-charts-color-seq-6: var(--ua-color-seq-6);
-  --ua-charts-color-seq-7: var(--ua-color-seq-7);
-  --ua-charts-color-seq-8: var(--ua-color-seq-8);
-  --ua-charts-color-seq-9: var(--ua-color-seq-9);
-  --ua-charts-color-seq-10: var(--ua-color-seq-10);
-  --ua-charts-color-seq-none: var(--ua-color-seq-none);
-  /* Not the lime marker: an annotation is a thin rule and its label, and both have to hold contrast. */
-  --ua-charts-color-annotation: var(--ua-color-muted-foreground);
-  --ua-charts-color-comparison: var(--ua-color-foreground-50);
-  --ua-charts-color-delta-good: var(--ua-color-success-text);
-  --ua-charts-color-delta-bad: var(--ua-color-destructive-text);
-  --ua-charts-color-trend-neutral: var(--ua-color-muted-foreground);
-  --ua-charts-color-live: var(--ua-color-live);
-  --ua-charts-color-background: var(--ua-color-background);
-}
+/* What a view paints with is the token package's charts tier (config/charts.tokens.json). */
+:root { color-scheme: light dark; }
 :root[data-theme="light"] { color-scheme: light; }
 :root[data-theme="dark"] { color-scheme: dark; }
 

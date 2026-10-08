@@ -1,11 +1,12 @@
 /* Token generation. Reads config/, writes generated/:
  *   *.tokens.json  W3C DTCG primitives: the ramps and surface set per theme, the scales
- *   tokens.css     primitives and the common tier as custom properties, light and dark
+ *   tokens.css     primitives, the common tier and the charts tier as custom properties, light and dark
  * config/ is the source of truth. Never edit generated/ by hand.
  *
  * Three tiers, as in the storybook repo. Base: Leonardo ramps, Utopia scales and
  * config/base.tokens.json. Common: config/common.tokens.json, names that alias
- * base. Component: not started.
+ * base. Component: config/charts.tokens.json, the names <ua-view> reads, as aliases
+ * into the other two.
  *
  * Run: pnpm --filter @universal-analytics/tokens generate */
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -86,7 +87,7 @@ async function css(source: string[], selector: string, colourOnly: boolean): Pro
  *  device preference, overridable either way by data-theme. */
 export async function buildCSS(root = ROOT): Promise<string> {
   const g = (name: string) => join(root, 'generated', `${name}.tokens.json`), c = (name: string) => join(root, 'config', `${name}.tokens.json`);
-  const shared = [g('scale.fluid'), c('base'), c('common')];
+  const shared = [g('scale.fluid'), c('base'), c('common'), c('charts')];
   const light = await css([g('color.light'), ...shared], ':root', false);
   // Only colours differ by theme. The other sources are there so aliases resolve.
   const dark = await css([g('color.dark'), ...shared, c('common.dark')], ':root[data-theme="dark"]', true);

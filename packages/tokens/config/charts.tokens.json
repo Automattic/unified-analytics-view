@@ -1,0 +1,129 @@
+{
+  "charts": {
+    "$description": "The component tier: the tokens <ua-view> reads, as aliases into the common and base tiers. packages/dom lists the same names with the value each falls back to where a page loads no tokens (src/tokens.ts), and a test holds the two together.",
+    "color": {
+      "$type": "color",
+      "$description": "What a view paints with, under the names @automattic/charts gives its own colours (its prefix is --a8c-charts-). A series colour is three: the mark, text in its colour, and its tint. `background` is the surface a view stands on, for the halo behind a label; a surface that is not the page sets it for the views it holds.",
+      "label": {
+        "$value": "{color.foreground}"
+      },
+      "label-secondary": {
+        "$value": "{color.muted-foreground}"
+      },
+      "grid": {
+        "$value": "{color.border}"
+      },
+      "axis-x": {
+        "$value": "{color.foreground-50}"
+      },
+      "series-1": {
+        "$value": "{color.mark.chartreuse}"
+      },
+      "series-1-text": {
+        "$value": "{color.mark.chartreuse-text}"
+      },
+      "series-1-soft": {
+        "$value": "{color.mark.chartreuse-soft}"
+      },
+      "series-2": {
+        "$value": "{color.mark.grass}"
+      },
+      "series-2-text": {
+        "$value": "{color.mark.grass-text}"
+      },
+      "series-2-soft": {
+        "$value": "{color.mark.grass-soft}"
+      },
+      "series-3": {
+        "$value": "{color.mark.teal}"
+      },
+      "series-3-text": {
+        "$value": "{color.mark.teal-text}"
+      },
+      "series-3-soft": {
+        "$value": "{color.mark.teal-soft}"
+      },
+      "series-4": {
+        "$value": "{color.mark.steel}"
+      },
+      "series-4-text": {
+        "$value": "{color.mark.steel-text}"
+      },
+      "series-4-soft": {
+        "$value": "{color.mark.steel-soft}"
+      },
+      "series-5": {
+        "$value": "{color.mark.rose}"
+      },
+      "series-5-text": {
+        "$value": "{color.mark.rose-text}"
+      },
+      "series-5-soft": {
+        "$value": "{color.mark.rose-soft}"
+      },
+      "series-6": {
+        "$value": "{color.mark.orange}"
+      },
+      "series-6-text": {
+        "$value": "{color.mark.orange-text}"
+      },
+      "series-6-soft": {
+        "$value": "{color.mark.orange-soft}"
+      },
+      "seq-1": {
+        "$value": "{color.seq-1}"
+      },
+      "seq-2": {
+        "$value": "{color.seq-2}"
+      },
+      "seq-3": {
+        "$value": "{color.seq-3}"
+      },
+      "seq-4": {
+        "$value": "{color.seq-4}"
+      },
+      "seq-5": {
+        "$value": "{color.seq-5}"
+      },
+      "seq-6": {
+        "$value": "{color.seq-6}"
+      },
+      "seq-7": {
+        "$value": "{color.seq-7}"
+      },
+      "seq-8": {
+        "$value": "{color.seq-8}"
+      },
+      "seq-9": {
+        "$value": "{color.seq-9}"
+      },
+      "seq-10": {
+        "$value": "{color.seq-10}"
+      },
+      "seq-none": {
+        "$value": "{color.seq-none}"
+      },
+      "annotation": {
+        "$value": "{color.muted-foreground}"
+      },
+      "comparison": {
+        "$value": "{color.foreground-50}"
+      },
+      "delta-good": {
+        "$value": "{color.success-text}"
+      },
+      "delta-bad": {
+        "$value": "{color.destructive-text}"
+      },
+      "trend-neutral": {
+        "$value": "{color.muted-foreground}"
+      },
+      "live": {
+        "$value": "{color.live}"
+      },
+      "background": {
+        "$value": "{color.background}"
+      }
+    }
+  }
+}

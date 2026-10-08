@@ -9,7 +9,7 @@ export function leader(result: Result, dim: string, m: string): Row | undefined 
 }
 
 /** The tldr prose: the text sibling of a view, derived from the query and the transforms, not from a named chart type. */
-export function tldrProse(q: Query, result: Result, share: boolean, catalog: Catalog): string {
+export function tldrProse(q: Query, result: Result, share: boolean, catalog: Catalog, points = false): string {
   const m = q.metrics[0]!, M = catalog.metrics[m]!, t = result.totals, rows = result.rows, dims = q.by || [], by = dims[0];
   const range = rangeLabel(result.meta.range), name = M.label.toLowerCase();
   if (M.instant) {
@@ -26,6 +26,20 @@ export function tldrProse(q: Query, result: Result, share: boolean, catalog: Cat
     const split = dims.find((d) => d !== time)!, top = leader(result, split, m)![split], days = [...new Set(rows.map((r) => r[time]))];
     const led = days.filter((d) => { const at = rows.filter((r) => r[time] === d), mine = at.find((r) => r[split] === top); return !!mine && at.every((r) => r === mine || (r[m] as number) < (mine[m] as number)); }).length;
     return largest(split).replace(' the ', ' is the ') + ' of ' + name + ' in the ' + range + ', and leads on ' + (led === days.length ? 'all ' + led : led + ' of ' + days.length) + ' ' + label(time) + 's.';
+  }
+  if (points && by && q.metrics.length > 1 && rows.length) {
+    // Two metrics set against each other, a point for each value of a dimension: how far each runs, and which point is
+    // furthest out on each. ponytail: "outliers" here are the two extremes, found by comparing rows. A test of how far
+    // out a point is would be a statistic, and those are the engine's.
+    const two = q.metrics.slice(0, 2), label = (f: string) => catalog.metrics[f]!.label.toLowerCase(), of = (f: string) => rows.map((r) => r[f] as number);
+    const top = two.map((f) => rows.reduce((a, r) => ((r[f] as number) > (a[f] as number) ? r : a))[by]);
+    return 'Across ' + rows.length + ' ' + catalog.dimensions[by]!.label.toLowerCase() + 's in the ' + range + ', ' + 'the range of ' + two.map((f) => label(f) + ' is ' + fmt(Math.min(...of(f))) + ' to ' + fmt(Math.max(...of(f)))).join(' and of ') + '. '
+      + (top[0] === top[1] ? top[0] + ' is highest on both.' : top[0] + ' is highest on ' + label(two[0]!) + ' and ' + top[1] + ' on ' + label(two[1]!) + '.');
+  }
+  if (by && catalog.dimensions[by]!.type === 'number' && rows.length) {
+    // A numeric dimension: the total, and the bin that holds the most of it.
+    const top = rows.reduce((a, r) => ((r[m] as number) > (a[m] as number) ? r : a)), end = top[by + '@end'];
+    return M.label + ': ' + fmt(t[m]) + ' in the ' + range + '. The most, ' + fmt(top[m] as number) + ', at a ' + catalog.dimensions[by]!.label.toLowerCase() + ' of ' + top[by] + (end == null ? '' : ' to ' + end) + '.';
   }
   if (by && catalog.dimensions[by]!.type !== 'time' && rows.length) {
     const label = catalog.dimensions[by]!.label.toLowerCase();

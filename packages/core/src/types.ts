@@ -8,6 +8,13 @@ export interface MetricDef {
   polarity: Polarity;
   rangeTotal?: 'sum' | 'sum of daily';
   instant?: boolean;
+  /** The range a value is read against, where it has one: the two ends of a gauge. Proposed to the API's owners, as the
+   * next two are (chart-coverage-plan, section 3.5). */
+  domain?: [number, number];
+  /** The value to reach. */
+  target?: number;
+  /** Where the domain is divided, in ascending order: each is where one band ends and the next begins. */
+  bands?: number[];
 }
 export interface DimensionDef {
   label: string;

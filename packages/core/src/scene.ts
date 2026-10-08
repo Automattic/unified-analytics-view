@@ -583,7 +583,7 @@ export function tldrValueText(catalog: Catalog, q: Query, result: Result, compac
 function sceneNumber(catalog: Catalog, q: Query, result: Result, share: boolean): SceneNode[] {
   const m = q.metrics[0]!, M = catalog.metrics[m]!, t = result.totals, by = (q.by || [])[0], rows = result.rows;
   const nodes: SceneNode[] = [];
-  const value = (text: string, short = text) => nodes.push({ key: 'value', part: 'number', kind: 'text', text, ...(short !== text && { short }), anchor: 'start', font: 'display', paint: 'ink', layer: 'data' });
+  const value = (text: string, short = text) => nodes.push({ key: 'value', part: 'number', kind: 'text', text, ...(short !== text && { short }), anchor: 'start', font: 'display', paint: 'ink', layer: 'data', ...(M.definition && { note: M.definition }) });
   const sub = (text: string, rank?: number) => nodes.push({ key: 'sub', part: 'number', kind: 'text', text, anchor: 'start', font: 'tick', paint: 'ink.muted', layer: 'guide', ...(rank && { rank }) });
   if (M.instant) {
     const n = t[m] || 0;

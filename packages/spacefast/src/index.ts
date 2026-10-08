@@ -40,7 +40,7 @@ const WRITTEN = new Set(Intl.supportedValuesOf('currency').map((c) => c.toLowerC
  * - Time with a breakdown is refused: a view of two dimensions needs each one's totals over the other, which the API has not defined.
  * - A list's rows carry their place as `<metric>@rank`, since the API says rank is row order.
  * - A scroll bucket is a `number` dimension, ten points wide.
- * - A rise is good, bad or neither as the answer's column says.
+ * - A rise is good, bad or neither as the answer's column says, and a metric's definition is the column's.
  * - Totals are the API's own. `other` and `truncated` have no place in a result and are left behind.
  * - Money is a metric for each currency, `revenue.usd` and `revenue.eur`: the API never adds currencies together, and a view
  *   has one unit a metric. Its unit is the currency, its values are in the currency's own units, and a row with no amount in a
@@ -66,7 +66,7 @@ export function adapt(api: ApiResult, options: AdaptOptions = {}): Adapted {
 
   const catalog: Catalog = { metrics: {}, dimensions: {} };
   for (const c of metrics) {
-    const def: MetricDef = { label: c.label, unit: c.currency || UNITS[c.unit]!, polarity: POLARITY[c.polarity]! };
+    const def: MetricDef = { label: c.label, unit: c.currency || UNITS[c.unit]!, polarity: POLARITY[c.polarity]!, ...(c.definition ? { definition: c.definition } : {}) };
     if (c.currency) def.rangeTotal = 'sum';
     if (c.id === 'visitor_days') def.rangeTotal = 'sum of daily';
     catalog.metrics[c.id] = def;

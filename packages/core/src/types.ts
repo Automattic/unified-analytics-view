@@ -10,6 +10,9 @@ export interface MetricDef {
    * `percent` one from 0 to 100; money is in its currency's own units, dollars and not cents; `ms` and `s` are lengths of time. */
   unit: Unit;
   polarity: Polarity;
+  /** What the number counts, caveats included, in a sentence or two. Carried on the tldr value as its `note`, so the
+   * caveat travels with the number: a painter shows it when the number is pointed at. It is too long to stand under the number. */
+  definition?: string;
   rangeTotal?: 'sum' | 'sum of daily';
   instant?: boolean;
   /** The range a value is read against, where it has one: the two ends of a gauge. Proposed to the API's owners, as the

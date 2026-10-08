@@ -360,7 +360,7 @@ What the API's owners answered, after the review on the PR:
 
 Open:
 
-1. **A metric's definition has nowhere to go.** Every column now carries one, caveats included: unique visitors over a range are consented visitors only. A catalog entry in core has no field for it and no view shows it. Recommended: an optional `definition` on a metric, shown where the "Sum of daily counts" note is. **To decide.**
+1. **A metric's definition had nowhere to go.** Every column carries one, caveats included: unique visitors over a range are consented visitors only. Decided October 8 and built: a catalog entry may carry `definition`, the tldr value carries it as its `note`, and `<ua-view>` shows it as the number's `title`. Seen in Chromium. It is not under the number, where the measured pass would drop a line that long at every width, and not in the tldr prose, which is also the prose rung and overflows a small box already. So it shows on hover and to assistive technology only: not on touch, not in the pixel painter, and not in the table's column heads. Whether a caveat this important needs a place that always shows is **to decide.**
 2. **Core writes money with the browser's digits.** The value is right in any browser, but Chrome writes forints with no decimals and Safari with two. The same seventeen currencies.
 3. **Time with a breakdown is refused,** here and by the API for now. A split or stacked series cannot be fed.
 4. **Until buckets snap, the first bucket of a series is cut by the window's start** and marked complete, and the adapter passes it on.

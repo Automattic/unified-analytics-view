@@ -9,12 +9,17 @@ export const catalog: Catalog = {
     present:   { label: 'Present now', unit: 'count', polarity: 'none', instant: true },
     net_subscribers: { label: 'Net subscribers', unit: 'count', polarity: 'up', rangeTotal: 'sum' },
     revenue:   { label: 'Revenue',     unit: 'usd',   polarity: 'up',   rangeTotal: 'sum' },
+    conversions:      { label: 'Conversions',     unit: 'count', polarity: 'up', rangeTotal: 'sum' },
+    conversion_rate:  { label: 'Conversion rate', unit: 'ratio', polarity: 'up' },
+    conversion_value: { label: 'Value',           unit: 'usd',   polarity: 'up', rangeTotal: 'sum' },
   },
   dimensions: {
     'date.day': { label: 'Day',     type: 'time' },
     page:       { label: 'Page',    type: 'categorical' },
     channel:    { label: 'Channel', type: 'categorical' },
     device:     { label: 'Device',  type: 'categorical' },
+    event:      { label: 'Event',   type: 'categorical' },
+    step:       { label: 'Step',    type: 'categorical' },
   },
 };
 
@@ -60,6 +65,26 @@ const CHANNELS: [string, number, number][] = [['Search', 0.41, 0.44], ['Direct',
 const DEVICES: [string, number, number][] = [['Desktop', 0.52, 0.55], ['Mobile', 0.41, 0.38], ['Tablet', 0.07, 0.07]];
 // A dimension whose values divide a total: each value's share of it, now and in the period before.
 const MIX: Record<string, [string, number, number][]> = { channel: CHANNELS, device: DEVICES };
+// Dimensions held as a table: a row per value, each metric now and in the period before, and the engine's own totals.
+// A rate is the engine's, row by row and over the whole: no view divides to get one, and it is not the sum of its rows.
+// Events are ranked as pages are. Steps come back in their own order, which is what makes them a funnel.
+type Cell = [now: number, before: number | null];
+const TABLES: Record<string, { fields: string[]; ranked: boolean; rows: [string, ...Cell[]][]; totals: Record<string, Cell> }> = {
+  event: { fields: ['conversions', 'conversion_rate', 'conversion_value'], ranked: true, rows: [
+    ['Add to cart',       [1310, 1180], [0.124, 0.125], [48200, 43100]],
+    ['Newsletter signup', [842, 610],   [0.08, 0.065],  [4210, 3050]],
+    ['Checkout started',  [655, 690],   [0.062, 0.073], [39800, 41900]],
+    ['Purchase',          [412, 371],   [0.039, 0.039], [31650, 27900]],
+    ['Trial started',     [198, null],  [0.019, null],  [9900, null]],
+    ['Contact form',      [96, 104],    [0.009, 0.011], [960, 1040]],
+  ], totals: { conversions: [3513, 2955], conversion_rate: [0.212, 0.198], conversion_value: [134720, 116990] } },
+  step: { fields: ['visitors', 'conversion_rate'], ranked: false, rows: [
+    ['Visited the site',  [10531, 9437], [1, 1]],
+    ['Viewed pricing',    [1705, 1390],  [0.162, 0.147]],
+    ['Started checkout',  [655, 690],    [0.062, 0.073]],
+    ['Purchased',         [412, 371],    [0.039, 0.039]],
+  ], totals: { conversion_rate: [0.039, 0.039] } },
+};
 const LIVE = [{ page: '/', present: 3 }, { page: '/pricing', present: 2 }, { page: '/blog/launch-notes', present: 1 }, { page: '/docs/getting-started', present: 1 }];
 
 export type Scenario = 'typical' | 'no-prior' | 'empty';
@@ -100,9 +125,15 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
   // A shorter range is the last days of the same series, and a mix of its own. 28 days is the fixture as it always was.
   const days = Math.min(28, parseInt(q.range || '') || 28), mix = seeded(days), vary = () => (days === 28 ? 1 : 0.5 + mix());
   const cur = DAILY.slice(56 - days), prev = DAILY.slice(56 - 2 * days, 56 - days);
+  // A table's counts follow the range. A rate does not.
+  const table = TABLES[by || ''], held = (m: string, n: number | null) => (n == null || catalog.metrics[m]!.unit === 'ratio' ? n : Math.round(n * days / 28));
+  const elsewhere = metrics.find((m) => !(m in DAILY[0]!) && !(table && table.fields.indexOf(m) >= 0));
+  if (elsewhere) throw new Error('The fixture has "' + elsewhere + '" by ' + Object.keys(TABLES).filter((d) => TABLES[d]!.fields.indexOf(elsewhere) >= 0).join(' or ') + ' only. Query it by that.');
+  if (table && dims.length > 1) throw new Error('The fixture has "' + by + '" on its own, and not with a second dimension. Remove "' + dims[1] + '" from by.');
   metrics.forEach((m) => {
-    totals[m] = sum(cur, m);
-    if (wantPrev) totals[m + '@previous'] = hasPrev ? sum(prev, m) : null;
+    const [now, before] = table && table.totals[m] ? table.totals[m]!.map((n) => held(m, n)) : [sum(cur, m), sum(prev, m)];
+    totals[m] = now!;
+    if (wantPrev) totals[m + '@previous'] = hasPrev ? before! : null;
   });
   // One row per value of a dimension, in the dimension's own order, before any sort or limit.
   function rowsBy(dim: string): Row[] {
@@ -111,6 +142,15 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
       metrics.forEach((m) => { r[m] = d[m as D]; if (wantPrev) r[m + '@previous'] = hasPrev ? prev[i]![m as D] : null; });
       return r;
     });
+    if (table) {
+      const missing = metrics.find((m) => table.fields.indexOf(m) < 0);
+      if (missing) throw new Error('The fixture has "' + dim + '" with ' + table.fields.join(', ') + ', and not "' + missing + '". Query one of those.');
+      return table.rows.map(([name, ...cells]) => {
+        const r: Row = { [dim]: name };
+        metrics.forEach((m) => { const [now, before] = cells[table.fields.indexOf(m)]!; r[m] = held(m, now); if (wantPrev) r[m + '@previous'] = hasPrev ? held(m, before) : null; });
+        return r;
+      });
+    }
     const perPage = metrics.find((m) => !(m in PAGES[0]!));
     if (dim === 'page' && perPage) throw new Error('The fixture has "' + perPage + '" by day, channel or device, and not page by page. Query it by one of those.');
     if (dim === 'page') return PAGES.map((p) => {
@@ -130,6 +170,7 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
   const m0 = metrics[0]!;
   // A categorical dimension is ranked by the first metric, and `limit` keeps its first values.
   const top = (rs: Row[]) => { const ranked = rs.slice().sort((a, b) => (b[m0] as number) - (a[m0] as number)); return q.limit ? ranked.slice(0, q.limit) : ranked; };
+  if (table && !table.ranked) return { rows: rowsBy(by!).slice(0, q.limit || undefined), totals, meta };
   if (dims.length < 2) return { rows: !by ? rows : by === 'date.day' ? rowsBy(by) : top(rowsBy(by)), totals, meta };
 
   // Two dimensions: one row per pair. Each value of the outer one is divided among the inner one's, unevenly from one

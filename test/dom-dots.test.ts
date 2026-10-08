@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildScene, resolve, unboundedContainer } from '@universal-analytics/core';
 import { catalog, runQuery, samples } from '@universal-analytics/fixtures';
-import { CELL_LEAST, DOTS_CSS, FONT, amount, dotted, rolls } from '../packages/dom/src/dots.ts';
+import { CELL, DOTS_CSS, FONT, amount, dotted, rolls } from '../packages/dom/src/dots.ts';
 import { NUMBER_FITS, SCREEN_LEAST, fitNumber } from '../packages/dom/src/measure.ts';
 import { cartesian } from '../packages/dom/src/layouts/cartesian.ts';
 import { once } from '../packages/dom/src/motion.ts';
@@ -35,25 +35,26 @@ describe('the dot-matrix face', () => {
     for (const ch of Object.keys(FONT)) if (ch !== ' ') expect(DOTS_CSS, ch).toContain(`.uav-glyph-run i[data-ch="${ch}"]::before, .uav-glyph-run i[data-was="${ch}"]::after { box-shadow:`);
     expect(DOTS_CSS).not.toContain('i[data-ch=" "]::before');
   });
-  it('keeps a cell a whole number of px, and is in the element\'s base sheet', () => {
-    expect(DOTS_CSS).toContain('--uav-u: max(3px, round(nearest, 1em / 7, 1px));');
-    expect(CELL_LEAST).toBe(3);
+  it('keeps a cell the same whole number of px everywhere, and is in the element\'s base sheet', () => {
+    expect(DOTS_CSS).toContain('--uav-u: 4px;');
+    expect(DOTS_CSS.match(/--uav-u:/g)).toHaveLength(1);
+    expect(CELL).toBe(4);
     expect(BASE_CSS).toContain(DOTS_CSS);
     expect(NUMBER_FITS.at(-1)).toBe('small short');
     // The words are still there where a shadow is not drawn.
     expect(DOTS_CSS).toMatch(/@media \(forced-colors: active\) \{\s+\.uav-glyphs \{ display: none; \}/);
   });
 
-  // A cell is never under its least. A number too wide for its room at that size keeps its cells and loses its end.
-  it('is on a screen, which is cut to its room at a whole cell and never shrinks a cell to fit', () => {
+  // A screen fills its room. A number too wide for it keeps its cells and loses its end.
+  it('is on a screen, which is as wide as its room at a whole cell and never shrinks a cell to fit', () => {
     expect(DOTS_CSS).toContain('overflow: hidden;');
-    expect(DOTS_CSS).toContain('max-inline-size: calc(round(down, 100% - var(--uav-g), var(--uav-u)) + var(--uav-g));');
-    expect(DOTS_CSS).toContain('var(--ua-charts-color-screen,');
-    expect(DOTS_CSS).toContain('box-shadow: var(--ua-charts-elevation-screen,');
+    expect(DOTS_CSS).toContain(' inline-size: round(down, 100%, var(--uav-u));');
+    // It has no surface of its own: the cells sit on what the view is on.
+    expect(DOTS_CSS).not.toMatch(/color-screen|elevation-screen|radius-screen|padding/);
     expect(DOTS_CSS).not.toContain('tight');
   });
   it('runs the number along the screen under the pointer, a cell at a time, and shows its end at once with reduced motion', () => {
-    expect(DOTS_CSS).toContain('.uav-glyph-run { display: flex; flex: none; position: relative; left: round(to-zero, calc(var(--uav-s, 0) * 100%), var(--uav-u)); translate: round(to-zero, calc(var(--uav-s, 0) * -100%), var(--uav-u)) 0; }');
+    expect(DOTS_CSS).toContain('.uav-glyph-run { display: flex; flex: none; min-inline-size: 100%; position: relative; left: round(to-zero, calc(var(--uav-s, 0) * 100%), var(--uav-u)); translate: round(to-zero, calc(var(--uav-s, 0) * -100%), var(--uav-u)) 0; }');
     expect(DOTS_CSS).toContain('.uav-glyphs:hover .uav-glyph-run { animation: uav-run');
     expect(DOTS_CSS).toContain('@media (prefers-reduced-motion: reduce) { .uav-glyphs:hover .uav-glyph-run { animation: none; --uav-s: 1; } }');
   });

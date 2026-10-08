@@ -19,7 +19,7 @@ describe('the radial layout', () => {
       '  ' + fig('guides') + ' .uav-legend { display: none; }', '  ' + fig('guides') + ' .uav-legend-top { display: block; max-block-size: none; }', '}'].join('\n'));
     expect(css).toContain('@container uav-view (block-size < 87.5px) {\n  ' + fig('guides') + ' :is(.uav-legend, .uav-legend-top) { display: none; }\n}');
     const alone = ['  ' + fig('marks') + ' :is(.uav-radial, .uav-legend, .uav-legend-top) { display: none; }', '  ' + fig('marks') + ' .uav-number { display: block; }',
-      '  ' + fig('marks') + ' { grid-template: "number" auto / minmax(0, 1fr); }', '  ' + fig('marks') + ' .uav-body { display: none; }', '  ' + fig('marks') + ' .uav-number { margin: 0; }', '}'].join('\n');
+      '  ' + fig('marks') + ' { grid-template: "number" auto / minmax(0, 1fr); }', '  ' + fig('marks') + ' .uav-body { display: none; }', '  ' + fig('marks') + ' .uav-number { align-self: start; margin: 0; }', '}'].join('\n');
     expect(css).toContain('@container uav-view (inline-size < 71.5px) {\n' + alone);
     expect(css).toContain('@container uav-view (block-size < 63.5px) {\n' + alone);
     const at = ['inline-size < 169.5px', 'block-size < 87.5px', 'inline-size < 119.5px', 'inline-size < 71.5px'].map((s) => css.indexOf(s));

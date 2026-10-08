@@ -25,9 +25,7 @@ export const TOKENS: Record<string, string> = {
   'color-delta-bad': 'var(--ua-charts-color-trend-down, currentColor)',
   'color-live': 'currentColor',
   'color-background': 'Canvas',
-  // The screen a number in dots is on: sunk into what the view stands on.
-  'color-screen': 'color-mix(in srgb, CanvasText 6%, Canvas)',
-  // Its lit cells. With no token they are the colour of the text the number would have been.
+  // The lit cells of a number in dots. With no token they are the colour of the text the number would have been.
   'color-label-screen': 'currentColor',
   'color-tooltip-surface': 'CanvasText',
   'color-tooltip-surface-secondary': 'GrayText',
@@ -39,8 +37,6 @@ export const TOKENS: Record<string, string> = {
   'border-radius-cell': '1px',
   'border-radius-swatch': '2px',
   'border-radius-tooltip': '2px',
-  'border-radius-screen': '2px',
-  'elevation-screen': 'inset 0 1px 2px color-mix(in srgb, CanvasText 20%, transparent)',
   // The readout stands above the view. Unthemed, a plain shadow straight down.
   'elevation-tooltip': '0 1px 3px color-mix(in srgb, CanvasText 25%, transparent)',
 

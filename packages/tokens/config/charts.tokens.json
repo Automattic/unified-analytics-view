@@ -155,10 +155,6 @@
         "$value": "{color.black}",
         "$description": "The stroke about the readout and the words of a crosshair. Black in both themes, as their text is."
       },
-      "screen": {
-        "$value": "{color.lime.300}",
-        "$description": "The screen a number in dots is on: the lime ramp's third step in both themes."
-      },
       "label-screen": {
         "$value": "{color.lime.1000}",
         "$description": "The lit cells of a number in dots, and at a tenth of it the unlit ones: the lime ramp's last step in both themes."
@@ -181,9 +177,6 @@
       },
       "tooltip": {
         "$value": "{radius.sm}"
-      },
-      "screen": {
-        "$value": "{radius.xs}"
       }
     },
     "stroke-width": {
@@ -322,12 +315,9 @@
     },
     "elevation": {
       "$type": "shadow",
-      "$description": "How far a thing stands from the view, as a box-shadow: the readout and the words of a crosshair above it, and the screen a number is on sunk into it.",
+      "$description": "How far a thing stands from the view, as a box-shadow: the readout and the words of a crosshair above it.",
       "tooltip": {
         "$value": "{elevation.2}"
-      },
-      "screen": {
-        "$value": "{elevation.inset}"
       }
     }
   }

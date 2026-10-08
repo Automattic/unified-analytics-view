@@ -92,7 +92,7 @@ function bind(cells: HTMLElement): void {
 }
 
 // The number alone. The body goes whole, so kept axes do not stand with no grid between them.
-const alone = { '': 'grid-template: "number" auto / minmax(0, 1fr);', '.uav-body': 'display: none;', '.uav-number': 'margin: 0;' };
+const alone = { '': 'grid-template: "number" auto / minmax(0, 1fr);', '.uav-body': 'display: none;', '.uav-number': 'align-self: start; margin: 0;' };
 
 export const matrix: LayoutPainter = {
   layout: 'matrix',

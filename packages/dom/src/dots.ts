@@ -2,22 +2,20 @@
  * for the one thing the direction gives it (docs/milestones.md, the tldr value): a glyph is five cells by seven, a
  * shape only decides which cells are lit, and the cells that are not are still there, faintly.
  *
- * The number is on a screen: the screen surface, sunk into whatever the view is on, two cells clear of the glyphs all
- * round. The unlit cells are the screen's and do not move.
+ * The number is on a screen with no surface of its own: its cells sit on whatever the view is on. The unlit cells are
+ * the screen's and do not move.
  *
  * It is drawn by the stylesheet. A character is one element, and its lit cells are that element's shadows, each a
  * whole number of cells from the first. The unlit cells are one background. So a number is as many elements as it
  * has characters, nothing is drawn in script, and the strict content security policy holds.
  *
- * A cell is a whole number of px, worked out from the face's size, so a dot is never soft: a fluid face steps from
- * one cell size to the next and does not slide. The lit cells have a colour of their own, the screen's label, and
- * the unlit ones are a tenth of it. A glyph is as tall as the face is set, seven cells to its size:
- * lit cells are half the ink a stroke of type is, so a number in dots is set larger to weigh the same.
+ * A cell is CELL px, everywhere: the face's size does not move it, so two screens side by side have the same dots.
+ * The lit cells have a colour of their own, the screen's label, and the unlit ones are a tenth of it.
  *
- * A cell is never under CELL_LEAST. Where the number at that size is wider than its room, the screen is cut to the
- * room, at a whole cell, and under the pointer the number runs along it a cell at a time and back, so the end of it
+ * A screen is as wide as its room, to a whole cell, so screens in a row of equal rooms are equal. Where the number
+ * is wider than that, under the pointer it runs along the screen a cell at a time and back, so the end of it
  * can be read. The cells stay where they are and only which are lit changes, as on the prototype's grid. A donut's
- * hole is the one place with a smaller cell: it is a circle, and a screen cut to a circle's box is no screen.
+ * hole is the one place a screen is only as wide as its number: it is a circle, and has no room to fill.
  * ponytail: the run is the pointer's alone. A reader with no pointer has the words, which are in the document.
  *
  * When the number first shows it rolls up to its value from nothing, every character of it, and when it changes
@@ -32,8 +30,8 @@
 import { once } from './motion.ts';
 import { token } from './tokens.ts';
 
-/** The least a cell is, in px: a dot of 2 and a gap of 1. Under it a digit is not read at a glance. */
-export const CELL_LEAST = 3;
+/** A cell, in px: a dot of 3 and a gap of 1. */
+export const CELL = 4;
 
 /** Five columns by seven rows, a row a string, "1" where a cell is lit. */
 export const FONT: Record<string, string[]> = {
@@ -87,22 +85,20 @@ const U = 'var(--uav-u)', lit = (ch: string) => FONT[ch]!.flatMap((row, y) => Ar
 const shadows = (ch: string) => lit(ch).map(([x, y]) => `calc(${U} * ${x + 1 - (NARROW[ch]?.[1] ?? 0)}) ${y ? `calc(${U} * ${y})` : '0'}`).join(', ');
 
 /** It joins the base sheet inside `@layer uav`. `--uav-u` is a cell, `--uav-d` the dot in it (a cell less a px, or
- * less two from eight px up, as the prototype's are) and `--uav-g` the gap. The screen is a gap and two cells clear of
- * the glyphs at the start and two cells at the end, so the unlit cells, which start a gap in, end a gap from its edge.
+ * less two from eight px up, as the prototype's are) and `--uav-g` the gap. The run is at least as wide as the screen,
+ * so that one that fits has nowhere to run to.
  * `--uav-s` is how far along its run the number is, from 0 to 1 (registered in motion.ts, which is what lets it
  * move): the track is set that share of the screen's width forward and of its own back, each to a whole cell, which
  * is nothing at all where the number fits. With reduced motion the pointer shows the end of the number at once.
  * The words stay in the document for a screen reader and for a copy, and are what shows where a shadow is not
  * drawn: under forced colours. */
 export const DOTS_CSS = `
-.uav-glyphs { display: inline-flex; box-sizing: border-box; overflow: hidden; vertical-align: middle; color: ${token('color-label-screen')};
-  --uav-u: max(${CELL_LEAST}px, round(nearest, 1em / 7, 1px)); --uav-d: calc(var(--uav-u) - max(1px, round(down, var(--uav-u) / 4, 1px))); --uav-g: calc(var(--uav-u) - var(--uav-d));
-  max-inline-size: calc(round(down, 100% - var(--uav-g), var(--uav-u)) + var(--uav-g));
-  --uav-pad: calc(var(--uav-u) * 2); padding: calc(var(--uav-pad) + var(--uav-g)) var(--uav-pad) var(--uav-pad) calc(var(--uav-pad) + var(--uav-g));
-  border-radius: ${token('border-radius-screen')}; box-shadow: ${token('elevation-screen')};
-  background: conic-gradient(at var(--uav-d) var(--uav-d), transparent 75%, color-mix(in srgb, currentColor 9%, transparent) 0) var(--uav-g) var(--uav-g) / var(--uav-u) var(--uav-u), ${token('color-screen')}; }
-.uav-hole .uav-glyphs { --uav-u: max(2px, round(nearest, 1em / 7, 1px)); max-inline-size: none; }
-.uav-glyph-run { display: flex; flex: none; position: relative; left: round(to-zero, calc(var(--uav-s, 0) * 100%), var(--uav-u)); translate: round(to-zero, calc(var(--uav-s, 0) * -100%), var(--uav-u)) 0; }
+.uav-glyphs { display: flex; box-sizing: border-box; overflow: hidden; vertical-align: middle; color: ${token('color-label-screen')};
+  --uav-u: ${CELL}px; --uav-d: calc(var(--uav-u) - max(1px, round(down, var(--uav-u) / 4, 1px))); --uav-g: calc(var(--uav-u) - var(--uav-d));
+  inline-size: round(down, 100%, var(--uav-u));
+  background: conic-gradient(at var(--uav-d) var(--uav-d), transparent 75%, color-mix(in srgb, currentColor 9%, transparent) 0) 0 0 / var(--uav-u) var(--uav-u); }
+.uav-hole .uav-glyphs { display: inline-flex; inline-size: auto; }
+.uav-glyph-run { display: flex; flex: none; min-inline-size: 100%; position: relative; left: round(to-zero, calc(var(--uav-s, 0) * 100%), var(--uav-u)); translate: round(to-zero, calc(var(--uav-s, 0) * -100%), var(--uav-u)) 0; }
 @keyframes uav-run { 0%, 15% { --uav-s: 0; } 85%, 100% { --uav-s: 1; } }
 .uav-glyphs:hover .uav-glyph-run { animation: uav-run 4s linear infinite alternate; }
 @media (prefers-reduced-motion: reduce) { .uav-glyphs:hover .uav-glyph-run { animation: none; --uav-s: 1; } }

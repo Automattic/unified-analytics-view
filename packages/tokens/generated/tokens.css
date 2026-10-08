@@ -259,12 +259,10 @@
   --ua-charts-color-tooltip-surface: var(--ua-color-constant-lime); /** The readout and the crosshair's words: the marker colour, from the constants, so it is the same in both themes. */
   --ua-charts-color-tooltip-surface-secondary: var(--ua-color-white); /** The crosshair's word for a comparison: quieter than the surface, edged in it, and the same in both themes. */
   --ua-charts-color-tooltip-border: var(--ua-color-black); /** The stroke about the readout and the words of a crosshair. Black in both themes, as their text is. */
-  --ua-charts-color-screen: var(--ua-color-lime-300); /** The screen a number in dots is on: the lime ramp's third step in both themes. */
   --ua-charts-color-label-screen: var(--ua-color-lime-1000); /** The lit cells of a number in dots, and at a tenth of it the unlit ones: the lime ramp's last step in both themes. */
   --ua-charts-border-radius-bar: var(--ua-radius-xs);
   --ua-charts-border-radius-swatch: var(--ua-radius-xs);
   --ua-charts-border-radius-tooltip: var(--ua-radius-sm);
-  --ua-charts-border-radius-screen: var(--ua-radius-xs);
   --ua-charts-font-size-tick: var(--ua-font-size-xs);
   --ua-charts-font-size-label: var(--ua-font-size-sm);
   --ua-charts-font-size-value: var(--ua-font-size-sm);
@@ -331,7 +329,6 @@
   --ua-charts-color-trend-down: var(--ua-color-destructive-text);
   --ua-charts-color-label-axis: var(--ua-color-muted-foreground);
   --ua-charts-elevation-tooltip: var(--ua-elevation-2);
-  --ua-charts-elevation-screen: var(--ua-elevation-inset);
   --ua-color-card-raised-90: color-mix(in srgb, var(--ua-color-card-raised) 90%, transparent);
   --ua-color-kbd-on-inverse: color-mix(in srgb, var(--ua-color-background) 20%, transparent);
   --ua-charts-color-axis-x: var(--ua-color-foreground-50);
@@ -520,7 +517,6 @@
   --ua-charts-color-tooltip-surface: var(--ua-color-constant-lime); /** The readout and the crosshair's words: the marker colour, from the constants, so it is the same in both themes. */
   --ua-charts-color-tooltip-surface-secondary: var(--ua-color-white); /** The crosshair's word for a comparison: quieter than the surface, edged in it, and the same in both themes. */
   --ua-charts-color-tooltip-border: var(--ua-color-black); /** The stroke about the readout and the words of a crosshair. Black in both themes, as their text is. */
-  --ua-charts-color-screen: var(--ua-color-lime-300); /** The screen a number in dots is on: the lime ramp's third step in both themes. */
   --ua-charts-color-label-screen: var(--ua-color-lime-1000); /** The lit cells of a number in dots, and at a tenth of it the unlit ones: the lime ramp's last step in both themes. */
   --ua-color-mark-chartreuse: var(--ua-color-constant-chartreuse);
   --ua-color-mark-chartreuse-text: var(--ua-color-constant-chartreuse);
@@ -772,7 +768,6 @@
   --ua-charts-color-tooltip-surface: var(--ua-color-constant-lime); /** The readout and the crosshair's words: the marker colour, from the constants, so it is the same in both themes. */
   --ua-charts-color-tooltip-surface-secondary: var(--ua-color-white); /** The crosshair's word for a comparison: quieter than the surface, edged in it, and the same in both themes. */
   --ua-charts-color-tooltip-border: var(--ua-color-black); /** The stroke about the readout and the words of a crosshair. Black in both themes, as their text is. */
-  --ua-charts-color-screen: var(--ua-color-lime-300); /** The screen a number in dots is on: the lime ramp's third step in both themes. */
   --ua-charts-color-label-screen: var(--ua-color-lime-1000); /** The lit cells of a number in dots, and at a tenth of it the unlit ones: the lime ramp's last step in both themes. */
   --ua-color-mark-chartreuse: var(--ua-color-constant-chartreuse);
   --ua-color-mark-chartreuse-text: var(--ua-color-constant-chartreuse);

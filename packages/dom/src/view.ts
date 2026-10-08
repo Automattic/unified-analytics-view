@@ -50,6 +50,10 @@ export const BASE_CSS = `@layer uav {
 .uav[data-parts~="number"]:not([data-layout="none"]) .uav-number { margin-block-end: 16px; }
 .uav-number > * { color: var(--uav-paint); }
 .uav-number > b { display: inline-block; vertical-align: middle; max-inline-size: 100%; }
+/* A number in dots is a block, so its screen has the number's whole width to fill. The ruler's is as wide as its glyphs. */
+:not(.uav-ruler) > .uav-number > b:has(.uav-glyphs) { display: block; }
+/* Beside a pulse it is what the pulse and its margins leave. */
+:not(.uav-ruler) > .uav-number > .uav-pulse + b:has(.uav-glyphs) { display: inline-block; inline-size: calc(100% - 20px); }
 .uav-number > span { display: block; line-height: calc(18 / 13); overflow: hidden; text-overflow: ellipsis; }
 .uav-number > .uav-f-tick { line-height: calc(16 / 11); }
 .uav-pulse { display: inline-block; vertical-align: middle; inline-size: 10px; block-size: 10px; margin-inline: 2px 8px; border-radius: 50%; background: var(--uav-paint); }

@@ -20,6 +20,8 @@ const LAYOUTS: [x: FieldKind, y: FieldKind, color: FieldKind, layout: Layout][] 
 
 function detectLayout(catalog: Catalog, layers: Layer[]): Layout {
   const is = (kind: FieldKind, f: unknown) => kind === 'any' || isDim(catalog, f);
+  // Anything on angle is laid out about a centre, whatever else is encoded. It is not a row of the table: that asks about x, y and color.
+  if (layers.some((l) => l.encode && l.encode.angle != null)) return 'radial';
   for (const [x, y, color, layout] of LAYOUTS) if (layers.some((l) => l.encode && is(x, l.encode.x) && is(y, l.encode.y) && is(color, l.encode.color))) return layout;
   throw new Error('These layers put no dimension on x, y or color, so there is nothing to lay out.');
 }
@@ -28,7 +30,7 @@ function checkLayers(layers: Layer[], q: Query, catalog: Catalog): void {
   const by = q.by || [], known = by.concat(q.metrics);
   if (by.length > 2 || (by.length === 2 && by[0] === by[1])) throw new Error('A view is by one dimension or by two different ones, and query.by has: ' + by.join(', ') + '. Remove all but two.');
   layers.forEach((l, i) => {
-    if (!l || !l.mark) throw new Error('Layer ' + (i + 1) + ' has no "mark". Use one of: line, area, bar, rule, text.');
+    if (!l || !l.mark) throw new Error('Layer ' + (i + 1) + ' has no "mark". Use one of: line, area, bar, rule, text, arc.');
     if (l.stack && !isDim(catalog, l.encode && l.encode.color)) throw new Error('Layer ' + (i + 1) + ' has "stack" and no dimension on color, so there is nothing to stack. Encode the query\'s second dimension on color, or remove "stack".');
     Object.entries(l.encode || {}).forEach(([ch, f]) => {
       if (typeof f === 'number') return;
@@ -52,7 +54,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
     layers = layers.filter((l) => l.series !== 'previous');
     if (!result.meta.empty) dropped.push(q.compare === 'previous' ? 'comparison series (no prior data)' : 'comparison series (the query has no "compare")');
   }
-  const share = layers.some((l) => l.stack === 'normalize');
+  const share = layers.some((l) => l.stack === 'normalize' || l.mark === 'arc');
   const p: PlanShape = { layout: layers.length ? detectLayout(catalog, layers) : 'none', layers, guides: {}, tldrValue: rules.tldrValue.above === 'always' || !!M.instant || !layers.length, side: false, rowLimit: null,
                          share, text: tldrProse(q, result, share, catalog) };
   if (p.layout === 'cartesian') p.guides = { x: true, y: true, grid: true };
@@ -65,6 +67,8 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   const twoUnits = p.layout === 'cartesian' && unitsOf(catalog, layers).length > 1;
   if (twoUnits && !short('axis-2')) p.guides.y2 = true;
   if (p.layout === 'band') p.guides = { legend: 'full' };
+  // A circle divided by a dimension has the band's legend. One that reads a metric against its range has none.
+  if (p.layout === 'radial' && layers.some((l) => isDim(catalog, l.encode && l.encode.color))) p.guides = { legend: 'full' };
   if (result.meta.empty || (M.instant && !result.rows.length)) {
     if (M.instant || !layers.length) { p.layout = 'none'; p.layers = []; p.tldrValue = true; p.guides = {}; }
     else { p.layout = 'notice'; p.layers = []; p.guides = {}; p.tldrValue = false; }
@@ -78,6 +82,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
     if (p.layout === 'cartesian') return p.side ? { rule: rule('marks'), measured: Math.max(0, container.displayWidth(valueLen) - rules.bare.numberWidth) } : { rule: rule('axes'), measured: 0 };
     if (p.layout === 'rows') return { rule: rule('marks'), measured: valueRoomOf(catalog, p.layers, result.rows) };
     if (p.layout === 'band') return { rule: rule(p.guides.legend === 'full' ? 'legend' : 'marks'), measured: 0 };
+    if (p.layout === 'radial') return { rule: rule(p.guides.legend === 'full' ? 'legend' : 'marks'), measured: 0 };
     return { rule: rule('notice'), measured: 0 };
   }
   // A number that stands alone or above the marks has to fit too. No rule can say so: the need is its own width.
@@ -104,6 +109,12 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
     'drop-guides': () => {
       if (p.layout === 'cartesian' && (p.guides.x || p.guides.y || p.guides.grid)) { p.guides = { x: false, y: false, grid: false }; p.tldrValue = true; p.side = true; return 'axes and grid (added the number to make up for them)'; }
       if (p.layout === 'band' && p.guides.legend === 'full') { p.guides = { legend: 'top' }; return 'the legend, except the largest segment'; }
+      // A circle steps down as a band does, and then once more: it is still worth drawing with no legend at all.
+      if (p.layout === 'radial' && p.guides.legend) {
+        if (p.guides.legend === 'full') { p.guides = { legend: 'top' }; if (fits()) return 'the legend, except the largest segment'; }
+        p.guides = {};
+        return 'the legend';
+      }
       return null;
     },
     'drop-secondary': () => {
@@ -142,6 +153,8 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   if (p.layout === 'none' && container.height != null && alone(p) > container.height) dropped.push('the note under the number');
   if (p.layout === 'cartesian' && p.guides.x && series && p.guides.legend !== 'full') dropped.push(p.guides.legend === 'labels' ? 'the legend (kept a label at the end of each line)' : 'the legend');
   if (p.layout === 'cartesian' && p.guides.y && twoUnits && !p.guides.y2) dropped.push('the second y axis');
+  // place() leaves the number out of a hole too small for it, by the `hole` rule and by the number's own width.
+  if (p.layout === 'radial' && buildScene(p, q, result, catalog).parts.includes('hole') && !scene.nodes.some((n) => n.key === 'hole')) dropped.push('the number in the hole');
   const midTick = rule('mid-tick');
   if (p.layout === 'cartesian' && p.guides.x && midTick && applies(midTick, { view: { inline: container.width } }) && catalog.dimensions[xDimOf(catalog, p.layers)!]!.type === 'time') dropped.push('the middle date label');
 

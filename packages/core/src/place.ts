@@ -1,7 +1,7 @@
 import { scaleLinear } from 'd3-scale';
 import { CHAR_W, clip } from './format.ts';
 import { applies, ruleFor } from './fit.ts';
-import { pathD } from './path.ts';
+import { arcD, pathD } from './path.ts';
 import { xScale } from './scene.ts';
 import type { Container, PathNode, PlacedNode, PlacedRect, PlacedScene, PlacedText, RectNode, Scene, SceneNode, TextNode } from './types.ts';
 
@@ -15,6 +15,7 @@ type Point = PathNode['points'][number];
 const SHORT_PLOT = 120;   // px of plot height under which ranked y ticks go
 const LABEL = 14;         // characters a label at a line's end is given before it is clipped
 const LABEL_LINE = 12;    // px from one such label to the next
+const RADIAL = 160;       // px across a circle of arcs that has room to spare
 
 const rect = ({ part, role, row, series, rank, x: _x, w: _w, v, v0, ...n }: RectNode, x: number, y: number, w: number, h: number, rx: number): PlacedRect => ({ ...n, x, y, w, h, rx });
 const text = ({ part, role, row, series, rank, x: _x, t, short, ...n }: TextNode, x: number, y: number, s: string = n.text): PlacedText => ({ ...n, x, y, text: s });
@@ -112,28 +113,68 @@ function placeRows(scene: Scene, W: number): Block {
   return { nodes, height: Math.max(0, rows.length * (rowH + gap) - gap) };
 }
 
-// One band and its legend: whichever of the two the plan shows.
-function placeBand(scene: Scene, W: number): Block {
-  const barH = 24, gap = 2, rows = scene.rows!, usable = W - gap * (rows.length - 1);
-  const nodes: PlacedNode[] = [];
-  let x0 = 0, h = barH;
+// The legend of a whole split by colour, under a band or a circle of arcs that ends at `top`: whichever of the two
+// the plan shows. Its height is where it ends, and `top` where it shows neither.
+function placeShares(scene: Scene, W: number, top: number): Block {
+  const rows = scene.rows || [], nodes: PlacedNode[] = [];
+  let h = top;
   scene.nodes.forEach((n) => {
     if (!scene.parts.includes(n.part)) return;
-    if (n.part === 'band' && n.kind === 'rect') {
-      const w = n.v! * usable;
-      nodes.push(rect(n, x0, 0, w, barH, 2));
-      x0 += w + gap;
-    } else if (n.part === 'legend-top' && n.kind === 'text') {
-      nodes.push(text(n, 0, barH + 18, fit(n.text, W)));
-      h = barH + 24;
+    if (n.part === 'legend-top' && n.kind === 'text') {
+      nodes.push(text(n, 0, top + 18, fit(n.text, W)));
+      h = top + 24;
     } else if (n.part === 'legend') {
-      const yy = barH + 20 + rows.indexOf(n.row!) * 24;
+      const yy = top + 20 + rows.indexOf(n.row!) * 24;
       if (n.kind === 'rect') nodes.push(rect(n, 0, yy - 6, 12, 12, 2));
       else if (n.kind === 'text') nodes.push(n.anchor === 'end' ? text(n, W, yy) : text(n, 20, yy, fit(n.text, W - 70)));
       h = yy + 10;
     }
   });
   return { nodes, height: h };
+}
+
+// One band and its legend.
+function placeBand(scene: Scene, W: number): Block {
+  const barH = 24, gap = 2, rows = scene.rows!, usable = W - gap * (rows.length - 1);
+  const nodes: PlacedNode[] = [];
+  let x0 = 0;
+  scene.nodes.forEach((n) => {
+    if (n.part !== 'band' || n.kind !== 'rect' || !scene.parts.includes(n.part)) return;
+    const w = n.v! * usable;
+    nodes.push(rect(n, x0, 0, w, barH, 2));
+    x0 += w + gap;
+  });
+  const legend = placeShares(scene, W, barH);
+  return { nodes: nodes.concat(legend.nodes), height: legend.height };
+}
+
+// Arcs about one centre, and the legend under them. The part holds its shape: a box of the scene's `aspect`, as wide as
+// the view up to RADIAL and no taller than `room` leaves once the legend is set, though never under `least` across.
+// It sits in the middle of the width. `plot` is that box, which the `hole` rule asks about.
+function placeRadial(scene: Scene, W: number, room: number | null, container: Container): Block & { plot: { w: number; h: number } } {
+  const rules = container.rules.fit, aspect = scene.aspect || 1, least = ruleFor(rules, 'radial', 'marks')?.needs.block ?? 0;
+  const under = placeShares(scene, W, 0).height;
+  const D = Math.min(W, RADIAL, room == null ? Infinity : Math.max(least, (room - under) * aspect)), h = D / aspect, plot = { w: D, h };
+  const nodes: PlacedNode[] = [];
+  let r0 = 1;
+  scene.nodes.forEach((n) => {
+    if (n.kind === 'arc') {
+      // An arc is drawn about the origin, and moved to the centre: the middle of a circle, and of the foot of a half.
+      const { part, role, row, series, rank, a0, a1, r0: inner, r1, kind, ...rest } = n;
+      if (role === 'primary') r0 = Math.min(r0, inner);
+      nodes.push({ ...rest, kind: 'path', d: arcD(n, D / 2), fill: true, tx: W / 2, ty: D / 2 });
+    } else if (n.part === 'hole' && n.kind === 'text' && scene.parts.includes('hole')) {
+      // The number in the hole is the small face, and it shows only where its corners are inside the hole.
+      // ponytail: the small face is taken to be as wide for its height as the large one. A container that says how wide it is would be exact.
+      const hole = ruleFor(rules, 'radial', 'hole'), face = container.display(n.text.length, r0 * D, true);
+      const wide = container.displayWidth(n.text.length) * (face.cell ? 1 : face.h / container.display(1, Infinity).h), tall = aspect === 1 ? face.h / 2 : face.h;
+      if (hole && applies(hole, { view: { inline: W }, plot: { inline: plot.w, block: plot.h } })) return;
+      if (Math.hypot(wide / 2, tall) > r0 * D / 2) return;
+      nodes.push({ ...text(n, W / 2, D / 2 - (aspect === 1 ? face.h / 2 : face.h)), h: face.h, cell: face.cell });
+    }
+  });
+  const legend = placeShares(scene, W, h);
+  return { nodes: nodes.concat(legend.nodes), height: legend.height, plot };
 }
 
 /** The pixel scene for a container: the ratio scene, placed at its size. Pure. */
@@ -169,6 +210,9 @@ export function place(scene: Scene, container: Container): PlacedScene {
       body = { nodes: placePlot(scene, W, ph, narrow).concat(shift(legend.nodes, 0, ph)), height: ph + legend.height }; plot = { w: W, h: ph };
     } else if (scene.layout === 'rows') {
       body = placeRows(scene, W);
+    } else if (scene.layout === 'radial') {
+      const radial = placeRadial(scene, W, H ? H - above : null, container);
+      body = radial; plot = radial.plot;
     } else {
       body = placeBand(scene, W);
     }

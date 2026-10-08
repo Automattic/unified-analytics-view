@@ -45,8 +45,8 @@ export interface Result {
 }
 
 /* The view spec. */
-export type Mark = 'line' | 'area' | 'bar' | 'rule' | 'text';
-export type Channel = 'x' | 'y' | 'color' | 'text';
+export type Mark = 'line' | 'area' | 'bar' | 'rule' | 'text' | 'arc';
+export type Channel = 'x' | 'y' | 'color' | 'text' | 'angle' | 'radius';
 export type Role = 'primary' | 'comparison' | 'reference' | 'context';
 export type KeepPart = 'guides' | 'secondary' | 'rows' | 'marks';
 export interface Layer {
@@ -57,6 +57,9 @@ export interface Layer {
   /** On a layer split by `color`: each series starts where the one under it ends. `normalize` makes each a share of the whole,
    * and `center` sets each stack half on either side of zero. */
   stack?: 'zero' | 'normalize' | 'center';
+  /** On an `arc`: the arcs run over the top half of the circle, from left to right, and not all the way round.
+   * The one layer field that is neither data nor role. */
+  sweep?: 'half';
   label?: string;
   align?: 'end';
   paint?: string;
@@ -107,7 +110,7 @@ export interface Container {
 }
 
 /* Plan: what will be drawn at this size, and what was dropped. */
-export type Layout = 'cartesian' | 'rows' | 'band' | 'none' | 'notice' | 'prose';
+export type Layout = 'cartesian' | 'rows' | 'band' | 'radial' | 'none' | 'notice' | 'prose';
 export interface Reduction {
   id: ReductionId;
   state: 'not needed' | 'applied' | 'kept by the spec' | 'nothing to drop';
@@ -134,7 +137,7 @@ export interface Plan extends PlanShape {
 /* Scene: a flat list of shapes with stable keys and paint tokens, in ratios.
  * Every node names its part, and its coordinates run 0 to 1 within that part's
  * box. A scene needs no size to exist. Pixel painters get theirs from place(). */
-export type Part = 'number' | 'plot' | 'x-axis' | 'y-axis' | 'y-axis-2' | 'labels' | 'rows' | 'band' | 'legend' | 'legend-top' | 'notice';
+export type Part = 'number' | 'plot' | 'x-axis' | 'y-axis' | 'y-axis-2' | 'labels' | 'rows' | 'band' | 'legend' | 'legend-top' | 'radial' | 'hole' | 'notice';
 interface NodeBase {
   key: string;
   part: Part;
@@ -179,7 +182,11 @@ export interface TextNode extends NodeBase {
   font: 'tick' | 'label' | 'value' | 'display';
   halo?: boolean;
 }
-export type SceneNode = RectNode | PathNode | LineNode | CircleNode | TextNode;
+/** An arc about the centre of the `radial` part. `a0` and `a1` are in turns, clockwise from the top, and below zero to the
+ * left of it. `r0` and `r1` are ratios of the part's radius. `d` is drawn about the origin at a radius of 50, so the
+ * part's box runs from -50 to 50: `arcD(node)`. A painter with a size draws `arcD(node, radius)`. */
+export interface ArcNode extends NodeBase { kind: 'arc'; a0: number; a1: number; r0: number; r1: number; d: string }
+export type SceneNode = RectNode | PathNode | LineNode | CircleNode | TextNode | ArcNode;
 export interface Scene {
   layout: Layout;
   /** The parts the plan shows. The number's nodes are in the scene either way, so a fit rule can show it in compensation.
@@ -194,6 +201,9 @@ export interface Scene {
   series?: string[];
   /** How x is shared among the rows of a plot. With `point`, marks sit 2 px inside each edge; that inset is the painter's. */
   scale?: 'band' | 'point';
+  /** Where a part holds its shape, its width over its height: 1 for a circle of arcs, 2 for the top half of one.
+   * A painter fits a box of that shape inside the room the part has, and never stretches it. */
+  aspect?: number;
   nodes: SceneNode[];
   text?: string;
 }

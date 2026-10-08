@@ -1,4 +1,4 @@
-import { area, curveMonotoneX, line } from 'd3-shape';
+import { arc, area, curveMonotoneX, line } from 'd3-shape';
 
 /** Where a point falls in the box a path is drawn in. */
 export interface PathBox<P> { x(p: P): number; y(v: number): number }
@@ -14,4 +14,12 @@ export function pathD<P extends { x: number; v: number; v0?: number }>(points: P
   const d = fill ? area<P>().x(to.x).y0((p) => to.y(p.v0 || 0)).y1(y) : line<P>().x(to.x).y(y);
   if (curve) d.curve(curveMonotoneX);
   return d(points);
+}
+
+/** The path of an arc about the origin: `a0` to `a1` in turns, clockwise from the top, between `r0` and `r1` as ratios
+ * of `radius`. The scene's `d` is drawn at a radius of 50, in a box from -50 to 50, as a line's is drawn in 100 by 100.
+ * A pixel painter passes its own radius and moves the origin to the centre. */
+export function arcD(a: { a0: number; a1: number; r0: number; r1: number }, radius = 50): string {
+  const turn = 2 * Math.PI;
+  return arc()({ startAngle: a.a0 * turn, endAngle: a.a1 * turn, innerRadius: a.r0 * radius, outerRadius: a.r1 * radius }) ?? '';
 }

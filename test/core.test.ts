@@ -32,10 +32,13 @@ const fromProto = ({ headline, ...p }: any) => ({
 // that reconciles by key morphs one layer into another. Ours name the layer by role and mark, with `#n` for the nth of
 // a role and mark. This maps the prototype's keys to ours, here and nowhere else. Nothing but `key` is touched, so
 // geometry, paint and order are still compared exactly.
+// The one-line legend's key: a second deliberate departure (feedback, review of October 7, finding 3). The prototype's
+// is `legend:top`, which is also the key of the legend entry of a segment called "top". Ours is `legend-top`, which no
+// segment can make. It changes the key in every band case of the sweep, and is mapped here with the layer keys.
 const ourKeys = (scene0: any, layers: { role: string; mark: string }[]) => {
   const seen: Record<string, number> = {};
   const names = layers.map((l) => { const base = l.role + ':' + l.mark, n = (seen[base] = (seen[base] || 0) + 1); return n > 1 ? base + '#' + n : base; });
-  return { ...scene0, nodes: scene0.nodes.map((n: any) => ({ ...n, key: n.key.replace(/^L(\d+):[a-z]+/, (_: string, i: string) => names[+i]) })) };
+  return { ...scene0, nodes: scene0.nodes.map((n: any) => ({ ...n, key: n.key === 'legend:top' ? 'legend-top' : n.key.replace(/^L(\d+):[a-z]+/, (_: string, i: string) => names[+i]) })) };
 };
 /** The prototype's scene as plain data, its layer keys mapped to ours. */
 const protoScene = (plan0: any, q: Spec['query'], res0: unknown, host0: unknown) => ourKeys(plain(proto.buildScene(plan0, q, res0, host0)), plan0.layers);
@@ -330,9 +333,9 @@ describe('the ratio scene (dom-painter-plan section 3)', () => {
       const { ratio, scene } = run(specs.mix!, w);
       expect(ratio.parts).toEqual(['band', part]);
       expect(ratio.nodes.filter((n) => n.part === 'legend').length).toBe(18);
-      expect(ratio.nodes.filter((n) => n.part === 'legend-top').map((n) => n.key)).toEqual(['legend:top']);
+      expect(ratio.nodes.filter((n) => n.part === 'legend-top').map((n) => n.key)).toEqual(['legend-top']);
       // place() draws one of them, as before.
-      expect(scene.nodes.filter((n) => /^(legend|swatch|share):/.test(n.key)).length).toBe(part === 'legend' ? 18 : 1);
+      expect(scene.nodes.filter((n) => /^(legend|swatch|share):|^legend-top$/.test(n.key)).length).toBe(part === 'legend' ? 18 : 1);
     }
   });
   for (const name of Object.keys(samples)) it(`${name}, with no size`, () => expect(lessRows(unbounded(specs[name]!).ratio)).toMatchSnapshot());
@@ -490,6 +493,24 @@ describe('a time dimension on rows and on a band: a deliberate departure from th
       expect(plain(scene)).toEqual(ourDays(scene0));
     });
   }
+});
+
+describe('the one-line legend\'s key: a deliberate departure from the prototype (feedback, review of October 7, finding 3)', () => {
+  // A channel called "top", which no fixture has.
+  const mix = samples.mix!.spec, named = runQuery(mix.query);
+  named.rows = named.rows.map((r, i) => (i ? r : { ...r, channel: 'top' }));
+  it('a segment called "top" has its legend entry and the one-line legend has its own: every key is unique, in both scenes and at every form of the legend', () => {
+    for (const w of [346, 150]) {
+      const container = makeContainer(w), plan = resolve(mix, named, container, catalog), ratio = buildScene(plan, mix.query, named, catalog);
+      for (const scene of [ratio, place(ratio, container)]) { const keys = scene.nodes.map((n) => n.key); expect(new Set(keys).size, 'duplicate keys at ' + w).toBe(keys.length); }
+      expect(ratio.nodes.filter((n) => n.key === 'legend:top' || n.key === 'legend-top').map((n) => [n.key, n.part, (n as { text: string }).text])).toEqual([['legend:top', 'legend', 'top'], ['legend-top', 'legend-top', 'top 41%']]);
+    }
+  });
+  it('the prototype gives the two one key', () => {
+    const host0 = proto.makeHost(346, null, 'svg', 8), full = plain(proto.buildScene(proto.resolve(toProto(mix), named, host0), mix.query, named, host0));
+    const host1 = proto.makeHost(150, null, 'svg', 8), line = plain(proto.buildScene(proto.resolve(toProto(mix), named, host1), mix.query, named, host1));
+    expect([full, line].map((s) => s.nodes.filter((n: any) => n.key === 'legend:top').map((n: any) => n.text))).toEqual([['top'], ['top 41%']]);
+  });
 });
 
 describe('golden scenes', () => {

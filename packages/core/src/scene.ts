@@ -452,8 +452,9 @@ function shareLegend(rows: Row[], k: (r: Row) => string, dim: DimensionDef, m: s
     nodes.push({ key: 'legend:' + k(r), part: 'legend', kind: 'text', row: k(r), text: name(r), anchor: 'start', baseline: 'middle', font: 'label', paint: 'ink', layer: 'guide' });
     nodes.push({ key: 'share:' + k(r), part: 'legend', kind: 'text', row: k(r), text: fmtPct(num(r, m) / total), anchor: 'end', baseline: 'middle', font: 'value', paint: 'ink', layer: 'guide' });
   });
-  // One line for the whole of it, so it names no row.
-  if (rows.length) nodes.push({ key: 'legend:top', part: 'legend-top', kind: 'text', text: name(rows[0]!) + ' ' + fmtPct(num(rows[0]!, m) / total), anchor: 'start', font: 'label', paint: 'ink', layer: 'guide' });
+  // One line for the whole of it, so it names no row. Its key has no colon after `legend`, so no segment's entry can
+  // share it, whatever the segment is called. The prototype's is `legend:top`: a deliberate departure.
+  if (rows.length) nodes.push({ key: 'legend-top', part: 'legend-top', kind: 'text', text: name(rows[0]!) + ' ' + fmtPct(num(rows[0]!, m) / total), anchor: 'start', font: 'label', paint: 'ink', layer: 'guide' });
   return nodes;
 }
 

@@ -70,7 +70,7 @@ describe('shares are of the engine\'s total', () => {
     const { ratio, plan } = run(top3, 346), text = (key: string) => (ratio.nodes.find((n) => n.key === key) as { text: string }).text;
     const band = ratio.nodes.filter((n) => n.part === 'band').map((n) => (n as { v: number }).v);
     expect(band.map((v) => Math.round(v * 100))).toEqual([41, 28, 14]);
-    expect(['share:Search', 'share:Direct', 'share:Social', 'legend:top', 'sub'].map(text)).toEqual(['41%', '28%', '14%', 'Search 41%', 'Search 41%']);
+    expect(['share:Search', 'share:Direct', 'share:Social', 'legend-top', 'sub'].map(text)).toEqual(['41%', '28%', '14%', 'Search 41%', 'Search 41%']);
     expect(plan.text).toBe('Search is the largest channel at 41% of visitors, followed by Direct at 28%.');
   });
   it('the fixture\'s channels add up to its total at any range', () => {

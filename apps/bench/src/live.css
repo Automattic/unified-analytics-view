@@ -6,6 +6,8 @@ body { min-block-size: 100vh; padding: 0; border-radius: 0; }
   position: fixed; inset: var(--edge) var(--edge) var(--edge) auto; inline-size: 400px; max-inline-size: calc(100% - 2 * var(--edge)); grid-template-rows: auto minmax(0, 1fr);
   transition: inline-size var(--move), inset var(--move), border-radius var(--move), translate var(--enter), opacity var(--enter), visibility 0s; }
 #panel .content { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--ua-space-xs); align-content: start; overflow-y: auto; transition: opacity var(--enter); }
+/* It scrolls out to the panel's edges, with the panel's padding inside it, so the scrollbar is clear of the views. */
+#panel .content { margin: 0 calc(-1 * var(--ua-space-s)) calc(-1 * var(--ua-space-s)); padding: 0 var(--ua-space-s) var(--ua-space-s); }
 #panel .content[aria-busy] { opacity: .5; }
 #panel .top { gap: var(--ua-space-2xs); }
 #panel .segmented button { white-space: nowrap; }
@@ -27,6 +29,10 @@ body { min-block-size: 100vh; padding: 0; border-radius: 0; }
 #panel[data-hidden] + #launcher { opacity: 1; scale: 1; visibility: visible;
   transition: opacity var(--ua-charts-motion-duration-entrance), scale var(--ua-charts-motion-duration-entrance) var(--ua-charts-motion-easing-entrance), visibility 0s; }
 @media (prefers-reduced-motion: reduce) { #panel, #panel[data-hidden], #launcher, #panel[data-hidden] + #launcher { transition: none; } }
-/* The three numbers that head the panel: in a row on the glass itself, with no card around each. */
+/* Nothing has a card around it: the views are on the glass itself, and further apart for it. The three numbers that
+ * head the panel are in a row. */
 #panel .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-#panel .tiles .card { padding: 0; background: none; border: 0; }
+#panel .card { padding: 0; background: none; border: 0; }
+#panel .content { gap: var(--ua-space-m); }
+/* A rule between one view and the next, halfway up the space between them. The border token is lost on the glass. */
+#panel .content > * + * { padding-block-start: var(--ua-space-m); border-block-start: 1px solid color-mix(in srgb, var(--ua-color-foreground) 14%, transparent); }

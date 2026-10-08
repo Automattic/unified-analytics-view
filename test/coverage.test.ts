@@ -41,10 +41,12 @@ describe('the sweep, for what the prototype does not know', () => {
       expect(view(spec), JSON.stringify(view.errors)).toBe(true);
       for (const sc of scenarios) {
         // 10 px is narrower than any number, "0" included.
-        const layouts = [346, 250, 120, 10].map((w) => run(spec, w, null, sc).plan.layout);
-        expect(layouts, sc).toEqual(sc === 'empty' ? ['notice', 'notice', 'none', 'prose'] : ['cartesian', 'cartesian', 'none', 'prose']);
-        expect(run(spec, 250, null, sc).plan.dropped[0], sc).toBe(sc === 'empty' ? undefined : 'axes and grid (added the number to make up for them)');
-        expect(run(spec, 700, null, sc).plan.dropped, sc).toEqual([]);
+        const layouts = [346, 250, 120, 10].map((w) => run(spec, w, null, sc).plan.layout), marks = run(spec, 700).plan.layout;
+        expect(layouts, sc).toEqual(sc === 'empty' ? ['notice', 'notice', 'none', 'prose'] : [marks, marks, 'none', 'prose']);
+        // What rows give up first is their own, and is held in test/coverage-rows.test.ts.
+        if (marks === 'cartesian') expect(run(spec, 250, null, sc).plan.dropped[0], sc).toBe(sc === 'empty' ? undefined : 'axes and grid (added the number to make up for them)');
+        // With room for everything, all that is missing is what there is no prior period to say.
+        expect(run(spec, 700, null, sc).plan.dropped, sc).toEqual(sc === 'no-prior' && spec.query.compare ? [expect.stringContaining('(no prior data)')] : []);
       }
     });
   }

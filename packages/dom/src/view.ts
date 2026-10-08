@@ -201,7 +201,7 @@ function paintTable(table: HTMLTableElement, title: string | undefined, q: Query
 
 function paintNumber(el: HTMLElement, nodes: SceneNode[]): void {
   keyed(el, nodes, (n) => (n.kind === 'circle' ? 'i' : n.kind === 'text' && n.font === 'display' ? 'b' : 'span'), (c, n) => {
-    if (n.kind === 'text') text(c, n); else c.classList.add('vg-pulse');
+    if (n.kind === 'text') { text(c, n); (c as HTMLElement).title = n.note ?? ''; } else c.classList.add('vg-pulse');      // what the number counts, when it is pointed at
   });
 }
 

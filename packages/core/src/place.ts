@@ -17,7 +17,7 @@ const LABEL = 14;         // characters a label at a line's end is given before 
 const LABEL_LINE = 12;    // px from one such label to the next
 const RADIAL = 160;       // px across a circle of arcs that has room to spare
 /** A dot's radius in px: by its size step, or the one size of a dot that has none. */
-const radius = (size?: number) => (size ? 2 + 2.5 * size : 3);
+export const radius = (size?: number) => (size ? 2 + 2.5 * size : 3);
 
 /** A label's box, and its rank: a ranked label is given up before an unranked one, and the higher its rank the sooner. */
 export interface LabelBox { x: number; y: number; w: number; h: number; rank?: number }

@@ -8,3 +8,5 @@ export { COLUMNS_BLOCK, columnRooms, declutter, place, type LabelBox } from './p
 export { arcD, pathD, type PathBox } from './path.ts';
 export { gridProse, partialNote, tldrProse } from './prose.ts';
 export { formatDimension, formatValue, rangeLabel } from './format.ts';
+export { SIZES, seqScale, sizeKey, sizeStep } from './scene.ts';
+export { radius as dotRadius } from './place.ts';

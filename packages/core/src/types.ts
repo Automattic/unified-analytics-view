@@ -21,6 +21,7 @@ export interface Catalog {
 /* Query and result. */
 export interface Query {
   metrics: string[];
+  /** One dimension or two. With two, rows come back long: one per pair. */
   by?: string[];
   range?: string;
   compare?: 'previous';
@@ -30,6 +31,9 @@ export type Row = Record<string, string | number | boolean | null | undefined>;
 export interface Result {
   rows: Row[];
   totals: Record<string, number | null>;
+  /** With two dimensions in `by`: for each one, a row per value holding the metrics' totals over the other, in the
+   * dimension's own order. A total covers the rows past `limit`. Proposed to the API's owners (chart-coverage-plan, section 3.5). */
+  totalsBy?: Record<string, Row[]>;
   meta: { range: string; compare: string | null; notes: string[]; empty?: boolean };
 }
 
@@ -43,7 +47,9 @@ export interface Layer {
   encode?: Partial<Record<Channel, string | number>>;
   series?: 'previous';
   role?: Role;
-  stack?: 'normalize';
+  /** On a layer split by `color`: each series starts where the one under it ends. `normalize` makes each a share of the whole,
+   * and `center` sets each stack half on either side of zero. */
+  stack?: 'zero' | 'normalize' | 'center';
   label?: string;
   align?: 'end';
   paint?: string;
@@ -51,8 +57,11 @@ export interface Layer {
 export interface Guides {
   x?: boolean;
   y?: boolean;
+  /** The second y axis, on the far side, where the layers measure in two units. */
+  y2?: boolean;
   grid?: boolean;
-  legend?: 'full' | 'top';
+  /** On a band, `top` is the largest segment's label. On a split plot, `labels` is a label at the end of each line. */
+  legend?: 'full' | 'top' | 'labels';
 }
 export interface Spec {
   spec?: string;
@@ -118,7 +127,7 @@ export interface Plan extends PlanShape {
 /* Scene: a flat list of shapes with stable keys and paint tokens, in ratios.
  * Every node names its part, and its coordinates run 0 to 1 within that part's
  * box. A scene needs no size to exist. Pixel painters get theirs from place(). */
-export type Part = 'number' | 'plot' | 'x-axis' | 'y-axis' | 'rows' | 'band' | 'legend' | 'legend-top' | 'notice';
+export type Part = 'number' | 'plot' | 'x-axis' | 'y-axis' | 'y-axis-2' | 'labels' | 'rows' | 'band' | 'legend' | 'legend-top' | 'notice';
 interface NodeBase {
   key: string;
   part: Part;
@@ -127,27 +136,30 @@ interface NodeBase {
   role?: Role;
   /** The dimension value the node came from. */
   row?: string;
+  /** The value of the colour dimension it came from, where a layer is split into series. */
+  series?: string;
   /** Absent stays. Ranked nodes are given up when room is short. */
   rank?: number;
   opacity?: number;
   note?: string;
 }
-/** A bar in the plot (`x` and `w` across, `v` up from the baseline), a row's bar (`v` across), a band segment (`v` is its share) or a legend swatch. */
-export interface RectNode extends NodeBase { kind: 'rect'; x?: number; w?: number; v?: number }
-/** `d` is drawn in a 100 by 100 box, for the painter to stretch. `points` are what it was drawn from. */
+/** A bar in the plot (`x` and `w` across, and up the plot from `v0` to `v`), a row's bar (`v` across), a band segment (`v` is its share) or a legend swatch.
+ * `v0` is absent where a bar starts at the bottom of the plot. A bar that hangs below its start has `v` under `v0`. */
+export interface RectNode extends NodeBase { kind: 'rect'; x?: number; w?: number; v?: number; v0?: number }
+/** `d` is drawn in a 100 by 100 box, for the painter to stretch. `points` are what it was drawn from. An area's point has `v0` where it starts above the bottom of the plot. */
 export interface PathNode extends NodeBase {
   kind: 'path';
   d: string | null;
-  points: { row: string; x: number; v: number }[];
+  points: { row: string; x: number; v: number; v0?: number }[];
   curve?: 'monotone';
   fill?: boolean;
   width?: number;
   dash?: string | null;
 }
-/** A line across the plot at height `t`. */
+/** A line across the plot at height `t`. The one at zero is painted `axis`, and sits above the bottom of the plot where values go below zero. */
 export interface LineNode extends NodeBase { kind: 'line'; t: number; width?: number; dash?: string }
 export interface CircleNode extends NodeBase { kind: 'circle'; pulse: boolean }
-/** Text in the number, rows, legend and notice parts is set in order and carries no position. */
+/** Text in the number, rows, legend and notice parts is set in order and carries no position. In `labels` it sits beside the plot at height `t`. */
 export interface TextNode extends NodeBase {
   kind: 'text';
   text: string;
@@ -164,12 +176,15 @@ export type SceneNode = RectNode | PathNode | LineNode | CircleNode | TextNode;
 export interface Scene {
   layout: Layout;
   /** The parts the plan shows. The number's nodes are in the scene either way, so a fit rule can show it in compensation.
-   * So are both forms of a band's legend, `legend` and `legend-top`, so a rule can swap them. place() draws only the parts named here. */
+   * So are both forms of a band's legend, `legend` and `legend-top`, and of a split plot's, `legend` and `labels`, so a rule can swap them.
+   * place() draws only the parts named here. */
   parts: Part[];
   /** The number sits beside a bare plot. */
   side?: boolean;
   /** Dimension values in order: the x domain, the rows or the segments. */
   rows?: string[];
+  /** The colour dimension's values in its own order, where a plot is split into series. A series' paint is its place here. */
+  series?: string[];
   /** How x is shared among the rows of a plot. With `point`, marks sit 2 px inside each edge; that inset is the painter's. */
   scale?: 'band' | 'point';
   nodes: SceneNode[];

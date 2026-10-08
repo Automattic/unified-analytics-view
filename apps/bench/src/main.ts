@@ -1,11 +1,12 @@
 import { buildScene, makeContainer, place, resolve, unboundedContainer } from '@universal-analytics/core';
 import { UaView, defineUaView, surfaceSheet } from '@universal-analytics/dom';
-import { catalog, runQuery, samples, type Scenario } from '@universal-analytics/fixtures';
+import { catalog, moreSamples, runQuery, samples as known, type Scenario } from '@universal-analytics/fixtures';
 import { paintSVG } from './paint-svg.ts';
 
 /* The bench: every sample, in frames that stand in for containers.
  * Controls live in the URL, so a reload or a shared link keeps them. */
 const WIDTHS = [346, 250, 170, 120, 80];
+const samples = { ...known, ...moreSamples };
 const controls = document.querySelector<HTMLFormElement>('#controls')!;
 const views = document.querySelector('#views')!;
 

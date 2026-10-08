@@ -2,7 +2,7 @@ import { CONTAINER_RULES, KEEP } from './container.ts';
 import { applies, ruleFor, type FitRule } from './fit.ts';
 import { PRESETS, expand } from './presets.ts';
 import { place } from './place.ts';
-import { buildScene, tldrValueText, isDim, roleOf, valueRoomOf } from './scene.ts';
+import { buildScene, tldrValueText, isDim, roleOf, seriesOf, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
 import { tldrProse } from './prose.ts';
 import type { Catalog, Container, Layer, Layout, Plan, PlanShape, PresetLibrary, Query, Reduction, ReductionId, Result, Role, PlacedScene, Spec } from './types.ts';
 
@@ -10,22 +10,34 @@ import type { Catalog, Container, Layer, Layout, Plan, PlanShape, PresetLibrary,
  * in order until the view fits. Layers carry a role; reductions act on roles. */
 const ROLE_NAMES: Partial<Record<Role, string>> = { comparison: 'comparison series', reference: 'reference lines', context: 'context fill' };
 
+/* The layout a layer's fields ask for: what is on x, on y and on color, first match first. `any` asks nothing of its channel. */
+type FieldKind = 'dimension' | 'any';
+const LAYOUTS: [x: FieldKind, y: FieldKind, color: FieldKind, layout: Layout][] = [
+  ['dimension', 'any',       'any',       'cartesian'],
+  ['any',       'dimension', 'any',       'rows'],
+  ['any',       'any',       'dimension', 'band'],
+];
+
 function detectLayout(catalog: Catalog, layers: Layer[]): Layout {
-  if (layers.some((l) => l.encode && isDim(catalog, l.encode.x))) return 'cartesian';
-  if (layers.some((l) => l.encode && isDim(catalog, l.encode.y))) return 'rows';
-  if (layers.some((l) => l.encode && isDim(catalog, l.encode.color))) return 'band';
+  const is = (kind: FieldKind, f: unknown) => kind === 'any' || isDim(catalog, f);
+  for (const [x, y, color, layout] of LAYOUTS) if (layers.some((l) => l.encode && is(x, l.encode.x) && is(y, l.encode.y) && is(color, l.encode.color))) return layout;
   throw new Error('These layers put no dimension on x, y or color, so there is nothing to lay out.');
 }
 
-function checkLayers(layers: Layer[], q: Query): void {
-  const known = (q.by || []).concat(q.metrics);
+function checkLayers(layers: Layer[], q: Query, catalog: Catalog): void {
+  const by = q.by || [], known = by.concat(q.metrics);
+  if (by.length > 2 || (by.length === 2 && by[0] === by[1])) throw new Error('A view is by one dimension or by two different ones, and query.by has: ' + by.join(', ') + '. Remove all but two.');
   layers.forEach((l, i) => {
     if (!l || !l.mark) throw new Error('Layer ' + (i + 1) + ' has no "mark". Use one of: line, area, bar, rule, text.');
+    if (l.stack && !isDim(catalog, l.encode && l.encode.color)) throw new Error('Layer ' + (i + 1) + ' has "stack" and no dimension on color, so there is nothing to stack. Encode the query\'s second dimension on color, or remove "stack".');
     Object.entries(l.encode || {}).forEach(([ch, f]) => {
       if (typeof f === 'number') return;
       if (known.indexOf(f) < 0) throw new Error('Layer ' + (i + 1) + ' encodes "' + f + '" on ' + ch + ', which the query does not return. It returns: ' + known.join(', ') + '.');
     });
   });
+  // Rows come back one per pair. A dimension that no layer encodes would leave several rows drawn in one place.
+  const unused = by.length === 2 && layers.length ? by.find((d) => !layers.some((l) => Object.values(l.encode || {}).indexOf(d) >= 0)) : null;
+  if (unused) throw new Error('The query is by "' + unused + '", and no layer encodes it, so its rows would be drawn over each other. Encode it on color, or remove it from query.by.');
 }
 
 /** Fit a spec to a container. Throws, with a message that names the fix, when the spec is invalid. */
@@ -35,7 +47,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   const m = q.metrics[0]!, M = catalog.metrics[m]!, by = (q.by || [])[0], rules = container.rules || CONTAINER_RULES, keep = spec.keep || [], dropped: string[] = [];
   let layers = (spec.layers || []).slice();
   if (!layers.length && by) throw new Error('This spec has a dimension but no layers, so there is nothing to draw it with. Add "layers", or "use" one of: ' + Object.keys(presets).join(', ') + '.');
-  checkLayers(layers, q);
+  checkLayers(layers, q, catalog);
   if (layers.some((l) => l.series === 'previous') && (q.compare !== 'previous' || result.totals[m + '@previous'] == null)) {
     layers = layers.filter((l) => l.series !== 'previous');
     if (!result.meta.empty) dropped.push(q.compare === 'previous' ? 'comparison series (no prior data)' : 'comparison series (the query has no "compare")');
@@ -44,6 +56,14 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   const p: PlanShape = { layout: layers.length ? detectLayout(catalog, layers) : 'none', layers, guides: {}, tldrValue: rules.tldrValue.above === 'always' || !!M.instant || !layers.length, side: false, rowLimit: null,
                          share, text: tldrProse(q, result, share, catalog) };
   if (p.layout === 'cartesian') p.guides = { x: true, y: true, grid: true };
+  // A split plot starts with its legend. Its rules step that down to a label at the end of each line, where there
+  // are lines, and then to nothing. They are asked once, of the view: unlike the reductions, they change no one else's room.
+  const series = p.layout === 'cartesian' ? seriesOf(catalog, layers) : null;
+  const short = (id: string) => { const r = ruleFor(rules.fit, 'cartesian', id); return !!r && !(r.keep && keep.indexOf(r.keep) >= 0) && applies(r, { view: { inline: container.width, block: container.height } }); };
+  if (series) { if (!short('legend')) p.guides.legend = 'full'; else if (series.lines && !short('labels')) p.guides.legend = 'labels'; }
+  // Layers that measure in two units have a y axis on each side, and the second is given up first.
+  const twoUnits = p.layout === 'cartesian' && unitsOf(catalog, layers).length > 1;
+  if (twoUnits && !short('axis-2')) p.guides.y2 = true;
   if (p.layout === 'band') p.guides = { legend: 'full' };
   if (result.meta.empty || (M.instant && !result.rows.length)) {
     if (M.instant || !layers.length) { p.layout = 'none'; p.layers = []; p.tldrValue = true; p.guides = {}; }
@@ -120,8 +140,10 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   });
   // place() gives up the note of a number that stands alone before the reducer gives up the number. Said here, as the middle label is.
   if (p.layout === 'none' && container.height != null && alone(p) > container.height) dropped.push('the note under the number');
+  if (p.layout === 'cartesian' && p.guides.x && series && p.guides.legend !== 'full') dropped.push(p.guides.legend === 'labels' ? 'the legend (kept a label at the end of each line)' : 'the legend');
+  if (p.layout === 'cartesian' && p.guides.y && twoUnits && !p.guides.y2) dropped.push('the second y axis');
   const midTick = rule('mid-tick');
-  if (p.layout === 'cartesian' && p.guides.x && midTick && applies(midTick, { view: { inline: container.width } }) && isDim(catalog, by) && catalog.dimensions[by]!.type === 'time') dropped.push('the middle date label');
+  if (p.layout === 'cartesian' && p.guides.x && midTick && applies(midTick, { view: { inline: container.width } }) && catalog.dimensions[xDimOf(catalog, p.layers)!]!.type === 'time') dropped.push('the middle date label');
 
   return {
     preset: spec0.use && !spec0.layers ? spec0.use : null, layout: p.layout,

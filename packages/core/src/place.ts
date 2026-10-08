@@ -8,14 +8,16 @@ import type { Container, PathNode, PlacedNode, PlacedRect, PlacedScene, PlacedTe
 /* place() turns the ratio scene into pixels, for painters with no CSS: the dot
  * grid, canvas and the bench's SVG. What the DOM leaves to its stylesheet is a
  * constant here: gutters, row heights, character widths, and the room below
- * which ranked nodes go. Placed nodes drop `part`, `role`, `row` and `rank`. */
+ * which ranked nodes go. Placed nodes drop `part`, `role`, `row`, `series` and `rank`. */
 interface Block { nodes: PlacedNode[]; height: number }
 type Point = PathNode['points'][number];
 
 const SHORT_PLOT = 120;   // px of plot height under which ranked y ticks go
+const LABEL = 14;         // characters a label at a line's end is given before it is clipped
+const LABEL_LINE = 12;    // px from one such label to the next
 
-const rect = ({ part, role, row, rank, x: _x, w: _w, v, ...n }: RectNode, x: number, y: number, w: number, h: number, rx: number): PlacedRect => ({ ...n, x, y, w, h, rx });
-const text = ({ part, role, row, rank, x: _x, t, short, ...n }: TextNode, x: number, y: number, s: string = n.text): PlacedText => ({ ...n, x, y, text: s });
+const rect = ({ part, role, row, series, rank, x: _x, w: _w, v, v0, ...n }: RectNode, x: number, y: number, w: number, h: number, rx: number): PlacedRect => ({ ...n, x, y, w, h, rx });
+const text = ({ part, role, row, series, rank, x: _x, t, short, ...n }: TextNode, x: number, y: number, s: string = n.text): PlacedText => ({ ...n, x, y, text: s });
 const fit = (s: string, room: number) => clip(s, Math.floor(room / CHAR_W));
 function shift(nodes: PlacedNode[], dx: number, dy: number): PlacedNode[] {
   nodes.forEach((n) => { n.tx = (n.tx || 0) + dx; n.ty = (n.ty || 0) + dy; });
@@ -46,27 +48,53 @@ function placeNumber(nodes: SceneNode[], W: number, container: Container, small:
 // The plot with its axes. The gutters for the tick labels are constants. `narrow` is the `mid-tick` rule's verdict on the view.
 function placePlot(scene: Scene, W: number, H: number, narrow: boolean): PlacedNode[] {
   const gy = scene.parts.includes('y-axis'), gx = scene.parts.includes('x-axis');
-  const ml = gy ? 36 : 1, mr = gy ? 6 : 1, mt = gy ? 10 : 3, mb = gx ? 22 : 3, inset = scene.scale === 'point' ? 2 : 0;
+  // Labels at the line ends take a gutter beside the plot, as wide as the longest of them up to LABEL characters.
+  const labels = scene.parts.includes('labels') ? scene.nodes.filter((n): n is TextNode => n.part === 'labels' && n.kind === 'text') : [];
+  const lw = labels.length ? Math.min(LABEL, Math.max(...labels.map((n) => n.text.length))) * CHAR_W + 6 : 0;
+  // The second y axis has a gutter as the first does, between the plot and those labels.
+  const g2 = scene.parts.includes('y-axis-2') ? 30 : 0;
+  const ml = gy ? 36 : 1, mr = (gy ? 6 : 1) + g2 + lw, mt = gy ? 10 : 3, mb = gx ? 22 : 3, inset = scene.scale === 'point' ? 2 : 0;
   const y = scaleLinear().domain([0, 1]).range([H - mb, mt]);
   const xs = xScale(scene.rows!, scene.scale!, ml + inset, W - mr - inset);
   const box = { x: (p: Point) => xs.cx(p.row), y };
+  // Labels of lines that end close are set a line apart: pushed down from the highest, then back up from the bottom of the plot.
+  // ponytail: a first cut for pixel painters, and not the answer to label collision (reference, Open 5).
+  const labelY = new Map<string, number>(), down = labels.slice().sort((a, b) => b.t! - a.t!);
+  down.reduce((least, n) => { const at = Math.max(y(n.t!), least); labelY.set(n.key, at); return at + LABEL_LINE; }, -Infinity);
+  down.reverse().reduce((most, n) => { const at = Math.min(labelY.get(n.key)!, most); labelY.set(n.key, at); return at - LABEL_LINE; }, y(0));
   const out: PlacedNode[] = [];
   scene.nodes.forEach((n) => {
-    if (n.part === 'number') return;
+    if (n.part === 'number' || n.part === 'legend' || (n.part === 'labels' && !lw) || (n.part === 'y-axis-2' && !g2)) return;
     if (n.rank && (n.part === 'x-axis' ? narrow : H < SHORT_PLOT)) return;
     if (n.kind === 'line') {
-      const { part, role, row, rank, t, ...rest } = n;
+      const { part, role, row, series, rank, t, ...rest } = n;
       out.push({ ...rest, x1: ml, x2: W - mr, y1: y(t), y2: y(t) });
     } else if (n.kind === 'path') {
-      const { part, role, row, rank, points, curve, ...rest } = n;
+      const { part, role, row, series, rank, points, curve, ...rest } = n;
       out.push({ ...rest, d: pathD(points, curve, n.fill, box) });
     } else if (n.kind === 'rect') {
-      out.push(rect(n, xs.x(n.row!), y(n.v!), xs.w, Math.max(0, y(0) - y(n.v!)), Math.min(2, xs.w / 4)));
+      // A bar of a series has a place of its own within its x, so its ratios are placed. The rest share the scale the scene used.
+      const pw = W - ml - mr, [bx, bw] = n.series == null ? [xs.x(n.row!), xs.w] : [ml + n.x! * pw, n.w! * pw], from = y(n.v0 ?? 0), to = y(n.v!);
+      out.push(rect(n, bx, Math.min(from, to), bw, Math.abs(from - to), Math.min(2, bw / 4)));
     } else if (n.kind === 'text') {
-      out.push(n.part === 'y-axis' ? text(n, ml - 6, y(n.t!)) : n.part === 'x-axis' ? text(n, xs.cx(n.row!), H - 5) : text(n, W - mr, y(n.t!) - 5));
+      out.push(n.part === 'y-axis' ? text(n, ml - 6, y(n.t!)) : n.part === 'x-axis' ? text(n, xs.cx(n.row!), H - 5)
+        : n.part === 'y-axis-2' ? text(n, W - mr + 6, y(n.t!)) : n.part === 'labels' ? text(n, W - lw, labelY.get(n.key)!, clip(n.text, LABEL)) : text(n, W - mr, y(n.t!) - 5));
     }
   });
   return out;
+}
+
+// A split plot's legend: a swatch and a name per series, set in a row that wraps.
+function placeLegend(scene: Scene, W: number): Block {
+  const nodes: PlacedNode[] = [], of = (kind: string, s: string) => scene.nodes.find((n) => n.part === 'legend' && n.kind === kind && n.series === s);
+  let x = 0, yy = 16;
+  scene.series!.forEach((s) => {
+    const swatch = of('rect', s) as RectNode, name = of('text', s) as TextNode, w = 18 + Math.min(name.text.length * CHAR_W, W - 18);
+    if (x && x + w > W) { x = 0; yy += 20; }
+    nodes.push(rect(swatch, x, yy - 6, 12, 12, 2), text(name, x + 18, yy, fit(name.text, W - 18)));
+    x += w + 14;
+  });
+  return { nodes, height: yy + 10 };
 }
 
 // The ranked bar list: rows of a fixed height, labels clipped by character width.
@@ -136,8 +164,9 @@ export function place(scene: Scene, container: Container): PlacedScene {
       const guided = scene.parts.includes('x-axis') || scene.parts.includes('y-axis');
       // The least a plot with axes is built to is the `axes` rule's block need, so the two cannot be set apart.
       const least = ruleFor(rules.fit, 'cartesian', 'axes')?.needs.block ?? 0;
-      const ph = !guided ? rules.bare.height : H ? Math.max(least, Math.min(rules.axes.height, H - above)) : rules.axes.height;
-      body = { nodes: placePlot(scene, W, ph, narrow), height: ph }; plot = { w: W, h: ph };
+      const legend = scene.parts.includes('legend') ? placeLegend(scene, W) : { nodes: [], height: 0 };
+      const ph = !guided ? rules.bare.height : H ? Math.max(least, Math.min(rules.axes.height, H - above - legend.height)) : rules.axes.height;
+      body = { nodes: placePlot(scene, W, ph, narrow).concat(shift(legend.nodes, 0, ph)), height: ph + legend.height }; plot = { w: W, h: ph };
     } else if (scene.layout === 'rows') {
       body = placeRows(scene, W);
     } else {

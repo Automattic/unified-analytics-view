@@ -38,10 +38,10 @@
       "additionalProperties": false,
       "properties": {
         "metrics": { "type": "array", "items": { "type": "string" }, "minItems": 1, "description": "Catalog metric names. The first is the primary metric." },
-        "by": { "type": "array", "items": { "type": "string" }, "maxItems": 1, "description": "Zero or one catalog dimension." },
+        "by": { "type": "array", "items": { "type": "string" }, "maxItems": 2, "uniqueItems": true, "description": "Zero, one or two catalog dimensions. With two, the second goes to color." },
         "range": { "type": "string", "description": "For example \"28d\"." },
         "compare": { "const": "previous" },
-        "limit": { "type": "integer", "minimum": 1, "description": "Top-N for a categorical dimension." }
+        "limit": { "type": "integer", "minimum": 1, "description": "Top-N for each categorical dimension." }
       }
     },
     "field": { "type": ["string", "number"], "description": "A dimension name, a metric name, or a number (for a rule)." },
@@ -63,7 +63,7 @@
         },
         "series": { "const": "previous", "description": "Draw the comparison companion of the metric." },
         "role": { "enum": ["primary", "comparison", "reference", "context"] },
-        "stack": { "const": "normalize" },
+        "stack": { "enum": ["zero", "normalize", "center"], "description": "On a layer split by color: each series starts where the one under it ends. \"normalize\" makes each a share of the whole, and \"center\" sets each stack half on either side of zero. A bar split by color with no stack sits beside its neighbours." },
         "label": { "type": "string", "description": "Text for a rule." },
         "align": { "const": "end" },
         "paint": { "type": "string", "description": "A paint token, never a colour." }

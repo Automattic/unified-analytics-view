@@ -84,11 +84,19 @@ export function attr(el: Element, name: string, v: string | number | null | unde
 export function prop(el: HTMLElement | SVGElement, name: string, v: string | number | null | undefined): void {
   if (v == null) el.style.removeProperty(name); else el.style.setProperty(name, String(v));
 }
+/** The colour a node is painted with. A tint is its paint's lighter colour, whole, where the tokens have one
+ * (`--a8c-charts-color-series-1-soft`), and the paint at the node's opacity where they do not. Text in a series colour
+ * takes the step that holds contrast for text (`-text`), where the tokens have that, and the mark's colour where not. */
+export function nodePaint(n: Pick<SceneNode, 'paint' | 'kind' | 'tone' | 'opacity'>): string {
+  const base = paintVar(n.paint), name = base.slice(4, base.indexOf(','));
+  if (n.tone === 'soft') return 'var(' + name + '-soft, color-mix(in srgb, ' + base + ' ' + (n.opacity ?? 1) * 100 + '%, transparent))';
+  return n.kind === 'text' && n.paint.startsWith('series.') ? 'var(' + name + '-text, ' + base + ')' : base;
+}
 /** What every painted node carries: its key, what the fit rules select on, the row and series it came from, and its paint. */
 function mark(el: HTMLElement | SVGElement, n: SceneNode): void {
   attr(el, 'data-key', n.key); attr(el, 'data-role', n.role); attr(el, 'data-rank', n.rank); attr(el, 'data-row', n.row); attr(el, 'data-series', n.series);
-  prop(el, '--vg-paint', paintVar(n.paint));
-  prop(el, 'opacity', n.opacity);
+  prop(el, '--vg-paint', nodePaint(n));
+  prop(el, 'opacity', n.tone === 'soft' ? null : n.opacity);
 }
 
 /** A text node's words. One with a shorter form holds both, and the stylesheet picks. */

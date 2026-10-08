@@ -346,7 +346,8 @@ export function place(scene: Scene, container: Container): PlacedScene {
     }
     out = hd ? { nodes: hd.nodes.concat(shift(body.nodes, 0, above)), height: above + body.height } : body;
   }
-  const placed: PlacedScene = { width: W, height: Math.ceil(out.height), nodes: out.nodes };
+  // A pixel painter draws a tint as the paint at the node's opacity, so `tone` stops here.
+  const placed: PlacedScene = { width: W, height: Math.ceil(out.height), nodes: out.nodes.map((n) => { const { tone: _tone, ...rest } = n as PlacedNode & { tone?: string }; return rest; }) };
   if (plot) placed.plot = plot;
   return placed;
 }

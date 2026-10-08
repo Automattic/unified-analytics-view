@@ -4137,6 +4137,7 @@ exports[`the ratio scene (dom-painter-plan section 3) > live, with no size 1`] =
       "part": "rows",
       "role": "primary",
       "row": "/",
+      "tone": "soft",
       "v": 1,
     },
     {
@@ -4174,6 +4175,7 @@ exports[`the ratio scene (dom-painter-plan section 3) > live, with no size 1`] =
       "part": "rows",
       "role": "primary",
       "row": "/pricing",
+      "tone": "soft",
       "v": 0.6666666666666666,
     },
     {
@@ -4211,6 +4213,7 @@ exports[`the ratio scene (dom-painter-plan section 3) > live, with no size 1`] =
       "part": "rows",
       "role": "primary",
       "row": "/blog/launch-notes",
+      "tone": "soft",
       "v": 0.3333333333333333,
     },
     {
@@ -4248,6 +4251,7 @@ exports[`the ratio scene (dom-painter-plan section 3) > live, with no size 1`] =
       "part": "rows",
       "role": "primary",
       "row": "/docs/getting-started",
+      "tone": "soft",
       "v": 0.3333333333333333,
     },
     {
@@ -4627,6 +4631,7 @@ exports[`the ratio scene (dom-painter-plan section 3) > pages, with no size 1`] 
       "part": "rows",
       "role": "primary",
       "row": "/",
+      "tone": "soft",
       "v": 1,
     },
     {
@@ -4664,6 +4669,7 @@ exports[`the ratio scene (dom-painter-plan section 3) > pages, with no size 1`] 
       "part": "rows",
       "role": "primary",
       "row": "/pricing",
+      "tone": "soft",
       "v": 0.6141078838174274,
     },
     {
@@ -4701,6 +4707,7 @@ exports[`the ratio scene (dom-painter-plan section 3) > pages, with no size 1`] 
       "part": "rows",
       "role": "primary",
       "row": "/blog/launch-notes",
+      "tone": "soft",
       "v": 0.4367219917012448,
     },
     {
@@ -4738,6 +4745,7 @@ exports[`the ratio scene (dom-painter-plan section 3) > pages, with no size 1`] 
       "part": "rows",
       "role": "primary",
       "row": "/docs/getting-started",
+      "tone": "soft",
       "v": 0.35892116182572614,
     },
     {
@@ -4775,6 +4783,7 @@ exports[`the ratio scene (dom-painter-plan section 3) > pages, with no size 1`] 
       "part": "rows",
       "role": "primary",
       "row": "/changelog",
+      "tone": "soft",
       "v": 0.1950207468879668,
     },
     {
@@ -4812,6 +4821,7 @@ exports[`the ratio scene (dom-painter-plan section 3) > pages, with no size 1`] 
       "part": "rows",
       "role": "primary",
       "row": "/about",
+      "tone": "soft",
       "v": 0.12655601659751037,
     },
     {
@@ -4849,6 +4859,7 @@ exports[`the ratio scene (dom-painter-plan section 3) > pages, with no size 1`] 
       "part": "rows",
       "role": "primary",
       "row": "/blog/analytics-without-cookies",
+      "tone": "soft",
       "v": 0.09439834024896265,
     },
     {
@@ -4886,6 +4897,7 @@ exports[`the ratio scene (dom-painter-plan section 3) > pages, with no size 1`] 
       "part": "rows",
       "role": "primary",
       "row": "/contact",
+      "tone": "soft",
       "v": 0.06016597510373444,
     },
     {
@@ -5264,6 +5276,7 @@ exports[`the ratio scene (dom-painter-plan section 3) > trend, with no size 1`] 
         },
       ],
       "role": "context",
+      "tone": "soft",
     },
     {
       "curve": "monotone",

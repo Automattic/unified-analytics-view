@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { nodePaint } from '@universal-analytics/dom';
 import { buildScene, formatValue, makeContainer, resolve, type Catalog, type Layer, type Result, type Spec } from '@universal-analytics/core';
 
 /* What the sidebar test case asked of the grammar: a metric's unit in every place its value is said, a mark painted
@@ -57,4 +58,22 @@ describe('color in rows', () => {
   it('the rows\' own dimension is a colour for each row', () => expect(bars('source')).toEqual(['series.1', 'series.2', 'series.3']));
   it('a companion of it paints the rows that share a value alike', () => expect(bars('source@kind')).toEqual(['series.1', 'series.2', 'series.1']));
   it('anything else is an error that names the fix', () => expect(() => scene(list('visitors'), result)).toThrow(/Encode "source" on color, or remove it/));
+});
+
+describe('a tint, and text in a series colour', () => {
+  const visitors = (use: string, by: string): Spec => ({ use, query: { metrics: ['visitors'], by: [by], range: '3d' } });
+  const flat: Result = { rows: [{ 'date.day': '2026-10-01', source: 'Search', visitors: 4 }, { 'date.day': '2026-10-02', source: 'Direct', visitors: 6 }], totals: { visitors: 10 }, meta: { range: '3d', compare: null, notes: [] } };
+  it('the fill under a line and a row\'s bar behind its label are tints, and the line is not', () => {
+    const plot = scene(visitors('line', 'date.day'), flat).scene.nodes.filter((n) => n.kind === 'path').map((n) => [n.key, n.tone]);
+    expect(plot).toEqual([['context:area', 'soft'], ['primary:line', undefined]]);
+    expect(scene(visitors('bar-list', 'source'), flat).scene.nodes.filter((n) => n.kind === 'rect').every((n) => n.tone === 'soft')).toBe(true);
+  });
+  it('a tint is the paint\'s soft colour, whole, and the paint at its opacity where the tokens have none', () => {
+    expect(nodePaint({ paint: 'series.2', kind: 'rect', tone: 'soft', opacity: 0.2 })).toBe('var(--a8c-charts-color-series-2-soft, color-mix(in srgb, var(--a8c-charts-color-series-2, currentColor) 20%, transparent))');
+    expect(nodePaint({ paint: 'series.2', kind: 'rect', opacity: 0.4 })).toBe('var(--a8c-charts-color-series-2, currentColor)');
+  });
+  it('text in a series colour takes the step for text, and other text its own paint', () => {
+    expect(nodePaint({ paint: 'series.3', kind: 'text' })).toBe('var(--a8c-charts-color-series-3-text, var(--a8c-charts-color-series-3, currentColor))');
+    expect(nodePaint({ paint: 'ink.muted', kind: 'text' })).toBe(nodePaint({ paint: 'ink.muted', kind: 'rect' }));
+  });
 });

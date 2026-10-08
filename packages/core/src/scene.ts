@@ -84,7 +84,7 @@ const path: MarkFn = (l, { id: layer, series, role: role0, paint, prev, rows: pt
   // An area's points say where it starts only when that is not the bottom of the plot.
   const points = (rs: Row[]): PathNode['points'] => rs.map((r) => { const [v0, v] = ends(r); return { row: k(r), x: unit.cx(k(r)), v, ...(l.mark === 'area' && v0 && { v0 }) }; });
   // An area under a line is a tint. Stacked, each is the mark itself.
-  if (l.mark === 'area') return [{ key: id, part: 'plot', kind: 'path', d: pathD(points(whole), 'monotone', true), points: points(whole), curve: 'monotone', fill: true, paint, ...(!(l.stack && series != null) && { opacity: 0.14 }), layer: 'data', ...role }];
+  if (l.mark === 'area') return [{ key: id, part: 'plot', kind: 'path', d: pathD(points(whole), 'monotone', true), points: points(whole), curve: 'monotone', fill: true, paint, ...(!(l.stack && series != null) && { opacity: 0.14, tone: 'soft' as const }), layer: 'data', ...role }];
   const nodes: SceneNode[] = [{ key: id, part: 'plot', kind: 'path', d: pathD(points(whole), 'monotone'), points: points(whole), curve: 'monotone', paint, width: prev ? 1.5 : 2, dash: prev ? '3 3' : null, layer: 'data', ...role }];
   const tail = prev ? [] : [whole[whole.length - 1]!].concat(pts.filter((r) => r.partial));
   if (tail.length > 1) nodes.push({ key: id + ':partial', part: 'plot', kind: 'path', d: pathD(points(tail)), points: points(tail), paint, width: 2, dash: '2 4', opacity: 0.75, layer: 'data', ...role, note: 'incomplete bucket' });
@@ -372,7 +372,7 @@ type TrackFn = (l: Layer, d: Track) => SceneNode[];
 // it runs from its value to that, and is painted by which way it goes. Behind a label it is a tint.
 const trackBar: TrackFn = (_l, { id, role, paint, k, at, to, v, beside, polarity }) => {
   const v0 = v(to == null ? 0 : at), v1 = v(to ?? at);
-  return [{ key: id + ':' + k, part: 'rows', kind: 'rect', v: v1, ...(v0 && { v0 }), row: k, paint: toned(polarity, v0, v1, paint), ...(!beside && { opacity: 0.2 }), layer: 'data', role }];
+  return [{ key: id + ':' + k, part: 'rows', kind: 'rect', v: v1, ...(v0 && { v0 }), row: k, paint: toned(polarity, v0, v1, paint), ...(!beside && { opacity: 0.2, tone: 'soft' as const }), layer: 'data', role }];
 };
 // A rule lies along the track from one of the row's values to another, or from zero where it has one end.
 const trackRule: TrackFn = (l, { id, role, k, at, to, v }) => [{ key: id + ':' + k, part: 'rows', kind: 'line', x: v(at), x2: v(to ?? 0), t: 0.5, row: k, paint: l.paint || 'ink', layer: 'data', role }];
@@ -498,7 +498,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
       keys = rows.map(k);
       return;
     }
-    if (angle == null) return arcs.push(arc(ids[i]!, l, 0, 1, r0, l.paint || 'series.1', { opacity: 0.14 }));
+    if (angle == null) return arcs.push(arc(ids[i]!, l, 0, 1, r0, l.paint || 'series.1', { opacity: 0.14, tone: 'soft' }));
     const marked = typeof angle === 'number' || roleOf(l) === 'reference', m = typeof angle === 'number' ? q.metrics[0]! : angle, M = catalog.metrics[m];
     if (!M) throw new Error(n + ' has "' + m + '" on angle, which is not a metric. Put a metric on angle, and a dimension on color.');
     if (!M.domain) throw new Error(n + ' reads "' + m + '" against a range, and the catalog gives that metric no "domain". Add "domain": [least, most] to it in the catalog, or encode a dimension on color to divide the circle by it.');

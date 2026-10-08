@@ -170,6 +170,9 @@ interface NodeBase {
   /** Absent stays. Ranked nodes are given up when room is short. */
   rank?: number;
   opacity?: number;
+  /** A fill that tints and does not mark: the fill under a line, a row's bar behind its label, the range behind a gauge.
+   * A painter with a lighter colour for the paint uses that, whole. One without draws the paint at `opacity`. */
+  tone?: 'soft';
   note?: string;
 }
 /** A bar in the plot (`x` and `w` across, and up the plot from `v0` to `v`), a row's bar (across its track from `v0` to `v`), a band segment (`v` is its share) or a legend swatch.

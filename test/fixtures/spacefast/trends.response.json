@@ -53,7 +53,7 @@
         "rows": [
           {
             "bucket": "2026-09-07T00:00:00Z",
-            "complete": true,
+            "complete": false,
             "page_views": 108,
             "visitors": 83,
             "bot_traffic": 10
@@ -357,16 +357,7 @@
         ],
         "since": "2026-09-30T18:38:05.873Z",
         "until": "2026-10-07T18:38:05.873Z",
-        "rows": [
-          {
-            "page_views": 3287,
-            "unique_visitors_range": 134,
-            "visitor_days": 1660,
-            "engaged_time": 27632,
-            "scroll_depth": 72.8,
-            "bot_traffic": 266
-          }
-        ],
+        "rows": [],
         "totals": {
           "page_views": 3287,
           "unique_visitors_range": 134,
@@ -380,16 +371,7 @@
         "previous": {
           "since": "2026-09-23T18:38:05.873Z",
           "until": "2026-09-30T18:38:05.873Z",
-          "rows": [
-            {
-              "page_views": 3582,
-              "unique_visitors_range": 141,
-              "visitor_days": 1756,
-              "engaged_time": 28104,
-              "scroll_depth": 72.1,
-              "bot_traffic": 257
-            }
-          ],
+          "rows": [],
           "totals": {
             "page_views": 3582,
             "unique_visitors_range": 141,

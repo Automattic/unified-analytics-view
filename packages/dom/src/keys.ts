@@ -76,8 +76,8 @@ export function crossMarks(scene: Scene, layers: Layer[], rows: Row[][], catalog
     if (l.mark !== 'line' || typeof y !== 'string' || !def) return;
     const prev = l.series === 'previous', field = prev ? y + '@previous' : y, side = units.indexOf(unitsOf(catalog, [l])[0]!) > 0 ? 1 : 0;
     for (const n of scene.nodes) {
-      // A line's unfinished tail is a path of its own, and the row where the two meet is in both.
-      if (n.kind !== 'path' || n.fill || n.part !== 'plot' || n.key.replace(/:partial$/, '') !== (n.series == null ? ids[li] : ids[li] + ':' + n.series)) continue;
+      // A line's unfinished tail, and an unfinished lead, are paths of their own, and the row where two meet is in both.
+      if (n.kind !== 'path' || n.fill || n.part !== 'plot' || n.key.replace(/:partial(:lead)?$/, '') !== (n.series == null ? ids[li] : ids[li] + ':' + n.series)) continue;
       for (const p of n.points) {
         const at = rows[keys.indexOf(p.row)] ?? [], row = n.series == null ? at[0] : at.find((r) => String(r[split!]) === n.series), id = li + ':' + (n.series ?? '') + ':' + p.row;
         if (row?.[field] == null || seen.has(id)) continue;

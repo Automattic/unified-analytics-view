@@ -1,7 +1,7 @@
 import type { Catalog, MetricDef, Polarity, Query, Result, Row, Unit } from '@universal-analytics/core';
 
 /* Spacefast's analytics query API, as its contract has it (spacefast/monorepo, packages/common/src/contracts/analytics-query.ts,
- * read at 23789af). One answer of `POST /v1/spaces/{spaceId}/analytics/query` becomes what a view takes: a query, a
+ * read at b1e28cc). One answer of `POST /v1/spaces/{spaceId}/analytics/query` becomes what a view takes: a query, a
  * result and the catalog for them. The answer repeats its columns' metadata, so nothing else is asked of the API. */
 
 type Cell = number | string | boolean | null | { amountMinor: number; currency: string }[];
@@ -34,7 +34,8 @@ const major = (amount: number, currency: string) => amount / 10 ** (DIGITS[curre
 const WRITTEN = new Set(Intl.supportedValuesOf('currency').map((c) => c.toLowerCase()));
 
 /** One answer as a view's query, result and catalog.
- * - The bucket is the time dimension `bucket`, and a row of the bucket still filling is `partial`.
+ * - The bucket is the time dimension `bucket`, and a row is `partial` where its bucket is not `complete`: the last while it is
+ *   still filling, and the first or last of a range that starts or ends inside one. A range is kept as it was asked.
  * - `previous` is laid beside each row as `<metric>@previous`: bucket for bucket in a series, and by the breakdown's value in
  *   a list, null where the value was not there before.
  * - Time with a breakdown is refused: a view of two dimensions needs each one's totals over the other, which the API has not defined.
@@ -107,7 +108,7 @@ export function adapt(api: ApiResult, options: AdaptOptions = {}): Adapted {
   const days = Math.max(1, Math.round((Date.parse(api.until) - Date.parse(api.since)) / DAY));
   const empty = [...api.rows, api.totals].every((r) => metrics.every((c) => !value(r, c)));
   const notes = [...bare.map((c) => c.label + ' has no amount in any currency over this range.'), ...typos.map((c) => c.name + ' in "' + c.currency + '" is left out: that is not a currency.')];
-  if (time && api.rows.some((r) => r.complete === false)) notes.push((api.granularity === 'hour' ? 'This hour' : 'Today') + ' is still in progress.');
+  if (time && api.rows.at(-1)?.complete === false) notes.push((api.granularity === 'hour' ? 'This hour' : 'Today') + ' is still in progress.');
   const query: Query = { metrics: metrics.map((c) => c.id), range: days + 'd' };
   const by = [...(time ? ['bucket'] : []), ...(dim ? [dim.id] : [])];
   if (by.length) query.by = by;

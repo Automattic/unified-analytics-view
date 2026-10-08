@@ -4,17 +4,17 @@ import { adapt, type ApiResult } from '@universal-analytics/spacefast';
 import trends from './fixtures/spacefast/trends.response.json';
 import breakdowns from './fixtures/spacefast/breakdowns.response.json';
 
-// The API's own examples (spacefast/monorepo, at 23789af), recorded from its store for a seeded site.
+// The API's own examples (spacefast/monorepo, at b1e28cc), recorded from its store for a seeded site.
 const answers = [...trends.data.results, ...breakdowns.data.results] as unknown as ApiResult[];
 const answer = (id: string) => answers.find((a) => a.id === id)!;
 
 describe('one answer of the Spacefast query API, as a view takes it', () => {
-  it('a daily series: the bucket is the time dimension, and the day still filling is partial', () => {
+  it('a daily series: the bucket is the time dimension, and a day the range only partly covers is partial, as is the one still filling', () => {
     const { query, result, catalog } = adapt(answer('traffic'));
     expect(query).toEqual({ metrics: ['page_views', 'visitors', 'bot_traffic'], range: '30d', by: ['bucket'] });
     expect(result.rows).toHaveLength(31);
-    expect(result.rows[0]).toEqual({ bucket: '2026-09-07T00:00:00Z', partial: false, page_views: 108, visitors: 83, bot_traffic: 10 });
-    expect(result.rows.filter((r) => r.partial).map((r) => r.bucket)).toEqual(['2026-10-07T00:00:00Z']);
+    expect(result.rows[0]).toEqual({ bucket: '2026-09-07T00:00:00Z', partial: true, page_views: 108, visitors: 83, bot_traffic: 10 });
+    expect(result.rows.filter((r) => r.partial).map((r) => r.bucket)).toEqual(['2026-09-07T00:00:00Z', '2026-10-07T00:00:00Z']);
     expect(formatDimension(result.rows[1]!.bucket, catalog.dimensions.bucket!)).toBe('Sep 8');
     expect(result.meta).toEqual({ range: '30d', compare: null, notes: ['Today is still in progress.'] });
   });
@@ -55,7 +55,7 @@ describe('one answer of the Spacefast query API, as a view takes it', () => {
     expect(query.compare).toBe('previous');
     expect(result.totals.page_views).toBe(3287);
     expect(result.totals['page_views@previous']).toBe(3582);
-    expect(result.rows[0]!['engaged_time@previous']).toBe(28104);
+    expect(result.totals['engaged_time@previous']).toBe(28104);
     expect(result.meta.compare).toBe('previous');
   });
   it('a list\'s comparison is matched by value, and is null for a value that was not there before', () => {
@@ -120,9 +120,9 @@ describe('the adapted answers draw', () => {
     const plan = resolve(spec, result, container, catalog);
     return { scene: place(buildScene(plan, spec.query, result, catalog), container), prose: tldrProse(spec.query, result, false, catalog) };
   };
-  it('a trend of page views, with the day still filling dashed', () => {
+  it('a trend of page views, dashed in from the day the range starts inside and out to the one still filling', () => {
     const { scene, prose } = draw('traffic', 'line', 'page_views');
-    expect(scene.nodes.some((n) => n.key === 'primary:line:partial')).toBe(true);
+    expect(scene.nodes.flatMap((n) => ('note' in n && n.note === 'incomplete bucket' ? [n.key] : []))).toEqual(['primary:line:partial:lead', 'primary:line:partial']);
     expect(prose).toContain('13.4k');
     expect(prose).toContain('last 30 days');
   });

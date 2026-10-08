@@ -88,8 +88,10 @@ const path: MarkFn = (l, { id: layer, series, role: role0, paint, prev, rows: pt
   // An area under a line is a tint. Stacked, each is the mark itself.
   if (l.mark === 'area') return [{ key: id, part: 'plot', kind: 'path', d: pathD(points(whole), 'monotone', true), points: points(whole), curve: 'monotone', fill: true, paint, ...(!(l.stack && series != null) && { opacity: 0.14, tone: 'soft' as const }), layer: 'data', ...role }];
   const nodes: SceneNode[] = [{ key: id, part: 'plot', kind: 'path', d: pathD(points(whole), 'monotone'), points: points(whole), curve: 'monotone', paint, width: prev ? 1.5 : 2, dash: prev ? '3 3' : null, layer: 'data', ...role }];
-  const tail = prev ? [] : [whole[whole.length - 1]!].concat(pts.filter((r) => r.partial));
-  if (tail.length > 1) nodes.push({ key: id + ':partial', part: 'plot', kind: 'path', d: pathD(points(tail)), points: points(tail), paint, width: 2, dash: '2 4', opacity: 0.75, layer: 'data', ...role, note: 'incomplete bucket' });
+  // A range that starts or ends inside a bucket leaves that one incomplete: dashed in from the first, and out to the last.
+  const from = pts.indexOf(whole[0]!), lead = pts.slice(0, from).concat(whole[0]!), tail = [whole[whole.length - 1]!].concat(pts.slice(from).filter((r) => r.partial));
+  for (const [key, rs] of [[':partial:lead', lead], [':partial', tail]] as const)
+    if (!prev && rs.length > 1) nodes.push({ key: id + key, part: 'plot', kind: 'path', d: pathD(points(rs)), points: points(rs), paint, width: 2, dash: '2 4', opacity: 0.75, layer: 'data', ...role, note: 'incomplete bucket' });
   return nodes;
 };
 const bar: MarkFn = (_l, { id, series, role, paint, prev, rows, k, unit, ends, polarity, slot: [j, n] = [0, 1] }) => rows.map((r) => {

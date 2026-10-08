@@ -544,3 +544,28 @@ The flake two agents reported is found and fixed: the fit sweep runs about 4.6 s
 11. **The bullet is sign-ups by device against the total's target,** which is not a real bullet. One with no dimension has no layout to land in.
 12. Prose for a range: "Between 100 and 2,600 across 8 pages."
 13. Not done: `bands`, in-cell bars per column, a waterfall total, Gantt and timeline (deferred). In `<ua-view>` the rows rules still ignore the measured value room, and a bare box plot's ticks sit on the full scale where `resolve()` rescales to the medians.
+
+### Step 8, custom marks and `geo` (built October 8)
+
+Merged. 539 tests pass and the typecheck is clean; every golden scene matches the branch it came from. Samples added: `map` (choropleth) and `symbols`. Checked on the bench in headless Chromium: the map at 346 px, the ranked list at 250 px and below from the same spec, a resize in place with no script, keyboard, hover, the table, boxed heights, both painters.
+
+**What was added**
+
+- **The registry,** in `packages/core/src/marks.ts`: `registerMark(name, { rules, scene, place })` and `customMarks()`. The mark's input is closed over when it is made: `geoMark(shapes)`, `registerGeo(shapes)`. For the DOM, `registerPainter(painter)`.
+- **`packages/geo`,** on `d3-geo` 3.1.1, installed from the configured registry. It is that package's dependency only; core is still at three and `packages/dom` depends only on core. The scene half loads with no DOM.
+- **`FitRule.fallback`,** a preset's name. `resolve()` plans again with it. In the DOM it is a nested `<ua-view>` given the same spec with `use: <fallback>`, and the compiled rule shows one or the other.
+- **Boundary shapes:** `packages/fixtures/src/countries.json`, 26 KB, 123 countries from Natural Earth 1:110m, simplified, small islands and Antarctica dropped. Real but low resolution, and not for a product. The script that made it was not committed.
+- `Mark` and `Layout` are open to a registered name. The schema takes any name of word characters, and `resolve()` checks it against the registry, with an error that lists the marks there are.
+
+**Findings**
+
+1. **A custom mark is a layout of its own, under its name,** and a view draws its layers alone.
+2. **A map has no preset.** `PRESETS` is core's and core cannot name a custom mark, so both samples are written as layers. This is the count section 7 asked for: presets that need a custom mark cannot be presets yet. A registry for presets beside the one for marks would close it. **To decide.**
+3. **The region dimension goes on `x`,** because `encode` is a closed set and a custom mark cannot add a channel. **To decide:** a `region` channel, or leave it.
+4. **The fixtures register `geo` on import,** so `fixtures` depends on `geo`. Otherwise every test that resolves all of `moreSamples` would throw on the map.
+5. **Region keys are country names,** since the catalog has no code-to-label facility. For the API's owners.
+6. **A row with no matching shape is not on the map and nothing says so.** It is still in the list and the table. To look at.
+7. **The fallback list has no limit:** 15 countries is 476 px tall at sidebar width.
+8. **`keep: ["marks"]` switches the fallback off,** and then `resolve()` ends at prose where `<ua-view>` keeps the map. The same `keep` difference as elsewhere.
+9. Symbols sit at the centroid of the whole shape, which is off the mainland for a country with far-flung parts. Under symbols the land is painted `seq.none`, for want of a neutral land token.
+10. **`ShadowRoot.querySelector(":scope > …")` returned null in Chromium** in the agent's probe, and `ensure()` in `dom.ts` is called on the shadow root with that selector. It works today because each call happens once. To look at.

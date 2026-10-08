@@ -147,7 +147,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   }
   // The view rule the layout stands on now, and the room beside its part that only measuring gives:
   // a number wider than the bare plot's rule allows it, or a row's widest value.
-  function guard(): { rule?: FitRule; measured: number } {
+  function guard(): { rule?: FitRule | undefined; measured: number } {
     if (p.layout === 'cartesian') return p.side ? { rule: rule('marks'), measured: Math.max(0, container.displayWidth(valueLen) - rules.bare.numberWidth) } : { rule: (points && rule('points')) || rule('axes'), measured: 0 };
     if (p.layout === 'rows') return { rule: beside() || rule('marks'), measured: valueRoomOf(catalog, p.layers, result.rows) };
     if (p.layout === 'band') return { rule: rule(p.guides.legend === 'full' ? 'legend' : 'marks'), measured: 0 };

@@ -124,7 +124,7 @@ export function once(el: Element, attrs: string[]): void {
   });
 }
 
-interface Morph { now: XV[]; from: XV[]; to: PathNode; frame: number; clock?: Animation | null }
+interface Morph { now: XV[]; from: XV[]; to: PathNode; frame: number; clock?: Animation | null | undefined }
 const morphs = new WeakMap<Element, Morph>();
 
 /** Set a path's shape. A new path, or one in a view that is not moving, takes it at once. A kept one goes there

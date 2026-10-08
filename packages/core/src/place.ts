@@ -21,7 +21,7 @@ const RADIAL = 160;       // px across a circle of arcs that has room to spare
 export const radius = (size?: number) => (size ? 2 + 2.5 * size : 3);
 
 /** A label's box, and its rank: a ranked label is given up before an unranked one, and the higher its rank the sooner. */
-export interface LabelBox { x: number; y: number; w: number; h: number; rank?: number }
+export interface LabelBox { x: number; y: number; w: number; h: number; rank?: number | undefined }
 /** Which labels to give up so that no two are closer than `gap`. They are taken in order of rank, and one that would
  * meet a label already kept goes. For any painter that has measured its labels: place() here, the DOM's measured pass.
  * ponytail: every label against every kept one, and a label never moves to make room. A first cut, and not the answer

@@ -99,7 +99,7 @@ export function expand(spec: Spec, presets: PresetLibrary = PRESETS): Spec {
     (Object.keys(enc) as Channel[]).forEach((ch) => {
       // A slot, and after it the suffix of a companion, which stays as it is written.
       const f = enc[ch], [slot, ...suffix] = typeof f === 'string' ? f.split('@') : [];
-      if (slot != null && slot in slots) enc[ch] = suffix.length ? [slots[slot], ...suffix].join('@') : slots[slot];
+      if (slot != null && slot in slots) enc[ch] = suffix.length ? [slots[slot], ...suffix].join('@') : slots[slot]!;
     });
     return c;
   });

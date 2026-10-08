@@ -102,7 +102,7 @@ export interface Spec {
   spec?: string;
   title?: string;
   query: Query;
-  use?: string;
+  use?: string | undefined;
   layers?: Layer[];
   keep?: KeepPart[];
 }
@@ -286,7 +286,7 @@ export interface PlacedText extends PlacedBase {
   baseline?: 'middle';
   font: 'tick' | 'label' | 'value' | 'display';
   h?: number;
-  cell?: number;
+  cell?: number | undefined;
   halo?: boolean;
 }
 export type PlacedNode = PlacedRect | PlacedPath | PlacedLine | PlacedCircle | PlacedText;
@@ -295,5 +295,5 @@ export interface PlacedScene {
   height: number;
   nodes: PlacedNode[];
   plot?: { w: number; h: number };
-  text?: string;
+  text?: string | undefined;
 }

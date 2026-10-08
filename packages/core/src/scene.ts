@@ -56,13 +56,13 @@ interface Draw {
   /** On a linear x a row's bin has a width of its own, `span`, and `w` is nothing. */
   unit: ReturnType<typeof xScale> & { span?: (k: string) => number };
   /** A value on x, as a ratio of the plot's width, where x is linear. */
-  xv?: (n: number) => number;
+  xv?: ((n: number) => number) | undefined;
   /** What a row says of a field: a metric's value in its unit, and anything else as itself. */
   say: (r: Row, f: string) => string;
   /** The plot sets one metric against another, and its dots are a part of their own, `points`. */
   points?: boolean;
   /** The metric the plot's dots are sized by, and the most it holds. */
-  size?: { field: string; top: number };
+  size?: { field: string; top: number } | undefined;
   /** A value on y, as a ratio of the plot's height. */
   v: (n: number) => number;
   /** Where a row's mark starts and where it ends, as ratios: from the baseline, or from the series stacked under it. */
@@ -70,7 +70,7 @@ interface Draw {
   /** A bar's place among those beside it at one x: which, of how many. */
   slot?: [number, number];
   /** For a bar with two ends: its metric's polarity, which turns the paint of the way it goes. */
-  polarity?: Polarity;
+  polarity?: Polarity | undefined;
 }
 type MarkFn = (l: Layer, d: Draw) => SceneNode[];
 /** A field's metric: the one a companion came with, or itself. */
@@ -374,7 +374,7 @@ interface Track {
   /** The track stands beside the label, so its marks are not behind any text. */
   beside: boolean;
   /** For a bar with two ends: its metric's polarity. */
-  polarity?: Polarity;
+  polarity?: Polarity | undefined;
 }
 type TrackFn = (l: Layer, d: Track) => SceneNode[];
 

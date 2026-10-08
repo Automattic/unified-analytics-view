@@ -11,7 +11,7 @@ export type ApiColumn =
   | { kind: 'dimension'; id: string; label: string; valueType: string }
   | { kind: 'metric'; id: string; label: string; definition: string; unit: string; type: string; additive: boolean; bots: 'excluded' | 'only'; wholeDays: boolean; polarity: string };
 interface ApiPeriod { since: string; until: string; rows: ApiRow[]; totals: ApiRow; truncated: boolean; other: ApiRow | null }
-export interface ApiResult extends ApiPeriod { id: string; timezone: string; granularity: 'none' | 'hour' | 'day'; columns: ApiColumn[]; previous?: ApiPeriod }
+export interface ApiResult extends ApiPeriod { id: string; timezone: string; granularity: 'none' | 'hour' | 'day'; columns: ApiColumn[]; previous?: ApiPeriod | undefined }
 
 export interface AdaptOptions {
   /** The metric the rows were ordered by, largest first, when it was not the first one. Its rank is the row's place. */

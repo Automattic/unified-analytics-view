@@ -50,7 +50,7 @@ export function readoutAt(rows: Row[], total: Row | undefined, q: Query, catalog
 
 /** The rows of the result at each point of the scene. One each, in step, unless the plot is split into series:
  * then `x` and `split` name the two dimensions, and a point has a row per series, in the series' order. */
-export function rowsAt(scene: Scene, q: Query, result: Result): { rows: Row[][]; x?: string; split?: string } {
+export function rowsAt(scene: Scene, q: Query, result: Result): { rows: Row[][]; x?: string | undefined; split?: string } {
   const keys = scene.rows ?? [], by = q.by || [], order = scene.series ?? [];
   // ponytail: scene.rows and result.rows are taken to run in step, as every scene builder with no split makes them.
   if (!order.length || by.length !== 2) return { rows: keys.map((_, i) => (result.rows[i] ? [result.rows[i]!] : [])), x: by[0] };

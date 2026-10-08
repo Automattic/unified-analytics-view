@@ -2,15 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { FIT_RULES, buildScene, resolve, unboundedContainer } from '@universal-analytics/core';
 import { compileFitRules } from '@universal-analytics/dom';
 import { catalog, moreSamples, runQuery } from '@universal-analytics/fixtures';
-import { hitNodes, readout } from '../packages/dom/src/keys.ts';
+import { companions, hitNodes, readout } from '../packages/dom/src/keys.ts';
 import { cartesian } from '../packages/dom/src/layouts/cartesian.ts';
 import { rows } from '../packages/dom/src/layouts/rows.ts';
 
 // What <ua-view> adds for ranges, ticks and a row's track, where it is a plain function or a string. That they
 // draw, fit and move is checked in a browser on the bench.
 const of = (sample: string) => {
-  const spec = moreSamples[sample]!.spec, result = runQuery(spec.query);
-  return { spec, result, scene: buildScene(resolve(spec, result, unboundedContainer(), catalog), spec.query, result, catalog) };
+  const spec = moreSamples[sample]!.spec, result = runQuery(spec.query), plan = resolve(spec, result, unboundedContainer(), catalog);
+  return { spec, result, layers: plan.layers, scene: buildScene(plan, spec.query, result, catalog) };
 };
 
 describe('a row\'s segments in a plot', () => {
@@ -27,10 +27,28 @@ describe('a row\'s segments in a plot', () => {
 });
 
 describe('the readout', () => {
-  it('says each companion the engine returned with a metric, under its suffix, after the comparison', () => {
-    const box = of('box'), league = of('league');
-    expect(readout(box.result.rows[0]!, box.spec.query, catalog)).toBe('/blog/analytics-without-cookies: Response time 720, min 210, p25 470, p50 640, p75 890, max 2,600, lower 648, upper 792');
-    expect(readout(league.result.rows[1]!, league.spec.query, catalog)).toBe('/pricing: Page views 2,960, previous period 2,310, rank 2');
+  it('says each companion of a metric that a layer encodes, under its suffix, after the comparison', () => {
+    const box = of('box'), errors = of('errors'), league = of('league');
+    expect(readout(box.result.rows[0]!, box.spec.query, catalog, box.layers)).toBe('/blog/analytics-without-cookies: Response time 720, min 210, p25 470, p50 640, p75 890, max 2,600');
+    expect(readout(errors.result.rows[0]!, errors.spec.query, catalog, errors.layers)).toBe('/blog/analytics-without-cookies: Response time 720, lower 648, upper 792');
+    expect(readout(league.result.rows[1]!, league.spec.query, catalog, league.layers)).toBe('/pricing: Page views 2,960, previous period 2,310, rank 2');
+  });
+  it('leaves out a companion the result carries and no layer encodes', () => {
+    // The fixture engine sends a page's rank with any compared query by page. The dumbbell draws nothing from it.
+    const dumbbell = of('dumbbell'), row = dumbbell.result.rows[1]!;
+    expect(row['pageviews@rank']).toBe(2);
+    expect(readout(row, dumbbell.spec.query, catalog, dumbbell.layers)).toBe('/pricing: Page views 2,960, previous period 2,310');
+    // A real result carries more than a view asks for. One that does is said as the one that does not.
+    const league = of('league'), more = { ...league.result.rows[1]!, 'pageviews@p95': 9999, 'visitors@rank': 4 };
+    expect(readout(more, league.spec.query, catalog, league.layers)).toBe('/pricing: Page views 2,960, previous period 2,310, rank 2');
+    expect(readout(more, league.spec.query, catalog, [])).toBe('/pricing: Page views 2,960, previous period 2,310');
+  });
+  it('and the table has a column for the same ones: both list by companions()', () => {
+    const box = of('box'), dumbbell = of('dumbbell'), league = of('league');
+    expect(companions('response_time', box.result.rows[0], box.layers)).toEqual(['response_time@min', 'response_time@p25', 'response_time@p50', 'response_time@p75', 'response_time@max']);
+    expect(companions('pageviews', dumbbell.result.rows[0], dumbbell.layers)).toEqual([]);
+    expect(companions('pageviews', { ...league.result.rows[0]!, 'pageviews@p95': 1 }, league.layers)).toEqual(['pageviews@rank']);
+    expect(companions('pageviews', undefined, league.layers)).toEqual([]);      // an empty result has no row, and the table no column
   });
 });
 

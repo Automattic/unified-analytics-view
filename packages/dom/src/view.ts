@@ -1,8 +1,8 @@
 import { CONTAINER_RULES, buildScene, expand, fallbackRule, formatDimension, formatValue, resolve, unboundedContainer } from '@universal-analytics/core';
-import type { Catalog, ContainerRules, Layout, Query, Result, Row, SceneNode, Spec } from '@universal-analytics/core';
+import type { Catalog, ContainerRules, Layer, Layout, Query, Result, Row, SceneNode, Spec } from '@universal-analytics/core';
 import { compileFitRules, type FitExtras } from './compile.ts';
 import { attr, ensure, keyed, paintVar, text } from './dom.ts';
-import { KEYS_CSS, Keys } from './keys.ts';
+import { KEYS_CSS, Keys, companions } from './keys.ts';
 import { LAYOUTS } from './layouts/index.ts';
 import { NUMBER_FITS, fitNumber, readNumber } from './measure.ts';
 import { MOTION_CSS, begin, register, settle } from './motion.ts';
@@ -169,10 +169,10 @@ export function pivot(q: Query, result: Result, fields: string[]): { cols: Row[s
 }
 
 /* The table is rebuilt whole: nothing in it moves, so there is nothing to keep. Totals are the engine's, never a sum of the rows. */
-function paintTable(table: HTMLTableElement, title: string | undefined, q: Query, result: Result, catalog: Catalog): void {
+function paintTable(table: HTMLTableElement, title: string | undefined, q: Query, result: Result, catalog: Catalog, layers: Layer[]): void {
   const by = q.by || [], prev = q.compare === 'previous';
-  // A companion the engine returned with a metric has a column after it, under its suffix. With two dimensions the table is a pivot, and has none.
-  const more = (m: string) => (by.length === 2 ? [] : Object.keys(result.rows[0] ?? {}).filter((f) => f.startsWith(m + '@') && f !== m + '@previous'));
+  // A companion of a metric that a layer encodes has a column after it, under its suffix, as the readout says it. With two dimensions the table is a pivot, and has none.
+  const more = (m: string) => (by.length === 2 ? [] : companions(m, result.rows[0], layers));
   const fields = q.metrics.flatMap((m) => [m, ...(prev ? [m + '@previous'] : []), ...more(m)]);
   const label = (f: string) => { const [m, of] = f.split('@'); return catalog.metrics[m!]!.label + (of == null ? '' : ', ' + (of === 'previous' ? 'previous period' : of)); };
   const row = (parent: HTMLElement, cells: [text: string, tag: 'th' | 'td', num?: boolean][]) => {
@@ -325,8 +325,8 @@ export class UaView extends Base {
       painter?.paint(this.#body, scene, rules, data);
       // Only while it shows: nothing reads a hidden table, and it is a row per row of the result.
       if (!this.hasAttribute('table')) this.#table.replaceChildren();
-      else if (painter?.table) painter.table(this.#table, spec.title, scene, data); else paintTable(this.#table, spec.title, data.query, result, catalog);
-      this.#keys.paint(scene, expand(spec).query, result, catalog);
+      else if (painter?.table) painter.table(this.#table, spec.title, scene, data); else paintTable(this.#table, spec.title, data.query, result, catalog, plan.layers);
+      this.#keys.paint(scene, expand(spec).query, result, catalog, plan.layers);
       const swap = fallbackRule(fits, scene.layout, spec.keep, this.via), { layers: _layers, ...rest } = spec;
       if (swap) Object.assign(this.#fallback ??= this.#root.appendChild(Object.assign(document.createElement(this.localName) as UaView, { className: 'vg-fallback' })),
         { via: this.via.concat(scene.layout), spec: { ...rest, use: swap.fallback }, result, catalog, rules });

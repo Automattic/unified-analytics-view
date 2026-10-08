@@ -144,11 +144,11 @@ describe('the readout of a split plot', () => {
   });
   it('says one pair as any row is said', () => {
     const { rows, q } = at('grouped');
-    expect(readout(rows[0]![1]!, q, catalog)).toMatch(/^Search, Mobile: Visitors [\d,]+$/);
+    expect(readout(rows[0]![1]!, q, catalog, [])).toMatch(/^Search, Mobile: Visitors [\d,]+$/);
   });
   it('reads two units at one x', () => {
     const { rows, q } = at('dual');
-    expect(readout(rows[0]![0]!, q, catalog)).toBe('Sep 8: Visitors 416; Revenue 2,453');
+    expect(readout(rows[0]![0]!, q, catalog, [])).toBe('Sep 8: Visitors 416; Revenue 2,453');
   });
 });
 

@@ -1,6 +1,6 @@
 # Chart coverage: inventory and plan
 
-As of October 7, 2026. **Status: Proposed. Nothing here is built. The calls it stood on were decided on October 7 and are recorded in section 6, with what is still open.**
+As of October 7, 2026. **Status: steps 1 to 6 and 8 were built on October 8 and are merged on the branch `chart-coverage`. Step 7 (`facet`) is not started; it waits for a sketch of the board. Sections 1 to 7 are the plan as it was written. Section 8 is what building each step found, and section 9 is what that leaves to decide.**
 
 A catalog of 220 chart types (40 Common, 84 Uncommon, 38 Rare, 58 Specialist) was read against the grammar as it stands in `packages/core`. This note records what the grammar can draw today, what it would take to draw every Common type, and the order to build that in.
 
@@ -569,3 +569,56 @@ Merged. 539 tests pass and the typecheck is clean; every golden scene matches th
 8. **`keep: ["marks"]` switches the fallback off,** and then `resolve()` ends at prose where `<ua-view>` keeps the map. The same `keep` difference as elsewhere.
 9. Symbols sit at the centroid of the whole shape, which is off the mainland for a country with far-flung parts. Under symbols the land is painted `seq.none`, for want of a neutral land token.
 10. **`ShadowRoot.querySelector(":scope > …")` returned null in Chromium** in the agent's probe, and `ensure()` in `dom.ts` is called on the shadow root with that selector. It works today because each call happens once. To look at.
+
+## 9. What the build leaves to decide
+
+Collected from section 8. Nothing here was settled by the build; where an agent had to choose to keep going, the choice is named.
+
+### Where the plan's claims did not hold
+
+| Claim | What happened |
+|---|---|
+| 29 of 40 are plain presets, none needing a pin or a custom mark | Scatter, bubble and quadrant have no preset: presets had one metric slot (`$metric2` exists now; a bubble wants a third). The map has none because core's presets cannot name a custom mark. Gantt and timeline are deferred. The table with in-cell bars is the one-bar form only. The bullet is not a real bullet. No pin was needed anywhere |
+| Fit rules belong to arrangements and parts, not charts | Two rules are tied to a shape: `points` (a scatter has no bare-plot form) and `track` (a row's track with dots or ranges stands beside its label) |
+| One layer field that is neither data nor role (`sweep`) | Still one. But role now does data work in two places: an `arc` or a `tick` with `role: "reference"` stands at the catalog `target` |
+| `cell` lives in `cartesian` | It has a layout of its own, `matrix` |
+| A ranged bar is painted by direction and polarity | The rule catches a box plot's box, which is not a before and an after |
+
+### To decide
+
+1. **Keyboard, three models built and unconfirmed:** through the series at one x (up and down), across points in two dimensions (nearest in the arrow's half-plane), and over a grid (row and column). Version 4's source was not read for any of them.
+2. **The direction rule's trigger.** Recommended: only a bar whose two ends are a `@before` and an after, or that a preset marks so. Today a layer's own `paint` is the way out.
+3. **Role doing data work** for a target. The alternative is a `$target` slot filled from the catalog at expansion, which puts the catalog inside `expand()`.
+4. **Presets for custom marks.** A registry for presets beside the one for marks would let `geo` have `use: "choropleth"`.
+5. **A `region` channel,** or leave the region on `x`.
+6. **Whether a ranged mark holds zero.** Today a candlestick and a fan sit in the top half of the plot.
+7. **`stack: "center"` is a silhouette.** A Likert chart needs an offset around a named neutral series.
+8. **Two metrics on two axes** have no legend, nothing ties an axis to its layer, and their zeros are not aligned.
+9. **Prose "outliers"** are the extremes by comparing rows. A real test is the engine's.
+10. **`seq.none` in dark** differs from the first ramp step by hue only. A hatch or an outline in the painter is the fix if it reads too close.
+11. **The schema exempts `use: "gauge"` by name.** Recommended: drop the "a preset needs a dimension" clause and rely on `expand()`'s error.
+12. **Preset names** are unchecked against `@automattic/charts`: `grouped-bar`, `stacked-bar`, `stacked-area`, `donut`, `gauge`, `heatmap`, `funnel`, `box-plot`, `error-bars`, `waterfall`, `candlestick`, `fan`, `dumbbell`, `bullet`. `pie` and `pie-semi-circle` follow the package from memory.
+
+### For the API's owners
+
+- `totalsBy`: totals per value of each dimension, with two dimensions.
+- What `limit` means with two dimensions.
+- A way to ask for a companion field by name in the query.
+- Bins as `dimension@end`; an ordinal dimension type, or an answer that is not ranked, for weekday and hour.
+- Catalog: type `number`; `domain`, `target`, `bands`; a colour role per dimension value; region codes with labels.
+- Records, for Gantt and timeline.
+
+### Not built, within the plan
+
+- Step 7, `facet`.
+- In-cell bars per column; `bands` drawn; a waterfall's closing total; a rank with no `compare`; the fold into "Other".
+- Unit formatting: currency, duration, and one unit for a rate (`ratio` and `percent` both exist).
+- A metric on `radius` (rose, radial bar).
+- Choosing one series with the pointer.
+
+### Not verified by anyone
+
+- Firefox and Safari itself. WebKit only for steps 2 and 3, in part.
+- A screen reader, touch, reduced motion, right-to-left.
+- The motion as it moves; only its end state was read.
+- The colours, by a person.

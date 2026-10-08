@@ -345,6 +345,23 @@ October 8. Six items above were picked as the ones that would make real data rea
 - Hover, the table and the dark theme after the merge. The spike page's seven verdicts after the container rename: they stayed at "running" in a background tab, on the baseline too.
 - Safari and Firefox.
 
+## The adapter for Spacefast's query API
+
+October 8. `packages/spacefast` turns one answer of the API's contract (spacefast/monorepo#3816, a draft, read at `afd8faa`) into a query, a result and a catalog. Held to the API's two recorded examples in `test/spacefast.test.ts`. Not looked at in a browser: the bench has no page that feeds it.
+
+What it does: the bucket is the time dimension and `complete: false` is `partial`; `previous` is laid beside each value as `@previous`, bucket for bucket in a series and by value in a list; a list's rows carry their place as `@rank`; a scroll bucket is a `number` dimension; `percent_points` is `percent`; a country column sets `values: 'country'`; totals are the API's own.
+
+Open:
+
+1. **Money is left out, with a note in `meta.notes`.** A revenue cell is a list of amounts, one per currency, in minor units. Core has one currency, in dollars. **To decide.**
+2. **Time with a breakdown is refused.** A view of two dimensions needs `totalsBy`, and the API has not said how `limit` and `other` work per bucket. Raised on the PR.
+3. **The first bucket of a series is cut by the window's start and marked complete,** so a trend over a preset window opens with a dip. Raised on the PR; the adapter passes it on as it comes.
+4. **Polarity is the caller's,** as an option: the API's catalog has none. Without one a metric is `up`, and a count of bots `none`.
+5. **An answer whose every value is zero is `empty`,** so a quiet week on an old site reads "No visits yet".
+6. **`other` and `truncated` are dropped.** A result has no place for them.
+7. **A custom range reads as a count of days,** "last 31 days", whatever its ends. An hourly bucket at midnight still reads as a day: the answer states its grain and core does not take one.
+8. `unique_visitors_range` counts consented visitors only and is passed on under the API's label. Raised on the PR.
+
 ## Bugs
 
 1. **Prototype: duplicate keys on a one-row time series.** A time series with exactly one row emits two `xtick` nodes with the same key. No swept case reaches it. Fixed in `37edd5d`, as a departure from the prototype on purpose: one row has one tick. It has its own test, which shows the prototype's two and says why ours differs. The prototype itself is unchanged.

@@ -1,0 +1,12 @@
+{
+  "name": "@universal-analytics/spacefast",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@universal-analytics/core": "workspace:*"
+  }
+}

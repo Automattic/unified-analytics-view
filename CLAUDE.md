@@ -27,6 +27,7 @@ Packages export their TypeScript source and nothing is built for release yet. Vi
 - `apps/bench`: where work is looked at. Every sample in resizable frames, with data state, height limit and theme as controls, beside pages for the demo, tokens, materials and the spike. A painter control picks the prototype's SVG painter on the pixel scene, or `<ua-view>`; new painters, chrome and surfaces get a place here as they land.
 - `packages/dom`: the `<ua-view>` custom element and the fit-rule compiler. It plans once with no limits, paints the ratio scene, and leaves the fitting to container queries; a measured pass (`measure.ts`) settles what CSS cannot say. One module per layout in `src/layouts/`, behind the seam in `src/layout.ts`: `cartesian`, `rows`, `band`, `radial` and `matrix`, with `points`, `ranges` and `track` painting what those marks add. A custom mark's painter joins through `registerPainter`. Its only dependency is core.
 - `packages/geo`: the `geo` custom mark, for a choropleth and symbols on a map. The one package that depends on `d3-geo`. Its scene half loads with no DOM.
+- `packages/spacefast`: the adapter from one answer of Spacefast's analytics query API to a view's query, result and catalog. One function, `adapt`. It knows that API's names; core still knows none. The API's two recorded examples are in `test/fixtures/spacefast`.
 - `packages/dots`: not started.
 
 ## Rules

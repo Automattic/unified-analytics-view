@@ -292,8 +292,8 @@ function sceneMatrix(catalog: Catalog, layers: Layer[], result: Result): Body {
   const ends = lo < hi ? [lo, hi] : [Math.min(lo, 0), Math.max(hi, lo ? 0 : 1)];
   const step = scaleQuantize<number>().domain(ends).range(Array.from({ length: SEQ }, (_, i) => i + 1));
   const nodes: SceneNode[] = [], id = layerKeys(layers)[0]!, role = roleOf(l), nx = xs.length, ny = ys.length;
-  // Every sixth label stays, and the rest are ranked to be given up where they would meet: the odd ones first.
-  const rank = (i: number) => (i % 6 ? { rank: i % 2 ? 2 : 1 } : {});
+  // Every sixth label stays, and the rest are ranked to be given up where they would meet: every third goes last.
+  const rank = (i: number) => (i % 6 ? { rank: i % 3 ? 2 : 1 } : {});
   const tick = (f: string, v: string) => formatDimension(v, catalog.dimensions[f]!);
   ys.forEach((y, j) => nodes.push({ key: 'ytick:' + y, part: 'y-axis', kind: 'text', t: 1 - (j + 0.5) / ny, text: tick(yf, y), anchor: 'end', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...rank(j) }));
   xs.forEach((x, i) => nodes.push({ key: 'xtick:' + x, part: 'x-axis', kind: 'text', x: (i + 0.5) / nx, text: tick(xf, x), anchor: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...rank(i) }));

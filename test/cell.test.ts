@@ -129,12 +129,13 @@ describe('the ramp, and the labels', () => {
   it('every label is in the scene, ranked, and place() thins them by rank where they would meet', () => {
     const { ratio } = run(heatmap, 700), rank = (prefix: string) => ratio.nodes.filter((n) => n.key.startsWith(prefix)).map((n) => n.rank ?? 0);
     expect(texts(ratio, 'ytick:')).toEqual(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
-    expect(rank('ytick:')).toEqual([0, 2, 1, 2, 1, 2, 0]);
-    expect(rank('xtick:').slice(0, 7)).toEqual([0, 2, 1, 2, 1, 2, 0]);
-    expect(texts(run(heatmap, 700).scene, 'xtick:')).toEqual(['12am', '2am', '4am', '6am', '8am', '10am', '12pm', '2pm', '4pm', '6pm', '8pm', '10pm']);
-    expect(texts(run(heatmap, 346).scene, 'xtick:')).toEqual(['12am', '6am', '12pm', '6pm']);
+    expect(rank('ytick:')).toEqual([0, 2, 2, 1, 2, 2, 0]);
+    expect(rank('xtick:').slice(0, 7)).toEqual([0, 2, 2, 1, 2, 2, 0]);
+    expect(texts(run(heatmap, 1000).scene, 'xtick:').length).toBe(24);
+    expect(texts(run(heatmap, 346).scene, 'xtick:')).toEqual(['12am', '3am', '6am', '9am', '12pm', '3pm', '6pm', '9pm']);
+    expect(texts(run(heatmap, 234).scene, 'xtick:')).toEqual(['12am', '6am', '12pm', '6pm']);
     expect(texts(run(heatmap, 346).scene, 'ytick:').length).toBe(7);
-    expect(texts(run(heatmap, 346, 100).scene, 'ytick:')).toEqual(['Mon', 'Wed', 'Fri', 'Sun']);
+    expect(texts(run(heatmap, 346, 100).scene, 'ytick:')).toEqual(['Mon', 'Thu', 'Sun']);
   });
   it('place() sets the cells a hairline apart, beside a gutter as wide as the longest row label', () => {
     const { scene } = run(heatmap, 346), at = (k: string) => scene.nodes.find((n) => n.key === k) as unknown as { x: number; y: number; w: number; h: number };

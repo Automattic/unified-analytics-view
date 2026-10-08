@@ -148,7 +148,7 @@ describe('the readout of a split plot', () => {
   });
   it('reads two units at one x', () => {
     const { rows, q } = at('dual');
-    expect(readout(rows[0]![0]!, q, catalog)).toBe('Sep 8: Visitors 416; Revenue 2,453');
+    expect(readout(rows[0]![0]!, q, catalog)).toBe('Sep 8: Visitors 416; Revenue $2,453');
   });
 });
 

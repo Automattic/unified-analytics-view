@@ -2,9 +2,12 @@ import type { FitRule } from './fit.ts';
 
 /* Catalog: the slice of the semantic model the front end needs. */
 export type Polarity = 'up' | 'down' | 'none';
+export type Unit = 'count' | 'ratio' | 'percent' | 'usd' | 'ms' | 's' | 'bytes';
 export interface MetricDef {
   label: string;
-  unit: string;
+  /** What the metric is measured in, which is how its values are written (format.ts). `ratio` is a rate from 0 to 1 and
+   * `percent` one from 0 to 100; `usd` is in dollars, not cents; `ms` and `s` are lengths of time. */
+  unit: Unit;
   polarity: Polarity;
   rangeTotal?: 'sum' | 'sum of daily';
   instant?: boolean;

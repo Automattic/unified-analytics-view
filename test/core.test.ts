@@ -5,7 +5,7 @@ import * as d3array from 'd3-array';
 import * as d3scale from 'd3-scale';
 import * as d3shape from 'd3-shape';
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, buildScene, expand, formatDimension, formatValue, makeContainer, partialNote, pathD, place, resolve, unboundedContainer, type PainterName, type Spec } from '@universal-analytics/core';
+import { CONTAINER_RULES, UNITS, buildScene, expand, formatDimension, formatValue, makeContainer, partialNote, pathD, place, resolve, unboundedContainer, type PainterName, type Spec, type Unit } from '@universal-analytics/core';
 import catalogSchema from '@universal-analytics/core/schema/catalog.schema.json';
 import viewSchema from '@universal-analytics/core/schema/view.schema.json';
 import { catalog, runQuery, samples, scenarios } from '@universal-analytics/fixtures';
@@ -142,6 +142,21 @@ describe('what a painter says with: values and dimensions in catalog format', ()
     expect(formatDimension(null, catalog.dimensions.page!)).toBe('–');
     expect([partialNote(rows[0]!), partialNote(last)]).toEqual(['', 'so far']);
   });
+  it('a value in each unit the catalog may give: as a readout says it, short, and exact', () => {
+    const say = (unit: Unit, v: number) => ([undefined, 'compact', 'exact'] as const).map((form) => formatValue(v, { label: '', unit, polarity: 'none' }, form));
+    // Money is in dollars, not cents.
+    expect([49, 49.5, 63512, -5].map((v) => say('usd', v))).toEqual([['$49', '$49', '$49.00'], ['$49.50', '$49.5', '$49.50'], ['$63.5k', '$63.5k', '$63,512.00'], ['-$5', '-$5', '-$5.00']]);
+    // A rate from 0 to 1 and one in percent points read the same.
+    expect([say('ratio', 0.1244), say('percent', 12.44), say('percent', 2.4)]).toEqual([['12%', '12%', '12.44%'], ['12%', '12%', '12.44%'], ['2.4%', '2.4%', '2.4%']]);
+    expect([4.26, 340, 1234, 125000, 3900000].map((v) => say('ms', v)[0])).toEqual(['4.3ms', '340ms', '1.2s', '2m 05s', '1h 05m']);
+    expect([0.34, 1.2, 125].map((v) => say('s', v))).toEqual([['340ms', '340ms', '0.34 s'], ['1.2s', '1.2s', '1.2 s'], ['2m 05s', '2m 05s', '125 s']]);
+    expect(say('ms', 1234)[2]).toBe('1,234 ms');
+    expect([512, 1234567, 5e12].map((v) => say('bytes', v))).toEqual([['512 B', '512 B', '512 B'], ['1.2 MB', '1.2 MB', '1,234,567 B'], ['5 TB', '5 TB', '5,000,000,000,000 B']]);
+    expect(UNITS.map((u) => formatValue(null, { label: '', unit: u, polarity: 'none' }))).toEqual(UNITS.map(() => '–'));
+  });
+  it('a unit with no format is an error that names the units there are', () => {
+    expect(() => formatValue(1, { label: '', unit: 'eur' as Unit, polarity: 'none' })).toThrow(/The unit "eur" has no format\. Give the metric one of count, ratio, percent, usd, ms, s, bytes/);
+  });
 });
 
 describe('pathD: the one place a path string is made', () => {
@@ -245,6 +260,10 @@ describe('schemas', () => {
   it('reject presentation in a spec: the tldr value and the guides are the container\'s to decide', () => {
     expect(view({ ...trend, headline: true })).toBe(false);
     expect(view({ ...trend, guides: { x: false } })).toBe(false);
+  });
+  it('the catalog\'s units are the ones the formatter has, and no other', () => {
+    expect((catalogSchema as any).properties.metrics.additionalProperties.properties.unit.enum).toEqual(UNITS);
+    expect(cat({ metrics: { m: { label: 'M', unit: 'eur', polarity: 'up' } }, dimensions: {} })).toBe(false);
   });
 });
 

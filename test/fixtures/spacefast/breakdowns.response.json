@@ -16,31 +16,37 @@
             "kind": "metric",
             "id": "page_views",
             "label": "Page views",
+            "definition": "One page load or client-side route change.",
             "unit": "count",
             "type": "count",
             "additive": true,
             "bots": "excluded",
-            "wholeDays": false
+            "wholeDays": false,
+            "polarity": "up_is_good"
           },
           {
             "kind": "metric",
             "id": "engaged_time",
             "label": "Engaged time",
+            "definition": "Median engaged time per page view: milliseconds a visitor kept the page in the foreground, from the tracker heartbeat. Null when no page view reported any.",
             "unit": "ms",
             "type": "duration",
             "additive": false,
             "bots": "excluded",
-            "wholeDays": false
+            "wholeDays": false,
+            "polarity": "up_is_good"
           },
           {
             "kind": "metric",
             "id": "scroll_depth",
             "label": "Scroll depth",
+            "definition": "How far down the page visitors reached: the average deepest scroll in percentage points (0-100), and page views by deepest scroll in ten buckets. Null when no page view reported one.",
             "unit": "percent_points",
             "type": "rate",
             "additive": false,
             "bots": "excluded",
-            "wholeDays": false
+            "wholeDays": false,
+            "polarity": "up_is_good"
           }
         ],
         "since": "2026-09-30T18:38:05.873Z",
@@ -134,11 +140,13 @@
             "kind": "metric",
             "id": "page_views",
             "label": "Page views",
+            "definition": "One page load or client-side route change.",
             "unit": "count",
             "type": "count",
             "additive": true,
             "bots": "excluded",
-            "wholeDays": false
+            "wholeDays": false,
+            "polarity": "up_is_good"
           }
         ],
         "since": "2026-09-07T18:38:05.950Z",
@@ -208,21 +216,25 @@
             "kind": "metric",
             "id": "event_occurrences",
             "label": "Events",
+            "definition": "Named events (custom, conversion, instrument, video), each counted once. Counted over whole UTC days.",
             "unit": "count",
             "type": "count",
             "additive": true,
             "bots": "excluded",
-            "wholeDays": true
+            "wholeDays": true,
+            "polarity": "neutral"
           },
           {
             "kind": "metric",
             "id": "revenue",
             "label": "Revenue",
+            "definition": "Conversion values by event, always split by currency: amounts in different currencies are never added together. Counted over whole UTC days.",
             "unit": "minor_units",
             "type": "money",
             "additive": true,
             "bots": "excluded",
-            "wholeDays": true
+            "wholeDays": true,
+            "polarity": "up_is_good"
           }
         ],
         "since": "2026-09-07T00:00:00.000Z",

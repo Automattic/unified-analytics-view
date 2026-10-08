@@ -2,6 +2,7 @@ import { max, min } from 'd3-array';
 import { scaleBand, scaleLinear, scalePoint } from 'd3-scale';
 import { CHAR_W, delta, fmt, fmtDay, fmtPct } from './format.ts';
 import { pathD } from './path.ts';
+import { leader } from './prose.ts';
 import type { Catalog, Guides, Layer, Mark, Part, PathNode, PlanShape, Query, Result, Role, Row, Scene, SceneNode } from './types.ts';
 
 /* Node kinds: rect, path, line, circle, text. Every node has a stable key,
@@ -293,7 +294,8 @@ function sceneNumber(catalog: Catalog, q: Query, result: Result, share: boolean)
   if (result.meta.empty) { value('0'); sub('No visits yet'); return nodes; }
   let note: string | null = M.rangeTotal === 'sum of daily' ? 'Sum of daily counts' : null;
   if (by && catalog.dimensions[by]!.type !== 'time' && rows.length) {
-    note = share ? rows[0]![by] + ' ' + fmtPct(num(rows[0]!, m) / (t[m] || 1)) : 'Top: ' + rows[0]![by];
+    const top = leader(result, by, m)!;                                      // with two dimensions a row is a pair, so the leader is the engine's
+    note = share ? top[by] + ' ' + fmtPct(num(top, m) / (t[m] || 1)) : 'Top: ' + top[by];
   }
   const dl = q.compare === 'previous' ? delta(t[m] as number, t[m + '@previous'], M.polarity) : null;
   value(fmt(t[m]), fmt(t[m], true));

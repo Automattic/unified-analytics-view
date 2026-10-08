@@ -345,3 +345,26 @@ describe('a scale per unit', () => {
       .toBe('These layers measure in 3 units (share, count, usd), and a plot has a y axis on each side at most. Remove a layer, or draw them as separate views.');
   });
 });
+
+describe('tldr prose for two dimensions and for two metrics', () => {
+  const text = (name: string, sc?: (typeof scenarios)[number]) => run(specs[name]!, 346, null, sc).plan.text;
+  it('says who leads each dimension, as a share of the engine\'s total, and over time on how many days', () => {
+    expect(text('series')).toBe('Desktop is the largest device at 52% of visitors in the last 28 days, and leads on 26 of 28 days.');
+    expect(text('stacked')).toBe(text('series'));
+    expect(text('area')).toBe('Search is the largest channel at 42% of page views in the last 28 days, and leads on all 28 days.');
+    expect(text('grouped')).toBe('Search is the largest channel at 41% of visitors, and Desktop the largest device at 50%.');
+    expect(text('grouped', 'empty')).toBe('No visitors recorded in the last 28 days.');
+  });
+  it('says each metric of two, the first with the range', () => {
+    expect(text('dual')).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not unique people. Revenue: 63.5k.');
+    expect(run({ ...specs.dual!, query: { ...specs.dual!.query, compare: 'previous' } }, 346).plan.text)
+      .toBe('Visitors: 10.5k in the last 28 days, up 12% on the previous period. This is a sum of daily counts, not unique people. Revenue: 63.5k, up 8.1% on the previous period.');
+    expect(text('diverging')).toBe('Net subscribers: 180 in the last 28 days.');
+  });
+  it('the note under the number names the leader the engine names, not the first pair', () => {
+    const note = (spec: Spec) => (run(spec, 346).ratio.nodes.find((n) => n.key === 'sub') as { text: string }).text;
+    expect(note(specs.grouped!)).toBe('Top: Search');
+    expect(note({ ...specs.grouped!, layers: [{ ...specs.grouped!.layers![0]!, stack: 'normalize' }] })).toBe('Search 41%');
+    expect(note(specs.stacked!)).toBe('Sum of daily counts');
+  });
+});

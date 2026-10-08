@@ -1,6 +1,6 @@
 import { CONTAINER_RULES, KEEP } from './container.ts';
 import { applies, ruleFor, type FitRule } from './fit.ts';
-import { PRESETS, expand } from './presets.ts';
+import { PRESETS, expand, usesPrevious } from './presets.ts';
 import { COLUMNS_BLOCK, place } from './place.ts';
 import { buildScene, columnLabel, columnsOf, tldrValueText, isDim, roleOf, seriesOf, trackBeside, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
 import { gridProse, tldrProse } from './prose.ts';
@@ -72,10 +72,10 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   let layers = (spec.layers || []).slice();
   if (!layers.length && by) throw new Error('This spec has a dimension but no layers, so there is nothing to draw it with. Add "layers", or "use" one of: ' + Object.keys(presets).join(', ') + '.');
   checkLayers(layers, q, catalog, result);
-  if (layers.some((l) => l.series) && (q.compare !== 'previous' || result.totals[m + '@previous'] == null)) {
+  if (layers.some(usesPrevious) && (q.compare !== 'previous' || result.totals[m + '@previous'] == null)) {
     const why = q.compare === 'previous' ? ' (no prior data)' : ' (the query has no "compare")';
     if (!result.meta.empty) [['previous', 'comparison series'], ['delta', 'the change on the previous period']].forEach(([series, what]) => { if (layers.some((l) => l.series === series)) dropped.push(what + why); });
-    layers = layers.filter((l) => !l.series);
+    layers = layers.filter((l) => !usesPrevious(l));
   }
   const share = layers.some((l) => l.stack === 'normalize' || l.mark === 'arc');
   // A plot of points has no sparkline form: two metrics need both their axes to be read. So it has no bare rung, and

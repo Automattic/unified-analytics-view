@@ -29,6 +29,8 @@ function gaveUp(r: FitRule, plan: Plan, unbounded: Plan): boolean | null {
   if (r.id === 'labels') return unbounded.guides.legend ? !(here && !!plan.guides.legend) : null;
   // And a second y axis only where its layers measure in two units.
   if (r.id === 'axis-2') return unbounded.guides.y2 ? !(here && !!plan.guides.y2) : null;
+  // Rows have headers only where they have more than one column of values.
+  if (r.id === 'columns') return unbounded.guides.columns ? !(here && !!plan.guides.columns) : null;
   if (r.id === 'mid-tick') return here && plan.guides.x ? plan.dropped.includes('the middle date label') : null;
   if (r.id === 'secondary') return here && unbounded.layers.some((l) => l.role !== 'primary') ? plan.layers.every((l) => l.role === 'primary') : null;
   return !here;

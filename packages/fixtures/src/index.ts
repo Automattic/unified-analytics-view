@@ -220,4 +220,7 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
   dual:    { label: 'Two units: visitors and revenue by day', spec: { spec: 'view/0', title: 'Visitors and revenue', query: { metrics: ['visitors', 'revenue'], by: ['date.day'], range: '28d' },
             layers: [{ mark: 'bar', encode: { x: 'date.day', y: 'visitors' } }, { mark: 'line', encode: { x: 'date.day', y: 'revenue' }, paint: 'series.2' }] } },
   area:    { label: 'Stacked areas: page views by day and channel', spec: { spec: 'view/0', title: 'Page views by channel', use: 'stacked-area', query: { metrics: ['pageviews'], by: ['date.day', 'channel'], range: '28d' } } },
+  conversions: { label: 'Columns: count, rate and value by event', spec: { spec: 'view/0', title: 'Conversions', query: { metrics: ['conversions', 'conversion_rate', 'conversion_value'], by: ['event'], range: '28d' },
+            layers: [{ mark: 'bar', encode: { y: 'event', x: 'conversions' } }, { mark: 'text', encode: { y: 'event', text: 'event' } }, { mark: 'text', encode: { y: 'event', text: 'conversions' }, align: 'end' },
+                     { mark: 'text', encode: { y: 'event', text: 'conversion_rate' }, align: 'end' }, { mark: 'text', encode: { y: 'event', text: 'conversion_value' }, align: 'end' }] } },
 };

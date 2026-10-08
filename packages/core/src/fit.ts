@@ -25,7 +25,7 @@ export interface Room { inline: number; block?: number | null }
 
 /* The defaults. A context passes its containers a different set, as `rules.fit`.
  * What these cannot say is measured in `resolve()`: the width of the number,
- * the width of a row's value, and anything that depends on how tall the content is. */
+ * the width of a row's value and of each column after it, and anything that depends on how tall the content is. */
 export const FIT_RULES: FitRule[] = [
   { id: 'axes',      layout: 'cartesian', container: 'view', needs: { inline: 280, block: 120 },      // a plot with axes
     hide: ['x-axis', 'y-axis', 'grid'], show: ['number'], set: { arrange: 'side' }, keep: 'guides' },
@@ -40,7 +40,9 @@ export const FIT_RULES: FitRule[] = [
     hide: ['role:comparison', 'role:reference', 'role:context'], keep: 'secondary' },
   { id: 'marks',     layout: 'cartesian', container: 'view', needs: { inline: 152, block: 46 },       // 76 for the number, a 12 px gap and a 64 px bare plot
     hide: ['plot'], show: ['number'], keep: 'marks' },
-  { id: 'marks',     layout: 'rows',      container: 'view', needs: { inline: 90 },                   // the label; the value's room is measured
+  { id: 'columns',   layout: 'rows',      container: 'view', needs: { block: 80 },                    // headers over the columns: their 20 px and two rows under them
+    hide: ['columns'], keep: 'guides' },
+  { id: 'marks',     layout: 'rows',      container: 'view', needs: { inline: 90 },                   // the label; the value's room is measured, and each ranked column's
     hide: ['rows'], show: ['number'], keep: 'marks' },
   { id: 'legend',    layout: 'band',      container: 'view', needs: { inline: 170 },                  // the full legend becomes the largest segment's label
     hide: [], set: { legend: 'top' }, keep: 'guides' },

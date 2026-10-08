@@ -1,6 +1,6 @@
 import { max, min } from 'd3-array';
 import { scaleBand, scaleLinear, scalePoint } from 'd3-scale';
-import { CHAR_W, delta, fmt, fmtDay, fmtPct } from './format.ts';
+import { CHAR_W, delta, fmt, fmtDay, fmtPct, formatValue } from './format.ts';
 import { pathD } from './path.ts';
 import { leader } from './prose.ts';
 import type { Catalog, Guides, Layer, Mark, Part, PathNode, PlanShape, Query, Result, Role, Row, Scene, SceneNode } from './types.ts';
@@ -219,14 +219,26 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   return { nodes, rows: keys, ...(split && { series }), scale };
 }
 
-/** Room the widest value label needs in a bar list. */
+/** A row's columns: its `text` layers that show a metric, in layer order. The first stays. The rest are ranked, and given up from the right. */
+export function columnsOf(catalog: Catalog, layers: Layer[]): Layer[] {
+  return layers.filter((l) => l.mark === 'text' && typeof (l.encode && l.encode.text) === 'string' && (l.encode!.text as string) in catalog.metrics);
+}
+/** What heads a column. */
+export function columnLabel(catalog: Catalog, l: Layer): string {
+  return catalog.metrics[l.encode!.text as string]!.label;
+}
+// What a text layer says in one row.
+function cellOf(catalog: Catalog, l: Layer, r: Row): { text: string; paint: string } {
+  const f = l.encode!.text as string, M = catalog.metrics[f];
+  return { text: M ? formatValue(num(r, f), M) : String(r[f]), paint: 'ink' };
+}
+export const TICK_W = CHAR_W - 0.8;   // rough advance of the 11px tick face, which a column's header is set in
+
+/** Room a row's columns need between them: for each, its widest value, or its header where there are headers.
+ * Measured in characters, as place() sets them. */
 export function valueRoomOf(catalog: Catalog, layers: Layer[], rows: Row[]): number {
-  let room = 0;
-  layers.forEach((l) => {
-    const f = l.encode && l.encode.text;
-    if (l.mark === 'text' && typeof f === 'string' && f in catalog.metrics) room = Math.max(room, (max(rows, (r) => fmt(num(r, f)).length) || 0) * CHAR_W + 14);
-  });
-  return room;
+  const cols = columnsOf(catalog, layers);
+  return cols.reduce((room, l) => room + Math.max((max(rows, (r) => cellOf(catalog, l, r).text.length) || 0) * CHAR_W, cols.length > 1 ? columnLabel(catalog, l).length * TICK_W : 0) + 14, 0);
 }
 
 /* What a mark in a row's track is drawn with: its layer's key, role and paint, the row, and the track's scale. */
@@ -259,7 +271,12 @@ function sceneRows(catalog: Catalog, layers: Layer[], rows: Row[]): Body {
   if (units.length > 1) throw new Error('These rows have marks that measure in ' + units.length + ' units (' + units.join(', ') + '), and a row has one track. Keep the marks of one unit, and show the other metric as a text layer.');
   const vals = tracked.flatMap((l) => rows.map((r) => num(r, l.encode!.x as string)));
   const lo = Math.min(0, min(vals) ?? 0), hi = Math.max(0, max(vals) ?? 0) || (lo ? 0 : 1), v = (n: number) => (n - lo) / (hi - lo);
-  const ids = layerKeys(layers);
+  const ids = layerKeys(layers), cols = columnsOf(catalog, layers);
+  // A column after the first is ranked by its place, so the last goes first. One column of values needs no header: the view's title says what it is.
+  const rank = (l: Layer) => { const j = cols.indexOf(l); return j > 0 && { rank: j }; };
+  if (cols.length > 1) cols.forEach((l) => {
+    nodes.push({ key: 'column:' + ids[layers.indexOf(l)], part: 'columns', kind: 'text', text: columnLabel(catalog, l), anchor: 'end', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...rank(l) });
+  });
   rows.forEach((r) => {
     const k = r[dim] as string;
     // The row itself: what a painter keys, and what is chosen and named when the row is.
@@ -269,9 +286,9 @@ function sceneRows(catalog: Catalog, layers: Layer[], rows: Row[]): Body {
       if (draw) {
         nodes.push(...draw(l, { id: ids[li]!, role: roleOf(l), paint: l.paint || 'series.1', row: r, k, v }));
       } else if (l.mark === 'text') {
-        const f = l.encode!.text as string, metric = f in catalog.metrics;
-        nodes.push({ key: ids[li] + ':' + k, part: 'rows', kind: 'text', row: k, text: metric ? fmt(num(r, f)) : String(r[f]),
-          anchor: l.align === 'end' ? 'end' : 'start', baseline: 'middle', font: metric ? 'value' : 'label', paint: 'ink', layer: 'data', role: roleOf(l) });
+        const cell = cellOf(catalog, l, r);
+        nodes.push({ key: ids[li] + ':' + k, part: 'rows', kind: 'text', row: k, text: cell.text,
+          anchor: l.align === 'end' ? 'end' : 'start', baseline: 'middle', font: cols.includes(l) ? 'value' : 'label', paint: cell.paint, layer: 'data', role: roleOf(l), ...rank(l) });
       } else {
         throw new Error('The "' + l.mark + '" mark has no rule for rows yet. Use bar or text.');
       }
@@ -353,6 +370,7 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
     if (p.guides.x) parts.push('x-axis');
     if (key === 'full') parts.push('legend');
   } else if (p.layout === 'rows') {
+    if (p.guides.columns) parts.push('columns');
     parts.push('rows');
     body = sceneRows(catalog, p.layers, result.rows.slice(0, p.rowLimit || result.rows.length));
   } else if (p.layout === 'band') {

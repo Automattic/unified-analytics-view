@@ -6,7 +6,7 @@ import { rows } from '../packages/dom/src/layouts/rows.ts';
 // String work only: there is no DOM here. What the browser makes of the rows is checked on the bench.
 describe('the rows layout', () => {
   it('gives up its body with its marks, so the number stands alone', () => {
-    const css = compileFitRules(FIT_RULES.filter((r) => r.layout === 'rows'), { rows: rows.fit! });
+    const css = compileFitRules(FIT_RULES.filter((r) => r.layout === 'rows' && r.id === 'marks'), { rows: rows.fit! });
     const fig = '.vg[data-layout="rows"]:not([data-keep~="marks"])';
     expect(css.split('\n')).toEqual([
       '/* rows marks */', '@container view (inline-size < 90px) {',

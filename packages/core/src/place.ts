@@ -2,7 +2,7 @@ import { scaleLinear } from 'd3-scale';
 import { CHAR_W, clip } from './format.ts';
 import { applies, ruleFor } from './fit.ts';
 import { pathD } from './path.ts';
-import { xScale } from './scene.ts';
+import { TICK_W, xScale } from './scene.ts';
 import type { Container, PathNode, PlacedNode, PlacedRect, PlacedScene, PlacedText, RectNode, Scene, SceneNode, TextNode } from './types.ts';
 
 /* place() turns the ratio scene into pixels, for painters with no CSS: the dot
@@ -97,20 +97,36 @@ function placeLegend(scene: Scene, W: number): Block {
   return { nodes, height: yy + 10 };
 }
 
-// The ranked bar list: rows of a fixed height, labels clipped by character width.
+/** The room each of a row's columns takes, the first of them first: its widest text, a header among them, and 14 px.
+ * The DOM sets a column by its content. It asks this only for when to give one up, so that it agrees with resolve(). */
+export function columnRooms(scene: Scene): number[] {
+  const room: number[] = [];
+  scene.nodes.forEach((n) => {
+    if (n.kind !== 'text' || !(n.part === 'columns' || (n.part === 'rows' && n.font === 'value'))) return;
+    const i = n.rank || 0;
+    room[i] = Math.max(room[i] || 0, n.text.length * (n.part === 'columns' ? TICK_W : CHAR_W) + 14);
+  });
+  return room;
+}
+export const COLUMNS_BLOCK = 20;   // px the headers take over the rows
+
+// Rows of a fixed height. The track, with the bar in it, lies behind the label and the first column of values, and each
+// ranked column stands beyond its end. Labels are clipped by character width.
 function placeRows(scene: Scene, W: number): Block {
-  const rowH = 28, gap = 4, rows = scene.rows!, x = scaleLinear().domain([0, 1]).range([0, W]);
-  const values = scene.nodes.filter((n): n is TextNode => n.part === 'rows' && n.kind === 'text' && n.font === 'value');
-  const valueRoom = values.length ? Math.max(...values.map((n) => n.text.length)) * CHAR_W + 14 : 0;
+  const rowH = 28, gap = 4, rows = scene.rows!, room = columnRooms(scene), head = scene.parts.includes('columns') ? COLUMNS_BLOCK : 0;
+  // Where a column's text ends, and where the track does: short of the right edge by the ranked columns' room.
+  const edge = (i: number) => W - 8 - room.slice(i + 1).reduce((s, w) => s + w, 0), track = edge(0) + 8;
+  const x = scaleLinear().domain([0, 1]).range([0, track]), valueRoom = room[0] || 0;
   const nodes: PlacedNode[] = [];
   scene.nodes.forEach((n) => {
-    if (n.part !== 'rows') return;
-    const top = rows.indexOf(n.row!) * (rowH + gap);
+    if (head && n.part === 'columns' && n.kind === 'text') nodes.push(text(n, edge(n.rank || 0), head / 2));
+    if (n.part !== 'rows' || n.kind === 'row') return;
+    const top = head + rows.indexOf(n.row!) * (rowH + gap);
     // A bar lies from where its track has zero to its value, and is never thinner than 3 px.
     if (n.kind === 'rect') { const from = x(n.v0 ?? 0), to = x(n.v!); nodes.push(rect(n, Math.min(from, to), top, Math.max(3, Math.abs(to - from)), rowH, 3)); }
-    else if (n.kind === 'text') nodes.push(n.anchor === 'end' ? text(n, W - 8, top + rowH / 2) : text(n, 8, top + rowH / 2, fit(n.text, W - 16 - valueRoom)));
+    else if (n.kind === 'text') nodes.push(n.anchor === 'end' ? text(n, edge(n.rank || 0), top + rowH / 2) : text(n, 8, top + rowH / 2, fit(n.text, track - 16 - valueRoom)));
   });
-  return { nodes, height: Math.max(0, rows.length * (rowH + gap) - gap) };
+  return { nodes, height: head + Math.max(0, rows.length * (rowH + gap) - gap) };
 }
 
 // One band and its legend: whichever of the two the plan shows.

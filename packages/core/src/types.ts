@@ -62,6 +62,8 @@ export interface Guides {
   grid?: boolean;
   /** On a band, `top` is the largest segment's label. On a split plot, `labels` is a label at the end of each line. */
   legend?: 'full' | 'top' | 'labels';
+  /** The headers over a row's columns, where it has more than one column of values. */
+  columns?: boolean;
 }
 export interface Spec {
   spec?: string;
@@ -127,7 +129,7 @@ export interface Plan extends PlanShape {
 /* Scene: a flat list of shapes with stable keys and paint tokens, in ratios.
  * Every node names its part, and its coordinates run 0 to 1 within that part's
  * box. A scene needs no size to exist. Pixel painters get theirs from place(). */
-export type Part = 'number' | 'plot' | 'x-axis' | 'y-axis' | 'y-axis-2' | 'labels' | 'rows' | 'band' | 'legend' | 'legend-top' | 'notice';
+export type Part = 'number' | 'plot' | 'x-axis' | 'y-axis' | 'y-axis-2' | 'labels' | 'columns' | 'rows' | 'band' | 'legend' | 'legend-top' | 'notice';
 interface NodeBase {
   key: string;
   part: Part;
@@ -161,7 +163,9 @@ export interface LineNode extends NodeBase { kind: 'line'; t: number; width?: nu
 export interface CircleNode extends NodeBase { kind: 'circle'; pulse: boolean }
 /** One row of the `rows` part: the thing a painter keys and a reader chooses. It draws nothing itself, and place() leaves it out. */
 export interface RowNode extends NodeBase { kind: 'row'; row: string }
-/** Text in the number, rows, legend and notice parts is set in order and carries no position. In `labels` it sits beside the plot at height `t`. */
+/** Text in the number, rows, legend and notice parts is set in order and carries no position. In `labels` it sits beside the plot at height `t`.
+ * In `rows`, text in the `value` face is a column: the first has no `rank`, and each one after it has its place among them as its rank,
+ * so the last is given up first. A header in `columns` has the rank of the column it is over. */
 export interface TextNode extends NodeBase {
   kind: 'text';
   text: string;

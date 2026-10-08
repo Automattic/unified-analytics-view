@@ -3,6 +3,7 @@ import { keyed, text } from '../dom.ts';
 import type { LayoutPainter } from '../layout.ts';
 import { band } from './band.ts';
 import { cartesian } from './cartesian.ts';
+import { matrix } from './matrix.ts';
 import { rows } from './rows.ts';
 
 // The empty state: one line, centred in the room a plot would have taken.
@@ -19,4 +20,4 @@ const notice: LayoutPainter = {
 };
 
 /** One painter per layout. `none` and `prose` have no body, so the element paints them alone. */
-export const LAYOUTS: Partial<Record<Layout, LayoutPainter>> = { cartesian, rows, band, notice };
+export const LAYOUTS: Partial<Record<Layout, LayoutPainter>> = { cartesian, rows, band, matrix, notice };

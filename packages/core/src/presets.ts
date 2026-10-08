@@ -21,6 +21,9 @@ export const PRESETS: PresetLibrary = {
     { mark: 'bar', encode: { x: '$by', y: '$metric', color: '$split' }, stack: 'zero' } ] },
   'stacked-area': { layers: [
     { mark: 'area', encode: { x: '$by', y: '$metric', color: '$split' }, stack: 'zero' } ] },
+  // As a pivot table reads: the first dimension down the side, the second across.
+  'heatmap': { layers: [
+    { mark: 'cell', encode: { y: '$by', x: '$split', color: '$metric' } } ] },
 };
 
 export function expand(spec: Spec, presets: PresetLibrary = PRESETS): Spec {

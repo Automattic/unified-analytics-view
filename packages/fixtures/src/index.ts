@@ -186,5 +186,6 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
             layers: [{ mark: 'bar', encode: { x: 'date.day', y: 'net_subscribers' } }] } },
   dual:    { label: 'Two units: visitors and revenue by day', spec: { spec: 'view/0', title: 'Visitors and revenue', query: { metrics: ['visitors', 'revenue'], by: ['date.day'], range: '28d' },
             layers: [{ mark: 'bar', encode: { x: 'date.day', y: 'visitors' } }, { mark: 'line', encode: { x: 'date.day', y: 'revenue' }, paint: 'series.2' }] } },
+  heatmap: { label: 'Heatmap: visitors by weekday and hour', spec: { spec: 'view/0', title: 'Visitors by weekday and hour', use: 'heatmap', query: { metrics: ['visitors'], by: ['weekday', 'hour'], range: '28d' } } },
   area:    { label: 'Stacked areas: page views by day and channel', spec: { spec: 'view/0', title: 'Page views by channel', use: 'stacked-area', query: { metrics: ['pageviews'], by: ['date.day', 'channel'], range: '28d' } } },
 };

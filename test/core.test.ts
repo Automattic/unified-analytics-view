@@ -211,8 +211,8 @@ describe('fitting the container (reference section 10.1)', () => {
 describe('validation', () => {
   it('names the fix', () => {
     const err = (s: Spec) => { try { resolve(s, runQuery(s.query), makeContainer(346), catalog); } catch (e) { return (e as Error).message; } };
-    expect(err(invalid['unknown preset']!)).toBe('Unknown preset "donut". The library has: line, bar-list, share-bar, grouped-bar, stacked-bar, stacked-area.');
-    expect(err(invalid['dimension, no layers']!)).toBe('This spec has a dimension but no layers, so there is nothing to draw it with. Add "layers", or "use" one of: line, bar-list, share-bar, grouped-bar, stacked-bar, stacked-area.');
+    expect(err(invalid['unknown preset']!)).toBe('Unknown preset "donut". The library has: line, bar-list, share-bar, grouped-bar, stacked-bar, stacked-area, heatmap.');
+    expect(err(invalid['dimension, no layers']!)).toBe('This spec has a dimension but no layers, so there is nothing to draw it with. Add "layers", or "use" one of: line, bar-list, share-bar, grouped-bar, stacked-bar, stacked-area, heatmap.');
     expect(err(invalid['preset, no dimension']!)).toBe('The "line" preset needs a dimension in query.by.');
     expect(err({ query: { metrics: ['pageviews'], by: ['page'] }, layers: [{ mark: 'bar', encode: { y: 'page', x: 'visitors' } }] }))
       .toBe('Layer 1 encodes "visitors" on x, which the query does not return. It returns: page, pageviews.');

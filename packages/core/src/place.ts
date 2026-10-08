@@ -3,12 +3,12 @@ import { CHAR_W, clip } from './format.ts';
 import { applies, ruleFor } from './fit.ts';
 import { pathD } from './path.ts';
 import { xScale } from './scene.ts';
-import type { Container, PathNode, PlacedNode, PlacedRect, PlacedScene, PlacedText, RectNode, Scene, SceneNode, TextNode } from './types.ts';
+import type { Container, Part, PathNode, PlacedNode, PlacedRect, PlacedScene, PlacedText, RectNode, Scene, SceneNode, TextNode } from './types.ts';
 
 /* place() turns the ratio scene into pixels, for painters with no CSS: the dot
  * grid, canvas and the bench's SVG. What the DOM leaves to its stylesheet is a
  * constant here: gutters, row heights, character widths, and the room below
- * which ranked nodes go. Placed nodes drop `part`, `role`, `row`, `series` and `rank`. */
+ * which ranked nodes go. Placed nodes drop `part`, `role`, `row`, `series`, `pair` and `rank`. */
 interface Block { nodes: PlacedNode[]; height: number }
 type Point = PathNode['points'][number];
 
@@ -97,6 +97,41 @@ function placeLegend(scene: Scene, W: number): Block {
   return { nodes, height: yy + 10 };
 }
 
+// A grid of cells, with a label for each of its rows in a gutter as wide as the longest, and for each column under it.
+// Cells are a hairline apart. Labels thin by rank: the highest rank goes first, until those left along an axis are clear
+// of each other, by character width across and by a line's height down. The unranked always stay.
+function placeMatrix(scene: Scene, W: number, H: number): PlacedNode[] {
+  const texts = (part: Part) => (scene.parts.includes(part) ? scene.nodes.filter((n): n is TextNode => n.part === part && n.kind === 'text') : []);
+  const ys = texts('y-axis'), xs = texts('x-axis');
+  const ml = ys.length ? Math.min(LABEL, Math.max(...ys.map((n) => n.text.length))) * CHAR_W + 6 : 0, pw = W - ml, ph = H - (xs.length ? 22 : 0);
+  const below = (labels: TextNode[], pitch: number, size: (n: TextNode) => number) =>
+    [3, 2].find((r) => labels.filter((n) => (n.rank || 0) < r).every((n, i, kept) => !i || pitch * (labels.indexOf(n) - labels.indexOf(kept[i - 1]!)) >= (size(n) + size(kept[i - 1]!)) / 2 + 4)) ?? 1;
+  const xr = below(xs, pw / xs.length, (n) => n.text.length * CHAR_W), yr = below(ys, ph / ys.length, () => LABEL_LINE - 4);
+  const out: PlacedNode[] = [];
+  scene.nodes.forEach((n) => {
+    if (n.kind === 'rect' && n.part === 'plot') {
+      const { part, role, rank, x, w, y, h, pair, ...rest } = n;
+      out.push({ ...rest, x: ml + x! * pw, y: y! * ph, w: Math.max(1, w! * pw - 1), h: Math.max(1, h! * ph - 1), rx: 1 });
+    } else if (n.kind === 'text' && ys.includes(n)) { if ((n.rank || 0) < yr) out.push(text(n, ml - 6, (1 - n.t!) * ph, clip(n.text, LABEL))); }
+    else if (n.kind === 'text' && xs.includes(n) && (n.rank || 0) < xr) out.push(text(n, ml + n.x! * pw, H - 5));
+  });
+  return out;
+}
+
+// A grid's ramp, set in a line in the scene's order: text by character width, swatches side by side. What the line has no room for is left out.
+function placeRamp(scene: Scene, W: number): Block {
+  const nodes: PlacedNode[] = [];
+  let x = 0;
+  scene.nodes.forEach((n) => {
+    if (n.part !== 'ramp') return;
+    const w = n.kind === 'text' ? n.text.length * CHAR_W + 6 : 15, lead = n.key === 'ramp:none' ? 10 : n.kind === 'text' && x ? 5 : 0;
+    if (x + lead + w > W) return;
+    if (n.kind === 'rect') nodes.push(rect(n, x + lead, 8, 14, 10, 1)); else if (n.kind === 'text') nodes.push(text(n, x + lead, 13));
+    x += lead + w;
+  });
+  return { nodes, height: 24 };
+}
+
 // The ranked bar list: rows of a fixed height, labels clipped by character width.
 function placeRows(scene: Scene, W: number): Block {
   const rowH = 28, gap = 4, rows = scene.rows!, x = scaleLinear().domain([0, 1]).range([0, W]);
@@ -167,6 +202,12 @@ export function place(scene: Scene, container: Container): PlacedScene {
       const legend = scene.parts.includes('legend') ? placeLegend(scene, W) : { nodes: [], height: 0 };
       const ph = !guided ? rules.bare.height : H ? Math.max(least, Math.min(rules.axes.height, H - above - legend.height)) : rules.axes.height;
       body = { nodes: placePlot(scene, W, ph, narrow).concat(shift(legend.nodes, 0, ph)), height: ph + legend.height }; plot = { w: W, h: ph };
+    } else if (scene.layout === 'matrix') {
+      // A grid has no bare form. The least it is built to is its `marks` rule's block need, and its ramp is set under it.
+      const least = ruleFor(rules.fit, 'matrix', 'marks')?.needs.block ?? 0;
+      const ramp = scene.parts.includes('ramp') ? placeRamp(scene, W) : { nodes: [], height: 0 };
+      const ph = H ? Math.max(least, Math.min(rules.axes.height, H - above - ramp.height)) : rules.axes.height;
+      body = { nodes: placeMatrix(scene, W, ph).concat(shift(ramp.nodes, 0, ph)), height: ph + ramp.height };
     } else if (scene.layout === 'rows') {
       body = placeRows(scene, W);
     } else {

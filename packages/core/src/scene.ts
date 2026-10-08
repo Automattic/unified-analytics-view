@@ -1,6 +1,6 @@
 import { max, min } from 'd3-array';
-import { scaleBand, scaleLinear, scalePoint } from 'd3-scale';
-import { CHAR_W, delta, fmt, fmtDay, fmtPct } from './format.ts';
+import { scaleBand, scaleLinear, scalePoint, scaleQuantize } from 'd3-scale';
+import { CHAR_W, delta, fmt, fmtDay, fmtPct, formatDimension } from './format.ts';
 import { pathD } from './path.ts';
 import { leader } from './prose.ts';
 import type { Catalog, Guides, Layer, Mark, Part, PathNode, PlanShape, Query, Result, Role, Row, Scene, SceneNode } from './types.ts';
@@ -8,7 +8,7 @@ import type { Catalog, Guides, Layer, Mark, Part, PathNode, PlanShape, Query, Re
 /* Node kinds: rect, path, line, circle, text. Every node has a stable key,
  * a part, a paint token (never a colour) and a layer: "data" or "guide".
  * Nothing here is in pixels: positions are ratios of the part's box. */
-type Body = Pick<Scene, 'nodes' | 'rows' | 'series' | 'scale'>;
+type Body = Pick<Scene, 'nodes' | 'rows' | 'series' | 'ys' | 'scale'>;
 
 const num = (r: Row, f: string) => r[f] as number;
 /** The role a layer plays: the one it states, or the one its mark and series imply. */
@@ -271,6 +271,45 @@ function sceneBand(layer: Layer, rows: Row[], totals: Result['totals']): Body {
   return { nodes, rows: rows.map(k) };
 }
 
+const SEQ = 7;      // paint tokens run from seq.1 to seq.7, and seq.none is a cell with no value
+
+// A dimension on x and another on y, and a metric on color: a grid of cells, each painted a step of the sequential ramp.
+// Both positions are discrete and the cells meet; the gap between them is the painter's. A cell with no value is
+// `seq.none` and not the lowest step: nothing is not a little. A pair the result has no row for is drawn the same way.
+function sceneMatrix(catalog: Catalog, layers: Layer[], result: Result): Body {
+  const l = layers[0]!, { x: xf, y: yf, color: m } = l.encode || {};
+  if (layers.length > 1 || l.mark !== 'cell' || !isDim(catalog, xf) || !isDim(catalog, yf) || typeof m !== 'string' || !(m in catalog.metrics)) {
+    throw new Error('A dimension on both x and y makes a grid, and a grid draws one layer: a "cell" with a metric on color. Write { "mark": "cell", "encode": { "x": "' + xf + '", "y": "' + yf + '", "color": a metric } } alone, or move a dimension off an axis.');
+  }
+  // Each dimension in its own order, which is the engine's, so the grid does not turn with the ranking.
+  const domain = (f: string) => [...new Set(((result.totalsBy && result.totalsBy[f]) || result.rows).map((r) => r[f] as string))];
+  const xs = domain(xf), ys = domain(yf), at = new Map(result.rows.map((r) => [r[xf] + '\n' + r[yf], r[m] as number | null | undefined]));
+  // The colour scale runs from the least to the most of the cells drawn. That is geometry, as the top of a y scale is,
+  // and not a total, so it is read from the rows. A domain the catalog states for the metric comes before it.
+  const vals = [...at.values()].filter((v): v is number => v != null), stated = (catalog.metrics[m] as { domain?: [number, number] }).domain;
+  const [lo, hi] = stated || [min(vals) ?? 0, max(vals) ?? 0];
+  // Cells that all hold one value have no least and most. They are measured from zero.
+  const ends = lo < hi ? [lo, hi] : [Math.min(lo, 0), Math.max(hi, lo ? 0 : 1)];
+  const step = scaleQuantize<number>().domain(ends).range(Array.from({ length: SEQ }, (_, i) => i + 1));
+  const nodes: SceneNode[] = [], id = layerKeys(layers)[0]!, role = roleOf(l), nx = xs.length, ny = ys.length;
+  // Every sixth label stays, and the rest are ranked to be given up where they would meet: the odd ones first.
+  const rank = (i: number) => (i % 6 ? { rank: i % 2 ? 2 : 1 } : {});
+  const tick = (f: string, v: string) => formatDimension(v, catalog.dimensions[f]!);
+  ys.forEach((y, j) => nodes.push({ key: 'ytick:' + y, part: 'y-axis', kind: 'text', t: 1 - (j + 0.5) / ny, text: tick(yf, y), anchor: 'end', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...rank(j) }));
+  xs.forEach((x, i) => nodes.push({ key: 'xtick:' + x, part: 'x-axis', kind: 'text', x: (i + 0.5) / nx, text: tick(xf, x), anchor: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...rank(i) }));
+  // A row of the grid at a time, from the top: reading order.
+  ys.forEach((y, j) => xs.forEach((x, i) => {
+    const v = at.get(x + '\n' + y);
+    nodes.push({ key: id + ':' + x + ':' + y, part: 'plot', kind: 'rect', x: i / nx, w: 1 / nx, y: j / ny, h: 1 / ny, pair: [x, y], paint: v == null ? 'seq.none' : 'seq.' + step(v), layer: 'data', role });
+  }));
+  // The ramp is set in order: the low value, a swatch for each step, the high value, and the swatch for no value where a cell has none.
+  const end = (key: string, v: string): SceneNode => ({ key: 'ramp:' + key, part: 'ramp', kind: 'text', text: v, anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' });
+  const swatch = (key: string | number): SceneNode => ({ key: 'ramp:' + key, part: 'ramp', kind: 'rect', paint: 'seq.' + key, layer: 'data' });
+  nodes.push(end('low', fmt(ends[0], true)), ...Array.from({ length: SEQ }, (_, i) => swatch(i + 1)), end('high', fmt(ends[1], true)));
+  if (vals.length < nx * ny) nodes.push(swatch('none'), end('none:label', 'No data'));
+  return { nodes, rows: xs, ys };
+}
+
 /** The value shown as the number, formatted. */
 export function tldrValueText(catalog: Catalog, q: Query, result: Result, compact?: boolean): string {
   const m = q.metrics[0]!;
@@ -324,6 +363,12 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
     if (key === 'labels') parts.push('labels');
     if (p.guides.x) parts.push('x-axis');
     if (key === 'full') parts.push('legend');
+  } else if (p.layout === 'matrix') {
+    body = sceneMatrix(catalog, p.layers, result);
+    if (p.guides.y) parts.push('y-axis');
+    parts.push('plot');
+    if (p.guides.x) parts.push('x-axis');
+    if (p.guides.ramp) parts.push('ramp');
   } else if (p.layout === 'rows') {
     parts.push('rows');
     body = sceneRows(catalog, p.layers, result.rows.slice(0, p.rowLimit || result.rows.length));

@@ -1,6 +1,6 @@
 import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { buildScene, customMarks, makeContainer, place, registerMark, resolve, type CircleNode, type PainterName, type PathNode, type Result, type Spec } from '@universal-analytics/core';
+import { CONTAINER_RULES, buildScene, customMarks, makeContainer, place, registerMark, resolve, type CircleNode, type PainterName, type PathNode, type Result, type Spec } from '@universal-analytics/core';
 import viewSchema from '@universal-analytics/core/schema/view.schema.json';
 import { compileFitRules } from '@universal-analytics/dom';
 import { catalog, countries, moreSamples, runQuery, scenarios } from '@universal-analytics/fixtures';
@@ -218,15 +218,15 @@ describe('prose, the number and errors', () => {
 
 describe('the painter\'s half, as strings', () => {
   it('is the layout of the mark\'s name, with the mark\'s own rules, and its part holds the scene\'s aspect', () => {
-    expect([geoPainter.layout, geoPainter.rules]).toEqual(['geo', GEO_RULES]);
+    expect([geoPainter.layout, geoPainter.rules!(CONTAINER_RULES)]).toEqual(['geo', GEO_RULES]);
     expect(geoPainter.css).toContain('.vg[data-layout="geo"] .vg-plot { flex: none; align-self: center; inline-size: min(100%, 480px); aspect-ratio: var(--vg-aspect, 2);');
   });
   it('its rules compile to the keys going, and then to the swap for the ranked list, by width and by height', () => {
     const css = compileFitRules(GEO_RULES, { geo: geoPainter.fit ?? {} }), fig = (keep: string) => '.vg[data-layout="geo"]:not([data-keep~="' + keep + '"])';
-    expect(css).toContain('@container view (inline-size < 320px) {\n  ' + fig('guides') + ' :is(.vg-ramp, .vg-size) { display: none; }\n}');
-    expect(css).toContain('@container view (block-size < 170px) {\n  ' + fig('guides') + ' :is(.vg-ramp, .vg-size) { display: none; }\n}');
+    expect(css).toContain('@container view (inline-size < 319.5px) {\n  ' + fig('guides') + ' :is(.vg-ramp, .vg-size) { display: none; }\n}');
+    expect(css).toContain('@container view (block-size < 169.5px) {\n  ' + fig('guides') + ' :is(.vg-ramp, .vg-size) { display: none; }\n}');
     const swap = '  ' + fig('marks') + ' { display: none; }\n  ' + fig('marks') + ' ~ .vg-fallback { display: block; }\n}';
-    expect(css).toContain('@container view (inline-size < 280px) {\n' + swap);
-    expect(css).toContain('@container view (block-size < 120px) {\n' + swap);
+    expect(css).toContain('@container view (inline-size < 279.5px) {\n' + swap);
+    expect(css).toContain('@container view (block-size < 119.5px) {\n' + swap);
   });
 });

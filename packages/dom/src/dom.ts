@@ -22,7 +22,7 @@ const PAINT: Record<string, [name: string, fallback: string]> = {
 /** The custom property a paint token reads. A token the table does not know maps by name: `series.2` is `--a8c-charts-color-series-2`. */
 export function paintVar(token: string): string {
   // A spec can name its own paint, so the name is reduced to what a custom property may hold.
-  const [name, fallback] = PAINT[token] ?? [String(token).replace(/[^\w-]/g, '-'), 'currentColor'];
+  const [name, fallback] = Object.hasOwn(PAINT, token) ? PAINT[token]! : [String(token).replace(/[^\w-]/g, '-'), 'currentColor'];
   return 'var(--a8c-charts-color-' + name + ', ' + fallback + ')';
 }
 
@@ -47,7 +47,10 @@ export function ensureSvg(parent: Element): SVGSVGElement {
  * in its place and a kept one is left where it is unless the kept ones changed order among themselves.
  * ponytail: every kept element found out of place is moved, not the fewest. Longest increasing run if it shows. */
 export function keyed<N extends SceneNode>(parent: Element, nodes: N[], tag: (n: N) => string, each: (el: HTMLElement | SVGElement, n: N) => void): void {
-  const old = new Map(Array.from(parent.children, (c) => [c.getAttribute('data-key'), c as HTMLElement | SVGElement]));
+  // One child per key. Keys are unique in a sound scene, but two rows of one dimension value, or a spec painted
+  // against the result of the one before it, repeat one, and a second child under a key would never be met again.
+  const old = new Map<string | null, HTMLElement | SVGElement>();
+  for (const c of Array.from(parent.children) as (HTMLElement | SVGElement)[]) { const k = c.getAttribute('data-key'); if (old.has(k)) c.remove(); else old.set(k, c); }
   const svg = parent.namespaceURI === SVG;
   const els = nodes.map((n) => {
     const el = old.get(n.key);
@@ -90,7 +93,9 @@ function mark(el: HTMLElement | SVGElement, n: SceneNode): void {
 
 /** A text node's words. One with a shorter form holds both, and the stylesheet picks. */
 export function text(el: Element, n: TextNode): void {
-  el.classList.add('vg-f-' + n.font);
+  const face = 'vg-f-' + n.font;
+  // A kept key can change its face, and would otherwise carry both.
+  if (!el.classList.contains(face)) { for (const c of Array.from(el.classList)) if (c.startsWith('vg-f-')) el.classList.remove(c); el.classList.add(face); }
   if (n.short == null) { el.textContent = n.text; return; }
   if (!el.querySelector(':scope > .vg-full')) el.textContent = '';
   ensure(el, 'span', 'vg-full').textContent = n.text;

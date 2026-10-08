@@ -55,7 +55,7 @@ function list(el: Element, on: boolean): void {
 export const geoPainter: LayoutPainter = {
   layout: 'geo',
   css,
-  rules: GEO_RULES,
+  rules: () => GEO_RULES,
 
   paint(body, scene) {
     const part = ensure(body, 'div', 'vg-plot'), aspect = scene.aspect ?? 2;

@@ -2,6 +2,7 @@ import type { DimensionDef, MetricDef, Polarity, Row } from './types.ts';
 
 const NF = new Intl.NumberFormat('en-US');
 const CF = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
+const DF = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
 export const CHAR_W = 6.6; // rough advance of the 13px label face, for clipping
 
 export function fmt(v: number | null | undefined, compact?: boolean): string {
@@ -12,8 +13,10 @@ export function fmtPct(p: number): string {
   const x = p * 100;
   return (x >= 10 ? Math.round(x) : Math.round(x * 10) / 10) + '%';
 }
+// One formatter for every call: a readout and a table row each ask for a day, and toLocaleDateString builds its own each time.
 export function fmtDay(iso: string): string {
-  return new Date(iso + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+  const day = new Date(iso + 'T00:00:00Z');
+  return isNaN(+day) ? String(day) : DF.format(day);                    // "Invalid Date", as toLocaleDateString says it
 }
 /** A metric's value as its catalog entry sets it. With no form it is what a readout says: whole under ten thousand,
  * "10.5k" from there. `compact` is always the short form, and `exact` never is: a table cell, where the digits matter.

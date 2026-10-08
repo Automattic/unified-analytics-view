@@ -87,8 +87,12 @@ const over = (a: Animation[]) => Promise.allSettled(a.map((t) => t.finished));
 export function settle(fig: HTMLElement): void {
   const run = fig.dataset.moving;
   if (!run) return;
-  for (const el of fig.querySelectorAll('[data-exit]')) {
-    const fading = getComputedStyle(el).getPropertyValue('--vg-leaving') ? transitions(el) : [];
+  // Every leaving node is read before any is removed, and the transitions are asked for once: a removal between two
+  // reads lays the page out again for each node, and a node's own getAnimations() slows with every transition running.
+  const fades = new Map<Element, Animation[]>();
+  for (const t of transitions(fig, true)) { const e = t.effect as KeyframeEffect | null; if (e?.target && !e.pseudoElement) fades.set(e.target, (fades.get(e.target) ?? []).concat(t)); }
+  const leaving = Array.from(fig.querySelectorAll('[data-exit]'), (el) => [el, getComputedStyle(el).getPropertyValue('--vg-leaving') ? fades.get(el) ?? [] : []] as const);
+  for (const [el, fading] of leaving) {
     // A key that comes back takes its element back, and the mark with it.
     if (fading.length) over(fading).then(() => { if (el.hasAttribute('data-exit')) el.remove(); }); else el.remove();
   }
@@ -101,7 +105,7 @@ export function settle(fig: HTMLElement): void {
   rest();
 }
 
-interface Morph { now: XV[]; from: XV[]; to: PathNode; frame: number }
+interface Morph { now: XV[]; from: XV[]; to: PathNode; frame: number; clock?: Animation | null }
 const morphs = new WeakMap<Element, Morph>();
 
 /** Set a path's shape. A new path, or one in a view that is not moving, takes it at once. A kept one goes there
@@ -111,18 +115,20 @@ const morphs = new WeakMap<Element, Morph>();
 export function morph(el: SVGElement, n: PathNode): void {
   const m = morphs.get(el);
   if (!m || !el.closest('.vg[data-moving]')) {
-    if (m) cancelAnimationFrame(m.frame);
+    if (m?.frame) cancelAnimationFrame(m.frame);
     el.setAttribute('d', n.d ?? '');
     morphs.set(el, { now: n.points, from: n.points, to: n, frame: 0 });
     return;
   }
-  m.from = resample(m.now, n.points); m.to = n;
+  if (!m.frame && n.d === m.to.d) { m.to = n; return; }                  // at rest on this shape already: the same data again
+  m.from = resample(m.now, n.points); m.to = n; m.clock = undefined;
   el.style.setProperty('--vg-p', String(++turn));
   m.frame ||= requestAnimationFrame(() => step(el, m));
 }
 function step(el: SVGElement, m: Morph): void {
-  const clock = transitions(el).find((t) => (t as CSSTransition).transitionProperty === '--vg-p');
-  const p = clock?.effect?.getComputedTiming().progress ?? 1;
+  // The clock is found once for a morph. Asking each frame flushes style after the path before has been redrawn.
+  if (m.clock === undefined) m.clock = transitions(el).find((t) => (t as CSSTransition).transitionProperty === '--vg-p') ?? null;
+  const p = m.clock?.effect?.getComputedTiming().progress ?? 1;
   m.now = mix(m.from, m.to.points, p);
   el.setAttribute('d', (p < 1 ? pathD(m.now, m.to.curve, m.to.fill) : m.to.d) ?? '');
   m.frame = p < 1 ? requestAnimationFrame(() => step(el, m)) : 0;

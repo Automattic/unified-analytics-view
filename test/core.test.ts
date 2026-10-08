@@ -408,6 +408,14 @@ describe('y ticks: a deliberate departure from the prototype (dom-painter-plan s
     const { scene, scene0 } = short(trend);
     expect(plain(scene)).toEqual(scene0);
   });
+  it('where a count of 2 and of 4 share only zero, every other tick stays: a short plot never shows zero alone', () => {
+    // A top of 800: four ticks step by 200 and two by 500.
+    const spec: Spec = { query: trend.query, layers: [{ mark: 'line', encode: { x: 'date.day', y: 'visitors' } }] }, result = runQuery(spec.query);
+    result.rows.forEach((r, i) => { r.visitors = 420 + i * 10; });
+    const yticks = buildScene(resolve(spec, result, unboundedContainer(), catalog), spec.query, result, catalog).nodes.filter((n) => n.part === 'y-axis');
+    expect(yticks.map((n) => n.key)).toEqual(['ytick:0', 'ytick:200', 'ytick:400', 'ytick:600', 'ytick:800']);
+    expect(yticks.filter((n) => !n.rank).map((n) => n.key)).toEqual(['ytick:0', 'ytick:400', 'ytick:800']);
+  });
 });
 
 describe('one row on a time axis: a deliberate departure from the prototype (feedback, Bugs 1)', () => {

@@ -12,6 +12,9 @@ import type { ArcNode, Catalog, Guides, Layer, Mark, Part, PathNode, PlanShape, 
 type Body = Pick<Scene, 'nodes' | 'rows' | 'series' | 'ys' | 'scale' | 'track'>;
 
 const num = (r: Row, f: string) => r[f] as number;
+/* A row's dimension value as its key. A result may hold a number or a boolean there, and a key is compared with
+ * what a painter wrote into an attribute, so it is a string from here on. */
+const str = (r: Row, f: string) => String(r[f]);
 /** The role a layer plays: the one it states, or the one its mark and series imply. */
 export function roleOf(l: Layer): Role {
   return l.role || (l.series === 'previous' ? 'comparison' : l.mark === 'rule' ? 'reference' : 'primary');
@@ -225,7 +228,9 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     const y = scaleLinear().domain([lo, hi]);
     if (guides.y) y.nice(4);
     const [bottom, top] = y.domain() as [number, number];
-    return { v: (n: number) => (n - bottom) / (top - bottom), ticks: y.ticks(4), coarse: y.ticks(2), text: (t: number) => (share ? fmtPct(t) : fmt(t, true)) };
+    // A short plot keeps the ticks a count of 2 would give on this scale. Where the two counts share only zero (a top of 8, 80, 800: steps of 5 and of 2), every other tick stays instead.
+    const fine = y.ticks(4), two = y.ticks(2).filter((t) => fine.includes(t));
+    return { v: (n: number) => (n - bottom) / (top - bottom), ticks: fine, coarse: two.length > 1 ? two : fine.filter((_, i) => i % 2 === 0), text: (t: number) => (share ? fmtPct(t) : fmt(t, true)) };
   });
   let unit: Draw['unit'] = xScale(keys, shared, 0, 1), xv: Draw['xv'];
   if (xOn) {
@@ -399,7 +404,7 @@ function sceneRows(catalog: Catalog, layers: Layer[], rows: Row[]): Body {
     nodes.push({ key: 'column:' + ids[layers.indexOf(l)], part: 'columns', kind: 'text', text: columnLabel(catalog, l), anchor: 'end', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...rank(l) });
   });
   rows.forEach((r) => {
-    const k = r[dim] as string;
+    const k = str(r, dim);
     // The row itself: what a painter keys, and what is chosen and named when the row is.
     nodes.push({ key: 'row:' + k, part: 'rows', kind: 'row', row: k, paint: 'ink', layer: 'data' });
     layers.forEach((l, li) => {
@@ -418,14 +423,14 @@ function sceneRows(catalog: Catalog, layers: Layer[], rows: Row[]): Body {
       }
     });
   });
-  return { nodes, rows: rows.map((r) => r[dim] as string), ...(beside && { track: 'beside' as const }) };
+  return { nodes, rows: rows.map((r) => str(r, dim)), ...(beside && { track: 'beside' as const }) };
 }
 
 // No positional dimension: one band, stacked and normalized, split by colour. A share is of the engine's total, so
 // with a `limit` the band stops short of its end by what the rows past the limit hold.
 function sceneBand(layer: Layer, rows: Row[], totals: Result['totals']): Body {
   const nodes: SceneNode[] = [], m = layer.encode!.x as string, dim = layer.encode!.color as string;
-  const total = totals[m] || 1, k = (r: Row) => r[dim] as string;
+  const total = totals[m] || 1, k = (r: Row) => str(r, dim);
   rows.forEach((r, i) => {
     nodes.push({ key: 'seg:' + k(r), part: 'band', kind: 'rect', v: num(r, m) / total, row: k(r), paint: 'series.' + ((i % 6) + 1), layer: 'data', role: roleOf(layer) });
   });

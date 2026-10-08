@@ -10,7 +10,6 @@ function paths(range: string, scenario: 'typical' | 'no-prior' = 'typical'): Pat
   const spec = { ...samples.trend!.spec, query: { ...samples.trend!.spec.query, range } }, result = runQuery(spec.query, scenario);
   return buildScene(resolve(spec, result, unboundedContainer(), catalog), spec.query, result, catalog).nodes.filter((n): n is PathNode => n.kind === 'path');
 }
-const numbers = (d: string) => d.split(/[A-Z,]/).filter(Boolean).map(Number), commands = (d: string) => d.replace(/[^A-Z]/g, '');
 
 describe('resample and mix', () => {
   const [, , line] = paths('28d'), [, , week] = paths('7d');

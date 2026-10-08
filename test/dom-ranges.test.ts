@@ -39,7 +39,7 @@ describe('a track beside its label', () => {
     const css = compileFitRules(FIT_RULES.filter((r) => r.layout === 'rows' && r.id === 'track'), { rows: rows.fit! });
     const fig = '.vg[data-layout="rows"]:not([data-keep~="marks"])';
     expect(css.split('\n')).toEqual([
-      '/* rows track */', '@container view (inline-size < 160px) {',
+      '/* rows track */', '@container view (inline-size < 159.5px) {',
       '  ' + fig + ' .vg-track { display: none; }',
       '  ' + fig + ' .vg-body[data-track] { display: none; }', '  ' + fig + ' .vg-number:has(~ .vg-body[data-track]) { display: block; margin: 0; }',
       '}',

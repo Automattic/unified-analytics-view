@@ -201,8 +201,8 @@ export const COLUMNS_BLOCK = 20;   // px the headers take over the rows
 // ranked column stands beyond its end. Labels are clipped by character width.
 // A track that is read by where its marks are stands beside the label instead: after it, and short of the first column
 // of values. The label then has its own width, up to LABEL characters and no more than 45% of the room the two share.
-function placeRows(scene: Scene, W: number): Block {
-  const rowH = 28, gap = 4, rows = scene.rows!, room = columnRooms(scene), head = scene.parts.includes('columns') ? COLUMNS_BLOCK : 0;
+function placeRows(scene: Scene, W: number, { rowHeight: rowH, gap }: Container['rules']['rows']): Block {
+  const rows = scene.rows!, room = columnRooms(scene), head = scene.parts.includes('columns') ? COLUMNS_BLOCK : 0;
   // Where a column's text ends, and where the track does: short of the right edge by the ranked columns' room.
   const edge = (i: number) => W - 8 - room.slice(i + 1).reduce((s, w) => s + w, 0), track = edge(0) + 8;
   const valueRoom = room[0] || 0, beside = scene.track === 'beside';
@@ -331,7 +331,7 @@ export function place(scene: Scene, container: Container): PlacedScene {
       const ph = H ? Math.max(least, Math.min(rules.axes.height, H - above - ramp.height)) : rules.axes.height;
       body = { nodes: placeMatrix(scene, W, ph).concat(shift(ramp.nodes, 0, ph)), height: ph + ramp.height };
     } else if (scene.layout === 'rows') {
-      body = placeRows(scene, W);
+      body = placeRows(scene, W, rules.rows);
     } else if (scene.layout === 'radial') {
       const radial = placeRadial(scene, W, H ? H - above : null, container);
       body = radial; plot = radial.plot;

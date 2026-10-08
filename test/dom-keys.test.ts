@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildScene, expand, resolve, unboundedContainer } from '@universal-analytics/core';
+import { buildScene, resolve, unboundedContainer, type Catalog, type Spec } from '@universal-analytics/core';
 import { catalog, runQuery, samples, type Scenario } from '@universal-analytics/fixtures';
 import { Keys, hitNodes, readout, step } from '../packages/dom/src/keys.ts';
 
@@ -8,7 +8,7 @@ import { Keys, hitNodes, readout, step } from '../packages/dom/src/keys.ts';
 // is held here too, against stand-ins for the few elements it touches.
 
 const of = (sample: string, scenario: Scenario = 'typical') => {
-  const spec = samples[sample]!.spec, result = runQuery(spec.query, scenario), q = expand(spec).query;
+  const spec = samples[sample]!.spec, result = runQuery(spec.query, scenario), q = spec.query;
   const scene = buildScene(resolve(spec, result, unboundedContainer(), catalog), spec.query, result, catalog);
   return { result, scene, says: result.rows.map((r) => readout(r, q, catalog)) };
 };
@@ -72,6 +72,22 @@ describe('hitNodes', () => {
   });
 });
 
+describe('row keys', () => {
+  // A result may hold numbers where a dimension's values go. A painter writes them into data-row, and the keyboard
+  // and hover find a row by that attribute, so the scene's keys are strings whatever the result held.
+  it('are strings for a dimension whose values are numbers, in every layout', () => {
+    const hours: Catalog = { metrics: { hits: { label: 'Hits', unit: 'count', polarity: 'none' } }, dimensions: { hour: { label: 'Hour', type: 'categorical' } } };
+    const result = { rows: [{ hour: 9, hits: 12 }, { hour: 10, hits: 30 }, { hour: 11, hits: 7 }], totals: { hits: 49 }, meta: { range: '28d', compare: null, notes: [] } };
+    const query = { metrics: ['hits'], by: ['hour'] }, bars: Spec = { query, layers: [{ mark: 'bar', encode: { x: 'hour', y: 'hits' } }] };
+    for (const spec of [bars, { query, use: 'bar-list' }, { query, use: 'share-bar' }] as Spec[]) {
+      const scene = buildScene(resolve(spec, result, unboundedContainer(), hours), spec.query, result, hours);
+      expect(scene.rows, scene.layout).toEqual(['9', '10', '11']);
+      expect(scene.nodes.filter((n) => n.row != null).every((n) => typeof n.row === 'string'), scene.layout).toBe(true);
+    }
+    expect(hitNodes(buildScene(resolve(bars, result, unboundedContainer(), hours), query, result, hours)).map((h) => h.row)).toEqual(['9', '10', '11']);
+  });
+});
+
 describe('the mouse leaving', () => {
   // Just enough of an element for Keys: attributes, a box, and a parent.
   const el = (extra: object = {}) => {
@@ -83,15 +99,17 @@ describe('the mouse leaving', () => {
       style: { setProperty() {}, getPropertyValue: () => '' }, offsetWidth: 10, offsetHeight: 10, hidden: false, textContent: '',
     }, extra);
   };
-  const view = (focused: boolean) => {
-    const tip = el(), fig = el({ querySelector: () => tip });
+  const view = (focused: boolean, hovered = false) => {
+    const tip = el(), fig = el({ querySelector: () => tip }), host = el();
     // The body stands in for the holder of the points as well, so an event sent to it is one on the holder.
-    const points: ReturnType<typeof el>[] = [], body = el({ dataset: { hits: 'x' }, children: points, matches: () => focused, querySelector: () => body, querySelectorAll: () => points, closest: () => points[1] });
+    const points: ReturnType<typeof el>[] = [], body = el({ dataset: { hits: 'x' }, children: points, matches: (sel: string) => (sel === ':hover' ? hovered : focused), querySelector: () => body, querySelectorAll: () => points, closest: () => points[1] });
     for (const row of ['a', 'b', 'c']) { const p = el({ parentElement: body }); p.setAttribute('data-row', row); points.push(p); }
-    const keys = new Keys(el() as unknown as HTMLElement, fig as unknown as HTMLElement, body as unknown as HTMLElement);
-    keys.paint({ rows: ['a', 'b', 'c'] } as never, { metrics: [], by: [] } as never, { rows: [{}, {}, {}] } as never, { metrics: {}, dimensions: {} } as never);
+    const keys = new Keys(host as unknown as HTMLElement, fig as unknown as HTMLElement, body as unknown as HTMLElement);
+    const paint = () => keys.paint({ rows: ['a', 'b', 'c'] } as never, { metrics: [], by: [] } as never, { rows: [{}, {}, {}] } as never, { metrics: {}, dimensions: {} } as never);
+    paint();
+    let activated = 0; host.addEventListener('ua-activate', () => activated++);
     const send = (type: string, init: object) => body.dispatchEvent(Object.assign(new Event(type, { cancelable: true }), init));
-    return { tip, send, chosen: () => points.filter((p) => p.hasAttribute('data-active')).map((p) => p.getAttribute('data-row')) };
+    return { tip, send, paint, activated: () => activated, chosen: () => points.filter((p) => p.hasAttribute('data-active')).map((p) => p.getAttribute('data-row')) };
   };
 
   it.each([false, true])('clears the chosen point and the readout, as version 4 does (view focused: %s)', (focused) => {
@@ -103,6 +121,18 @@ describe('the mouse leaving', () => {
     // The next arrow starts from the first point, as from nothing.
     v.send('keydown', { key: 'ArrowRight' });
     expect(v.chosen()).toEqual(['a']);
+  });
+  it('keeps a point the mouse still holds through a paint, and the click that follows activates it', () => {
+    // New data under a resting mouse sends no pointerover: the element under it was kept.
+    const v = view(false, true);
+    v.send('pointerover', { pointerType: 'mouse' }); v.paint();
+    expect(v.chosen()).toEqual(['b']); expect(v.tip.hidden).toBe(false);
+    v.send('click', {});
+    expect(v.activated()).toBe(1);
+    // With the mouse gone and no focus, a paint lets the point go, as before.
+    const gone = view(false, false);
+    gone.send('pointerover', { pointerType: 'mouse' }); gone.paint();
+    expect(gone.chosen()).toEqual([]);
   });
   it('leaves a point chosen by touch alone', () => {
     const v = view(false);

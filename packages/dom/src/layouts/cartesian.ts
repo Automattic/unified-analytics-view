@@ -1,7 +1,7 @@
 import type { LineNode, PathNode, RectNode, SceneNode, TextNode } from '@universal-analytics/core';
 import { ensure, ensureSvg, keyed, paintVar, prop, text } from '../dom.ts';
 import { hitNodes } from '../keys.ts';
-import type { LayoutPainter } from '../layout.ts';
+import { NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
 import { apart, thin } from '../measure.ts';
 import { morph } from '../motion.ts';
 import { POINTS_CSS, POINTS_FIT, measurePoints, paintPoints } from './points.ts';
@@ -88,13 +88,13 @@ export const cartesian: LayoutPainter = {
     legend: { '.vg-labels': 'display: grid;' },
     'y-ticks': { '.vg-y-axis-2 [data-rank]': 'display: none;' },
     // The number alone. The body goes whole, so kept axes do not stand with no plot between them.
-    marks: { '': 'grid-template: "number" auto / minmax(0, 1fr);', '.vg-body': 'display: none;', '.vg-number': 'margin: 0;' },
+    marks: NUMBER_ALONE,
     ...POINTS_FIT,
   },
   // ponytail: no rule in core carries the 120 px under which place() drops ranked y ticks, and the y axis sits outside the
   // plot container, so this asks the view: 120 for the plot, 10 above it and 22 for the x axis. Wrong when the number
   // is above the plot. A `plot` rule in core, and the y axis inside that container, would say it properly.
-  rules: [{ id: 'y-ticks', layout: 'cartesian', container: 'view', needs: { block: 152 }, hide: ['y-tick.ranked'] }],
+  rules: () => [{ id: 'y-ticks', layout: 'cartesian', container: 'view', needs: { block: 152 }, hide: ['y-tick.ranked'] }],
 
   // X labels that would collide, by their real widths. One a fit rule has hidden has no box and is passed over, and
   // so is one that is leaving. Each is placed from its ratio, not read where it stands: a label may be on its way.

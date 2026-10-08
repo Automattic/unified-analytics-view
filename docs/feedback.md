@@ -1,6 +1,6 @@
 # Feedback from the build
 
-As of October 7, 2026. What executing `docs/dom-painter-plan.md` has found so far: where the plan did not hold as written, bugs, and loose ends. Every step of the plan is built and merged into `dom-painter`.
+As of October 8, 2026. What executing `docs/dom-painter-plan.md` has found so far: where the plan did not hold as written, bugs, and loose ends. Every step of the plan is built and merged into `dom-painter`.
 
 Each entry says what was found, what was done about it, and what is still to decide. Nothing here has been settled quietly.
 
@@ -135,7 +135,7 @@ Rows:
 1. **The plan's height-limit trick needs a spacer.** A flex line always takes its first item, so when not even one row fits, the first row was cut mid-height. An empty `::before` as the first flex item, full width, with a negative margin that cancels the gap, makes the first row wrap away like any other. Still no script. With it, only whole rows show at every checked size.
 2. **Top pages at 120 px wide shows a squeezed list where `resolve()` shows the number.** Expected: the widest value's room depends on content and cannot be said in CSS. A container query on the label track can only style what is inside it. Open; it wants the measured hook.
 3. **Present now fits one more row in a box than the pixel pipeline,** because the number block is 50 px tall in the DOM and 58 px in pixels. The element owns that.
-4. **A box shorter than one row, with no number above, would be blank** where `resolve()` shows the number. Not observed; core has no block need for `rows`, and a layout's own rules are static, so it cannot write one from `rules.rows.rowHeight`.
+4. **A box shorter than one row, with no number above, would be blank** where `resolve()` shows the number. Not observed; core has no block need for `rows`, and a layout's own rules are static, so it cannot write one from `rules.rows.rowHeight`. Observed in review, in Chrome 155: a 346 by 27 px box showed nothing. Fixed there: a layout's `rules` is now handed the context's rule set, and the rows layout writes a `marks-block` rule from `rows.rowHeight`, as the band has one. It asks the view, so it has the band rule's limit.
 5. **A row has no node in the scene.** The layout makes a `RectNode` per row to reuse `keyed`. A row node in the scene, or a `keyed` that takes any `{ key }`, would be cleaner.
 6. **Bar radius fallbacks disagree:** rows fall back to 3 px and cartesian to 2 px on the same token.
 7. The `list` and `listitem` roles on the rows were the agent's addition, not the plan's.
@@ -217,6 +217,28 @@ Checked together in Chrome and WebKit: stepping, activation, and a change from 2
 - **Hit targets would have slid and faded with the marks,** since they carry the registered properties and a key. Fixed in the merge: the hit layer takes its new places at once and a leaving target goes at once.
 - **A leaving band segment keeps `role="option"` with the id `hit--1`** for the 150 ms it fades. It is skipped when stepping. Open.
 - **The two branches were merged on a side branch first,** `dom-painter-step5`, because the main checkout held another session's uncommitted edits to `apps/bench/index.html`. It was merged into `dom-painter` once that work was committed, with no conflict.
+
+## Findings: the review of October 7
+
+`dom-painter` was reviewed against `master` at `5ff3def`, with findings reproduced in headless Chromium, WebKit and Chrome 155. Fourteen were fixed in the same pass: row keys that are not strings, the `table` attribute, fit rules at a fractional zoom, a repaint under a resting mouse, sizes under a scaled ancestor, duplicate keys in `keyed`, the alert shown while markup is parsed, marks in print and forced colours, a box shorter than one row (rows finding 4), a lone "0" on a thinned y axis, a touch that becomes a scroll, `placeRows` and `rules.rows`, a partial nested `rules`, and the clipped one-line legend. No screen reader, touch device, Safari or Firefox was used.
+
+Two of the fixes are choices to confirm. Marks keep the page's own colours in forced-colours mode (`forced-color-adjust: none`), where mapping them to system colours is the other answer. `placeRows` now reads `rules.rows`, a departure from the prototype under any row size but the default; it has a named test in `test/fit.test.ts`.
+
+What it found and left, all open:
+
+1. **The container is named plain `view`.** `@container view (block-size …)` skips a host that is sized in width only, and is answered by any ancestor size container the page also names `view`. Seen in Chrome: a `container: view / size` wrapper 500 px tall around a stacked trend at 346 px gave a 46 px host with a 14 px plot, and a Channel mix 0 px tall. The plan names the containers `view` and `plot`. Recommended: prefix both, `vg-view` and `vg-plot`, and change the plan with them.
+2. **Ranked y ticks are thinned at two different heights.** The DOM's local rule asks 152 px of the view (cartesian finding 4); `place()` asks 120 px of the plot, gutters included. Bug 2's `plot` rule with `block: 120` would give both one number.
+3. **The `legend:top` key meets a segment named "top".** The one-line legend's key is `legend:top`, and so is the legend entry of a band segment whose dimension value is `top`. Keys must be unique.
+4. **`note-first` drops unranked lines under the number.** An empty state can show a bare "0" without "No visits yet". The reference marks this to confirm.
+5. **Scene labels write a time dimension raw on rows and band:** `2026-09-29` where the readout says "Sep 29". The prototype does the same, so `formatDimension` there is a parity departure to make on purpose.
+6. **One unbounded scene scales the y axis to layers a rule later hides.** A sparkline whose secondary layer is hidden can sit at 30% of its height. Design-level: the scale would have to follow what shows.
+7. **View-level block needs are wrong when the number sits above the plot.** The need is asked of the view, which also holds the number, so axes can stay around a 4 px plot. Known; the same limit as the band's and the rows' `marks-block` rule.
+8. **Compiled rules differ in specificity when one has `keep`,** so "later wins" does not always hold. Latent: no two rules in the set meet this way today.
+9. **Only a rule's `needs` are shared.** `resolve()` reads nothing of `hide`, `show`, `set` or `keep`, and `FitRule.set` is read by nothing at all.
+10. Residuals of the fixes: a view left inside a removed iframe still raises ResizeObserver loop errors, and a hovering pen is treated as touch.
+11. Smaller, as the pixel painter has them: a rule's label sits above the top edge when the rule is at the top of the scale, and the end labels of a category axis overflow. A spec with no primary layer leaves an empty plot. A list clipped to nothing is still a tab stop (keyboard finding 5), and both band legends are exposed to assistive technology in a box.
+12. Efficiency, not taken: transitions on registered properties restyle every node each frame (plan section 6); one forced layout per view per data change; the hidden table's inputs are not stored, so it cannot be skipped; `resolve()` builds the scene twice and places it at Infinity; the fit rules are compiled on every render.
+13. Cleanups, not taken: `test/fit.test.ts` copies the sweep harness; `paint-svg.ts` duplicates the paint table; `.stage` is defined in both `bench.css` and `demo.css`; `surface.json` is unvalidated; the token generator lost its validation, and `{color.white}` is unresolved in the light primitives.
 
 ## Bugs
 

@@ -1,6 +1,6 @@
 import { COLUMNS_BLOCK, columnRooms, type RowNode, type SceneNode, type TextNode } from '@universal-analytics/core';
 import { attr, ensure, keyed, prop, text } from '../dom.ts';
-import type { LayoutPainter } from '../layout.ts';
+import { NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
 import { TRACK_CSS, TRACK_FIT, trackMark } from './track.ts';
 
 /* A dimension on y: a row for each of its values. The body is one grid, with a track for the label, which gives way,
@@ -36,7 +36,12 @@ export const rows: LayoutPainter = {
   layout: 'rows',
   css: css + TRACK_CSS,
   // The number alone. The body goes whole, so the gap its grid row would hold goes with it.
-  fit: { marks: { '': 'grid-template: "number" auto / minmax(0, 1fr);', '.vg-body': 'display: none;', '.vg-number': 'margin: 0;' }, ...TRACK_FIT },
+  fit: { marks: NUMBER_ALONE, 'marks-block': NUMBER_ALONE, ...TRACK_FIT },
+  // The wrap clips whole rows, so a box shorter than one row shows none, and with no number above it shows nothing at
+  // all. Under a row's height the list goes and the number stands in, as it does under the width the `marks` rule needs.
+  // ponytail: core's `marks` rule for rows has no block need, so this asks the view, as the band's does. Right while
+  // the list has the view's whole height, which is where it matters: a number above the list already stands alone.
+  rules: (context) => [{ id: 'marks-block', layout: 'rows', container: 'view', needs: { block: context.rows.rowHeight }, hide: ['rows'], show: ['number'], keep: 'marks' }],
 
   paint(body, scene, rules) {
     const head = ensure(body, 'div', 'vg-columns'), list = ensure(body, 'div', 'vg-rows'), by = new Map<string, SceneNode[]>();

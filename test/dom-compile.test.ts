@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { FIT_RULES, type FitRule } from '@universal-analytics/core';
+import { CONTAINER_RULES, FIT_RULES, type FitRule, type Spec } from '@universal-analytics/core';
 import { compileFitRules } from '@universal-analytics/dom';
+import { catalog, runQuery, samples } from '@universal-analytics/fixtures';
+import { check, rulesOver } from '../packages/dom/src/view.ts';
 
 // The compiler is string work, so it is held here with no DOM. What the browser makes of the CSS is checked on the bench.
 const only = (layout: string, id: string) => FIT_RULES.filter((r) => r.layout === layout && r.id === id);
@@ -10,13 +12,13 @@ describe('compileFitRules', () => {
     const css = compileFitRules(only('cartesian', 'axes'));
     expect(css).toBe([
       '/* cartesian axes */',
-      '@container view (inline-size < 280px) {',
+      '@container view (inline-size < 279.5px) {',
       '  .vg[data-layout="cartesian"]:not([data-keep~="guides"]) :is(.vg-x-axis, .vg-y-axis, .vg-grid) { display: none; }',
       '  .vg[data-layout="cartesian"]:not([data-keep~="guides"]) .vg-number { display: block; }',
       '  .vg[data-layout="cartesian"]:not([data-keep~="guides"]) { --vg-arrange: side; }',
       '}',
       '/* cartesian axes */',
-      '@container view (block-size < 120px) {',
+      '@container view (block-size < 119.5px) {',
       '  .vg[data-layout="cartesian"]:not([data-keep~="guides"]) :is(.vg-x-axis, .vg-y-axis, .vg-grid) { display: none; }',
       '  .vg[data-layout="cartesian"]:not([data-keep~="guides"]) .vg-number { display: block; }',
       '  .vg[data-layout="cartesian"]:not([data-keep~="guides"]) { --vg-arrange: side; }',
@@ -27,24 +29,24 @@ describe('compileFitRules', () => {
 
   it('maps roles to data-role, on the plot container', () => {
     expect(compileFitRules(only('cartesian', 'secondary'))).toContain(
-      '@container plot (block-size < 90px) {\n  .vg[data-layout="cartesian"]:not([data-keep~="secondary"]) :is([data-role="comparison"], [data-role="reference"], [data-role="context"]) { display: none; }\n}');
+      '@container plot (block-size < 89.5px) {\n  .vg[data-layout="cartesian"]:not([data-keep~="secondary"]) :is([data-role="comparison"], [data-role="reference"], [data-role="context"]) { display: none; }\n}');
   });
 
   it('maps the middle tick to the ranked x label, and a rule with no keep to a bare figure', () => {
     expect(compileFitRules(only('cartesian', 'mid-tick'))).toBe(
-      '/* cartesian mid-tick */\n@container view (inline-size < 380px) {\n  .vg[data-layout="cartesian"] .vg-x-axis [data-rank] { display: none; }\n}');
+      '/* cartesian mid-tick */\n@container view (inline-size < 379.5px) {\n  .vg[data-layout="cartesian"] .vg-x-axis [data-rank] { display: none; }\n}');
   });
 
   it('writes a set with nothing hidden, as the band legend has', () => {
     expect(compileFitRules(only('band', 'legend'))).toBe(
-      '/* band legend */\n@container view (inline-size < 170px) {\n  .vg[data-layout="band"]:not([data-keep~="guides"]) { --vg-legend: top; }\n}');
+      '/* band legend */\n@container view (inline-size < 169.5px) {\n  .vg[data-layout="band"]:not([data-keep~="guides"]) { --vg-legend: top; }\n}');
   });
 
   it('adds what a layout says changes with a rule, under the same condition and keep', () => {
     const css = compileFitRules(only('cartesian', 'marks'), { cartesian: { marks: { '': 'grid-template: none;', '.vg-body': 'display: none;' } } });
     const fig = '.vg[data-layout="cartesian"]:not([data-keep~="marks"])';
     expect(css.split('\n').slice(0, 6)).toEqual([
-      '/* cartesian marks */', '@container view (inline-size < 152px) {',
+      '/* cartesian marks */', '@container view (inline-size < 151.5px) {',
       '  ' + fig + ' .vg-plot { display: none; }', '  ' + fig + ' .vg-number { display: block; }',
       '  ' + fig + ' { grid-template: none; }', '  ' + fig + ' .vg-body { display: none; }',
     ]);
@@ -62,5 +64,32 @@ describe('compileFitRules', () => {
     const bad: FitRule = { id: 'x', layout: 'cartesian', container: 'view', needs: { inline: 100 }, hide: ['plot } :host { display: none'] };
     expect(() => compileFitRules([bad])).toThrow(/not a name\. Use letters, digits/);
     expect(() => compileFitRules([{ ...bad, hide: [], needs: { inline: '1px) or (x' as unknown as number } }])).toThrow(/as a number of px/);
+  });
+
+  it('says how to write a list given as a bare value, and a rule with no needs', () => {
+    const axes = FIT_RULES[0]!;
+    expect(() => compileFitRules([{ ...axes, hide: 'x-axis' as unknown as string[] }])).toThrow(/gives "hide" as "x-axis"\. It is a list: write \["x-axis"\]/);
+    expect(() => compileFitRules([{ ...axes, needs: undefined as unknown as FitRule['needs'] }])).toThrow(/has no "needs"\. Give the room its part needs/);
+  });
+});
+
+// The element's own checks are plain functions, so they are held here too. The element itself is checked on the bench.
+describe('what <ua-view> checks before it paints', () => {
+  const trend = samples.trend!.spec, result = runQuery(trend.query);
+  it('says how to write a list that a spec gives as a bare value', () => {
+    expect(() => check(trend, result, catalog)).not.toThrow();
+    expect(() => check({ ...trend, keep: 'guides' } as unknown as Spec, result, catalog)).toThrow(/gives "keep" as "guides"\. It is a list: write \["guides"\]/);
+    expect(() => check({ ...trend, query: { ...trend.query, by: 'date.day' } } as unknown as Spec, result, catalog)).toThrow(/"query\.by" as "date\.day"\. It is a list/);
+    expect(() => check({ ...trend, query: { ...trend.query, metrics: 'visitors' } } as unknown as Spec, result, catalog)).toThrow(/"query\.metrics" as "visitors"/);
+  });
+  it('takes only the catalog\'s own names for a metric or a dimension', () => {
+    expect(() => check({ query: { metrics: ['constructor'] } }, result, catalog)).toThrow(/no metric "constructor"\. It has: visitors, pageviews, present/);
+    expect(() => check({ ...trend, query: { ...trend.query, by: ['toString'] } }, result, catalog)).toThrow(/no dimension "toString"/);
+  });
+  it('lays a context\'s rules over the defaults one level down, so a size it leaves out is still the default', () => {
+    expect(rulesOver({ rows: { rowHeight: 20 } } as never).rows).toEqual({ rowHeight: 20, gap: CONTAINER_RULES.rows.gap });
+    expect(rulesOver({ axes: {} } as never).axes).toEqual(CONTAINER_RULES.axes);
+    expect(rulesOver({ bare: null } as never).bare).toEqual(CONTAINER_RULES.bare);
+    expect(rulesOver()).toEqual(CONTAINER_RULES);
   });
 });

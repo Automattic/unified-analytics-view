@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, buildScene, pathD, resolve, unboundedContainer, type PathNode, type RectNode } from '@universal-analytics/core';
+import { CONTAINER_RULES, buildScene, expand, pathD, resolve, unboundedContainer, type PathNode, type RectNode } from '@universal-analytics/core';
 import { catalog, moreSamples, runQuery, type Scenario } from '@universal-analytics/fixtures';
 import { compileFitRules } from '../packages/dom/src/compile.ts';
 import { band } from '../packages/dom/src/layouts/band.ts';
 import { cartesian } from '../packages/dom/src/layouts/cartesian.ts';
+import { hitNodes, readout, readoutAt, rowsAt, stepSeries } from '../packages/dom/src/keys.ts';
 import { apart } from '../packages/dom/src/measure.ts';
 import { mix, resample } from '../packages/dom/src/motion.ts';
 
@@ -101,5 +102,68 @@ describe('apart', () => {
     const at = apart(ys, 14, 152).filter((y): y is number => y != null).sort((a, b) => a - b);
     expect(at).toHaveLength(3);
     at.slice(1).forEach((y, i) => expect(y - at[i]!).toBeGreaterThanOrEqual(14));
+  });
+});
+
+describe('hit targets of a split plot', () => {
+  // A stacked area stops at the last whole day, as core draws it, so the unfinished one has no mark and no target.
+  it.each(names)('tile the plot in %s, one per x that drew a mark', (sample) => {
+    const { scene } = of(sample), hits = hitNodes(scene);
+    expect(hits.map((h) => h.row)).toEqual(sample === 'area' ? scene.rows!.slice(0, -1) : scene.rows);
+    hits.forEach((h, i) => expect(h.x! + h.w!).toBeCloseTo(hits[i + 1]?.x ?? 1, 9));
+  });
+  it('centre on a group of bars, not on the last of them', () => {
+    const { scene } = of('grouped'), hits = hitNodes(scene);
+    const bars = scene.nodes.filter((n): n is RectNode => n.part === 'plot' && n.kind === 'rect' && n.row === 'Search');
+    expect(bars).toHaveLength(3);
+    const lo = Math.min(...bars.map((b) => b.x!)), hi = Math.max(...bars.map((b) => b.x! + b.w!));
+    expect(hits[0]!.x! + hits[0]!.c * hits[0]!.w!).toBeCloseTo((lo + hi) / 2, 9);
+    // The axis label stands under the same place.
+    expect((scene.nodes.find((n) => n.key === 'xtick:Search') as { x: number }).x).toBeCloseTo((lo + hi) / 2, 9);
+  });
+});
+
+describe('the readout of a split plot', () => {
+  const at = (sample: string) => { const { spec, result, scene } = of(sample), q = expand(spec).query; return { q, result, scene, ...rowsAt(scene, q, result) }; };
+
+  it('finds the rows at each x, in the series\' order', () => {
+    const { rows, x, split, scene } = at('stacked');
+    expect([x, split]).toEqual(['date.day', 'device']);
+    expect(rows).toHaveLength(28);
+    rows.forEach((r, i) => { expect(r.map((p) => p.device)).toEqual(scene.series); expect(r.every((p) => p['date.day'] === scene.rows![i])).toBe(true); });
+  });
+  it('keeps a row per point where there is no split, two metrics or one', () => {
+    for (const sample of ['diverging', 'dual']) { const { rows, split, result } = at(sample); expect(split).toBeUndefined(); expect(rows.map((r) => r[0])).toEqual(result.rows); }
+  });
+  it('says the x, the engine\'s total there and every series', () => {
+    const { rows, x, split, q, result } = at('stacked'), total = result.totalsBy![x!]![0];
+    expect(readoutAt(rows[0]!, total, q, catalog, x!, split!)).toBe('Sep 8: Visitors 416 (Desktop 217, Mobile 173, Tablet 26)');
+    expect(readoutAt(rows[27]!, result.totalsBy![x!]![27], q, catalog, x!, split!)).toMatch(/^Oct 5: Visitors \d+ so far \(Desktop \d+, Mobile \d+, Tablet \d+\)$/);
+    expect(readoutAt(rows[0]!, undefined, q, catalog, x!, split!)).toBe('Sep 8: Visitors (Desktop 217, Mobile 173, Tablet 26)');
+  });
+  it('says one pair as any row is said', () => {
+    const { rows, q } = at('grouped');
+    expect(readout(rows[0]![1]!, q, catalog)).toMatch(/^Search, Mobile: Visitors [\d,]+$/);
+  });
+  it('reads two units at one x', () => {
+    const { rows, q } = at('dual');
+    expect(readout(rows[0]![0]!, q, catalog)).toBe('Sep 8: Visitors 416; Revenue 2,453');
+  });
+});
+
+describe('stepSeries', () => {
+  it('goes up from the whole point through the series and stops at the last', () => {
+    expect(stepSeries('ArrowUp', -1, 3)).toBe(0);
+    expect(stepSeries('ArrowUp', 1, 3)).toBe(2);
+    expect(stepSeries('ArrowUp', 2, 3)).toBe(2);
+  });
+  it('comes back down to the whole point', () => {
+    expect(stepSeries('ArrowDown', 1, 3)).toBe(0);
+    expect(stepSeries('ArrowDown', 0, 3)).toBe(-1);
+    expect(stepSeries('ArrowDown', -1, 3)).toBe(-1);
+  });
+  it('leaves left and right, and a plot with no series, alone', () => {
+    expect(stepSeries('ArrowRight', 0, 3)).toBeNull();
+    expect(stepSeries('ArrowUp', -1, 0)).toBeNull();
   });
 });

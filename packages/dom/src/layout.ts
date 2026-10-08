@@ -1,4 +1,4 @@
-import type { ContainerRules, FitRule, Layout, Room, Scene } from '@universal-analytics/core';
+import type { Catalog, ContainerRules, FitRule, Layer, Layout, Query, Result, Room, Scene } from '@universal-analytics/core';
 import { ensure } from './dom.ts';
 
 /* The seam between <ua-view> and a layout. A layout is one module in layouts/, exporting one LayoutPainter.
@@ -20,6 +20,10 @@ import { ensure } from './dom.ts';
  *
  * What a stylesheet cannot see is the measured pass's (measure.ts). The element runs it after each paint and when
  * the view's room changes, and owns the number and the prose rung. A layout joins it with `measure`. */
+/** What a view was planned from, for a layout that names its own points or lays out its own table: the plan's layers,
+ * the query with its preset expanded, and the result and catalog as they were given. */
+export interface ViewData { layers: Layer[]; query: Query; result: Result; catalog: Catalog }
+
 export interface LayoutPainter {
   layout: Layout;
   /** Its stylesheet text. It joins the base sheet inside `@layer vg`, so every compiled fit rule beats it whatever
@@ -32,7 +36,9 @@ export interface LayoutPainter {
   fit?: Record<string, Record<string, string>>;
   /** Fit rules of its own, for what the context's set does not carry yet. Compiled after the context's. */
   rules?: FitRule[];
-  paint(body: HTMLElement, scene: Scene, rules: ContainerRules): void;
+  paint(body: HTMLElement, scene: Scene, rules: ContainerRules, data: ViewData): void;
+  /** The table alternative, where the element's own, a row of the table per row of the result, is not this layout's. */
+  table?(table: HTMLTableElement, title: string | undefined, scene: Scene, data: ViewData): void;
   /** Its share of the measured pass, if it has one: labels that collide, how many rows fit. `room` is the view's
    * width, and its height when it was handed a box. Read sizes inside `body`, then write attributes there for
    * `css` to answer. Nothing written may change a size that is read, here or by the element, or the pass will not

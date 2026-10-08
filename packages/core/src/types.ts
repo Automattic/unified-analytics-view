@@ -45,7 +45,7 @@ export interface Result {
 }
 
 /* The view spec. */
-export type Mark = 'line' | 'area' | 'bar' | 'rule' | 'text' | 'arc';
+export type Mark = 'line' | 'area' | 'bar' | 'rule' | 'text' | 'arc' | 'cell';
 export type Channel = 'x' | 'y' | 'color' | 'text' | 'angle' | 'radius';
 export type Role = 'primary' | 'comparison' | 'reference' | 'context';
 export type KeepPart = 'guides' | 'secondary' | 'rows' | 'marks';
@@ -72,6 +72,8 @@ export interface Guides {
   grid?: boolean;
   /** On a band, `top` is the largest segment's label. On a split plot, `labels` is a label at the end of each line. */
   legend?: 'full' | 'top' | 'labels';
+  /** Under a grid of cells: the steps of the colour scale, with its low and its high value. */
+  ramp?: boolean;
 }
 export interface Spec {
   spec?: string;
@@ -110,7 +112,7 @@ export interface Container {
 }
 
 /* Plan: what will be drawn at this size, and what was dropped. */
-export type Layout = 'cartesian' | 'rows' | 'band' | 'radial' | 'none' | 'notice' | 'prose';
+export type Layout = 'cartesian' | 'rows' | 'band' | 'radial' | 'matrix' | 'none' | 'notice' | 'prose';
 export interface Reduction {
   id: ReductionId;
   state: 'not needed' | 'applied' | 'kept by the spec' | 'nothing to drop';
@@ -137,7 +139,7 @@ export interface Plan extends PlanShape {
 /* Scene: a flat list of shapes with stable keys and paint tokens, in ratios.
  * Every node names its part, and its coordinates run 0 to 1 within that part's
  * box. A scene needs no size to exist. Pixel painters get theirs from place(). */
-export type Part = 'number' | 'plot' | 'x-axis' | 'y-axis' | 'y-axis-2' | 'labels' | 'rows' | 'band' | 'legend' | 'legend-top' | 'radial' | 'hole' | 'notice';
+export type Part = 'number' | 'plot' | 'x-axis' | 'y-axis' | 'y-axis-2' | 'labels' | 'rows' | 'band' | 'legend' | 'legend-top' | 'radial' | 'hole' | 'ramp' | 'notice';
 interface NodeBase {
   key: string;
   part: Part;
@@ -155,7 +157,13 @@ interface NodeBase {
 }
 /** A bar in the plot (`x` and `w` across, and up the plot from `v0` to `v`), a row's bar (`v` across), a band segment (`v` is its share) or a legend swatch.
  * `v0` is absent where a bar starts at the bottom of the plot. A bar that hangs below its start has `v` under `v0`. */
-export interface RectNode extends NodeBase { kind: 'rect'; x?: number; w?: number; v?: number; v0?: number }
+export interface RectNode extends NodeBase {
+  kind: 'rect'; x?: number; w?: number; v?: number; v0?: number;
+  /** A cell of a grid: `y` and `h` down the plot from its top, as `x` and `w` run across it. */
+  y?: number; h?: number;
+  /** The two dimension values a cell came from: the one on x, then the one on y. A cell has no `row`. */
+  pair?: [x: string, y: string];
+}
 /** `d` is drawn in a 100 by 100 box, for the painter to stretch. `points` are what it was drawn from. An area's point has `v0` where it starts above the bottom of the plot. */
 export interface PathNode extends NodeBase {
   kind: 'path';
@@ -199,6 +207,8 @@ export interface Scene {
   rows?: string[];
   /** The colour dimension's values in its own order, where a plot is split into series. A series' paint is its place here. */
   series?: string[];
+  /** In a grid, the y dimension's values in order, from the top. `rows` are then its columns. */
+  ys?: string[];
   /** How x is shared among the rows of a plot. With `point`, marks sit 2 px inside each edge; that inset is the painter's. */
   scale?: 'band' | 'point';
   /** Where a part holds its shape, its width over its height: 1 for a circle of arcs, 2 for the top half of one.

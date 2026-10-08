@@ -50,7 +50,7 @@
       "required": ["mark"],
       "additionalProperties": false,
       "properties": {
-        "mark": { "enum": ["line", "area", "bar", "rule", "text", "arc"] },
+        "mark": { "enum": ["line", "area", "bar", "rule", "text", "arc", "cell"] },
         "encode": {
           "type": "object",
           "additionalProperties": false,

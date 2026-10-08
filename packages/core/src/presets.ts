@@ -33,6 +33,9 @@ export const PRESETS: PresetLibrary = {
     { mark: 'arc', encode: { radius: 0.7 }, sweep: 'half', role: 'context' },
     { mark: 'arc', encode: { angle: '$metric', radius: 0.7 }, sweep: 'half' },
     { mark: 'arc', encode: { angle: '$metric', radius: 0.7 }, sweep: 'half', role: 'reference' } ] },
+  // As a pivot table reads: the first dimension down the side, the second across.
+  'heatmap': { layers: [
+    { mark: 'cell', encode: { y: '$by', x: '$split', color: '$metric' } } ] },
 };
 
 export function expand(spec: Spec, presets: PresetLibrary = PRESETS): Spec {

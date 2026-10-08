@@ -278,8 +278,9 @@ export class UaView extends Base {
       this.#prose.textContent = plan.text;
       for (const el of [this.#number, ...this.#ruler]) paintNumber(el, scene.nodes.filter((n) => n.part === 'number'));
       if (this.#layout !== scene.layout) { this.#body.replaceChildren(); this.#body.removeAttribute('data-scale'); this.#layout = scene.layout; }
-      LAYOUTS[scene.layout]?.paint(this.#body, scene, rules);
-      paintTable(this.#table, spec.title, expand(spec).query, result, catalog);
+      const painter = LAYOUTS[scene.layout], data = { layers: plan.layers, query: expand(spec).query, result, catalog };
+      painter?.paint(this.#body, scene, rules, data);
+      if (painter?.table) painter.table(this.#table, spec.title, scene, data); else paintTable(this.#table, spec.title, data.query, result, catalog);
       this.#keys.paint(scene, expand(spec).query, result, catalog);
       fig.hidden = false; this.#error.hidden = true;
       settle(fig);

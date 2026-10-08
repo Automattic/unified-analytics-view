@@ -3,7 +3,7 @@ import { applies, ruleFor, type FitRule } from './fit.ts';
 import { PRESETS, expand } from './presets.ts';
 import { place } from './place.ts';
 import { buildScene, tldrValueText, isDim, roleOf, seriesOf, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
-import { tldrProse } from './prose.ts';
+import { gridProse, tldrProse } from './prose.ts';
 import type { Catalog, Container, Layer, Layout, Plan, PlanShape, PresetLibrary, Query, Reduction, ReductionId, Result, Role, PlacedScene, Spec } from './types.ts';
 
 /* Start from everything the spec asks for, then apply the container's reductions
@@ -13,6 +13,7 @@ const ROLE_NAMES: Partial<Record<Role, string>> = { comparison: 'comparison seri
 /* The layout a layer's fields ask for: what is on x, on y and on color, first match first. `any` asks nothing of its channel. */
 type FieldKind = 'dimension' | 'any';
 const LAYOUTS: [x: FieldKind, y: FieldKind, color: FieldKind, layout: Layout][] = [
+  ['dimension', 'dimension', 'any',       'matrix'],
   ['dimension', 'any',       'any',       'cartesian'],
   ['any',       'dimension', 'any',       'rows'],
   ['any',       'any',       'dimension', 'band'],
@@ -30,7 +31,7 @@ function checkLayers(layers: Layer[], q: Query, catalog: Catalog): void {
   const by = q.by || [], known = by.concat(q.metrics);
   if (by.length > 2 || (by.length === 2 && by[0] === by[1])) throw new Error('A view is by one dimension or by two different ones, and query.by has: ' + by.join(', ') + '. Remove all but two.');
   layers.forEach((l, i) => {
-    if (!l || !l.mark) throw new Error('Layer ' + (i + 1) + ' has no "mark". Use one of: line, area, bar, rule, text, arc.');
+    if (!l || !l.mark) throw new Error('Layer ' + (i + 1) + ' has no "mark". Use one of: line, area, bar, rule, text, arc, cell.');
     if (l.stack && !isDim(catalog, l.encode && l.encode.color)) throw new Error('Layer ' + (i + 1) + ' has "stack" and no dimension on color, so there is nothing to stack. Encode the query\'s second dimension on color, or remove "stack".');
     Object.entries(l.encode || {}).forEach(([ch, f]) => {
       if (typeof f === 'number') return;
@@ -58,6 +59,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   const p: PlanShape = { layout: layers.length ? detectLayout(catalog, layers) : 'none', layers, guides: {}, tldrValue: rules.tldrValue.above === 'always' || !!M.instant || !layers.length, side: false, rowLimit: null,
                          share, text: tldrProse(q, result, share, catalog) };
   if (p.layout === 'cartesian') p.guides = { x: true, y: true, grid: true };
+  if (p.layout === 'matrix') { p.guides = { x: true, y: true, ramp: true }; p.text = gridProse(q, result, catalog) ?? p.text; }
   // A split plot starts with its legend. Its rules step that down to a label at the end of each line, where there
   // are lines, and then to nothing. They are asked once, of the view: unlike the reductions, they change no one else's room.
   const series = p.layout === 'cartesian' ? seriesOf(catalog, layers) : null;
@@ -83,6 +85,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
     if (p.layout === 'rows') return { rule: rule('marks'), measured: valueRoomOf(catalog, p.layers, result.rows) };
     if (p.layout === 'band') return { rule: rule(p.guides.legend === 'full' ? 'legend' : 'marks'), measured: 0 };
     if (p.layout === 'radial') return { rule: rule(p.guides.legend === 'full' ? 'legend' : 'marks'), measured: 0 };
+    if (p.layout === 'matrix') return { rule: rule(p.guides.ramp && keep.indexOf('guides') < 0 ? 'ramp' : 'marks'), measured: 0 };   // a ramp the spec keeps asks for no room of its own
     return { rule: rule('notice'), measured: 0 };
   }
   // A number that stands alone or above the marks has to fit too. No rule can say so: the need is its own width.
@@ -115,6 +118,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
         p.guides = {};
         return 'the legend';
       }
+      if (p.layout === 'matrix' && p.guides.ramp) { p.guides = { ...p.guides, ramp: false }; return 'the colour ramp'; }
       return null;
     },
     'drop-secondary': () => {

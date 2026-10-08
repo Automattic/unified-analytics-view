@@ -16,6 +16,8 @@ export const catalog: Catalog = {
     page:       { label: 'Page',    type: 'categorical' },
     channel:    { label: 'Channel', type: 'categorical' },
     device:     { label: 'Device',  type: 'categorical' },
+    weekday:    { label: 'Weekday', type: 'categorical' },
+    hour:       { label: 'Hour',    type: 'categorical' },
   },
 };
 
@@ -60,8 +62,12 @@ const PAGES: (Counts & { page: string; prev: Counts | null })[] = [
 ];
 const CHANNELS: [string, number, number][] = [['Search', 0.41, 0.44], ['Direct', 0.28, 0.29], ['Social', 0.14, 0.13], ['AI assistants', 0.08, 0.04], ['Email', 0.06, 0.07], ['Other', 0.03, 0.03]];
 const DEVICES: [string, number, number][] = [['Desktop', 0.52, 0.55], ['Mobile', 0.41, 0.38], ['Tablet', 0.07, 0.07]];
+// The week and the day, each in its own order: a quiet weekend, a working day that peaks before noon and an evening after it.
+const shares = (names: string[], weights: number[]): [string, number, number][] => { const all = weights.reduce((s, w) => s + w, 0); return names.map((n, i) => [n, weights[i]! / all, weights[i]! / all]); };
+const WEEKDAYS = shares(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], [1.06, 1.12, 1.1, 1.04, 0.96, 0.7, 0.72]);
+const HOURS = shares(Array.from({ length: 24 }, (_, h) => (h % 12 || 12) + (h < 12 ? 'am' : 'pm')), Array.from({ length: 24 }, (_, h) => 0.15 + Math.exp(-((h - 11) ** 2) / 18) + 0.6 * Math.exp(-((h - 20) ** 2) / 8)));
 // A dimension whose values divide a total: each value's share of it, now and in the period before.
-const MIX: Record<string, [string, number, number][]> = { channel: CHANNELS, device: DEVICES };
+const MIX: Record<string, [string, number, number][]> = { channel: CHANNELS, device: DEVICES, weekday: WEEKDAYS, hour: HOURS };
 const LIVE = [{ page: '/', present: 3 }, { page: '/pricing', present: 2 }, { page: '/blog/launch-notes', present: 1 }, { page: '/docs/getting-started', present: 1 }];
 
 export type Scenario = 'typical' | 'no-prior' | 'empty';
@@ -146,6 +152,8 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
     const parts = fields.map((f) => (o[f] == null ? null : apportion(o[f] as number, weights)));
     return values.map(([name], j): Row => ({ ...o, [inner]: name, ...Object.fromEntries(fields.map((f, i) => [f, parts[i] ? parts[i]![j]! : null])) }));
   });
+  // Where the collector was down there is no count, which is not a count of none: Wednesdays from 3am to 5am.
+  pairs.forEach((p) => { if (p.weekday === 'Wed' && ['3am', '4am', '5am'].indexOf(p.hour as string) >= 0) fields.forEach((f) => { p[f] = null; }); });
   const innerRows = values.map(([name]) => {
     const r: Row = { [inner]: name }, mine = pairs.filter((p) => p[inner] === name);
     fields.forEach((f) => { r[f] = mine.some((p) => p[f] != null) ? mine.reduce((s, p) => s + ((p[f] as number) || 0), 0) : null; });
@@ -180,6 +188,7 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
             layers: [{ mark: 'bar', encode: { x: 'date.day', y: 'net_subscribers' } }] } },
   dual:    { label: 'Two units: visitors and revenue by day', spec: { spec: 'view/0', title: 'Visitors and revenue', query: { metrics: ['visitors', 'revenue'], by: ['date.day'], range: '28d' },
             layers: [{ mark: 'bar', encode: { x: 'date.day', y: 'visitors' } }, { mark: 'line', encode: { x: 'date.day', y: 'revenue' }, paint: 'series.2' }] } },
+  heatmap: { label: 'Heatmap: visitors by weekday and hour', spec: { spec: 'view/0', title: 'Visitors by weekday and hour', use: 'heatmap', query: { metrics: ['visitors'], by: ['weekday', 'hour'], range: '28d' } } },
   area:    { label: 'Stacked areas: page views by day and channel', spec: { spec: 'view/0', title: 'Page views by channel', use: 'stacked-area', query: { metrics: ['pageviews'], by: ['date.day', 'channel'], range: '28d' } } },
   donut:   { label: 'A donut: device share', spec: { spec: 'view/0', title: 'Devices', use: 'donut', query: { metrics: ['visitors'], by: ['device'], range: '28d' } } },
   pie:     { label: 'A pie: channel mix', spec: { spec: 'view/0', title: 'Channels', use: 'pie', query: { metrics: ['visitors'], by: ['channel'], range: '28d' } } },

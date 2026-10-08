@@ -243,12 +243,12 @@
           {
             "event_label": "newsletter",
             "event_occurrences": 278,
-            "revenue": []
+            "revenue": null
           },
           {
             "event_label": "checklist_download",
             "event_occurrences": 257,
-            "revenue": []
+            "revenue": null
           },
           {
             "event_label": "purchase",

@@ -206,8 +206,8 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   });
   if (split) {
     // Both keys to the series, each in its own part, as a band has. The plan names one in `parts`; a fit rule swaps them.
-    // A label sits beside the plot at the height its line ends. ponytail: two lines that end close have labels that
-    // collide. Nothing moves them apart yet (reference, Open 5).
+    // A label sits beside the plot at the height its line ends. Two lines that end close have labels that collide:
+    // that is the painter's to see to, as place() does, since only it knows how tall a label is (reference, Open 5).
     series.forEach((s, j) => {
       if (ends.has(s)) nodes.push({ key: 'label:' + s, part: 'labels', kind: 'text', series: s, t: ends.get(s)!, text: s, anchor: 'start', baseline: 'middle', font: 'tick', paint: 'series.' + (j + 1), layer: 'guide' });
     });

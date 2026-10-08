@@ -14,6 +14,7 @@ type Point = PathNode['points'][number];
 
 const SHORT_PLOT = 120;   // px of plot height under which ranked y ticks go
 const LABEL = 14;         // characters a label at a line's end is given before it is clipped
+const LABEL_LINE = 12;    // px from one such label to the next
 
 const rect = ({ part, role, row, series, rank, x: _x, w: _w, v, v0, ...n }: RectNode, x: number, y: number, w: number, h: number, rx: number): PlacedRect => ({ ...n, x, y, w, h, rx });
 const text = ({ part, role, row, series, rank, x: _x, t, short, ...n }: TextNode, x: number, y: number, s: string = n.text): PlacedText => ({ ...n, x, y, text: s });
@@ -56,6 +57,11 @@ function placePlot(scene: Scene, W: number, H: number, narrow: boolean): PlacedN
   const y = scaleLinear().domain([0, 1]).range([H - mb, mt]);
   const xs = xScale(scene.rows!, scene.scale!, ml + inset, W - mr - inset);
   const box = { x: (p: Point) => xs.cx(p.row), y };
+  // Labels of lines that end close are set a line apart: pushed down from the highest, then back up from the bottom of the plot.
+  // ponytail: a first cut for pixel painters, and not the answer to label collision (reference, Open 5).
+  const labelY = new Map<string, number>(), down = labels.slice().sort((a, b) => b.t! - a.t!);
+  down.reduce((least, n) => { const at = Math.max(y(n.t!), least); labelY.set(n.key, at); return at + LABEL_LINE; }, -Infinity);
+  down.reverse().reduce((most, n) => { const at = Math.min(labelY.get(n.key)!, most); labelY.set(n.key, at); return at - LABEL_LINE; }, y(0));
   const out: PlacedNode[] = [];
   scene.nodes.forEach((n) => {
     if (n.part === 'number' || n.part === 'legend' || (n.part === 'labels' && !lw) || (n.part === 'y-axis-2' && !g2)) return;
@@ -72,7 +78,7 @@ function placePlot(scene: Scene, W: number, H: number, narrow: boolean): PlacedN
       out.push(rect(n, bx, Math.min(from, to), bw, Math.abs(from - to), Math.min(2, bw / 4)));
     } else if (n.kind === 'text') {
       out.push(n.part === 'y-axis' ? text(n, ml - 6, y(n.t!)) : n.part === 'x-axis' ? text(n, xs.cx(n.row!), H - 5)
-        : n.part === 'y-axis-2' ? text(n, W - mr + 6, y(n.t!)) : n.part === 'labels' ? text(n, W - lw, y(n.t!), clip(n.text, LABEL)) : text(n, W - mr, y(n.t!) - 5));
+        : n.part === 'y-axis-2' ? text(n, W - mr + 6, y(n.t!)) : n.part === 'labels' ? text(n, W - lw, labelY.get(n.key)!, clip(n.text, LABEL)) : text(n, W - mr, y(n.t!) - 5));
     }
   });
   return out;

@@ -187,7 +187,12 @@ describe('a split plot\'s legend', () => {
     const labelled = key(300), line = labelled.scene.nodes.find((n) => n.key === 'primary:line:Desktop:partial') as { d: string }, [lx, ly] = line.d.split('L').pop()!.split(',').map(Number);
     expect(at(labelled.scene, 'label:Desktop')).toMatchObject({ x: 300 - 6 - 7 * 6.6, text: 'Desktop', anchor: 'start', baseline: 'middle' });
     expect(lx).toBeCloseTo(300 - 6 - 7 * 6.6 - 6 - 2, 2);
-    expect(at(labelled.scene, 'label:Desktop').y).toBeCloseTo(ly!, 2);          // a path is written to three places
+    expect(at(labelled.scene, 'label:Desktop').y).toBeCloseTo(ly!, 2);
+    // Mobile ends close under Desktop, so its label is moved down to a line's height from it. Six labels keep that distance too.
+    expect(at(labelled.scene, 'label:Mobile').y - at(labelled.scene, 'label:Desktop').y).toBeCloseTo(12, 9);
+    const six = run(specs.area!, 300).scene.nodes.filter((n) => n.key.startsWith('label:')).map((n) => (n as unknown as { y: number }).y).sort((a, b) => a - b);
+    expect(six.length).toBe(6);
+    six.forEach((yy, i) => { if (i) expect(yy - six[i - 1]!).toBeGreaterThanOrEqual(12 - 1e-9); expect(yy).toBeLessThanOrEqual(162); });          // a path is written to three places
   });
 });
 

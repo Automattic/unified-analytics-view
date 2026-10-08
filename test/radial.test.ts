@@ -135,9 +135,12 @@ describe('fit rules', () => {
     expect(expand(donut!).layers).toEqual([{ mark: 'arc', encode: { angle: 'visitors', color: 'device', radius: 0.6 } }]);
     const hole = run(donut!, 346).scene.nodes.find((n) => n.key === 'hole')!;
     expect(hole).toMatchObject({ kind: 'text', text: '10.5k', anchor: 'middle', font: 'display', x: 173, y: 68, h: 24 });
-    expect(at(donut!, 120)).toMatchObject({ hole: true, dropped: ['the legend, except the largest segment'] });
-    expect(at(donut!, 119)).toMatchObject({ hole: false, parts: ['radial', 'hole', 'legend-top'], dropped: ['the legend, except the largest segment', 'the number in the hole'] });
-    expect(applies(rule('hole'), { view: { inline: 119 }, plot: { inline: 119, block: 119 } })).toBe(true);
+    // Five digits of the small face are 73 px wide, and their corners are inside the hole from 129 px across.
+    expect(at(donut!, 129)).toMatchObject({ hole: true, dropped: ['the legend, except the largest segment'] });
+    expect(at(donut!, 128)).toMatchObject({ hole: false, parts: ['radial', 'hole', 'legend-top'], dropped: ['the legend, except the largest segment', 'the number in the hole'] });
+    // Three are inside it sooner, and the rule is then what takes the number out.
+    expect([120, 119].map((w) => at(gauge!, w).hole)).toEqual([true, false]);
+    expect(applies(rule('hole'), { view: { inline: 119 }, plot: { inline: 119, block: 60 } })).toBe(true);
     // A pie has no hole, and a number above the circle is not said twice.
     expect(at(pie!, 346)).toMatchObject({ hole: false, parts: ['radial', 'legend'], dropped: [] });
     const always = { ...makeContainer(346), rules: { ...makeContainer(346).rules, tldrValue: { above: 'always' as const } } }, result = runQuery(donut!.query);

@@ -164,10 +164,9 @@ function placeRadial(scene: Scene, W: number, room: number | null, container: Co
       if (role === 'primary') r0 = Math.min(r0, inner);
       nodes.push({ ...rest, kind: 'path', d: arcD(n, D / 2), fill: true, tx: W / 2, ty: D / 2 });
     } else if (n.part === 'hole' && n.kind === 'text' && scene.parts.includes('hole')) {
-      // The number in the hole is the small face, and it shows only where its corners are inside the hole.
-      // ponytail: the small face is taken to be as wide for its height as the large one. A container that says how wide it is would be exact.
+      // The number in the hole is the small face, whose width displayWidth() gives, and it shows only where its corners are inside the hole.
       const hole = ruleFor(rules, 'radial', 'hole'), face = container.display(n.text.length, r0 * D, true);
-      const wide = container.displayWidth(n.text.length) * (face.cell ? 1 : face.h / container.display(1, Infinity).h), tall = aspect === 1 ? face.h / 2 : face.h;
+      const wide = container.displayWidth(n.text.length), tall = aspect === 1 ? face.h / 2 : face.h;
       if (hole && applies(hole, { view: { inline: W }, plot: { inline: plot.w, block: plot.h } })) return;
       if (Math.hypot(wide / 2, tall) > r0 * D / 2) return;
       nodes.push({ ...text(n, W / 2, D / 2 - (aspect === 1 ? face.h / 2 : face.h)), h: face.h, cell: face.cell });

@@ -1,0 +1,20 @@
+/* The marks page: specimens in a grid, each a view on a surface. The only size here is the least width a specimen
+ * is given, which is the width at which a view has given nothing up. */
+.marks section { margin-block-start: var(--ua-space-xl); padding-block-start: var(--ua-space-s); border-block-start: 1px solid var(--ua-color-border); }
+.marks h2 { font-size: var(--ua-font-size-lg); margin: 0; }
+.marks h3 { font-size: var(--ua-font-size-xs); font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--ua-color-muted-foreground); margin: var(--ua-space-m) 0 var(--ua-space-2xs); }
+.marks .note { margin: var(--ua-space-4xs) 0 0; color: var(--ua-color-muted-foreground); }
+.specimens { display: grid; grid-template-columns: repeat(auto-fill, minmax(346px, 1fr)); gap: var(--ua-space-s); align-items: start; }
+.specimen { margin: 0; min-inline-size: 0; }
+.specimen figcaption { margin-block-start: var(--ua-space-4xs); font-size: var(--ua-font-size-xs); color: var(--ua-color-muted-foreground); }
+/* A surface, with room around the view as a card gives it. A view's label halo takes the surface's colour. */
+.surface { box-sizing: border-box; padding: var(--ua-space-s); background: var(--surface); border: 1px solid var(--ua-color-border); border-radius: var(--ua-radius-lg); --a8c-charts-color-background: var(--surface); }
+
+/* Both themes: the page twice, side by side. Each half is as tall as what it holds (marks.ts), so the page scrolls both. */
+.both { display: grid; grid-template-columns: 1fr 1fr; gap: var(--ua-space-s); align-items: start; }
+.both iframe { inline-size: 100%; border: 1px solid var(--ua-color-border); border-radius: var(--ua-radius-lg); }
+.embed nav, .embed #controls { display: none; }
+html:has(.embed) { overflow: hidden; }
+/* A screen and glass have their own edges, and no border. */
+.surface:is(.ua-screen, .ua-frost, .ua-crystal-surface) { border-color: transparent; }
+.specimen.backdrop { padding: var(--ua-space-s); }

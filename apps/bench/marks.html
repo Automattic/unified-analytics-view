@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Marks · Bench</title>
+  <link rel="stylesheet" href="/src/bench.css">
+  <link rel="stylesheet" href="/src/material.css">
+  <link rel="stylesheet" href="/src/marks.css">
+</head>
+<body>
+  <nav><a href="/demo.html">Demo</a> <a href="/">Views</a> <a href="/marks.html" aria-current="page">Marks</a> <a href="/sidebar.html">Sidebar</a> <a href="/tokens.html">Tokens</a> <a href="/spike.html">Spike</a></nav>
+  <form id="controls">
+    <fieldset><legend>Theme</legend>
+      <label><input type="radio" name="theme" value="" checked> system</label>
+      <label><input type="radio" name="theme" value="light"> light</label>
+      <label><input type="radio" name="theme" value="dark"> dark</label>
+      <label><input type="radio" name="theme" value="both"> both</label>
+    </fieldset>
+  </form>
+  <main class="marks"></main>
+  <script type="module" src="/src/marks.ts"></script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-import type { CircleNode, PathNode } from '@universal-analytics/core';
+import type { CircleNode, PathNode, TextNode } from '@universal-analytics/core';
 import { attr, ensure, keyed, paintVar, prop, text, type LayoutPainter } from '@universal-analytics/dom';
 import { GEO_RULES } from './index.ts';
 
@@ -14,6 +14,7 @@ import { GEO_RULES } from './index.ts';
  *       g.vg-land           regions the result has no row for, and every region where symbols stand on them
  *       g.vg-regions        regions with a row: the list a reader steps through
  *     .vg-points            a symbol for each region with a row, and then these are the list
+ *   .vg-note                how many rows have no shape, where there are any
  *   .vg-ramp, .vg-size
  *
  * Never colour alone: each region in the list is named by its readout, which says its value (keys.ts), and the table
@@ -33,11 +34,14 @@ const css = `
 .vg[data-layout="geo"] .vg-points { pointer-events: none; }
 .vg[data-layout="geo"] .vg-points i { pointer-events: auto; }
 .vg[data-layout="geo"] .vg-ramp:empty { display: none; }
+.vg[data-layout="geo"] .vg-note { block-size: 18px; line-height: 18px; overflow: hidden; white-space: nowrap; }
+.vg[data-layout="geo"] .vg-note span { color: var(--vg-paint); }
+.vg[data-layout="geo"] .vg-note:empty { display: none; }
 /* In a box the part gives way to the height and its width follows, as a circle of arcs does. */
 @container vg-view (block-size >= 0px) {
   .vg[data-layout="geo"] .vg-body { container-type: size; overflow: hidden; }
   .vg[data-layout="geo"] .vg-plot { flex: 0 1 calc(min(100cqi, 480px) / var(--vg-aspect, 2)); min-block-size: 0; inline-size: auto; max-inline-size: 100%; }
-  .vg[data-layout="geo"] :is(.vg-ramp, .vg-size) { flex: none; }
+  .vg[data-layout="geo"] :is(.vg-note, .vg-ramp, .vg-size) { flex: none; }
 }`;
 
 /** The group of the map's SVG with this class, made on first use. */
@@ -75,6 +79,8 @@ export const geoPainter: LayoutPainter = {
     keyed(points, symbols, () => 'i', (el, n) => { prop(el, '--vg-x', n.x); prop(el, '--vg-t', n.t); prop(el, '--vg-size', n.size); });
     list(regions, shapes.some(listed)); list(points, symbols.length > 0);
 
+    // The note is read: it says what the map does not. It is made whether or not there is one, so it stays above the keys.
+    keyed(ensure(body, 'div', 'vg-note'), scene.nodes.filter((n): n is TextNode => n.part === 'note' && n.kind === 'text'), () => 'span', text);
     const ramp = ensure(body, 'div', 'vg-ramp'), sizes = ensure(body, 'div', 'vg-size');
     // The keys say again what each region's name says whole.
     for (const el of [ramp, sizes]) el.setAttribute('aria-hidden', 'true');

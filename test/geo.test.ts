@@ -1,6 +1,6 @@
 import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, buildScene, customMarks, makeContainer, place, registerMark, resolve, type CircleNode, type PainterName, type PathNode, type Result, type Spec } from '@universal-analytics/core';
+import { CONTAINER_RULES, buildScene, customMarks, makeContainer, notShownNote, place, registerMark, resolve, type CircleNode, type PainterName, type PathNode, type Result, type Spec } from '@universal-analytics/core';
 import viewSchema from '@universal-analytics/core/schema/view.schema.json';
 import { compileFitRules } from '@universal-analytics/dom';
 import { catalog, countries, moreSamples, runQuery, scenarios } from '@universal-analytics/fixtures';
@@ -10,7 +10,7 @@ import { geoPainter } from '@universal-analytics/geo/dom';
 // Step 8 of docs/chart-coverage-plan.md: the `geo` mark, which is a custom mark, registered by the fixtures with their
 // boundary shapes. No prototype knows it, so it is held to a sweep, facts and golden scenes of its own. The registry
 // and `fallback` are in test/registry.test.ts.
-const map = moreSamples.map!.spec, symbols = moreSamples.symbols!.spec;
+const map = moreSamples.map!.spec, symbols = moreSamples.symbols!.spec, unmapped = moreSamples.unmapped!.spec;
 const both: Spec = { ...map, query: { ...map.query, metrics: ['visitors', 'pageviews'] }, layers: [{ mark: 'geo', encode: { x: 'country', color: 'visitors', size: 'pageviews' } }] };
 const run = (spec: Spec, w: number, h: number | null = null, scenario: (typeof scenarios)[number] = 'typical', painter: PainterName = 'svg', result: Result = runQuery(spec.query, scenario)) => {
   const container = makeContainer(w, h, painter, 8), plan = resolve(spec, result, container, catalog);
@@ -24,7 +24,7 @@ const dots = (ratio: { nodes: unknown[] }) => (ratio.nodes as CircleNode[]).filt
 const ASPECT = 1.886;   // Equal Earth, fitted to the fixture's shapes
 
 describe('the sweep', () => {
-  for (const [name, spec] of Object.entries({ map, symbols, both })) {
+  for (const [name, spec] of Object.entries({ map, symbols, both, unmapped })) {
     it(name + ': unique keys, no NaN, nothing taller than the container allows, symbols inside the box, and a part that holds its shape', () => {
       for (const sc of scenarios) for (const p of ['svg', 'dots'] as PainterName[]) for (const h of [null, 300, 160, 100, 60, 40]) for (const w of [54, 80, 120, 170, 250, 290, 346, 500, 700]) {
         const at = [name, sc, p, w, h].join(' ');
@@ -80,19 +80,26 @@ describe('the sweep', () => {
 describe('golden scenes', () => {
   for (const [w, h] of [[346, null], [300, null], [250, null]] as [number, number | null][]) it(`map at ${w} by ${h ?? 'any'}`, () => expect(run(map, w, h).scene).toMatchSnapshot());
   for (const [w, h] of [[346, null], [250, 100]] as [number, number | null][]) it(`symbols at ${w} by ${h ?? 'any'}`, () => expect(run(symbols, w, h).scene).toMatchSnapshot());
+  it('unmapped at 346 by any', () => expect(run(unmapped, 346).scene).toMatchSnapshot());
 });
 
 describe('the fixture: visitors by country', () => {
   it('answers with a row per country, ranked, and every one of them is the id of a boundary shape', () => {
     const { rows, totals } = runQuery(map.query), ids = countries.features.map((f) => f.id);
     expect(rows.length).toBe(15);
-    expect(rows.slice(0, 3).map((r) => r.country)).toEqual(['United States', 'India', 'United Kingdom']);
+    expect(rows.slice(0, 3).map((r) => r.country)).toEqual(['US', 'IN', 'GB']);
     expect(rows.every((r) => ids.includes(r.country as string))).toBe(true);
     expect(Math.abs(rows.reduce((s, r) => s + (r.visitors as number), 0) - totals.visitors!)).toBeLessThanOrEqual(8);
   });
-  it('the shapes are a small fixture: every feature has an id, and the file is not a large one', () => {
+  it('the shapes are a small fixture, keyed on ISO 3166-1 alpha-2 in capitals with each name beside its code, and the file is not a large one', () => {
     expect(countries.features.length).toBe(123);
-    expect(new Set(countries.features.map((f) => f.id)).size).toBe(123);
+    const coded = countries.features.filter((f) => f.id != null);
+    expect([coded.length, new Set(coded.map((f) => f.id)).size, coded.every((f) => /^[A-Z]{2}$/.test(String(f.id)))]).toEqual([122, 122, true]);
+    expect(new Set(countries.features.map((f) => f.properties!.name)).size).toBe(123);
+    expect(Object.fromEntries(['US', 'GB', 'EH', 'CD', 'CG', 'KP', 'KR', 'SS', 'RS', 'CI'].map((id) => [id, coded.find((f) => f.id === id)!.properties!.name])))
+      .toEqual({ US: 'United States', GB: 'United Kingdom', EH: 'W. Sahara', CD: 'Dem. Rep. Congo', CG: 'Congo', KP: 'North Korea', KR: 'South Korea', SS: 'S. Sudan', RS: 'Serbia', CI: 'Côte d\'Ivoire' });
+    // The one shape with no code of its own has no id: it is drawn, and no row is its.
+    expect(countries.features.filter((f) => f.id == null).map((f) => f.properties!.name)).toEqual(['Somaliland']);
     expect(JSON.stringify(countries).length).toBeLessThan(30000);
   });
 });
@@ -104,7 +111,7 @@ describe('geo, filled by a metric', () => {
     expect([plan.layout, ratio.layout, plan.preset]).toEqual(['geo', 'geo', null]);
   });
   it('draws every shape handed in, in the shapes\' order whatever the ranking, each a path in a box 100 wide', () => {
-    expect(shapes(ratio).map((n) => n.key)).toEqual(countries.features.map((f) => 'primary:geo:' + f.id));
+    expect(shapes(ratio).map((n) => n.key)).toEqual(countries.features.map((f) => 'primary:geo:' + (f.id ?? f.properties!.name)));
     expect(shapes(ratio).every((n) => n.fill && n.layer === 'data' && n.role === 'primary' && /^M[\d.,LMZ]+Z$/.test(n.d!))).toBe(true);
     const xs = shapes(ratio).flatMap((n) => n.d!.match(/[\d.]+/g)!.map(Number).filter((_, i) => i % 2 === 0)), ys = shapes(ratio).flatMap((n) => n.d!.match(/[\d.]+/g)!.map(Number).filter((_, i) => i % 2 === 1));
     expect([Math.min(...xs), Math.max(...xs), Math.min(...ys)]).toEqual([0, 100, 0]);
@@ -123,8 +130,8 @@ describe('geo, filled by a metric', () => {
     const none = shapes(ratio).filter((n) => n.paint === 'seq.none');
     expect(none.length).toBe(123 - 15);
     expect(none.every((n) => n.row == null)).toBe(true);
-    const nulled = { ...result, rows: result.rows.map((r) => (r.country === 'India' ? { ...r, visitors: null } : r)) };
-    expect(shapes(run(map, 346, null, 'typical', 'svg', nulled).ratio).find((n) => n.key === 'primary:geo:India')).toMatchObject({ paint: 'seq.none', row: 'India' });
+    const nulled = { ...result, rows: result.rows.map((r) => (r.country === 'IN' ? { ...r, visitors: null } : r)) };
+    expect(shapes(run(map, 346, null, 'typical', 'svg', nulled).ratio).find((n) => n.key === 'primary:geo:IN')).toMatchObject({ paint: 'seq.none', row: 'IN' });
   });
   it('its rows are the result\'s, in the result\'s order, which is the list a reader steps through', () => {
     expect(ratio.rows).toEqual(result.rows.map((r) => r.country));
@@ -144,10 +151,10 @@ describe('geo, filled by a metric', () => {
     expect([wide.plot!.w, wide.height]).toEqual([346, Math.ceil(346 / ASPECT + 24)]);
     expect([boxed.plot!.h, boxed.height, boxed.nodes.some((n) => n.key.startsWith('ramp:'))]).toEqual([160, 160, false]);
     expect(most.plot!.w).toBe(480);
-    const us = (s: typeof wide) => s.nodes.find((n) => n.key === 'primary:geo:United States') as unknown as { d: string; tx?: number; fill: boolean };
+    const us = (s: typeof wide) => s.nodes.find((n) => n.key === 'primary:geo:US') as unknown as { d: string; tx?: number; fill: boolean };
     expect([us(wide).tx, us(most).tx, us(boxed).tx]).toEqual([undefined, 110, (346 - 160 * ASPECT) / 2]);
     // The same path, at 3.46 times the size.
-    const at = (d: string) => d.match(/[\d.]+/g)!.map(Number), d0 = at(shapes(run(map, 346).ratio).find((n) => n.row === 'United States')!.d!);
+    const at = (d: string) => d.match(/[\d.]+/g)!.map(Number), d0 = at(shapes(run(map, 346).ratio).find((n) => n.row === 'US')!.d!);
     at(us(wide).d).forEach((n, i) => expect(n).toBeCloseTo(d0[i]! * 3.46, 1));
     expect(wide.nodes.find((n) => n.key === 'ramp:1')).toMatchObject({ ty: 346 / ASPECT, y: 8 });
   });
@@ -159,10 +166,10 @@ describe('geo, with a symbol for each region', () => {
     const top = Math.max(...result.rows.map((r) => r.pageviews as number));
     expect(dots(ratio).length).toBe(15);
     for (const n of dots(ratio)) expect(n.size, n.key).toBe(Math.min(4, Math.max(1, Math.ceil(Math.sqrt((result.rows.find((r) => r.country === n.row)!.pageviews as number) / top) * 4))));
-    expect(dots(ratio).find((n) => n.row === 'United States')).toMatchObject({ key: 'primary:geo:United States:symbol', size: 4, paint: 'series.1', opacity: 0.7, layer: 'data', role: 'primary' });
+    expect(dots(ratio).find((n) => n.row === 'US')).toMatchObject({ key: 'primary:geo:US:symbol', size: 4, paint: 'series.1', opacity: 0.7, layer: 'data', role: 'primary' });
     // Brazil is south of the equator and west of Greenwich; Australia is east of both.
     const at = (k: string) => dots(ratio).find((n) => n.row === k)!;
-    expect(at('Brazil').x! < 0.5 && at('Brazil').t! < 0.5 && at('Australia').x! > 0.5 && at('Australia').t! < at('Brazil').t! + 0.2).toBe(true);
+    expect(at('BR').x! < 0.5 && at('BR').t! < 0.5 && at('AU').x! > 0.5 && at('AU').t! < at('BR').t! + 0.2).toBe(true);
   });
   it('the regions are the ground they stand on: every shape in the tone of no value, as context', () => {
     expect(shapes(ratio).length).toBe(123);
@@ -171,8 +178,8 @@ describe('geo, with a symbol for each region', () => {
   });
   it('has the key to sizes a plot has, and place() sets a symbol by its step', () => {
     expect((ratio.nodes.filter((n) => n.part === 'size' && n.kind === 'text') as { text: string }[]).map((n) => n.text)).toEqual(['Page views', '486', '1.9k', '4.4k', '7.8k']);
-    const { scene } = run(symbols, 346), us = scene.nodes.find((n) => n.key === 'primary:geo:United States:symbol') as unknown as { cx: number; cy: number; r: number };
-    const node = dots(ratio).find((n) => n.row === 'United States')!;
+    const { scene } = run(symbols, 346), us = scene.nodes.find((n) => n.key === 'primary:geo:US:symbol') as unknown as { cx: number; cy: number; r: number };
+    const node = dots(ratio).find((n) => n.row === 'US')!;
     expect(us).toMatchObject({ r: 12, cx: node.x! * 346, cy: (1 - node.t!) * 346 / ASPECT });
     expect(scene.height).toBe(Math.ceil(346 / ASPECT + 28));
   });
@@ -185,12 +192,60 @@ describe('geo, with a symbol for each region', () => {
   });
 });
 
+describe('rows the map has no shape for', () => {
+  const note = (s: { nodes: { key: string }[] }) => (s.nodes.find((n) => n.key === 'note:not-shown') as { text: string } | undefined)?.text;
+  const withRows = (rows: Result['rows']) => { const result = runQuery(map.query); return run(map, 346, null, 'typical', 'svg', { ...result, rows: [...result.rows, ...rows] }); };
+  it('the wording is core\'s, by the dimension\'s label: one, several, and nothing to say of none', () => {
+    expect([notShownNote(1, 'Country'), notShownNote(12, 'Country'), notShownNote(3, 'Page'), notShownNote(0, 'Country')]).toEqual(['1 country not shown', '12 countries not shown', '3 pages not shown', '']);
+  });
+  it('counts the rows whose value is no shape\'s id, an empty one and a null among them, and says so under the map', () => {
+    const { ratio, scene, result } = run(unmapped, 346);
+    expect(result.rows.filter((r) => !countries.features.some((f) => f.id === r.visitor_country)).map((r) => r.visitor_country)).toEqual(['SG', '', 'MT', 'BH']);
+    expect(ratio.nodes.find((n) => n.key === 'note:not-shown')).toEqual({ key: 'note:not-shown', part: 'note', kind: 'text', text: '4 countries not shown', anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' });
+    expect(ratio.parts).toEqual(['plot', 'note', 'ramp']);
+    expect([note(withRows([{ country: 'Atlantis', visitors: 12 }]).ratio), note(withRows([{ country: '', visitors: 12 }, { country: null, visitors: 3 }]).ratio)]).toEqual(['1 country not shown', '2 countries not shown']);
+    // The match is on the id as it is written. A code in small letters, one with a space, a name, and the name of a
+    // shape that has no id are each a row with no shape.
+    const loose = withRows([{ country: 'cn', visitors: 9 }, { country: ' CN', visitors: 9 }, { country: 'China', visitors: 9 }, { country: 'Somaliland', visitors: 9 }]).ratio;
+    expect([note(loose), shapes(loose).find((n) => n.key === 'primary:geo:CN')!.row, shapes(loose).find((n) => n.key === 'primary:geo:Somaliland')!.row]).toEqual(['4 countries not shown', undefined, undefined]);
+    // Every row is still a row: the table's, and the list's a reader steps through. The shapes drawn are the same.
+    expect(ratio.rows!.length).toBe(19);
+    expect(shapes(ratio).filter((n) => n.row != null).length).toBe(15);
+    // In pixels it is a line under the map, at the start of the width, and the ramp is under it.
+    expect(scene.nodes.find((n) => n.key === 'note:not-shown')).toMatchObject({ kind: 'text', text: '4 countries not shown', x: 0, y: 346 / ASPECT + 11, paint: 'ink.muted' });
+    expect([scene.plot!.w, scene.height]).toEqual([346, Math.ceil(346 / ASPECT + 18 + 24)]);
+    expect(scene.nodes.find((n) => n.key === 'ramp:1')).toMatchObject({ ty: 346 / ASPECT + 18 });
+  });
+  it('says nothing when every row has a shape', () => {
+    for (const spec of [map, symbols, both]) { const { ratio, scene } = run(spec, 346); expect([note(ratio), note(scene), ratio.parts.includes('note')]).toEqual([undefined, undefined, false]); }
+  });
+  it('the note goes with the keys, so it takes no room from a small map, and is never beside the list, which has every row', () => {
+    const at = (w: number, h: number | null = null) => { const { plan, ratio, scene } = run(unmapped, w, h); return [plan.layout, ratio.parts.join(' '), note(scene)]; };
+    expect(at(700)).toEqual(['geo', 'plot note ramp', '4 countries not shown']);
+    expect(at(320)).toEqual(['geo', 'plot note ramp', '4 countries not shown']);
+    expect(at(346, 170)).toEqual(['geo', 'plot note ramp', '4 countries not shown']);
+    expect(run(unmapped, 346, 170).scene.plot!.h).toBe(170 - 18 - 24);
+    expect(at(319)).toEqual(['geo', 'plot', undefined]);
+    expect(at(346, 169)).toEqual(['geo', 'plot', undefined]);
+    expect(at(279)).toEqual(['rows', 'rows', undefined]);
+    // The list it becomes holds the rows the map could not draw.
+    expect(run(unmapped, 250).ratio.rows).toEqual(run(unmapped, 346).result.rows.map((r) => r.visitor_country));
+    // With symbols it is the same note, over the key to sizes.
+    const sym: Spec = { ...unmapped, layers: [{ mark: 'geo', encode: { x: 'visitor_country', size: 'visitors' } }] };
+    expect([run(sym, 346).ratio.parts, note(run(sym, 346).scene)]).toEqual([['plot', 'points', 'note', 'size'], '4 countries not shown']);
+  });
+  it('a result of rows with no value alone is a map with a note, and not the error for shapes that are the wrong ones', () => {
+    const result = runQuery(map.query), { ratio } = run(map, 346, null, 'typical', 'svg', { ...result, rows: [{ country: '', visitors: 40 }] });
+    expect([note(ratio), shapes(ratio).every((n) => n.paint === 'seq.none' && n.row == null)]).toEqual(['1 country not shown', true]);
+  });
+});
+
 describe('prose, the number and errors', () => {
   it('says what the ranked list says: the top regions by the metric', () => {
-    expect(run(map, 346).plan.text).toBe('Top countries by visitors, last 28 days: United States (3,265), India (1,264), United Kingdom (948).');
+    expect(run(map, 346).plan.text).toBe('Top countries by visitors, last 28 days: US (3,265), IN (1,264), GB (948).');
     expect(run(map, 250).plan.text).toBe(run(map, 346).plan.text);
     expect(run(map, 346, null, 'empty').plan.text).toBe('No visitors recorded in the last 28 days.');
-    expect((run(map, 120).ratio.nodes.find((n) => n.key === 'sub') as { text: string }).text).toBe('Top: United States');
+    expect((run(map, 120).ratio.nodes.find((n) => n.key === 'sub') as { text: string }).text).toBe('Top: US');
   });
   it('errors name the fix: no dimension on x, no metric to draw by, more than one layer, and values that join to no shape', () => {
     const q = map.query, of = (layers: Spec['layers'], query = q) => err(() => run({ spec: 'view/0', query, layers }, 346));
@@ -201,16 +256,16 @@ describe('prose, the number and errors', () => {
     expect(of([...map.layers!, ...map.layers!])).toBe('A map draws one "geo" layer, and this view has 2. Put the metric to fill by on color and the metric for symbols on size, in one layer.');
     expect(of([...map.layers!, { mark: 'bar', encode: { x: 'country', y: 'visitors' } }])).toBe('The "geo" mark is laid out by its own code, and layer 2 is a "bar". Keep the "geo" layers alone, and draw the others as a view of their own.');
     expect(of([{ mark: 'geo', encode: { x: 'page', color: 'pageviews' } }], { metrics: ['pageviews'], by: ['page'] }))
-      .toBe('None of the 8 values of "page" is the id of a boundary shape. The first is "/", and the shapes have "Tanzania", "W. Sahara", "Canada" and 120 more. Hand geoMark() shapes whose ids are the values of the dimension.');
+      .toBe('None of the 8 values of "page" is the id of a boundary shape. The first is "/", and the shapes are keyed on ISO 3166-1 alpha-2 codes, in capitals: "TZ", "EH" and 120 more. Have the engine send those ids for "page", or hand geoMark() shapes whose ids are its values.');
   });
   it('the shapes are an input: a mark made from other shapes draws those, and shapes that are not shapes are an error', () => {
-    const two: Shapes = { type: 'FeatureCollection', features: countries.features.filter((f) => f.id === 'Brazil' || f.id === 'Argentina') };
+    const two: Shapes = { type: 'FeatureCollection', features: countries.features.filter((f) => f.id === 'BR' || f.id === 'AR') };
     registerMark('south', geoMark(two));
     const spec: Spec = { ...map, layers: [{ mark: 'south', encode: { x: 'country', color: 'visitors' } }] }, result = runQuery(spec.query);
     const scene = buildScene(resolve(spec, result, makeContainer(700), catalog), spec.query, result, catalog);
-    expect(shapes(scene).map((n) => [n.key, n.paint])).toEqual([['primary:south:Argentina', 'seq.none'], ['primary:south:Brazil', 'seq.7']]);
+    expect(shapes(scene).map((n) => [n.key, n.paint])).toEqual([['primary:south:AR', 'seq.none'], ['primary:south:BR', 'seq.7']]);
     expect(scene.aspect).toBeLessThan(1);
-    const bad = 'The geo mark needs boundary shapes: a GeoJSON FeatureCollection in which every feature has an "id", the value the region\'s dimension has for it. Hand one to geoMark() or registerGeo().';
+    const bad = 'The geo mark needs boundary shapes: a GeoJSON FeatureCollection in which every feature has an "id", the value the region\'s dimension has for it, or where no value stands for it a "properties.name". Hand one to geoMark() or registerGeo().';
     expect(err(() => geoMark({ type: 'FeatureCollection', features: [{ type: 'Feature', geometry: null }] }))).toBe(bad);
     expect(err(() => geoMark({ type: 'Topology', features: [] }))).toBe(bad);
   });
@@ -223,8 +278,8 @@ describe('the painter\'s half, as strings', () => {
   });
   it('its rules compile to the keys going, and then to the swap for the ranked list, by width and by height', () => {
     const css = compileFitRules(GEO_RULES, { geo: geoPainter.fit ?? {} }), fig = (keep: string) => '.vg[data-layout="geo"]:not([data-keep~="' + keep + '"])';
-    expect(css).toContain('@container vg-view (inline-size < 319.5px) {\n  ' + fig('guides') + ' :is(.vg-ramp, .vg-size) { display: none; }\n}');
-    expect(css).toContain('@container vg-view (block-size < 169.5px) {\n  ' + fig('guides') + ' :is(.vg-ramp, .vg-size) { display: none; }\n}');
+    expect(css).toContain('@container vg-view (inline-size < 319.5px) {\n  ' + fig('guides') + ' :is(.vg-ramp, .vg-size, .vg-note) { display: none; }\n}');
+    expect(css).toContain('@container vg-view (block-size < 169.5px) {\n  ' + fig('guides') + ' :is(.vg-ramp, .vg-size, .vg-note) { display: none; }\n}');
     const swap = '  ' + fig('marks') + ' { display: none; }\n  ' + fig('marks') + ' ~ .vg-fallback { display: block; }\n}';
     expect(css).toContain('@container vg-view (inline-size < 279.5px) {\n' + swap);
     expect(css).toContain('@container vg-view (block-size < 119.5px) {\n' + swap);

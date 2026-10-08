@@ -157,7 +157,9 @@ export interface Plan extends PlanShape {
 export type Part = 'number' | 'plot' | 'x-axis' | 'y-axis' | 'y-axis-2' | 'labels' | 'columns' | 'rows' | 'band' | 'legend' | 'legend-top' | 'radial' | 'hole' | 'ramp' | 'notice'
   /* `points` holds the dots of a plot that sets one metric against another, and `point-labels` the labels on a plot's
    * points. Both lie over the plot and share its box. `size` is the key to the sizes of its dots. */
-  | 'points' | 'point-labels' | 'size';
+  | 'points' | 'point-labels' | 'size'
+  /* `note` is a line of text under a custom mark's own parts, saying what they could not draw. It goes with the guides. */
+  | 'note';
 interface NodeBase {
   key: string;
   part: Part;

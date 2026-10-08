@@ -1,9 +1,9 @@
 import { CONTAINER_RULES, KEEP } from './container.ts';
 import { applies, ruleFor, type FitRule } from './fit.ts';
-import { PRESETS, expand } from './presets.ts';
+import { PRESETS, expand, usesPrevious } from './presets.ts';
 import { COLUMNS_BLOCK, place } from './place.ts';
-import { buildScene, columnLabel, columnsOf, tldrValueText, isDim, roleOf, seriesOf, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
-import { gridProse, tldrProse } from './prose.ts';
+import { buildScene, columnLabel, columnsOf, tldrValueText, isDim, roleOf, seriesOf, trackBeside, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
+import { gridProse, rangeProse, tldrProse } from './prose.ts';
 import type { Catalog, Container, Layer, Layout, Plan, PlanShape, PresetLibrary, Query, Reduction, ReductionId, Result, Role, PlacedScene, Spec } from './types.ts';
 
 /* Start from everything the spec asks for, then apply the container's reductions
@@ -37,13 +37,19 @@ function checkLayers(layers: Layer[], q: Query, catalog: Catalog, result: Result
   const by = q.by || [], known = by.concat(q.metrics);
   if (by.length > 2 || (by.length === 2 && by[0] === by[1])) throw new Error('A view is by one dimension or by two different ones, and query.by has: ' + by.join(', ') + '. Remove all but two.');
   layers.forEach((l, i) => {
-    if (!l || !l.mark) throw new Error('Layer ' + (i + 1) + ' has no "mark". Use one of: line, area, bar, rule, text, arc, cell, dot.');
+    if (!l || !l.mark) throw new Error('Layer ' + (i + 1) + ' has no "mark". Use one of: line, area, bar, rule, text, arc, cell, dot, tick.');
+    // A second end belongs to a mark that can run from one value to another, and needs the first end to run from.
+    for (const [end, start] of [['x2', 'x'], ['y2', 'y']] as const) {
+      if (l.encode?.[end] == null) continue;
+      if (['bar', 'rule', 'area'].indexOf(l.mark) < 0) throw new Error('Layer ' + (i + 1) + ' is a "' + l.mark + '" with "' + end + '", and only a bar, a rule or an area runs from one value to another. Use one of those, or remove "' + end + '".');
+      if (typeof l.encode[start] !== 'string' || isDim(catalog, l.encode[start])) throw new Error('Layer ' + (i + 1) + ' has "' + end + '" and no value on ' + start + ' to run from. Encode where it starts on ' + start + ': a metric, or a companion the result returns with one.');
+    }
     if (l.series === 'delta' && !(l.mark === 'text' && isDim(catalog, l.encode && l.encode.y) && typeof (l.encode && l.encode.text) === 'string' && (l.encode!.text as string) in catalog.metrics))
       throw new Error('Layer ' + (i + 1) + ' has series: "delta", which is a row\'s change in a metric. Make it a text layer with the dimension on y and the metric on text.');
     if (l.stack && !isDim(catalog, l.encode && l.encode.color)) throw new Error('Layer ' + (i + 1) + ' has "stack" and no dimension on color, so there is nothing to stack. Encode the query\'s second dimension on color, or remove "stack".');
     Object.entries(l.encode || {}).forEach(([ch, f]) => {
       if (typeof f === 'number') return;
-      if (ch === 'size' && !(f in catalog.metrics)) throw new Error('Layer ' + (i + 1) + ' encodes "' + f + '" on size, and a size is a quantity. Encode one of the query\'s metrics: ' + q.metrics.join(', ') + '.');
+      if (ch === 'size' && !(f.split('@')[0]! in catalog.metrics)) throw new Error('Layer ' + (i + 1) + ' encodes "' + f + '" on size, and a size is a quantity. Encode one of the query\'s metrics: ' + q.metrics.join(', ') + '.');
       // A companion of a field the query returns is the engine's to send, so it is looked for in the result. An empty result has none to show.
       const row = result.rows[0], of = f.split('@')[0]!;
       if (f !== of && known.indexOf(of) >= 0 && row && !(f in row)) throw new Error('Layer ' + (i + 1) + ' encodes "' + f + '" on ' + ch + ', which the result does not return. With "' + of + '" it returns: ' + (Object.keys(row).filter((c) => c.split('@')[0] === of && c !== of).join(', ') || 'nothing') + '.');
@@ -66,10 +72,10 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   let layers = (spec.layers || []).slice();
   if (!layers.length && by) throw new Error('This spec has a dimension but no layers, so there is nothing to draw it with. Add "layers", or "use" one of: ' + Object.keys(presets).join(', ') + '.');
   checkLayers(layers, q, catalog, result);
-  if (layers.some((l) => l.series) && (q.compare !== 'previous' || result.totals[m + '@previous'] == null)) {
+  if (layers.some(usesPrevious) && (q.compare !== 'previous' || result.totals[m + '@previous'] == null)) {
     const why = q.compare === 'previous' ? ' (no prior data)' : ' (the query has no "compare")';
     if (!result.meta.empty) [['previous', 'comparison series'], ['delta', 'the change on the previous period']].forEach(([series, what]) => { if (layers.some((l) => l.series === series)) dropped.push(what + why); });
-    layers = layers.filter((l) => !l.series);
+    layers = layers.filter((l) => !usesPrevious(l));
   }
   const share = layers.some((l) => l.stack === 'normalize' || l.mark === 'arc');
   // A plot of points has no sparkline form: two metrics need both their axes to be read. So it has no bare rung, and
@@ -79,6 +85,10 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
                          share, text: tldrProse(q, result, share, catalog, points) };
   if (p.layout === 'cartesian') p.guides = { x: true, y: true, grid: true };
   if (p.layout === 'matrix') { p.guides = { x: true, y: true, ramp: true }; p.text = gridProse(q, result, catalog) ?? p.text; }
+  // A range that supports the central mark is said after the view's own sentence: its least and its most. One that
+  // runs from the period before is the comparison, which is not a range.
+  const range = layers.filter((l) => roleOf(l) === 'context' && !usesPrevious(l)).map((l) => l.encode || {}).map((e) => (e.y2 != null ? [e.y, e.y2] : [e.x, e.x2])).find((ends): ends is [string, string] => ends.every((f) => typeof f === 'string'));
+  if (range) p.text += rangeProse(q, result, catalog, range);
   // A split plot starts with its legend. Its rules step that down to a label at the end of each line, where there
   // are lines, and then to nothing. They are asked once, of the view: unlike the reductions, they change no one else's room.
   const series = p.layout === 'cartesian' ? seriesOf(catalog, layers) : null;
@@ -104,8 +114,10 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   // A row short of room gives up its ranked columns from the right: every column of values but the first. The room they
   // need is measured, so no rule can say it; the label's is the `marks` rule's. Headers stand over what is left, if that
   // is more than one column, and are a guide the view gives up when it is short. Both are asked once, as the legend is.
+  // A track that stands beside its label asks for room of its own, by its own rule, as a plot of points does.
+  const beside = () => (p.layout === 'rows' && trackBeside(p.layers) && rule('track')) || undefined;
   if (p.layout === 'rows') {
-    const label = rule('marks')?.needs.inline ?? 0;
+    const label = (beside() || rule('marks'))?.needs.inline ?? 0;
     for (let cols = columnsOf(catalog, p.layers); cols.length > 1 && container.width < label + valueRoomOf(catalog, p.layers, result.rows); cols = columnsOf(catalog, p.layers)) {
       const last = cols[cols.length - 1]!;
       p.layers = p.layers.filter((l) => l !== last);
@@ -117,7 +129,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   // a number wider than the bare plot's rule allows it, or a row's widest value.
   function guard(): { rule?: FitRule; measured: number } {
     if (p.layout === 'cartesian') return p.side ? { rule: rule('marks'), measured: Math.max(0, container.displayWidth(valueLen) - rules.bare.numberWidth) } : { rule: (points && rule('points')) || rule('axes'), measured: 0 };
-    if (p.layout === 'rows') return { rule: rule('marks'), measured: valueRoomOf(catalog, p.layers, result.rows) };
+    if (p.layout === 'rows') return { rule: beside() || rule('marks'), measured: valueRoomOf(catalog, p.layers, result.rows) };
     if (p.layout === 'band') return { rule: rule(p.guides.legend === 'full' ? 'legend' : 'marks'), measured: 0 };
     if (p.layout === 'radial') return { rule: rule(p.guides.legend === 'full' ? 'legend' : 'marks'), measured: 0 };
     if (p.layout === 'matrix') return { rule: rule(p.guides.ramp && keep.indexOf('guides') < 0 ? 'ramp' : 'marks'), measured: 0 };   // a ramp the spec keeps asks for no room of its own
@@ -158,6 +170,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
       return null;
     },
     'drop-secondary': () => {
+      if (p.layout === 'rows') return null;                                // rows have no rule about roles: giving one up would win a row no room
       const gone = p.layers.filter((l) => roleOf(l) !== 'primary');
       if (!gone.length) return null;
       p.layers = p.layers.filter((l) => roleOf(l) === 'primary');

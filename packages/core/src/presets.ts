@@ -1,7 +1,8 @@
 import type { Channel, Layer, PresetLibrary, Spec } from './types.ts';
 
 /* A preset is a saved fragment of a spec, with slots filled from the query: `$metric`, `$by`, for a second
- * dimension `$split`, and for a second metric `$metric2`. It expands into ordinary layers before the grammar runs, and nothing downstream knows its name.
+ * dimension `$split`, and for a second metric `$metric2`. A slot may be followed by a suffix, `$metric@p50`, for a
+ * companion the engine returns with the field. It expands into ordinary layers before the grammar runs, and nothing downstream knows its name.
  * Names follow the @automattic/charts component they replace, where one exists. */
 export const PRESETS: PresetLibrary = {
   'line': { layers: [
@@ -43,7 +44,43 @@ export const PRESETS: PresetLibrary = {
     { mark: 'text', encode: { y: '$by', text: '$by' } },
     { mark: 'text', encode: { y: '$by', text: '$metric' }, align: 'end' },
     { mark: 'text', encode: { y: '$by', text: '$metric2' }, align: 'end' } ] },
+  // Ranges, from the companions the engine returns with a metric. What supports the central mark is `context`, so it
+  // goes first and the central mark stays. Working names, as those above are.
+  // The box states its paint: a bar with two ends is painted by which way it goes, and a box goes no way.
+  'box-plot': { layers: [
+    { mark: 'rule', encode: { x: '$by', y: '$metric@min', y2: '$metric@max' }, role: 'context' },
+    { mark: 'bar',  encode: { x: '$by', y: '$metric@p25', y2: '$metric@p75' }, role: 'context', paint: 'series.1' },
+    { mark: 'tick', encode: { x: '$by', y: '$metric@p50' } } ] },
+  'error-bars': { layers: [
+    { mark: 'bar',  encode: { x: '$by', y: '$metric' } },
+    { mark: 'rule', encode: { x: '$by', y: '$metric@lower', y2: '$metric@upper' }, role: 'context' } ] },
+  'waterfall': { layers: [
+    { mark: 'bar',  encode: { x: '$by', y: '$metric@before', y2: '$metric@running' } } ] },
+  'candlestick': { layers: [
+    { mark: 'rule', encode: { x: '$by', y: '$metric@min', y2: '$metric@max' }, role: 'context' },
+    { mark: 'bar',  encode: { x: '$by', y: '$metric@open', y2: '$metric@close' } } ] },
+  'fan': { layers: [
+    { mark: 'area', encode: { x: '$by', y: '$metric@lower', y2: '$metric@upper' }, role: 'context' },
+    { mark: 'line', encode: { x: '$by', y: '$metric' } } ] },
+  // Rows whose track is read by position. A dumbbell sets this period against the one before; with no `compare` in
+  // the query it is a dot for each row. A bullet's tick stands at the metric's catalog `target`.
+  'dumbbell': { layers: [
+    { mark: 'rule', encode: { y: '$by', x: '$metric@previous', x2: '$metric' }, role: 'context' },
+    { mark: 'dot',  encode: { y: '$by', x: '$metric' }, series: 'previous', role: 'comparison' },
+    { mark: 'dot',  encode: { y: '$by', x: '$metric' } },
+    { mark: 'text', encode: { y: '$by', text: '$by' } },
+    { mark: 'text', encode: { y: '$by', text: '$metric' }, align: 'end' } ] },
+  'bullet': { layers: [
+    { mark: 'bar',  encode: { y: '$by', x: '$metric' } },
+    { mark: 'tick', encode: { y: '$by', x: '$metric' }, role: 'reference' },
+    { mark: 'text', encode: { y: '$by', text: '$by' } },
+    { mark: 'text', encode: { y: '$by', text: '$metric' }, align: 'end' } ] },
 };
+
+/** Whether a layer draws from the period before: the previous series, a row's change on it, or a field of it by name. Such a layer goes where there is no such period. */
+export function usesPrevious(l: Layer): boolean {
+  return !!l.series || Object.values(l.encode || {}).some((f) => typeof f === 'string' && f.endsWith('@previous'));
+}
 
 export function expand(spec: Spec, presets: PresetLibrary = PRESETS): Spec {
   if (!spec.use) return spec;
@@ -55,10 +92,15 @@ export function expand(spec: Spec, presets: PresetLibrary = PRESETS): Spec {
   if (!m2 && p.layers.some((l) => Object.values(l.encode || {}).indexOf('$metric2') >= 0)) throw new Error('The "' + spec.use + '" preset needs two metrics in query.metrics: the count, then the rate the engine returns for it.');
   const { use: _use, ...out } = spec;
   if (spec.layers) return out;                               // layers written in the spec win over the preset
-  out.layers = p.layers.filter((l) => !l.series || q.compare === 'previous').map((l) => {
+  const slots: Record<string, string | undefined> = { $by: by, $split: split, $metric: m, $metric2: m2 };
+  out.layers = p.layers.filter((l) => !usesPrevious(l) || q.compare === 'previous').map((l) => {
     const c: Layer = JSON.parse(JSON.stringify(l));
     const enc = c.encode || {};
-    (Object.keys(enc) as Channel[]).forEach((ch) => { enc[ch] = enc[ch] === '$by' ? by : enc[ch] === '$split' ? split : enc[ch] === '$metric' ? m : enc[ch] === '$metric2' ? m2 : enc[ch]; });
+    (Object.keys(enc) as Channel[]).forEach((ch) => {
+      // A slot, and after it the suffix of a companion, which stays as it is written.
+      const f = enc[ch], [slot, ...suffix] = typeof f === 'string' ? f.split('@') : [];
+      if (slot != null && slot in slots) enc[ch] = suffix.length ? [slots[slot], ...suffix].join('@') : slots[slot];
+    });
     return c;
   });
   return out;

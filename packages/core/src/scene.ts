@@ -3,12 +3,12 @@ import { scaleBand, scaleLinear, scalePoint, scaleQuantize } from 'd3-scale';
 import { CHAR_W, delta, fmt, fmtDay, fmtPct, formatDimension, formatValue } from './format.ts';
 import { arcD, pathD } from './path.ts';
 import { leader } from './prose.ts';
-import type { ArcNode, Catalog, Guides, Layer, Mark, Part, PathNode, PlanShape, Query, Result, Role, Row, Scene, SceneNode, TextNode } from './types.ts';
+import type { ArcNode, Catalog, Guides, Layer, Mark, Part, PathNode, PlanShape, Polarity, Query, Result, Role, Row, Scene, SceneNode, TextNode } from './types.ts';
 
 /* Node kinds: rect, path, line, circle, text. Every node has a stable key,
  * a part, a paint token (never a colour) and a layer: "data" or "guide".
  * Nothing here is in pixels: positions are ratios of the part's box. */
-type Body = Pick<Scene, 'nodes' | 'rows' | 'series' | 'ys' | 'scale'>;
+type Body = Pick<Scene, 'nodes' | 'rows' | 'series' | 'ys' | 'scale' | 'track'>;
 
 const num = (r: Row, f: string) => r[f] as number;
 /** The role a layer plays: the one it states, or the one its mark and series imply. */
@@ -63,8 +63,15 @@ interface Draw {
   ends: (r: Row) => [number, number];
   /** A bar's place among those beside it at one x: which, of how many. */
   slot?: [number, number];
+  /** For a bar with two ends: its metric's polarity, which turns the paint of the way it goes. */
+  polarity?: Polarity;
 }
 type MarkFn = (l: Layer, d: Draw) => SceneNode[];
+/** A field's metric: the one a companion came with, or itself. */
+const metricOf = (catalog: Catalog, f: unknown) => (typeof f === 'string' ? catalog.metrics[f.split('@')[0]!] : undefined);
+/** The paint of a bar that runs from one value to another: good or bad by which way it goes, turned by its metric's
+ * polarity. One whose metric has no better way keeps its own paint. Positions are compared as they are drawn. */
+const toned = (polarity: Polarity | undefined, from: number, to: number, paint: string) => (!polarity || polarity === 'none' ? paint : (to < from) === (polarity === 'down') ? 'delta.good' : 'delta.bad');
 
 const path: MarkFn = (l, { id: layer, series, role: role0, paint, prev, rows: pts, k, unit, ends }) => {
   const id = series == null ? layer : layer + ':' + series, role = series == null ? { role: role0 } : { role: role0, series };
@@ -79,13 +86,18 @@ const path: MarkFn = (l, { id: layer, series, role: role0, paint, prev, rows: pt
   if (tail.length > 1) nodes.push({ key: id + ':partial', part: 'plot', kind: 'path', d: pathD(points(tail)), points: points(tail), paint, width: 2, dash: '2 4', opacity: 0.75, layer: 'data', ...role, note: 'incomplete bucket' });
   return nodes;
 };
-const bar: MarkFn = (_l, { id, series, role, paint, prev, rows, k, unit, ends, slot: [j, n] = [0, 1] }) => rows.map((r) => {
+const bar: MarkFn = (_l, { id, series, role, paint, prev, rows, k, unit, ends, polarity, slot: [j, n] = [0, 1] }) => rows.map((r) => {
   const [v0, v] = ends(r), w = (unit.span ? unit.span(k(r)) : unit.w) / n;
   return { key: id + ':' + k(r) + (series == null ? '' : ':' + series), part: 'plot', kind: 'rect', x: unit.x(k(r)) + j * w, w, v, ...(v0 && { v0 }), row: k(r), ...(series != null && { series }),
-    paint, opacity: r.partial && !prev ? 0.4 : 1, layer: 'data', role };
+    paint: toned(polarity, v0, v, paint), opacity: r.partial && !prev ? 0.4 : 1, layer: 'data', role };
 });
-const rule: MarkFn = (l, { id, role, v, xv }) => {
+const rule: MarkFn = (l, { id, series, role, rows, k, unit, ends, v, xv }) => {
   const { x, y } = l.encode || {};
+  // A field on y: a segment for each row, standing at its x from one of its values to another, or up from zero where it has one end.
+  if (typeof y === 'string') return rows.map((r): SceneNode => {
+    const [t, t2] = ends(r), at = unit.cx(k(r));
+    return { key: id + ':' + k(r) + (series == null ? '' : ':' + series), part: 'plot', kind: 'line', x: at, x2: at, t, t2, row: k(r), ...(series != null && { series }), paint: l.paint || 'ink', layer: 'data', role };
+  });
   // A constant on x stands the height of the plot. Its label sits beside it, at the top.
   if (typeof x === 'number') {
     if (!xv) throw new Error('A rule at x: ' + x + ' needs a scale to be measured on, and this plot has a time or a category on x. Put the rule on y, or a metric or a number dimension on x.');
@@ -118,8 +130,13 @@ const label: MarkFn = (l, { id, series, role, rows, k, unit, ends, size }) => {
   return rows.map((r): TextNode => ({ key: id + ':' + k(r) + (series == null ? '' : ':' + series), part: 'point-labels', kind: 'text', x: unit.cx(k(r)), t: ends(r)[1], text: typeof r[f] === 'number' ? fmt(r[f] as number) : String(r[f]),
     anchor: 'middle', font: 'tick', paint: 'ink', halo: true, row: k(r), ...(series != null && { series }), rank: order.indexOf(r) + 1, layer: 'guide', role }));
 };
+// A short stroke across its row's band, at its value.
+const tick: MarkFn = (l, { id, series, role, rows, k, unit, ends }) => rows.map((r): SceneNode => {
+  const x = unit.x(k(r)), t = ends(r)[1];
+  return { key: id + ':' + k(r) + (series == null ? '' : ':' + series), part: 'plot', kind: 'line', x, x2: x + (unit.span ? unit.span(k(r)) : unit.w), t, t2: t, row: k(r), ...(series != null && { series }), paint: l.paint || 'ink', width: 2, layer: 'data', role };
+});
 /* The marks a plot draws, by name. A new mark is a function here. */
-const PLOT_MARKS: Partial<Record<Mark, MarkFn>> = { line: path, area: path, bar, rule, dot, text: label };
+const PLOT_MARKS: Partial<Record<Mark, MarkFn>> = { line: path, area: path, bar, rule, dot, text: label, tick };
 
 const SERIES = 6;   // paint tokens run from series.1 to series.6
 
@@ -166,7 +183,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   const series = split ? [...new Set(((result.totalsBy && result.totalsBy[split]) || rows).map((r) => r[split] as string))] : [];
   if (series.length > SERIES) throw new Error('Splitting by "' + split + '" makes ' + series.length + ' series, and there are ' + SERIES + ' series colours. Add "limit": ' + SERIES + ' to the query, or less.');
   const isTime = catalog.dimensions[xField]!.type === 'time';
-  const shared = layers.some((l) => l.mark === 'bar') ? 'band' : 'point', scale = xOn ? 'linear' : shared;
+  const shared = layers.some((l) => l.mark === 'bar' || l.mark === 'tick') ? 'band' : 'point', scale = xOn ? 'linear' : shared;
   const yField = (l: Layer) => (l.series === 'previous' ? l.encode!.y + '@previous' : (l.encode!.y as string));
   // Where each row's mark starts and ends, in its metric's own terms: from zero, or from the series stacked under it.
   // A stack runs in the series' order, the first at the bottom, and a value below zero stacks downward.
@@ -175,7 +192,11 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   const spans = layers.map((l) => {
     const out = new Map<Row, [number, number]>();
     if (typeof (l.encode && l.encode.y) !== 'string') return out;
-    const f = yField(l), share = l.stack === 'normalize';
+    const f = yField(l), share = l.stack === 'normalize', y2 = l.encode!.y2;
+    // A second end: the mark runs from one of the engine's values to another, and stands on nothing. A row with either missing has no mark.
+    if (y2 != null) { rows.forEach((r) => { const to = typeof y2 === 'number' ? y2 : r[y2]; if (r[f] != null && to != null) out.set(r, [num(r, f), to as number]); }); return out; }
+    // A tick that is a `reference` stands at its metric's catalog `target`, as a gauge's mark does. With no target there is none.
+    if (l.mark === 'tick' && roleOf(l) === 'reference') { const to = metricOf(catalog, f)?.target; if (to != null) rows.forEach((r) => out.set(r, [0, to])); return out; }
     if (!l.stack || !splitOf(catalog, l, xField)) { rows.forEach((r) => { if (r[f] != null) out.set(r, [0, num(r, f)]); }); return out; }
     if (share && rows.length && !whole.size) throw new Error('stack: "normalize" divides by the engine\'s total for each "' + xField + '", and this result has no totalsBy. Return it from the query layer, or use stack: "zero".');
     const up: Record<string, number> = {}, down: Record<string, number> = {};
@@ -246,13 +267,14 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   const ids = layerKeys(layers), ends = new Map<string, number>();
   layers.forEach((l, i) => {
     const draw = PLOT_MARKS[l.mark], prev = l.series === 'previous', span = spans[i]!;
-    if (!draw) throw new Error('The "' + l.mark + '" mark has no rule for a time or category axis yet. Use line, area, bar, rule, dot or text.');
-    // A bar stands on a row's share of x. A metric there gives it none, and neither does a number dimension that came with no bins.
-    if (l.mark === 'bar' && xOn && !xDim) throw new Error('Layer ' + (i + 1) + ' is a bar with the metric "' + xOn + '" on x, and a bar needs a dimension there to stand on. Use "dot" for a point at two metrics, or put a dimension on x.');
+    if (!draw) throw new Error('The "' + l.mark + '" mark has no rule for a time or category axis yet. Use line, area, bar, rule, dot, text or tick.');
+    // A bar stands on a row's share of x, and a tick lies across it. A metric there gives it none, and neither does a number dimension that came with no bins.
+    if ((l.mark === 'bar' || l.mark === 'tick') && xOn && !xDim) throw new Error('Layer ' + (i + 1) + ' is a ' + l.mark + ' with the metric "' + xOn + '" on x, and a ' + l.mark + ' needs a dimension there to stand on. Use "dot" for a point at two metrics, or put a dimension on x.');
     if (l.mark === 'bar' && xOn && rows.length && rows[0]![xOn + '@end'] == null) throw new Error('Bars on the number dimension "' + xOn + '" need its bins, and this result has no "' + xOn + '@end". Return where each bin ends from the query layer, or use line or dot.');
     const v = scaleOf(l).v;
     const d: Draw = { id: ids[i]!, role: roleOf(l), paint: l.paint || (prev ? 'compare' : 'series.1'), prev, rows: rows.filter((r) => span.has(r)), k, unit, v, xv, size, points: !!xOn && !xDim,
-      ends: (r) => { const [lo, hi] = span.get(r)!; return [v(lo), v(hi)]; } };
+      ends: (r) => { const [lo, hi] = span.get(r)!; return [v(lo), v(hi)]; },
+      ...(l.mark === 'bar' && l.encode!.y2 != null && !l.paint && { polarity: metricOf(catalog, l.encode!.y)?.polarity }) };
     if (!splitOf(catalog, l, xField)) return nodes.push(...draw(l, d));
     series.forEach((s, j) => {
       // Bars of one x that are not stacked sit side by side: overlapping bars are never what was meant. Lines and areas overlay.
@@ -277,7 +299,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   }
   // The key to sizes: the metric's name, then each step with the most it stands for.
   if (size) {
-    nodes.push({ key: 'size:title', part: 'size', kind: 'text', text: catalog.metrics[size.field]!.label, anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' });
+    nodes.push({ key: 'size:title', part: 'size', kind: 'text', text: metricOf(catalog, size.field)!.label, anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' });
     for (let s = 1; s <= SIZES; s++) {
       nodes.push({ key: 'size:' + s, part: 'size', kind: 'circle', pulse: false, size: s, paint: 'ink.muted', layer: 'guide' });
       nodes.push({ key: 'size:' + s + ':label', part: 'size', kind: 'text', text: fmt(Math.round(size.top * (s / SIZES) ** 2), true), anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' });
@@ -311,25 +333,42 @@ export function valueRoomOf(catalog: Catalog, layers: Layer[], rows: Row[]): num
   return cols.reduce((room, l) => room + Math.max((max(rows, (r) => cellOf(catalog, l, r).text.length) || 0) * CHAR_W, cols.length > 1 ? columnLabel(catalog, l).length * TICK_W : 0) + 14, 0);
 }
 
-/* What a mark in a row's track is drawn with: its layer's key, role and paint, the row, and the track's scale. */
+/* What a mark in a row's track is drawn with: its layer's key, role and paint, the row's key, its value and its second end, and the track's scale. */
 interface Track {
   id: string;
   role: Role;
   paint: string;
-  row: Row;
   k: string;
+  /** The row's value on the track. */
+  at: number;
+  /** Its second end, where the layer has one. */
+  to?: number;
   /** A value on the track's x, as a ratio of its width. */
   v: (n: number) => number;
+  /** The track stands beside the label, so its marks are not behind any text. */
+  beside: boolean;
+  /** For a bar with two ends: its metric's polarity. */
+  polarity?: Polarity;
 }
 type TrackFn = (l: Layer, d: Track) => SceneNode[];
 
-// A bar runs from zero to its value, so one below zero lies to the left of where the others start.
-const trackBar: TrackFn = (l, { id, role, paint, row, k, v }) => {
-  const v0 = v(0);
-  return [{ key: id + ':' + k, part: 'rows', kind: 'rect', v: v(num(row, l.encode!.x as string)), ...(v0 && { v0 }), row: k, paint, opacity: 0.2, layer: 'data', role }];
+// A bar runs from zero to its value, so one below zero lies to the left of where the others start. With a second end
+// it runs from its value to that, and is painted by which way it goes. Behind a label it is a tint.
+const trackBar: TrackFn = (_l, { id, role, paint, k, at, to, v, beside, polarity }) => {
+  const v0 = v(to == null ? 0 : at), v1 = v(to ?? at);
+  return [{ key: id + ':' + k, part: 'rows', kind: 'rect', v: v1, ...(v0 && { v0 }), row: k, paint: toned(polarity, v0, v1, paint), ...(!beside && { opacity: 0.2 }), layer: 'data', role }];
 };
+// A rule lies along the track from one of the row's values to another, or from zero where it has one end.
+const trackRule: TrackFn = (l, { id, role, k, at, to, v }) => [{ key: id + ':' + k, part: 'rows', kind: 'line', x: v(at), x2: v(to ?? 0), t: 0.5, row: k, paint: l.paint || 'ink', layer: 'data', role }];
+// A tick stands across the row at its value.
+const trackTick: TrackFn = (l, { id, role, k, at, v }) => [{ key: id + ':' + k, part: 'rows', kind: 'line', x: v(at), x2: v(at), t: 0, t2: 1, row: k, paint: l.paint || 'ink', width: 2, layer: 'data', role }];
+const trackDot: TrackFn = (_l, { id, role, paint, k, at, v }) => [{ key: id + ':' + k, part: 'rows', kind: 'circle', pulse: false, x: v(at), t: 0.5, row: k, paint, layer: 'data', role }];
 /* The marks a row's track draws, by name. A new mark is a function here. Text is not among them: it is set in the row, not on the scale. */
-const TRACK_MARKS: Partial<Record<Mark, TrackFn>> = { bar: trackBar };
+const TRACK_MARKS: Partial<Record<Mark, TrackFn>> = { bar: trackBar, rule: trackRule, tick: trackTick, dot: trackDot };
+/** Whether a row's track is read by where its marks are, and so stands beside the label and not behind it: any mark but a bar from zero. */
+export function trackBeside(layers: Layer[]): boolean {
+  return layers.some((l) => TRACK_MARKS[l.mark] && (l.mark !== 'bar' || (l.encode && l.encode.x2 != null)));
+}
 
 // A dimension on y: a row for each of its values, with a track that has a metric on x. The ranked bar list is the first of these.
 // The track's scale is derived here, once, from what its layers put on x. It is linear and holds zero and whatever is on
@@ -337,9 +376,16 @@ const TRACK_MARKS: Partial<Record<Mark, TrackFn>> = { bar: trackBar };
 function sceneRows(catalog: Catalog, layers: Layer[], rows: Row[]): Body {
   const nodes: SceneNode[] = [];
   const dim = layers.map((l) => l.encode && l.encode.y).find((f) => isDim(catalog, f)) as string;
-  const tracked = layers.filter((l) => TRACK_MARKS[l.mark]), units = [...new Set(tracked.map((l) => catalog.metrics[l.encode!.x as string]?.unit))];
+  const tracked = layers.filter((l) => TRACK_MARKS[l.mark]), units = [...new Set(tracked.map((l) => metricOf(catalog, l.encode!.x)?.unit))];
   if (units.length > 1) throw new Error('These rows have marks that measure in ' + units.length + ' units (' + units.join(', ') + '), and a row has one track. Keep the marks of one unit, and show the other metric as a text layer.');
-  const vals = tracked.flatMap((l) => rows.map((r) => num(r, l.encode!.x as string)));
+  // What a layer puts on the track in one row: its value, and its second end where it has one. A layer of the previous
+  // series reads the metric's companion. A tick that is a `reference` stands at the metric's catalog `target`, as a gauge's mark does.
+  const on = (l: Layer, r: Row): (number | null | undefined)[] => {
+    const { x, x2 } = l.encode!, f = l.series === 'previous' ? x + '@previous' : (x as string);
+    const at = typeof x === 'number' ? x : l.mark === 'tick' && roleOf(l) === 'reference' ? metricOf(catalog, f)?.target : (r[f] as number | null | undefined);
+    return x2 == null ? [at] : [at, typeof x2 === 'number' ? x2 : (r[x2] as number | null | undefined)];
+  };
+  const vals = tracked.flatMap((l) => rows.flatMap((r) => on(l, r) as number[])), beside = trackBeside(layers);
   const lo = Math.min(0, min(vals) ?? 0), hi = Math.max(0, max(vals) ?? 0) || (lo ? 0 : 1), v = (n: number) => (n - lo) / (hi - lo);
   const ids = layerKeys(layers), cols = columnsOf(catalog, layers);
   // A column after the first is ranked by its place, so the last goes first. One column of values needs no header: the view's title says what it is.
@@ -354,17 +400,20 @@ function sceneRows(catalog: Catalog, layers: Layer[], rows: Row[]): Body {
     layers.forEach((l, li) => {
       const draw = TRACK_MARKS[l.mark];
       if (draw) {
-        nodes.push(...draw(l, { id: ids[li]!, role: roleOf(l), paint: l.paint || 'series.1', row: r, k, v }));
+        const [at, to] = on(l, r), ranged = l.encode!.x2 != null;
+        if (at == null || (ranged && to == null)) return;                  // a row with nothing to mark has no mark
+        nodes.push(...draw(l, { id: ids[li]!, role: roleOf(l), paint: l.paint || (l.series === 'previous' ? 'compare' : 'series.1'), k, at, ...(ranged && { to: to! }), v, beside,
+          ...(l.mark === 'bar' && ranged && !l.paint && { polarity: metricOf(catalog, l.encode!.x)?.polarity }) }));
       } else if (l.mark === 'text') {
         const cell = cellOf(catalog, l, r);
         nodes.push({ key: ids[li] + ':' + k, part: 'rows', kind: 'text', row: k, text: cell.text,
           anchor: l.align === 'end' ? 'end' : 'start', baseline: 'middle', font: cols.includes(l) ? 'value' : 'label', paint: cell.paint, layer: 'data', role: roleOf(l), ...rank(l) });
       } else {
-        throw new Error('The "' + l.mark + '" mark has no rule for rows yet. Use bar or text.');
+        throw new Error('The "' + l.mark + '" mark has no rule for rows yet. Use bar, text, rule, tick or dot.');
       }
     });
   });
-  return { nodes, rows: rows.map((r) => r[dim] as string) };
+  return { nodes, rows: rows.map((r) => r[dim] as string), ...(beside && { track: 'beside' as const }) };
 }
 
 // No positional dimension: one band, stacked and normalized, split by colour. A share is of the engine's total, so

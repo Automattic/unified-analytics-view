@@ -68,6 +68,8 @@ export const FIT_RULES: FitRule[] = [
     hide: ['plot', 'ramp'], show: ['number'], keep: 'marks' },
   { id: 'notice',    layout: 'notice',    container: 'view', needs: { inline: 150, block: 40 },
     hide: ['notice'], show: ['number'], keep: 'marks' },
+  { id: 'track',     layout: 'rows',      container: 'view', needs: { inline: 160 },                  // a track beside its label: the label's 90 px and 70 to read a mark's place in. The value's room is measured
+    hide: ['track'], keep: 'marks' },
 ];
 
 /** The rule a layout has under an id. A part with no rule needs no room. */

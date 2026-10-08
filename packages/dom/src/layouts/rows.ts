@@ -1,6 +1,7 @@
 import { COLUMNS_BLOCK, columnRooms, type RowNode, type SceneNode, type TextNode } from '@universal-analytics/core';
-import { ensure, keyed, prop, text } from '../dom.ts';
+import { attr, ensure, keyed, prop, text } from '../dom.ts';
 import type { LayoutPainter } from '../layout.ts';
+import { TRACK_CSS, TRACK_FIT, trackMark } from './track.ts';
 
 /* A dimension on y: a row for each of its values. The body is one grid, with a track for the label, which gives way,
  * and one for each column of values, sized by its content. The headers and every row are subgrids of it, so a column
@@ -20,10 +21,10 @@ const css = `
 .vg[data-layout="rows"]:not([data-parts~="columns"]) .vg-columns { display: none; }
 .vg-rows { grid-row: 2; align-content: start; row-gap: var(--vg-row-gap); overflow: hidden; }
 .vg-row { position: relative; align-items: center; block-size: var(--vg-row-block); }
-.vg-row > i { position: absolute; grid-column: 1 / 3; inset-block: 0; inset-inline-start: calc(var(--vg-x, 0) * 100%); inline-size: max(3px, calc(var(--vg-v) * 100%));
+.vg-row > i { position: absolute; grid-column: var(--vg-track, 1 / 3); inset-block: 0; inset-inline-start: calc(var(--vg-x, 0) * 100%); inline-size: max(3px, calc(var(--vg-v) * 100%));
   background: var(--vg-paint); border-radius: var(--a8c-charts-border-radius-bar, 3px); }
 :is(.vg-row, .vg-columns) > span { position: relative; grid-row: 1; padding-inline: 8px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--vg-paint); }
-.vg-row > .vg-f-label { grid-column: 1; padding-inline-end: 0; }
+.vg-row > .vg-f-label { grid-column: var(--vg-col, 1); padding-inline-end: 0; }
 :is(.vg-row, .vg-columns) > span:not(.vg-f-label) { grid-column: var(--vg-col); }
 :is(.vg-row, .vg-columns) > [data-anchor="end"] { text-align: end; }
 :is(.vg-row, .vg-columns) > [data-rank] { max-inline-size: max(0px, ${short}); padding-inline: min(8px, max(0px, ${short})); }
@@ -33,22 +34,30 @@ const css = `
 
 export const rows: LayoutPainter = {
   layout: 'rows',
-  css,
+  css: css + TRACK_CSS,
   // The number alone. The body goes whole, so the gap its grid row would hold goes with it.
-  fit: { marks: { '': 'grid-template: "number" auto / minmax(0, 1fr);', '.vg-body': 'display: none;', '.vg-number': 'margin: 0;' } },
+  fit: { marks: { '': 'grid-template: "number" auto / minmax(0, 1fr);', '.vg-body': 'display: none;', '.vg-number': 'margin: 0;' }, ...TRACK_FIT },
 
   paint(body, scene, rules) {
     const head = ensure(body, 'div', 'vg-columns'), list = ensure(body, 'div', 'vg-rows'), by = new Map<string, SceneNode[]>();
-    const rooms = columnRooms(scene), label = rules.fit.find((r) => r.layout === 'rows' && r.id === 'marks')?.needs.inline ?? 0;
+    const beside = scene.track === 'beside', room = (id: string) => rules.fit.find((r) => r.layout === 'rows' && r.id === id)?.needs.inline;
+    const rooms = columnRooms(scene), label = (beside ? room('track') : undefined) ?? room('marks') ?? 0;
+    // A row's labels stand side by side in the order they come, each before the last in a column as wide as its text.
+    // Beside its label the track is a column too. `first` is the column of the first value.
+    const col = new Map<string, number>(), count = new Map<string, number>();
+    for (const n of scene.nodes) if (n.part === 'rows' && n.kind === 'text' && n.font === 'label') { col.set(n.key, (count.get(n.row!) ?? 0) + 1); count.set(n.row!, col.get(n.key)!); }
+    const lead = Math.max(1, ...count.values()) - 1, first = lead + (beside ? 3 : 2);
     // The room a view needs to show the column of this rank: the label's, by the `marks` rule, and each column's up to it.
     const need = (rank?: number) => (rank ? label + rooms.slice(0, rank + 1).reduce((s, w) => s + w, 0) + 'px' : null);
     list.setAttribute('data-hits', 'y');                                     // each row is its own hit target
-    prop(body, '--vg-tracks', 'minmax(0, 1fr)' + ' auto'.repeat(rooms.length));
+    prop(body, '--vg-tracks', 'auto '.repeat(lead) + (beside ? 'minmax(0, auto) ' : '') + 'minmax(0, 1fr)' + ' auto'.repeat(rooms.length));
+    prop(body, '--vg-track', beside ? first - 1 + ' / ' + first : lead ? '1 / ' + (first + 1) : null); attr(body, 'data-track', scene.track);
     prop(body, '--vg-row-block', rules.rows.rowHeight + 'px'); prop(body, '--vg-row-gap', rules.rows.gap + 'px'); prop(body, '--vg-columns-block', COLUMNS_BLOCK + 'px');
     // A column's cell says which track is its own, so one that is given up leaves the others where they are.
     const cell = (c: HTMLElement | SVGElement, n: TextNode) => {
       text(c, n); c.setAttribute('data-anchor', n.anchor);
-      if (n.font !== 'label') { prop(c, '--vg-col', (n.rank || 0) + 2); prop(c, '--vg-need', need(n.rank)); }
+      if (n.font !== 'label') { prop(c, '--vg-col', (n.rank || 0) + first); prop(c, '--vg-need', need(n.rank)); }
+      else prop(c, '--vg-col', lead ? col.get(n.key) : null);
     };
     // Headers stand over more than one column, so they go with the second.
     prop(head, '--vg-need', need(1));
@@ -60,6 +69,7 @@ export const rows: LayoutPainter = {
         if (n.kind === 'text') cell(c, n);
         // A bar lies from where its track has zero to its value.
         else if (n.kind === 'rect') { const from = n.v0 ?? 0; prop(c, '--vg-x', Math.min(from, n.v!) || null); prop(c, '--vg-v', Math.abs(n.v! - from)); }
+        else if (n.kind === 'line' || n.kind === 'circle') trackMark(c, n);
       });
     });
   },

@@ -68,6 +68,15 @@ export function tldrProse(q: Query, result: Result, share: boolean, catalog: Cat
   }).join(' ');
 }
 
+/** What a view with a range says after its own sentence: the least and the most the range holds over the rows.
+ * `ends` are the two fields a row's range runs between. A comparison of the engine's numbers, as the leader is: nothing
+ * is worked out. Empty where no row has an end. */
+export function rangeProse(q: Query, result: Result, catalog: Catalog, ends: [string, string]): string {
+  const by = (q.by || [])[0], rows = result.rows, vals = rows.flatMap((r) => ends.map((f) => r[f])).filter((v): v is number => typeof v === 'number');
+  if (!by || !vals.length) return '';
+  return ' Between ' + fmt(Math.min(...vals)) + ' and ' + fmt(Math.max(...vals)) + ' across ' + rows.length + ' ' + catalog.dimensions[by]!.label.toLowerCase() + (rows.length === 1 ? '' : 's') + '.';
+}
+
 /** The tldr prose for a metric by two dimensions on a grid: the cell that holds the most, and the busiest value of each
  * dimension as a share of the engine's total. The peak is a comparison of the engine's rows and the rest are its totals
  * by dimension: nothing is summed. Null where there is nothing to say it of, and the query's own sentence stands. */

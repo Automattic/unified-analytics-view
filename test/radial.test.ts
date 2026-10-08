@@ -179,6 +179,6 @@ describe('validation', () => {
     expect(err(arc({ angle: 'channel', color: 'channel' }))).toBe('Layer 1 splits by "channel" with "channel" on angle. Put a metric on angle: each segment is its share of that metric\'s total.');
     expect(err({ spec: 'view/0', use: 'pie', query: { metrics: ['visitors'] } })).toBe('The "pie" preset needs a dimension in query.by.');
     expect(err({ spec: 'view/0', query: { metrics: ['visitors'], by: ['channel'] }, layers: [{ mark: 'arc', encode: { x: 'channel', y: 'visitors' } }] }))
-      .toBe('The "arc" mark has no rule for a time or category axis yet. Use line, area, bar, rule, dot or text.');
+      .toBe('The "arc" mark has no rule for a time or category axis yet. Use line, area, bar, rule, dot, text or tick.');
   });
 });

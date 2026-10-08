@@ -128,24 +128,25 @@ describe('a delta per row', () => {
     expect(at<{ paint: string }>(turned.nodes, 'primary:text#3:/').paint).toBe('delta.bad');
   });
   it('is left out when the query has no compare, and dropped when there is nothing to compare with', () => {
-    const none: Spec = { ...league, query: { ...league.query, compare: undefined } };
+    // The rank goes with the compare too: the fixture returns it only then (test/ranges.test.ts).
+    const none: Spec = { ...league, layers: league.layers!.slice(1), query: { ...league.query, compare: undefined } };
     expect(run(none, 346).plan).toMatchObject({ guides: {}, dropped: ['the change on the previous period (the query has no "compare")'] });
     expect(run(league, 346, null, 'no-prior').plan).toMatchObject({ guides: {}, dropped: ['the change on the previous period (no prior data)'] });
-    expect(run(league, 346, null, 'no-prior').ratio.nodes.filter((n) => n.row === '/').map((n) => n.key)).toEqual(['row:/', 'primary:text:/', 'primary:text#2:/']);
+    expect(run(league, 346, null, 'no-prior').ratio.nodes.filter((n) => n.row === '/').map((n) => n.key)).toEqual(['row:/', 'context:text:/', 'primary:text:/', 'primary:text#2:/']);
     // A preset leaves it out on expansion, as it does a previous layer.
     const presets = { table: { layers: [{ mark: 'text' as const, encode: { y: '$by', text: '$by' } }, { mark: 'text' as const, encode: { y: '$by', text: '$metric' }, series: 'delta' as const }] } };
     expect(expand({ use: 'table', query: league.query }, presets).layers!.length).toBe(2);
     expect(expand({ use: 'table', query: none.query }, presets).layers!.length).toBe(1);
   });
   it('is counted after the other layers for its key, so the columns before and after it keep theirs when it goes', () => {
-    const mixed: Spec = { ...league, layers: [league.layers![0]!, league.layers![2]!, league.layers![1]!] };
+    const mixed: Spec = { ...league, layers: [league.layers![1]!, league.layers![3]!, league.layers![2]!] };
     const keys = (sc: (typeof scenarios)[number]) => run(mixed, 346, null, sc).ratio.nodes.filter((n) => n.row === '/').map((n) => n.key);
     expect(keys('typical')).toEqual(['row:/', 'primary:text:/', 'primary:text#3:/', 'primary:text#2:/']);
     expect(keys('no-prior')).toEqual(['row:/', 'primary:text:/', 'primary:text#2:/']);
   });
   it('the schema takes it, and an error names the fix where it is not a row\'s text', () => {
     expect(view(league), JSON.stringify(view.errors)).toBe(true);
-    expect(view({ ...league, layers: [{ ...league.layers![2]!, series: 'rank' }] })).toBe(false);
+    expect(view({ ...league, layers: [{ ...league.layers![3]!, series: 'rank' }] })).toBe(false);
     expect(err({ query: { metrics: ['visitors'], by: ['date.day'], compare: 'previous' }, layers: [{ mark: 'line', encode: { x: 'date.day', y: 'visitors' }, series: 'delta' }] }))
       .toBe('Layer 1 has series: "delta", which is a row\'s change in a metric. Make it a text layer with the dimension on y and the metric on text.');
   });
@@ -173,7 +174,7 @@ describe('the track', () => {
   it('errors name the fix: marks in two units, and a mark the track has no rule for', () => {
     const two: Spec = { query: conversions.query, layers: [...conversions.layers!, { mark: 'bar', encode: { y: 'event', x: 'conversion_value' } }] };
     expect(err(two)).toBe('These rows have marks that measure in 2 units (count, usd), and a row has one track. Keep the marks of one unit, and show the other metric as a text layer.');
-    expect(err({ query: conversions.query, layers: [{ mark: 'line', encode: { y: 'event', x: 'conversions' } }] })).toBe('The "line" mark has no rule for rows yet. Use bar or text.');
+    expect(err({ query: conversions.query, layers: [{ mark: 'line', encode: { y: 'event', x: 'conversions' } }] })).toBe('The "line" mark has no rule for rows yet. Use bar, text, rule, tick or dot.');
   });
 });
 

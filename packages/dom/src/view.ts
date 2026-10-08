@@ -144,8 +144,10 @@ export function pivot(q: Query, result: Result, fields: string[]): { cols: Row[s
 /* The table is rebuilt whole: nothing in it moves, so there is nothing to keep. Totals are the engine's, never a sum of the rows. */
 function paintTable(table: HTMLTableElement, title: string | undefined, q: Query, result: Result, catalog: Catalog): void {
   const by = q.by || [], prev = q.compare === 'previous';
-  const fields = q.metrics.flatMap((m) => (prev ? [m, m + '@previous'] : [m]));
-  const label = (f: string) => { const m = f.replace('@previous', ''); return catalog.metrics[m]!.label + (f === m ? '' : ', previous period'); };
+  // A companion the engine returned with a metric has a column after it, under its suffix. With two dimensions the table is a pivot, and has none.
+  const more = (m: string) => (by.length === 2 ? [] : Object.keys(result.rows[0] ?? {}).filter((f) => f.startsWith(m + '@') && f !== m + '@previous'));
+  const fields = q.metrics.flatMap((m) => [m, ...(prev ? [m + '@previous'] : []), ...more(m)]);
+  const label = (f: string) => { const [m, of] = f.split('@'); return catalog.metrics[m!]!.label + (of == null ? '' : ', ' + (of === 'previous' ? 'previous period' : of)); };
   const row = (parent: HTMLElement, cells: [text: string, tag: 'th' | 'td', num?: boolean][]) => {
     const tr = parent.appendChild(document.createElement('tr'));
     for (const [s, tag, num] of cells) { const c = tr.appendChild(document.createElement(tag)); c.textContent = s; if (num) c.setAttribute('data-num', ''); if (tag === 'th') c.scope = parent.tagName === 'THEAD' ? 'col' : 'row'; }
@@ -163,7 +165,7 @@ function paintTable(table: HTMLTableElement, title: string | undefined, q: Query
     return;
   }
   row(table.createTHead(), [...by.map((d): [string, 'th'] => [catalog.dimensions[d]!.label, 'th']), ...fields.map((f): [string, 'th', boolean] => [label(f), 'th', true])]);
-  const value = (v: Row[string], f: string) => formatValue(v as number | null, catalog.metrics[f.replace('@previous', '')]!, 'exact');
+  const value = (v: Row[string], f: string) => formatValue(v as number | null, catalog.metrics[f.split('@')[0]!]!, 'exact');
   const body = table.createTBody(), totals = fields.map((f): [string, 'td', boolean] => [value(result.totals[f], f), 'td', true]);
   for (const r of result.rows) row(body, [...by.map((d): [string, 'th'] => [formatDimension(r[d], catalog.dimensions[d]!), 'th']), ...fields.map((f): [string, 'td', boolean] => [value(r[f], f), 'td', true])]);
   if (!by.length) row(body, totals);

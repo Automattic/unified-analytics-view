@@ -99,6 +99,7 @@ The catalog is the slice of the semantic model the front end needs. Computation 
 
 Rules the front end relies on:
 
+- **The names in this document are the fixtures'.** Another catalog has its own (`bucket` for `date.day`, `page_views` for `pageviews`), and a spec uses the names of the catalog it is drawn against.
 - **Each name is defined exactly once,** outside both the data and the views. A view refers to `visitors`; it never carries a formula.
 - **Totals come from the engine.** A view never sums the rows it happens to receive, because many metrics are not additive. Visitors in v1 are counted per day, so a range total is a sum of daily counts and must be labelled as one (`rangeTotal: "sum of daily"`).
 - **The unit says how a value is written,** wherever it is written: the tldr value, a tick, a row, the readout, the table, the prose. The units are `count`, `ratio` (a rate from 0 to 1), `percent` (one from 0 to 100), `ms`, `s` and `bytes`, and a currency's ISO 4217 code in lower case (`usd`, `eur`) for money in that currency's own units: dollars, not cents. Each currency is a unit of its own, so two never share an axis and nothing adds them. An unknown unit is an error. A `number` dimension has no unit yet, so load time is still a bare number.
@@ -107,7 +108,9 @@ Rules the front end relies on:
 - **A dimension whose values are codes says so,** with `values`. `country` is the one kind: an ISO 3166-1 alpha-2 code in capitals, written as the country's name wherever a value is written. An empty code reads as no value, and what is not a code is written as it came.
 - **Polarity drives delta colour.** `up` means an increase is good, `down` the reverse, `none` means no judgement.
 - **`instant`** marks a metric with no range and no prior period, such as people present now.
-- **`unit` sets how a value reads** wherever it is said: the tldr value, an axis, a row, a readout and the prose. `ratio` is a percentage and `seconds` a length of time ("3m 48s"). Every other unit still reads as a count; currency is not built.
+- **How each unit reads.** `count` is a number, shortened where room is short ("13.4k"). `ratio` and `percent` are both written as a percentage ("5.8%"). `ms` and `s` are a length of time ("27.6s", "3m 48s"). `bytes` is a size. A currency is written with its symbol ("$4,333"). A value that is null is written as a dash, and never as zero.
+- **A metric may say what it is read against,** with `domain` (least, then most), `target` and `bands`. The `gauge` preset needs `domain`; a gauge and the `bullet` preset mark `target`. A dimension of type `number` is one the engine has cut into bins: each row holds where its bin starts, and where it ends as `<dimension>@end`. These are built here and are in the schema. They are still proposals to the API's owners (section 19, Open 11).
+- **A name is an opaque string.** `date.day`, `bucket`, `revenue.usd` and `page_views` are all names; a dot means nothing to the grammar. Only `@` is read: `<name>@<suffix>` is a companion of `<name>`.
 - **Unknown is null, not zero.**
 
 Properties the full catalog will need but the stub lacks: format, thresholds or bands, valid dimensions per metric, valid grains, approximation and coverage, identity definition for people-counts, hierarchy on dimensions, and a colour role on dimensions.
@@ -149,6 +152,8 @@ A result is:
 
 - A comparison is delivered as a companion field, `metric@previous`, aligned row by row. It is null when there is no prior data.
 - Statistics arrive the same way, as companions the engine returns: `metric@p25`, `metric@lower`, `metric@running`, `metric@rank`, and `dimension@end` for a bin. Core computes none of them. A query cannot yet ask for one by name; that is Open.
+- A spec drawn against an answer that already exists names metrics that answer has, in any order and not necessarily all of them: the first named is the primary metric. Its `by`, `range` and `compare` are the answer's. Leaving `limit` out keeps every row the answer has.
+- A total may be null, where the engine has no figure for the range. It is written as a dash.
 - `partial: true` marks an incomplete bucket (today).
 - `meta.empty: true` marks a period with no data at all.
 
@@ -194,6 +199,10 @@ A layer:
 | `align` | `"end"` for right-aligned text |
 | `paint` | Override the paint token. `"delta"` is the paint of the metric's change over the range: good or bad by its polarity, and the layer's own where there is no change to judge. Built October 8, for the sidebar test case |
 
+Paint tokens an author may name: `series.1` to `series.6`, `compare`, `rule`, `ink`, `ink.muted`, `delta`, `delta.good` and `delta.bad`. A layer with no `paint` takes `series.1`, or `compare` for a `previous` series; a layer split by a dimension on `color` takes a series colour per value.
+
+**Several metrics on one plot.** Each is a layer of its own, and each takes `series.1` unless its `paint` says otherwise, so give the second `"paint": "series.2"`. Metrics of one unit share the y axis, however far apart their values are. Metrics of two units get an axis each; three units is an error. There is no legend for layers that differ by metric: a legend comes only from a dimension on `color`. That is a known gap (October 8).
+
 The same spec, written as layers:
 
 ```json
@@ -216,7 +225,7 @@ Rules:
 - There is no `intent` field. An earlier version had one; it was a chart type under a new name and was removed.
 - There is no `headline` field and no `guides` field. Both were presentation switches and were removed on October 7; the schema rejects them. The container's rules decide what they used to.
 
-**To do:** publish a JSON Schema for the spec. It is the contract agents will write against.
+The JSON Schema for a spec is `packages/core/schema/view.schema.json`, and the catalog's is beside it. It is the contract agents write against. It cannot check a field against a result, a preset's name, or a custom mark's: `resolve()` does, and its error names the fix.
 
 ---
 
@@ -260,6 +269,23 @@ A custom mark registered in code and referenced by name is the escape hatch for 
 | `radial` | Anything on `angle` | `arc`s about one centre |
 | a custom mark's name | A layer with that mark | Whatever the mark draws, alone |
 
+**A table is rows of `text` layers.** In `rows`, each `text` layer with a metric on `text` is a column of values, set at the end with `align: "end"`; one with the dimension on `text` is the row's label. With more than one column the columns get headers, from the metrics' labels. A bar is optional: rows with no bar, dot or tick are a plain table. Each column takes the unit of its own metric, so columns of different units, or of several currencies, are fine. A header cannot be authored, and a column that is not a metric is written raw.
+
+```json
+"layers": [
+  { "mark": "bar",  "encode": { "y": "page", "x": "pageviews" } },
+  { "mark": "text", "encode": { "y": "page", "text": "page" } },
+  { "mark": "text", "encode": { "y": "page", "text": "pageviews" }, "align": "end" },
+  { "mark": "text", "encode": { "y": "page", "text": "engaged_time" }, "align": "end" }
+]
+```
+
+**The `geo` mark** draws a map, and is the one custom mark so far. It takes one layer, alone in the view. `x` is the dimension whose values are region keys (a `country` dimension holds ISO 3166-1 alpha-2 codes). `color` is a metric to fill each region by, on the sequential ramp; `size` is a metric for a symbol on each region. Either or both. The boundary shapes and the projection are handed over in code, not in the spec.
+
+```json
+{ "query": { "metrics": ["visitors"], "by": ["country"] }, "layers": [{ "mark": "geo", "encode": { "x": "country", "color": "visitors" } }] }
+```
+
 `rows` is a track per row: a label, a track with a linear scale that bars, dots, rules and ticks draw in, and columns of values. Facets are not built (section 19, Decided 26). The plan and what building it found are in `docs/chart-coverage-plan.md`.
 
 ---
@@ -288,7 +314,7 @@ Delta states: up or down with a percentage, "No change" (under 0.5%), "New" (pri
 
 **Status: Proven.**
 
-A preset is a saved fragment of a spec with two slots, `$by` and `$metric`, filled from the query. It expands before the grammar runs, and nothing downstream knows its name.
+A preset is a saved fragment of a spec with slots filled from the query: `$metric` and `$by`, `$split` for a second dimension, and `$metric2` for a second metric. A slot may carry a suffix, `$metric@p50`, for a companion the engine returns. It expands before the grammar runs, and nothing downstream knows its name.
 
 ```json
 {
@@ -307,6 +333,32 @@ A preset is a saved fragment of a spec with two slots, `$by` and `$metric`, fill
   ] }
 }
 ```
+
+The library ships these (`packages/core/src/presets.ts`). The three above are written out; the rest expand the same way.
+
+| Preset | The query needs | Draws |
+|---|---|---|
+| `line` | One dimension, time or ordered | A line over its filled area, and the period before as a second line when the query compares |
+| `bar-list` | One categorical dimension | Ranked rows: a bar, the label and the value |
+| `share-bar` | One categorical dimension | One bar divided by share, with a legend |
+| `grouped-bar` | Two dimensions: the axis, then the split | Bars side by side, a colour for each value of the split |
+| `stacked-bar` | Two dimensions: the axis, then the split | Bars stacked |
+| `stacked-area` | Two dimensions: the axis, then the split | Areas stacked |
+| `pie` | One categorical dimension of six values or fewer (`limit`) | A circle divided by share |
+| `donut` | The same | A ring divided by share, with the total in the middle |
+| `pie-semi-circle` | The same | Half a ring |
+| `gauge` | No dimension, and a metric with a catalog `domain` | The metric against its range, with its `target` marked and its `bands` behind |
+| `heatmap` | Two dimensions: down the side, then across | A grid of cells coloured by the metric |
+| `funnel` | Two metrics, a count then a rate, by a dimension in the engine's order | Rows with a bar, the count and the rate |
+| `box-plot` | Companions `@min`, `@p25`, `@p50`, `@p75`, `@max` | A box and whiskers for each value |
+| `error-bars` | Companions `@lower`, `@upper` | A bar and the interval it is known to |
+| `waterfall` | Companions `@before`, `@running` | Floating bars, each from the running total before it |
+| `candlestick` | Companions `@open`, `@close`, `@min`, `@max` | A body and a wick for each value |
+| `fan` | Companions `@lower`, `@upper` | A line inside the band it is known to |
+| `dumbbell` | One categorical dimension, and `compare` | Rows with a dot for now and one for before, joined. Without `compare`, a dot each |
+| `bullet` | One categorical dimension, and a metric with a catalog `target` | Rows with a bar and a tick at the target |
+
+A companion is something the engine returns with a metric. A query cannot yet ask for one by name (section 5), so a preset that needs companions works only against a result that has them.
 
 - The library ships the basics. Users and agents add their own presets to it.
 - A preset is named after the `@automattic/charts` component it replaces, where one exists: `line` for `LineChart`, `bar-list` for `BarListChart`. The prototype calls `line` by its earlier name, `trend`.
@@ -627,7 +679,7 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 8. Whether deltas exclude the partial day.
 9. Params and selections. Not started. The design intent: a selection is a filter predicate, not pixels or row IDs; three kinds (interval, point, set); several views combine by union, intersection or cross-filter; dragging is transient and local, releasing commits to the context.
 10. Settled October 7: see Decided 24. Built October 8.
-11. Catalog properties beyond the stub, and where polarity and thresholds are declared. What this repo will propose to the API's owners is listed in `docs/chart-coverage-plan.md`, section 3.5: a `number` dimension type; `domain`, `target` and `bands` on a metric; a colour role per dimension value; and totals per split on the result.
+11. Catalog properties beyond the stub, and where polarity and thresholds are declared. What this repo will propose to the API's owners is listed in `docs/chart-coverage-plan.md`, section 3.5: a `number` dimension type; `domain`, `target` and `bands` on a metric; a colour role per dimension value; and totals per split on the result. All but the colour role are built here and are in the schema, so a catalog may use them; what is open is whether the API will send them.
 12. How a board composes views that share params. A facet is a small board (Decided 26), so a facet waits for this.
 13. The name.
 14. Which survives at the smallest size, the marks or the tldr value. Today the tldr value does; a sparkline in a table cell wants the line alone. To settle in testing.

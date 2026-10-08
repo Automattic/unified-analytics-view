@@ -24,7 +24,8 @@ export interface LayoutPainter {
   layout: Layout;
   /** Its stylesheet text. It joins the base sheet inside `@layer vg`, so every compiled fit rule beats it whatever
    * the specificity. Begin selectors with `.vg[data-layout="…"]`. For a natural height other than its content's,
-   * set `--vg-body-block` on the figure; a view handed a box ignores it and the body fills what is left. */
+   * set `--vg-body-block` on the figure; a view handed a box ignores it and the body fills what is left. A body
+   * whose content has a height of its own states the height of the part that has none (cartesian.ts). */
   css: string;
   /** What else changes when one of its fit rules applies, by rule id: a selector inside the figure ('' is the
    * figure itself), then declarations. They are written under the rule's own condition and `keep`. */

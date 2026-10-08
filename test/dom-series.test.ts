@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { buildScene, pathD, resolve, unboundedContainer, type PathNode, type RectNode } from '@universal-analytics/core';
+import { CONTAINER_RULES, buildScene, pathD, resolve, unboundedContainer, type PathNode, type RectNode } from '@universal-analytics/core';
 import { catalog, moreSamples, runQuery, type Scenario } from '@universal-analytics/fixtures';
+import { compileFitRules } from '../packages/dom/src/compile.ts';
+import { band } from '../packages/dom/src/layouts/band.ts';
 import { cartesian } from '../packages/dom/src/layouts/cartesian.ts';
+import { apart } from '../packages/dom/src/measure.ts';
 import { mix, resample } from '../packages/dom/src/motion.ts';
 
 // What <ua-view> adds for a plot split into series, a stack, a signed scale and a second unit, where it is a plain
@@ -46,5 +49,57 @@ describe('a split path', () => {
   it('gains a start when it had none, and loses one', () => {
     expect(mix([{ x: 0, v: 0.4 }], [{ x: 0, v: 0.8, v0: 0.2 }], 0.5)).toEqual([{ x: 0, v: 0.6000000000000001, v0: 0.1 }]);
     expect(mix([{ x: 0, v: 0.8, v0: 0.2 }], [{ x: 0, v: 0.4 }], 1)).toEqual([{ x: 0, v: 0.4, v0: 0 }]);
+  });
+});
+
+describe('the cartesian layout\'s guides', () => {
+  const rules = (id: string) => CONTAINER_RULES.fit.filter((r) => r.layout === 'cartesian' && r.id === id);
+  const fig = '.vg[data-layout="cartesian"]:not([data-keep~="guides"])';
+
+  it('swaps the legend for the labels at the line ends, as a grid, and then gives those up', () => {
+    expect(compileFitRules(rules('legend'), { cartesian: cartesian.fit! }).split('\n').slice(0, 6)).toEqual([
+      '/* cartesian legend */', '@container view (inline-size < 320px) {',
+      '  ' + fig + ' .vg-legend { display: none; }', '  ' + fig + ' .vg-labels { display: block; }', '  ' + fig + ' .vg-labels { display: grid; }', '}',
+    ]);
+    const css = compileFitRules(CONTAINER_RULES.fit, { cartesian: cartesian.fit! });
+    expect(css.indexOf(fig + ' .vg-labels { display: none; }')).toBeGreaterThan(css.lastIndexOf(fig + ' .vg-labels { display: grid; }'));
+  });
+  it('gives up the second axis before the first, and with it whenever the axes go', () => {
+    expect(compileFitRules(rules('axis-2'))).toBe('/* cartesian axis-2 */\n@container view (inline-size < 340px) {\n  ' + fig + ' .vg-y-axis-2 { display: none; }\n}');
+    expect(compileFitRules(rules('axes'), { cartesian: cartesian.fit! })).toContain(fig + ' .vg-y-axis-2 { display: none; }');
+  });
+  it('keeps the labels out until a rule brings them in, and the legend out of a plot that is not split', () => {
+    expect(cartesian.css).toContain('.vg-labels { grid-area: labels; display: none; }');
+    expect(cartesian.css).toContain('.vg[data-layout="cartesian"]:not([data-parts~="legend"]) .vg-legend { display: none; }');
+    expect(of('series').scene.parts).toContain('legend');
+    expect(of('diverging').scene.parts).not.toContain('legend');
+  });
+  it('says the band\'s legend differently, under the same class, and leaves the band\'s alone', () => {
+    expect(cartesian.css).toContain('.vg[data-layout="cartesian"] .vg-legend { grid-area: legend; display: flex; flex-wrap: wrap;');
+    expect(band.css).toContain('.vg-legend { display: grid;');
+  });
+});
+
+describe('apart', () => {
+  it('leaves labels that are clear of each other where they are', () => {
+    expect(apart([10, 60, 110], 14, 150)).toEqual([10, 60, 110]);
+  });
+  it('sets those that are close a line apart, whatever order they come in', () => {
+    expect(apart([50, 52, 20], 14, 150)).toEqual([50, 64, 20]);
+    expect(apart([52, 50], 14, 150)).toEqual([64, 50]);
+  });
+  it('pushes back up from the bottom of the room', () => {
+    expect(apart([140, 145, 148], 14, 150)).toEqual([122, 136, 150]);
+  });
+  it('gives up the lowest when there is no room for all', () => {
+    expect(apart([5, 10, 15, 20], 14, 30)).toEqual([2, 16, 30, null]);
+    expect(apart([5], 14, 0)).toEqual([0]);
+    expect(apart([], 14, 100)).toEqual([]);
+  });
+  it('holds the series\' labels of a three-line plot apart in a 152 px plot', () => {
+    const ys = of('series').scene.nodes.filter((n) => n.part === 'labels').map((n) => (1 - (n as { t: number }).t) * 152);
+    const at = apart(ys, 14, 152).filter((y): y is number => y != null).sort((a, b) => a - b);
+    expect(at).toHaveLength(3);
+    at.slice(1).forEach((y, i) => expect(y - at[i]!).toBeGreaterThanOrEqual(14));
   });
 });

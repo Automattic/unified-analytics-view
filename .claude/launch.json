@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "bench",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["bench"],
+      "port": 5173
+    }
+  ]
+}

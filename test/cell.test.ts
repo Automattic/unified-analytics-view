@@ -139,7 +139,7 @@ describe('the ramp, and the labels', () => {
   });
   it('place() sets the cells a hairline apart, beside a gutter as wide as the longest row label', () => {
     const { scene } = run(heatmap, 346), at = (k: string) => scene.nodes.find((n) => n.key === k) as unknown as { x: number; y: number; w: number; h: number };
-    const ml = 3 * 6.6 + 6, pw = (346 - ml) / 24, ph = (184 - 22) / 7, first = at('primary:cell:12am:Mon'), next = at('primary:cell:1am:Tue');
+    const ml = 3 * 6.6 + 14, pw = (346 - ml) / 24, ph = (184 - 22) / 7, first = at('primary:cell:12am:Mon'), next = at('primary:cell:1am:Tue');
     expect(first).toMatchObject({ x: ml, y: 0, rx: 1 });
     [[first.w, pw - 1], [first.h, ph - 1], [next.x, ml + pw], [next.y, ph]].forEach(([px, want]) => expect(px).toBeCloseTo(want!, 9));
     expect(at('ytick:Mon')).toMatchObject({ x: ml - 6, anchor: 'end', baseline: 'middle' });

@@ -103,10 +103,10 @@ function placeLegend(scene: Scene, W: number): Block {
 function placeMatrix(scene: Scene, W: number, H: number): PlacedNode[] {
   const texts = (part: Part) => (scene.parts.includes(part) ? scene.nodes.filter((n): n is TextNode => n.part === part && n.kind === 'text') : []);
   const ys = texts('y-axis'), xs = texts('x-axis');
-  const ml = ys.length ? Math.min(LABEL, Math.max(...ys.map((n) => n.text.length))) * CHAR_W + 6 : 0, pw = W - ml, ph = H - (xs.length ? 22 : 0);
+  const ml = ys.length ? Math.min(LABEL, Math.max(...ys.map((n) => n.text.length))) * CHAR_W + 14 : 0, pw = W - ml, ph = H - (xs.length ? 22 : 0);   // CHAR_W is short for a capital, so the gutter is not
   const below = (labels: TextNode[], pitch: number, size: (n: TextNode) => number) =>
-    [3, 2].find((r) => labels.filter((n) => (n.rank || 0) < r).every((n, i, kept) => !i || pitch * (labels.indexOf(n) - labels.indexOf(kept[i - 1]!)) >= (size(n) + size(kept[i - 1]!)) / 2 + 4)) ?? 1;
-  const xr = below(xs, pw / xs.length, (n) => n.text.length * CHAR_W), yr = below(ys, ph / ys.length, () => LABEL_LINE - 4);
+    [3, 2].find((r) => labels.filter((n) => (n.rank || 0) < r).every((n, i, kept) => !i || pitch * (labels.indexOf(n) - labels.indexOf(kept[i - 1]!)) >= (size(n) + size(kept[i - 1]!)) / 2 + 8)) ?? 1;
+  const xr = below(xs, pw / xs.length, (n) => n.text.length * CHAR_W), yr = below(ys, ph / ys.length, () => LABEL_LINE - 8);
   const out: PlacedNode[] = [];
   scene.nodes.forEach((n) => {
     if (n.kind === 'rect' && n.part === 'plot') {

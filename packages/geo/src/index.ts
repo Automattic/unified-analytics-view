@@ -1,6 +1,6 @@
 import { geoEqualEarth, geoPath, type ExtendedFeatureCollection, type GeoProjection } from 'd3-geo';
 import { dotRadius, notShownNote, registerMark, roleOf, seqScale, sizeKey, sizeStep } from '@universal-analytics/core';
-import type { CircleNode, CustomMark, FitRule, Part, PathNode, PlacedNode, SceneNode, TextNode } from '@universal-analytics/core';
+import type { CircleNode, CustomMark, FitRule, Part, PathNode, PlacedNode, Row, SceneNode, TextNode } from '@universal-analytics/core';
 
 /* The `geo` mark: a map of regions, as a custom mark (core's marks.ts). This is its half for core: a scene in ratios
  * and its place in pixels, with no DOM. The painter is in dom.ts.
@@ -20,8 +20,10 @@ import type { CircleNode, CustomMark, FitRule, Part, PathNode, PlacedNode, Scene
  * This is the only package that depends on d3-geo. */
 
 /** Boundary shapes: a GeoJSON FeatureCollection with a feature for each region, whose `id` is the value the region's
- * dimension has for it. */
-export interface Shapes { type: string; features: { type: string; id?: string | number; geometry: { type: string; coordinates: unknown[] } | null }[] }
+ * dimension has for it, matched as it is written: "US" is not "us". `properties.name` is what the region is called.
+ * A feature with a name and no id is drawn and can have no row: land no value of the dimension stands for.
+ * `keys` says what the ids are, for the error a result that matches none of them gets. */
+export interface Shapes { type: string; keys?: string; features: { type: string; id?: string | number; properties?: { name?: string } | null; geometry: { type: string; coordinates: unknown[] } | null }[] }
 
 const BOX = 100;      // the width of the box paths are drawn in. Its height follows from the shapes
 const MAP = 480;      // px across a map that has room to spare
@@ -42,14 +44,14 @@ const scaled = (d: string, k: number) => d.replace(/-?\d+(?:\.\d+)?/g, (n) => St
 /** The geo mark for a set of boundary shapes. They are fitted to the box whole, so the map is of the shapes handed in:
  * the world, or one country's regions. `projection` is d3-geo's, and Equal Earth where none is given, which keeps areas true. */
 export function geoMark(shapes: Shapes, projection: GeoProjection = geoEqualEarth()): CustomMark {
-  if (!shapes || shapes.type !== 'FeatureCollection' || !Array.isArray(shapes.features) || !shapes.features.length || shapes.features.some((f) => !f || f.id == null)) {
-    throw new Error('The geo mark needs boundary shapes: a GeoJSON FeatureCollection in which every feature has an "id", the value the region\'s dimension has for it. Hand one to geoMark() or registerGeo().');
+  if (!shapes || shapes.type !== 'FeatureCollection' || !Array.isArray(shapes.features) || !shapes.features.length || shapes.features.some((f) => !f || (f.id == null && !f.properties?.name))) {
+    throw new Error('The geo mark needs boundary shapes: a GeoJSON FeatureCollection in which every feature has an "id", the value the region\'s dimension has for it, or where no value stands for it a "properties.name". Hand one to geoMark() or registerGeo().');
   }
   const all = shapes as unknown as ExtendedFeatureCollection, path = geoPath(projection.fitWidth(BOX, all)).digits(1);
   const height = path.bounds(all)[1][1], aspect = Math.round(BOX / height * 1000) / 1000;
   // ponytail: a symbol stands at the centroid of the whole shape, which for a country with far-flung parts is not on
   // its mainland. The centroid of its largest polygon, if that shows.
-  const regions = all.features.map((f) => { const [cx, cy] = path.centroid(f); return { id: String(f.id), d: path(f), x: cx / BOX, t: 1 - cy / height }; }).filter((s) => s.d && Number.isFinite(s.x + s.t));
+  const regions = all.features.map((f) => { const [cx, cy] = path.centroid(f); return { id: f.id == null ? null : String(f.id), key: String(f.id ?? f.properties!.name), d: path(f), x: cx / BOX, t: 1 - cy / height }; }).filter((s) => s.d && Number.isFinite(s.x + s.t));
 
   return {
     rules: GEO_RULES,
@@ -63,21 +65,22 @@ export function geoMark(shapes: Shapes, projection: GeoProjection = geoEqualEart
       }
       // A row with no value for the dimension, null or empty, has no shape, and is no sign that the shapes are the wrong ones.
       const named = rows.filter((r) => r[dim] != null && r[dim] !== '');
-      const at = new Map(named.map((r) => [String(r[dim]), r])), drawn = regions.filter((s) => at.has(s.id));
+      const at = new Map<string | null, Row>(named.map((r) => [String(r[dim]), r])), drawn = regions.filter((s) => at.has(s.id));
+      const keyed = regions.filter((s) => s.id != null);
       if (named.length && !drawn.length) {
-        throw new Error('None of the ' + named.length + ' values of "' + dim + '" is the id of a boundary shape. The first is "' + named[0]![dim] + '", and the shapes have ' + regions.slice(0, 3).map((s) => '"' + s.id + '"').join(', ') + ' and ' + (regions.length - 3) + ' more. Hand geoMark() shapes whose ids are the values of the dimension.');
+        throw new Error('None of the ' + named.length + ' values of "' + dim + '" is the id of a boundary shape. The first is "' + named[0]![dim] + '", and the shapes ' + (shapes.keys ? 'are keyed on ' + shapes.keys + ': ' : 'have ') + keyed.slice(0, 2).map((s) => '"' + s.id + '"').join(', ') + ' and ' + (keyed.length - 2) + ' more. Have the engine send those ids for "' + dim + '", or hand geoMark() shapes whose ids are its values.');
       }
-      const of = (id: string, f: unknown) => (typeof f === 'string' ? (at.get(id)?.[f] as number | null | undefined) : undefined);
+      const of = (id: string | null, f: unknown) => (typeof f === 'string' ? (at.get(id)?.[f] as number | null | undefined) : undefined);
       const values = (f: unknown) => drawn.map((s) => of(s.id, f)).filter((v): v is number => v != null);
       // The colour scale runs over the regions drawn, as a grid's runs over its cells: geometry, read from the rows.
       const fill = typeof color === 'string' ? seqScale(values(color), catalog.metrics[color]!.domain) : null;
       const top = Math.max(0, ...values(size)) || 1, id = roleOf(l) + ':' + l.mark, role = roleOf(l);
       // Every shape handed in is drawn, in the shapes' own order, so the map does not change with the ranking. One the
       // result has a row for carries it. Under symbols the regions are the ground they stand on, in the tone of no value.
-      const nodes: SceneNode[] = regions.map((s): PathNode => ({ key: id + ':' + s.id, part: 'plot', kind: 'path', d: s.d, points: [], fill: true,
-        paint: fill ? fill.paint(of(s.id, color)) : 'seq.none', layer: fill ? 'data' : 'guide', role: fill ? role : 'context', ...(at.has(s.id) && { row: s.id }) }));
-      if (typeof size === 'string') nodes.push(...drawn.filter((s) => of(s.id, size) != null).map((s): CircleNode => ({ key: id + ':' + s.id + ':symbol', part: 'points', kind: 'circle', pulse: false, x: s.x, t: s.t,
-        size: sizeStep(of(s.id, size)!, top), opacity: 0.7, row: s.id, paint: l.paint || 'series.1', layer: 'data', role })));
+      const nodes: SceneNode[] = regions.map((s): PathNode => ({ key: id + ':' + s.key, part: 'plot', kind: 'path', d: s.d, points: [], fill: true,
+        paint: fill ? fill.paint(of(s.id, color)) : 'seq.none', layer: fill ? 'data' : 'guide', role: fill ? role : 'context', ...(at.has(s.id) && { row: s.id! }) }));
+      if (typeof size === 'string') nodes.push(...drawn.filter((s) => of(s.id, size) != null).map((s): CircleNode => ({ key: id + ':' + s.key + ':symbol', part: 'points', kind: 'circle', pulse: false, x: s.x, t: s.t,
+        size: sizeStep(of(s.id, size)!, top), opacity: 0.7, row: s.id!, paint: l.paint || 'series.1', layer: 'data', role })));
       // Rows the map has no shape for: a count of rows, and of nothing in them.
       const ids = new Set(regions.map((s) => s.id)), note = notShownNote(rows.length - named.filter((r) => ids.has(String(r[dim]))).length, catalog.dimensions[dim]!.label);
       if (note) nodes.push({ key: 'note:not-shown', part: 'note', kind: 'text', text: note, anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' });

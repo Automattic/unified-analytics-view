@@ -61,24 +61,24 @@
   --ua-color-red-800: #a30200; /** Contrast ratio: 7.50 */
   --ua-color-red-900: #6b1005; /** Contrast ratio: 11.30 */
   --ua-color-red-1000: #260a06; /** Contrast ratio: 17.00 */
-  --ua-color-qual-steel-100: #cbd5e4; /** Contrast ratio: 1.35 */
-  --ua-color-qual-steel-200: #7590b3; /** Contrast ratio: 3.00 */
-  --ua-color-qual-steel-300: #496b94; /** Contrast ratio: 5.00 */
-  --ua-color-qual-teal-100: #acdeda; /** Contrast ratio: 1.35 */
+  --ua-color-qual-steel-100: #bcd7ff; /** Contrast ratio: 1.35 */
+  --ua-color-qual-steel-200: #5d91d0; /** Contrast ratio: 3.00 */
+  --ua-color-qual-steel-300: #466c97; /** Contrast ratio: 5.00 */
+  --ua-color-qual-teal-100: #aedce2; /** Contrast ratio: 1.35 */
   --ua-color-qual-teal-200: #009f99; /** Contrast ratio: 3.00 */
-  --ua-color-qual-teal-300: #007672; /** Contrast ratio: 5.00 */
-  --ua-color-qual-grass-100: #7eeaa9; /** Contrast ratio: 1.35 */
-  --ua-color-qual-grass-200: #37a068; /** Contrast ratio: 3.00 */
-  --ua-color-qual-grass-300: #357550; /** Contrast ratio: 5.00 */
-  --ua-color-qual-chartreuse-100: #c8e043; /** Contrast ratio: 1.35 */
-  --ua-color-qual-chartreuse-200: #87953c; /** Contrast ratio: 3.00 */
-  --ua-color-qual-chartreuse-300: #646e36; /** Contrast ratio: 5.00 */
-  --ua-color-qual-orange-100: #ffcaa0; /** Contrast ratio: 1.35 */
-  --ua-color-qual-orange-200: #eb6415; /** Contrast ratio: 3.00 */
-  --ua-color-qual-orange-300: #ad4d16; /** Contrast ratio: 5.00 */
-  --ua-color-qual-rose-100: #ffc5d5; /** Contrast ratio: 1.35 */
-  --ua-color-qual-rose-200: #ff4385; /** Contrast ratio: 3.00 */
-  --ua-color-qual-rose-300: #d10058; /** Contrast ratio: 5.00 */
+  --ua-color-qual-teal-300: #00757e; /** Contrast ratio: 5.00 */
+  --ua-color-qual-grass-100: #8de7aa; /** Contrast ratio: 1.35 */
+  --ua-color-qual-grass-200: #00a275; /** Contrast ratio: 3.00 */
+  --ua-color-qual-grass-300: #007763; /** Contrast ratio: 5.00 */
+  --ua-color-qual-chartreuse-100: #c0e22b; /** Contrast ratio: 1.35 */
+  --ua-color-qual-chartreuse-200: #689d00; /** Contrast ratio: 3.00 */
+  --ua-color-qual-chartreuse-300: #4b750d; /** Contrast ratio: 5.00 */
+  --ua-color-qual-orange-100: #ffc9a5; /** Contrast ratio: 1.35 */
+  --ua-color-qual-orange-200: #f8580a; /** Contrast ratio: 3.00 */
+  --ua-color-qual-orange-300: #c4312a; /** Contrast ratio: 5.00 */
+  --ua-color-qual-rose-100: #ffc5d3; /** Contrast ratio: 1.35 */
+  --ua-color-qual-rose-200: #ff457f; /** Contrast ratio: 3.00 */
+  --ua-color-qual-rose-300: #cd0c64; /** Contrast ratio: 5.00 */
   --ua-color-seq-100: #cbed00;
   --ua-color-seq-200: #80e955;
   --ua-color-seq-300: #22de7e;
@@ -317,24 +317,24 @@
   --ua-color-red-800: #ff7759; /** Contrast ratio: 7.50 */
   --ua-color-red-900: #ffb29b; /** Contrast ratio: 11.30 */
   --ua-color-red-1000: #ffebe4; /** Contrast ratio: 17.00 */
-  --ua-color-qual-steel-100: #162b43; /** Contrast ratio: 1.35 */
+  --ua-color-qual-steel-100: #15157f; /** Contrast ratio: 1.35 */
   --ua-color-qual-steel-200: #3d6089; /** Contrast ratio: 3.00 */
-  --ua-color-qual-steel-300: #6583a9; /** Contrast ratio: 5.00 */
-  --ua-color-qual-teal-100: #172e2d; /** Contrast ratio: 1.35 */
-  --ua-color-qual-teal-200: #096964; /** Contrast ratio: 3.00 */
-  --ua-color-qual-teal-300: #00908b; /** Contrast ratio: 5.00 */
-  --ua-color-qual-grass-100: #1d2d22; /** Contrast ratio: 1.35 */
-  --ua-color-qual-grass-200: #336849; /** Contrast ratio: 3.00 */
-  --ua-color-qual-grass-300: #379160; /** Contrast ratio: 5.00 */
-  --ua-color-qual-chartreuse-100: #282b1b; /** Contrast ratio: 1.35 */
-  --ua-color-qual-chartreuse-200: #5a6232; /** Contrast ratio: 3.00 */
-  --ua-color-qual-chartreuse-300: #7a873b; /** Contrast ratio: 5.00 */
-  --ua-color-qual-orange-100: #3f2213; /** Contrast ratio: 1.35 */
-  --ua-color-qual-orange-200: #994517; /** Contrast ratio: 3.00 */
-  --ua-color-qual-orange-300: #d65b14; /** Contrast ratio: 5.00 */
-  --ua-color-qual-rose-100: #4e1424; /** Contrast ratio: 1.35 */
-  --ua-color-qual-rose-200: #bb004f; /** Contrast ratio: 3.00 */
-  --ua-color-qual-rose-300: #fa0f6f; /** Contrast ratio: 5.00 */
+  --ua-color-qual-steel-300: #5483bb; /** Contrast ratio: 5.00 */
+  --ua-color-qual-teal-100: #032e3b; /** Contrast ratio: 1.35 */
+  --ua-color-qual-teal-200: #006874; /** Contrast ratio: 3.00 */
+  --ua-color-qual-teal-300: #008f8f; /** Contrast ratio: 5.00 */
+  --ua-color-qual-grass-100: #0c2f2b; /** Contrast ratio: 1.35 */
+  --ua-color-qual-grass-200: #006a5b; /** Contrast ratio: 3.00 */
+  --ua-color-qual-grass-300: #009270; /** Contrast ratio: 5.00 */
+  --ua-color-qual-chartreuse-100: #212e11; /** Contrast ratio: 1.35 */
+  --ua-color-qual-chartreuse-200: #446811; /** Contrast ratio: 3.00 */
+  --ua-color-qual-chartreuse-300: #5c8e01; /** Contrast ratio: 5.00 */
+  --ua-color-qual-orange-100: #590020; /** Contrast ratio: 1.35 */
+  --ua-color-qual-orange-200: #b2262c; /** Contrast ratio: 3.00 */
+  --ua-color-qual-orange-300: #e7491c; /** Contrast ratio: 5.00 */
+  --ua-color-qual-rose-100: #550629; /** Contrast ratio: 1.35 */
+  --ua-color-qual-rose-200: #b9055a; /** Contrast ratio: 3.00 */
+  --ua-color-qual-rose-300: #f81b6f; /** Contrast ratio: 5.00 */
   --ua-color-seq-100: #3c3764;
   --ua-color-seq-200: #3f5183;
   --ua-color-seq-300: #336c9b;
@@ -517,24 +517,24 @@
   --ua-color-red-800: #ff7759; /** Contrast ratio: 7.50 */
   --ua-color-red-900: #ffb29b; /** Contrast ratio: 11.30 */
   --ua-color-red-1000: #ffebe4; /** Contrast ratio: 17.00 */
-  --ua-color-qual-steel-100: #162b43; /** Contrast ratio: 1.35 */
+  --ua-color-qual-steel-100: #15157f; /** Contrast ratio: 1.35 */
   --ua-color-qual-steel-200: #3d6089; /** Contrast ratio: 3.00 */
-  --ua-color-qual-steel-300: #6583a9; /** Contrast ratio: 5.00 */
-  --ua-color-qual-teal-100: #172e2d; /** Contrast ratio: 1.35 */
-  --ua-color-qual-teal-200: #096964; /** Contrast ratio: 3.00 */
-  --ua-color-qual-teal-300: #00908b; /** Contrast ratio: 5.00 */
-  --ua-color-qual-grass-100: #1d2d22; /** Contrast ratio: 1.35 */
-  --ua-color-qual-grass-200: #336849; /** Contrast ratio: 3.00 */
-  --ua-color-qual-grass-300: #379160; /** Contrast ratio: 5.00 */
-  --ua-color-qual-chartreuse-100: #282b1b; /** Contrast ratio: 1.35 */
-  --ua-color-qual-chartreuse-200: #5a6232; /** Contrast ratio: 3.00 */
-  --ua-color-qual-chartreuse-300: #7a873b; /** Contrast ratio: 5.00 */
-  --ua-color-qual-orange-100: #3f2213; /** Contrast ratio: 1.35 */
-  --ua-color-qual-orange-200: #994517; /** Contrast ratio: 3.00 */
-  --ua-color-qual-orange-300: #d65b14; /** Contrast ratio: 5.00 */
-  --ua-color-qual-rose-100: #4e1424; /** Contrast ratio: 1.35 */
-  --ua-color-qual-rose-200: #bb004f; /** Contrast ratio: 3.00 */
-  --ua-color-qual-rose-300: #fa0f6f; /** Contrast ratio: 5.00 */
+  --ua-color-qual-steel-300: #5483bb; /** Contrast ratio: 5.00 */
+  --ua-color-qual-teal-100: #032e3b; /** Contrast ratio: 1.35 */
+  --ua-color-qual-teal-200: #006874; /** Contrast ratio: 3.00 */
+  --ua-color-qual-teal-300: #008f8f; /** Contrast ratio: 5.00 */
+  --ua-color-qual-grass-100: #0c2f2b; /** Contrast ratio: 1.35 */
+  --ua-color-qual-grass-200: #006a5b; /** Contrast ratio: 3.00 */
+  --ua-color-qual-grass-300: #009270; /** Contrast ratio: 5.00 */
+  --ua-color-qual-chartreuse-100: #212e11; /** Contrast ratio: 1.35 */
+  --ua-color-qual-chartreuse-200: #446811; /** Contrast ratio: 3.00 */
+  --ua-color-qual-chartreuse-300: #5c8e01; /** Contrast ratio: 5.00 */
+  --ua-color-qual-orange-100: #590020; /** Contrast ratio: 1.35 */
+  --ua-color-qual-orange-200: #b2262c; /** Contrast ratio: 3.00 */
+  --ua-color-qual-orange-300: #e7491c; /** Contrast ratio: 5.00 */
+  --ua-color-qual-rose-100: #550629; /** Contrast ratio: 1.35 */
+  --ua-color-qual-rose-200: #b9055a; /** Contrast ratio: 3.00 */
+  --ua-color-qual-rose-300: #f81b6f; /** Contrast ratio: 5.00 */
   --ua-color-seq-100: #3c3764;
   --ua-color-seq-200: #3f5183;
   --ua-color-seq-300: #336c9b;

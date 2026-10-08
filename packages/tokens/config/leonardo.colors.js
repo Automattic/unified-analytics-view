@@ -111,16 +111,17 @@ let red = new Leo.Color({
 // 100 is a tint, clear of the surface and no more (1.35); 200 is what a mark needs (3);
 // 300 is what text needs (5). Each is seeded by a constant, the hue at its brightest.
 const R = [1.35,3,5];
-const hue = (name, key) => new Leo.Color({ name: "Qual " + name, colorKeys: [key], ratios: R, colorSpace: "CAM02p", smooth: true });
+const hue = (name, ...keys) => new Leo.Color({ name: "Qual " + name, colorKeys: keys, ratios: R, colorSpace: "CAM02p", smooth: true });
 // Each is seeded by a constant in base.tokens.json: the one of its name, or for chartreuse the lime that one aliases,
 // the colour a chart paints that series with, so a ramp and its series colour cannot drift apart.
 const seed = (name) => JSON.parse(readFileSync(new URL('./base.tokens.json', import.meta.url), 'utf-8')).color.constant[name].$value.hex;
-let steel = hue("Steel", seed('steel'));
-let teal = hue("Teal", seed('teal'));
-let grass = hue("Grass", seed('grass'));
-let chartreuse = hue("Chartreuse", seed('lime'));   // constant.chartreuse is an alias of the marker's lime
-let orange = hue("Orange", seed('orange'));
-let rose = hue("Rose", seed('rose'));
+let steel = hue("Steel", seed('steel'), '#1d1bb1', '#7aaff5');
+let teal = hue("Teal", seed('teal'), '#00b0bd', '#003d4d');
+let grass = hue("Grass", seed('grass'), '#00574d');
+// constant.chartreuse is an alias of the marker's lime. Its second key is a green for the ramp to pass through as it darkens.
+let chartreuse = hue("Chartreuse", seed('lime'), '#609400');
+let orange = hue("Orange", seed('orange'), '#ff5e00', '#650124');
+let rose = hue("Rose", seed('rose'), '#ec1371', '#750039');
 
 // The sequential ramp is not made here: its steps are chosen by hand, in sequential.json.
 

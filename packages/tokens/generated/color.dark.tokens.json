@@ -799,12 +799,12 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.0863,
-            0.1686,
-            0.2627
+            0.0824,
+            0.0824,
+            0.498
           ],
           "alpha": 1,
-          "hex": "#162b43"
+          "hex": "#15157f"
         },
         "$description": "Contrast ratio: 1.35"
       },
@@ -825,12 +825,12 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.3961,
+            0.3294,
             0.5137,
-            0.6627
+            0.7333
           ],
           "alpha": 1,
-          "hex": "#6583a9"
+          "hex": "#5483bb"
         },
         "$description": "Contrast ratio: 5.00"
       }
@@ -840,12 +840,12 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.0902,
+            0.0118,
             0.1804,
-            0.1765
+            0.2314
           ],
           "alpha": 1,
-          "hex": "#172e2d"
+          "hex": "#032e3b"
         },
         "$description": "Contrast ratio: 1.35"
       },
@@ -853,12 +853,12 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.0353,
-            0.4118,
-            0.3922
+            0,
+            0.4078,
+            0.4549
           ],
           "alpha": 1,
-          "hex": "#096964"
+          "hex": "#006874"
         },
         "$description": "Contrast ratio: 3.00"
       },
@@ -867,11 +867,11 @@
           "colorSpace": "srgb",
           "components": [
             0,
-            0.5647,
-            0.5451
+            0.5608,
+            0.5608
           ],
           "alpha": 1,
-          "hex": "#00908b"
+          "hex": "#008f8f"
         },
         "$description": "Contrast ratio: 5.00"
       }
@@ -881,12 +881,12 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.1137,
-            0.1765,
-            0.1333
+            0.0471,
+            0.1843,
+            0.1686
           ],
           "alpha": 1,
-          "hex": "#1d2d22"
+          "hex": "#0c2f2b"
         },
         "$description": "Contrast ratio: 1.35"
       },
@@ -894,12 +894,12 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.2,
-            0.4078,
-            0.2863
+            0,
+            0.4157,
+            0.3569
           ],
           "alpha": 1,
-          "hex": "#336849"
+          "hex": "#006a5b"
         },
         "$description": "Contrast ratio: 3.00"
       },
@@ -907,12 +907,12 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.2157,
-            0.5686,
-            0.3765
+            0,
+            0.5725,
+            0.4392
           ],
           "alpha": 1,
-          "hex": "#379160"
+          "hex": "#009270"
         },
         "$description": "Contrast ratio: 5.00"
       }
@@ -922,12 +922,12 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.1569,
-            0.1686,
-            0.1059
+            0.1294,
+            0.1804,
+            0.0667
           ],
           "alpha": 1,
-          "hex": "#282b1b"
+          "hex": "#212e11"
         },
         "$description": "Contrast ratio: 1.35"
       },
@@ -935,12 +935,12 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.3529,
-            0.3843,
-            0.1961
+            0.2667,
+            0.4078,
+            0.0667
           ],
           "alpha": 1,
-          "hex": "#5a6232"
+          "hex": "#446811"
         },
         "$description": "Contrast ratio: 3.00"
       },
@@ -948,12 +948,12 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.4784,
-            0.5294,
-            0.2314
+            0.3608,
+            0.5569,
+            0.0039
           ],
           "alpha": 1,
-          "hex": "#7a873b"
+          "hex": "#5c8e01"
         },
         "$description": "Contrast ratio: 5.00"
       }
@@ -963,12 +963,12 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.2471,
-            0.1333,
-            0.0745
+            0.349,
+            0,
+            0.1255
           ],
           "alpha": 1,
-          "hex": "#3f2213"
+          "hex": "#590020"
         },
         "$description": "Contrast ratio: 1.35"
       },
@@ -976,12 +976,12 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.6,
-            0.2706,
-            0.0902
+            0.698,
+            0.149,
+            0.1725
           ],
           "alpha": 1,
-          "hex": "#994517"
+          "hex": "#b2262c"
         },
         "$description": "Contrast ratio: 3.00"
       },
@@ -989,12 +989,12 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.8392,
-            0.3569,
-            0.0784
+            0.9059,
+            0.2863,
+            0.1098
           ],
           "alpha": 1,
-          "hex": "#d65b14"
+          "hex": "#e7491c"
         },
         "$description": "Contrast ratio: 5.00"
       }
@@ -1004,12 +1004,12 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.3059,
-            0.0784,
-            0.1412
+            0.3333,
+            0.0235,
+            0.1608
           ],
           "alpha": 1,
-          "hex": "#4e1424"
+          "hex": "#550629"
         },
         "$description": "Contrast ratio: 1.35"
       },
@@ -1017,12 +1017,12 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.7333,
-            0,
-            0.3098
+            0.7255,
+            0.0196,
+            0.3529
           ],
           "alpha": 1,
-          "hex": "#bb004f"
+          "hex": "#b9055a"
         },
         "$description": "Contrast ratio: 3.00"
       },
@@ -1030,12 +1030,12 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.9804,
-            0.0588,
+            0.9725,
+            0.1059,
             0.4353
           ],
           "alpha": 1,
-          "hex": "#fa0f6f"
+          "hex": "#f81b6f"
         },
         "$description": "Contrast ratio: 5.00"
       }

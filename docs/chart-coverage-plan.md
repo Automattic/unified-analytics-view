@@ -373,3 +373,18 @@ The nine Common charts marked "out" in section 2, and the four Uncommon families
 - **Specs that need `keep`.** As today.
 - **Layer fields that are neither data nor role.** There is one, `sweep`. If the count grows, chart types are coming back as parameters.
 - **Charts that need their own fit rules** rather than their layout's. The claim is that rules belong to arrangements and parts.
+
+## 8. Findings as it is built
+
+Kept here and not in `docs/feedback.md`, which other work on `dom-painter` is writing to.
+
+### Step 5, part 1: the sequential ramp (built October 8)
+
+In `packages/tokens`. Tests pass (160) and the typecheck is clean. Nothing consumes it yet.
+
+1. **Seven steps, teal.** It reuses the `qual-teal` seed, so no new colour enters the system. Neighbours are 1.37 to 1.40 apart in contrast in both themes; nine steps would put them near 1.28, under the 1.35 the system uses for a subtle difference.
+2. **Names.** Base `color.seq.100` to `700`; common `color.seq-1` to `seq-7` and `color.seq-none`. Paint tokens `seq.1` to `seq.7` and `seq.none` map to `--a8c-charts-color-seq-*` through `paintVar` with no table entry. The bench's stylesheet still has to declare those properties; step 5 does it.
+3. **The ramp has its own ratio set,** 1.7 to 12 against the page. The shared ten ratios cluster near the surface.
+4. **Base numbering differs from the other ramps.** In `seq`, 100 is the first step; elsewhere 200 is the page. A comment in `leonardo.colors.js` says so.
+5. **No-data is the weakest margin.** `seq-none` is 1.46 from step 1 in light and 1.27 in dark. If that reads too close on screen, the fix is a hatch or outline in the painter, not a token. To look at.
+6. **Nobody has seen the colours.** The checks are contrast numbers only.

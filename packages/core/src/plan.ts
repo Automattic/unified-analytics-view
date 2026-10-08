@@ -25,7 +25,8 @@ function detectLayout(catalog: Catalog, layers: Layer[]): Layout {
 }
 
 function checkLayers(layers: Layer[], q: Query): void {
-  const known = (q.by || []).concat(q.metrics);
+  const by = q.by || [], known = by.concat(q.metrics);
+  if (by.length > 2 || (by.length === 2 && by[0] === by[1])) throw new Error('A view is by one dimension or by two different ones, and query.by has: ' + by.join(', ') + '. Remove all but two.');
   layers.forEach((l, i) => {
     if (!l || !l.mark) throw new Error('Layer ' + (i + 1) + ' has no "mark". Use one of: line, area, bar, rule, text.');
     Object.entries(l.encode || {}).forEach(([ch, f]) => {
@@ -33,6 +34,9 @@ function checkLayers(layers: Layer[], q: Query): void {
       if (known.indexOf(f) < 0) throw new Error('Layer ' + (i + 1) + ' encodes "' + f + '" on ' + ch + ', which the query does not return. It returns: ' + known.join(', ') + '.');
     });
   });
+  // Rows come back one per pair. A dimension that no layer encodes would leave several rows drawn in one place.
+  const unused = by.length === 2 && layers.length ? by.find((d) => !layers.some((l) => Object.values(l.encode || {}).indexOf(d) >= 0)) : null;
+  if (unused) throw new Error('The query is by "' + unused + '", and no layer encodes it, so its rows would be drawn over each other. Encode it on color, or remove it from query.by.');
 }
 
 /** Fit a spec to a container. Throws, with a message that names the fix, when the spec is invalid. */

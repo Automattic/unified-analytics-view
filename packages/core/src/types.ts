@@ -21,6 +21,7 @@ export interface Catalog {
 /* Query and result. */
 export interface Query {
   metrics: string[];
+  /** One dimension or two. With two, rows come back long: one per pair. */
   by?: string[];
   range?: string;
   compare?: 'previous';
@@ -30,6 +31,9 @@ export type Row = Record<string, string | number | boolean | null | undefined>;
 export interface Result {
   rows: Row[];
   totals: Record<string, number | null>;
+  /** With two dimensions in `by`: for each one, a row per value holding the metrics' totals over the other, in the
+   * dimension's own order. A total covers the rows past `limit`. Proposed to the API's owners (chart-coverage-plan, section 3.5). */
+  totalsBy?: Record<string, Row[]>;
   meta: { range: string; compare: string | null; notes: string[]; empty?: boolean };
 }
 

@@ -11,7 +11,9 @@ export interface MetricDef {
 }
 export interface DimensionDef {
   label: string;
-  type: 'time' | 'categorical';
+  /** `number` is a quantity the engine has cut into bins, or sampled along. Each row holds where its bin starts, and where it
+   * ends as `<dimension>@end`. Proposed to the API's owners (chart-coverage-plan, section 3.5). */
+  type: 'time' | 'categorical' | 'number';
 }
 export interface Catalog {
   metrics: Record<string, MetricDef>;

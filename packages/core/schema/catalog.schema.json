@@ -30,7 +30,7 @@
         "additionalProperties": false,
         "properties": {
           "label": { "type": "string" },
-          "type": { "enum": ["time", "categorical"] }
+          "type": { "enum": ["time", "categorical", "number"], "description": "\"number\" is a quantity the engine bins or samples along. A row holds where its bin starts, and where it ends as \"<dimension>@end\"." }
         }
       }
     }

@@ -2,7 +2,7 @@ import { max, sum } from 'd3-array';
 import { scaleBand, scaleLinear, scalePoint } from 'd3-scale';
 import { CHAR_W, delta, fmt, fmtDay, fmtPct } from './format.ts';
 import { pathD } from './path.ts';
-import type { Catalog, Guides, Layer, Part, PathNode, PlanShape, Query, Result, Role, Row, Scene, SceneNode } from './types.ts';
+import type { Catalog, Guides, Layer, Mark, Part, PathNode, PlanShape, Query, Result, Role, Row, Scene, SceneNode } from './types.ts';
 
 /* Node kinds: rect, path, line, circle, text. Every node has a stable key,
  * a part, a paint token (never a colour) and a layer: "data" or "guide".
@@ -38,11 +38,47 @@ export function xScale(rows: string[], scale: 'band' | 'point', lo: number, hi: 
   return { x, w, cx: (k: string) => x(k) + w / 2 };
 }
 
-// A dimension on x, a metric on y: line, area, bar, rule.
+/* What a mark in the plot is drawn with: its layer's key, role and paint, the field on y, and the plot's scales. */
+interface Draw {
+  id: string;
+  role: Role;
+  paint: string;
+  prev: boolean;
+  f: string;
+  rows: Row[];
+  k: (r: Row) => string;
+  unit: ReturnType<typeof xScale>;
+  v: (n: number) => number;
+}
+type MarkFn = (l: Layer, d: Draw) => SceneNode[];
+
+const path: MarkFn = (l, { id, role, paint, prev, f, rows, k, unit, v }) => {
+  const pts = rows.filter((r) => r[f] != null);
+  const whole = pts.filter((r) => prev || !r.partial);
+  if (!whole.length) return [];
+  const points = (rs: Row[]): PathNode['points'] => rs.map((r) => ({ row: k(r), x: unit.cx(k(r)), v: v(num(r, f)) }));
+  if (l.mark === 'area') return [{ key: id, part: 'plot', kind: 'path', d: pathD(points(whole), 'monotone', true), points: points(whole), curve: 'monotone', fill: true, paint, opacity: 0.14, layer: 'data', role }];
+  const nodes: SceneNode[] = [{ key: id, part: 'plot', kind: 'path', d: pathD(points(whole), 'monotone'), points: points(whole), curve: 'monotone', paint, width: prev ? 1.5 : 2, dash: prev ? '3 3' : null, layer: 'data', role }];
+  const tail = prev ? [] : [whole[whole.length - 1]!].concat(pts.filter((r) => r.partial));
+  if (tail.length > 1) nodes.push({ key: id + ':partial', part: 'plot', kind: 'path', d: pathD(points(tail)), points: points(tail), paint, width: 2, dash: '2 4', opacity: 0.75, layer: 'data', role, note: 'incomplete bucket' });
+  return nodes;
+};
+const bar: MarkFn = (_l, { id, role, paint, prev, f, rows, k, unit, v }) => rows.filter((r) => r[f] != null).map((r) => (
+  { key: id + ':' + k(r), part: 'plot', kind: 'rect', x: unit.x(k(r)), w: unit.w, v: v(num(r, f)), row: k(r), paint, opacity: r.partial && !prev ? 0.4 : 1, layer: 'data', role }));
+const rule: MarkFn = (l, { id, role, v }) => {
+  const t = v(l.encode!.y as number);
+  const nodes: SceneNode[] = [{ key: id, part: 'plot', kind: 'line', t, paint: 'rule', dash: '5 3', width: 1.5, layer: 'data', role }];
+  if (l.label) nodes.push({ key: id + ':label', part: 'plot', kind: 'text', t, text: l.label, anchor: 'end', font: 'tick', paint: 'rule', halo: true, layer: 'guide', role });
+  return nodes;
+};
+/* The marks a plot draws, by name. A new mark is a function here. */
+const PLOT_MARKS: Partial<Record<Mark, MarkFn>> = { line: path, area: path, bar, rule };
+
+// A dimension on x, a metric on y. The scales are derived here, once; each layer's mark draws against them.
 function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, rows: Row[]): Body {
   const nodes: SceneNode[] = [];
   const xField = layers.map((l) => l.encode && l.encode.x).find((f) => isDim(catalog, f)) as string;
-  const keys = rows.map((r) => r[xField] as string);
+  const k = (r: Row) => r[xField] as string, keys = rows.map(k);
   const isTime = catalog.dimensions[xField]!.type === 'time';
   const scale = layers.some((l) => l.mark === 'bar') ? 'band' : 'point';
   const yField = (l: Layer) => (l.series === 'previous' ? l.encode!.y + '@previous' : (l.encode!.y as string));
@@ -77,35 +113,9 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, rows:
   }
   const ids = layerKeys(layers);
   layers.forEach((l, i) => {
-    const id = ids[i]!, prev = l.series === 'previous', role = roleOf(l);
-    const paint = l.paint || (prev ? 'compare' : 'series.1');
-    if (l.mark === 'line' || l.mark === 'area') {
-      const f = yField(l), pts = rows.filter((r) => r[f] != null);
-      const whole = pts.filter((r) => prev || !r.partial);
-      if (!whole.length) return;
-      const k = (r: Row) => r[xField] as string;
-      const points = (rs: Row[]): PathNode['points'] => rs.map((r) => ({ row: k(r), x: unit.cx(k(r)), v: v(num(r, f)) }));
-      if (l.mark === 'area') {
-        nodes.push({ key: id, part: 'plot', kind: 'path', d: pathD(points(whole), 'monotone', true), points: points(whole), curve: 'monotone', fill: true, paint, opacity: 0.14, layer: 'data', role });
-      } else {
-        nodes.push({ key: id, part: 'plot', kind: 'path', d: pathD(points(whole), 'monotone'), points: points(whole), curve: 'monotone', paint, width: prev ? 1.5 : 2, dash: prev ? '3 3' : null, layer: 'data', role });
-        const tail = prev ? [] : [whole[whole.length - 1]!].concat(pts.filter((r) => r.partial));
-        if (tail.length > 1) nodes.push({ key: id + ':partial', part: 'plot', kind: 'path', d: pathD(points(tail)), points: points(tail), paint, width: 2, dash: '2 4', opacity: 0.75, layer: 'data', role, note: 'incomplete bucket' });
-      }
-    } else if (l.mark === 'bar') {
-      const f = yField(l);
-      rows.forEach((r) => {
-        if (r[f] == null) return;
-        nodes.push({ key: id + ':' + r[xField], part: 'plot', kind: 'rect', x: unit.x(r[xField] as string), w: unit.w, v: v(num(r, f)), row: r[xField] as string,
-          paint, opacity: r.partial && !prev ? 0.4 : 1, layer: 'data', role });
-      });
-    } else if (l.mark === 'rule') {
-      const t = v(l.encode!.y as number);
-      nodes.push({ key: id, part: 'plot', kind: 'line', t, paint: 'rule', dash: '5 3', width: 1.5, layer: 'data', role });
-      if (l.label) nodes.push({ key: id + ':label', part: 'plot', kind: 'text', t, text: l.label, anchor: 'end', font: 'tick', paint: 'rule', halo: true, layer: 'guide', role });
-    } else {
-      throw new Error('The "' + l.mark + '" mark has no rule for a time or category axis yet. Use line, area, bar or rule.');
-    }
+    const draw = PLOT_MARKS[l.mark], prev = l.series === 'previous';
+    if (!draw) throw new Error('The "' + l.mark + '" mark has no rule for a time or category axis yet. Use line, area, bar or rule.');
+    nodes.push(...draw(l, { id: ids[i]!, role: roleOf(l), paint: l.paint || (prev ? 'compare' : 'series.1'), prev, f: l.mark === 'rule' ? '' : yField(l), rows, k, unit, v }));
   });
   return { nodes, rows: keys, scale };
 }

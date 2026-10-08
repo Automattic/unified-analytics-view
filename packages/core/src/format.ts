@@ -13,6 +13,11 @@ export function fmtPct(p: number): string {
   const x = p * 100;
   return (x >= 10 ? Math.round(x) : Math.round(x * 10) / 10) + '%';
 }
+/** A length of time in seconds, in its two largest parts: "48s", "3m 48s", "1h 5m". A part that is nothing is left out. */
+export function fmtDuration(seconds: number): string {
+  const n = Math.round(Math.abs(seconds)), parts = [[Math.floor(n / 3600), 'h'], [Math.floor(n % 3600 / 60), 'm'], [n % 60, 's']].filter(([x]) => x);
+  return (seconds < 0 && n ? '-' : '') + (parts.slice(0, 2).map(([x, u]) => x + '' + u).join(' ') || '0s');
+}
 // One formatter for every call: a readout and a table row each ask for a day, and toLocaleDateString builds its own each time.
 export function fmtDay(iso: string): string {
   const day = new Date(iso + 'T00:00:00Z');
@@ -20,10 +25,12 @@ export function fmtDay(iso: string): string {
 }
 /** A metric's value as its catalog entry sets it. With no form it is what a readout says: whole under ten thousand,
  * "10.5k" from there. `compact` is always the short form, and `exact` never is: a table cell, where the digits matter.
- * A `ratio` is a share of a whole and reads as a percentage in every form.
- * ponytail: every other unit is set as a count, `usd` too. A new unit gets its branch here. */
-export function formatValue(v: number | null | undefined, metric: MetricDef, form?: 'compact' | 'exact'): string {
+ * A `ratio` is a share of a whole and reads as a percentage in every form, and `seconds` is a length of time and reads
+ * as one: "3m 48s".
+ * ponytail: every other unit is set as a count, `usd` and `ms` too. A new unit gets its branch here. */
+export function formatValue(v: number | null | undefined, metric: Pick<MetricDef, 'unit'>, form?: 'compact' | 'exact'): string {
   if (metric.unit === 'ratio' && v != null) return fmtPct(v);
+  if (metric.unit === 'seconds' && v != null) return fmtDuration(v);
   return form === 'exact' && v != null ? NF.format(v) : fmt(v, form === 'compact');
 }
 /** A dimension's value as its catalog entry sets it: a day as "Sep 8", a category as itself. */

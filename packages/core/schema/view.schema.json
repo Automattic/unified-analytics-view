@@ -74,7 +74,7 @@
         "sweep": { "const": "half", "description": "On an arc: the arcs run over the top half of the circle and not all the way round. The one layer field that is neither data nor role." },
         "label": { "type": "string", "description": "Text for a rule." },
         "align": { "const": "end" },
-        "paint": { "type": "string", "description": "A paint token, never a colour." }
+        "paint": { "type": "string", "description": "A paint token, never a colour. \"delta\" is the paint of the metric's change over the range: good or bad by its polarity, and the layer's own where there is no change to judge." }
       }
     }
   }

@@ -67,6 +67,8 @@ export interface Layer {
   sweep?: 'half';
   label?: string;
   align?: 'end';
+  /** A paint token in place of the layer's own. `delta` is the paint of its metric's change over the range: good or bad by
+   * the metric's polarity, and the layer's own where there is no change to judge. */
   paint?: string;
 }
 export interface Guides {

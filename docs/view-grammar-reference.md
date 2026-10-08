@@ -103,6 +103,7 @@ Rules the front end relies on:
 - **Totals come from the engine.** A view never sums the rows it happens to receive, because many metrics are not additive. Visitors in v1 are counted per day, so a range total is a sum of daily counts and must be labelled as one (`rangeTotal: "sum of daily"`).
 - **Polarity drives delta colour.** `up` means an increase is good, `down` the reverse, `none` means no judgement.
 - **`instant`** marks a metric with no range and no prior period, such as people present now.
+- **`unit` sets how a value reads** wherever it is said: the tldr value, an axis, a row, a readout and the prose. `ratio` is a percentage and `seconds` a length of time ("3m 48s"). Every other unit still reads as a count; currency is not built.
 - **Unknown is null, not zero.**
 
 Properties the full catalog will need but the stub lacks: format, thresholds or bands, valid dimensions per metric, valid grains, approximation and coverage, identity definition for people-counts, hierarchy on dimensions, and a colour role on dimensions.
@@ -180,14 +181,14 @@ A layer:
 | Field | Meaning |
 |---|---|
 | `mark` | `line`, `area`, `bar`, `rule`, `text`, `dot`, `tick`, `cell`, `arc`, or the name of a custom mark registered in code |
-| `encode` | Channel to field: `x`, `y`, `x2`, `y2`, `color`, `size`, `text`, `angle`, `radius`. A field is a dimension name, a metric name, a companion the result returns (`metric@p25`), or a number (for a rule, or an arc's inner radius) |
+| `encode` | Channel to field: `x`, `y`, `x2`, `y2`, `color`, `size`, `text`, `angle`, `radius`. A field is a dimension name, a metric name, a companion the result returns (`metric@p25`), or a number (for a rule, or an arc's inner radius). In rows, `color` paints each row: the rows' own dimension is a colour for each, and a companion of it (`source@kind`) paints rows that share a value alike. Built October 8, for the sidebar test case |
 | `series` | `"previous"` draws the comparison companion of the metric. Comparison is a property of a layer, not a second metric. `"delta"`, on a `text` layer in rows, is the row's change, painted by polarity |
 | `role` | `primary`, `comparison`, `reference`, `context`. Defaults: a `previous` series is `comparison`, a `rule` is `reference`, everything else is `primary` |
 | `stack` | `"zero"`, `"normalize"` for share of whole, or `"center"`, on a layer split by `color`. A `bar` split by `color` with no `stack` sits beside its neighbours |
 | `sweep` | `"half"` for an `arc`. The one layer field that is neither data nor role |
 | `label` | Text for a rule |
 | `align` | `"end"` for right-aligned text |
-| `paint` | Override the paint token |
+| `paint` | Override the paint token. `"delta"` is the paint of the metric's change over the range: good or bad by its polarity, and the layer's own where there is no change to judge. Built October 8, for the sidebar test case |
 
 The same spec, written as layers:
 

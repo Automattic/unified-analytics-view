@@ -54,6 +54,9 @@ function checkLayers(layers: Layer[], q: Query, catalog: Catalog, result: Result
     if (l.series === 'delta' && !(l.mark === 'text' && isDim(catalog, l.encode && l.encode.y) && typeof (l.encode && l.encode.text) === 'string' && (l.encode!.text as string) in catalog.metrics))
       throw new Error('Layer ' + (i + 1) + ' has series: "delta", which is a row\'s change in a metric. Make it a text layer with the dimension on y and the metric on text.');
     if (l.stack && !isDim(catalog, l.encode && l.encode.color)) throw new Error('Layer ' + (i + 1) + ' has "stack" and no dimension on color, so there is nothing to stack. Encode the query\'s second dimension on color, or remove "stack".');
+    // In rows a colour says which rows go together, so it is the rows' own dimension or something the engine says of it.
+    const { x: lx, y: ly, color: lc } = l.encode || {};
+    if (isDim(catalog, ly) && !isDim(catalog, lx) && typeof lc === 'string' && lc.split('@')[0] !== ly) throw new Error('Layer ' + (i + 1) + ' is in rows by "' + ly + '" and encodes "' + lc + '" on color. A row is painted by its own dimension, for a colour each, or by a companion the result returns with it, for rows that go together. Encode "' + ly + '" on color, or remove it.');
     Object.entries(l.encode || {}).forEach(([ch, f]) => {
       if (typeof f === 'number') return;
       if (ch === 'size' && !(f.split('@')[0]! in catalog.metrics)) throw new Error('Layer ' + (i + 1) + ' encodes "' + f + '" on size, and a size is a quantity. Encode one of the query\'s metrics: ' + q.metrics.join(', ') + '.');

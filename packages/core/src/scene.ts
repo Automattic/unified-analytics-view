@@ -139,6 +139,14 @@ const tick: MarkFn = (l, { id, series, role, rows, k, unit, ends }) => rows.map(
   const x = unit.x(k(r)), t = ends(r)[1];
   return { key: id + ':' + k(r) + (series == null ? '' : ':' + series), part: 'plot', kind: 'line', x, x2: x + (unit.span ? unit.span(k(r)) : unit.w), t, t2: t, row: k(r), ...(series != null && { series }), paint: l.paint || 'ink', width: 2, layer: 'data', role };
 });
+/** A layer's own paint, where it states one. `delta` is the paint of its metric's change over the range, as the tldr
+ * value's delta has it: good or bad by the metric's polarity. With no change to judge, the layer has stated none. */
+function paintOf(l: Layer, catalog: Catalog, result: Result): string | undefined {
+  if (l.paint !== 'delta') return l.paint;
+  const f = l.encode && (isDim(catalog, l.encode.y) ? l.encode.x : l.encode.y), M = metricOf(catalog, f);
+  const d = M && delta(result.totals[f as string] as number, result.totals[f + '@previous'], M.polarity);
+  return d && d.pct != null && d.paint !== 'ink.muted' ? d.paint : undefined;
+}
 /* The marks a plot draws, by name. A new mark is a function here. */
 const PLOT_MARKS: Partial<Record<Mark, MarkFn>> = { line: path, area: path, bar, rule, dot, text: label, tick };
 
@@ -230,7 +238,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     const [bottom, top] = y.domain() as [number, number];
     // A short plot keeps the ticks a count of 2 would give on this scale. Where the two counts share only zero (a top of 8, 80, 800: steps of 5 and of 2), every other tick stays instead.
     const fine = y.ticks(4), two = y.ticks(2).filter((t) => fine.includes(t));
-    return { v: (n: number) => (n - bottom) / (top - bottom), ticks: fine, coarse: two.length > 1 ? two : fine.filter((_, i) => i % 2 === 0), text: (t: number) => (share ? fmtPct(t) : fmt(t, true)) };
+    return { v: (n: number) => (n - bottom) / (top - bottom), ticks: fine, coarse: two.length > 1 ? two : fine.filter((_, i) => i % 2 === 0), text: (t: number) => (share ? fmtPct(t) : formatValue(t, { unit: u }, 'compact')) };
   });
   let unit: Draw['unit'] = xScale(keys, shared, 0, 1), xv: Draw['xv'];
   if (xOn) {
@@ -278,7 +286,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     if ((l.mark === 'bar' || l.mark === 'tick') && xOn && !xDim) throw new Error('Layer ' + (i + 1) + ' is a ' + l.mark + ' with the metric "' + xOn + '" on x, and a ' + l.mark + ' needs a dimension there to stand on. Use "dot" for a point at two metrics, or put a dimension on x.');
     if (l.mark === 'bar' && xOn && rows.length && rows[0]![xOn + '@end'] == null) throw new Error('Bars on the number dimension "' + xOn + '" need its bins, and this result has no "' + xOn + '@end". Return where each bin ends from the query layer, or use line or dot.');
     const v = scaleOf(l).v;
-    const d: Draw = { id: ids[i]!, role: roleOf(l), paint: l.paint || (prev ? 'compare' : 'series.1'), prev, rows: rows.filter((r) => span.has(r)), k, unit, v, xv, size, points: !!xOn && !xDim,
+    const d: Draw = { id: ids[i]!, role: roleOf(l), paint: paintOf(l, catalog, result) || (prev ? 'compare' : 'series.1'), prev, rows: rows.filter((r) => span.has(r)), k, unit, v, xv, size, points: !!xOn && !xDim,
       ends: (r) => { const [lo, hi] = span.get(r)!; return [v(lo), v(hi)]; },
       ...(l.mark === 'bar' && l.encode!.y2 != null && !l.paint && { polarity: metricOf(catalog, l.encode!.y)?.polarity }) };
     if (!splitOf(catalog, l, xField)) return nodes.push(...draw(l, d));
@@ -383,7 +391,7 @@ export const BUILT_IN_MARKS: string[] = [...new Set(Object.keys(PLOT_MARKS).conc
 // A dimension on y: a row for each of its values, with a track that has a metric on x. The ranked bar list is the first of these.
 // The track's scale is derived here, once, from what its layers put on x. It is linear and holds zero and whatever is on
 // either side of it, and it is not rounded: a row's track has no axis to read against.
-function sceneRows(catalog: Catalog, layers: Layer[], rows: Row[]): Body {
+function sceneRows(catalog: Catalog, layers: Layer[], rows: Row[], result: Result): Body {
   const nodes: SceneNode[] = [];
   const dim = layers.map((l) => l.encode && l.encode.y).find((f) => isDim(catalog, f)) as string;
   const tracked = layers.filter((l) => TRACK_MARKS[l.mark]), units = [...new Set(tracked.map((l) => metricOf(catalog, l.encode!.x)?.unit))];
@@ -403,6 +411,9 @@ function sceneRows(catalog: Catalog, layers: Layer[], rows: Row[]): Body {
   if (cols.length > 1) cols.forEach((l) => {
     nodes.push({ key: 'column:' + ids[layers.indexOf(l)], part: 'columns', kind: 'text', text: columnLabel(catalog, l), anchor: 'end', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...rank(l) });
   });
+  // A mark with a field on color is painted by it, row by row: rows that share a value share a series colour, in the
+  // order the values first come. The row's own dimension there is a colour for each row.
+  const shade = (l: Layer, r: Row) => { const c = l.encode!.color; return typeof c === 'string' ? 'series.' + ([...new Set(rows.map((x) => x[c]))].indexOf(r[c]) % SERIES + 1) : undefined; };
   rows.forEach((r) => {
     const k = str(r, dim);
     // The row itself: what a painter keys, and what is chosen and named when the row is.
@@ -412,7 +423,7 @@ function sceneRows(catalog: Catalog, layers: Layer[], rows: Row[]): Body {
       if (draw) {
         const [at, to] = on(l, r), ranged = l.encode!.x2 != null;
         if (at == null || (ranged && to == null)) return;                  // a row with nothing to mark has no mark
-        nodes.push(...draw(l, { id: ids[li]!, role: roleOf(l), paint: l.paint || (l.series === 'previous' ? 'compare' : 'series.1'), k, at, ...(ranged && { to: to! }), v, beside,
+        nodes.push(...draw(l, { id: ids[li]!, role: roleOf(l), paint: paintOf(l, catalog, result) || shade(l, r) || (l.series === 'previous' ? 'compare' : 'series.1'), k, at, ...(ranged && { to: to! }), v, beside,
           ...(l.mark === 'bar' && ranged && !l.paint && { polarity: metricOf(catalog, l.encode!.x)?.polarity }) }));
       } else if (l.mark === 'text') {
         const cell = cellOf(catalog, l, r);
@@ -554,7 +565,7 @@ function sceneMatrix(catalog: Catalog, layers: Layer[], result: Result): Body {
 export function tldrValueText(catalog: Catalog, q: Query, result: Result, compact?: boolean): string {
   const m = q.metrics[0]!;
   if (catalog.metrics[m]!.instant) return String(result.totals[m] || 0);
-  return result.meta.empty ? '0' : fmt(result.totals[m], compact);
+  return result.meta.empty ? '0' : formatValue(result.totals[m], catalog.metrics[m]!, compact ? 'compact' : undefined);
 }
 
 /* The tldr value: a total from the engine, a delta if the query compares, and a derived note.
@@ -577,7 +588,7 @@ function sceneNumber(catalog: Catalog, q: Query, result: Result, share: boolean)
     note = share ? top[by] + ' ' + fmtPct(num(top, m) / (t[m] || 1)) : 'Top: ' + top[by];
   }
   const dl = q.compare === 'previous' ? delta(t[m] as number, t[m + '@previous'], M.polarity) : null;
-  value(fmt(t[m]), fmt(t[m], true));
+  value(formatValue(t[m], M), formatValue(t[m], M, 'compact'));
   if (dl) nodes.push({ key: 'delta', part: 'number', kind: 'text', text: dl.text + (dl.pct != null ? ' on the previous period' : ''), ...(dl.pct != null && { short: dl.text }), anchor: 'start', font: 'value', paint: dl.paint, layer: 'guide' });
   if (note) sub(note, 1);                                                   // the note is given up beside a bare plot
   return nodes;
@@ -615,7 +626,7 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
   } else if (p.layout === 'rows') {
     if (p.guides.columns) parts.push('columns');
     parts.push('rows');
-    body = sceneRows(catalog, p.layers, result.rows.slice(0, p.rowLimit || result.rows.length));
+    body = sceneRows(catalog, p.layers, result.rows.slice(0, p.rowLimit || result.rows.length), result);
   } else if (p.layout === 'band') {
     parts.push('band');
     if (p.guides.legend) parts.push(p.guides.legend === 'top' ? 'legend-top' : 'legend');

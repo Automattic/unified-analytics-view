@@ -52,12 +52,12 @@ export function tldrProse(q: Query, result: Result, share: boolean, catalog: Cat
     }
     // Several metrics by one dimension: the ranking is by the first, and the rest are said once, as the engine's totals. A metric it gives no total for is left out.
     const rest = q.metrics.slice(1).filter((x) => t[x] != null).map((x) => catalog.metrics[x]!.label.toLowerCase() + ' ' + formatValue(t[x], catalog.metrics[x]!));
-    return 'Top ' + plural(label) + ' by ' + name + ', ' + range + ': ' + rows.slice(0, 3).map((r) => r[by] + ' (' + fmt(r[m] as number) + ')').join(', ') + '.' + (rest.length ? ' Overall, ' + rest.join(' and ') + '.' : '');
+    return 'Top ' + plural(label) + ' by ' + name + ', ' + range + ': ' + rows.slice(0, 3).map((r) => r[by] + ' (' + formatValue(r[m] as number, catalog.metrics[m]!) + ')').join(', ') + '.' + (rest.length ? ' Overall, ' + rest.join(' and ') + '.' : '');
   }
   // Each metric the query asks for, the first with the range.
   return q.metrics.map((m, i) => {
     const M = catalog.metrics[m]!;
-    let s = M.label + ': ' + fmt(t[m]) + (i ? '' : ' in the ' + range);
+    let s = M.label + ': ' + formatValue(t[m], M) + (i ? '' : ' in the ' + range);
     if (q.compare === 'previous') {
       const d = delta(t[m] as number, t[m + '@previous'], M.polarity);
       s += d.pct != null ? ', ' + (d.pct > 0 ? 'up ' : 'down ') + fmtPct(Math.abs(d.pct)) + ' on the previous period'

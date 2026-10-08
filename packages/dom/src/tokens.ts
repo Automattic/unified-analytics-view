@@ -25,16 +25,28 @@ export const TOKENS: Record<string, string> = {
   'color-delta-bad': 'var(--ua-charts-color-trend-down, currentColor)',
   'color-live': 'currentColor',
   'color-background': 'Canvas',
+  // The screen a number in dots is on: sunk into what the view stands on.
+  'color-screen': 'color-mix(in srgb, CanvasText 6%, Canvas)',
+  // Its lit cells. With no token they are the colour of the text the number would have been.
+  'color-label-screen': 'currentColor',
   'color-tooltip-surface': 'CanvasText',
+  'color-tooltip-surface-secondary': 'GrayText',
+  'color-tooltip-border': 'CanvasText',
+  'color-focus': 'Highlight',
+  'color-hover': 'color-mix(in srgb, currentColor 8%, transparent)',
 
   'border-radius-bar': '2px',
   'border-radius-cell': '1px',
   'border-radius-swatch': '2px',
   'border-radius-tooltip': '2px',
+  'border-radius-screen': '2px',
+  'elevation-screen': 'inset 0 1px 2px color-mix(in srgb, CanvasText 20%, transparent)',
+  // The readout stands above the view. Unthemed, a plain shadow straight down.
+  'elevation-tooltip': '0 1px 3px color-mix(in srgb, CanvasText 25%, transparent)',
 
   'stroke-width-line': '2px',
   'stroke-width-rule': '1px',
-  'stroke-width-active': '2px',
+  'stroke-width-focus': '2px',
 
   // The four faces of a scene's text, and the smaller one the number takes where the larger does not fit.
   'font-size-tick': '11px',
@@ -53,6 +65,12 @@ export const TOKENS: Record<string, string> = {
   'motion-easing-update': 'cubic-bezier(0.4, 0, 0.2, 1)',
   'motion-duration-exit': '150ms',
   'motion-easing-exit': 'cubic-bezier(0.4, 0, 1, 1)',
+  // A line drawing in from its start, when its plot first shows (layouts/cartesian.ts).
+  'motion-duration-draw': '1400ms',
+  // A character of a number in dots rolling to the next: eight steps, a row each (dots.ts).
+  'motion-duration-roll': '384ms',
+  // How long the readout waits where it says nothing a reader cannot already see (keys.ts).
+  'motion-delay-tooltip': '500ms',
 };
 
 /** A colour a scene names that the table does not: `series.2` is `color-series-2`, and a sequential step `color-seq-4`.
@@ -64,6 +82,30 @@ export function token(name: string, fallback: string | undefined = TOKENS[name])
   if (fallback == null) throw new Error('<ua-view> has no token "' + name + '". Add it to TOKENS in packages/dom/src/tokens.ts, with the value it falls back to.');
   return 'var(--ua-charts-' + name + ', ' + fallback + ')';
 }
+
+/* One outline for what the keyboard has: the holder with its focus, and the mark an arrow key chose in it. Every
+ * layout draws it from here, so it is one width and one colour wherever it is. Only where it sits differs, and that
+ * is by what the thing is, never by which layout it is in. */
+const WIDTH = token('stroke-width-focus'), COLOR = token('color-focus');
+export const FOCUS = {
+  width: WIDTH, color: COLOR,
+  /** Inside the box: a holder and a row are clipped at their edge by whatever holds them. */
+  inside: `outline: ${WIDTH} solid ${COLOR}; outline-offset: calc(-1 * ${WIDTH});`,
+  /** A pixel clear of the box: a bar, a segment, a cell or a dot stands free, and may be too small to hold it. */
+  around: `outline: ${WIDTH} solid ${COLOR}; outline-offset: 1px;`,
+  /** A shape in an SVG, which an outline would draw a box about: its own edge, at the same width on screen. */
+  stroke: `stroke: ${COLOR}; stroke-width: ${WIDTH}; vector-effect: non-scaling-stroke;`,
+};
+
+/* What the pointer is over, or a touch chose, is said more quietly, and never with the keyboard's outline: a reader
+ * who tabs to a view must be able to tell where focus is from where the mouse was left. It is one treatment too: a
+ * hairline in the label's colour about a mark, or as a shape's edge, and a tint behind a row, which is a line of text. */
+export const HOVER = {
+  width: token('stroke-width-rule'), color: token('color-label'),
+  row: `background: ${token('color-hover')}; border-radius: ${token('border-radius-bar')};`,
+  around: `outline: ${token('stroke-width-rule')} solid ${token('color-label')};`,
+  stroke: `stroke: ${token('color-label')}; stroke-width: ${token('stroke-width-rule')}; vector-effect: non-scaling-stroke;`,
+};
 
 /** The faces, as lengths the element works out once for the whole view (view.ts) and every part of it reads. */
 export const FACES = ['tick', 'label', 'value', 'display', 'display-small'] as const;

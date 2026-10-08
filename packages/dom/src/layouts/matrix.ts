@@ -1,5 +1,5 @@
 import { formatDimension, formatValue, type RectNode, type Row, type TextNode } from '@universal-analytics/core';
-import { attr, ensure, keyed, paintVar, prop, text } from '../dom.ts';
+import { attr, ensure, keyed, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { readout } from '../keys.ts';
 import type { LayoutPainter } from '../layout.ts';
@@ -20,10 +20,9 @@ const css = `
 .uav[data-layout="matrix"] .uav-body { display: grid; grid-template: "y plot" minmax(0, 1fr) ". x" auto "ramp ramp" auto / auto minmax(0, 1fr); }
 .uav[data-layout="matrix"] [data-thin] { visibility: hidden; }
 .uav-cells { position: absolute; inset: 0; display: grid; gap: 1px; grid-template: repeat(var(--uav-ny), minmax(0, 1fr)) / repeat(var(--uav-nx), minmax(0, 1fr)); }
-.uav-cells:focus-visible { outline-offset: 2px; }
 .uav-cells > div { display: contents; }
 .uav-cells i { grid-area: var(--uav-cy) / var(--uav-cx); background: var(--uav-paint); border-radius: ${token('border-radius-cell')}; }
-.uav-cells [data-active] { z-index: 1; outline: ${token('stroke-width-active')} solid ${paintVar('ink')}; outline-offset: 1px; }
+.uav-cells [data-active] { z-index: 1; }
 .uav-ramp { grid-area: ramp; display: flex; align-items: center; gap: 1px; block-size: 24px; overflow: hidden; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .uav-ramp i { flex: none; inline-size: 14px; block-size: 10px; border-radius: ${token('border-radius-cell')}; background: var(--uav-paint); }
 .uav-ramp span { color: var(--uav-paint); margin-inline: 5px; }
@@ -44,11 +43,11 @@ interface Grid { nx: number; ny: number; rows: Map<string, Row>; fresh: boolean 
 const grids = new WeakMap<HTMLElement, Grid>();
 const id = (x: number, y: number) => 'cell-' + x + '-' + y;
 
-/** Choose a cell, or none. The readout is the cell's own name, set by it and always inside the view, as keys.ts sets one.
+/** Choose a cell, or none, and say how: by the keys or by the pointer, as keys.ts does. The readout is the cell's own name, set by it and always inside the view, as keys.ts sets one.
  * ponytail: its placing is keys.ts's, written again, since that one is private to its class. One function when the two meet. */
-function choose(cells: HTMLElement, el: HTMLElement | null): void {
+function choose(cells: HTMLElement, el: HTMLElement | null, how: 'keys' | 'pointer' = 'pointer'): void {
   cells.querySelector('[data-active]')?.removeAttribute('data-active');
-  el?.setAttribute('data-active', '');
+  el?.setAttribute('data-active', how);
   attr(cells, 'aria-activedescendant', el?.id);
   const fig = cells.closest<HTMLElement>('.uav')!, tip = ensure(fig, 'div', 'uav-readout');
   tip.hidden = !el;
@@ -88,7 +87,7 @@ function bind(cells: HTMLElement): void {
     const to = stepCell(e.key, on ? (on.id.split('-').slice(1).map(Number) as [number, number]) : null, g.nx, g.ny);
     if (!to) return;
     e.preventDefault();
-    choose(cells, cells.querySelector<HTMLElement>('#' + id(...to)));
+    choose(cells, cells.querySelector<HTMLElement>('#' + id(...to)), 'keys');
   });
 }
 

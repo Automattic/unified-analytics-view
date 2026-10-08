@@ -147,7 +147,7 @@
   --ua-charts-border-radius-cell: 1px;
   --ua-charts-stroke-width-line: 2px;
   --ua-charts-stroke-width-rule: 1px;
-  --ua-charts-stroke-width-active: 2px;
+  --ua-charts-stroke-width-focus: 2px;
   --ua-charts-font-weight-value: 500;
   --ua-charts-font-weight-display: 600;
   --ua-charts-font-weight-heading: 600;
@@ -158,10 +158,13 @@
   --ua-charts-motion-easing-update: cubic-bezier(0.4, 0, 0.2, 1);
   --ua-charts-motion-duration-exit: 150ms;
   --ua-charts-motion-easing-exit: cubic-bezier(0.4, 0, 1, 1);
+  --ua-charts-motion-delay-tooltip: 500ms;
+  --ua-charts-motion-duration-roll: 384ms;
+  --ua-charts-motion-duration-draw: 1400ms;
   --ua-color-surface-page: var(--ua-color-neutral-200);
   --ua-color-surface-card: var(--ua-color-neutral-100);
   --ua-color-surface-raised: var(--ua-color-white);
-  --ua-color-surface-screen: var(--ua-color-neutral-400);
+  --ua-color-surface-screen: var(--ua-color-neutral-300);
   --ua-color-mark-steel: var(--ua-color-constant-steel);
   --ua-color-mark-steel-text: var(--ua-color-constant-steel);
   --ua-color-mark-steel-soft: var(--ua-color-qual-steel-100);
@@ -252,9 +255,16 @@
   --ua-elevation-2: calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 2px color-mix(in srgb, var(--ua-color-black) 8%, transparent), calc(var(--ua-light-x, 0) * -4px) calc(var(--ua-light-y, -1) * -4px) 10px color-mix(in srgb, var(--ua-color-black) 10%, transparent), inset calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 0 color-mix(in srgb, var(--ua-color-white) calc(14% * var(--ua-light-hi, 1)), transparent);
   --ua-elevation-3: calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 1px color-mix(in srgb, var(--ua-color-black) 8%, transparent), calc(var(--ua-light-x, 0) * -4px) calc(var(--ua-light-y, -1) * -4px) 8px color-mix(in srgb, var(--ua-color-black) 8%, transparent), calc(var(--ua-light-x, 0) * -18px) calc(var(--ua-light-y, -1) * -18px) 36px color-mix(in srgb, var(--ua-color-black) 14%, transparent), inset calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 0 color-mix(in srgb, var(--ua-color-white) calc(16% * var(--ua-light-hi, 1)), transparent);
   --ua-elevation-inset: inset calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 2px color-mix(in srgb, var(--ua-color-black) 20%, transparent), inset calc(var(--ua-light-x, 0) * -3px) calc(var(--ua-light-y, -1) * -3px) 8px color-mix(in srgb, var(--ua-color-black) 10%, transparent), calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 0 var(--ua-color-surface-raised);
+  --ua-charts-color-label-inverse: var(--ua-color-black); /** Text on the tooltip surface. Black in both themes, as the surface is one colour in both. */
+  --ua-charts-color-tooltip-surface: var(--ua-color-constant-lime); /** The readout and the crosshair's words: the marker colour, from the constants, so it is the same in both themes. */
+  --ua-charts-color-tooltip-surface-secondary: var(--ua-color-white); /** The crosshair's word for a comparison: quieter than the surface, edged in it, and the same in both themes. */
+  --ua-charts-color-tooltip-border: var(--ua-color-black); /** The stroke about the readout and the words of a crosshair. Black in both themes, as their text is. */
+  --ua-charts-color-screen: var(--ua-color-lime-300); /** The screen a number in dots is on: the lime ramp's third step in both themes. */
+  --ua-charts-color-label-screen: var(--ua-color-lime-1000); /** The lit cells of a number in dots, and at a tenth of it the unlit ones: the lime ramp's last step in both themes. */
   --ua-charts-border-radius-bar: var(--ua-radius-xs);
   --ua-charts-border-radius-swatch: var(--ua-radius-xs);
-  --ua-charts-border-radius-tooltip: var(--ua-radius-xs);
+  --ua-charts-border-radius-tooltip: var(--ua-radius-sm);
+  --ua-charts-border-radius-screen: var(--ua-radius-xs);
   --ua-charts-font-size-tick: var(--ua-font-size-xs);
   --ua-charts-font-size-label: var(--ua-font-size-sm);
   --ua-charts-font-size-value: var(--ua-font-size-sm);
@@ -320,13 +330,15 @@
   --ua-charts-color-trend-up: var(--ua-color-success-text);
   --ua-charts-color-trend-down: var(--ua-color-destructive-text);
   --ua-charts-color-label-axis: var(--ua-color-muted-foreground);
-  --ua-charts-color-tooltip-surface: var(--ua-color-foreground);
+  --ua-charts-elevation-tooltip: var(--ua-elevation-2);
+  --ua-charts-elevation-screen: var(--ua-elevation-inset);
   --ua-color-card-raised-90: color-mix(in srgb, var(--ua-color-card-raised) 90%, transparent);
   --ua-color-kbd-on-inverse: color-mix(in srgb, var(--ua-color-background) 20%, transparent);
   --ua-charts-color-axis-x: var(--ua-color-foreground-50);
   --ua-charts-color-comparison: var(--ua-color-foreground-50);
   --ua-charts-color-background: var(--ua-color-background);
-  --ua-charts-color-label-inverse: var(--ua-color-background);
+  --ua-charts-color-focus: var(--ua-color-ring);
+  --ua-charts-color-hover: var(--ua-color-row-hover);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -432,7 +444,7 @@
   --ua-color-surface-page: var(--ua-color-neutral-200);
   --ua-color-surface-card: var(--ua-color-neutral-300);
   --ua-color-surface-raised: var(--ua-color-neutral-400);
-  --ua-color-surface-screen: var(--ua-color-neutral-100);
+  --ua-color-surface-screen: var(--ua-color-neutral-300);
   --ua-color-mark-steel: var(--ua-color-qual-steel-200);
   --ua-color-mark-steel-text: var(--ua-color-qual-steel-300);
   --ua-color-mark-steel-soft: var(--ua-color-qual-steel-100);
@@ -504,6 +516,12 @@
   --ua-color-raised-foreground: var(--ua-color-neutral-1000);
   --ua-color-on-ink: var(--ua-color-neutral-200);
   --ua-color-overlay: color-mix(in srgb, var(--ua-color-black) 80%, transparent);
+  --ua-charts-color-label-inverse: var(--ua-color-black); /** Text on the tooltip surface. Black in both themes, as the surface is one colour in both. */
+  --ua-charts-color-tooltip-surface: var(--ua-color-constant-lime); /** The readout and the crosshair's words: the marker colour, from the constants, so it is the same in both themes. */
+  --ua-charts-color-tooltip-surface-secondary: var(--ua-color-white); /** The crosshair's word for a comparison: quieter than the surface, edged in it, and the same in both themes. */
+  --ua-charts-color-tooltip-border: var(--ua-color-black); /** The stroke about the readout and the words of a crosshair. Black in both themes, as their text is. */
+  --ua-charts-color-screen: var(--ua-color-lime-300); /** The screen a number in dots is on: the lime ramp's third step in both themes. */
+  --ua-charts-color-label-screen: var(--ua-color-lime-1000); /** The lit cells of a number in dots, and at a tenth of it the unlit ones: the lime ramp's last step in both themes. */
   --ua-color-mark-chartreuse: var(--ua-color-constant-chartreuse);
   --ua-color-mark-chartreuse-text: var(--ua-color-constant-chartreuse);
   --ua-color-background: var(--ua-color-surface-page);
@@ -564,7 +582,6 @@
   --ua-charts-color-trend-up: var(--ua-color-success-text);
   --ua-charts-color-trend-down: var(--ua-color-destructive-text);
   --ua-charts-color-label-axis: var(--ua-color-muted-foreground);
-  --ua-charts-color-tooltip-surface: var(--ua-color-foreground);
   --ua-color-card-raised-90: color-mix(in srgb, var(--ua-color-card-raised) 90%, transparent);
   --ua-color-kbd-on-inverse: color-mix(in srgb, var(--ua-color-background) 10%, transparent);
   --ua-charts-color-axis-x: var(--ua-color-foreground-50);
@@ -572,7 +589,8 @@
   --ua-charts-color-series-1-text: var(--ua-color-mark-chartreuse-text);
   --ua-charts-color-comparison: var(--ua-color-foreground-50);
   --ua-charts-color-background: var(--ua-color-background);
-  --ua-charts-color-label-inverse: var(--ua-color-background);
+  --ua-charts-color-focus: var(--ua-color-ring);
+  --ua-charts-color-hover: var(--ua-color-row-hover);
 }
 }
 
@@ -678,7 +696,7 @@
   --ua-color-surface-page: var(--ua-color-neutral-200);
   --ua-color-surface-card: var(--ua-color-neutral-300);
   --ua-color-surface-raised: var(--ua-color-neutral-400);
-  --ua-color-surface-screen: var(--ua-color-neutral-100);
+  --ua-color-surface-screen: var(--ua-color-neutral-300);
   --ua-color-mark-steel: var(--ua-color-qual-steel-200);
   --ua-color-mark-steel-text: var(--ua-color-qual-steel-300);
   --ua-color-mark-steel-soft: var(--ua-color-qual-steel-100);
@@ -750,6 +768,12 @@
   --ua-color-raised-foreground: var(--ua-color-neutral-1000);
   --ua-color-on-ink: var(--ua-color-neutral-200);
   --ua-color-overlay: color-mix(in srgb, var(--ua-color-black) 80%, transparent);
+  --ua-charts-color-label-inverse: var(--ua-color-black); /** Text on the tooltip surface. Black in both themes, as the surface is one colour in both. */
+  --ua-charts-color-tooltip-surface: var(--ua-color-constant-lime); /** The readout and the crosshair's words: the marker colour, from the constants, so it is the same in both themes. */
+  --ua-charts-color-tooltip-surface-secondary: var(--ua-color-white); /** The crosshair's word for a comparison: quieter than the surface, edged in it, and the same in both themes. */
+  --ua-charts-color-tooltip-border: var(--ua-color-black); /** The stroke about the readout and the words of a crosshair. Black in both themes, as their text is. */
+  --ua-charts-color-screen: var(--ua-color-lime-300); /** The screen a number in dots is on: the lime ramp's third step in both themes. */
+  --ua-charts-color-label-screen: var(--ua-color-lime-1000); /** The lit cells of a number in dots, and at a tenth of it the unlit ones: the lime ramp's last step in both themes. */
   --ua-color-mark-chartreuse: var(--ua-color-constant-chartreuse);
   --ua-color-mark-chartreuse-text: var(--ua-color-constant-chartreuse);
   --ua-color-background: var(--ua-color-surface-page);
@@ -810,7 +834,6 @@
   --ua-charts-color-trend-up: var(--ua-color-success-text);
   --ua-charts-color-trend-down: var(--ua-color-destructive-text);
   --ua-charts-color-label-axis: var(--ua-color-muted-foreground);
-  --ua-charts-color-tooltip-surface: var(--ua-color-foreground);
   --ua-color-card-raised-90: color-mix(in srgb, var(--ua-color-card-raised) 90%, transparent);
   --ua-color-kbd-on-inverse: color-mix(in srgb, var(--ua-color-background) 10%, transparent);
   --ua-charts-color-axis-x: var(--ua-color-foreground-50);
@@ -818,5 +841,6 @@
   --ua-charts-color-series-1-text: var(--ua-color-mark-chartreuse-text);
   --ua-charts-color-comparison: var(--ua-color-foreground-50);
   --ua-charts-color-background: var(--ua-color-background);
-  --ua-charts-color-label-inverse: var(--ua-color-background);
+  --ua-charts-color-focus: var(--ua-color-ring);
+  --ua-charts-color-hover: var(--ua-color-row-hover);
 }

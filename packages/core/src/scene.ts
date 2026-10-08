@@ -23,7 +23,7 @@ export function roleOf(l: Layer): Role {
  * drops. Two layers of one role and mark are told apart by a count among themselves alone: `primary:text`, then
  * `primary:text#2`. Layers of the previous series, and of a row's delta, are counted last. A reduction drops whole roles, and missing prior
  * data drops the whole previous series, so neither can move a count. */
-function layerKeys(layers: Layer[]): string[] {
+export function layerKeys(layers: Layer[]): string[] {
   const seen: Record<string, number> = {}, keys: string[] = [];
   for (const prev of [false, true]) layers.forEach((l, i) => {
     if (!!l.series !== prev) return;

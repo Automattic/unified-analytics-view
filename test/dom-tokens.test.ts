@@ -8,7 +8,7 @@ import { geoPainter } from '@universal-analytics/geo/dom';
 import { KEYS_CSS } from '../packages/dom/src/keys.ts';
 import { LAYOUTS } from '../packages/dom/src/layouts/index.ts';
 import { MOTION_CSS } from '../packages/dom/src/motion.ts';
-import { FACES, NAMED, TOKENS } from '../packages/dom/src/tokens.ts';
+import { FACES, FOCUS, HOVER, NAMED, TOKENS } from '../packages/dom/src/tokens.ts';
 import { BASE_CSS, FALLBACK_CSS } from '../packages/dom/src/view.ts';
 import { ROOT } from '../packages/tokens/src/generate.ts';
 
@@ -43,6 +43,45 @@ describe('the public tokens', () => {
     expect(paintVar('ink.muted')).toBe('var(--ua-charts-color-label-secondary, GrayText)');
     expect(paintVar('delta.bad')).toBe('var(--ua-charts-color-delta-bad, var(--ua-charts-color-trend-down, currentColor))');
     for (const paint of ['series.2', 'seq.10', 'seq.none']) expect(NAMED.test(paintVar(paint).slice(16, paintVar(paint).indexOf(',')))).toBe(true);
+  });
+});
+
+describe('the focus outline', () => {
+  // The holder that has focus and the mark chosen in it wear one outline, in every layout. Only where it sits differs.
+  it('and the pointer\'s hairline are the only outlines any stylesheet of the element draws', () => {
+    const drawn = [...new Set([...css.matchAll(/outline: ([^;]+);/g)].map((m) => m[1]!))];
+    expect(drawn.sort()).toEqual(['none', 'var(--ua-charts-stroke-width-focus, 2px) solid var(--ua-charts-color-focus, Highlight)', 'var(--ua-charts-stroke-width-rule, 1px) solid var(--ua-charts-color-label, CanvasText)']);
+    expect([...new Set([...css.matchAll(/outline-offset: ([^;]+);/g)].map((m) => m[1]!))].sort()).toEqual(['1px', 'calc(-1 * var(--ua-charts-stroke-width-focus, 2px))']);
+  });
+  it('is on every holder that takes focus, and on the mark the keys chose in each kind of holder', () => {
+    expect(css).toContain(`:is([data-hits], .uav-cells):focus-visible { ${FOCUS.inside} }`);
+    // A list's rows and a row's bar are painted over an outline of the box that holds them, so there it is a box of its own, on top.
+    expect(css).toContain(`.uav-rows:focus-visible::after, .uav-row[data-active="keys"]::after { content: ""; position: absolute; inset: 0; pointer-events: none; ${FOCUS.inside} }`);
+    expect(css).toContain('.uav-rows { position: relative;');
+    expect(css).toContain(`:is(.uav-bars, .uav-dots, .uav-points, .uav-band, .uav-cells) [data-active="keys"] { ${FOCUS.around} }`);
+    // An arc and a region are shapes, so the outline is the shape's own edge, at the same width and colour.
+    expect(css).toContain(`svg[data-hits] path[data-active="keys"] { ${FOCUS.stroke} }`);
+    expect(css).toContain(`.uav[data-layout="geo"] .uav-plot path[data-active="keys"] { ${FOCUS.stroke} }`);
+    expect(css).toContain(`.uav[data-layout="geo"] .uav-plot:has(.uav-regions:focus-visible) { ${FOCUS.inside} }`);
+  });
+  // A reader who tabs to a view must be able to tell where focus is from where the mouse was left.
+  it('is never what the pointer\'s mark wears: that has a hairline, and a row a tint', () => {
+    expect(css).toContain(`.uav-row[data-active="pointer"] { ${HOVER.row} }`);
+    expect(css).toContain(`:is(.uav-bars, .uav-dots, .uav-points, .uav-band, .uav-cells) [data-active="pointer"] { ${HOVER.around} }`);
+    expect(css).toContain(`svg[data-hits] path[data-active="pointer"] { ${HOVER.stroke} }`);
+    expect(css).toContain(`.uav[data-layout="geo"] .uav-plot path[data-active="pointer"] { ${HOVER.stroke} }`);
+    for (const part of Object.values(HOVER)) expect(part).not.toContain('focus');
+    // Every rule that draws either names how the mark was chosen. One that did not would draw for both.
+    expect(css.match(/\[data-active\] \{ (outline|stroke|background):/g)).toBeNull();
+  });
+});
+
+describe('the readout', () => {
+  // A row that says its value has said what the readout would. A mark read against an axis has said no number.
+  it('waits to appear only where a row says its own value', () => {
+    expect(css).toContain('.uav:has(.uav-row > .uav-f-value) > .uav-readout { transition: visibility 0s var(--ua-charts-motion-delay-tooltip, 500ms); }');
+    expect(css).toContain('@starting-style { .uav:has(.uav-row > .uav-f-value) > .uav-readout { visibility: hidden; } }');
+    expect(new Set(css.match(/[^\n}]*\.uav-readout \{ transition:/g)).size).toBe(1);
   });
 });
 

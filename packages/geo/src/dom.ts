@@ -1,5 +1,5 @@
 import type { CircleNode, PathNode, TextNode } from '@universal-analytics/core';
-import { attr, ensure, keyed, paintVar, prop, text, token, type LayoutPainter } from '@universal-analytics/dom';
+import { FOCUS, HOVER, attr, ensure, keyed, prop, text, token, type LayoutPainter } from '@universal-analytics/dom';
 import { GEO_RULES } from './index.ts';
 
 /* The `geo` mark's half for the DOM: the painter of its layout, for registerPainter().
@@ -27,9 +27,12 @@ const css = `
 .uav[data-layout="geo"] .uav-body { display: flex; flex-direction: column; }
 .uav[data-layout="geo"] .uav-plot { flex: none; align-self: center; inline-size: min(100%, 480px); aspect-ratio: var(--uav-aspect, 2); container-type: inline-size; }
 .uav[data-layout="geo"] .uav-plot path { fill: var(--uav-paint); stroke: ${token('color-background')}; stroke-width: 0.5px; }
-.uav[data-layout="geo"] .uav-plot path[data-active] { stroke: ${paintVar('ink')}; stroke-width: ${token('stroke-width-active', '1.5px')}; }
+/* A region is a shape, so the outline of the chosen one is its edge, the keyboard's or the pointer's. The list of regions is a group of the SVG, which
+ * has no box of its own to outline, so the part wears the holder's for it. */
+.uav[data-layout="geo"] .uav-plot path[data-active="keys"] { ${FOCUS.stroke} }
+.uav[data-layout="geo"] .uav-plot path[data-active="pointer"] { ${HOVER.stroke} }
 .uav[data-layout="geo"] .uav-regions:focus-visible { outline: none; }
-.uav[data-layout="geo"] .uav-plot:has(.uav-regions:focus-visible) { outline: auto; outline-offset: -2px; }
+.uav[data-layout="geo"] .uav-plot:has(.uav-regions:focus-visible) { ${FOCUS.inside} }
 /* The symbols' holder lies over the regions, and only a symbol takes the pointer from them. */
 .uav[data-layout="geo"] .uav-points { pointer-events: none; }
 .uav[data-layout="geo"] .uav-points i { pointer-events: auto; }

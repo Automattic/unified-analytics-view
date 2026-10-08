@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildScene, resolve, unboundedContainer, type Catalog, type Spec } from '@universal-analytics/core';
 import { catalog, runQuery, samples, type Scenario } from '@universal-analytics/fixtures';
-import { Keys, hitNodes, readout, step } from '../packages/dom/src/keys.ts';
+import { Keys, crossMarks, hitNodes, readout, rowsAt, step } from '../packages/dom/src/keys.ts';
 
 // Which point a key moves to, what the readout says and where a plot's hit targets lie are plain functions, held
 // here with no DOM. Focus, hover and the event are checked in a browser on the bench. What the mouse leaving does
@@ -51,6 +51,34 @@ describe('readout', () => {
   it('reads a ranked list and a share the same way', () => {
     expect(of('pages').says[0]).toMatch(/^\/.*: Page views [\d,]+$/);
     expect(of('mix').says[0]).toMatch(/^\w+: Visitors [\d,]+$/);
+  });
+});
+
+// A line is read against the axes, so at a point of one the readout is a crosshair, and these are what it says on them.
+describe('crossMarks', () => {
+  const marks = (sample: string, scenario: Scenario = 'typical') => {
+    const spec = samples[sample]!.spec, result = runQuery(spec.query, scenario), plan = resolve(spec, result, unboundedContainer(), catalog);
+    const scene = buildScene(plan, spec.query, result, catalog), { rows, split } = rowsAt(scene, spec.query, result);
+    return { scene, result, at: crossMarks(scene, plan.layers, rows, catalog, split) };
+  };
+  it('says a line\'s value at each of its rows, where the scene set it, and the comparison\'s after it', () => {
+    const { scene, result, at } = marks('trend'), line = scene.nodes.find((n) => n.kind === 'path' && n.key === 'primary:line');
+    expect([...at.keys()]).toEqual(scene.rows);
+    const first = at.get(scene.rows![0]!)!, row = result.rows[0]!, own = first.find((m) => m.role === 'primary')!;
+    expect(first.map((m) => m.role).sort()).toEqual(['comparison', 'primary']);
+    expect(own.text).toBe(String(row.visitors));
+    expect(own.t).toBe(line!.kind === 'path' ? line!.points[0]!.v : NaN);
+    expect(first.find((m) => m.role === 'comparison')!.text).toBe(String(row['visitors@previous']));
+    expect(first.every((m) => m.side === 0)).toBe(true);
+  });
+  it('says the unfinished day once, in core\'s words, though two paths meet the day before it', () => {
+    const { scene, at } = marks('trend'), last = at.get(scene.rows!.at(-1)!)!, before = at.get(scene.rows!.at(-2)!)!;
+    expect(last.find((m) => m.role === 'primary')!.text).toMatch(/ so far$/);
+    expect(before.filter((m) => m.role === 'primary')).toHaveLength(1);
+  });
+  it('has no comparison where there is no prior period, and nothing for a view that is not a plot of lines', () => {
+    expect(marks('trend', 'no-prior').at.get(marks('trend', 'no-prior').scene.rows![0]!)!.map((m) => m.role)).toEqual(['primary']);
+    for (const sample of ['pages', 'mix']) expect(marks(sample).at.size).toBe(0);
   });
 });
 

@@ -447,3 +447,60 @@ Merged. 263 tests pass and the typecheck is clean. All of it is inside `packages
 11. **A stacked area has no hit target on the unfinished day.** Core draws the stack only to the last whole day. To look at.
 12. **Leaving labels and second-axis ticks go at once;** they are not in the motion sheet's fade list.
 13. **Not done:** choosing one series with the pointer; the three-line legend gap from the core findings.
+
+### Steps 2, 4, 5 and 6 (built October 8, merged together)
+
+Built in parallel from step 1 and merged in the order 6, 5, 4, 2. After the last merge 411 tests pass and the typecheck is clean. Every golden scene in the merged tree is byte-identical to the branch it came from, and the six original samples' are unchanged. Each agent checked its own branch on the bench in headless Chromium; step 2 also in WebKit. **The merged tree has not been opened in a browser yet.**
+
+Samples added to `moreSamples`: `donut`, `pie`, `half`, `gauge`; `heatmap`; `scatter`, `bubble`, `quadrant`, `histogram`, `density`; `league`, `conversions`, `funnel`.
+
+**At the merge**
+
+1. **Every step adds to the same lists:** `Mark`, `Channel`, `Part`, `Layout`, the schema's mark enum, the two error strings that list marks, and the two test strings that list presets. Each merge conflicted there and nowhere surprising. The lists are joined.
+2. **Two steps defined `conversion_rate` differently.** Step 2's is a ratio by event and by step; step 4's was percent points by page. They are different facts, so the page one is now `page_conversion`. The two units for one idea (`ratio`, `percent`) should become one when units are formatted.
+3. **A plot of points was taken for any layout with a metric on x and no dimension there,** which is also a row's bar. It now needs no dimension on y either.
+4. **Core named metrics in an error's example** (`visitors`, `conversion_rate`). The rule is that core knows no metric name; the example is generic now.
+5. **Tests that swept every sample as a plot** were filtered at each merge. The pattern to keep: a suite takes the samples of its own layout.
+
+**Step 2, rows as tracks**
+
+- Columns are the `text` layers that show a metric; the `bar` is the track, not a column. Built that way because a bar as a column would give `bar-list` two "Page views" columns and break parity. A departure from the plan's wording.
+- The track runs behind the label and the first column; ranked columns stand beyond its end. In-cell bars per column are **not built**, so "table with in-cell bars" is only the single-bar form.
+- **The league table has no rank column.** A rank needs a field the result does not carry. Recommended: a companion, `pageviews@rank`, in step 3.
+- A row node (`kind: "row"`) is in every `rows` scene and `place()` leaves it out. The two recorded ratio scenes for the old samples are compared with it stripped, in one helper, `lessRows`, as a named departure.
+- Columns are dropped by a step asked once in `resolve()`, not by a new reduction, since a new reduction would change every plan.
+- The funnel preset needed a fourth slot, `$metric2`. New unit `ratio`, read as a percentage.
+- To add a mark to a row's track: a `TrackFn` in `TRACK_MARKS` in `scene.ts`, then `placeRows` and `layouts/rows.ts`.
+- Not done: the DOM `marks` rule for rows still ignores the value's room, so Top pages at 120 px shows rows in `<ua-view>` and the number in `resolve()`. That was so before.
+
+**Step 4, a metric on both axes, and `dot`**
+
+- **A plot of points needed a fit rule of its own,** `points`, with no bare rung. This counts against section 7's claim that rules belong to arrangements.
+- **Scatter and bubble have no preset.** They need a second metric slot. `$metric2` now exists from step 2, so this is cheap to close.
+- New parts `points`, `point-labels` and `size`. Bins arrive as `<dimension>@end` on each row; density as `pageviews@density`. `checkLayers` now accepts a companion the result carries, which is a slice of step 3.
+- Labels are decluttered greedily by rank, label against label only. In the quadrant sample a rule's label sits over a point. A first cut; Open 5 stands.
+- "Outliers" in the prose are the extremes, by comparing rows. A real test is a statistic and so the engine's. **To decide.**
+- **Keyboard in two dimensions is built and unconfirmed:** the nearest point in the arrow's half-plane.
+- The fixture has 8 pages, so collision is only exercised with synthetic data.
+- Not done: `aria-orientation` on the 2D listbox; a bin's readout says its start, not its range; no vertical grid lines.
+
+**Step 5, `cell`**
+
+- **A layout of its own, `matrix`,** not a branch in cartesian: it shares none of cartesian's ladder. A departure from section 3.4. It claims every dimension-by-dimension spec, which a future Gantt (rows on a time x) will collide with.
+- The colour scale quantizes over the least and most of the cells drawn, or the catalog `domain` when there is one. A pair with no row is drawn `seq.none`.
+- **`seq.none` against `seq.1` in dark reads as distinct by hue only.** Clear at 346 px, faint at 170, and likely to merge in greyscale. No hatch or outline was added. **To look at.**
+- Weekday and hour work as ordered categorical in the grid, but the engine ranks a one-dimension query, so a weekday bar chart would come back out of calendar order. Needs an ordinal type or an unranked answer. For the API's owners.
+- The seam grew: `LayoutPainter.paint` takes the view's data as a fourth argument, and a layout may supply its own `table`.
+- **Keyboard on a grid is built and unconfirmed:** row and column, ARIA `grid`.
+- The `marks` rule does not know the column count: 24 columns at 150 px are about 5 px each.
+
+**Step 6, `arc`**
+
+- **A gauge's layers lean on role to do data work:** an `arc` with a metric on `angle` and `role: "reference"` is marked at the catalog `target`. The alternative was a `$target` slot. **To decide.**
+- **The schema exempts `use: "gauge"` by name** from "a preset needs a dimension". Cleaner: drop that clause and rely on `expand()`'s error.
+- `bands` is in the catalog type and schema and is **not drawn**: there are no paint tokens for bands.
+- The number in a donut's hole is its own part, `hole`. Between about 120 and 145 px across, `<ua-view>` shows it and the pixel painter drops it.
+- A half circle uses the circle's `marks` need, so it collapses to the number when it would still fit.
+- A catalog `target` now shows in any metric's prose and note, not only a gauge's.
+- `radius` is a number only (the inner radius). A metric on radius is an error, so rose and radial bar are not built.
+- Preset names `pie` and `pie-semi-circle` follow the package from memory; `donut` and `gauge` are working names.

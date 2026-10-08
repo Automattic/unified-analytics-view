@@ -39,11 +39,13 @@ describe('the sweep, for what the prototype does not know', () => {
     });
     it(name + ': resolves in every data state, and steps down to the number and then the prose', () => {
       expect(view(spec), JSON.stringify(view.errors)).toBe(true);
+      // A plot of points has no bare form: under the room its axes need it is the number alone (test/points.test.ts).
+      const points = ['scatter', 'bubble', 'quadrant'].includes(name);
       for (const sc of scenarios) {
         // 10 px is narrower than any number, "0" included.
         const layouts = [346, 250, 120, 10].map((w) => run(spec, w, null, sc).plan.layout);
-        expect(layouts, sc).toEqual(sc === 'empty' ? ['notice', 'notice', 'none', 'prose'] : ['cartesian', 'cartesian', 'none', 'prose']);
-        expect(run(spec, 250, null, sc).plan.dropped[0], sc).toBe(sc === 'empty' ? undefined : 'axes and grid (added the number to make up for them)');
+        expect(layouts, sc).toEqual(sc === 'empty' ? ['notice', 'notice', 'none', 'prose'] : ['cartesian', points ? 'none' : 'cartesian', 'none', 'prose']);
+        if (!points) expect(run(spec, 250, null, sc).plan.dropped[0], sc).toBe(sc === 'empty' ? undefined : 'axes and grid (added the number to make up for them)');
         expect(run(spec, 700, null, sc).plan.dropped, sc).toEqual([]);
       }
     });

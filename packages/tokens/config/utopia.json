@@ -6,7 +6,7 @@
     "maxFontSize": 16,
     "minRatio": 1.125,
     "maxRatio": 1.2,
-    "positiveSteps": 4,
+    "positiveSteps": 5,
     "negativeSteps": 2
   },
   "spaceScale": {

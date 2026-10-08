@@ -16,7 +16,7 @@ StyleDictionary.registerTransform({
 
 StyleDictionary.registerTransform({
   name: 'dimension/css', type: 'value', transitive: true,
-  filter: (token: Token) => { const v = valueOf(token); return token.$type === 'dimension' && typeof v === 'object' && v !== null && 'value' in v; },
+  filter: (token: Token) => { const v = valueOf(token); return (token.$type === 'dimension' || token.$type === 'duration') && typeof v === 'object' && v !== null && 'value' in v; },
   transform: (token: Token) => { const v = valueOf(token) as { value: number; unit: string }; return `${v.value}${v.unit}`; },
 });
 
@@ -26,4 +26,10 @@ StyleDictionary.registerTransform({
   transform: (token: Token) => (valueOf(token) as { hex: string }).hex,
 });
 
-export const transforms = ['attribute/cti', 'name/kebab', 'value/clamp', 'dimension/css', 'color/dtcg-css'];
+StyleDictionary.registerTransform({
+  name: 'cubic-bezier/css', type: 'value', transitive: true,
+  filter: (token: Token) => token.$type === 'cubicBezier' && Array.isArray(valueOf(token)),
+  transform: (token: Token) => `cubic-bezier(${(valueOf(token) as number[]).join(', ')})`,
+});
+
+export const transforms = ['attribute/cti', 'name/kebab', 'value/clamp', 'dimension/css', 'cubic-bezier/css', 'color/dtcg-css'];

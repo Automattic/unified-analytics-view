@@ -350,7 +350,7 @@ function sceneNumber(catalog: Catalog, q: Query, result: Result, share: boolean)
     return nodes;
   }
   if (result.meta.empty) { value('0'); sub('No visits yet'); return nodes; }
-  let note: string | null = M.rangeTotal === 'sum of daily' ? 'Sum of daily counts' : null;
+  let note: string | null = M.rangeTotal === 'sum of daily' ? 'Sum of daily counts' : M.target != null ? 'Target ' + fmt(M.target) : null;
   if (by && catalog.dimensions[by]!.type !== 'time' && rows.length) {
     const top = leader(result, by, m)!;                                      // with two dimensions a row is a pair, so the leader is the engine's
     note = share ? top[by] + ' ' + fmtPct(num(top, m) / (t[m] || 1)) : 'Top: ' + top[by];

@@ -39,7 +39,7 @@ export const catalog: Catalog = {
   },
 };
 
-function seeded(seed: number) {
+export function seeded(seed: number) {
   return function () {
     seed = (seed + 0x6D2B79F5) | 0;
     let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
@@ -142,7 +142,7 @@ type M = keyof Counts;
 type D = keyof Daily;
 
 /** `total` divided among weights in whole numbers that add up to it: the largest remainders take what rounding down leaves. */
-function apportion(total: number, weights: number[]): number[] {
+export function apportion(total: number, weights: number[]): number[] {
   const all = weights.reduce((s, w) => s + w, 0), exact = weights.map((w) => Math.abs(total) * w / all), out = exact.map(Math.floor);
   const left = Math.abs(total) - out.reduce((s, n) => s + n, 0);
   exact.map((x, i) => [x - out[i]!, i] as const).sort((a, b) => b[0] - a[0]).slice(0, left).forEach(([, i]) => { out[i]!++; });

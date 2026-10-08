@@ -1,4 +1,4 @@
-import { delta, fmt, fmtPct, rangeLabel } from './format.ts';
+import { delta, fmt, fmtPct, formatValue, rangeLabel } from './format.ts';
 import type { Catalog, Query, Result, Row } from './types.ts';
 
 /** The row for the value of a dimension that has the most of a metric: from the engine's totals by dimension where the
@@ -33,7 +33,9 @@ export function tldrProse(q: Query, result: Result, share: boolean, catalog: Cat
       const tot = t[m] || 1;
       return rows[0]![by] + ' is the largest ' + label + ' at ' + fmtPct((rows[0]![m] as number) / tot) + ' of ' + name + ', followed by ' + rows[1]![by] + ' at ' + fmtPct((rows[1]![m] as number) / tot) + '.';
     }
-    return 'Top ' + label + 's by ' + name + ', ' + range + ': ' + rows.slice(0, 3).map((r) => r[by] + ' (' + fmt(r[m] as number) + ')').join(', ') + '.';
+    // Several metrics by one dimension: the ranking is by the first, and the rest are said once, as the engine's totals. A metric it gives no total for is left out.
+    const rest = q.metrics.slice(1).filter((x) => t[x] != null).map((x) => catalog.metrics[x]!.label.toLowerCase() + ' ' + formatValue(t[x], catalog.metrics[x]!));
+    return 'Top ' + label + 's by ' + name + ', ' + range + ': ' + rows.slice(0, 3).map((r) => r[by] + ' (' + fmt(r[m] as number) + ')').join(', ') + '.' + (rest.length ? ' Overall, ' + rest.join(' and ') + '.' : '');
   }
   // Each metric the query asks for, the first with the range.
   return q.metrics.map((m, i) => {

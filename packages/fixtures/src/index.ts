@@ -14,6 +14,7 @@ export const catalog: Catalog = {
     conversions:      { label: 'Conversions',     unit: 'count', polarity: 'up', rangeTotal: 'sum' },
     conversion_rate:  { label: 'Conversion rate', unit: 'ratio', polarity: 'up' },
     conversion_value: { label: 'Value',           unit: 'usd',   polarity: 'up', rangeTotal: 'sum' },
+    response_time:    { label: 'Response time',   unit: 'ms',    polarity: 'down' },
   },
   dimensions: {
     'date.day': { label: 'Day',     type: 'time' },
@@ -38,11 +39,11 @@ function seeded(seed: number) {
 }
 type Counts = { visitors: number; pageviews: number };
 /** What a day has and a page does not: sign-ups less cancellations, which falls below zero, and takings, in another unit. */
-type Daily = Counts & { net_subscribers: number; revenue: number; signups: number };
+type Daily = Counts & { net_subscribers: number; revenue: number; signups: number; response_time: number };
 const DAY = 86400000, TODAY = Date.UTC(2026, 9, 5);
 const DAILY = (function () {
   // The first is the prototype's, drawn from in its order. What the prototype does not know draws from the second.
-  const rand = seeded(11), more = seeded(23), spend = seeded(37), join = seeded(41);
+  const rand = seeded(11), more = seeded(23), spend = seeded(37), join = seeded(41), slow = seeded(53);
   return Array.from({ length: 56 }, function (_, i) {
     const t = TODAY - (55 - i) * DAY, dow = new Date(t).getUTCDay();
     const season = [0.72, 1.06, 1.12, 1.1, 1.04, 0.96, 0.7][dow]!;
@@ -54,7 +55,13 @@ const DAILY = (function () {
     const net_subscribers = Math.round((more() - 0.45) * 40 * (partial ? 0.42 : 1));
     const revenue = Math.round(visitors * (4 + spend() * 4));
     const signups = Math.round(visitors * (0.02 + join() * 0.02));
-    return { iso: new Date(t).toISOString().slice(0, 10), visitors, pageviews, net_subscribers, revenue, signups, partial };
+    // A response time is measured through the day, so a day has more to say of it than one number. The engine says
+    // it all: where the day opened and closed, its least and its most, and the interval its mean is known to.
+    const level = 400 + 50 * Math.sin(i / 4), open = Math.round(level + (slow() - 0.5) * 140), close = Math.round(level + (slow() - 0.5) * 140);
+    const response_time = Math.round((open + close) / 2 + (slow() - 0.5) * 30), wide = Math.round(18 + slow() * 30);
+    const times = { 'response_time@open': open, 'response_time@close': close, 'response_time@min': Math.min(open, close) - Math.round(30 + slow() * 90),
+      'response_time@max': Math.max(open, close) + Math.round(40 + slow() * 160), 'response_time@lower': response_time - wide, 'response_time@upper': response_time + wide };
+    return { iso: new Date(t).toISOString().slice(0, 10), visitors, pageviews, net_subscribers, revenue, signups, response_time, times, partial };
   });
 })();
 const PAGES: (Counts & { page: string; prev: Counts | null })[] = [
@@ -78,6 +85,20 @@ const MIX: Record<string, [string, number, number][]> = { channel: CHANNELS, dev
 // What a page has and a day does not: the share of its visitors who convert, in percent. A rate is the engine's to work out, and does not add up.
 const RATES: Record<string, number> = { '/': 2.1, '/pricing': 5.8, '/blog/launch-notes': 1.2, '/docs/getting-started': 3.4, '/changelog': 0.9, '/about': 1.6, '/blog/analytics-without-cookies': 2.7, '/contact': 4.4 };
 const RATE = 2.6;
+// A page's response time in milliseconds, as the engine states it: its mean, then each companion of it. The least, the
+// quartiles and the most, and the interval the mean is known to. No view works out a quantile.
+const TIME_FIELDS = ['', '@min', '@p25', '@p50', '@p75', '@max', '@lower', '@upper'];
+const TIMES: Record<string, number[]> = {
+  '/':                               [412, 120, 290, 380, 490, 1180, 396, 428],
+  '/pricing':                        [468, 140, 320, 430, 560, 1420, 441, 495],
+  '/blog/launch-notes':              [655, 180, 430, 590, 800, 2350, 612, 698],
+  '/docs/getting-started':           [530, 150, 360, 480, 650, 1760, 492, 568],
+  '/changelog':                      [345, 110, 250, 320, 410, 940,  318, 372],
+  '/about':                          [298, 100, 220, 280, 350, 760,  266, 330],
+  '/blog/analytics-without-cookies': [720, 210, 470, 640, 890, 2600, 648, 792],
+  '/contact':                        [384, 130, 270, 350, 450, 1050, 331, 437],
+};
+const TIME: Cell = [436, 451];
 // Load time in seconds, in bins half a second wide: the weight of each, with a long tail.
 const LOAD = { width: 0.5, weights: [2, 9, 21, 30, 27, 20, 14, 10, 7, 5, 4, 3, 2, 2, 1, 1] };
 // Dimensions held as a table: a row per value, each metric now and in the period before, and the engine's own totals.
@@ -126,6 +147,7 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
   const live = metrics.indexOf('present') >= 0;
   if (metrics.indexOf('page_conversion') >= 0 && dims.length && (dims.length > 1 || by !== 'page')) throw new Error('The fixture has "page_conversion" page by page, and not by anything else. Query it by page alone.');
   if (dims.indexOf('load_time') >= 0 && (dims.length > 1 || live || metrics.indexOf('page_conversion') >= 0)) throw new Error('The fixture bins a count by "load_time" and nothing more. Query a count by it alone.');
+  if (metrics.indexOf('response_time') >= 0 && (dims.length > 1 || (by && by !== 'page' && by !== 'date.day'))) throw new Error('The fixture has "response_time" by day or page by page, and not by anything else. Query it by date.day or by page alone.');
   if (live && (metrics.length > 1 || dims.length > 1 || (by && by !== 'page'))) throw new Error('"present" is an instantaneous count. Query it alone, optionally by page.');
 
   if (scenario === 'empty') {
@@ -149,15 +171,23 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
   if (table && dims.length > 1) throw new Error('The fixture has "' + by + '" on its own, and not with a second dimension. Remove "' + dims[1] + '" from by.');
   metrics.forEach((m) => {
     const rate = m === 'page_conversion';
-    const [now, before] = table && table.totals[m] ? table.totals[m]!.map((n) => held(m, n)) : rate ? [RATE, RATE - 0.2] : [sum(cur, m), sum(prev, m)];
+    const [now, before] = table && table.totals[m] ? table.totals[m]!.map((n) => held(m, n)) : rate ? [RATE, RATE - 0.2] : m === 'response_time' ? TIME : [sum(cur, m), sum(prev, m)];
     totals[m] = now!;
     if (wantPrev) totals[m + '@previous'] = hasPrev ? before! : null;
   });
   // One row per value of a dimension, in the dimension's own order, before any sort or limit.
   function rowsBy(dim: string): Row[] {
+    // Companions come with a query by one dimension. A running total is the engine's: what the range held before each
+    // day, and what it holds after it.
+    let run = 0;
     if (dim === 'date.day') return cur.map((d, i) => {
       const r: Row = { 'date.day': d.iso, partial: d.partial };
-      metrics.forEach((m) => { r[m] = d[m as D]; if (wantPrev) r[m + '@previous'] = hasPrev ? prev[i]![m as D] : null; });
+      metrics.forEach((m) => {
+        r[m] = d[m as D]; if (wantPrev) r[m + '@previous'] = hasPrev ? prev[i]![m as D] : null;
+        if (dims.length > 1) return;
+        if (m === 'response_time') Object.assign(r, d.times);
+        if (m === 'net_subscribers') { r[m + '@before'] = run; run += d.net_subscribers; r[m + '@running'] = run; }
+      });
       return r;
     });
     if (table) {
@@ -169,12 +199,13 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
         return r;
       });
     }
-    const perPage = metrics.find((m) => m !== 'page_conversion' && !(m in PAGES[0]!));
+    const perPage = metrics.find((m) => m !== 'page_conversion' && m !== 'response_time' && !(m in PAGES[0]!));
     if (dim === 'page' && perPage) throw new Error('The fixture has "' + perPage + '" by day, channel or device, and not page by page. Query it by one of those.');
     if (dim === 'page') return PAGES.map((p) => {
       const r: Row = { page: p.page };
       metrics.forEach((m) => {
         if (m === 'page_conversion') { r[m] = Math.round(RATES[p.page]! * vary() * 10) / 10; if (wantPrev) r[m + '@previous'] = null; return; }
+        if (m === 'response_time') { TIME_FIELDS.forEach((f, j) => { r[m + f] = TIMES[p.page]![j]!; }); if (wantPrev) r[m + '@previous'] = null; return; }
         r[m] = Math.round(p[m as M] * days / 28 * vary()); if (wantPrev) r[m + '@previous'] = hasPrev && p.prev ? p.prev[m as M] : null;
       });
       return r;
@@ -202,8 +233,12 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
   const m0 = metrics[0]!;
   // A categorical dimension is ranked by the first metric, and `limit` keeps its first values. Days and bins keep their own order.
   const top = (rs: Row[]) => { const ranked = rs.slice().sort((a, b) => (b[m0] as number) - (a[m0] as number)); return q.limit ? ranked.slice(0, q.limit) : ranked; };
+  // A page's rank by page views is the engine's too, counted before any limit.
+  // ponytail: it comes only with a query that compares. A query has no way to ask for a companion, and the prototype's
+  // samples must come back as they were. When the contract can ask, this is asked for.
+  const ranked = (rs: Row[]) => { if (by === 'page' && wantPrev && m0 === 'pageviews') rs.forEach((r, i) => { r['pageviews@rank'] = i + 1; }); return rs; };
   if (table && !table.ranked) return { rows: rowsBy(by!).slice(0, q.limit || undefined), totals, meta };
-  if (dims.length < 2) return { rows: !by ? rows : catalog.dimensions[by]!.type !== 'categorical' ? rowsBy(by) : top(rowsBy(by)), totals, meta };
+  if (dims.length < 2) return { rows: !by ? rows : catalog.dimensions[by]!.type !== 'categorical' ? rowsBy(by) : ranked(top(rowsBy(by))), totals, meta };
 
   // Two dimensions: one row per pair. Each value of the outer one is divided among the inner one's, unevenly from one
   // to the next, so every pair adds up to the outer row it came from. Time, when it is there, is the outer one.

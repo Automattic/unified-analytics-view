@@ -24,11 +24,12 @@ function detectLayout(catalog: Catalog, layers: Layer[]): Layout {
   throw new Error('These layers put no dimension on x, y or color, so there is nothing to lay out.');
 }
 
-function checkLayers(layers: Layer[], q: Query): void {
+function checkLayers(layers: Layer[], q: Query, catalog: Catalog): void {
   const by = q.by || [], known = by.concat(q.metrics);
   if (by.length > 2 || (by.length === 2 && by[0] === by[1])) throw new Error('A view is by one dimension or by two different ones, and query.by has: ' + by.join(', ') + '. Remove all but two.');
   layers.forEach((l, i) => {
     if (!l || !l.mark) throw new Error('Layer ' + (i + 1) + ' has no "mark". Use one of: line, area, bar, rule, text.');
+    if (l.stack && !isDim(catalog, l.encode && l.encode.color)) throw new Error('Layer ' + (i + 1) + ' has "stack" and no dimension on color, so there is nothing to stack. Encode the query\'s second dimension on color, or remove "stack".');
     Object.entries(l.encode || {}).forEach(([ch, f]) => {
       if (typeof f === 'number') return;
       if (known.indexOf(f) < 0) throw new Error('Layer ' + (i + 1) + ' encodes "' + f + '" on ' + ch + ', which the query does not return. It returns: ' + known.join(', ') + '.');
@@ -46,7 +47,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   const m = q.metrics[0]!, M = catalog.metrics[m]!, by = (q.by || [])[0], rules = container.rules || CONTAINER_RULES, keep = spec.keep || [], dropped: string[] = [];
   let layers = (spec.layers || []).slice();
   if (!layers.length && by) throw new Error('This spec has a dimension but no layers, so there is nothing to draw it with. Add "layers", or "use" one of: ' + Object.keys(presets).join(', ') + '.');
-  checkLayers(layers, q);
+  checkLayers(layers, q, catalog);
   if (layers.some((l) => l.series === 'previous') && (q.compare !== 'previous' || result.totals[m + '@previous'] == null)) {
     layers = layers.filter((l) => l.series !== 'previous');
     if (!result.meta.empty) dropped.push(q.compare === 'previous' ? 'comparison series (no prior data)' : 'comparison series (the query has no "compare")');

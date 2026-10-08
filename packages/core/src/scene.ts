@@ -38,7 +38,7 @@ export function xScale(rows: string[], scale: 'band' | 'point', lo: number, hi: 
   return { x, w, cx: (k: string) => x(k) + w / 2 };
 }
 
-/* What a mark in the plot is drawn with: its layer's key, role and paint, the field on y, and the plot's scales. */
+/* What a mark in the plot is drawn with: its layer's key, role and paint, the rows it has a value for, and the plot's scales. */
 interface Draw {
   id: string;
   /** The series this is, where the layer is split into them. `rows` are then that series' alone. */
@@ -46,29 +46,36 @@ interface Draw {
   role: Role;
   paint: string;
   prev: boolean;
-  f: string;
   rows: Row[];
   k: (r: Row) => string;
   unit: ReturnType<typeof xScale>;
+  /** A value on y, as a ratio of the plot's height. */
   v: (n: number) => number;
+  /** Where a row's mark starts and where it ends, as ratios: from the baseline, or from the series stacked under it. */
+  ends: (r: Row) => [number, number];
+  /** A bar's place among those beside it at one x: which, of how many. */
+  slot?: [number, number];
 }
 type MarkFn = (l: Layer, d: Draw) => SceneNode[];
 
-const path: MarkFn = (l, { id: layer, series, role: role0, paint, prev, f, rows, k, unit, v }) => {
+const path: MarkFn = (l, { id: layer, series, role: role0, paint, prev, rows: pts, k, unit, ends }) => {
   const id = series == null ? layer : layer + ':' + series, role = series == null ? { role: role0 } : { role: role0, series };
-  const pts = rows.filter((r) => r[f] != null);
   const whole = pts.filter((r) => prev || !r.partial);
   if (!whole.length) return [];
-  const points = (rs: Row[]): PathNode['points'] => rs.map((r) => ({ row: k(r), x: unit.cx(k(r)), v: v(num(r, f)) }));
-  if (l.mark === 'area') return [{ key: id, part: 'plot', kind: 'path', d: pathD(points(whole), 'monotone', true), points: points(whole), curve: 'monotone', fill: true, paint, opacity: 0.14, layer: 'data', ...role }];
+  // An area's points say where it starts only when that is not the bottom of the plot.
+  const points = (rs: Row[]): PathNode['points'] => rs.map((r) => { const [v0, v] = ends(r); return { row: k(r), x: unit.cx(k(r)), v, ...(l.mark === 'area' && v0 && { v0 }) }; });
+  // An area under a line is a tint. Stacked, each is the mark itself.
+  if (l.mark === 'area') return [{ key: id, part: 'plot', kind: 'path', d: pathD(points(whole), 'monotone', true), points: points(whole), curve: 'monotone', fill: true, paint, ...(!(l.stack && series != null) && { opacity: 0.14 }), layer: 'data', ...role }];
   const nodes: SceneNode[] = [{ key: id, part: 'plot', kind: 'path', d: pathD(points(whole), 'monotone'), points: points(whole), curve: 'monotone', paint, width: prev ? 1.5 : 2, dash: prev ? '3 3' : null, layer: 'data', ...role }];
   const tail = prev ? [] : [whole[whole.length - 1]!].concat(pts.filter((r) => r.partial));
   if (tail.length > 1) nodes.push({ key: id + ':partial', part: 'plot', kind: 'path', d: pathD(points(tail)), points: points(tail), paint, width: 2, dash: '2 4', opacity: 0.75, layer: 'data', ...role, note: 'incomplete bucket' });
   return nodes;
 };
-const bar: MarkFn = (_l, { id, series, role, paint, prev, f, rows, k, unit, v }) => rows.filter((r) => r[f] != null).map((r) => (
-  { key: id + ':' + k(r) + (series == null ? '' : ':' + series), part: 'plot', kind: 'rect', x: unit.x(k(r)), w: unit.w, v: v(num(r, f)), row: k(r), ...(series != null && { series }),
-    paint, opacity: r.partial && !prev ? 0.4 : 1, layer: 'data', role }));
+const bar: MarkFn = (_l, { id, series, role, paint, prev, rows, k, unit, ends, slot: [j, n] = [0, 1] }) => rows.map((r) => {
+  const [v0, v] = ends(r), w = unit.w / n;
+  return { key: id + ':' + k(r) + (series == null ? '' : ':' + series), part: 'plot', kind: 'rect', x: unit.x(k(r)) + j * w, w, v, ...(v0 && { v0 }), row: k(r), ...(series != null && { series }),
+    paint, opacity: r.partial && !prev ? 0.4 : 1, layer: 'data', role };
+});
 const rule: MarkFn = (l, { id, role, v }) => {
   const t = v(l.encode!.y as number);
   const nodes: SceneNode[] = [{ key: id, part: 'plot', kind: 'line', t, paint: 'rule', dash: '5 3', width: 1.5, layer: 'data', role }];
@@ -109,14 +116,34 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   const isTime = catalog.dimensions[xField]!.type === 'time';
   const scale = layers.some((l) => l.mark === 'bar') ? 'band' : 'point';
   const yField = (l: Layer) => (l.series === 'previous' ? l.encode!.y + '@previous' : (l.encode!.y as string));
+  // Where each row's mark starts and ends, in its metric's own terms: from zero, or from the series stacked under it.
+  // A stack runs in the series' order, the first at the bottom, and a value below zero stacks downward.
+  // Normalized, each is a share of the engine's total for its x, so with a `limit` a stack stops short of the top.
+  const whole = new Map(((result.totalsBy && result.totalsBy[xField]) || []).map((r) => [k(r), r]));
+  const spans = layers.map((l) => {
+    const out = new Map<Row, [number, number]>();
+    if (typeof (l.encode && l.encode.y) !== 'string') return out;
+    const f = yField(l), share = l.stack === 'normalize';
+    if (!l.stack || !splitOf(catalog, l, xField)) { rows.forEach((r) => { if (r[f] != null) out.set(r, [0, num(r, f)]); }); return out; }
+    if (share && rows.length && !whole.size) throw new Error('stack: "normalize" divides by the engine\'s total for each "' + xField + '", and this result has no totalsBy. Return it from the query layer, or use stack: "zero".');
+    const up: Record<string, number> = {}, down: Record<string, number> = {};
+    series.forEach((s) => rows.forEach((r) => {
+      if (r[split!] !== s || r[f] == null) return;
+      const n = num(r, f), run = n < 0 ? down : up, from = run[k(r)] || 0, all = share ? (whole.get(k(r))![f] as number) || 1 : 1;
+      run[k(r)] = from + n;
+      out.set(r, [from / all, (from + n) / all]);
+    }));
+    return out;
+  });
+  const share = layers.some((l) => l.stack === 'normalize' && splitOf(catalog, l, xField));
   const yVals: number[] = [];
-  layers.forEach((l) => {
+  layers.forEach((l, i) => {
     const y = l.encode && l.encode.y;
     if (typeof y === 'number') yVals.push(y);
-    else if (y) rows.forEach((r) => { const v = r[yField(l)]; if (v != null) yVals.push(v as number); });
+    else spans[i]!.forEach(([, hi]) => yVals.push(hi));
   });
-  // Always rounded to 4 ticks: a scene with no size cannot pick a tick count by height.
-  const y = scaleLinear().domain([0, max(yVals) || 1]);
+  // Always rounded to 4 ticks: a scene with no size cannot pick a tick count by height. Shares run to the whole.
+  const y = scaleLinear().domain([0, share ? 1 : max(yVals) || 1]);
   if (guides.y) y.nice(4);
   const top = y.domain()[1]!, v = (n: number) => n / top;
   const unit = xScale(keys, scale, 0, 1);
@@ -126,7 +153,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     // A short plot keeps the ticks a count of 2 would give on this scale. The rest are ranked, to be given up there.
     const rank = coarse.includes(t) ? {} : { rank: 1 };
     if (guides.grid) nodes.push({ key: 'grid:' + t, part: 'plot', kind: 'line', t: v(t), paint: t === 0 ? 'axis' : 'grid', layer: 'guide', ...rank });
-    nodes.push({ key: 'ytick:' + t, part: 'y-axis', kind: 'text', t: v(t), text: fmt(t, true), anchor: 'end', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...rank });
+    nodes.push({ key: 'ytick:' + t, part: 'y-axis', kind: 'text', t: v(t), text: share ? fmtPct(t) : fmt(t, true), anchor: 'end', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...rank });
   });
   if (guides.x && keys.length) {
     const last = keys.length - 1;
@@ -138,20 +165,26 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
         anchor: !isTime ? 'middle' : j === 0 ? 'start' : j === idx.length - 1 ? 'end' : 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...(mid && { rank: 1 }) });
     });
   }
-  const ids = layerKeys(layers);
+  const ids = layerKeys(layers), ends = new Map<string, number>();
   layers.forEach((l, i) => {
-    const draw = PLOT_MARKS[l.mark], prev = l.series === 'previous';
+    const draw = PLOT_MARKS[l.mark], prev = l.series === 'previous', span = spans[i]!;
     if (!draw) throw new Error('The "' + l.mark + '" mark has no rule for a time or category axis yet. Use line, area, bar or rule.');
-    const d = { id: ids[i]!, role: roleOf(l), paint: l.paint || (prev ? 'compare' : 'series.1'), prev, f: l.mark === 'rule' ? '' : yField(l), rows, k, unit, v };
+    const d: Draw = { id: ids[i]!, role: roleOf(l), paint: l.paint || (prev ? 'compare' : 'series.1'), prev, rows: rows.filter((r) => span.has(r)), k, unit, v,
+      ends: (r) => { const [lo, hi] = span.get(r)!; return [v(lo), v(hi)]; } };
     if (!splitOf(catalog, l, xField)) return nodes.push(...draw(l, d));
-    series.forEach((s, j) => nodes.push(...draw(l, { ...d, series: s, paint: prev ? d.paint : 'series.' + (j + 1), rows: rows.filter((r) => r[split!] === s) })));
+    series.forEach((s, j) => {
+      // Bars of one x that are not stacked sit side by side: overlapping bars are never what was meant. Lines and areas overlay.
+      const drawn = draw(l, { ...d, series: s, paint: prev ? d.paint : 'series.' + (j + 1), rows: d.rows.filter((r) => r[split!] === s), ...(l.mark === 'bar' && !l.stack && { slot: [j, series.length] }) });
+      nodes.push(...drawn);
+      // Where the series' line ends, for its label: half way up its band where areas are stacked.
+      const last = drawn.filter((n): n is PathNode => n.kind === 'path').map((n) => n.points[n.points.length - 1]!).pop();
+      if (last) ends.set(s, l.mark === 'area' && l.stack ? ((last.v0 || 0) + last.v) / 2 : last.v);
+    });
   });
   if (split) {
     // Both keys to the series, each in its own part, as a band has. The plan names one in `parts`; a fit rule swaps them.
     // A label sits beside the plot at the height its line ends. ponytail: two lines that end close have labels that
     // collide. Nothing moves them apart yet (reference, Open 5).
-    const ends = new Map<string, number>();
-    nodes.forEach((n) => { if (n.kind === 'path' && n.series != null && n.points.length) ends.set(n.series, n.points[n.points.length - 1]!.v); });
     series.forEach((s, j) => {
       if (ends.has(s)) nodes.push({ key: 'label:' + s, part: 'labels', kind: 'text', series: s, t: ends.get(s)!, text: s, anchor: 'start', baseline: 'middle', font: 'tick', paint: 'series.' + (j + 1), layer: 'guide' });
     });

@@ -190,3 +190,65 @@ describe('a split plot\'s legend', () => {
     expect(at(labelled.scene, 'label:Desktop').y).toBeCloseTo(ly!, 2);          // a path is written to three places
   });
 });
+
+describe('stacking, and bars side by side', () => {
+  const plot = (spec: Spec, w = 700, result = runQuery(spec.query)) => { const container = makeContainer(w), ratio = buildScene(resolve(spec, result, container, catalog), spec.query, result, catalog); return { ratio, scene: place(ratio, container), result }; };
+  const rects = (ratio: { nodes: any[] }, row: string) => ratio.nodes.filter((n) => n.kind === 'rect' && n.part === 'plot' && n.row === row) as { key: string; x: number; w: number; v: number; v0?: number; series: string }[];
+  const stacked = specs.stacked!, as = (stack: string | undefined, spec = stacked): Spec => ({ ...spec, layers: [{ ...spec.layers![0]!, stack } as any] });
+  it('stack: "zero" starts each series where the one under it ends, in the series\' order', () => {
+    const { ratio, result } = plot(stacked), [desktop, mobile, tablet] = rects(ratio, '2026-09-08');
+    expect([desktop!.series, mobile!.series, tablet!.series]).toEqual(['Desktop', 'Mobile', 'Tablet']);
+    expect(desktop!.v0).toBe(undefined);
+    expect([mobile!.v0, tablet!.v0]).toEqual([desktop!.v, mobile!.v]);
+    expect(new Set([desktop!.x, mobile!.x, tablet!.x]).size).toBe(1);
+    // The top of a stack is its day's total on the y scale, which runs to 600 here.
+    expect(ratio.nodes.filter((n) => n.part === 'y-axis').map((n) => (n as { text: string }).text)).toEqual(['0', '200', '400', '600']);
+    expect(tablet!.v).toBeCloseTo((result.totalsBy!['date.day']![0]!.visitors as number) / 600, 12);
+  });
+  it('stack: "normalize" makes each a share of the engine\'s total for its x, so a limit leaves the stack short', () => {
+    const shares = as('normalize'), { ratio } = plot(shares);
+    expect(ratio.nodes.filter((n) => n.part === 'y-axis').map((n) => (n as { text: string }).text)).toEqual(['0%', '20%', '40%', '60%', '80%', '100%']);
+    for (const row of ratio.rows!) expect(rects(ratio, row).pop()!.v, row).toBeCloseTo(1, 12);
+    const top2 = plot({ ...shares, query: { ...shares.query, limit: 2 } }), all = top2.result.totalsBy!['date.day']![0]!.visitors as number, [d, m] = top2.result.rows;
+    expect(rects(top2.ratio, '2026-09-08').map((n) => n.series)).toEqual(['Desktop', 'Mobile']);
+    expect(rects(top2.ratio, '2026-09-08').pop()!.v).toBeCloseTo(((d!.visitors as number) + (m!.visitors as number)) / all, 12);
+    expect(rects(top2.ratio, '2026-09-08').pop()!.v).toBeLessThan(0.95);
+    // The same holds with no guides to round the scale: shares run to the whole.
+    expect(rects(plot({ ...shares, query: { ...shares.query, limit: 2 } }, 250).ratio, '2026-09-08').pop()!.v).toBeLessThan(0.95);
+  });
+  it('a bar with color and no stack sits beside its neighbours, and they fill the room one bar had', () => {
+    const grouped = plot(specs.grouped!), [a, b, c] = rects(grouped.ratio, 'Search'), one = rects(plot(as('zero', specs.grouped!)).ratio, 'Search')[0]!;
+    expect([a!.key, b!.key, c!.key]).toEqual(['primary:bar:Search:Desktop', 'primary:bar:Search:Mobile', 'primary:bar:Search:Tablet']);
+    expect([a!.v0, b!.v0, c!.v0]).toEqual([undefined, undefined, undefined]);
+    expect(a!.x).toBe(one.x);
+    expect(b!.x).toBeCloseTo(a!.x + a!.w, 12);
+    expect(a!.w * 3).toBeCloseTo(one.w, 12);
+    // Lines and areas with no stack overlay: every series starts at the baseline.
+    const overlay = plot(as(undefined, specs.area!)).ratio.nodes.filter((n) => n.kind === 'path');
+    expect(overlay.every((n) => n.points.every((p) => p.v0 == null) && n.opacity === 0.14)).toBe(true);
+  });
+  it('stacked areas share their edges, are the mark itself and not a tint, and are labelled half way up', () => {
+    const { ratio } = plot(specs.area!), areas = ratio.nodes.filter((n) => n.kind === 'path');
+    expect(areas.map((n) => n.key)).toEqual(['primary:area:Search', 'primary:area:Direct', 'primary:area:Social', 'primary:area:AI assistants', 'primary:area:Email', 'primary:area:Other']);
+    expect(areas[1]!.points.map((p) => p.v0)).toEqual(areas[0]!.points.map((p) => p.v));
+    expect(areas.map((n) => n.opacity)).toEqual(Array(6).fill(undefined));
+    const end = areas[1]!.points[areas[1]!.points.length - 1]!;
+    expect((ratio.nodes.find((n) => n.key === 'label:Direct') as { t: number }).t).toBe((end.v0! + end.v) / 2);
+  });
+  it('place() reads v0: a stacked bar starts where the one under it ends, in pixels too', () => {
+    const { scene } = plot(stacked, 346), at = (k: string) => scene.nodes.find((n) => n.key === k) as { x: number; y: number; w: number; h: number };
+    const desktop = at('primary:bar:2026-09-08:Desktop'), mobile = at('primary:bar:2026-09-08:Mobile');
+    expect(desktop.y + desktop.h).toBeCloseTo(162, 9);
+    expect(mobile.y + mobile.h).toBeCloseTo(desktop.y, 9);
+    expect(mobile.x).toBeCloseTo(desktop.x, 9);
+    const grouped = plot(specs.grouped!, 346).scene.nodes.filter((n) => n.key.startsWith('primary:bar:Search')) as { x: number; w: number }[];
+    expect(grouped[1]!.x).toBeCloseTo(grouped[0]!.x + grouped[0]!.w, 9);
+  });
+  it('errors name the fix: a stack with nothing to stack, and shares with no total to divide by', () => {
+    expect(err({ query: { metrics: ['visitors'], by: ['date.day'] }, layers: [{ mark: 'bar', encode: { x: 'date.day', y: 'visitors' }, stack: 'zero' }] }))
+      .toBe('Layer 1 has "stack" and no dimension on color, so there is nothing to stack. Encode the query\'s second dimension on color, or remove "stack".');
+    const shares = as('normalize'), result = { ...runQuery(shares.query), totalsBy: undefined };
+    expect(() => resolve(shares, result, makeContainer(346), catalog)).toThrow('stack: "normalize" divides by the engine\'s total for each "date.day", and this result has no totalsBy. Return it from the query layer, or use stack: "zero".');
+    expect(view({ ...stacked, layers: [{ ...stacked.layers![0]!, stack: 'pile' }] })).toBe(false);
+  });
+});

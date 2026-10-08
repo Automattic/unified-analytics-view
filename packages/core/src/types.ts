@@ -47,7 +47,8 @@ export interface Layer {
   encode?: Partial<Record<Channel, string | number>>;
   series?: 'previous';
   role?: Role;
-  stack?: 'normalize';
+  /** On a layer split by `color`: each series starts where the one under it ends. `normalize` makes each a share of the whole. */
+  stack?: 'zero' | 'normalize';
   label?: string;
   align?: 'end';
   paint?: string;
@@ -139,13 +140,14 @@ interface NodeBase {
   opacity?: number;
   note?: string;
 }
-/** A bar in the plot (`x` and `w` across, `v` up from the baseline), a row's bar (`v` across), a band segment (`v` is its share) or a legend swatch. */
-export interface RectNode extends NodeBase { kind: 'rect'; x?: number; w?: number; v?: number }
-/** `d` is drawn in a 100 by 100 box, for the painter to stretch. `points` are what it was drawn from. */
+/** A bar in the plot (`x` and `w` across, and up the plot from `v0` to `v`), a row's bar (`v` across), a band segment (`v` is its share) or a legend swatch.
+ * `v0` is absent where a bar starts at the bottom of the plot. A bar that hangs below its start has `v` under `v0`. */
+export interface RectNode extends NodeBase { kind: 'rect'; x?: number; w?: number; v?: number; v0?: number }
+/** `d` is drawn in a 100 by 100 box, for the painter to stretch. `points` are what it was drawn from. An area's point has `v0` where it starts above the bottom of the plot. */
 export interface PathNode extends NodeBase {
   kind: 'path';
   d: string | null;
-  points: { row: string; x: number; v: number }[];
+  points: { row: string; x: number; v: number; v0?: number }[];
   curve?: 'monotone';
   fill?: boolean;
   width?: number;

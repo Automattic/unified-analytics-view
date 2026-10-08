@@ -63,7 +63,7 @@
         },
         "series": { "const": "previous", "description": "Draw the comparison companion of the metric." },
         "role": { "enum": ["primary", "comparison", "reference", "context"] },
-        "stack": { "const": "normalize" },
+        "stack": { "enum": ["zero", "normalize"], "description": "On a layer split by color: each series starts where the one under it ends. \"normalize\" makes each a share of the whole. A bar split by color with no stack sits beside its neighbours." },
         "label": { "type": "string", "description": "Text for a rule." },
         "align": { "const": "end" },
         "paint": { "type": "string", "description": "A paint token, never a colour." }

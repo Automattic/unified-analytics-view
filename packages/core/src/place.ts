@@ -15,7 +15,7 @@ type Point = PathNode['points'][number];
 const SHORT_PLOT = 120;   // px of plot height under which ranked y ticks go
 const LABEL = 14;         // characters a label at a line's end is given before it is clipped
 
-const rect = ({ part, role, row, series, rank, x: _x, w: _w, v, ...n }: RectNode, x: number, y: number, w: number, h: number, rx: number): PlacedRect => ({ ...n, x, y, w, h, rx });
+const rect = ({ part, role, row, series, rank, x: _x, w: _w, v, v0, ...n }: RectNode, x: number, y: number, w: number, h: number, rx: number): PlacedRect => ({ ...n, x, y, w, h, rx });
 const text = ({ part, role, row, series, rank, x: _x, t, short, ...n }: TextNode, x: number, y: number, s: string = n.text): PlacedText => ({ ...n, x, y, text: s });
 const fit = (s: string, room: number) => clip(s, Math.floor(room / CHAR_W));
 function shift(nodes: PlacedNode[], dx: number, dy: number): PlacedNode[] {
@@ -65,7 +65,9 @@ function placePlot(scene: Scene, W: number, H: number, narrow: boolean): PlacedN
       const { part, role, row, series, rank, points, curve, ...rest } = n;
       out.push({ ...rest, d: pathD(points, curve, n.fill, box) });
     } else if (n.kind === 'rect') {
-      out.push(rect(n, xs.x(n.row!), y(n.v!), xs.w, Math.max(0, y(0) - y(n.v!)), Math.min(2, xs.w / 4)));
+      // A bar of a series has a place of its own within its x, so its ratios are placed. The rest share the scale the scene used.
+      const pw = W - ml - mr, [bx, bw] = n.series == null ? [xs.x(n.row!), xs.w] : [ml + n.x! * pw, n.w! * pw], from = y(n.v0 ?? 0), to = y(n.v!);
+      out.push(rect(n, bx, Math.min(from, to), bw, Math.abs(from - to), Math.min(2, bw / 4)));
     } else if (n.kind === 'text') {
       out.push(n.part === 'y-axis' ? text(n, ml - 6, y(n.t!)) : n.part === 'x-axis' ? text(n, xs.cx(n.row!), H - 5)
         : n.part === 'labels' ? text(n, W - mr + 6, y(n.t!), clip(n.text, LABEL)) : text(n, W - mr, y(n.t!) - 5));

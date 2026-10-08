@@ -162,4 +162,10 @@ export const samples: Record<string, { label: string; spec: Spec }> = {
 export const moreSamples: Record<string, { label: string; spec: Spec }> = {
   series: { label: 'Three series: visitors by device', spec: { spec: 'view/0', title: 'Visitors by device', query: { metrics: ['visitors'], by: ['date.day', 'device'], range: '28d' },
             layers: [{ mark: 'line', encode: { x: 'date.day', y: 'visitors', color: 'device' } }] } },
+  stacked: { label: 'Stacked bars: visitors by day and device', spec: { spec: 'view/0', title: 'Visitors by device', query: { metrics: ['visitors'], by: ['date.day', 'device'], range: '28d' },
+            layers: [{ mark: 'bar', encode: { x: 'date.day', y: 'visitors', color: 'device' }, stack: 'zero' }] } },
+  grouped: { label: 'Grouped bars: channels by device', spec: { spec: 'view/0', title: 'Channels by device', query: { metrics: ['visitors'], by: ['channel', 'device'], range: '28d' },
+            layers: [{ mark: 'bar', encode: { x: 'channel', y: 'visitors', color: 'device' } }] } },
+  area:    { label: 'Stacked areas: page views by day and channel', spec: { spec: 'view/0', title: 'Page views by channel', query: { metrics: ['pageviews'], by: ['date.day', 'channel'], range: '28d' },
+            layers: [{ mark: 'area', encode: { x: 'date.day', y: 'pageviews', color: 'channel' }, stack: 'zero' }] } },
 };

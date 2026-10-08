@@ -61,111 +61,44 @@
   --ua-color-red-800: #a30200; /** Contrast ratio: 7.50 */
   --ua-color-red-900: #6b1005; /** Contrast ratio: 11.30 */
   --ua-color-red-1000: #260a06; /** Contrast ratio: 17.00 */
-  --ua-color-qual-indigo-100: #fffcff; /** Contrast ratio: -1.06 */
-  --ua-color-qual-indigo-200: #f6f3f8; /** Contrast ratio: 1.00 */
-  --ua-color-qual-indigo-300: #eeebf3; /** Contrast ratio: 1.07 */
-  --ua-color-qual-indigo-400: #e6e3ed; /** Contrast ratio: 1.16 */
-  --ua-color-qual-indigo-500: #d5d2e1; /** Contrast ratio: 1.35 */
-  --ua-color-qual-indigo-600: #a7a4c1; /** Contrast ratio: 2.20 */
-  --ua-color-qual-indigo-700: #68658f; /** Contrast ratio: 5.00 */
-  --ua-color-qual-indigo-800: #4e4a76; /** Contrast ratio: 7.50 */
-  --ua-color-qual-indigo-900: #342f5b; /** Contrast ratio: 11.30 */
-  --ua-color-qual-indigo-1000: #130f2c; /** Contrast ratio: 17.00 */
-  --ua-color-qual-steel-100: #fdfdfe; /** Contrast ratio: -1.06 */
-  --ua-color-qual-steel-200: #f3f5f9; /** Contrast ratio: 1.00 */
-  --ua-color-qual-steel-300: #e9edf4; /** Contrast ratio: 1.07 */
-  --ua-color-qual-steel-400: #dee6ee; /** Contrast ratio: 1.16 */
-  --ua-color-qual-steel-500: #c9d6e4; /** Contrast ratio: 1.35 */
-  --ua-color-qual-steel-600: #8daac6; /** Contrast ratio: 2.20 */
-  --ua-color-qual-steel-700: #406d94; /** Contrast ratio: 5.00 */
-  --ua-color-qual-steel-800: #265276; /** Contrast ratio: 7.50 */
-  --ua-color-qual-steel-900: #183751; /** Contrast ratio: 11.30 */
-  --ua-color-qual-steel-1000: #0b141c; /** Contrast ratio: 17.00 */
-  --ua-color-qual-teal-100: #f9fcfa; /** Contrast ratio: -1.06 */
-  --ua-color-qual-teal-200: #e9f7f2; /** Contrast ratio: 1.00 */
-  --ua-color-qual-teal-300: #d8f2e9; /** Contrast ratio: 1.07 */
-  --ua-color-qual-teal-400: #c6ede1; /** Contrast ratio: 1.16 */
-  --ua-color-qual-teal-500: #a0e2d0; /** Contrast ratio: 1.35 */
-  --ua-color-qual-teal-600: #26bba0; /** Contrast ratio: 2.20 */
-  --ua-color-qual-teal-700: #127765; /** Contrast ratio: 5.00 */
-  --ua-color-qual-teal-800: #1e584c; /** Contrast ratio: 7.50 */
-  --ua-color-qual-teal-900: #1c3a33; /** Contrast ratio: 11.30 */
-  --ua-color-qual-teal-1000: #0d1512; /** Contrast ratio: 17.00 */
-  --ua-color-qual-grass-100: #f7feef; /** Contrast ratio: -1.06 */
-  --ua-color-qual-grass-200: #daffc9; /** Contrast ratio: 1.00 */
-  --ua-color-qual-grass-300: #bdffa5; /** Contrast ratio: 1.07 */
-  --ua-color-qual-grass-400: #a1fb84; /** Contrast ratio: 1.16 */
-  --ua-color-qual-grass-500: #80ee61; /** Contrast ratio: 1.35 */
-  --ua-color-qual-grass-600: #60bb47; /** Contrast ratio: 2.20 */
-  --ua-color-qual-grass-700: #467438; /** Contrast ratio: 5.00 */
-  --ua-color-qual-grass-800: #39562e; /** Contrast ratio: 7.50 */
-  --ua-color-qual-grass-900: #293922; /** Contrast ratio: 11.30 */
-  --ua-color-qual-grass-1000: #10140d; /** Contrast ratio: 17.00 */
-  --ua-color-qual-chartreuse-100: #fdffec; /** Contrast ratio: -1.06 */
-  --ua-color-qual-chartreuse-200: #e9ff81; /** Contrast ratio: 1.00 */
-  --ua-color-qual-chartreuse-300: #dafc3a; /** Contrast ratio: 1.07 */
-  --ua-color-qual-chartreuse-400: #d1f41a; /** Contrast ratio: 1.16 */
-  --ua-color-qual-chartreuse-500: #c1e200; /** Contrast ratio: 1.35 */
-  --ua-color-qual-chartreuse-600: #99b219; /** Contrast ratio: 2.20 */
-  --ua-color-qual-chartreuse-700: #626f27; /** Contrast ratio: 5.00 */
-  --ua-color-qual-chartreuse-800: #4a5324; /** Contrast ratio: 7.50 */
-  --ua-color-qual-chartreuse-900: #32371d; /** Contrast ratio: 11.30 */
-  --ua-color-qual-chartreuse-1000: #13140c; /** Contrast ratio: 17.00 */
-  --ua-color-qual-yellow-100: #fffdf1; /** Contrast ratio: -1.06 */
-  --ua-color-qual-yellow-200: #fff7aa; /** Contrast ratio: 1.00 */
-  --ua-color-qual-yellow-300: #fff07b; /** Contrast ratio: 1.07 */
-  --ua-color-qual-yellow-400: #fae649; /** Contrast ratio: 1.16 */
-  --ua-color-qual-yellow-500: #eed614; /** Contrast ratio: 1.35 */
-  --ua-color-qual-yellow-600: #bca80a; /** Contrast ratio: 2.20 */
-  --ua-color-qual-yellow-700: #746a22; /** Contrast ratio: 5.00 */
-  --ua-color-qual-yellow-800: #565021; /** Contrast ratio: 7.50 */
-  --ua-color-qual-yellow-900: #39351b; /** Contrast ratio: 11.30 */
-  --ua-color-qual-yellow-1000: #14130b; /** Contrast ratio: 17.00 */
-  --ua-color-qual-orange-100: #fffbf4; /** Contrast ratio: -1.06 */
-  --ua-color-qual-orange-200: #fff3dd; /** Contrast ratio: 1.00 */
-  --ua-color-qual-orange-300: #ffeac3; /** Contrast ratio: 1.07 */
-  --ua-color-qual-orange-400: #ffe1a9; /** Contrast ratio: 1.16 */
-  --ua-color-qual-orange-500: #ffcd77; /** Contrast ratio: 1.35 */
-  --ua-color-qual-orange-600: #f19000; /** Contrast ratio: 2.20 */
-  --ua-color-qual-orange-700: #955d16; /** Contrast ratio: 5.00 */
-  --ua-color-qual-orange-800: #6d4719; /** Contrast ratio: 7.50 */
-  --ua-color-qual-orange-900: #463017; /** Contrast ratio: 11.30 */
-  --ua-color-qual-orange-1000: #19120a; /** Contrast ratio: 17.00 */
-  --ua-color-qual-coral-100: #fffbf9; /** Contrast ratio: -1.06 */
-  --ua-color-qual-coral-200: #fff2ed; /** Contrast ratio: 1.00 */
-  --ua-color-qual-coral-300: #ffe9e1; /** Contrast ratio: 1.07 */
-  --ua-color-qual-coral-400: #ffdcd2; /** Contrast ratio: 1.16 */
-  --ua-color-qual-coral-500: #ffc9ba; /** Contrast ratio: 1.35 */
-  --ua-color-qual-coral-600: #ff836b; /** Contrast ratio: 2.20 */
-  --ua-color-qual-coral-700: #bf3929; /** Contrast ratio: 5.00 */
-  --ua-color-qual-coral-800: #8c3023; /** Contrast ratio: 7.50 */
-  --ua-color-qual-coral-900: #5a241b; /** Contrast ratio: 11.30 */
-  --ua-color-qual-coral-1000: #1f0e0b; /** Contrast ratio: 17.00 */
-  --ua-color-qual-rose-100: #fffbfb; /** Contrast ratio: -1.06 */
-  --ua-color-qual-rose-200: #fff1f4; /** Contrast ratio: 1.00 */
-  --ua-color-qual-rose-300: #ffe8ee; /** Contrast ratio: 1.07 */
-  --ua-color-qual-rose-400: #ffdce5; /** Contrast ratio: 1.16 */
-  --ua-color-qual-rose-500: #ffc5d5; /** Contrast ratio: 1.35 */
-  --ua-color-qual-rose-600: #ff7da6; /** Contrast ratio: 2.20 */
-  --ua-color-qual-rose-700: #d10058; /** Contrast ratio: 5.00 */
-  --ua-color-qual-rose-800: #9e0643; /** Contrast ratio: 7.50 */
-  --ua-color-qual-rose-900: #66142e; /** Contrast ratio: 11.30 */
-  --ua-color-qual-rose-1000: #230b11; /** Contrast ratio: 17.00 */
+  --ua-color-qual-steel-100: #cbd5e4; /** Contrast ratio: 1.35 */
+  --ua-color-qual-steel-200: #7590b3; /** Contrast ratio: 3.00 */
+  --ua-color-qual-steel-300: #496b94; /** Contrast ratio: 5.00 */
+  --ua-color-qual-teal-100: #acdeda; /** Contrast ratio: 1.35 */
+  --ua-color-qual-teal-200: #009f99; /** Contrast ratio: 3.00 */
+  --ua-color-qual-teal-300: #007672; /** Contrast ratio: 5.00 */
+  --ua-color-qual-grass-100: #7eeaa9; /** Contrast ratio: 1.35 */
+  --ua-color-qual-grass-200: #37a068; /** Contrast ratio: 3.00 */
+  --ua-color-qual-grass-300: #357550; /** Contrast ratio: 5.00 */
+  --ua-color-qual-chartreuse-100: #c8e043; /** Contrast ratio: 1.35 */
+  --ua-color-qual-chartreuse-200: #87953c; /** Contrast ratio: 3.00 */
+  --ua-color-qual-chartreuse-300: #646e36; /** Contrast ratio: 5.00 */
+  --ua-color-qual-orange-100: #ffcaa0; /** Contrast ratio: 1.35 */
+  --ua-color-qual-orange-200: #eb6415; /** Contrast ratio: 3.00 */
+  --ua-color-qual-orange-300: #ad4d16; /** Contrast ratio: 5.00 */
+  --ua-color-qual-rose-100: #ffc5d5; /** Contrast ratio: 1.35 */
+  --ua-color-qual-rose-200: #ff4385; /** Contrast ratio: 3.00 */
+  --ua-color-qual-rose-300: #d10058; /** Contrast ratio: 5.00 */
+  --ua-color-seq-100: #cbed00;
+  --ua-color-seq-200: #80e955;
+  --ua-color-seq-300: #22de7e;
+  --ua-color-seq-400: #00c99d;
+  --ua-color-seq-500: #00b3ab;
+  --ua-color-seq-600: #009dae;
+  --ua-color-seq-700: #1186a9;
+  --ua-color-seq-800: #336c9b;
+  --ua-color-seq-900: #3f5183;
+  --ua-color-seq-1000: #3c3764;
   --ua-color-white: #ffffff;
   --ua-color-black: #000000;
   --ua-color-constant-lime: #d8f24b;
   --ua-color-constant-green: #8be583;
   --ua-color-constant-amber: #fbb605;
-  --ua-color-seq-100: #3c3764;
-  --ua-color-seq-200: #3f5183;
-  --ua-color-seq-300: #336c9b;
-  --ua-color-seq-400: #1186a9;
-  --ua-color-seq-500: #009dae;
-  --ua-color-seq-600: #00b3ab;
-  --ua-color-seq-700: #00c99d;
-  --ua-color-seq-800: #22de7e;
-  --ua-color-seq-900: #80e955;
-  --ua-color-seq-1000: #cbed00;
+  --ua-color-constant-grass: #45d289;
+  --ua-color-constant-teal: #00a09a;
+  --ua-color-constant-steel: #395c85;
+  --ua-color-constant-rose: #f5006b;
+  --ua-color-constant-orange: #ff701e;
   --ua-font-size-3xl: clamp(1.4016rem, 0.9739rem + 2.4437cqi, 2.0736rem); /** 22.43px → 33.18px */
   --ua-font-size-2xl: clamp(1.2458rem, 0.939rem + 1.7533cqi, 1.728rem); /** 19.93px → 27.65px */
   --ua-font-size-xl: clamp(1.1074rem, 0.8958rem + 1.2094cqi, 1.44rem); /** 17.72px → 23.04px */
@@ -212,6 +145,25 @@
   --ua-color-surface-page: var(--ua-color-neutral-200);
   --ua-color-surface-card: var(--ua-color-neutral-100);
   --ua-color-surface-raised: var(--ua-color-white);
+  --ua-color-mark-steel: var(--ua-color-constant-steel);
+  --ua-color-mark-steel-text: var(--ua-color-constant-steel);
+  --ua-color-mark-steel-soft: var(--ua-color-qual-steel-100);
+  --ua-color-mark-teal: var(--ua-color-qual-teal-200);
+  --ua-color-mark-teal-text: var(--ua-color-qual-teal-300);
+  --ua-color-mark-teal-soft: var(--ua-color-qual-teal-100);
+  --ua-color-mark-grass: var(--ua-color-qual-grass-200);
+  --ua-color-mark-grass-text: var(--ua-color-qual-grass-300);
+  --ua-color-mark-grass-soft: var(--ua-color-qual-grass-100);
+  --ua-color-mark-chartreuse: var(--ua-color-qual-chartreuse-200);
+  --ua-color-mark-chartreuse-text: var(--ua-color-qual-chartreuse-300);
+  --ua-color-mark-chartreuse-soft: var(--ua-color-qual-chartreuse-100);
+  --ua-color-mark-orange: var(--ua-color-qual-orange-200);
+  --ua-color-mark-orange-text: var(--ua-color-qual-orange-300);
+  --ua-color-mark-orange-soft: var(--ua-color-qual-orange-100);
+  --ua-color-mark-rose: var(--ua-color-constant-rose);
+  --ua-color-mark-rose-text: var(--ua-color-qual-rose-300);
+  --ua-color-mark-rose-soft: var(--ua-color-qual-rose-100);
+  --ua-color-constant-chartreuse: var(--ua-color-constant-lime);
   --ua-color-foreground: var(--ua-color-neutral-1000);
   --ua-color-card-foreground: var(--ua-color-neutral-1000);
   --ua-color-popover-foreground: var(--ua-color-neutral-1000);
@@ -242,16 +194,16 @@
   --ua-color-info-soft: var(--ua-color-blue-300);
   --ua-color-marker: var(--ua-color-constant-lime);
   --ua-color-live: var(--ua-color-lime-700);
-  --ua-color-seq-1: var(--ua-color-seq-1000);
-  --ua-color-seq-2: var(--ua-color-seq-900);
-  --ua-color-seq-3: var(--ua-color-seq-800);
-  --ua-color-seq-4: var(--ua-color-seq-700);
-  --ua-color-seq-5: var(--ua-color-seq-600);
-  --ua-color-seq-6: var(--ua-color-seq-500);
-  --ua-color-seq-7: var(--ua-color-seq-400);
-  --ua-color-seq-8: var(--ua-color-seq-300);
-  --ua-color-seq-9: var(--ua-color-seq-200);
-  --ua-color-seq-10: var(--ua-color-seq-100);
+  --ua-color-seq-1: var(--ua-color-seq-100);
+  --ua-color-seq-2: var(--ua-color-seq-200);
+  --ua-color-seq-3: var(--ua-color-seq-300);
+  --ua-color-seq-4: var(--ua-color-seq-400);
+  --ua-color-seq-5: var(--ua-color-seq-500);
+  --ua-color-seq-6: var(--ua-color-seq-600);
+  --ua-color-seq-7: var(--ua-color-seq-700);
+  --ua-color-seq-8: var(--ua-color-seq-800);
+  --ua-color-seq-9: var(--ua-color-seq-900);
+  --ua-color-seq-10: var(--ua-color-seq-1000);
   --ua-color-seq-none: var(--ua-color-neutral-400);
   --ua-color-switch-thumb-on: var(--ua-color-neutral-200);
   --ua-color-switch-thumb-off: var(--ua-color-neutral-200);
@@ -365,101 +317,24 @@
   --ua-color-red-800: #ff7759; /** Contrast ratio: 7.50 */
   --ua-color-red-900: #ffb29b; /** Contrast ratio: 11.30 */
   --ua-color-red-1000: #ffebe4; /** Contrast ratio: 17.00 */
-  --ua-color-qual-indigo-100: #010103; /** Contrast ratio: -1.06 */
-  --ua-color-qual-indigo-200: #0c0920; /** Contrast ratio: 1.00 */
-  --ua-color-qual-indigo-300: #161130; /** Contrast ratio: 1.07 */
-  --ua-color-qual-indigo-400: #1d183c; /** Contrast ratio: 1.16 */
-  --ua-color-qual-indigo-500: #29244d; /** Contrast ratio: 1.35 */
-  --ua-color-qual-indigo-600: #494572; /** Contrast ratio: 2.20 */
-  --ua-color-qual-indigo-700: #807da2; /** Contrast ratio: 5.00 */
-  --ua-color-qual-indigo-800: #a09dbc; /** Contrast ratio: 7.50 */
-  --ua-color-qual-indigo-900: #c5c2d6; /** Contrast ratio: 11.30 */
-  --ua-color-qual-indigo-1000: #f0edf4; /** Contrast ratio: 17.00 */
-  --ua-color-qual-steel-100: #010102; /** Contrast ratio: -1.06 */
-  --ua-color-qual-steel-200: #080d12; /** Contrast ratio: 1.00 */
-  --ua-color-qual-steel-300: #0d1721; /** Contrast ratio: 1.07 */
-  --ua-color-qual-steel-400: #101f2c; /** Contrast ratio: 1.16 */
-  --ua-color-qual-steel-500: #142c40; /** Contrast ratio: 1.35 */
-  --ua-color-qual-steel-600: #234d6f; /** Contrast ratio: 2.20 */
-  --ua-color-qual-steel-700: #5c85a8; /** Contrast ratio: 5.00 */
-  --ua-color-qual-steel-800: #84a4c1; /** Contrast ratio: 7.50 */
-  --ua-color-qual-steel-900: #b5c7da; /** Contrast ratio: 11.30 */
-  --ua-color-qual-steel-1000: #eceff5; /** Contrast ratio: 17.00 */
-  --ua-color-qual-teal-100: #010101; /** Contrast ratio: -1.06 */
-  --ua-color-qual-teal-200: #090e0c; /** Contrast ratio: 1.00 */
-  --ua-color-qual-teal-300: #0f1815; /** Contrast ratio: 1.07 */
-  --ua-color-qual-teal-400: #13201d; /** Contrast ratio: 1.16 */
-  --ua-color-qual-teal-500: #192e29; /** Contrast ratio: 1.35 */
-  --ua-color-qual-teal-600: #1f5247; /** Contrast ratio: 2.20 */
-  --ua-color-qual-teal-700: #00917b; /** Contrast ratio: 5.00 */
-  --ua-color-qual-teal-800: #0eb499; /** Contrast ratio: 7.50 */
-  --ua-color-qual-teal-900: #77d5bf; /** Contrast ratio: 11.30 */
-  --ua-color-qual-teal-1000: #def4ec; /** Contrast ratio: 17.00 */
-  --ua-color-qual-grass-100: #010101; /** Contrast ratio: -1.06 */
-  --ua-color-qual-grass-200: #0a0d09; /** Contrast ratio: 1.00 */
-  --ua-color-qual-grass-300: #121810; /** Contrast ratio: 1.07 */
-  --ua-color-qual-grass-400: #182015; /** Contrast ratio: 1.16 */
-  --ua-color-qual-grass-500: #212d1c; /** Contrast ratio: 1.35 */
-  --ua-color-qual-grass-600: #36512c; /** Contrast ratio: 2.20 */
-  --ua-color-qual-grass-700: #518f3e; /** Contrast ratio: 5.00 */
-  --ua-color-qual-grass-800: #5eb345; /** Contrast ratio: 7.50 */
-  --ua-color-qual-grass-900: #70dc51; /** Contrast ratio: 11.30 */
-  --ua-color-qual-grass-1000: #c4ffad; /** Contrast ratio: 17.00 */
-  --ua-color-qual-chartreuse-100: #010101; /** Contrast ratio: -1.06 */
-  --ua-color-qual-chartreuse-200: #0c0d07; /** Contrast ratio: 1.00 */
-  --ua-color-qual-chartreuse-300: #15170d; /** Contrast ratio: 1.07 */
-  --ua-color-qual-chartreuse-400: #1c1e12; /** Contrast ratio: 1.16 */
-  --ua-color-qual-chartreuse-500: #272b18; /** Contrast ratio: 1.35 */
-  --ua-color-qual-chartreuse-600: #454e23; /** Contrast ratio: 2.20 */
-  --ua-color-qual-chartreuse-700: #768926; /** Contrast ratio: 5.00 */
-  --ua-color-qual-chartreuse-800: #93aa1d; /** Contrast ratio: 7.50 */
-  --ua-color-qual-chartreuse-900: #b3d200; /** Contrast ratio: 11.30 */
-  --ua-color-qual-chartreuse-1000: #dcfd43; /** Contrast ratio: 17.00 */
-  --ua-color-qual-yellow-100: #010101; /** Contrast ratio: -1.06 */
-  --ua-color-qual-yellow-200: #0f0e08; /** Contrast ratio: 1.00 */
-  --ua-color-qual-yellow-300: #17160d; /** Contrast ratio: 1.07 */
-  --ua-color-qual-yellow-400: #1f1d11; /** Contrast ratio: 1.16 */
-  --ua-color-qual-yellow-500: #2c2a17; /** Contrast ratio: 1.35 */
-  --ua-color-qual-yellow-600: #514b20; /** Contrast ratio: 2.20 */
-  --ua-color-qual-yellow-700: #8f821f; /** Contrast ratio: 5.00 */
-  --ua-color-qual-yellow-800: #b4a110; /** Contrast ratio: 7.50 */
-  --ua-color-qual-yellow-900: #ddc500; /** Contrast ratio: 11.30 */
-  --ua-color-qual-yellow-1000: #fff184; /** Contrast ratio: 17.00 */
-  --ua-color-qual-orange-100: #020101; /** Contrast ratio: -1.06 */
-  --ua-color-qual-orange-200: #120d07; /** Contrast ratio: 1.00 */
-  --ua-color-qual-orange-300: #1c140b; /** Contrast ratio: 1.07 */
-  --ua-color-qual-orange-400: #271c0f; /** Contrast ratio: 1.16 */
-  --ua-color-qual-orange-500: #372714; /** Contrast ratio: 1.35 */
-  --ua-color-qual-orange-600: #654319; /** Contrast ratio: 2.20 */
-  --ua-color-qual-orange-700: #b8700b; /** Contrast ratio: 5.00 */
-  --ua-color-qual-orange-800: #e78a00; /** Contrast ratio: 7.50 */
-  --ua-color-qual-orange-900: #ffb745; /** Contrast ratio: 11.30 */
-  --ua-color-qual-orange-1000: #ffedcd; /** Contrast ratio: 17.00 */
-  --ua-color-qual-coral-100: #020101; /** Contrast ratio: -1.06 */
-  --ua-color-qual-coral-200: #160a08; /** Contrast ratio: 1.00 */
-  --ua-color-qual-coral-300: #22100c; /** Contrast ratio: 1.07 */
-  --ua-color-qual-coral-400: #301611; /** Contrast ratio: 1.16 */
-  --ua-color-qual-coral-500: #461e17; /** Contrast ratio: 1.35 */
-  --ua-color-qual-coral-600: #822e21; /** Contrast ratio: 2.20 */
-  --ua-color-qual-coral-700: #e94532; /** Contrast ratio: 5.00 */
-  --ua-color-qual-coral-800: #ff775e; /** Contrast ratio: 7.50 */
-  --ua-color-qual-coral-900: #ffb29e; /** Contrast ratio: 11.30 */
-  --ua-color-qual-coral-1000: #ffebe4; /** Contrast ratio: 17.00 */
-  --ua-color-qual-rose-100: #020101; /** Contrast ratio: -1.06 */
-  --ua-color-qual-rose-200: #19080b; /** Contrast ratio: 1.00 */
-  --ua-color-qual-rose-300: #260c12; /** Contrast ratio: 1.07 */
-  --ua-color-qual-rose-400: #37101a; /** Contrast ratio: 1.16 */
-  --ua-color-qual-rose-500: #4e1424; /** Contrast ratio: 1.35 */
-  --ua-color-qual-rose-600: #930c3f; /** Contrast ratio: 2.20 */
-  --ua-color-qual-rose-700: #fa0f6f; /** Contrast ratio: 5.00 */
-  --ua-color-qual-rose-800: #ff709e; /** Contrast ratio: 7.50 */
-  --ua-color-qual-rose-900: #ffaec6; /** Contrast ratio: 11.30 */
-  --ua-color-qual-rose-1000: #ffeaee; /** Contrast ratio: 17.00 */
-  --ua-color-white: #ffffff;
-  --ua-color-black: #000000;
-  --ua-color-constant-lime: #d8f24b;
-  --ua-color-constant-green: #8be583;
-  --ua-color-constant-amber: #fbb605;
+  --ua-color-qual-steel-100: #162b43; /** Contrast ratio: 1.35 */
+  --ua-color-qual-steel-200: #3d6089; /** Contrast ratio: 3.00 */
+  --ua-color-qual-steel-300: #6583a9; /** Contrast ratio: 5.00 */
+  --ua-color-qual-teal-100: #172e2d; /** Contrast ratio: 1.35 */
+  --ua-color-qual-teal-200: #096964; /** Contrast ratio: 3.00 */
+  --ua-color-qual-teal-300: #00908b; /** Contrast ratio: 5.00 */
+  --ua-color-qual-grass-100: #1d2d22; /** Contrast ratio: 1.35 */
+  --ua-color-qual-grass-200: #336849; /** Contrast ratio: 3.00 */
+  --ua-color-qual-grass-300: #379160; /** Contrast ratio: 5.00 */
+  --ua-color-qual-chartreuse-100: #282b1b; /** Contrast ratio: 1.35 */
+  --ua-color-qual-chartreuse-200: #5a6232; /** Contrast ratio: 3.00 */
+  --ua-color-qual-chartreuse-300: #7a873b; /** Contrast ratio: 5.00 */
+  --ua-color-qual-orange-100: #3f2213; /** Contrast ratio: 1.35 */
+  --ua-color-qual-orange-200: #994517; /** Contrast ratio: 3.00 */
+  --ua-color-qual-orange-300: #d65b14; /** Contrast ratio: 5.00 */
+  --ua-color-qual-rose-100: #4e1424; /** Contrast ratio: 1.35 */
+  --ua-color-qual-rose-200: #bb004f; /** Contrast ratio: 3.00 */
+  --ua-color-qual-rose-300: #fa0f6f; /** Contrast ratio: 5.00 */
   --ua-color-seq-100: #3c3764;
   --ua-color-seq-200: #3f5183;
   --ua-color-seq-300: #336c9b;
@@ -470,9 +345,36 @@
   --ua-color-seq-800: #22de7e;
   --ua-color-seq-900: #80e955;
   --ua-color-seq-1000: #cbed00;
+  --ua-color-white: #ffffff;
+  --ua-color-black: #000000;
+  --ua-color-constant-lime: #d8f24b;
+  --ua-color-constant-green: #8be583;
+  --ua-color-constant-amber: #fbb605;
+  --ua-color-constant-grass: #45d289;
+  --ua-color-constant-teal: #00a09a;
+  --ua-color-constant-steel: #395c85;
+  --ua-color-constant-rose: #f5006b;
+  --ua-color-constant-orange: #ff701e;
   --ua-color-surface-page: var(--ua-color-neutral-200);
   --ua-color-surface-card: var(--ua-color-neutral-300);
   --ua-color-surface-raised: var(--ua-color-neutral-400);
+  --ua-color-mark-steel: var(--ua-color-qual-steel-200);
+  --ua-color-mark-steel-text: var(--ua-color-qual-steel-300);
+  --ua-color-mark-steel-soft: var(--ua-color-qual-steel-100);
+  --ua-color-mark-teal: var(--ua-color-constant-teal);
+  --ua-color-mark-teal-text: var(--ua-color-constant-teal);
+  --ua-color-mark-teal-soft: var(--ua-color-qual-teal-100);
+  --ua-color-mark-grass: var(--ua-color-constant-grass);
+  --ua-color-mark-grass-text: var(--ua-color-constant-grass);
+  --ua-color-mark-grass-soft: var(--ua-color-qual-grass-100);
+  --ua-color-mark-chartreuse-soft: var(--ua-color-qual-chartreuse-100);
+  --ua-color-mark-orange: var(--ua-color-constant-orange);
+  --ua-color-mark-orange-text: var(--ua-color-constant-orange);
+  --ua-color-mark-orange-soft: var(--ua-color-qual-orange-100);
+  --ua-color-mark-rose: var(--ua-color-constant-rose);
+  --ua-color-mark-rose-text: var(--ua-color-qual-rose-300);
+  --ua-color-mark-rose-soft: var(--ua-color-qual-rose-100);
+  --ua-color-constant-chartreuse: var(--ua-color-constant-lime);
   --ua-color-foreground: var(--ua-color-neutral-1000);
   --ua-color-card-foreground: var(--ua-color-neutral-1000);
   --ua-color-popover-foreground: var(--ua-color-neutral-1000);
@@ -527,6 +429,8 @@
   --ua-color-raised-foreground: var(--ua-color-neutral-1000);
   --ua-color-on-ink: var(--ua-color-neutral-200);
   --ua-color-overlay: color-mix(in srgb, var(--ua-color-black) 80%, transparent);
+  --ua-color-mark-chartreuse: var(--ua-color-constant-chartreuse);
+  --ua-color-mark-chartreuse-text: var(--ua-color-constant-chartreuse);
   --ua-color-background: var(--ua-color-surface-page);
   --ua-color-card: var(--ua-color-surface-card);
   --ua-color-card-raised: var(--ua-color-surface-raised);
@@ -613,101 +517,24 @@
   --ua-color-red-800: #ff7759; /** Contrast ratio: 7.50 */
   --ua-color-red-900: #ffb29b; /** Contrast ratio: 11.30 */
   --ua-color-red-1000: #ffebe4; /** Contrast ratio: 17.00 */
-  --ua-color-qual-indigo-100: #010103; /** Contrast ratio: -1.06 */
-  --ua-color-qual-indigo-200: #0c0920; /** Contrast ratio: 1.00 */
-  --ua-color-qual-indigo-300: #161130; /** Contrast ratio: 1.07 */
-  --ua-color-qual-indigo-400: #1d183c; /** Contrast ratio: 1.16 */
-  --ua-color-qual-indigo-500: #29244d; /** Contrast ratio: 1.35 */
-  --ua-color-qual-indigo-600: #494572; /** Contrast ratio: 2.20 */
-  --ua-color-qual-indigo-700: #807da2; /** Contrast ratio: 5.00 */
-  --ua-color-qual-indigo-800: #a09dbc; /** Contrast ratio: 7.50 */
-  --ua-color-qual-indigo-900: #c5c2d6; /** Contrast ratio: 11.30 */
-  --ua-color-qual-indigo-1000: #f0edf4; /** Contrast ratio: 17.00 */
-  --ua-color-qual-steel-100: #010102; /** Contrast ratio: -1.06 */
-  --ua-color-qual-steel-200: #080d12; /** Contrast ratio: 1.00 */
-  --ua-color-qual-steel-300: #0d1721; /** Contrast ratio: 1.07 */
-  --ua-color-qual-steel-400: #101f2c; /** Contrast ratio: 1.16 */
-  --ua-color-qual-steel-500: #142c40; /** Contrast ratio: 1.35 */
-  --ua-color-qual-steel-600: #234d6f; /** Contrast ratio: 2.20 */
-  --ua-color-qual-steel-700: #5c85a8; /** Contrast ratio: 5.00 */
-  --ua-color-qual-steel-800: #84a4c1; /** Contrast ratio: 7.50 */
-  --ua-color-qual-steel-900: #b5c7da; /** Contrast ratio: 11.30 */
-  --ua-color-qual-steel-1000: #eceff5; /** Contrast ratio: 17.00 */
-  --ua-color-qual-teal-100: #010101; /** Contrast ratio: -1.06 */
-  --ua-color-qual-teal-200: #090e0c; /** Contrast ratio: 1.00 */
-  --ua-color-qual-teal-300: #0f1815; /** Contrast ratio: 1.07 */
-  --ua-color-qual-teal-400: #13201d; /** Contrast ratio: 1.16 */
-  --ua-color-qual-teal-500: #192e29; /** Contrast ratio: 1.35 */
-  --ua-color-qual-teal-600: #1f5247; /** Contrast ratio: 2.20 */
-  --ua-color-qual-teal-700: #00917b; /** Contrast ratio: 5.00 */
-  --ua-color-qual-teal-800: #0eb499; /** Contrast ratio: 7.50 */
-  --ua-color-qual-teal-900: #77d5bf; /** Contrast ratio: 11.30 */
-  --ua-color-qual-teal-1000: #def4ec; /** Contrast ratio: 17.00 */
-  --ua-color-qual-grass-100: #010101; /** Contrast ratio: -1.06 */
-  --ua-color-qual-grass-200: #0a0d09; /** Contrast ratio: 1.00 */
-  --ua-color-qual-grass-300: #121810; /** Contrast ratio: 1.07 */
-  --ua-color-qual-grass-400: #182015; /** Contrast ratio: 1.16 */
-  --ua-color-qual-grass-500: #212d1c; /** Contrast ratio: 1.35 */
-  --ua-color-qual-grass-600: #36512c; /** Contrast ratio: 2.20 */
-  --ua-color-qual-grass-700: #518f3e; /** Contrast ratio: 5.00 */
-  --ua-color-qual-grass-800: #5eb345; /** Contrast ratio: 7.50 */
-  --ua-color-qual-grass-900: #70dc51; /** Contrast ratio: 11.30 */
-  --ua-color-qual-grass-1000: #c4ffad; /** Contrast ratio: 17.00 */
-  --ua-color-qual-chartreuse-100: #010101; /** Contrast ratio: -1.06 */
-  --ua-color-qual-chartreuse-200: #0c0d07; /** Contrast ratio: 1.00 */
-  --ua-color-qual-chartreuse-300: #15170d; /** Contrast ratio: 1.07 */
-  --ua-color-qual-chartreuse-400: #1c1e12; /** Contrast ratio: 1.16 */
-  --ua-color-qual-chartreuse-500: #272b18; /** Contrast ratio: 1.35 */
-  --ua-color-qual-chartreuse-600: #454e23; /** Contrast ratio: 2.20 */
-  --ua-color-qual-chartreuse-700: #768926; /** Contrast ratio: 5.00 */
-  --ua-color-qual-chartreuse-800: #93aa1d; /** Contrast ratio: 7.50 */
-  --ua-color-qual-chartreuse-900: #b3d200; /** Contrast ratio: 11.30 */
-  --ua-color-qual-chartreuse-1000: #dcfd43; /** Contrast ratio: 17.00 */
-  --ua-color-qual-yellow-100: #010101; /** Contrast ratio: -1.06 */
-  --ua-color-qual-yellow-200: #0f0e08; /** Contrast ratio: 1.00 */
-  --ua-color-qual-yellow-300: #17160d; /** Contrast ratio: 1.07 */
-  --ua-color-qual-yellow-400: #1f1d11; /** Contrast ratio: 1.16 */
-  --ua-color-qual-yellow-500: #2c2a17; /** Contrast ratio: 1.35 */
-  --ua-color-qual-yellow-600: #514b20; /** Contrast ratio: 2.20 */
-  --ua-color-qual-yellow-700: #8f821f; /** Contrast ratio: 5.00 */
-  --ua-color-qual-yellow-800: #b4a110; /** Contrast ratio: 7.50 */
-  --ua-color-qual-yellow-900: #ddc500; /** Contrast ratio: 11.30 */
-  --ua-color-qual-yellow-1000: #fff184; /** Contrast ratio: 17.00 */
-  --ua-color-qual-orange-100: #020101; /** Contrast ratio: -1.06 */
-  --ua-color-qual-orange-200: #120d07; /** Contrast ratio: 1.00 */
-  --ua-color-qual-orange-300: #1c140b; /** Contrast ratio: 1.07 */
-  --ua-color-qual-orange-400: #271c0f; /** Contrast ratio: 1.16 */
-  --ua-color-qual-orange-500: #372714; /** Contrast ratio: 1.35 */
-  --ua-color-qual-orange-600: #654319; /** Contrast ratio: 2.20 */
-  --ua-color-qual-orange-700: #b8700b; /** Contrast ratio: 5.00 */
-  --ua-color-qual-orange-800: #e78a00; /** Contrast ratio: 7.50 */
-  --ua-color-qual-orange-900: #ffb745; /** Contrast ratio: 11.30 */
-  --ua-color-qual-orange-1000: #ffedcd; /** Contrast ratio: 17.00 */
-  --ua-color-qual-coral-100: #020101; /** Contrast ratio: -1.06 */
-  --ua-color-qual-coral-200: #160a08; /** Contrast ratio: 1.00 */
-  --ua-color-qual-coral-300: #22100c; /** Contrast ratio: 1.07 */
-  --ua-color-qual-coral-400: #301611; /** Contrast ratio: 1.16 */
-  --ua-color-qual-coral-500: #461e17; /** Contrast ratio: 1.35 */
-  --ua-color-qual-coral-600: #822e21; /** Contrast ratio: 2.20 */
-  --ua-color-qual-coral-700: #e94532; /** Contrast ratio: 5.00 */
-  --ua-color-qual-coral-800: #ff775e; /** Contrast ratio: 7.50 */
-  --ua-color-qual-coral-900: #ffb29e; /** Contrast ratio: 11.30 */
-  --ua-color-qual-coral-1000: #ffebe4; /** Contrast ratio: 17.00 */
-  --ua-color-qual-rose-100: #020101; /** Contrast ratio: -1.06 */
-  --ua-color-qual-rose-200: #19080b; /** Contrast ratio: 1.00 */
-  --ua-color-qual-rose-300: #260c12; /** Contrast ratio: 1.07 */
-  --ua-color-qual-rose-400: #37101a; /** Contrast ratio: 1.16 */
-  --ua-color-qual-rose-500: #4e1424; /** Contrast ratio: 1.35 */
-  --ua-color-qual-rose-600: #930c3f; /** Contrast ratio: 2.20 */
-  --ua-color-qual-rose-700: #fa0f6f; /** Contrast ratio: 5.00 */
-  --ua-color-qual-rose-800: #ff709e; /** Contrast ratio: 7.50 */
-  --ua-color-qual-rose-900: #ffaec6; /** Contrast ratio: 11.30 */
-  --ua-color-qual-rose-1000: #ffeaee; /** Contrast ratio: 17.00 */
-  --ua-color-white: #ffffff;
-  --ua-color-black: #000000;
-  --ua-color-constant-lime: #d8f24b;
-  --ua-color-constant-green: #8be583;
-  --ua-color-constant-amber: #fbb605;
+  --ua-color-qual-steel-100: #162b43; /** Contrast ratio: 1.35 */
+  --ua-color-qual-steel-200: #3d6089; /** Contrast ratio: 3.00 */
+  --ua-color-qual-steel-300: #6583a9; /** Contrast ratio: 5.00 */
+  --ua-color-qual-teal-100: #172e2d; /** Contrast ratio: 1.35 */
+  --ua-color-qual-teal-200: #096964; /** Contrast ratio: 3.00 */
+  --ua-color-qual-teal-300: #00908b; /** Contrast ratio: 5.00 */
+  --ua-color-qual-grass-100: #1d2d22; /** Contrast ratio: 1.35 */
+  --ua-color-qual-grass-200: #336849; /** Contrast ratio: 3.00 */
+  --ua-color-qual-grass-300: #379160; /** Contrast ratio: 5.00 */
+  --ua-color-qual-chartreuse-100: #282b1b; /** Contrast ratio: 1.35 */
+  --ua-color-qual-chartreuse-200: #5a6232; /** Contrast ratio: 3.00 */
+  --ua-color-qual-chartreuse-300: #7a873b; /** Contrast ratio: 5.00 */
+  --ua-color-qual-orange-100: #3f2213; /** Contrast ratio: 1.35 */
+  --ua-color-qual-orange-200: #994517; /** Contrast ratio: 3.00 */
+  --ua-color-qual-orange-300: #d65b14; /** Contrast ratio: 5.00 */
+  --ua-color-qual-rose-100: #4e1424; /** Contrast ratio: 1.35 */
+  --ua-color-qual-rose-200: #bb004f; /** Contrast ratio: 3.00 */
+  --ua-color-qual-rose-300: #fa0f6f; /** Contrast ratio: 5.00 */
   --ua-color-seq-100: #3c3764;
   --ua-color-seq-200: #3f5183;
   --ua-color-seq-300: #336c9b;
@@ -718,9 +545,36 @@
   --ua-color-seq-800: #22de7e;
   --ua-color-seq-900: #80e955;
   --ua-color-seq-1000: #cbed00;
+  --ua-color-white: #ffffff;
+  --ua-color-black: #000000;
+  --ua-color-constant-lime: #d8f24b;
+  --ua-color-constant-green: #8be583;
+  --ua-color-constant-amber: #fbb605;
+  --ua-color-constant-grass: #45d289;
+  --ua-color-constant-teal: #00a09a;
+  --ua-color-constant-steel: #395c85;
+  --ua-color-constant-rose: #f5006b;
+  --ua-color-constant-orange: #ff701e;
   --ua-color-surface-page: var(--ua-color-neutral-200);
   --ua-color-surface-card: var(--ua-color-neutral-300);
   --ua-color-surface-raised: var(--ua-color-neutral-400);
+  --ua-color-mark-steel: var(--ua-color-qual-steel-200);
+  --ua-color-mark-steel-text: var(--ua-color-qual-steel-300);
+  --ua-color-mark-steel-soft: var(--ua-color-qual-steel-100);
+  --ua-color-mark-teal: var(--ua-color-constant-teal);
+  --ua-color-mark-teal-text: var(--ua-color-constant-teal);
+  --ua-color-mark-teal-soft: var(--ua-color-qual-teal-100);
+  --ua-color-mark-grass: var(--ua-color-constant-grass);
+  --ua-color-mark-grass-text: var(--ua-color-constant-grass);
+  --ua-color-mark-grass-soft: var(--ua-color-qual-grass-100);
+  --ua-color-mark-chartreuse-soft: var(--ua-color-qual-chartreuse-100);
+  --ua-color-mark-orange: var(--ua-color-constant-orange);
+  --ua-color-mark-orange-text: var(--ua-color-constant-orange);
+  --ua-color-mark-orange-soft: var(--ua-color-qual-orange-100);
+  --ua-color-mark-rose: var(--ua-color-constant-rose);
+  --ua-color-mark-rose-text: var(--ua-color-qual-rose-300);
+  --ua-color-mark-rose-soft: var(--ua-color-qual-rose-100);
+  --ua-color-constant-chartreuse: var(--ua-color-constant-lime);
   --ua-color-foreground: var(--ua-color-neutral-1000);
   --ua-color-card-foreground: var(--ua-color-neutral-1000);
   --ua-color-popover-foreground: var(--ua-color-neutral-1000);
@@ -775,6 +629,8 @@
   --ua-color-raised-foreground: var(--ua-color-neutral-1000);
   --ua-color-on-ink: var(--ua-color-neutral-200);
   --ua-color-overlay: color-mix(in srgb, var(--ua-color-black) 80%, transparent);
+  --ua-color-mark-chartreuse: var(--ua-color-constant-chartreuse);
+  --ua-color-mark-chartreuse-text: var(--ua-color-constant-chartreuse);
   --ua-color-background: var(--ua-color-surface-page);
   --ua-color-card: var(--ua-color-surface-card);
   --ua-color-card-raised: var(--ua-color-surface-raised);

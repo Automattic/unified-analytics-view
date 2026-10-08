@@ -5,6 +5,8 @@
  * The Leo shim captures constructor arguments for our token generator.
  */
 
+import { readFileSync } from 'node:fs';
+
 // ─── Shim: captures Leonardo web UI constructor calls ───────
 const _colors = [];
 let _theme = null;
@@ -104,26 +106,26 @@ let red = new Leo.Color({
   smooth: true
 });
 
-// The qualitative hues: nine seeds, a 10-step interpolation through five colours in
-// Leonardo's diverging palette builder. One seed per ramp, named qual-*, apart from the
-// state ramps above. No step is singled out as the series colour: whoever paints with a
-// hue picks the step that gives the contrast it needs.
-const R = [-1.06,1,1.07,1.16,1.35,2.2,5,7.5,11.3,17];
+// The qualitative hues: six seeds, one per ramp, named qual-*, apart from the state ramps
+// above. A ramp here has only the steps a chart needs, each a contrast against the page:
+// 100 is a tint, clear of the surface and no more (1.35); 200 is what a mark needs (3);
+// 300 is what text needs (5). Each is seeded by a constant, the hue at its brightest.
+const R = [1.35,3,5];
 const hue = (name, key) => new Leo.Color({ name: "Qual " + name, colorKeys: [key], ratios: R, colorSpace: "CAM02p", smooth: true });
-let indigo = hue("Indigo", '#3c3764');
-let steel = hue("Steel", '#36648a');
-let teal = hue("Teal", '#00b297');
-let grass = hue("Grass", '#76e557');
-let chartreuse = hue("Chartreuse", '#cbed00');
-let yellow = hue("Yellow", '#e8d000');
-let orange = hue("Orange", '#fe9a00');
-let coral = hue("Coral", '#ff503b');
-let rose = hue("Rose", '#f5006b');
+// Each is seeded by a constant in base.tokens.json: the one of its name, or for chartreuse the lime that one aliases,
+// the colour a chart paints that series with, so a ramp and its series colour cannot drift apart.
+const seed = (name) => JSON.parse(readFileSync(new URL('./base.tokens.json', import.meta.url), 'utf-8')).color.constant[name].$value.hex;
+let steel = hue("Steel", seed('steel'));
+let teal = hue("Teal", seed('teal'));
+let grass = hue("Grass", seed('grass'));
+let chartreuse = hue("Chartreuse", seed('lime'));   // constant.chartreuse is an alias of the marker's lime
+let orange = hue("Orange", seed('orange'));
+let rose = hue("Rose", seed('rose'));
 
-// The sequential ramp is not made here: its steps are chosen by hand, in base.tokens.json.
+// The sequential ramp is not made here: its steps are chosen by hand, in sequential.json.
 
 let Untitled = new Leo.Theme({
-  colors: [neutral,lime,blue,amber,green,red,indigo,steel,teal,grass,chartreuse,yellow,orange,coral,rose],
+  colors: [neutral,lime,blue,amber,green,red,steel,teal,grass,chartreuse,orange,rose],
   backgroundColor: neutral,
   lightness: 97,
   contrast: 1,

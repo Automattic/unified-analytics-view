@@ -1,7 +1,7 @@
 {
   "color": {
     "$type": "color",
-    "$description": "The colours that sit outside the ramps, the same in both themes. White and black are for where a design means white or black and not the end of a ramp. The constants are Spacefast's signal fills, which keep one value in light and dark: its marker, success and warning.",
+    "$description": "The colours that sit outside the ramps, the same in both themes. White and black are for where a design means white or black and not the end of a ramp. The constants are Spacefast's signal fills, which keep one value in light and dark: its marker, success and warning. Chartreuse, grass, teal, steel, rose and orange are the six colours a chart paints its series with, chosen by hand; each is also the seed of the qualitative ramp of its name (leonardo.colors.js).",
     "white": {
       "$value": {
         "colorSpace": "srgb",
@@ -62,128 +62,68 @@
           "alpha": 1,
           "hex": "#fbb605"
         }
-      }
-    },
-    "seq": {
-      "$description": "The sequential ramp, for a value quantized to colour (a heatmap cell, a region of a map). Ten steps chosen by hand, from indigo through teal to chartreuse, each lighter than the last. The same in both themes: the common tier says which end is step 1.",
-      "100": {
+      },
+      "chartreuse": {
+        "$value": "{color.constant.lime}"
+      },
+      "grass": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.2353,
-            0.2157,
-            0.3922
+            0.2706,
+            0.8235,
+            0.5373
           ],
           "alpha": 1,
-          "hex": "#3c3764"
+          "hex": "#45d289"
         }
       },
-      "200": {
-        "$value": {
-          "colorSpace": "srgb",
-          "components": [
-            0.2471,
-            0.3176,
-            0.5137
-          ],
-          "alpha": 1,
-          "hex": "#3f5183"
-        }
-      },
-      "300": {
-        "$value": {
-          "colorSpace": "srgb",
-          "components": [
-            0.2,
-            0.4235,
-            0.6078
-          ],
-          "alpha": 1,
-          "hex": "#336c9b"
-        }
-      },
-      "400": {
-        "$value": {
-          "colorSpace": "srgb",
-          "components": [
-            0.0667,
-            0.5255,
-            0.6627
-          ],
-          "alpha": 1,
-          "hex": "#1186a9"
-        }
-      },
-      "500": {
+      "teal": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
             0.0,
-            0.6157,
-            0.6824
+            0.6275,
+            0.6039
           ],
           "alpha": 1,
-          "hex": "#009dae"
+          "hex": "#00a09a"
         }
       },
-      "600": {
+      "steel": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
+            0.2235,
+            0.3608,
+            0.5216
+          ],
+          "alpha": 1,
+          "hex": "#395c85"
+        }
+      },
+      "rose": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.9608,
             0.0,
-            0.702,
-            0.6706
+            0.4196
           ],
           "alpha": 1,
-          "hex": "#00b3ab"
+          "hex": "#f5006b"
         }
       },
-      "700": {
+      "orange": {
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.0,
-            0.7882,
-            0.6157
+            1.0,
+            0.4392,
+            0.1176
           ],
           "alpha": 1,
-          "hex": "#00c99d"
-        }
-      },
-      "800": {
-        "$value": {
-          "colorSpace": "srgb",
-          "components": [
-            0.1333,
-            0.8706,
-            0.4941
-          ],
-          "alpha": 1,
-          "hex": "#22de7e"
-        }
-      },
-      "900": {
-        "$value": {
-          "colorSpace": "srgb",
-          "components": [
-            0.502,
-            0.9137,
-            0.3333
-          ],
-          "alpha": 1,
-          "hex": "#80e955"
-        }
-      },
-      "1000": {
-        "$value": {
-          "colorSpace": "srgb",
-          "components": [
-            0.7961,
-            0.9294,
-            0.0
-          ],
-          "alpha": 1,
-          "hex": "#cbed00"
+          "hex": "#ff701e"
         }
       }
     }

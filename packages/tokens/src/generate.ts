@@ -11,7 +11,7 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import StyleDictionary from 'style-dictionary';
-import { generateLeonardoTokens } from './leonardo.ts';
+import { generateLeonardoTokens, hexToDTCGColor } from './leonardo.ts';
 import { transforms } from './transforms.ts';
 import { generateUtopiaTokens } from './utopia.ts';
 
@@ -22,14 +22,46 @@ export const ROOT = join(import.meta.dirname, '..');
 /** Primitives are namespaced so they cannot collide with a host page's own. */
 export const PREFIX = 'ua';
 
+/** A mark's three colours: its name's suffix, the contrast it needs against the surface it is on, and the step of its
+ * hue's ramp that has that contrast against the page. WCAG AA: 3 to 1 for a graphic, 4.5 to 1 for text. */
+const MARK_PARTS: [part: string, needs: number | null, step: number][] = [['', 3, 200], ['-text', 4.5, 300], ['-soft', null, 100]];
+const MARK_DESCRIPTION = 'What a chart paints each hue with: a mark, text in its colour, and a tint. A mark and its text are the hue\'s constant where that holds the contrast needed (3 to 1, and 4.5 to 1) against the page, the card and the raised surface of this theme, and the step of its ramp where it does not. A tint is the ramp\'s.';
+
+/** WCAG's contrast ratio between two hex colours. */
+export function contrastRatio(a: string, b: string): number {
+  const lum = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)).reduce((sum, c, i) => sum + c * [0.2126, 0.7152, 0.0722][i]!, 0);
+  const [lo, hi] = [lum(a), lum(b)].sort((x, y) => x - y);
+  return (hi! + 0.05) / (lo! + 0.05);
+}
+
 /** Leonardo and Utopia output, keyed by the file each tree is written to. */
 export async function primitives(root = ROOT): Promise<Record<string, Tree>> {
   const leonardo = await generateLeonardoTokens(join(root, 'config/leonardo.json'));
   const utopia = await generateUtopiaTokens(join(root, 'config/utopia.json'));
   const s = JSON.parse(readFileSync(join(root, 'config/surface.json'), 'utf-8')) as { description: string; set: Record<string, { light: string; dark: string }> };
+  const seq = JSON.parse(readFileSync(join(root, 'config/sequential.json'), 'utf-8')) as { description: string; steps: string[] };
   for (const theme of ['light', 'dark'] as const) {
     const ramps = leonardo[theme].color as Tree;
+    // Chosen by hand, and given to each theme in its own direction: step 100 is the end nearest the page.
+    const steps = theme === 'dark' ? seq.steps : seq.steps.slice().reverse();
+    ramps.seq = { $description: seq.description, ...Object.fromEntries(steps.map((hex, i) => [String((i + 1) * 100), { $value: hexToDTCGColor(hex) }])) };
     ramps.surface = { $description: s.description, ...Object.fromEntries(Object.entries(s.set).map(([name, value]) => [name, { $value: value[theme] }])) };
+  }
+  // What a chart paints a hue with, per theme: the hue's constant, its brightest, wherever that holds the contrast the
+  // element needs against every surface of the theme, and the ramp's step for that contrast where it does not. A tint
+  // is the ramp's always: a constant at full strength is not a tint.
+  const base = JSON.parse(readFileSync(join(root, 'config/base.tokens.json'), 'utf-8')).color as Tree;
+  for (const theme of ['light', 'dark'] as const) {
+    const ramps = leonardo[theme].color as Record<string, Tree>;
+    const hex = (ref: string): string => { const v = (ref.slice(1, -1).split('.').slice(1).reduce((node, key) => (node as Tree)[key], { ...base, ...ramps } as unknown) as { $value: string | { hex: string } }).$value; return typeof v === 'string' ? hex(v) : v.hex; };
+    const surfaces = Object.keys(s.set).map((name) => hex(`{color.surface.${name}}`));
+    const clears = (ref: string, needs: number) => surfaces.every((surface) => contrastRatio(hex(ref), surface) >= needs);
+    const mark: Tree = { $description: MARK_DESCRIPTION };
+    for (const hue of Object.keys(ramps).filter((name) => name.startsWith('qual-')).map((name) => name.slice(5))) {
+      const constant = `{color.constant.${hue}}`;
+      for (const [part, needs, step] of MARK_PARTS) mark[hue + part] = { $value: needs != null && clears(constant, needs) ? constant : `{color.qual-${hue}.${step}}` };
+    }
+    ramps.mark = mark;
   }
   return { 'color.light': leonardo.light, 'color.dark': leonardo.dark, 'scale.fluid': utopia.fluid, 'scale.min': utopia.min, 'scale.max': utopia.max };
 }

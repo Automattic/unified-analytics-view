@@ -24,11 +24,18 @@ export function fmtTime(iso: string): string {
 }
 // Percent points, as a rate is said: whole from ten, a decimal under it. Exact keeps two.
 const pct = (x: number, exact?: boolean) => (exact ? +x.toFixed(2) : x >= 10 ? Math.round(x) : Math.round(x * 10) / 10) + '%';
-// ponytail: `usd` is the one currency. Currency is per event upstream, and how it reaches a query result is undecided; when it does, the code comes from there.
-const USD = { style: 'currency', currency: 'USD' } as const;
-const UF = new Intl.NumberFormat('en-US', USD);                                                              // $1,234.50
-const UW = new Intl.NumberFormat('en-US', { ...USD, trailingZeroDisplay: 'stripIfInteger' } as Intl.NumberFormatOptions);   // $49, and $49.50. ES2023, so not in this target's types
-const UC = new Intl.NumberFormat('en-US', { ...USD, notation: 'compact', maximumFractionDigits: 1 });       // $63.5K
+// Money is in its currency's own units, dollars and not cents, and its unit is the currency's ISO 4217 code in lower case.
+// One set of formatters a currency, made when first asked for: $1,234.50, then $49 and $49.50, then $63.5K.
+const CURRENCIES = new Set(Intl.supportedValuesOf('currency').map((c) => c.toLowerCase()));
+const MONEY = new Map<string, [Intl.NumberFormat, Intl.NumberFormat, Intl.NumberFormat]>();
+function money(v: number, unit: string, form?: 'compact' | 'exact'): string {
+  const cur = { style: 'currency', currency: unit.toUpperCase() } as const;
+  if (!MONEY.has(unit)) MONEY.set(unit, [new Intl.NumberFormat('en-US', cur),
+    new Intl.NumberFormat('en-US', { ...cur, trailingZeroDisplay: 'stripIfInteger' } as Intl.NumberFormatOptions),         // ES2023, so not in this target's types
+    new Intl.NumberFormat('en-US', { ...cur, notation: 'compact', maximumFractionDigits: 1 })]);
+  const [full, whole, short] = MONEY.get(unit)!;
+  return form === 'exact' ? full.format(v) : form === 'compact' || Math.abs(v) >= 10000 ? short.format(v).replace('K', 'k') : whole.format(v);
+}
 const two = (n: number) => String(n).padStart(2, '0');
 // A length of time, from milliseconds, in the largest terms that read: "340ms", "1.2s", "2m 05s", "1h 05m".
 function duration(ms: number): string {
@@ -44,8 +51,8 @@ function bytes(v: number): string {
   while (a >= 999.95 && i < BYTES.length - 1) { a /= 1000; i++; }
   return (v < 0 ? '-' : '') + +a.toFixed(i ? 1 : 0) + ' ' + BYTES[i];
 }
-/** The units a catalog may give a metric. The `Unit` type, the catalog schema's enum and `formatUnit` are kept in step: a new unit is added to all three. */
-export const UNITS: Unit[] = ['count', 'ratio', 'percent', 'usd', 'ms', 's', 'bytes'];
+/** The units a catalog may give a metric, beside a currency's code. The `Unit` type, the catalog schema's enum and `formatUnit` are kept in step: a new unit is added to all three. */
+export const UNITS: Unit[] = ['count', 'ratio', 'percent', 'ms', 's', 'bytes'];
 /** A value in a unit, where there is a unit and no one metric to hand: a tick on a scale that several metrics share. */
 export function formatUnit(v: number | null | undefined, unit: string, form?: 'compact' | 'exact'): string {
   if (v == null) return '–';
@@ -54,15 +61,15 @@ export function formatUnit(v: number | null | undefined, unit: string, form?: 'c
     case 'count': return exact ? NF.format(v) : fmt(v, form === 'compact');
     case 'ratio': return pct(v * 100, exact);                             // a rate from 0 to 1
     case 'percent': return pct(v, exact);                                 // percent points already, 0 to 100
-    case 'usd': return exact ? UF.format(v) : form === 'compact' || Math.abs(v) >= 10000 ? UC.format(v).replace('K', 'k') : UW.format(v);
     case 'ms': return exact ? NF.format(v) + ' ms' : duration(v);
     case 's': return exact ? NF.format(v) + ' s' : duration(v * 1000);
     case 'bytes': return exact ? NF.format(v) + ' B' : bytes(v);
   }
-  throw new Error('The unit "' + unit + '" has no format. Give the metric one of ' + UNITS.join(', ') + ' in the catalog, or add a branch for it to formatUnit in packages/core/src/format.ts.');
+  if (CURRENCIES.has(unit)) return money(v, unit, form);
+  throw new Error('The unit "' + unit + '" has no format. Give the metric one of ' + UNITS.join(', ') + ' in the catalog, or a currency\'s ISO 4217 code in lower case ("usd"), or add a branch for it to formatUnit in packages/core/src/format.ts.');
 }
 /** A metric's value as its catalog entry sets it: in its unit. With no form it is what a readout says: a count whole
- * under ten thousand and "10.5k" from there, money as "$49.50" and "$63.5k", a rate as "12%", a time as "340ms" or
+ * under ten thousand and "10.5k" from there, money as "$49.50" and "$63.5k" in its own currency, a rate as "12%", a time as "340ms" or
  * "2m 05s", bytes as "1.2 MB". `compact` is always the short form, and `exact` never is: a table cell, where the digits matter. */
 export function formatValue(v: number | null | undefined, metric: MetricDef, form?: 'compact' | 'exact'): string {
   return formatUnit(v, metric.unit, form);

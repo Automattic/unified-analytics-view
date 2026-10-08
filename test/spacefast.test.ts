@@ -67,13 +67,24 @@ describe('one answer of the Spacefast query API, as a view takes it', () => {
     expect(catalog.dimensions.scroll_depth_bucket!.type).toBe('number');
     expect(result.rows).toEqual([{ scroll_depth_bucket: 0, 'scroll_depth_bucket@end': 10, page_views: 40 }, { scroll_depth_bucket: 90, 'scroll_depth_bucket@end': 100, page_views: 12 }, { scroll_depth_bucket: null, 'scroll_depth_bucket@end': null, page_views: 3 }]);
   });
-  it('money is left out, and a note says so', () => {
+  it('money is a metric for each currency, in the currency\'s own units, and nothing is added across them', () => {
     const { query, result, catalog } = adapt(answer('goals'));
-    expect(query.metrics).toEqual(['event_occurrences']);
-    expect(catalog.metrics.revenue).toBeUndefined();
-    expect(result.rows[2]).toEqual({ event_label: 'purchase', event_occurrences: 203, 'event_occurrences@rank': 3 });
-    expect(result.meta.notes).toEqual(['Revenue is left out: it is split by currency, which a view cannot show yet.']);
+    expect(query.metrics).toEqual(['event_occurrences', 'revenue.eur', 'revenue.gbp', 'revenue.usd']);
+    expect(catalog.metrics['revenue.eur']).toEqual({ label: 'Revenue (EUR)', unit: 'eur', polarity: 'up', rangeTotal: 'sum' });
+    expect(result.rows[2]).toEqual({ event_label: 'purchase', event_occurrences: 203, 'revenue.eur': 418, 'revenue.gbp': 126, 'revenue.usd': 4333, 'event_occurrences@rank': 3 });
+    expect(result.rows[0]!['revenue.usd']).toBeNull();                         // an event with no amount has none, not zero
+    expect(result.totals).toEqual({ event_occurrences: 738, 'revenue.eur': 418, 'revenue.gbp': 126, 'revenue.usd': 4333 });
+    expect(query.metrics.slice(1).map((m) => formatValue(result.totals[m], catalog.metrics[m]!))).toEqual(['€418', '£126', '$4,333']);
+    expect(result.meta.notes).toEqual([]);
     expect(result.meta.range).toBe('31d');                                     // whole days, as the answer's own since and until say
+  });
+  it('a currency with no cents is not divided, and money with no amount anywhere is a note', () => {
+    const goals = answer('goals'), yen = [{ amountMinor: 5000, currency: 'jpy' }];
+    const jpy = adapt({ ...goals, rows: [{ event_label: 'purchase', event_occurrences: 1, revenue: yen }], totals: { event_occurrences: 1, revenue: yen } });
+    expect(jpy.result.totals['revenue.jpy']).toBe(5000);
+    const none = adapt({ ...goals, rows: goals.rows.slice(0, 2), totals: { event_occurrences: 535, revenue: [] } });
+    expect(none.query.metrics).toEqual(['event_occurrences']);
+    expect(none.result.meta.notes).toEqual(['Revenue has no amount in any currency over this range.']);
   });
   it('an answer with nothing in it is empty', () => {
     const none = { ...answer('traffic'), rows: answer('traffic').rows.map((r) => ({ ...r, page_views: 0, visitors: 0, bot_traffic: 0 })), totals: { page_views: 0, visitors: null, bot_traffic: 0 } };
@@ -83,7 +94,8 @@ describe('one answer of the Spacefast query API, as a view takes it', () => {
   it('what it cannot adapt is an error that names the fix', () => {
     expect(() => adapt({ id: 'x', problem: {} } as unknown as ApiResult)).toThrow(/A failed query has a `problem`/);
     expect(() => adapt({ ...answer('traffic'), columns: [...answer('traffic').columns, answer('countries').columns[0]!] })).toThrow(/two queries in the batch/);
-    expect(() => adapt({ ...answer('goals'), columns: answer('goals').columns.filter((c) => c.id !== 'event_occurrences') })).toThrow(/Ask for a count beside it/);
+    expect(() => adapt({ ...answer('goals'), columns: answer('goals').columns.filter((c) => c.kind !== 'metric') })).toThrow(/Ask for at least one metric/);
+    expect(() => adapt({ ...answer('goals'), columns: answer('goals').columns.filter((c) => c.id !== 'event_occurrences'), rows: [], totals: { revenue: [] } })).toThrow(/"revenue" has no amount in any currency over this range\. Ask for a count beside it, or a longer range/);
     const odd = answer('countries');
     expect(() => adapt({ ...odd, columns: [odd.columns[0]!, { ...odd.columns[1]!, unit: 'furlongs' } as ApiResult['columns'][number]] })).toThrow(/Add it to UNITS/);
   });
@@ -101,6 +113,12 @@ describe('the adapted answers draw', () => {
     expect(scene.nodes.some((n) => n.key === 'primary:line:partial')).toBe(true);
     expect(prose).toContain('13.4k');
     expect(prose).toContain('last 30 days');
+  });
+  it('revenue in one currency, on an axis in that currency', () => {
+    const { scene, prose } = draw('goals', 'bar-list', 'revenue.eur');
+    const text = scene.nodes.flatMap((n) => ('text' in n && typeof n.text === 'string' ? [n.text] : []));
+    expect(text).toContain('€418');
+    expect(prose).toContain('€418');
   });
   it('a list of top pages', () => {
     const { scene } = draw('pages', 'bar-list', 'page_views');

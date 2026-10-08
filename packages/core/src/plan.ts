@@ -2,7 +2,7 @@ import { CONTAINER_RULES, KEEP } from './container.ts';
 import { applies, ruleFor, type FitRule } from './fit.ts';
 import { PRESETS, expand } from './presets.ts';
 import { place } from './place.ts';
-import { buildScene, tldrValueText, isDim, roleOf, valueRoomOf } from './scene.ts';
+import { buildScene, tldrValueText, isDim, roleOf, valueRoomOf, xDimOf } from './scene.ts';
 import { tldrProse } from './prose.ts';
 import type { Catalog, Container, Layer, Layout, Plan, PlanShape, PresetLibrary, Query, Reduction, ReductionId, Result, Role, PlacedScene, Spec } from './types.ts';
 
@@ -132,7 +132,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   // place() gives up the note of a number that stands alone before the reducer gives up the number. Said here, as the middle label is.
   if (p.layout === 'none' && container.height != null && alone(p) > container.height) dropped.push('the note under the number');
   const midTick = rule('mid-tick');
-  if (p.layout === 'cartesian' && p.guides.x && midTick && applies(midTick, { view: { inline: container.width } }) && isDim(catalog, by) && catalog.dimensions[by]!.type === 'time') dropped.push('the middle date label');
+  if (p.layout === 'cartesian' && p.guides.x && midTick && applies(midTick, { view: { inline: container.width } }) && catalog.dimensions[xDimOf(catalog, p.layers)!]!.type === 'time') dropped.push('the middle date label');
 
   return {
     preset: spec0.use && !spec0.layers ? spec0.use : null, layout: p.layout,

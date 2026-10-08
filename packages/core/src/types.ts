@@ -131,6 +131,8 @@ interface NodeBase {
   role?: Role;
   /** The dimension value the node came from. */
   row?: string;
+  /** The value of the colour dimension it came from, where a layer is split into series. */
+  series?: string;
   /** Absent stays. Ranked nodes are given up when room is short. */
   rank?: number;
   opacity?: number;
@@ -174,6 +176,8 @@ export interface Scene {
   side?: boolean;
   /** Dimension values in order: the x domain, the rows or the segments. */
   rows?: string[];
+  /** The colour dimension's values in its own order, where a plot is split into series. A series' paint is its place here. */
+  series?: string[];
   /** How x is shared among the rows of a plot. With `point`, marks sit 2 px inside each edge; that inset is the painter's. */
   scale?: 'band' | 'point';
   nodes: SceneNode[];

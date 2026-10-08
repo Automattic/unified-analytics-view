@@ -8,14 +8,14 @@ import type { Container, PathNode, PlacedNode, PlacedRect, PlacedScene, PlacedTe
 /* place() turns the ratio scene into pixels, for painters with no CSS: the dot
  * grid, canvas and the bench's SVG. What the DOM leaves to its stylesheet is a
  * constant here: gutters, row heights, character widths, and the room below
- * which ranked nodes go. Placed nodes drop `part`, `role`, `row` and `rank`. */
+ * which ranked nodes go. Placed nodes drop `part`, `role`, `row`, `series` and `rank`. */
 interface Block { nodes: PlacedNode[]; height: number }
 type Point = PathNode['points'][number];
 
 const SHORT_PLOT = 120;   // px of plot height under which ranked y ticks go
 
-const rect = ({ part, role, row, rank, x: _x, w: _w, v, ...n }: RectNode, x: number, y: number, w: number, h: number, rx: number): PlacedRect => ({ ...n, x, y, w, h, rx });
-const text = ({ part, role, row, rank, x: _x, t, short, ...n }: TextNode, x: number, y: number, s: string = n.text): PlacedText => ({ ...n, x, y, text: s });
+const rect = ({ part, role, row, series, rank, x: _x, w: _w, v, ...n }: RectNode, x: number, y: number, w: number, h: number, rx: number): PlacedRect => ({ ...n, x, y, w, h, rx });
+const text = ({ part, role, row, series, rank, x: _x, t, short, ...n }: TextNode, x: number, y: number, s: string = n.text): PlacedText => ({ ...n, x, y, text: s });
 const fit = (s: string, room: number) => clip(s, Math.floor(room / CHAR_W));
 function shift(nodes: PlacedNode[], dx: number, dy: number): PlacedNode[] {
   nodes.forEach((n) => { n.tx = (n.tx || 0) + dx; n.ty = (n.ty || 0) + dy; });
@@ -55,10 +55,10 @@ function placePlot(scene: Scene, W: number, H: number, narrow: boolean): PlacedN
     if (n.part === 'number') return;
     if (n.rank && (n.part === 'x-axis' ? narrow : H < SHORT_PLOT)) return;
     if (n.kind === 'line') {
-      const { part, role, row, rank, t, ...rest } = n;
+      const { part, role, row, series, rank, t, ...rest } = n;
       out.push({ ...rest, x1: ml, x2: W - mr, y1: y(t), y2: y(t) });
     } else if (n.kind === 'path') {
-      const { part, role, row, rank, points, curve, ...rest } = n;
+      const { part, role, row, series, rank, points, curve, ...rest } = n;
       out.push({ ...rest, d: pathD(points, curve, n.fill, box) });
     } else if (n.kind === 'rect') {
       out.push(rect(n, xs.x(n.row!), y(n.v!), xs.w, Math.max(0, y(0) - y(n.v!)), Math.min(2, xs.w / 4)));

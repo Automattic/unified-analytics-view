@@ -14,6 +14,15 @@
   --a8c-charts-color-series-4: var(--ua-color-qual-rose-700);
   --a8c-charts-color-series-5: var(--ua-color-qual-steel-700);
   --a8c-charts-color-series-6: var(--ua-color-foreground-50);
+  /* The sequential ramp, for a grid of cells, and the cell with no value. */
+  --a8c-charts-color-seq-1: var(--ua-color-seq-1);
+  --a8c-charts-color-seq-2: var(--ua-color-seq-2);
+  --a8c-charts-color-seq-3: var(--ua-color-seq-3);
+  --a8c-charts-color-seq-4: var(--ua-color-seq-4);
+  --a8c-charts-color-seq-5: var(--ua-color-seq-5);
+  --a8c-charts-color-seq-6: var(--ua-color-seq-6);
+  --a8c-charts-color-seq-7: var(--ua-color-seq-7);
+  --a8c-charts-color-seq-none: var(--ua-color-seq-none);
   /* Not the lime marker: an annotation is a thin rule and its label, and both have to hold contrast. */
   --a8c-charts-color-annotation: var(--ua-color-muted-foreground);
   --a8c-charts-color-comparison: var(--ua-color-foreground-50);

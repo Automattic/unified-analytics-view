@@ -36,6 +36,7 @@ export const catalog: Catalog = {
     event:      { label: 'Event',   type: 'categorical' },
     step:       { label: 'Step',    type: 'categorical' },
     country:    { label: 'Country', type: 'categorical' },
+    visitor_country: { label: 'Country', type: 'categorical' },
   },
 };
 
@@ -95,6 +96,9 @@ const MIX: Record<string, [string, number, number][]> = { channel: CHANNELS, dev
 // Where visitors are, by the name the boundary shapes know each country by.
 MIX.country = [['United States', 0.31, 0.33], ['India', 0.12, 0.1], ['United Kingdom', 0.09, 0.1], ['Germany', 0.08, 0.08], ['Brazil', 0.07, 0.06], ['Canada', 0.06, 0.06], ['France', 0.05, 0.05],
   ['Australia', 0.045, 0.05], ['Japan', 0.04, 0.04], ['Spain', 0.035, 0.035], ['Mexico', 0.03, 0.03], ['Indonesia', 0.025, 0.02], ['Nigeria', 0.02, 0.015], ['South Africa', 0.015, 0.015], ['Sweden', 0.01, 0.015]];
+// Every country the tracker saw, as real data has them: small ones the fixture's shapes leave out, and one it could not
+// place, which arrives as an empty string.
+MIX.visitor_country = [...MIX.country, ['Singapore', 0.012, 0.01], ['Malta', 0.006, 0.006], ['Bahrain', 0.004, 0.004], ['', 0.008, 0.008]];
 // What a page has and a day does not: the share of its visitors who convert, in percent. A rate is the engine's to work out, and does not add up.
 const RATES: Record<string, number> = { '/': 2.1, '/pricing': 5.8, '/blog/launch-notes': 1.2, '/docs/getting-started': 3.4, '/changelog': 0.9, '/about': 1.6, '/blog/analytics-without-cookies': 2.7, '/contact': 4.4 };
 const RATE = 2.6;
@@ -336,4 +340,6 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
             layers: [{ mark: 'geo', encode: { x: 'country', color: 'visitors' } }] } },
   symbols: { label: 'Symbols on a map: page views by country', spec: { spec: 'view/0', title: 'Page views by country', query: { metrics: ['pageviews'], by: ['country'], range: '28d' },
             layers: [{ mark: 'geo', encode: { x: 'country', size: 'pageviews' } }] } },
+  unmapped: { label: 'A map with rows it has no shape for: visitors by every country seen', spec: { spec: 'view/0', title: 'Visitors by country, all of them', query: { metrics: ['visitors'], by: ['visitor_country'], range: '28d' },
+            layers: [{ mark: 'geo', encode: { x: 'visitor_country', color: 'visitors' } }] } },
 };

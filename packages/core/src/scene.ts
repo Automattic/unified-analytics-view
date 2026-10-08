@@ -17,12 +17,12 @@ export function roleOf(l: Layer): Role {
 }
 /* A layer's key names it by role and mark, and does not count the layers before it, so it holds when another layer
  * drops. Two layers of one role and mark are told apart by a count among themselves alone: `primary:text`, then
- * `primary:text#2`. Layers of the previous series are counted last. A reduction drops whole roles, and missing prior
+ * `primary:text#2`. Layers of the previous series, and of a row's delta, are counted last. A reduction drops whole roles, and missing prior
  * data drops the whole previous series, so neither can move a count. */
 function layerKeys(layers: Layer[]): string[] {
   const seen: Record<string, number> = {}, keys: string[] = [];
   for (const prev of [false, true]) layers.forEach((l, i) => {
-    if ((l.series === 'previous') !== prev) return;
+    if (!!l.series !== prev) return;
     const base = roleOf(l) + ':' + l.mark, n = (seen[base] = (seen[base] || 0) + 1);
     keys[i] = n > 1 ? base + '#' + n : base;
   });
@@ -225,12 +225,15 @@ export function columnsOf(catalog: Catalog, layers: Layer[]): Layer[] {
 }
 /** What heads a column. */
 export function columnLabel(catalog: Catalog, l: Layer): string {
-  return catalog.metrics[l.encode!.text as string]!.label;
+  return l.series === 'delta' ? 'Change' : catalog.metrics[l.encode!.text as string]!.label;
 }
 // What a text layer says in one row.
 function cellOf(catalog: Catalog, l: Layer, r: Row): { text: string; paint: string } {
   const f = l.encode!.text as string, M = catalog.metrics[f];
-  return { text: M ? formatValue(num(r, f), M) : String(r[f]), paint: 'ink' };
+  if (!M || l.series !== 'delta') return { text: M ? formatValue(num(r, f), M) : String(r[f]), paint: 'ink' };
+  // The row's change, as the tldr value's delta says the total's. A row with nothing before it has a dash: a column has no room for the words.
+  const d = delta(num(r, f), r[f + '@previous'] as number | null | undefined, M.polarity);
+  return { text: d.state === 'none' ? '–' : d.text, paint: d.paint };
 }
 export const TICK_W = CHAR_W - 0.8;   // rough advance of the 11px tick face, which a column's header is set in
 

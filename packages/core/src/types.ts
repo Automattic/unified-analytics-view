@@ -45,7 +45,8 @@ export type KeepPart = 'guides' | 'secondary' | 'rows' | 'marks';
 export interface Layer {
   mark: Mark;
   encode?: Partial<Record<Channel, string | number>>;
-  series?: 'previous';
+  /** `previous` draws the metric's comparison companion. On a `text` layer in rows, `delta` says the row's change on it instead, painted by the metric's polarity. */
+  series?: 'previous' | 'delta';
   role?: Role;
   /** On a layer split by `color`: each series starts where the one under it ends. `normalize` makes each a share of the whole,
    * and `center` sets each stack half on either side of zero. */

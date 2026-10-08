@@ -32,7 +32,7 @@ export function expand(spec: Spec, presets: PresetLibrary = PRESETS): Spec {
   if (!split && p.layers.some((l) => Object.values(l.encode || {}).indexOf('$split') >= 0)) throw new Error('The "' + spec.use + '" preset needs two dimensions in query.by: the one on the axis, then the one to split by.');
   const { use: _use, ...out } = spec;
   if (spec.layers) return out;                               // layers written in the spec win over the preset
-  out.layers = p.layers.filter((l) => l.series !== 'previous' || q.compare === 'previous').map((l) => {
+  out.layers = p.layers.filter((l) => !l.series || q.compare === 'previous').map((l) => {
     const c: Layer = JSON.parse(JSON.stringify(l));
     const enc = c.encode || {};
     (Object.keys(enc) as Channel[]).forEach((ch) => { enc[ch] = enc[ch] === '$by' ? by : enc[ch] === '$split' ? split : enc[ch] === '$metric' ? m : enc[ch]; });

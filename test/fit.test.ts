@@ -118,7 +118,8 @@ describe('the rules are what place() builds to', () => {
 });
 
 describe('the rules against resolve(), over the sweep', () => {
-  it('a rule never hides what resolve() keeps', () => {
+  // The whole sweep in one test: about 4.6 s, which the default 5 s limit cuts off on a busy machine.
+  it('a rule never hides what resolve() keeps', { timeout: 30000 }, () => {
     const wrong: string[] = [];
     sweep(({ name, w, h, r, says, did }) => { if (says && !did) wrong.push([name, r.id, w, h].join(' ')); });
     expect(wrong).toEqual([]);

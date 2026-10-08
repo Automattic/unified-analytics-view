@@ -216,6 +216,17 @@ describe('stacking, and bars side by side', () => {
     // The same holds with no guides to round the scale: shares run to the whole.
     expect(rects(plot({ ...shares, query: { ...shares.query, limit: 2 } }, 250).ratio, '2026-09-08').pop()!.v).toBeLessThan(0.95);
   });
+  it('stack: "center" sets each stack half on either side of zero', () => {
+    const { ratio } = plot(as('center')), zero = (ratio.nodes.find((n) => n.key === 'ytick:0') as { t: number }).t;
+    expect(view(as('center')), JSON.stringify(view.errors)).toBe(true);
+    expect(zero).toBe(0.5);
+    for (const row of ratio.rows!) {
+      const [desktop, mobile, tablet] = rects(ratio, row);
+      expect((desktop!.v0! + tablet!.v) / 2, row).toBeCloseTo(zero, 12);
+      expect(desktop!.v0! < zero && tablet!.v > zero, row).toBe(true);
+      expect([mobile!.v0, tablet!.v0], row).toEqual([desktop!.v, mobile!.v]);
+    }
+  });
   it('a bar with color and no stack sits beside its neighbours, and they fill the room one bar had', () => {
     const grouped = plot(specs.grouped!), [a, b, c] = rects(grouped.ratio, 'Search'), one = rects(plot(as('zero', specs.grouped!)).ratio, 'Search')[0]!;
     expect([a!.key, b!.key, c!.key]).toEqual(['primary:bar:Search:Desktop', 'primary:bar:Search:Mobile', 'primary:bar:Search:Tablet']);

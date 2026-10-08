@@ -133,6 +133,8 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
       run[k(r)] = from + n;
       out.set(r, [from / all, (from + n) / all]);
     }));
+    // Centred, a stack sits half on each side of zero.
+    if (l.stack === 'center') out.forEach((ends, r) => { const mid = ((up[k(r)] || 0) + (down[k(r)] || 0)) / 2; out.set(r, [ends[0] - mid, ends[1] - mid]); });
     return out;
   });
   const share = layers.some((l) => l.stack === 'normalize' && splitOf(catalog, l, xField));

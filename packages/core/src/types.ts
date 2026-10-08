@@ -47,8 +47,9 @@ export interface Layer {
   encode?: Partial<Record<Channel, string | number>>;
   series?: 'previous';
   role?: Role;
-  /** On a layer split by `color`: each series starts where the one under it ends. `normalize` makes each a share of the whole. */
-  stack?: 'zero' | 'normalize';
+  /** On a layer split by `color`: each series starts where the one under it ends. `normalize` makes each a share of the whole,
+   * and `center` sets each stack half on either side of zero. */
+  stack?: 'zero' | 'normalize' | 'center';
   label?: string;
   align?: 'end';
   paint?: string;

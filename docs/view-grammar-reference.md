@@ -503,7 +503,7 @@ One consequence, also agreed: a scene with no size cannot choose its tick count 
 **Status: SVG and dot grid Proven. An HTML and CSS painter is Proposed and comes first in the build.**
 
 - **Two layers per view.** Data marks go to whichever renderer fits. Axes, labels, tooltips, brush and focus rings always stay in the DOM, so text stays crisp, tokens apply through CSS and keyboard access survives.
-- **Tokens, not colours.** A painter maps paint tokens to CSS custom properties, using the `@automattic/charts` token names (`series.1` becomes `--a8c-charts-color-series-1`). The full map is in `docs/dom-painter-plan.md`. Light and dark are token sets.
+- **Tokens, not colours.** A painter maps paint tokens to CSS custom properties, using the `@automattic/charts` token names under our own prefix (`series.1` becomes `--ua-charts-color-series-1`, for its `--a8c-charts-color-series-1`). The full map is in `docs/dom-painter-plan.md`. Light and dark are token sets.
 - **Intrinsic sizing.** The DOM painter plans once per data change and CSS fits the view on resize. Bars are HTML positioned by custom properties; lines and areas are a stretched SVG (decided October 7). The view carries no size or mode; see section 10.
 - **Isolation.** On a customer's site the view must not inherit or leak styles. Use a custom element with shadow DOM.
 - **Renderer choice by mark count.** HTML and SVG for up to a few thousand marks, canvas beyond, WebGPU later. Aggregating to pixel resolution first keeps most analytics views in the first tier.

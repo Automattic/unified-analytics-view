@@ -25,7 +25,7 @@ const css = `
 .uav-y-axis { grid-area: y; }
 .uav-y-axis-2 { grid-area: y2; }
 /* Labels share one cell and are moved by a percentage inset, so the column is still sized by the widest. */
-:is(.uav-y-axis, .uav-y-axis-2) span { grid-area: 1 / 1; align-self: start; justify-self: end; position: relative; inset-block-start: calc((1 - var(--uav-t)) * 100%); translate: 0 -50%; padding-inline-end: 6px; color: var(--a8c-charts-color-label-axis, var(--uav-paint)); }
+:is(.uav-y-axis, .uav-y-axis-2) span { grid-area: 1 / 1; align-self: start; justify-self: end; position: relative; inset-block-start: calc((1 - var(--uav-t)) * 100%); translate: 0 -50%; padding-inline-end: 6px; color: var(--ua-charts-color-label-axis, var(--uav-paint)); }
 .uav-y-axis-2 span { justify-self: start; padding-inline: 6px 0; }
 /* The label at a line's end, in its series' colour. The plan names the legend, so these wait for the rule that swaps them in.
  * --uav-dy is the measured pass's: how far a label is moved to stand a line from the next. One with no room keeps its box. */
@@ -42,7 +42,7 @@ const css = `
 .uav[data-layout="cartesian"] .uav-legend span::before { content: ""; display: inline-block; inline-size: 12px; block-size: 12px; margin-inline-end: 6px; border-radius: 2px; vertical-align: -1px; background: var(--uav-swatch); }
 .uav-x-axis { grid-area: x; box-sizing: border-box; block-size: 22px; padding-block-start: 5px; }
 /* ponytail: physical translate, so not right for right-to-left. Logical anchors when a surface needs it. */
-.uav-x-axis span { grid-area: 1 / 1; justify-self: start; position: relative; inset-inline-start: calc(var(--uav-x) * 100%); translate: -50%; color: var(--a8c-charts-color-label-axis, var(--uav-paint)); }
+.uav-x-axis span { grid-area: 1 / 1; justify-self: start; position: relative; inset-inline-start: calc(var(--uav-x) * 100%); translate: -50%; color: var(--ua-charts-color-label-axis, var(--uav-paint)); }
 .uav-x-axis [data-anchor="start"] { translate: 0; }
 .uav-x-axis [data-anchor="end"] { translate: -100%; }
 /* A label the measured pass gave up keeps its box, so the next measurement reads the same. */
@@ -55,7 +55,7 @@ const css = `
  * it, and a value below zero hangs from the zero line. With no start it rises from the bottom. */
 .uav-bars i { position: absolute; inset-inline-start: calc(var(--uav-x) * 100%); inline-size: calc(var(--uav-w) * 100%);
   inset-block-end: calc(min(var(--uav-v0, 0), var(--uav-v)) * 100%); block-size: calc(max(var(--uav-v) - var(--uav-v0, 0), var(--uav-v0, 0) - var(--uav-v)) * 100%);
-  background: var(--uav-paint); border-radius: var(--a8c-charts-border-radius-bar, 2px); }
+  background: var(--uav-paint); border-radius: var(--ua-charts-border-radius-bar, 2px); }
 .uav-plot svg { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; overflow: visible; }
 /* A point scale puts its first and last marks 2 px inside the plot. */
 .uav-body[data-scale="point"] svg { inset-inline-start: 2px; inline-size: calc(100% - 4px); }
@@ -64,7 +64,7 @@ const css = `
 .uav-plot path[data-fill] { fill: var(--uav-paint); stroke: none; }
 /* ponytail: a label in the plot is set above its line at the inline end, the one anchor a scene asks for today. */
 .uav-refs span { position: absolute; inset-inline-end: 0; inset-block-start: calc((1 - var(--uav-t)) * 100%); translate: 0 -100%; padding-block-end: 2px; white-space: nowrap; color: var(--uav-paint); }
-.uav-refs [data-halo] { -webkit-text-stroke: 3px var(--a8c-charts-color-background, Canvas); paint-order: stroke fill; }`;
+.uav-refs [data-halo] { -webkit-text-stroke: 3px var(--ua-charts-color-background, Canvas); paint-order: stroke fill; }`;
 
 const inPlot = (n: SceneNode) => n.part === 'plot';
 

@@ -22,7 +22,7 @@ const css = `
 .uav-rows { grid-row: 2; align-content: start; row-gap: var(--uav-row-gap); overflow: hidden; }
 .uav-row { position: relative; align-items: center; block-size: var(--uav-row-block); }
 .uav-row > i { position: absolute; grid-column: var(--uav-track, 1 / 3); inset-block: 0; inset-inline-start: calc(var(--uav-x, 0) * 100%); inline-size: max(3px, calc(var(--uav-v) * 100%));
-  background: var(--uav-paint); border-radius: var(--a8c-charts-border-radius-bar, 3px); }
+  background: var(--uav-paint); border-radius: var(--ua-charts-border-radius-bar, 3px); }
 :is(.uav-row, .uav-columns) > span { position: relative; grid-row: 1; padding-inline: 8px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--uav-paint); }
 .uav-row > .uav-f-label { grid-column: var(--uav-col, 1); padding-inline-end: 0; }
 :is(.uav-row, .uav-columns) > span:not(.uav-f-label) { grid-column: var(--uav-col); }

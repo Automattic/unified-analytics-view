@@ -7,7 +7,7 @@ import { NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
  * text. The stylesheet shows one of them. Sizes are the pixel painter's: a 24 px bar and 24 px to a legend row. */
 const css = `
 .uav-band { display: flex; gap: 2px; block-size: 24px; }
-.uav-band i { flex: var(--uav-v) 1 0px; min-inline-size: 0; background: var(--uav-paint); border-radius: var(--a8c-charts-border-radius-bar, 2px); }
+.uav-band i { flex: var(--uav-v) 1 0px; min-inline-size: 0; background: var(--uav-paint); border-radius: var(--ua-charts-border-radius-bar, 2px); }
 .uav-legend { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; grid-auto-rows: 20px; gap: 4px 8px; align-items: center; margin-block-start: 10px; }
 .uav-legend i { grid-column: 1; block-size: 12px; border-radius: 2px; background: var(--uav-paint); }
 .uav-legend span, .uav-legend-top span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--uav-paint); }

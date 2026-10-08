@@ -288,7 +288,7 @@ Done when traffic against conversion by page renders with the top labels shown, 
 
 Size: medium. Unlocks heatmap, and calendar heatmap and climate stripes beyond the Common tier.
 
-1. **Tokens.** A sequential ramp from `packages/tokens`, named in the `--a8c-charts-*` scheme, and paint tokens `seq.1` to `seq.n`. This is the first thing to consume the generated tokens.
+1. **Tokens.** A sequential ramp from `packages/tokens`, named in the `--ua-charts-*` scheme, and paint tokens `seq.1` to `seq.n`. This is the first thing to consume the generated tokens.
 2. **`cell`** on band by band. The colour value is quantized to the ramp. Null is its own token, not the lowest step.
 3. **A `ramp` part:** the legend, with the low and high value.
 4. **DOM.** A CSS grid. Keyboard in two dimensions over a real grid.
@@ -383,7 +383,7 @@ Kept here and not in `docs/feedback.md`, which other work on `dom-painter` is wr
 In `packages/tokens`. Tests pass (160) and the typecheck is clean. Nothing consumes it yet.
 
 1. **Seven steps, teal.** It reuses the `qual-teal` seed, so no new colour enters the system. Neighbours are 1.37 to 1.40 apart in contrast in both themes; nine steps would put them near 1.28, under the 1.35 the system uses for a subtle difference.
-2. **Names.** Base `color.seq.100` to `700`; common `color.seq-1` to `seq-7` and `color.seq-none`. Paint tokens `seq.1` to `seq.7` and `seq.none` map to `--a8c-charts-color-seq-*` through `paintVar` with no table entry. The bench's stylesheet still has to declare those properties; step 5 does it.
+2. **Names.** Base `color.seq.100` to `700`; common `color.seq-1` to `seq-7` and `color.seq-none`. Paint tokens `seq.1` to `seq.7` and `seq.none` map to `--ua-charts-color-seq-*` through `paintVar` with no table entry. The bench's stylesheet still has to declare those properties; step 5 does it.
 3. **The ramp has its own ratio set,** 1.7 to 12 against the page. The shared ten ratios cluster near the surface.
 4. **Base numbering differs from the other ramps.** In `seq`, 100 is the first step; elsewhere 200 is the page. A comment in `leonardo.colors.js` says so.
 5. **No-data is the weakest margin.** `seq-none` is 1.46 from step 1 in light and 1.27 in dark. If that reads too close on screen, the fix is a hatch or outline in the painter, not a token. To look at.

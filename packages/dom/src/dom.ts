@@ -5,7 +5,7 @@ import { leave } from './motion.ts';
  * security policy asks: createElement, never innerHTML; style.setProperty, never a style attribute in markup. */
 const SVG = 'http://www.w3.org/2000/svg';
 
-/* Paint tokens under the @automattic/charts names (docs/dom-painter-plan.md, 4.1). A page that sets none of them
+/* Paint tokens under the @automattic/charts names, with our prefix for its `--a8c-charts-` (docs/dom-painter-plan.md, 4.1). A page that sets none of them
  * still gets a legible view: the fallbacks are system colours, so they follow light and dark. */
 const PAINT: Record<string, [name: string, fallback: string]> = {
   ink: ['label', 'CanvasText'],
@@ -14,16 +14,16 @@ const PAINT: Record<string, [name: string, fallback: string]> = {
   axis: ['axis-x', 'GrayText'],
   rule: ['annotation', 'currentColor'],
   compare: ['comparison', 'GrayText'],
-  'delta.good': ['delta-good', 'var(--a8c-charts-color-trend-up, currentColor)'],
-  'delta.bad': ['delta-bad', 'var(--a8c-charts-color-trend-down, currentColor)'],
+  'delta.good': ['delta-good', 'var(--ua-charts-color-trend-up, currentColor)'],
+  'delta.bad': ['delta-bad', 'var(--ua-charts-color-trend-down, currentColor)'],
   delta: ['trend-neutral', 'GrayText'],
   live: ['live', 'currentColor'],
 };
-/** The custom property a paint token reads. A token the table does not know maps by name: `series.2` is `--a8c-charts-color-series-2`. */
+/** The custom property a paint token reads. A token the table does not know maps by name: `series.2` is `--ua-charts-color-series-2`. */
 export function paintVar(token: string): string {
   // A spec can name its own paint, so the name is reduced to what a custom property may hold.
   const [name, fallback] = Object.hasOwn(PAINT, token) ? PAINT[token]! : [String(token).replace(/[^\w-]/g, '-'), 'currentColor'];
-  return 'var(--a8c-charts-color-' + name + ', ' + fallback + ')';
+  return 'var(--ua-charts-color-' + name + ', ' + fallback + ')';
 }
 
 /** The child of `parent` with this class, made on first use. Children stay in the order they were first asked for. */
@@ -85,7 +85,7 @@ export function prop(el: HTMLElement | SVGElement, name: string, v: string | num
   if (v == null) el.style.removeProperty(name); else el.style.setProperty(name, String(v));
 }
 /** The colour a node is painted with. A tint is its paint's lighter colour, whole, where the tokens have one
- * (`--a8c-charts-color-series-1-soft`), and the paint at the node's opacity where they do not. Text in a series colour
+ * (`--ua-charts-color-series-1-soft`), and the paint at the node's opacity where they do not. Text in a series colour
  * takes the step that holds contrast for text (`-text`), where the tokens have that, and the mark's colour where not. */
 export function nodePaint(n: Pick<SceneNode, 'paint' | 'kind' | 'tone' | 'opacity'>): string {
   const base = paintVar(n.paint), name = base.slice(4, base.indexOf(','));

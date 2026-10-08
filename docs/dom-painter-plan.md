@@ -149,27 +149,27 @@ One custom element, `<ua-view>`, with an open shadow root. It takes `spec`, `res
 - Paint tokens become custom properties on `:host`, so a surface themes a view from outside the shadow root. They use the `@automattic/charts` names; see section 4.1.
 - **The painter is safe under a strict content security policy,** because a browser's own panel and an agent harness's frame both impose one (`docs/shell-plan.md`, section 3). Nodes are made with `createElement`, never `innerHTML`. The `style` attributes in the sketch above show the result; they are written with `style.setProperty`. Styles are constructed stylesheets adopted by the shadow root, never a `<style>` element.
 
-### 4.1 Paint tokens as `@automattic/charts` custom properties
+### 4.1 Paint tokens as custom properties, named as `@automattic/charts` names its own
 
-Names on the right were read from `src/styles/chart-scope.scss` on Jetpack trunk. A page that already styles `@automattic/charts` themes a view with no extra work.
+Names on the right were read from `src/styles/chart-scope.scss` on Jetpack trunk, where the prefix is `--a8c-charts-`. Ours is `--ua-charts-` until the two interoperate, so that nobody takes one for the other. A page that already styles `@automattic/charts` themes a view by aliasing each token across: `--ua-charts-color-label: var(--a8c-charts-color-label)`.
 
 | Paint token | Custom property | Note |
 |---|---|---|
-| `ink` | `--a8c-charts-color-label` | |
-| `ink.muted` | `--a8c-charts-color-label-secondary` | Tick labels use `--a8c-charts-color-label-axis` |
-| `grid` | `--a8c-charts-color-grid` | |
-| `axis` | `--a8c-charts-color-axis-x`, `-axis-y` | |
-| `series.1` to `series.6` | `--a8c-charts-color-series-1` to `-6` | Theirs declares only slot 1 and generates the rest in script. We declare all six |
-| `rule` | `--a8c-charts-color-annotation` | |
-| `compare` | `--a8c-charts-color-comparison` | **New.** Theirs dashes the series colour instead |
-| `delta.good`, `delta.bad` | `--a8c-charts-color-delta-good`, `-delta-bad` | **New.** They default to `-trend-up` and `-trend-down`. Theirs names a direction; ours names a judgement, because polarity can make a rise bad |
-| flat delta | `--a8c-charts-color-trend-neutral` | |
-| `live` | `--a8c-charts-color-live` | **New** |
-| panel and tile surfaces | `--a8c-charts-color-surface`, `-surface-secondary`, `-background` | |
-| bar track | `--a8c-charts-color-track` | |
-| tooltip | `--a8c-charts-color-tooltip-surface` | |
-| bar corner | `--a8c-charts-border-radius-bar` | |
-| entrance motion | `--a8c-charts-motion-duration-entrance`, `-motion-easing-entrance` | Update and exit motion tokens are new |
+| `ink` | `--ua-charts-color-label` | |
+| `ink.muted` | `--ua-charts-color-label-secondary` | Tick labels use `--ua-charts-color-label-axis` |
+| `grid` | `--ua-charts-color-grid` | |
+| `axis` | `--ua-charts-color-axis-x`, `-axis-y` | |
+| `series.1` to `series.6` | `--ua-charts-color-series-1` to `-6` | Theirs declares only slot 1 and generates the rest in script. We declare all six |
+| `rule` | `--ua-charts-color-annotation` | |
+| `compare` | `--ua-charts-color-comparison` | **New.** Theirs dashes the series colour instead |
+| `delta.good`, `delta.bad` | `--ua-charts-color-delta-good`, `-delta-bad` | **New.** They default to `-trend-up` and `-trend-down`. Theirs names a direction; ours names a judgement, because polarity can make a rise bad |
+| flat delta | `--ua-charts-color-trend-neutral` | |
+| `live` | `--ua-charts-color-live` | **New** |
+| panel and tile surfaces | `--ua-charts-color-surface`, `-surface-secondary`, `-background` | |
+| bar track | `--ua-charts-color-track` | |
+| tooltip | `--ua-charts-color-tooltip-surface` | |
+| bar corner | `--ua-charts-border-radius-bar` | |
+| entrance motion | `--ua-charts-motion-duration-entrance`, `-motion-easing-entrance` | Update and exit motion tokens are new |
 
 ### 4.2 Surface layouts
 

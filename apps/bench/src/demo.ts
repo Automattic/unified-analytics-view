@@ -37,7 +37,7 @@ const hue = (spec: Spec) => (spec.use === 'share-bar' || spec.use === 'bar-list'
  * ponytail: a stopgap for the demo. The grammar's way is a `color` channel on the layer, which the scene would
  * turn into a series colour per row; nothing outside a view should be styling its insides. */
 const rowColours = new CSSStyleSheet();
-rowColours.replaceSync([1, 2, 3, 4, 5, 6].map((n) => `.uav-row:nth-child(6n+${n}) > i { --uav-paint: var(--a8c-charts-color-series-${n}) !important; }`).join('\n')
+rowColours.replaceSync([1, 2, 3, 4, 5, 6].map((n) => `.uav-row:nth-child(6n+${n}) > i { --uav-paint: var(--ua-charts-color-series-${n}) !important; }`).join('\n')
   + '\n.uav-row > i { opacity: var(--demo-row-opacity, .8) !important; }');
 
 /** The surface's range goes into every query that has one. */
@@ -104,7 +104,7 @@ for (const name of ['trend', 'pages', 'mix', 'live']) {
 
 for (const [metric, def] of Object.entries(catalog.metrics)) {
   const chip = el('span', 'hue', def.label + (HUE[metric] ? '' : ' (the default)'));
-  chip.style.setProperty('--c', HUE[metric] ? `var(--ua-color-mark-${HUE[metric]})` : 'var(--a8c-charts-color-series-1)');
+  chip.style.setProperty('--c', HUE[metric] ? `var(--ua-color-mark-${HUE[metric]})` : 'var(--ua-charts-color-series-1)');
   $('hues').append(chip);
 }
 
@@ -142,7 +142,7 @@ function update() {
     // A spec the editor has broken is still handed over: the view says what is wrong with it.
     try {
       const spec = ranged(m.spec(), s.range), h = hue(spec);
-      for (const part of ['', '-text', '-soft']) { const name = '--a8c-charts-color-series-1' + part; if (h) m.view.style.setProperty(name, `var(--ua-color-mark-${h}${part})`); else m.view.style.removeProperty(name); }
+      for (const part of ['', '-text', '-soft']) { const name = '--ua-charts-color-series-1' + part; if (h) m.view.style.setProperty(name, `var(--ua-color-mark-${h}${part})`); else m.view.style.removeProperty(name); }
       m.view.spec = spec; m.view.result = runQuery(spec.query, s.scenario);
     } catch { /* the note below says why */ }
   }

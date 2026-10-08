@@ -27,7 +27,7 @@ export const POINTS_CSS = `
 /* A label sits above its point, clear of the dot. --uav-nudge is the measured pass's: what keeps it inside the plot. */
 .uav-point-labels span { position: absolute; inset-inline-start: calc(var(--uav-x) * 100%); inset-block-start: calc((1 - var(--uav-t)) * 100%);
   translate: calc(-50% + var(--uav-nudge, 0px)) calc(-100% - 2px - ${DOT} / 2); max-inline-size: 14ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--uav-paint); }
-.uav-point-labels [data-halo] { -webkit-text-stroke: 3px var(--a8c-charts-color-background, Canvas); paint-order: stroke fill; }
+.uav-point-labels [data-halo] { -webkit-text-stroke: 3px var(--ua-charts-color-background, Canvas); paint-order: stroke fill; }
 /* A label the measured pass gave up keeps its box, so the next measurement reads the same. */
 .uav-point-labels [data-thin] { visibility: hidden; }
 /* A rule at a value on x stands the height of the plot, and its label sits beside it at the top. */

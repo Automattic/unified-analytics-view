@@ -13,7 +13,7 @@ import { pathD, type PathNode } from '@universal-analytics/core';
  * fade can change a size the measured pass reads. */
 
 const TOKEN = (kind: string, duration: string, easing: string) =>
-  `var(--a8c-charts-motion-duration-${kind}, ${duration}) var(--a8c-charts-motion-easing-${kind}, ${easing})`;
+  `var(--ua-charts-motion-duration-${kind}, ${duration}) var(--ua-charts-motion-easing-${kind}, ${easing})`;
 const UPDATE = TOKEN('update', '300ms', 'cubic-bezier(0.4, 0, 0.2, 1)'), EXIT = TOKEN('exit', '150ms', 'cubic-bezier(0.4, 0, 1, 1)');
 /** The ratios, and `--uav-p`, which a path's morph is timed by. */
 const MOVED = ['--uav-x', '--uav-w', '--uav-v', '--uav-v0', '--uav-t', '--uav-p', '--uav-x2', '--uav-t2'];

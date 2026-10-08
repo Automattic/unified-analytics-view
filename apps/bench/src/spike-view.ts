@@ -46,15 +46,15 @@ const GUIDES = '.uav[data-layout="cartesian"]:not([data-keep~="guides"])', MARKS
 /* The base sheet, then the four cartesian fit rules of section 2 compiled by hand.
  * Where this departs from the plan's text it says CHANGED; the report lists each one. */
 const CSS_TEXT = `
-:host { display: block; container: uav-view / inline-size; font: 11px/1.3 system-ui, sans-serif; color: var(--a8c-charts-color-label); }
+:host { display: block; container: uav-view / inline-size; font: 11px/1.3 system-ui, sans-serif; color: var(--ua-charts-color-label); }
 .uav { position: relative; box-sizing: border-box; block-size: 100%; margin: 0; padding-block-start: 8px; display: grid; column-gap: 6px;
   grid-template: "y plot" minmax(0, 1fr) ". x" auto / auto minmax(0, 1fr); --uav-plot-block: var(--uav-axes-height, 184px); }
 .uav-prose { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .uav-number { display: none; grid-area: number; align-self: center; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .uav-number b { display: block; font-size: 24px; line-height: 1.1; font-weight: 600; letter-spacing: -0.01em; }
-.uav-number [data-judge="good"] { color: var(--a8c-charts-color-delta-good); }
-.uav-number [data-judge="bad"] { color: var(--a8c-charts-color-delta-bad); }
-.uav-y-axis, .uav-x-axis { display: grid; color: var(--a8c-charts-color-label-secondary); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.uav-number [data-judge="good"] { color: var(--ua-charts-color-delta-good); }
+.uav-number [data-judge="bad"] { color: var(--ua-charts-color-delta-bad); }
+.uav-y-axis, .uav-x-axis { display: grid; color: var(--ua-charts-color-label-secondary); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .uav-y-axis { grid-area: y; }
 .uav-y-axis span { grid-area: 1 / 1; align-self: start; justify-self: end; position: relative; inset-block-start: calc((1 - var(--uav-t)) * 100%); translate: 0 -50%; }
 .uav-x-axis { grid-area: x; margin-inline: 2px; padding-block-start: 4px; }
@@ -65,13 +65,13 @@ const CSS_TEXT = `
 /* The height has to be a stated block-size. Chrome 155 answers no block-size query on a plot whose height comes from
  * contain-intrinsic-block-size or min-block-size through a stretched grid row, though it lays it out at that height. */
 .uav-plot { grid-area: plot; position: relative; container: uav-plot / size; block-size: var(--uav-plot-block); }
-.uav-grid i { position: absolute; inset-inline: 0; inset-block-start: calc((1 - var(--uav-t)) * 100%); border-block-start: 1px solid var(--a8c-charts-color-grid); }
-.uav-grid i[data-key="grid:0"] { border-color: var(--a8c-charts-color-axis-x); }
+.uav-grid i { position: absolute; inset-inline: 0; inset-block-start: calc((1 - var(--uav-t)) * 100%); border-block-start: 1px solid var(--ua-charts-color-grid); }
+.uav-grid i[data-key="grid:0"] { border-color: var(--ua-charts-color-axis-x); }
 .uav-grid i, .uav-y-axis span { transition: --uav-t 600ms linear; }
 svg { position: absolute; inset-block-start: 0; inset-inline-start: 2px; inline-size: calc(100% - 4px); block-size: 100%; overflow: visible; }
-path { fill: none; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke: var(--a8c-charts-color-series-1); stroke-width: 2; }
-[data-role="context"] { fill: var(--a8c-charts-color-series-1); stroke: none; opacity: 0.14; }
-[data-role="comparison"] { stroke: var(--a8c-charts-color-comparison); stroke-width: 1.5; stroke-dasharray: 3 3; }
+path { fill: none; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke: var(--ua-charts-color-series-1); stroke-width: 2; }
+[data-role="context"] { fill: var(--ua-charts-color-series-1); stroke: none; opacity: 0.14; }
+[data-role="comparison"] { stroke: var(--ua-charts-color-comparison); stroke-width: 1.5; stroke-dasharray: 3 3; }
 [data-key$=":partial"] { stroke-dasharray: 2 4; opacity: 0.75; }
 
 /* axes */

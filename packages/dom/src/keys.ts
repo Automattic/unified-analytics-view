@@ -98,7 +98,7 @@ export const KEYS_CSS = `
 [data-hits]:focus-visible { outline-offset: -2px; }
 .uav-readout { position: absolute; z-index: 1; left: 0; top: 0; box-sizing: border-box; inline-size: max-content; max-inline-size: 100%; padding: 2px 6px; border-radius: 2px;
   pointer-events: none; font-size: 11px; font-variant-numeric: tabular-nums;
-  color: var(--a8c-charts-color-label-inverse, Canvas); background: var(--a8c-charts-color-tooltip-surface, CanvasText); }
+  color: var(--ua-charts-color-label-inverse, Canvas); background: var(--ua-charts-color-tooltip-surface, CanvasText); }
 .uav-hits { position: absolute; inset: 0; }
 .uav-body[data-scale="point"] .uav-hits { inset-inline: 2px; }
 .uav-hits i { position: absolute; inset-block: 0; inset-inline-start: calc(var(--uav-x) * 100%); inline-size: calc(var(--uav-w) * 100%); }

@@ -36,7 +36,7 @@ Packages export their TypeScript source and nothing is built for release yet. Vi
 - **Do not add chart types.** A new shape is a mark. A new combination is a preset, named after the `@automattic/charts` component it replaces where one exists. What the grammar cannot say is a custom mark, registered in code (`registerMark`), and each one counts against the grammar.
 - **New samples go in `moreSamples`.** The parity tests sweep every entry of `samples` against the prototype.
 - **Statistics come from the engine,** as companion fields (`metric@p25`). Core computes no quantile, bin or running total.
-- **This is the candidate next major of `@automattic/charts`.** Keep its token names (`--a8c-charts-*`) and its keyboard model. See `docs/positioning.md`.
+- **This is the candidate next major of `@automattic/charts`.** Keep its token structure, under our own prefix (`--ua-charts-*` for its `--a8c-charts-*`), and its keyboard model. The two do not interoperate yet; a page with version 4 tokens aliases each one across. See `docs/positioning.md`.
 - **No sizes, breakpoints or presentation switches in a spec.** They belong to the container and its rules. `keep` is the author's one lever, and it is provisional.
 - **Scenes carry paint tokens, never colours.**
 - **Keys are stable and unique.** Transitions and keyboard navigation hang on them.

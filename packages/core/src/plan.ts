@@ -2,7 +2,7 @@ import { CONTAINER_RULES, KEEP } from './container.ts';
 import { applies, ruleFor, type FitRule } from './fit.ts';
 import { PRESETS, expand } from './presets.ts';
 import { place } from './place.ts';
-import { buildScene, tldrValueText, isDim, roleOf, seriesOf, valueRoomOf, xDimOf } from './scene.ts';
+import { buildScene, tldrValueText, isDim, roleOf, seriesOf, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
 import { tldrProse } from './prose.ts';
 import type { Catalog, Container, Layer, Layout, Plan, PlanShape, PresetLibrary, Query, Reduction, ReductionId, Result, Role, PlacedScene, Spec } from './types.ts';
 
@@ -61,6 +61,9 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   const series = p.layout === 'cartesian' ? seriesOf(catalog, layers) : null;
   const short = (id: string) => { const r = ruleFor(rules.fit, 'cartesian', id); return !!r && !(r.keep && keep.indexOf(r.keep) >= 0) && applies(r, { view: { inline: container.width, block: container.height } }); };
   if (series) { if (!short('legend')) p.guides.legend = 'full'; else if (series.lines && !short('labels')) p.guides.legend = 'labels'; }
+  // Layers that measure in two units have a y axis on each side, and the second is given up first.
+  const twoUnits = p.layout === 'cartesian' && unitsOf(catalog, layers).length > 1;
+  if (twoUnits && !short('axis-2')) p.guides.y2 = true;
   if (p.layout === 'band') p.guides = { legend: 'full' };
   if (result.meta.empty || (M.instant && !result.rows.length)) {
     if (M.instant || !layers.length) { p.layout = 'none'; p.layers = []; p.tldrValue = true; p.guides = {}; }
@@ -138,6 +141,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   // place() gives up the note of a number that stands alone before the reducer gives up the number. Said here, as the middle label is.
   if (p.layout === 'none' && container.height != null && alone(p) > container.height) dropped.push('the note under the number');
   if (p.layout === 'cartesian' && p.guides.x && series && p.guides.legend !== 'full') dropped.push(p.guides.legend === 'labels' ? 'the legend (kept a label at the end of each line)' : 'the legend');
+  if (p.layout === 'cartesian' && p.guides.y && twoUnits && !p.guides.y2) dropped.push('the second y axis');
   const midTick = rule('mid-tick');
   if (p.layout === 'cartesian' && p.guides.x && midTick && applies(midTick, { view: { inline: container.width } }) && catalog.dimensions[xDimOf(catalog, p.layers)!]!.type === 'time') dropped.push('the middle date label');
 

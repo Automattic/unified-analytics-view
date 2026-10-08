@@ -299,3 +299,49 @@ describe('a signed domain', () => {
     expect((ratio.nodes.filter((n) => n.kind === 'rect') as { v0: number }[]).every((n) => n.v0 === 1)).toBe(true);
   });
 });
+
+describe('a scale per unit', () => {
+  const dual = specs.dual!, ticks = (ratio: { nodes: any[] }, part: string) => ratio.nodes.filter((n) => n.part === part).map((n) => n.text);
+  it('layers whose metrics differ in unit get a y scale each, and a second axis on the far side', () => {
+    const { ratio, plan, result } = run(dual, 346);
+    expect(plan.guides).toEqual({ x: true, y: true, y2: true, grid: true });
+    expect(ratio.parts).toEqual(['y-axis', 'plot', 'y-axis-2', 'x-axis']);
+    expect(ticks(ratio, 'y-axis')).toEqual(['0', '200', '400', '600']);
+    expect(ticks(ratio, 'y-axis-2')).toEqual(['0', '1k', '2k', '3k', '4k']);
+    expect(ratio.nodes.filter((n) => n.part === 'y-axis-2').map((n) => [n.key, (n as { anchor: string }).anchor])[1]).toEqual(['ytick:usd:1000', 'start']);
+    // Each mark is on its own scale. The grid is the first scale's.
+    const first = result.rows[0]!, bar = ratio.nodes.find((n) => n.key === 'primary:bar:' + first['date.day']) as { v: number }, line = ratio.nodes.find((n) => n.key === 'primary:line') as { points: { v: number }[] };
+    expect(bar.v).toBeCloseTo((first.visitors as number) / 600, 12);
+    expect(line.points[0]!.v).toBeCloseTo((first.revenue as number) / 4000, 12);
+    expect(ratio.nodes.filter((n) => n.key.startsWith('grid:')).map((n) => n.key)).toEqual(['grid:0', 'grid:200', 'grid:400', 'grid:600']);
+  });
+  it('two metrics of one unit share a scale, and a constant is on the first', () => {
+    const counts: Spec = { query: { metrics: ['visitors', 'pageviews'], by: ['date.day'] }, layers: [{ mark: 'bar', encode: { x: 'date.day', y: 'visitors' } }, { mark: 'line', encode: { x: 'date.day', y: 'pageviews' } }, { mark: 'rule', encode: { y: 1000 } }] };
+    const { ratio, plan } = run(counts, 346);
+    expect(plan.guides.y2).toBe(undefined);
+    expect(ratio.parts).toEqual(['y-axis', 'plot', 'x-axis']);
+    expect(ticks(ratio, 'y-axis')).toEqual(['0', '500', '1k', '1.5k']);
+    expect((ratio.nodes.find((n) => n.key === 'reference:rule') as { t: number }).t).toBeCloseTo(1000 / 1500, 12);
+  });
+  it('the second axis is given up before the first, and the marks keep their scale', () => {
+    const wide = run(dual, 346), narrow = run(dual, 300), marks = (r: typeof wide) => r.ratio.nodes.filter((n) => n.layer === 'data' && n.part === 'plot');
+    expect(narrow.plan).toMatchObject({ guides: { x: true, y: true, grid: true }, dropped: ['the second y axis', 'the middle date label'] });
+    expect(narrow.ratio.parts).toEqual(['y-axis', 'plot', 'x-axis']);
+    expect(marks(narrow)).toEqual(marks(wide));
+    expect(run({ ...dual, keep: ['guides'] }, 300).plan.guides.y2).toBe(true);
+    expect(run(dual, 250).plan.guides).toEqual({ x: false, y: false, grid: false });
+  });
+  it('place() gives the second axis a gutter of its own', () => {
+    const { scene } = run(dual, 346), tick = scene.nodes.find((n) => n.key === 'ytick:usd:1000') as { x: number; y: number }, last = scene.nodes.filter((n) => n.key.startsWith('primary:bar:')).pop() as { x: number; w: number };
+    expect(tick).toMatchObject({ x: 346 - 30, y: 162 - 152 / 4 });
+    expect(last.x + last.w).toBeLessThan(346 - 36);
+  });
+  it('shares are a unit of their own, and a third unit is an error that names the fix', () => {
+    const mixed: Spec = { query: { metrics: ['visitors'], by: ['date.day', 'device'] }, layers: [{ mark: 'bar', encode: { x: 'date.day', y: 'visitors', color: 'device' }, stack: 'normalize' }, { mark: 'line', encode: { x: 'date.day', y: 'visitors', color: 'device' } }] };
+    const { ratio } = run(mixed, 700);
+    expect([ticks(ratio, 'y-axis').pop(), ticks(ratio, 'y-axis-2').pop()]).toEqual(['100%', '300']);
+    expect(ratio.nodes.find((n) => n.part === 'y-axis-2')!.key).toBe('ytick:count:0');
+    expect(err({ query: { metrics: ['visitors', 'revenue'], by: ['date.day', 'device'] }, layers: [...mixed.layers!, { mark: 'line', encode: { x: 'date.day', y: 'revenue', color: 'device' } }] }))
+      .toBe('These layers measure in 3 units (share, count, usd), and a plot has a y axis on each side at most. Remove a layer, or draw them as separate views.');
+  });
+});

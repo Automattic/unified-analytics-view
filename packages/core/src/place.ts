@@ -50,13 +50,15 @@ function placePlot(scene: Scene, W: number, H: number, narrow: boolean): PlacedN
   // Labels at the line ends take a gutter beside the plot, as wide as the longest of them up to LABEL characters.
   const labels = scene.parts.includes('labels') ? scene.nodes.filter((n): n is TextNode => n.part === 'labels' && n.kind === 'text') : [];
   const lw = labels.length ? Math.min(LABEL, Math.max(...labels.map((n) => n.text.length))) * CHAR_W + 6 : 0;
-  const ml = gy ? 36 : 1, mr = (gy ? 6 : 1) + lw, mt = gy ? 10 : 3, mb = gx ? 22 : 3, inset = scene.scale === 'point' ? 2 : 0;
+  // The second y axis has a gutter as the first does, between the plot and those labels.
+  const g2 = scene.parts.includes('y-axis-2') ? 30 : 0;
+  const ml = gy ? 36 : 1, mr = (gy ? 6 : 1) + g2 + lw, mt = gy ? 10 : 3, mb = gx ? 22 : 3, inset = scene.scale === 'point' ? 2 : 0;
   const y = scaleLinear().domain([0, 1]).range([H - mb, mt]);
   const xs = xScale(scene.rows!, scene.scale!, ml + inset, W - mr - inset);
   const box = { x: (p: Point) => xs.cx(p.row), y };
   const out: PlacedNode[] = [];
   scene.nodes.forEach((n) => {
-    if (n.part === 'number' || n.part === 'legend' || (n.part === 'labels' && !lw)) return;
+    if (n.part === 'number' || n.part === 'legend' || (n.part === 'labels' && !lw) || (n.part === 'y-axis-2' && !g2)) return;
     if (n.rank && (n.part === 'x-axis' ? narrow : H < SHORT_PLOT)) return;
     if (n.kind === 'line') {
       const { part, role, row, series, rank, t, ...rest } = n;
@@ -70,7 +72,7 @@ function placePlot(scene: Scene, W: number, H: number, narrow: boolean): PlacedN
       out.push(rect(n, bx, Math.min(from, to), bw, Math.abs(from - to), Math.min(2, bw / 4)));
     } else if (n.kind === 'text') {
       out.push(n.part === 'y-axis' ? text(n, ml - 6, y(n.t!)) : n.part === 'x-axis' ? text(n, xs.cx(n.row!), H - 5)
-        : n.part === 'labels' ? text(n, W - mr + 6, y(n.t!), clip(n.text, LABEL)) : text(n, W - mr, y(n.t!) - 5));
+        : n.part === 'y-axis-2' ? text(n, W - mr + 6, y(n.t!)) : n.part === 'labels' ? text(n, W - lw, y(n.t!), clip(n.text, LABEL)) : text(n, W - mr, y(n.t!) - 5));
     }
   });
   return out;

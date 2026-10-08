@@ -57,6 +57,8 @@ export interface Layer {
 export interface Guides {
   x?: boolean;
   y?: boolean;
+  /** The second y axis, on the far side, where the layers measure in two units. */
+  y2?: boolean;
   grid?: boolean;
   /** On a band, `top` is the largest segment's label. On a split plot, `labels` is a label at the end of each line. */
   legend?: 'full' | 'top' | 'labels';
@@ -125,7 +127,7 @@ export interface Plan extends PlanShape {
 /* Scene: a flat list of shapes with stable keys and paint tokens, in ratios.
  * Every node names its part, and its coordinates run 0 to 1 within that part's
  * box. A scene needs no size to exist. Pixel painters get theirs from place(). */
-export type Part = 'number' | 'plot' | 'x-axis' | 'y-axis' | 'labels' | 'rows' | 'band' | 'legend' | 'legend-top' | 'notice';
+export type Part = 'number' | 'plot' | 'x-axis' | 'y-axis' | 'y-axis-2' | 'labels' | 'rows' | 'band' | 'legend' | 'legend-top' | 'notice';
 interface NodeBase {
   key: string;
   part: Part;

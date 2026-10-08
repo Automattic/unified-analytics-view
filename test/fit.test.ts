@@ -29,6 +29,10 @@ function gaveUp(r: FitRule, plan: Plan, unbounded: Plan): boolean | null {
   if (r.id === 'labels') return unbounded.guides.legend ? !(here && !!plan.guides.legend) : null;
   // And a second y axis only where its layers measure in two units.
   if (r.id === 'axis-2') return unbounded.guides.y2 ? !(here && !!plan.guides.y2) : null;
+  // Labels on points, a key to sizes, and the rung a plot of points has in place of a bare plot: only where a view has them.
+  if (r.id === 'point-labels') return unbounded.guides.pointLabels ? !(here && !!plan.guides.pointLabels) : null;
+  if (r.id === 'size') return unbounded.guides.size ? !(here && !!plan.guides.size) : null;
+  if (r.id === 'points') return unbounded.layers.some((l) => String(l.encode?.x) in catalog.metrics) && !unbounded.layers.some((l) => String(l.encode?.x) in catalog.dimensions) ? !here : null;
   if (r.id === 'mid-tick') return here && plan.guides.x ? plan.dropped.includes('the middle date label') : null;
   if (r.id === 'secondary') return here && unbounded.layers.some((l) => l.role !== 'primary') ? plan.layers.every((l) => l.role === 'primary') : null;
   return !here;

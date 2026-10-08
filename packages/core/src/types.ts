@@ -40,8 +40,8 @@ export interface Result {
 }
 
 /* The view spec. */
-export type Mark = 'line' | 'area' | 'bar' | 'rule' | 'text';
-export type Channel = 'x' | 'y' | 'color' | 'text';
+export type Mark = 'line' | 'area' | 'bar' | 'rule' | 'text' | 'dot';
+export type Channel = 'x' | 'y' | 'color' | 'text' | 'size';
 export type Role = 'primary' | 'comparison' | 'reference' | 'context';
 export type KeepPart = 'guides' | 'secondary' | 'rows' | 'marks';
 export interface Layer {
@@ -64,6 +64,10 @@ export interface Guides {
   grid?: boolean;
   /** On a band, `top` is the largest segment's label. On a split plot, `labels` is a label at the end of each line. */
   legend?: 'full' | 'top' | 'labels';
+  /** The labels a `text` layer sets on the points of a plot. */
+  pointLabels?: boolean;
+  /** The key to the sizes of a plot's dots. */
+  size?: boolean;
 }
 export interface Spec {
   spec?: string;
@@ -129,7 +133,10 @@ export interface Plan extends PlanShape {
 /* Scene: a flat list of shapes with stable keys and paint tokens, in ratios.
  * Every node names its part, and its coordinates run 0 to 1 within that part's
  * box. A scene needs no size to exist. Pixel painters get theirs from place(). */
-export type Part = 'number' | 'plot' | 'x-axis' | 'y-axis' | 'y-axis-2' | 'labels' | 'rows' | 'band' | 'legend' | 'legend-top' | 'notice';
+export type Part = 'number' | 'plot' | 'x-axis' | 'y-axis' | 'y-axis-2' | 'labels' | 'rows' | 'band' | 'legend' | 'legend-top' | 'notice'
+  /* `points` holds the dots of a plot that sets one metric against another, and `point-labels` the labels on a plot's
+   * points. Both lie over the plot and share its box. `size` is the key to the sizes of its dots. */
+  | 'points' | 'point-labels' | 'size';
 interface NodeBase {
   key: string;
   part: Part;
@@ -158,10 +165,13 @@ export interface PathNode extends NodeBase {
   width?: number;
   dash?: string | null;
 }
-/** A line across the plot at height `t`. The one at zero is painted `axis`, and sits above the bottom of the plot where values go below zero. */
-export interface LineNode extends NodeBase { kind: 'line'; t: number; width?: number; dash?: string }
-export interface CircleNode extends NodeBase { kind: 'circle'; pulse: boolean }
-/** Text in the number, rows, legend and notice parts is set in order and carries no position. In `labels` it sits beside the plot at height `t`. */
+/** A line across the plot at height `t`. The one at zero is painted `axis`, and sits above the bottom of the plot where values go below zero.
+ * With `x`, `x2` and `t2` it is the segment from (`x`, `t`) to (`x2`, `t2`): a rule at a value on x stands from 0 to 1 at one `x`. */
+export interface LineNode extends NodeBase { kind: 'line'; t: number; x?: number; x2?: number; t2?: number; width?: number; dash?: string }
+/** The pulse beside the number, or a dot at `x` and `t`: in `plot` on a time or category axis, and in `points` where x is a metric too. `size` is a step from 1 up, not a radius: how big a step is, in pixels, is the painter's. */
+export interface CircleNode extends NodeBase { kind: 'circle'; pulse: boolean; x?: number; t?: number; size?: number }
+/** Text in the number, rows, legend and notice parts is set in order and carries no position. In `labels` it sits beside the plot at height `t`.
+ * In `point-labels` it sits on the point at `x` and `t`, and its `rank` is its place among them, the largest point first. */
 export interface TextNode extends NodeBase {
   kind: 'text';
   text: string;
@@ -187,8 +197,9 @@ export interface Scene {
   rows?: string[];
   /** The colour dimension's values in its own order, where a plot is split into series. A series' paint is its place here. */
   series?: string[];
-  /** How x is shared among the rows of a plot. With `point`, marks sit 2 px inside each edge; that inset is the painter's. */
-  scale?: 'band' | 'point';
+  /** How x is shared among the rows of a plot. With `point`, marks sit 2 px inside each edge; that inset is the painter's.
+   * With `linear`, x is a metric or a numeric dimension, and every node in the plot carries its own `x`. */
+  scale?: 'band' | 'point' | 'linear';
   nodes: SceneNode[];
   text?: string;
 }

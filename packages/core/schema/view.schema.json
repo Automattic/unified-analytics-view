@@ -44,13 +44,13 @@
         "limit": { "type": "integer", "minimum": 1, "description": "Top-N for each categorical dimension." }
       }
     },
-    "field": { "type": ["string", "number"], "description": "A dimension name, a metric name, or a number (for a rule)." },
+    "field": { "type": ["string", "number"], "description": "A dimension name, a metric name, a companion the result returns such as \"pageviews@density\", or a number (for a rule, on x or on y)." },
     "layer": {
       "type": "object",
       "required": ["mark"],
       "additionalProperties": false,
       "properties": {
-        "mark": { "enum": ["line", "area", "bar", "rule", "text"] },
+        "mark": { "enum": ["line", "area", "bar", "rule", "text", "dot"] },
         "encode": {
           "type": "object",
           "additionalProperties": false,
@@ -58,7 +58,8 @@
             "x": { "$ref": "#/definitions/field" },
             "y": { "$ref": "#/definitions/field" },
             "color": { "$ref": "#/definitions/field" },
-            "text": { "$ref": "#/definitions/field" }
+            "text": { "$ref": "#/definitions/field" },
+            "size": { "$ref": "#/definitions/field", "description": "A metric. A dot's size is one of a few steps, and the painter says how big each is." }
           }
         },
         "series": { "const": "previous", "description": "Draw the comparison companion of the metric." },

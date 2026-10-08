@@ -16,7 +16,7 @@ const TOKEN = (kind: string, duration: string, easing: string) =>
   `var(--a8c-charts-motion-duration-${kind}, ${duration}) var(--a8c-charts-motion-easing-${kind}, ${easing})`;
 const UPDATE = TOKEN('update', '300ms', 'cubic-bezier(0.4, 0, 0.2, 1)'), EXIT = TOKEN('exit', '150ms', 'cubic-bezier(0.4, 0, 1, 1)');
 /** The ratios, and `--vg-p`, which a path's morph is timed by. */
-const MOVED = ['--vg-x', '--vg-w', '--vg-v', '--vg-v0', '--vg-t', '--vg-p'];
+const MOVED = ['--vg-x', '--vg-w', '--vg-v', '--vg-v0', '--vg-t', '--vg-p', '--vg-x2', '--vg-t2'];
 
 let registered = false;
 /** Register them as numbers, which is what lets them animate. `@property` is ignored in a shadow root, so this is

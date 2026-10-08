@@ -5,6 +5,7 @@ import type { LayoutPainter } from '../layout.ts';
 import { apart, thin } from '../measure.ts';
 import { morph } from '../motion.ts';
 import { POINTS_CSS, POINTS_FIT, measurePoints, paintPoints } from './points.ts';
+import { RANGES_CSS, paintRanges } from './ranges.ts';
 
 /* A dimension on x, a metric on y. The y axis is a column sized by its labels, the x axis a row under the plot,
  * and the plot a size container, so rules about roles can ask how much room the marks have.
@@ -69,7 +70,7 @@ const inPlot = (n: SceneNode) => n.part === 'plot';
 
 export const cartesian: LayoutPainter = {
   layout: 'cartesian',
-  css: css + POINTS_CSS,
+  css: css + POINTS_CSS + RANGES_CSS,
   fit: {
     // Without its axes the plot is a sparkline beside the number, which takes its short forms and gives up its note.
     // A number the measured pass has set carries data-fit and is left to it: that is the number alone, under `marks`.
@@ -146,7 +147,7 @@ export const cartesian: LayoutPainter = {
       morph(el as SVGElement, n); el.toggleAttribute('data-fill', !!n.fill);
       prop(el, 'stroke-width', n.fill ? null : n.width || 2); prop(el, 'stroke-dasharray', n.dash);
     });
-    keyed(refs, nodes.filter((n): n is LineNode | TextNode => inPlot(n) && ((n.kind === 'line' && n.layer === 'data') || n.kind === 'text')), (n) => (n.kind === 'line' ? 'i' : 'span'), (el, n) => {
+    keyed(refs, nodes.filter((n): n is LineNode | TextNode => inPlot(n) && ((n.kind === 'line' && n.layer === 'data' && n.row == null) || n.kind === 'text')), (n) => (n.kind === 'line' ? 'i' : 'span'), (el, n) => {
       if (n.kind === 'line') return line(el, n);
       text(el, n); prop(el, '--vg-t', n.t); el.toggleAttribute('data-halo', !!n.halo);
     });
@@ -155,5 +156,6 @@ export const cartesian: LayoutPainter = {
     hits.setAttribute('data-hits', 'x');
     keyed(hits, hitNodes(scene), () => 'i', (el, n) => { prop(el, '--vg-x', n.x); prop(el, '--vg-w', n.w); prop(el, '--vg-c', n.c); });
     paintPoints(body, plot, scene);
+    paintRanges(plot, scene);
   },
 };

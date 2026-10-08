@@ -2,9 +2,7 @@
  * generated tokens; the only sizes here are the panel's own width and the height it hands a tile. */
 .sidebar { inline-size: 480px; min-inline-size: 240px; padding: 0; resize: horizontal; overflow: hidden; border: 1px solid var(--ua-color-border); border-radius: var(--ua-radius-lg); }
 #panel { box-sizing: border-box; padding: var(--ua-space-s); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--ua-space-xs); container-type: inline-size;
-  --a8c-charts-color-background: var(--ua-color-surface-card); --a8c-charts-color-series-1: var(--ua-color-qual-indigo-700); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) #panel { --a8c-charts-color-series-1: var(--ua-color-qual-indigo-800); } }
-:root[data-theme="dark"] #panel { --a8c-charts-color-series-1: var(--ua-color-qual-indigo-800); }
+  --a8c-charts-color-background: var(--ua-color-surface-card); }
 
 #panel .top { display: flex; justify-content: space-between; align-items: center; }
 #panel .top b { font-size: var(--ua-font-size-base); }
@@ -20,7 +18,8 @@
 .bar { display: flex; justify-content: end; }
 /* A chip switches one thing on a card. Off, it is an outline. */
 #panel .chip { font-size: var(--ua-font-size-xs); font-weight: 600; padding: 0 var(--ua-space-3xs); border: 1px solid var(--ua-color-border); border-radius: var(--ua-radius-full); }
-#panel .chip[aria-pressed="true"] { background: var(--a8c-charts-color-series-1); border-color: transparent; color: var(--ua-color-background); }
+/* On: the series' tint under the label, which the foreground reads on in both themes, and the series' mark colour as its edge. */
+#panel .chip[aria-pressed="true"] { background: var(--a8c-charts-color-series-1-soft); border-color: var(--a8c-charts-color-series-1); }
 #panel .chip[aria-pressed="true"]::before { content: '✓ '; }
 
 #panel .card { box-sizing: border-box; min-inline-size: 0; padding: var(--ua-space-xs) var(--ua-space-s) var(--ua-space-s); background: var(--ua-color-surface-card);

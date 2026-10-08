@@ -7,13 +7,14 @@
   --a8c-charts-color-label-secondary: var(--ua-color-muted-foreground);
   --a8c-charts-color-grid: var(--ua-color-border);
   --a8c-charts-color-axis-x: var(--ua-color-foreground-50);
-  /* The first series is the one a view uses when it needs only one colour, and that is chartreuse. */
-  --a8c-charts-color-series-1: var(--ua-color-qual-chartreuse-700);
-  --a8c-charts-color-series-2: var(--ua-color-qual-orange-700);
-  --a8c-charts-color-series-3: var(--ua-color-qual-teal-700);
-  --a8c-charts-color-series-4: var(--ua-color-qual-rose-700);
-  --a8c-charts-color-series-5: var(--ua-color-qual-steel-700);
-  --a8c-charts-color-series-6: var(--ua-color-foreground-50);
+  /* A series colour is three: the mark, its text, and its tint. The tokens choose each per theme: the hue at its
+   * brightest where that holds the contrast the element needs, and the ramp's step for that contrast where not. */
+  --a8c-charts-color-series-1: var(--ua-color-mark-chartreuse); --a8c-charts-color-series-1-text: var(--ua-color-mark-chartreuse-text); --a8c-charts-color-series-1-soft: var(--ua-color-mark-chartreuse-soft);
+  --a8c-charts-color-series-2: var(--ua-color-mark-grass); --a8c-charts-color-series-2-text: var(--ua-color-mark-grass-text); --a8c-charts-color-series-2-soft: var(--ua-color-mark-grass-soft);
+  --a8c-charts-color-series-3: var(--ua-color-mark-teal); --a8c-charts-color-series-3-text: var(--ua-color-mark-teal-text); --a8c-charts-color-series-3-soft: var(--ua-color-mark-teal-soft);
+  --a8c-charts-color-series-4: var(--ua-color-mark-steel); --a8c-charts-color-series-4-text: var(--ua-color-mark-steel-text); --a8c-charts-color-series-4-soft: var(--ua-color-mark-steel-soft);
+  --a8c-charts-color-series-5: var(--ua-color-mark-rose); --a8c-charts-color-series-5-text: var(--ua-color-mark-rose-text); --a8c-charts-color-series-5-soft: var(--ua-color-mark-rose-soft);
+  --a8c-charts-color-series-6: var(--ua-color-mark-orange); --a8c-charts-color-series-6-text: var(--ua-color-mark-orange-text); --a8c-charts-color-series-6-soft: var(--ua-color-mark-orange-soft);
   /* The sequential ramp, for a grid of cells, and the cell with no value. */
   --a8c-charts-color-seq-1: var(--ua-color-seq-1);
   --a8c-charts-color-seq-2: var(--ua-color-seq-2);
@@ -70,6 +71,8 @@ h2 small { display: inline; }
 .swatch { display: block; border-radius: var(--ua-radius-sm); border: 1px solid var(--ua-color-border);
   background: linear-gradient(var(--c), var(--c)), repeating-conic-gradient(#8884 0 25%, transparent 0 50%) 0 0 / 12px 12px; }
 .ramps { display: grid; grid-template-columns: 5em repeat(var(--steps), minmax(0, 1fr)); gap: var(--ua-space-2xs); align-items: start; max-inline-size: 1100px; }
+/* A ramp's name starts its row, however many steps the ramp before it had. */
+.ramps > b { grid-column: 1; }
 .step .swatch { block-size: 40px; }
 .chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--ua-space-xs); }
 .chip { display: flex; gap: var(--ua-space-xs); align-items: center; min-inline-size: 0; }

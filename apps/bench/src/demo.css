@@ -64,13 +64,7 @@
 .hue { display: inline-flex; align-items: center; gap: var(--ua-space-4xs); margin-inline-end: var(--ua-space-s); color: var(--ua-color-foreground); }
 .hue::before { content: ''; inline-size: 0.8em; block-size: 0.8em; border-radius: var(--ua-radius-xs); background: var(--c); }
 
-/* ───────── Mark colours, for this page only ─────────
- * A stopgap, until the tokens say it. The bench maps every series to step 700 of its ramp, which is the step that
- * holds contrast for text (5:1) and is duller than a mark needs. A mark is not text: it needs about 3:1. No step
- * sits there in light, so each colour here is a mix of 600 and 700, which lands near it. In dark, step 800 is both
- * vivid and well clear. Six ramps make the series set, chartreuse first; the other three are for a metric's own colour. */
-.demo { --q-chartreuse: color-mix(in oklab, var(--ua-color-qual-chartreuse-600), var(--ua-color-qual-chartreuse-700) 40%); --q-orange: color-mix(in oklab, var(--ua-color-qual-orange-600), var(--ua-color-qual-orange-700) 40%); --q-teal: color-mix(in oklab, var(--ua-color-qual-teal-600), var(--ua-color-qual-teal-700) 40%); --q-rose: color-mix(in oklab, var(--ua-color-qual-rose-600), var(--ua-color-qual-rose-700) 40%); --q-steel: color-mix(in oklab, var(--ua-color-qual-steel-600), var(--ua-color-qual-steel-700) 40%); --q-indigo: color-mix(in oklab, var(--ua-color-qual-indigo-600), var(--ua-color-qual-indigo-700) 40%); --q-coral: color-mix(in oklab, var(--ua-color-qual-coral-600), var(--ua-color-qual-coral-700) 40%); --q-grass: color-mix(in oklab, var(--ua-color-qual-grass-600), var(--ua-color-qual-grass-700) 40%); --q-yellow: color-mix(in oklab, var(--ua-color-qual-yellow-600), var(--ua-color-qual-yellow-700) 40%);
-  --a8c-charts-color-series-1: var(--q-chartreuse); --a8c-charts-color-series-2: var(--q-orange); --a8c-charts-color-series-3: var(--q-teal); --a8c-charts-color-series-4: var(--q-rose); --a8c-charts-color-series-5: var(--q-steel); --a8c-charts-color-series-6: var(--q-indigo);
-  --demo-row-opacity: .8; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .demo { --q-chartreuse: var(--ua-color-qual-chartreuse-800); --q-orange: var(--ua-color-qual-orange-800); --q-teal: var(--ua-color-qual-teal-800); --q-rose: var(--ua-color-qual-rose-800); --q-steel: var(--ua-color-qual-steel-800); --q-indigo: var(--ua-color-qual-indigo-800); --q-coral: var(--ua-color-qual-coral-800); --q-grass: var(--ua-color-qual-grass-800); --q-yellow: var(--ua-color-qual-yellow-800); --demo-row-opacity: .45; } }
-:root[data-theme="dark"] .demo { --q-chartreuse: var(--ua-color-qual-chartreuse-800); --q-orange: var(--ua-color-qual-orange-800); --q-teal: var(--ua-color-qual-teal-800); --q-rose: var(--ua-color-qual-rose-800); --q-steel: var(--ua-color-qual-steel-800); --q-indigo: var(--ua-color-qual-indigo-800); --q-coral: var(--ua-color-qual-coral-800); --q-grass: var(--ua-color-qual-grass-800); --q-yellow: var(--ua-color-qual-yellow-800); --demo-row-opacity: .45; }
+/* A ranked list here has a colour for each row (demo.ts), at this strength. */
+.demo { --demo-row-opacity: .8; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .demo { --demo-row-opacity: .45; } }
+:root[data-theme="dark"] .demo { --demo-row-opacity: .45; }

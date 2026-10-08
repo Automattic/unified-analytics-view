@@ -388,3 +388,44 @@ In `packages/tokens`. Tests pass (160) and the typecheck is clean. Nothing consu
 4. **Base numbering differs from the other ramps.** In `seq`, 100 is the first step; elsewhere 200 is the page. A comment in `leonardo.colors.js` says so.
 5. **No-data is the weakest margin.** `seq-none` is 1.46 from step 1 in light and 1.27 in dark. If that reads too close on screen, the fix is a hatch or outline in the painter, not a token. To look at.
 6. **Nobody has seen the colours.** The checks are contrast numbers only.
+
+### Step 1, parts 1 to 10: scales, series, stacking (built October 8, core only)
+
+Merged. 225 tests pass and the typecheck is clean. `prototype/`, `packages/dom` and the six samples' golden scenes are unchanged. Six new samples: `stacked`, `grouped`, `series`, `diverging`, `dual`, `area`. They are swept and have golden scenes in `test/coverage.test.ts`. The DOM painter (part 11) is not built, so `<ua-view>` draws them wrongly; the SVG painter on the pixel scene is right.
+
+**What was added, for the steps that follow**
+
+- `Query.by` takes one or two dimensions. `Result.totalsBy?: Record<string, Row[]>` holds, per dimension, a row per value with the metrics' totals over the other dimension, in the dimension's order. It is present only with two dimensions.
+- `Layer.stack` is `'zero' | 'normalize' | 'center'`. Dodge has no field.
+- `Guides` gains `y2` and `legend: 'labels'`. `Part` gains `labels` and `y-axis-2`; `legend` is used on cartesian too.
+- `NodeBase.series` and `Scene.series` (the colour domain in order; paint is `series.(index + 1)`).
+- `RectNode.v0` and `PathNode.points[].v0`: where a bar or an area starts, as a ratio of the plot's height. Absent means the bottom, so old scenes are unchanged. A bar below zero has `v < v0`.
+- Keys: `primary:line:Desktop`, `primary:bar:2026-09-08:Desktop`, `swatch:<series>`, `legend:<series>`, `label:<series>`, `ytick:<unit>:<t>`.
+- Fit rules on cartesian, all `keep: 'guides'`: `axis-2` (340 px wide), `legend` (320 by 180, shows `labels`), `labels` (280 by 120).
+- **To add a mark:** write a `MarkFn` (`(l: Layer, d: Draw) => SceneNode[]`), add it to `PLOT_MARKS` in `scene.ts`, and add its name to `Mark`, the schema enum and the two error strings that list marks.
+- **To add a layout:** add a row to `LAYOUTS` in `plan.ts` (`[x, y, color, layout]`, first match wins), a branch in `buildScene`, a branch in `place`, and fit rules. `FieldKind` is `'dimension' | 'any'` and needs `'metric'` for step 4.
+- **New samples go in `moreSamples`,** not `samples`: the parity tests sweep every entry of `samples` against the prototype.
+
+**What part 11 has to do in `packages/dom`**
+
+1. A bar starts at `min(v0, v)` and is `|v - v0|` tall. That covers stacks, the signed domain and centred stacks.
+2. Check that `morph` in `motion.ts` interpolates `points[].v0`.
+3. A `.vg-legend` for cartesian, reconciled with the band's use of the class.
+4. A `.vg-labels` column beside the plot, shown by the `legend` rule; the measured pass keeps labels a line apart.
+5. A `.vg-y-axis-2` column on the far side.
+6. `hitNodes` centres a row's target on the last rect it sees, which is off-centre with dodge. The readout and the table need the pair, not the row.
+
+**Findings**
+
+1. **Part 2 changed no golden scene.** The share sentence in `prose.ts` had the same row-summing fault and is fixed with it. The fixture's channel rows did not add up to its total outside 28 days; now they do.
+2. **`limit` with two dimensions is underspecified.** Built as: the top N of each categorical dimension, with totals still covering what was cut. For the API's owners.
+3. **`stack: "center"` is a silhouette, not a Likert chart.** It centres each stack on zero. A Likert form needs an offset around a named neutral series, which the plan did not specify. Open.
+4. **A normalized stack with a `limit` stops short of 100%,** as the band now does. Stack positions sum the rows drawn, for geometry only; the divisor is the engine's.
+5. **Paint order is the engine's order of `totalsBy`.** A `limit` can still shift a value's colour between views. Only the catalog colour role fixes that.
+6. **The legend steps by fit rules asked once, not by reductions,** because a reduction applies once. Known gap: a legend that wraps to three lines in a box near 290 by 185 px falls to the bare plot and skips direct labels.
+7. **Direct labels are their own part, `labels`,** in a gutter beside the plot. `place()` sets labels that collide 12 px apart. That is a first cut for pixel painters, not an answer to Open 5.
+8. **Two metrics have no legend, and nothing ties an axis to its layer.** The `dual` sample sets `paint: "series.2"` by hand. The two zero lines are not aligned. Three units is an error. Open.
+9. **Units are not formatted.** Revenue reads "63.5k" with no currency. The MVP view set needs currency and duration anyway.
+10. **Dodge leaves no gap inside a group.** To look at.
+11. **Thresholds are hand-picked,** as the others are.
+12. **The reference and `CLAUDE.md` still describe the old state** ("the six sample specs", sections 5 to 11). To update when the steps have landed.

@@ -429,3 +429,21 @@ Merged. 225 tests pass and the typecheck is clean. `prototype/`, `packages/dom` 
 10. **Dodge leaves no gap inside a group.** To look at.
 11. **Thresholds are hand-picked,** as the others are.
 12. **The reference and `CLAUDE.md` still describe the old state** ("the six sample specs", sections 5 to 11). To update when the steps have landed.
+
+### Step 1, part 11: the DOM painter (built October 8)
+
+Merged. 263 tests pass and the typecheck is clean. All of it is inside `packages/dom`, with tests in `test/dom-series.test.ts`. Checked in headless Chromium on the bench: the six samples at 346, 250, 170, 120 and 80 px, a width sweep from 420 to 60 px in 20 px steps, boxed heights, the three data states, dark, a data change, real key events, and the pivoted table. Not checked: WebKit, Firefox, a screen reader, touch, reduced motion.
+
+1. **Keyboard through series is built and unconfirmed.** Version 4's source was not read, and the docs record only its one-dimensional model. As built: left and right step along x and keep the series; up goes from the whole point to the first series and onward; down comes back; Escape and hover clear it. **To decide.**
+2. **The readout for a split point** is "Sep 8: Visitors 416 (Desktop 217, Mobile 173, Tablet 26)", with the total from `totalsBy`. A chosen pair reads "Sep 9, Mobile: Visitors 208". Comparison values are not in the whole-point readout.
+3. **The option's `aria-label` changes while a series is chosen.** Whether a screen reader announces a new name on the same active descendant is unchecked.
+4. **`ua-activate` gained `rows`,** every row at that x. `row` is as before for one dimension.
+5. **A chosen series is shown by dimming the others to 0.3** and underlining its legend entry. The pointer chooses only the x.
+6. **The cartesian layout states the plot's height, not the body's** (`--vg-plot-block`), so a legend adds its lines at natural height as `place()` does.
+7. **The band's legend CSS is untouched;** cartesian overrides `.vg-legend` under its own layout.
+8. **Three additions to the layout's fit map** that core's rules could not say: `legend` shows the labels as a grid; `axes` also hides the second axis, because `axis-2` has no block need; `y-ticks` thins the second axis too. The second is a block need missing in core.
+9. **Labels are kept a line apart** by `apart()` in `measure.ts`, following `place()`.
+10. **The pivoted table** puts the first dimension down the side and the second across, with the engine's totals in the last column and the footer.
+11. **A stacked area has no hit target on the unfinished day.** Core draws the stack only to the last whole day. To look at.
+12. **Leaving labels and second-axis ticks go at once;** they are not in the motion sheet's fade list.
+13. **Not done:** choosing one series with the pointer; the three-line legend gap from the core findings.

@@ -90,7 +90,7 @@ describe('companion fields, and the checks on a second end', () => {
     expect(view({ spec: 'view/0', query: box!.query, layers: expand(box!).layers }), JSON.stringify(view.errors)).toBe(true);
     expect(view({ spec: 'view/0', query: dumbbell!.query, layers: expand(dumbbell!).layers }), JSON.stringify(view.errors)).toBe(true);
     expect(view({ spec: 'view/0', query: box!.query, layers: [{ mark: 'bar', encode: { x: 'page', y: 'response_time', y3: 'response_time@max' } }] })).toBe(false);
-    expect(view({ spec: 'view/0', query: box!.query, layers: [{ mark: 'stroke', encode: { x: 'page', y: 'response_time' } }] })).toBe(false);
+    expect(view({ spec: 'view/0', query: box!.query, layers: [{ mark: 'a stroke', encode: { x: 'page', y: 'response_time' } }] })).toBe(false);   // a name that could be a custom mark's is resolve()'s to check
   });
 });
 

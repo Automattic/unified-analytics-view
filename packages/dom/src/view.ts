@@ -1,4 +1,4 @@
-import { CONTAINER_RULES, buildScene, expand, formatDimension, formatValue, resolve, unboundedContainer } from '@universal-analytics/core';
+import { CONTAINER_RULES, buildScene, expand, fallbackRule, formatDimension, formatValue, resolve, unboundedContainer } from '@universal-analytics/core';
 import type { Catalog, ContainerRules, Layout, Query, Result, Row, SceneNode, Spec } from '@universal-analytics/core';
 import { compileFitRules, type FitExtras } from './compile.ts';
 import { attr, ensure, keyed, paintVar, text } from './dom.ts';
@@ -98,6 +98,17 @@ export function surfaceSheet(): CSSStyleSheet {
 }
 
 const EXTRAS: FitExtras = Object.fromEntries(painters.map((p) => [p.layout, p.fit ?? {}]));
+
+/* A layout whose rule names a `fallback` is painted twice: by this view, and as that preset by a view of its own
+ * beside the figure, handed the same query, result, catalog and rules. That one is its own container, with its own
+ * rules, keyboard and measured pass. The compiled rule shows one of the two, so nothing runs on resize. The table is
+ * the same query's either way, so it is this view's. */
+const FALLBACK_CSS = `@layer vg {
+.vg-fallback { display: none; }
+@container view (block-size >= 0px) { .vg-fallback { block-size: 100%; container-type: size; } }
+:host([table]) .vg { display: block !important; }
+:host([table]) .vg-fallback { display: none !important; }
+}`;
 const sheets = new Map<string, CSSStyleSheet>();
 function sheet(css: string): CSSStyleSheet {
   let s = sheets.get(css);
@@ -188,7 +199,10 @@ export class UaView extends Base {
   #root: ShadowRoot; #fig: HTMLElement; #prose: HTMLElement; #number: HTMLElement; #body: HTMLElement; #table: HTMLTableElement; #error: HTMLElement;
   #room: HTMLElement; #ruler: HTMLElement[]; #seen = '';
   #keys: Keys;
+  #fallback: UaView | null = null;
   #frame = 0;
+  /** The layouts this view is the fallback of, set by the view that holds it. A fallback that leads back to one of them is an error. */
+  via: Layout[] = [];
   // The one observer of the measured pass. It watches the room and the ruler, whose sizes nothing it writes can change.
   // It only asks for a frame. A write in its callback can resize something the page observes, and the browser then
   // reports a "ResizeObserver loop" error to the page's window. So a view that crosses a threshold paints one frame
@@ -267,11 +281,13 @@ export class UaView extends Base {
       const rules: ContainerRules = { ...CONTAINER_RULES, ...(this.#input('rules', false) as Partial<ContainerRules> | undefined) };
       check(spec, result, catalog);
       if (!Array.isArray(rules.fit)) throw new Error('The rules need "fit", an array of fit rules. Leave it out to use the defaults.');
-      const fit = sheet(compileFitRules([...rules.fit, ...painters.flatMap((p) => p.rules ?? [])], EXTRAS));
+      // Painters registered since this module loaded, for custom marks: their styles, extras and rules join the rest.
+      const more = Object.values(LAYOUTS).filter((p) => !painters.includes(p)), fits = [...rules.fit, ...painters.concat(more).flatMap((p) => p.rules ?? [])];
+      const fit = sheet(compileFitRules(fits, { ...EXTRAS, ...Object.fromEntries(more.map((p) => [p.layout, p.fit ?? {}])) }));
       const plan = resolve(spec, result, { ...unboundedContainer(), rules }, catalog);
       const scene = buildScene(plan, spec.query, result, catalog), fig = this.#fig;
 
-      this.#root.adoptedStyleSheets = [sheet(BASE_CSS), fit];
+      this.#root.adoptedStyleSheets = [sheet(BASE_CSS), sheet(FALLBACK_CSS), ...more.map((p) => sheet('@layer vg {' + p.css + '}')), fit];
       fig.dataset.layout = scene.layout; fig.dataset.keep = (spec.keep || []).join(' '); fig.dataset.parts = scene.parts.join(' ');
       if (spec.title) fig.setAttribute('aria-label', spec.title); else fig.removeAttribute('aria-label');
       // The plot's natural heights are the context's, read by the stylesheet. The painter hard-codes neither.
@@ -284,6 +300,10 @@ export class UaView extends Base {
       painter?.paint(this.#body, scene, rules, data);
       if (painter?.table) painter.table(this.#table, spec.title, scene, data); else paintTable(this.#table, spec.title, data.query, result, catalog);
       this.#keys.paint(scene, expand(spec).query, result, catalog);
+      const swap = fallbackRule(fits, scene.layout, spec.keep, this.via), { layers: _layers, ...rest } = spec;
+      if (swap) Object.assign(this.#fallback ??= this.#root.appendChild(Object.assign(document.createElement(this.localName) as UaView, { className: 'vg-fallback' })),
+        { via: this.via.concat(scene.layout), spec: { ...rest, use: swap.fallback }, result, catalog, rules });
+      else { this.#fallback?.remove(); this.#fallback = null; }
       fig.hidden = false; this.#error.hidden = true;
       settle(fig);
       // At once, not a frame later: new data is never shown unfitted. This is not an observer's callback, so nothing
@@ -292,6 +312,7 @@ export class UaView extends Base {
     } catch (e) {
       // Never out of a lifecycle callback: the view says what is wrong where it would have drawn.
       this.#root.adoptedStyleSheets = [sheet(BASE_CSS)];
+      this.#fallback?.remove(); this.#fallback = null;
       this.#error.textContent = e instanceof Error ? e.message : String(e);
       this.#fig.hidden = true; this.#error.hidden = false;
     }

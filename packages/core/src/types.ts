@@ -47,7 +47,8 @@ export interface Result {
 }
 
 /* The view spec. */
-export type Mark = 'line' | 'area' | 'bar' | 'rule' | 'text' | 'arc' | 'cell' | 'dot' | 'tick';
+/** The marks core draws, and the name of any custom mark registered in code (marks.ts). */
+export type Mark = 'line' | 'area' | 'bar' | 'rule' | 'text' | 'arc' | 'cell' | 'dot' | 'tick' | (string & {});
 /** `x2` and `y2` are the second end of a `bar`, a `rule` or an `area`: it runs from the value on `x` or `y` to the one there. */
 export type Channel = 'x' | 'y' | 'color' | 'text' | 'angle' | 'radius' | 'size' | 'x2' | 'y2';
 export type Role = 'primary' | 'comparison' | 'reference' | 'context';
@@ -122,7 +123,8 @@ export interface Container {
 }
 
 /* Plan: what will be drawn at this size, and what was dropped. */
-export type Layout = 'cartesian' | 'rows' | 'band' | 'radial' | 'matrix' | 'none' | 'notice' | 'prose';
+/** A custom mark is laid out by its own code, under its own name. */
+export type Layout = 'cartesian' | 'rows' | 'band' | 'radial' | 'matrix' | 'none' | 'notice' | 'prose' | (string & {});
 export interface Reduction {
   id: ReductionId;
   state: 'not needed' | 'applied' | 'kept by the spec' | 'nothing to drop';

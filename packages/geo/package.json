@@ -1,0 +1,15 @@
+{
+  "name": "@universal-analytics/geo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./dom": "./src/dom.ts"
+  },
+  "dependencies": {
+    "@universal-analytics/core": "workspace:*",
+    "@universal-analytics/dom": "workspace:*",
+    "d3-geo": "^3.1.1"
+  }
+}

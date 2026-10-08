@@ -2,6 +2,7 @@ import { max, min } from 'd3-array';
 import { scaleBand, scaleLinear, scalePoint, scaleQuantize } from 'd3-scale';
 import { CHAR_W, delta, fmt, fmtDay, fmtPct, formatDimension, formatValue } from './format.ts';
 import { arcD, pathD } from './path.ts';
+import { customMarks } from './marks.ts';
 import { leader } from './prose.ts';
 import type { ArcNode, Catalog, Guides, Layer, Mark, Part, PathNode, PlanShape, Polarity, Query, Result, Role, Row, Scene, SceneNode, TextNode } from './types.ts';
 
@@ -111,9 +112,9 @@ const rule: MarkFn = (l, { id, series, role, rows, k, unit, ends, v, xv }) => {
   if (l.label) nodes.push({ key: id + ':label', part: 'plot', kind: 'text', t, text: l.label, anchor: 'end', font: 'tick', paint: 'rule', halo: true, layer: 'guide', role });
   return nodes;
 };
-const SIZES = 4;    // the steps a value on `size` falls into. How big each is, in pixels, is the painter's
+export const SIZES = 4;    // the steps a value on `size` falls into. How big each is, in pixels, is the painter's
 /** The step for a value, 1 to SIZES, by area: the square root of its share of the most. */
-const sizeStep = (n: number, top: number) => Math.min(SIZES, Math.max(1, Math.ceil(Math.sqrt(Math.max(0, n) / top) * SIZES)));
+export const sizeStep = (n: number, top: number) => Math.min(SIZES, Math.max(1, Math.ceil(Math.sqrt(Math.max(0, n) / top) * SIZES)));
 // A point for each row, at its values on x and y. One that is sized lets what is under it show.
 const dot: MarkFn = (l, { id, series, role, paint, rows, k, unit, ends, size, points }) => {
   const sized = l.encode!.size != null && size;
@@ -297,15 +298,17 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
       nodes.push({ key: 'legend:' + s, part: 'legend', kind: 'text', series: s, text: s, anchor: 'start', baseline: 'middle', font: 'label', paint: 'ink', layer: 'guide' });
     });
   }
-  // The key to sizes: the metric's name, then each step with the most it stands for.
-  if (size) {
-    nodes.push({ key: 'size:title', part: 'size', kind: 'text', text: metricOf(catalog, size.field)!.label, anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' });
-    for (let s = 1; s <= SIZES; s++) {
-      nodes.push({ key: 'size:' + s, part: 'size', kind: 'circle', pulse: false, size: s, paint: 'ink.muted', layer: 'guide' });
-      nodes.push({ key: 'size:' + s + ':label', part: 'size', kind: 'text', text: fmt(Math.round(size.top * (s / SIZES) ** 2), true), anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' });
-    }
-  }
+  if (size) nodes.push(...sizeKey(metricOf(catalog, size.field)!.label, size.top));
   return { nodes, rows: keys, ...(split && { series }), scale };
+}
+/** The key to sizes: the metric's name, then each step with the most it stands for. */
+export function sizeKey(label: string, top: number): SceneNode[] {
+  const nodes: SceneNode[] = [{ key: 'size:title', part: 'size', kind: 'text', text: label, anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' }];
+  for (let s = 1; s <= SIZES; s++) {
+    nodes.push({ key: 'size:' + s, part: 'size', kind: 'circle', pulse: false, size: s, paint: 'ink.muted', layer: 'guide' });
+    nodes.push({ key: 'size:' + s + ':label', part: 'size', kind: 'text', text: fmt(Math.round(top * (s / SIZES) ** 2), true), anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' });
+  }
+  return nodes;
 }
 
 /** A row's columns: its `text` layers that show a metric, in layer order. The first stays. The rest are ranked, and given up from the right. */
@@ -369,6 +372,8 @@ const TRACK_MARKS: Partial<Record<Mark, TrackFn>> = { bar: trackBar, rule: track
 export function trackBeside(layers: Layer[]): boolean {
   return layers.some((l) => TRACK_MARKS[l.mark] && (l.mark !== 'bar' || (l.encode && l.encode.x2 != null)));
 }
+/** The marks core draws itself, as an error lists them. Any other name is a custom mark's, registered in code (marks.ts). */
+export const BUILT_IN_MARKS: string[] = [...new Set(Object.keys(PLOT_MARKS).concat(Object.keys(TRACK_MARKS), 'arc', 'cell'))];
 
 // A dimension on y: a row for each of its values, with a track that has a metric on x. The ranked bar list is the first of these.
 // The track's scale is derived here, once, from what its layers put on x. It is linear and holds zero and whatever is on
@@ -494,6 +499,22 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
 }
 
 const SEQ = 7;      // paint tokens run from seq.1 to seq.7, and seq.none is a cell with no value
+/** The sequential colour scale, which outputs tokens: a value is quantized to a step of the ramp, between the least and
+ * the most of `vals`, or the ends of the domain the catalog states for the metric. No value is `seq.none` and not the
+ * lowest step: nothing is not a little. `ramp` is its legend, set in order: the low value, a swatch for each step, the
+ * high value, and with `none` the swatch for no value. */
+export function seqScale(vals: number[], stated?: [number, number]): { paint(v: number | null | undefined): string; ramp(none: boolean): SceneNode[] } {
+  const [lo, hi] = stated || [min(vals) ?? 0, max(vals) ?? 0];
+  // Values that are all one have no least and most. They are measured from zero.
+  const ends = lo < hi ? [lo, hi] : [Math.min(lo, 0), Math.max(hi, lo ? 0 : 1)];
+  const step = scaleQuantize<number>().domain(ends).range(Array.from({ length: SEQ }, (_, i) => i + 1));
+  const end = (key: string, v: string): SceneNode => ({ key: 'ramp:' + key, part: 'ramp', kind: 'text', text: v, anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' });
+  const swatch = (key: string | number): SceneNode => ({ key: 'ramp:' + key, part: 'ramp', kind: 'rect', paint: 'seq.' + key, layer: 'data' });
+  return {
+    paint: (v) => (v == null ? 'seq.none' : 'seq.' + step(v)),
+    ramp: (none) => [end('low', fmt(ends[0], true)), ...Array.from({ length: SEQ }, (_, i) => swatch(i + 1)), end('high', fmt(ends[1], true)), ...(none ? [swatch('none'), end('none:label', 'No data')] : [])],
+  };
+}
 
 // A dimension on x and another on y, and a metric on color: a grid of cells, each painted a step of the sequential ramp.
 // Both positions are discrete and the cells meet; the gap between them is the painter's. A cell with no value is
@@ -508,11 +529,7 @@ function sceneMatrix(catalog: Catalog, layers: Layer[], result: Result): Body {
   const xs = domain(xf), ys = domain(yf), at = new Map(result.rows.map((r) => [r[xf] + '\n' + r[yf], r[m] as number | null | undefined]));
   // The colour scale runs from the least to the most of the cells drawn. That is geometry, as the top of a y scale is,
   // and not a total, so it is read from the rows. A domain the catalog states for the metric comes before it.
-  const vals = [...at.values()].filter((v): v is number => v != null), stated = catalog.metrics[m]!.domain;
-  const [lo, hi] = stated || [min(vals) ?? 0, max(vals) ?? 0];
-  // Cells that all hold one value have no least and most. They are measured from zero.
-  const ends = lo < hi ? [lo, hi] : [Math.min(lo, 0), Math.max(hi, lo ? 0 : 1)];
-  const step = scaleQuantize<number>().domain(ends).range(Array.from({ length: SEQ }, (_, i) => i + 1));
+  const vals = [...at.values()].filter((v): v is number => v != null), seq = seqScale(vals, catalog.metrics[m]!.domain);
   const nodes: SceneNode[] = [], id = layerKeys(layers)[0]!, role = roleOf(l), nx = xs.length, ny = ys.length;
   // Every sixth label stays, and the rest are ranked to be given up where they would meet: every third goes last.
   const rank = (i: number) => (i % 6 ? { rank: i % 3 ? 2 : 1 } : {});
@@ -522,13 +539,9 @@ function sceneMatrix(catalog: Catalog, layers: Layer[], result: Result): Body {
   // A row of the grid at a time, from the top: reading order.
   ys.forEach((y, j) => xs.forEach((x, i) => {
     const v = at.get(x + '\n' + y);
-    nodes.push({ key: id + ':' + x + ':' + y, part: 'plot', kind: 'rect', x: i / nx, w: 1 / nx, y: j / ny, h: 1 / ny, pair: [x, y], paint: v == null ? 'seq.none' : 'seq.' + step(v), layer: 'data', role });
+    nodes.push({ key: id + ':' + x + ':' + y, part: 'plot', kind: 'rect', x: i / nx, w: 1 / nx, y: j / ny, h: 1 / ny, pair: [x, y], paint: seq.paint(v), layer: 'data', role });
   }));
-  // The ramp is set in order: the low value, a swatch for each step, the high value, and the swatch for no value where a cell has none.
-  const end = (key: string, v: string): SceneNode => ({ key: 'ramp:' + key, part: 'ramp', kind: 'text', text: v, anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' });
-  const swatch = (key: string | number): SceneNode => ({ key: 'ramp:' + key, part: 'ramp', kind: 'rect', paint: 'seq.' + key, layer: 'data' });
-  nodes.push(end('low', fmt(ends[0], true)), ...Array.from({ length: SEQ }, (_, i) => swatch(i + 1)), end('high', fmt(ends[1], true)));
-  if (vals.length < nx * ny) nodes.push(swatch('none'), end('none:label', 'No data'));
+  nodes.push(...seq.ramp(vals.length < nx * ny));
   return { nodes, rows: xs, ys };
 }
 
@@ -608,6 +621,11 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
     // A number above the circle is not said again inside it.
     if (!parts.includes('number') && body.nodes.some((n) => n.part === 'hole')) parts.push('hole');
     if (p.guides.legend) parts.push(p.guides.legend === 'top' ? 'legend-top' : 'legend');
+  } else if (customMarks().has(p.layout)) {
+    // A custom mark builds its own scene, and says which of its parts the plan shows.
+    const { parts: own, ...rest } = customMarks().get(p.layout)!.scene({ layers: p.layers, guides: p.guides, query: q, result, catalog });
+    parts.push(...own);
+    body = rest;
   }
   return { layout: p.layout, parts, ...(side && { side }), ...body, nodes: number.concat(body.nodes) };
 }

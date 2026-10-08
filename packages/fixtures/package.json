@@ -5,6 +5,7 @@
   "type": "module",
   "exports": "./src/index.ts",
   "dependencies": {
-    "@universal-analytics/core": "workspace:*"
+    "@universal-analytics/core": "workspace:*",
+    "@universal-analytics/geo": "workspace:*"
   }
 }

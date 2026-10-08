@@ -1,6 +1,7 @@
 import { scaleLinear } from 'd3-scale';
 import { CHAR_W, clip } from './format.ts';
 import { applies, ruleFor } from './fit.ts';
+import { customMarks } from './marks.ts';
 import { arcD, pathD } from './path.ts';
 import { TICK_W, xScale } from './scene.ts';
 import type { CircleNode, Container, Part, PathNode, PlacedCircle, PlacedNode, PlacedRect, PlacedScene, PlacedText, RectNode, Scene, SceneNode, TextNode } from './types.ts';
@@ -17,7 +18,7 @@ const LABEL = 14;         // characters a label at a line's end is given before 
 const LABEL_LINE = 12;    // px from one such label to the next
 const RADIAL = 160;       // px across a circle of arcs that has room to spare
 /** A dot's radius in px: by its size step, or the one size of a dot that has none. */
-const radius = (size?: number) => (size ? 2 + 2.5 * size : 3);
+export const radius = (size?: number) => (size ? 2 + 2.5 * size : 3);
 
 /** A label's box, and its rank: a ranked label is given up before an unranked one, and the higher its rank the sooner. */
 export interface LabelBox { x: number; y: number; w: number; h: number; rank?: number }
@@ -334,6 +335,12 @@ export function place(scene: Scene, container: Container): PlacedScene {
     } else if (scene.layout === 'radial') {
       const radial = placeRadial(scene, W, H ? H - above : null, container);
       body = radial; plot = radial.plot;
+    } else if (customMarks().has(scene.layout)) {
+      // A custom mark places its own parts. Its ramp and its key to sizes are set under them, as a grid's and a plot's are.
+      const keys = [scene.parts.includes('ramp') && placeRamp(scene, W), scene.parts.includes('size') && placeSize(scene)].filter((b): b is Block => !!b), under = keys.reduce((s, b) => s + b.height, 0);
+      const own = customMarks().get(scene.layout)!.place(scene, W, H ? H - above - under : null, container);
+      body = { nodes: keys.reduce((nodes, b, i) => nodes.concat(shift(b.nodes, 0, own.height + keys.slice(0, i).reduce((s, k) => s + k.height, 0))), own.nodes), height: own.height + under };
+      if (own.plot) plot = own.plot;
     } else {
       body = placeBand(scene, W);
     }

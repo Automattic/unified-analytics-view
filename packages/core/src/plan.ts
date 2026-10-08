@@ -10,10 +10,17 @@ import type { Catalog, Container, Layer, Layout, Plan, PlanShape, PresetLibrary,
  * in order until the view fits. Layers carry a role; reductions act on roles. */
 const ROLE_NAMES: Partial<Record<Role, string>> = { comparison: 'comparison series', reference: 'reference lines', context: 'context fill' };
 
+/* The layout a layer's fields ask for: what is on x, on y and on color, first match first. `any` asks nothing of its channel. */
+type FieldKind = 'dimension' | 'any';
+const LAYOUTS: [x: FieldKind, y: FieldKind, color: FieldKind, layout: Layout][] = [
+  ['dimension', 'any',       'any',       'cartesian'],
+  ['any',       'dimension', 'any',       'rows'],
+  ['any',       'any',       'dimension', 'band'],
+];
+
 function detectLayout(catalog: Catalog, layers: Layer[]): Layout {
-  if (layers.some((l) => l.encode && isDim(catalog, l.encode.x))) return 'cartesian';
-  if (layers.some((l) => l.encode && isDim(catalog, l.encode.y))) return 'rows';
-  if (layers.some((l) => l.encode && isDim(catalog, l.encode.color))) return 'band';
+  const is = (kind: FieldKind, f: unknown) => kind === 'any' || isDim(catalog, f);
+  for (const [x, y, color, layout] of LAYOUTS) if (layers.some((l) => l.encode && is(x, l.encode.x) && is(y, l.encode.y) && is(color, l.encode.color))) return layout;
   throw new Error('These layers put no dimension on x, y or color, so there is nothing to lay out.');
 }
 

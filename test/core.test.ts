@@ -5,7 +5,7 @@ import * as d3array from 'd3-array';
 import * as d3scale from 'd3-scale';
 import * as d3shape from 'd3-shape';
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, buildScene, expand, formatDimension, formatValue, makeContainer, partialNote, pathD, place, resolve, unboundedContainer, type PainterName, type Spec } from '@universal-analytics/core';
+import { CONTAINER_RULES, UNITS, buildScene, expand, formatDimension, formatValue, makeContainer, partialNote, pathD, place, resolve, unboundedContainer, type PainterName, type Spec, type Unit } from '@universal-analytics/core';
 import catalogSchema from '@universal-analytics/core/schema/catalog.schema.json';
 import viewSchema from '@universal-analytics/core/schema/view.schema.json';
 import { catalog, runQuery, samples, scenarios } from '@universal-analytics/fixtures';
@@ -32,10 +32,13 @@ const fromProto = ({ headline, ...p }: any) => ({
 // that reconciles by key morphs one layer into another. Ours name the layer by role and mark, with `#n` for the nth of
 // a role and mark. This maps the prototype's keys to ours, here and nowhere else. Nothing but `key` is touched, so
 // geometry, paint and order are still compared exactly.
+// The one-line legend's key: a second deliberate departure (feedback, review of October 7, finding 3). The prototype's
+// is `legend:top`, which is also the key of the legend entry of a segment called "top". Ours is `legend-top`, which no
+// segment can make. It changes the key in every band case of the sweep, and is mapped here with the layer keys.
 const ourKeys = (scene0: any, layers: { role: string; mark: string }[]) => {
   const seen: Record<string, number> = {};
   const names = layers.map((l) => { const base = l.role + ':' + l.mark, n = (seen[base] = (seen[base] || 0) + 1); return n > 1 ? base + '#' + n : base; });
-  return { ...scene0, nodes: scene0.nodes.map((n: any) => ({ ...n, key: n.key.replace(/^L(\d+):[a-z]+/, (_: string, i: string) => names[+i]) })) };
+  return { ...scene0, nodes: scene0.nodes.map((n: any) => ({ ...n, key: n.key === 'legend:top' ? 'legend-top' : n.key.replace(/^L(\d+):[a-z]+/, (_: string, i: string) => names[+i]) })) };
 };
 /** The prototype's scene as plain data, its layer keys mapped to ours. */
 const protoScene = (plan0: any, q: Spec['query'], res0: unknown, host0: unknown) => ourKeys(plain(proto.buildScene(plan0, q, res0, host0)), plan0.layers);
@@ -138,9 +141,28 @@ describe('what a painter says with: values and dimensions in catalog format', ()
     const V = catalog.metrics.visitors!, rows = runQuery(trend.query).rows, last = rows[rows.length - 1]!;
     expect([formatValue(1234, V), formatValue(10531, V), formatValue(1234, V, 'compact'), formatValue(10531, V, 'exact'), formatValue(null, V), formatValue(null, V, 'exact')]).toEqual(['1,234', '10.5k', '1.2k', '10,531', '–', '–']);
     expect(formatDimension('2026-09-08', catalog.dimensions['date.day']!)).toBe('Sep 8');
+    // A bucket arrives as a bare date or as a full ISO datetime, and is read in UTC either way. One on an hour of the day says the hour.
+    const time = (v: string) => formatDimension(v, catalog.dimensions['date.day']!);
+    expect(['2026-09-08T00:00:00.000Z', '2026-09-08T00:00:00Z', '2026-09-08T15:00:00.000Z', '2026-09-08T15:00:00', '2026-09-08T23:00:00.000Z'].map(time)).toEqual(['Sep 8', 'Sep 8', 'Sep 8, 3 PM', 'Sep 8, 3 PM', 'Sep 8, 11 PM']);
+    expect(time('yesterday')).toBe('Invalid Date');
     expect(formatDimension('/pricing', catalog.dimensions.page!)).toBe('/pricing');
     expect(formatDimension(null, catalog.dimensions.page!)).toBe('–');
     expect([partialNote(rows[0]!), partialNote(last)]).toEqual(['', 'so far']);
+  });
+  it('a value in each unit the catalog may give: as a readout says it, short, and exact', () => {
+    const say = (unit: Unit, v: number) => ([undefined, 'compact', 'exact'] as const).map((form) => formatValue(v, { label: '', unit, polarity: 'none' }, form));
+    // Money is in dollars, not cents.
+    expect([49, 49.5, 63512, -5].map((v) => say('usd', v))).toEqual([['$49', '$49', '$49.00'], ['$49.50', '$49.5', '$49.50'], ['$63.5k', '$63.5k', '$63,512.00'], ['-$5', '-$5', '-$5.00']]);
+    // A rate from 0 to 1 and one in percent points read the same.
+    expect([say('ratio', 0.1244), say('percent', 12.44), say('percent', 2.4)]).toEqual([['12%', '12%', '12.44%'], ['12%', '12%', '12.44%'], ['2.4%', '2.4%', '2.4%']]);
+    expect([4.26, 340, 1234, 125000, 3900000].map((v) => say('ms', v)[0])).toEqual(['4.3ms', '340ms', '1.2s', '2m 05s', '1h 05m']);
+    expect([0.34, 1.2, 125].map((v) => say('s', v))).toEqual([['340ms', '340ms', '0.34 s'], ['1.2s', '1.2s', '1.2 s'], ['2m 05s', '2m 05s', '125 s']]);
+    expect(say('ms', 1234)[2]).toBe('1,234 ms');
+    expect([512, 1234567, 5e12].map((v) => say('bytes', v))).toEqual([['512 B', '512 B', '512 B'], ['1.2 MB', '1.2 MB', '1,234,567 B'], ['5 TB', '5 TB', '5,000,000,000,000 B']]);
+    expect(UNITS.map((u) => formatValue(null, { label: '', unit: u, polarity: 'none' }))).toEqual(UNITS.map(() => '–'));
+  });
+  it('a unit with no format is an error that names the units there are', () => {
+    expect(() => formatValue(1, { label: '', unit: 'eur' as Unit, polarity: 'none' })).toThrow(/The unit "eur" has no format\. Give the metric one of count, ratio, percent, usd, ms, s, bytes/);
   });
 });
 
@@ -246,6 +268,10 @@ describe('schemas', () => {
     expect(view({ ...trend, headline: true })).toBe(false);
     expect(view({ ...trend, guides: { x: false } })).toBe(false);
   });
+  it('the catalog\'s units are the ones the formatter has, and no other', () => {
+    expect((catalogSchema as any).properties.metrics.additionalProperties.properties.unit.enum).toEqual(UNITS);
+    expect(cat({ metrics: { m: { label: 'M', unit: 'eur', polarity: 'up' } }, dimensions: {} })).toBe(false);
+  });
 });
 
 describe('the ratio scene (dom-painter-plan section 3)', () => {
@@ -307,9 +333,9 @@ describe('the ratio scene (dom-painter-plan section 3)', () => {
       const { ratio, scene } = run(specs.mix!, w);
       expect(ratio.parts).toEqual(['band', part]);
       expect(ratio.nodes.filter((n) => n.part === 'legend').length).toBe(18);
-      expect(ratio.nodes.filter((n) => n.part === 'legend-top').map((n) => n.key)).toEqual(['legend:top']);
+      expect(ratio.nodes.filter((n) => n.part === 'legend-top').map((n) => n.key)).toEqual(['legend-top']);
       // place() draws one of them, as before.
-      expect(scene.nodes.filter((n) => /^(legend|swatch|share):/.test(n.key)).length).toBe(part === 'legend' ? 18 : 1);
+      expect(scene.nodes.filter((n) => /^(legend|swatch|share):|^legend-top$/.test(n.key)).length).toBe(part === 'legend' ? 18 : 1);
     }
   });
   for (const name of Object.keys(samples)) it(`${name}, with no size`, () => expect(lessRows(unbounded(specs[name]!).ratio)).toMatchSnapshot());
@@ -441,6 +467,49 @@ describe('one row on a time axis: a deliberate departure from the prototype (fee
       const some = { ...runQuery(trend.query), rows: runQuery(trend.query).rows.slice(0, n) };
       expect(xticks(buildScene(resolve(trend, some, unboundedContainer(), catalog), trend.query, some, catalog)).length).toBe(n);
     }
+  });
+});
+
+describe('a time dimension on rows and on a band: a deliberate departure from the prototype (feedback, review of October 7, finding 5)', () => {
+  // The prototype writes a row's label and a segment's name as the result holds them, "2026-09-29", where its own x axis
+  // and our readout say "Sep 29". Ours says the dimension as the catalog sets it, wherever it is written. No sample puts a
+  // time dimension on rows or on a band, so the sweep does not meet this. The prototype's texts are mapped here and nowhere else.
+  const day = /^\d{4}-\d{2}-\d{2}/, said = (text: string) => text.replace(day, (iso) => formatDimension(iso, catalog.dimensions['date.day']!));
+  const ourDays = (scene0: any) => ({ ...scene0, nodes: scene0.nodes.map((n: any) => (n.kind === 'text' ? { ...n, text: said(n.text) } : n)) });
+  const byDay: Record<string, Spec> = {
+    rows: { spec: 'view/0', title: 'Page views by day', use: 'bar-list', query: { metrics: ['pageviews'], by: ['date.day'], range: '28d', limit: 8 } },
+    band: { spec: 'view/0', title: 'Visitors by day', use: 'share-bar', query: { metrics: ['visitors'], by: ['date.day'], range: '28d', limit: 6 } },
+  };
+  for (const [name, spec] of Object.entries(byDay)) for (const w of [700, 346, 150]) {
+    it(name + ' at ' + w + ': the prototype says the date raw; ours says the day, and nothing else differs', () => {
+      const { plan, scene, result } = run(spec, w);
+      const host0 = proto.makeHost(w, null, 'svg', 8), res0 = proto.runQuery(spec.query, 'typical'), plan0 = proto.resolve(toProto(spec), res0, host0), scene0 = protoScene(plan0, spec.query, res0, host0);
+      const texts = (sc: any): string[] => sc.nodes.filter((n: any) => n.kind === 'text').map((n: any) => n.text);
+      expect(plain(result)).toEqual(plain(res0));
+      expect(plain(plan)).toEqual({ ...fromProto(plain(plan0)), preset: plan.preset });
+      expect(texts(scene0).some((t) => day.test(t))).toBe(true);
+      expect(texts(scene).some((t) => day.test(t))).toBe(false);
+      expect(texts(scene).some((t) => /^[A-Z][a-z]{2} \d/.test(t))).toBe(true);
+      expect(plain(scene)).toEqual(ourDays(scene0));
+    });
+  }
+});
+
+describe('the one-line legend\'s key: a deliberate departure from the prototype (feedback, review of October 7, finding 3)', () => {
+  // A channel called "top", which no fixture has.
+  const mix = samples.mix!.spec, named = runQuery(mix.query);
+  named.rows = named.rows.map((r, i) => (i ? r : { ...r, channel: 'top' }));
+  it('a segment called "top" has its legend entry and the one-line legend has its own: every key is unique, in both scenes and at every form of the legend', () => {
+    for (const w of [346, 150]) {
+      const container = makeContainer(w), plan = resolve(mix, named, container, catalog), ratio = buildScene(plan, mix.query, named, catalog);
+      for (const scene of [ratio, place(ratio, container)]) { const keys = scene.nodes.map((n) => n.key); expect(new Set(keys).size, 'duplicate keys at ' + w).toBe(keys.length); }
+      expect(ratio.nodes.filter((n) => n.key === 'legend:top' || n.key === 'legend-top').map((n) => [n.key, n.part, (n as { text: string }).text])).toEqual([['legend:top', 'legend', 'top'], ['legend-top', 'legend-top', 'top 41%']]);
+    }
+  });
+  it('the prototype gives the two one key', () => {
+    const host0 = proto.makeHost(346, null, 'svg', 8), full = plain(proto.buildScene(proto.resolve(toProto(mix), named, host0), mix.query, named, host0));
+    const host1 = proto.makeHost(150, null, 'svg', 8), line = plain(proto.buildScene(proto.resolve(toProto(mix), named, host1), mix.query, named, host1));
+    expect([full, line].map((s) => s.nodes.filter((n: any) => n.key === 'legend:top').map((n: any) => n.text))).toEqual([['top'], ['top 41%']]);
   });
 });
 

@@ -29,7 +29,7 @@ describe('a row\'s segments in a plot', () => {
 describe('the readout', () => {
   it('says each companion the engine returned with a metric, under its suffix, after the comparison', () => {
     const box = of('box'), league = of('league');
-    expect(readout(box.result.rows[0]!, box.spec.query, catalog)).toBe('/blog/analytics-without-cookies: Response time 720, min 210, p25 470, p50 640, p75 890, max 2,600, lower 648, upper 792');
+    expect(readout(box.result.rows[0]!, box.spec.query, catalog)).toBe('/blog/analytics-without-cookies: Response time 720ms, min 210ms, p25 470ms, p50 640ms, p75 890ms, max 2.6s, lower 648ms, upper 792ms');
     expect(readout(league.result.rows[1]!, league.spec.query, catalog)).toBe('/pricing: Page views 2,960, previous period 2,310, rank 2');
   });
 });

@@ -63,7 +63,7 @@ export function geoMark(shapes: Shapes, projection: GeoProjection = geoEqualEart
       const of = (id: string, f: unknown) => (typeof f === 'string' ? (at.get(id)?.[f] as number | null | undefined) : undefined);
       const values = (f: unknown) => drawn.map((s) => of(s.id, f)).filter((v): v is number => v != null);
       // The colour scale runs over the regions drawn, as a grid's runs over its cells: geometry, read from the rows.
-      const fill = typeof color === 'string' ? seqScale(values(color), catalog.metrics[color]!.domain) : null;
+      const fill = typeof color === 'string' ? seqScale(values(color), catalog.metrics[color]!) : null;
       const top = Math.max(0, ...values(size)) || 1, id = roleOf(l) + ':' + l.mark, role = roleOf(l);
       // Every shape handed in is drawn, in the shapes' own order, so the map does not change with the ranking. One the
       // result has a row for carries it. Under symbols the regions are the ground they stand on, in the tone of no value.
@@ -72,7 +72,7 @@ export function geoMark(shapes: Shapes, projection: GeoProjection = geoEqualEart
       if (typeof size === 'string') nodes.push(...drawn.filter((s) => of(s.id, size) != null).map((s): CircleNode => ({ key: id + ':' + s.id + ':symbol', part: 'points', kind: 'circle', pulse: false, x: s.x, t: s.t,
         size: sizeStep(of(s.id, size)!, top), opacity: 0.7, row: s.id, paint: l.paint || 'series.1', layer: 'data', role })));
       if (fill) nodes.push(...fill.ramp(regions.some((s) => of(s.id, color) == null)));
-      if (typeof size === 'string') nodes.push(...sizeKey(catalog.metrics[size]!.label, top));
+      if (typeof size === 'string') nodes.push(...sizeKey(catalog.metrics[size]!, top));
       const sized = typeof size === 'string', parts: Part[] = ['plot'];
       if (sized) parts.push('points');
       if (fill && guides.ramp) parts.push('ramp');

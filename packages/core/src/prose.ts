@@ -1,4 +1,4 @@
-import { delta, fmt, fmtPct, formatDimension, formatValue, rangeLabel } from './format.ts';
+import { delta, fmtPct, formatDimension, formatValue, rangeLabel } from './format.ts';
 import type { Catalog, Query, Result, Row } from './types.ts';
 
 /** The row for the value of a dimension that has the most of a metric: from the engine's totals by dimension where the
@@ -36,13 +36,13 @@ export function tldrProse(q: Query, result: Result, share: boolean, catalog: Cat
     // out a point is would be a statistic, and those are the engine's.
     const two = q.metrics.slice(0, 2), label = (f: string) => catalog.metrics[f]!.label.toLowerCase(), of = (f: string) => rows.map((r) => r[f] as number);
     const top = two.map((f) => rows.reduce((a, r) => ((r[f] as number) > (a[f] as number) ? r : a))[by]);
-    return 'Across ' + rows.length + ' ' + plural(catalog.dimensions[by]!.label.toLowerCase()) + ' in the ' + range + ', ' + 'the range of ' + two.map((f) => label(f) + ' is ' + fmt(Math.min(...of(f))) + ' to ' + fmt(Math.max(...of(f)))).join(' and of ') + '. '
+    return 'Across ' + rows.length + ' ' + plural(catalog.dimensions[by]!.label.toLowerCase()) + ' in the ' + range + ', ' + 'the range of ' + two.map((f) => label(f) + ' is ' + formatValue(Math.min(...of(f)), catalog.metrics[f]!) + ' to ' + formatValue(Math.max(...of(f)), catalog.metrics[f]!)).join(' and of ') + '. '
       + (top[0] === top[1] ? top[0] + ' is highest on both.' : top[0] + ' is highest on ' + label(two[0]!) + ' and ' + top[1] + ' on ' + label(two[1]!) + '.');
   }
   if (by && catalog.dimensions[by]!.type === 'number' && rows.length) {
     // A numeric dimension: the total, and the bin that holds the most of it.
     const top = rows.reduce((a, r) => ((r[m] as number) > (a[m] as number) ? r : a)), end = top[by + '@end'];
-    return M.label + ': ' + fmt(t[m]) + ' in the ' + range + '. The most, ' + fmt(top[m] as number) + ', at a ' + catalog.dimensions[by]!.label.toLowerCase() + ' of ' + top[by] + (end == null ? '' : ' to ' + end) + '.';
+    return M.label + ': ' + formatValue(t[m], M) + ' in the ' + range + '. The most, ' + formatValue(top[m] as number, M) + ', at a ' + catalog.dimensions[by]!.label.toLowerCase() + ' of ' + top[by] + (end == null ? '' : ' to ' + end) + '.';
   }
   if (by && catalog.dimensions[by]!.type !== 'time' && rows.length) {
     const label = catalog.dimensions[by]!.label.toLowerCase();
@@ -52,19 +52,19 @@ export function tldrProse(q: Query, result: Result, share: boolean, catalog: Cat
     }
     // Several metrics by one dimension: the ranking is by the first, and the rest are said once, as the engine's totals. A metric it gives no total for is left out.
     const rest = q.metrics.slice(1).filter((x) => t[x] != null).map((x) => catalog.metrics[x]!.label.toLowerCase() + ' ' + formatValue(t[x], catalog.metrics[x]!));
-    return 'Top ' + plural(label) + ' by ' + name + ', ' + range + ': ' + rows.slice(0, 3).map((r) => r[by] + ' (' + fmt(r[m] as number) + ')').join(', ') + '.' + (rest.length ? ' Overall, ' + rest.join(' and ') + '.' : '');
+    return 'Top ' + plural(label) + ' by ' + name + ', ' + range + ': ' + rows.slice(0, 3).map((r) => r[by] + ' (' + formatValue(r[m] as number, M) + ')').join(', ') + '.' + (rest.length ? ' Overall, ' + rest.join(' and ') + '.' : '');
   }
   // Each metric the query asks for, the first with the range.
   return q.metrics.map((m, i) => {
     const M = catalog.metrics[m]!;
-    let s = M.label + ': ' + fmt(t[m]) + (i ? '' : ' in the ' + range);
+    let s = M.label + ': ' + formatValue(t[m], M) + (i ? '' : ' in the ' + range);
     if (q.compare === 'previous') {
       const d = delta(t[m] as number, t[m + '@previous'], M.polarity);
       s += d.pct != null ? ', ' + (d.pct > 0 ? 'up ' : 'down ') + fmtPct(Math.abs(d.pct)) + ' on the previous period'
          : d.state === 'flat' ? ', level with the previous period' : ', with no prior period to compare';
     }
     // Against its target, where the catalog gives it one: what a gauge shows.
-    if (M.target && t[m] != null) s += ', ' + fmtPct(t[m]! / M.target) + ' of its target of ' + fmt(M.target);
+    if (M.target && t[m] != null) s += ', ' + fmtPct(t[m]! / M.target) + ' of its target of ' + formatValue(M.target, M);
     s += '.';
     if (M.rangeTotal === 'sum of daily') s += ' This is a sum of daily counts, not unique people.';
     return s;
@@ -77,7 +77,8 @@ export function tldrProse(q: Query, result: Result, share: boolean, catalog: Cat
 export function rangeProse(q: Query, result: Result, catalog: Catalog, ends: [string, string]): string {
   const by = (q.by || [])[0], rows = result.rows, vals = rows.flatMap((r) => ends.map((f) => r[f])).filter((v): v is number => typeof v === 'number');
   if (!by || !vals.length) return '';
-  return ' Between ' + fmt(Math.min(...vals)) + ' and ' + fmt(Math.max(...vals)) + ' across ' + rows.length + ' ' + catalog.dimensions[by]!.label.toLowerCase() + (rows.length === 1 ? '' : 's') + '.';
+  const M = catalog.metrics[ends[0].split('@')[0]!] || catalog.metrics[q.metrics[0]!]!;      // the metric the ends are companions of
+  return ' Between ' + formatValue(Math.min(...vals), M) + ' and ' + formatValue(Math.max(...vals), M) + ' across ' + rows.length + ' ' + catalog.dimensions[by]!.label.toLowerCase() + (rows.length === 1 ? '' : 's') + '.';
 }
 
 /** The tldr prose for a metric by two dimensions on a grid: the cell that holds the most, and the busiest value of each
@@ -89,7 +90,7 @@ export function gridProse(q: Query, result: Result, catalog: Catalog): string | 
   const peak = rows.reduce((top, r) => ((r[m] as number) > (top[m] as number) ? r : top)), name = catalog.metrics[m]!.label.toLowerCase();
   const say = (d: string, r: Row) => formatDimension(r[d], catalog.dimensions[d]!);
   const busiest = (d: string, is: string) => { const top = leader(result, d, m)!; return say(d, top) + is + ' the busiest ' + catalog.dimensions[d]!.label.toLowerCase() + ' at ' + fmtPct((top[m] as number) / (result.totals[m] || 1)); };
-  return 'Most ' + name + ' at ' + say(a, peak) + ', ' + say(b, peak) + ' (' + fmt(peak[m] as number) + ') in the ' + rangeLabel(result.meta.range) + '. ' + busiest(a, ' is') + ' of ' + name + ', and ' + busiest(b, '') + '.';
+  return 'Most ' + name + ' at ' + say(a, peak) + ', ' + say(b, peak) + ' (' + formatValue(peak[m] as number, catalog.metrics[m]!) + ') in the ' + rangeLabel(result.meta.range) + '. ' + busiest(a, ' is') + ' of ' + name + ', and ' + busiest(b, '') + '.';
 }
 
 /** What follows a value from the unfinished bucket, as in "Visitors 175 so far". Empty for a finished one, so it also answers whether the row is partial. */

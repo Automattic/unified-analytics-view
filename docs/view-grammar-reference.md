@@ -101,6 +101,8 @@ Rules the front end relies on:
 
 - **Each name is defined exactly once,** outside both the data and the views. A view refers to `visitors`; it never carries a formula.
 - **Totals come from the engine.** A view never sums the rows it happens to receive, because many metrics are not additive. Visitors in v1 are counted per day, so a range total is a sum of daily counts and must be labelled as one (`rangeTotal: "sum of daily"`).
+- **The unit says how a value is written,** wherever it is written: the tldr value, a tick, a row, the readout, the table, the prose. The units are `count`, `ratio` (a rate from 0 to 1), `percent` (one from 0 to 100), `usd` (dollars, not cents), `ms`, `s` and `bytes`. An unknown unit is an error. One currency only: how a currency reaches a result is undecided upstream. A `number` dimension has no unit yet, so load time is still a bare number.
+- **A time value is a bare date or a full ISO datetime, read in UTC,** and written the same wherever it is: "Sep 8" on an axis, a row, a legend and in the readout. A bucket on an hour of the day reads "Sep 8, 3 PM". The grain is read from the value, because neither the catalog nor the result states it, so the midnight bucket of an hourly result reads as a day. Valid grains are among the properties below.
 - **Polarity drives delta colour.** `up` means an increase is good, `down` the reverse, `none` means no judgement.
 - **`instant`** marks a metric with no range and no prior period, such as people present now.
 - **Unknown is null, not zero.**

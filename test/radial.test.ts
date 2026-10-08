@@ -79,7 +79,7 @@ describe('arcs', () => {
   it('with a limit the circle stops short of closing, as the band stops short of its end', () => {
     const top3: Spec = { ...pie!, query: { ...pie!.query, limit: 3 } }, { ratio, plan } = run(top3, 346);
     expect(Math.round(arcs(top3).pop()!.a1 * 100)).toBe(83);                // 41 + 28 + 14, less the gap
-    expect((ratio.nodes.find((n) => n.key === 'legend:top') as { text: string }).text).toBe('Search 41%');
+    expect((ratio.nodes.find((n) => n.key === 'legend-top') as { text: string }).text).toBe('Search 41%');
     expect(plan.text).toBe('Search is the largest channel at 41% of visitors, followed by Direct at 28%.');
   });
   it('the legend is the band\'s, node for node', () => {

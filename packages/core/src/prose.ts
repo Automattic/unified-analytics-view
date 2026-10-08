@@ -96,3 +96,10 @@ export function gridProse(q: Query, result: Result, catalog: Catalog): string | 
 export function partialNote(row: Row): string {
   return row.partial ? 'so far' : '';
 }
+
+/** What a view says of the rows it has no place to draw, by the label of their dimension: "12 countries not shown".
+ * The table still lists them. Empty when there are none, so it also answers whether there is anything to say. */
+export function notShownNote(count: number, label: string): string {
+  const name = label.toLowerCase();
+  return count ? count + ' ' + (count === 1 ? name : plural(name)) + ' not shown' : '';
+}

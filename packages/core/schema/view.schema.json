@@ -44,13 +44,13 @@
         "limit": { "type": "integer", "minimum": 1, "description": "Top-N for each categorical dimension." }
       }
     },
-    "field": { "type": ["string", "number"], "description": "A dimension name, a metric name, or a number (for a rule)." },
+    "field": { "type": ["string", "number"], "description": "A dimension name, a metric name, a companion the result returns such as \"pageviews@density\", or a number (for a rule, on x or on y)." },
     "layer": {
       "type": "object",
       "required": ["mark"],
       "additionalProperties": false,
       "properties": {
-        "mark": { "enum": ["line", "area", "bar", "rule", "text", "arc", "cell"] },
+        "mark": { "enum": ["line", "area", "bar", "rule", "text", "arc", "cell", "dot"] },
         "encode": {
           "type": "object",
           "additionalProperties": false,
@@ -60,7 +60,8 @@
             "color": { "$ref": "#/definitions/field" },
             "text": { "$ref": "#/definitions/field" },
             "angle": { "$ref": "#/definitions/field", "description": "For an arc: a metric. With a dimension on color each segment is its share of the total. With none the metric is read against its catalog domain." },
-            "radius": { "type": "number", "minimum": 0, "exclusiveMaximum": 1, "description": "For an arc: the inner radius, as a share of the outer. 0.6 makes a donut." }
+            "radius": { "type": "number", "minimum": 0, "exclusiveMaximum": 1, "description": "For an arc: the inner radius, as a share of the outer. 0.6 makes a donut." },
+            "size": { "$ref": "#/definitions/field", "description": "A metric. A dot's size is one of a few steps, and the painter says how big each is." }
           }
         },
         "series": { "const": "previous", "description": "Draw the comparison companion of the metric." },

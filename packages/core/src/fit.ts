@@ -35,6 +35,12 @@ export const FIT_RULES: FitRule[] = [
     hide: ['legend'], show: ['labels'], keep: 'guides' },
   { id: 'labels',    layout: 'cartesian', container: 'view', needs: { inline: 280, block: 120 },      // and those go when the axes do
     hide: ['labels'], keep: 'guides' },
+  { id: 'point-labels', layout: 'cartesian', container: 'view', needs: { inline: 340, block: 180 },   // labels on points go first
+    hide: ['point-labels'], keep: 'guides' },
+  { id: 'size',      layout: 'cartesian', container: 'view', needs: { inline: 320, block: 160 },      // then the key to the sizes of dots
+    hide: ['size'], keep: 'guides' },
+  { id: 'points',    layout: 'cartesian', container: 'view', needs: { inline: 280, block: 120 },      // a plot of points has no sparkline form: under the axes' need it is the number alone
+    hide: ['points'], show: ['number'], keep: 'marks' },
   { id: 'mid-tick',  layout: 'cartesian', container: 'view', needs: { inline: 380 }, hide: ['x-tick.mid'] },
   { id: 'secondary', layout: 'cartesian', container: 'plot', needs: { inline: 180, block: 90 },       // comparison and reference layers stay legible above this
     hide: ['role:comparison', 'role:reference', 'role:context'], keep: 'secondary' },

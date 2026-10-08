@@ -4,7 +4,7 @@ export { FIT_RULES, applies, type FitRule, type Room } from './fit.ts';
 export { PRESETS, expand } from './presets.ts';
 export { resolve } from './plan.ts';
 export { buildScene, roleOf } from './scene.ts';
-export { place } from './place.ts';
+export { declutter, place, type LabelBox } from './place.ts';
 export { arcD, pathD, type PathBox } from './path.ts';
 export { gridProse, partialNote, tldrProse } from './prose.ts';
 export { formatDimension, formatValue, rangeLabel } from './format.ts';

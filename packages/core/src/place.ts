@@ -3,7 +3,7 @@ import { CHAR_W, clip } from './format.ts';
 import { applies, ruleFor } from './fit.ts';
 import { arcD, pathD } from './path.ts';
 import { xScale } from './scene.ts';
-import type { Container, Part, PathNode, PlacedNode, PlacedRect, PlacedScene, PlacedText, RectNode, Scene, SceneNode, TextNode } from './types.ts';
+import type { CircleNode, Container, Part, PathNode, PlacedCircle, PlacedNode, PlacedRect, PlacedScene, PlacedText, RectNode, Scene, SceneNode, TextNode } from './types.ts';
 
 /* place() turns the ratio scene into pixels, for painters with no CSS: the dot
  * grid, canvas and the bench's SVG. What the DOM leaves to its stylesheet is a
@@ -16,8 +16,26 @@ const SHORT_PLOT = 120;   // px of plot height under which ranked y ticks go
 const LABEL = 14;         // characters a label at a line's end is given before it is clipped
 const LABEL_LINE = 12;    // px from one such label to the next
 const RADIAL = 160;       // px across a circle of arcs that has room to spare
+/** A dot's radius in px: by its size step, or the one size of a dot that has none. */
+const radius = (size?: number) => (size ? 2 + 2.5 * size : 3);
+
+/** A label's box, and its rank: a ranked label is given up before an unranked one, and the higher its rank the sooner. */
+export interface LabelBox { x: number; y: number; w: number; h: number; rank?: number }
+/** Which labels to give up so that no two are closer than `gap`. They are taken in order of rank, and one that would
+ * meet a label already kept goes. For any painter that has measured its labels: place() here, the DOM's measured pass.
+ * ponytail: every label against every kept one, and a label never moves to make room. A first cut, and not the answer
+ * to label collision (reference, Open 5). */
+export function declutter(boxes: LabelBox[], gap = 2): boolean[] {
+  const kept: LabelBox[] = [], gone = boxes.map(() => false);
+  boxes.map((_, i) => i).sort((a, b) => (boxes[a]!.rank || 0) - (boxes[b]!.rank || 0) || a - b).forEach((i) => {
+    const b = boxes[i]!;
+    if (kept.some((k) => b.x < k.x + k.w + gap && k.x < b.x + b.w + gap && b.y < k.y + k.h + gap && k.y < b.y + b.h + gap)) gone[i] = true; else kept.push(b);
+  });
+  return gone;
+}
 
 const rect = ({ part, role, row, series, rank, x: _x, w: _w, v, v0, ...n }: RectNode, x: number, y: number, w: number, h: number, rx: number): PlacedRect => ({ ...n, x, y, w, h, rx });
+const circle = ({ part, role, row, series, rank, x: _x, t: _t, size, ...n }: CircleNode, cx: number, cy: number): PlacedCircle => ({ ...n, cx, cy, r: radius(size) });
 const text = ({ part, role, row, series, rank, x: _x, t, short, ...n }: TextNode, x: number, y: number, s: string = n.text): PlacedText => ({ ...n, x, y, text: s });
 const fit = (s: string, room: number) => clip(s, Math.floor(room / CHAR_W));
 function shift(nodes: PlacedNode[], dx: number, dy: number): PlacedNode[] {
@@ -56,8 +74,21 @@ function placePlot(scene: Scene, W: number, H: number, narrow: boolean): PlacedN
   const g2 = scene.parts.includes('y-axis-2') ? 30 : 0;
   const ml = gy ? 36 : 1, mr = (gy ? 6 : 1) + g2 + lw, mt = gy ? 10 : 3, mb = gx ? 22 : 3, inset = scene.scale === 'point' ? 2 : 0;
   const y = scaleLinear().domain([0, 1]).range([H - mb, mt]);
-  const xs = xScale(scene.rows!, scene.scale!, ml + inset, W - mr - inset);
-  const box = { x: (p: Point) => xs.cx(p.row), y };
+  // On a linear x every node has its own ratio of the plot's width. Otherwise a node is placed by its row, on the scale the scene used.
+  const lin = scene.scale === 'linear', pw = W - ml - mr, px = (x: number) => ml + x * pw;
+  const xs = xScale(scene.rows!, scene.scale === 'linear' ? 'point' : scene.scale!, ml + inset, W - mr - inset);
+  const at = (n: { x?: number; row?: string }) => (lin || n.row == null ? px(n.x!) : xs.cx(n.row));
+  const box = { x: (p: Point) => at(p), y };
+  // Labels on points, where the plan shows them: each above its point, clipped as a line's label is and kept inside
+  // the plot. Where two would collide the one of lower rank is left out.
+  const dots = new Map(scene.nodes.filter((n): n is CircleNode => n.kind === 'circle' && n.row != null).map((n) => [n.row, n.size]));
+  const tags = (scene.parts.includes('point-labels') ? scene.nodes.filter((n): n is TextNode => n.part === 'point-labels' && n.kind === 'text') : []).map((n) => {
+    const s = clip(n.text, LABEL), w = s.length * CHAR_W;
+    const r = radius(dots.get(n.row)) + 4, above = y(n.t!) - r;
+    // Under its point where there is no room above it.
+    return { n, s, w, x: Math.max(ml + w / 2, Math.min(at(n), W - mr - w / 2)), y: above < LABEL_LINE ? y(n.t!) + r + LABEL_LINE - 3 : above };
+  });
+  const lost = declutter(tags.map((a) => ({ x: a.x - a.w / 2, y: a.y - LABEL_LINE, w: a.w, h: LABEL_LINE, rank: a.n.rank }))), tag = new Map(tags.filter((_, i) => !lost[i]).map((a) => [a.n.key, a]));
   // Labels of lines that end close are set a line apart: pushed down from the highest, then back up from the bottom of the plot.
   // ponytail: a first cut for pixel painters, and not the answer to label collision (reference, Open 5).
   const labelY = new Map<string, number>(), down = labels.slice().sort((a, b) => b.t! - a.t!);
@@ -66,20 +97,25 @@ function placePlot(scene: Scene, W: number, H: number, narrow: boolean): PlacedN
   const out: PlacedNode[] = [];
   scene.nodes.forEach((n) => {
     if (n.part === 'number' || n.part === 'legend' || (n.part === 'labels' && !lw) || (n.part === 'y-axis-2' && !g2)) return;
+    if (n.part === 'size') return;
+    if (n.part === 'point-labels') { const a = tag.get(n.key); if (a) out.push(text(a.n, a.x, a.y, a.s)); return; }
     if (n.rank && (n.part === 'x-axis' ? narrow : H < SHORT_PLOT)) return;
     if (n.kind === 'line') {
-      const { part, role, row, series, rank, t, ...rest } = n;
-      out.push({ ...rest, x1: ml, x2: W - mr, y1: y(t), y2: y(t) });
+      const { part, role, row, series, rank, t, x, x2, t2, ...rest } = n;
+      out.push({ ...rest, x1: x == null ? ml : px(x), x2: x2 == null ? W - mr : px(x2), y1: y(t), y2: y(t2 ?? t) });
     } else if (n.kind === 'path') {
       const { part, role, row, series, rank, points, curve, ...rest } = n;
       out.push({ ...rest, d: pathD(points, curve, n.fill, box) });
     } else if (n.kind === 'rect') {
       // A bar of a series has a place of its own within its x, so its ratios are placed. The rest share the scale the scene used.
-      const pw = W - ml - mr, [bx, bw] = n.series == null ? [xs.x(n.row!), xs.w] : [ml + n.x! * pw, n.w! * pw], from = y(n.v0 ?? 0), to = y(n.v!);
+      const [bx, bw] = n.series == null && !lin ? [xs.x(n.row!), xs.w] : [px(n.x!), n.w! * pw], from = y(n.v0 ?? 0), to = y(n.v!);
       out.push(rect(n, bx, Math.min(from, to), bw, Math.abs(from - to), Math.min(2, bw / 4)));
+    } else if (n.kind === 'circle') {
+      out.push(circle(n, at(n), y(n.t!)));
     } else if (n.kind === 'text') {
-      out.push(n.part === 'y-axis' ? text(n, ml - 6, y(n.t!)) : n.part === 'x-axis' ? text(n, xs.cx(n.row!), H - 5)
-        : n.part === 'y-axis-2' ? text(n, W - mr + 6, y(n.t!)) : n.part === 'labels' ? text(n, W - lw, labelY.get(n.key)!, clip(n.text, LABEL)) : text(n, W - mr, y(n.t!) - 5));
+      out.push(n.part === 'y-axis' ? text(n, ml - 6, y(n.t!)) : n.part === 'x-axis' ? text(n, at(n), H - 5)
+        : n.part === 'y-axis-2' ? text(n, W - mr + 6, y(n.t!)) : n.part === 'labels' ? text(n, W - lw, labelY.get(n.key)!, clip(n.text, LABEL))
+        : n.x != null ? text(n, px(n.x) + 4, y(n.t!) + 9) : text(n, W - mr, y(n.t!) - 5));       // beside a rule that stands, or above one that lies
     }
   });
   return out;
@@ -131,6 +167,18 @@ function placeRamp(scene: Scene, W: number): Block {
     x += lead + w;
   });
   return { nodes, height: 24 };
+}
+
+// The key to sizes, in one line: the metric's name, then each step's dot and the most it stands for.
+function placeSize(scene: Scene): Block {
+  const nodes: PlacedNode[] = [], mid = 14;
+  let x = 0;
+  scene.nodes.forEach((n) => {
+    if (n.part !== 'size') return;
+    if (n.kind === 'circle') { const r = radius(n.size); nodes.push(circle(n, x + r, mid)); x += 2 * r + 4; }
+    else if (n.kind === 'text') { nodes.push(text(n, x, mid)); x += n.text.length * CHAR_W + 10; }
+  });
+  return { nodes, height: 28 };
 }
 
 // The ranked bar list: rows of a fixed height, labels clipped by character width.
@@ -240,6 +288,8 @@ export function place(scene: Scene, container: Container): PlacedScene {
       // The least a plot with axes is built to is the `axes` rule's block need, so the two cannot be set apart.
       const least = ruleFor(rules.fit, 'cartesian', 'axes')?.needs.block ?? 0;
       const legend = scene.parts.includes('legend') ? placeLegend(scene, W) : { nodes: [], height: 0 };
+      // The key to sizes goes under the legend, and both come out of the plot's height.
+      if (scene.parts.includes('size')) { const sizes = placeSize(scene); legend.nodes.push(...shift(sizes.nodes, 0, legend.height)); legend.height += sizes.height; }
       const ph = !guided ? rules.bare.height : H ? Math.max(least, Math.min(rules.axes.height, H - above - legend.height)) : rules.axes.height;
       body = { nodes: placePlot(scene, W, ph, narrow).concat(shift(legend.nodes, 0, ph)), height: ph + legend.height }; plot = { w: W, h: ph };
     } else if (scene.layout === 'matrix') {

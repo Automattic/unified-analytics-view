@@ -10,6 +10,7 @@ export const catalog: Catalog = {
     net_subscribers: { label: 'Net subscribers', unit: 'count', polarity: 'up', rangeTotal: 'sum' },
     revenue:   { label: 'Revenue',     unit: 'usd',   polarity: 'up',   rangeTotal: 'sum' },
     signups:   { label: 'Sign-ups',    unit: 'count', polarity: 'up',   rangeTotal: 'sum', domain: [0, 500], target: 400, bands: [200, 400] },
+    conversion_rate: { label: 'Conversion rate', unit: 'percent', polarity: 'up' },
   },
   dimensions: {
     'date.day': { label: 'Day',     type: 'time' },
@@ -18,6 +19,7 @@ export const catalog: Catalog = {
     device:     { label: 'Device',  type: 'categorical' },
     weekday:    { label: 'Weekday', type: 'categorical' },
     hour:       { label: 'Hour',    type: 'categorical' },
+    load_time:  { label: 'Load time', type: 'number' },
   },
 };
 
@@ -68,6 +70,11 @@ const WEEKDAYS = shares(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], [1.06
 const HOURS = shares(Array.from({ length: 24 }, (_, h) => (h % 12 || 12) + (h < 12 ? 'am' : 'pm')), Array.from({ length: 24 }, (_, h) => 0.15 + Math.exp(-((h - 11) ** 2) / 18) + 0.6 * Math.exp(-((h - 20) ** 2) / 8)));
 // A dimension whose values divide a total: each value's share of it, now and in the period before.
 const MIX: Record<string, [string, number, number][]> = { channel: CHANNELS, device: DEVICES, weekday: WEEKDAYS, hour: HOURS };
+// What a page has and a day does not: the share of its visitors who convert, in percent. A rate is the engine's to work out, and does not add up.
+const RATES: Record<string, number> = { '/': 2.1, '/pricing': 5.8, '/blog/launch-notes': 1.2, '/docs/getting-started': 3.4, '/changelog': 0.9, '/about': 1.6, '/blog/analytics-without-cookies': 2.7, '/contact': 4.4 };
+const RATE = 2.6;
+// Load time in seconds, in bins half a second wide: the weight of each, with a long tail.
+const LOAD = { width: 0.5, weights: [2, 9, 21, 30, 27, 20, 14, 10, 7, 5, 4, 3, 2, 2, 1, 1] };
 const LIVE = [{ page: '/', present: 3 }, { page: '/pricing', present: 2 }, { page: '/blog/launch-notes', present: 1 }, { page: '/docs/getting-started', present: 1 }];
 
 export type Scenario = 'typical' | 'no-prior' | 'empty';
@@ -92,6 +99,8 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
   const meta: Result['meta'] = { range: q.range || '28d', compare: q.compare || null, notes: [] };
   const totals: Result['totals'] = {}; let rows: Row[] = [];
   const live = metrics.indexOf('present') >= 0;
+  if (metrics.indexOf('conversion_rate') >= 0 && dims.length && (dims.length > 1 || by !== 'page')) throw new Error('The fixture has "conversion_rate" page by page, and not by anything else. Query it by page alone.');
+  if (dims.indexOf('load_time') >= 0 && (dims.length > 1 || live || metrics.indexOf('conversion_rate') >= 0)) throw new Error('The fixture bins a count by "load_time" and nothing more. Query a count by it alone.');
   if (live && (metrics.length > 1 || dims.length > 1 || (by && by !== 'page'))) throw new Error('"present" is an instantaneous count. Query it alone, optionally by page.');
 
   if (scenario === 'empty') {
@@ -109,8 +118,9 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
   const days = Math.min(28, parseInt(q.range || '') || 28), mix = seeded(days), vary = () => (days === 28 ? 1 : 0.5 + mix());
   const cur = DAILY.slice(56 - days), prev = DAILY.slice(56 - 2 * days, 56 - days);
   metrics.forEach((m) => {
-    totals[m] = sum(cur, m);
-    if (wantPrev) totals[m + '@previous'] = hasPrev ? sum(prev, m) : null;
+    const rate = m === 'conversion_rate';
+    totals[m] = rate ? RATE : sum(cur, m);
+    if (wantPrev) totals[m + '@previous'] = !hasPrev ? null : rate ? RATE - 0.2 : sum(prev, m);
   });
   // One row per value of a dimension, in the dimension's own order, before any sort or limit.
   function rowsBy(dim: string): Row[] {
@@ -119,13 +129,27 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
       metrics.forEach((m) => { r[m] = d[m as D]; if (wantPrev) r[m + '@previous'] = hasPrev ? prev[i]![m as D] : null; });
       return r;
     });
-    const perPage = metrics.find((m) => !(m in PAGES[0]!));
+    const perPage = metrics.find((m) => m !== 'conversion_rate' && !(m in PAGES[0]!));
     if (dim === 'page' && perPage) throw new Error('The fixture has "' + perPage + '" by day, channel or device, and not page by page. Query it by one of those.');
     if (dim === 'page') return PAGES.map((p) => {
       const r: Row = { page: p.page };
-      metrics.forEach((m) => { r[m] = Math.round(p[m as M] * days / 28 * vary()); if (wantPrev) r[m + '@previous'] = hasPrev && p.prev ? p.prev[m as M] : null; });
+      metrics.forEach((m) => {
+        if (m === 'conversion_rate') { r[m] = Math.round(RATES[p.page]! * vary() * 10) / 10; if (wantPrev) r[m + '@previous'] = null; return; }
+        r[m] = Math.round(p[m as M] * days / 28 * vary()); if (wantPrev) r[m + '@previous'] = hasPrev && p.prev ? p.prev[m as M] : null;
+      });
       return r;
     });
+    // Bins are the engine's: each row says where its bin starts and ends, and the bins divide the whole of the total.
+    // Density comes with them as a companion: the share of the total in each unit of the dimension.
+    if (dim === 'load_time') {
+      const weights = LOAD.weights.map((w) => w * vary()), parts = metrics.map((m) => apportion(totals[m]!, weights));
+      const before = metrics.map((m) => (hasPrev ? apportion(totals[m + '@previous']!, LOAD.weights) : null));
+      return weights.map((_, i) => {
+        const r: Row = { load_time: i * LOAD.width, 'load_time@end': (i + 1) * LOAD.width };
+        metrics.forEach((m, j) => { r[m] = parts[j]![i]!; r[m + '@density'] = Math.round(parts[j]![i]! / (totals[m] || 1) / LOAD.width * 1e4) / 1e4; if (wantPrev) r[m + '@previous'] = before[j] ? before[j]![i]! : null; });
+        return r;
+      });
+    }
     // The mix moves with the range and still adds up to the engine's total: its values divide the whole of it.
     const values = MIX[dim]!, mixes = values.map((c) => metrics.map(() => c[1] * vary())), whole = metrics.map((_, j) => mixes.reduce((s, w) => s + w[j]!, 0));
     return values.map((c, i) => {
@@ -136,9 +160,9 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
   }
   if (dims.indexOf('date.day') >= 0) meta.notes.push('Today is still in progress.');
   const m0 = metrics[0]!;
-  // A categorical dimension is ranked by the first metric, and `limit` keeps its first values.
+  // A categorical dimension is ranked by the first metric, and `limit` keeps its first values. Days and bins keep their own order.
   const top = (rs: Row[]) => { const ranked = rs.slice().sort((a, b) => (b[m0] as number) - (a[m0] as number)); return q.limit ? ranked.slice(0, q.limit) : ranked; };
-  if (dims.length < 2) return { rows: !by ? rows : by === 'date.day' ? rowsBy(by) : top(rowsBy(by)), totals, meta };
+  if (dims.length < 2) return { rows: !by ? rows : catalog.dimensions[by]!.type !== 'categorical' ? rowsBy(by) : top(rowsBy(by)), totals, meta };
 
   // Two dimensions: one row per pair. Each value of the outer one is divided among the inner one's, unevenly from one
   // to the next, so every pair adds up to the outer row it came from. Time, when it is there, is the outer one.
@@ -194,4 +218,15 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
   pie:     { label: 'A pie: channel mix', spec: { spec: 'view/0', title: 'Channels', use: 'pie', query: { metrics: ['visitors'], by: ['channel'], range: '28d' } } },
   half:    { label: 'A half circle: page views by device', spec: { spec: 'view/0', title: 'Page views by device', use: 'pie-semi-circle', query: { metrics: ['pageviews'], by: ['device'], range: '28d' } } },
   gauge:   { label: 'A gauge: sign-ups against a target', spec: { spec: 'view/0', title: 'Sign-ups', use: 'gauge', query: { metrics: ['signups'], range: '28d' } } },
+  scatter: { label: 'Scatter: traffic against conversion rate by page', spec: { spec: 'view/0', title: 'Traffic against conversion', query: { metrics: ['visitors', 'conversion_rate'], by: ['page'], range: '28d' },
+            layers: [{ mark: 'dot', encode: { x: 'visitors', y: 'conversion_rate' } }, { mark: 'text', encode: { x: 'visitors', y: 'conversion_rate', text: 'page' } }] } },
+  bubble:  { label: 'Bubbles: traffic against conversion rate, sized by page views', spec: { spec: 'view/0', title: 'Traffic, conversion and page views', query: { metrics: ['visitors', 'conversion_rate', 'pageviews'], by: ['page'], range: '28d' },
+            layers: [{ mark: 'dot', encode: { x: 'visitors', y: 'conversion_rate', size: 'pageviews' } }] } },
+  quadrant: { label: 'Quadrants: traffic against conversion rate, with a rule on each axis', spec: { spec: 'view/0', title: 'Where to look', query: { metrics: ['visitors', 'conversion_rate'], by: ['page'], range: '28d' },
+            layers: [{ mark: 'rule', encode: { x: 1000 }, label: '1,000 visitors', role: 'reference' }, { mark: 'rule', encode: { y: 3 }, label: 'Converts at 3', role: 'reference' },
+                     { mark: 'dot', encode: { x: 'visitors', y: 'conversion_rate' } }, { mark: 'text', encode: { x: 'visitors', y: 'conversion_rate', text: 'page' } }] } },
+  histogram: { label: 'Histogram: page views by load time', spec: { spec: 'view/0', title: 'Load time', query: { metrics: ['pageviews'], by: ['load_time'], range: '28d' },
+            layers: [{ mark: 'bar', encode: { x: 'load_time', y: 'pageviews' } }] } },
+  density: { label: 'Density: page views along load time', spec: { spec: 'view/0', title: 'Load time, as a density', query: { metrics: ['pageviews'], by: ['load_time'], range: '28d' },
+            layers: [{ mark: 'area', encode: { x: 'load_time', y: 'pageviews@density' }, role: 'context' }, { mark: 'line', encode: { x: 'load_time', y: 'pageviews@density' } }] } },
 };

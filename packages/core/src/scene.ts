@@ -3,7 +3,7 @@ import { scaleBand, scaleLinear, scalePoint, scaleQuantize } from 'd3-scale';
 import { CHAR_W, delta, fmt, fmtDay, fmtPct, formatDimension } from './format.ts';
 import { arcD, pathD } from './path.ts';
 import { leader } from './prose.ts';
-import type { ArcNode, Catalog, Guides, Layer, Mark, Part, PathNode, PlanShape, Query, Result, Role, Row, Scene, SceneNode } from './types.ts';
+import type { ArcNode, Catalog, Guides, Layer, Mark, Part, PathNode, PlanShape, Query, Result, Role, Row, Scene, SceneNode, TextNode } from './types.ts';
 
 /* Node kinds: rect, path, line, circle, text. Every node has a stable key,
  * a part, a paint token (never a colour) and a layer: "data" or "guide".
@@ -49,7 +49,14 @@ interface Draw {
   prev: boolean;
   rows: Row[];
   k: (r: Row) => string;
-  unit: ReturnType<typeof xScale>;
+  /** On a linear x a row's bin has a width of its own, `span`, and `w` is nothing. */
+  unit: ReturnType<typeof xScale> & { span?: (k: string) => number };
+  /** A value on x, as a ratio of the plot's width, where x is linear. */
+  xv?: (n: number) => number;
+  /** The plot sets one metric against another, and its dots are a part of their own, `points`. */
+  points?: boolean;
+  /** The metric the plot's dots are sized by, and the most it holds. */
+  size?: { field: string; top: number };
   /** A value on y, as a ratio of the plot's height. */
   v: (n: number) => number;
   /** Where a row's mark starts and where it ends, as ratios: from the baseline, or from the series stacked under it. */
@@ -73,18 +80,46 @@ const path: MarkFn = (l, { id: layer, series, role: role0, paint, prev, rows: pt
   return nodes;
 };
 const bar: MarkFn = (_l, { id, series, role, paint, prev, rows, k, unit, ends, slot: [j, n] = [0, 1] }) => rows.map((r) => {
-  const [v0, v] = ends(r), w = unit.w / n;
+  const [v0, v] = ends(r), w = (unit.span ? unit.span(k(r)) : unit.w) / n;
   return { key: id + ':' + k(r) + (series == null ? '' : ':' + series), part: 'plot', kind: 'rect', x: unit.x(k(r)) + j * w, w, v, ...(v0 && { v0 }), row: k(r), ...(series != null && { series }),
     paint, opacity: r.partial && !prev ? 0.4 : 1, layer: 'data', role };
 });
-const rule: MarkFn = (l, { id, role, v }) => {
-  const t = v(l.encode!.y as number);
+const rule: MarkFn = (l, { id, role, v, xv }) => {
+  const { x, y } = l.encode || {};
+  // A constant on x stands the height of the plot. Its label sits beside it, at the top.
+  if (typeof x === 'number') {
+    if (!xv) throw new Error('A rule at x: ' + x + ' needs a scale to be measured on, and this plot has a time or a category on x. Put the rule on y, or a metric or a number dimension on x.');
+    const at = xv(x), up: SceneNode[] = [{ key: id, part: 'plot', kind: 'line', x: at, x2: at, t: 0, t2: 1, paint: 'rule', dash: '5 3', width: 1.5, layer: 'data', role }];
+    if (l.label) up.push({ key: id + ':label', part: 'plot', kind: 'text', x: at, t: 1, text: l.label, anchor: 'start', font: 'tick', paint: 'rule', halo: true, layer: 'guide', role });
+    return up;
+  }
+  if (typeof y !== 'number') throw new Error('A rule is drawn at a number, and this one has none on x or on y. Encode one, for example { "y": 1000 }.');
+  const t = v(y);
   const nodes: SceneNode[] = [{ key: id, part: 'plot', kind: 'line', t, paint: 'rule', dash: '5 3', width: 1.5, layer: 'data', role }];
   if (l.label) nodes.push({ key: id + ':label', part: 'plot', kind: 'text', t, text: l.label, anchor: 'end', font: 'tick', paint: 'rule', halo: true, layer: 'guide', role });
   return nodes;
 };
+const SIZES = 4;    // the steps a value on `size` falls into. How big each is, in pixels, is the painter's
+/** The step for a value, 1 to SIZES, by area: the square root of its share of the most. */
+const sizeStep = (n: number, top: number) => Math.min(SIZES, Math.max(1, Math.ceil(Math.sqrt(Math.max(0, n) / top) * SIZES)));
+// A point for each row, at its values on x and y. One that is sized lets what is under it show.
+const dot: MarkFn = (l, { id, series, role, paint, rows, k, unit, ends, size, points }) => {
+  const sized = l.encode!.size != null && size;
+  return rows.map((r): SceneNode => ({ key: id + ':' + k(r) + (series == null ? '' : ':' + series), part: points ? 'points' : 'plot', kind: 'circle', pulse: false, x: unit.cx(k(r)), t: ends(r)[1],
+    ...(sized && { size: sizeStep(num(r, sized.field), sized.top), opacity: 0.7 }), row: k(r), ...(series != null && { series }), paint, layer: 'data', role }));
+};
+// A label on each row's point, in a part of its own over the plot, so a rule can give them all up. Each has its place
+// among them, the largest point first: by the metric the dots are sized by, or else by its own y. A painter gives up
+// the ones that collide from the last, since only it knows how wide a label is (reference, Open 5).
+const label: MarkFn = (l, { id, series, role, rows, k, unit, ends, size }) => {
+  const { y, text: f } = l.encode || {};
+  if (typeof y !== 'string' || typeof f !== 'string') throw new Error('A "text" layer in a plot needs a field on y, for where each label sits, and one on text, for what it says: for example { "x": "visitors", "y": "conversion_rate", "text": "page" }.');
+  const by = size ? size.field : y, order = rows.slice().sort((a, b) => num(b, by) - num(a, by));
+  return rows.map((r): TextNode => ({ key: id + ':' + k(r) + (series == null ? '' : ':' + series), part: 'point-labels', kind: 'text', x: unit.cx(k(r)), t: ends(r)[1], text: typeof r[f] === 'number' ? fmt(r[f] as number) : String(r[f]),
+    anchor: 'middle', font: 'tick', paint: 'ink', halo: true, row: k(r), ...(series != null && { series }), rank: order.indexOf(r) + 1, layer: 'guide', role }));
+};
 /* The marks a plot draws, by name. A new mark is a function here. */
-const PLOT_MARKS: Partial<Record<Mark, MarkFn>> = { line: path, area: path, bar, rule };
+const PLOT_MARKS: Partial<Record<Mark, MarkFn>> = { line: path, area: path, bar, rule, dot, text: label };
 
 const SERIES = 6;   // paint tokens run from series.1 to series.6
 
@@ -118,17 +153,20 @@ export function splitOf(catalog: Catalog, l: Layer, xField?: string): string | n
 // A dimension on x, a metric on y, and with a second dimension on color a series for each of its values.
 // The scales are derived here, once: x from its dimension, and a y for each unit the layers measure in.
 // Each layer's mark draws against them.
-function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, result: Result): Body {
+// With a metric on x as well, a row is still one value of a dimension: the query's, `by`. `xField` is the dimension the
+// rows are keyed by either way, and `xOn` the field x is measured along where that is a linear scale.
+function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, result: Result, by?: string): Body {
   const nodes: SceneNode[] = [], rows = result.rows;
-  const xField = xDimOf(catalog, layers)!;
-  const k = (r: Row) => r[xField] as string, keys = [...new Set(rows.map(k))];
+  const xDim = xDimOf(catalog, layers), xField = (xDim || by)!;
+  const xOn = !xDim ? (layers.map((l) => l.encode && l.encode.x).find((f) => typeof f === 'string') as string) : catalog.dimensions[xDim]!.type === 'number' ? xDim : null;
+  const k = (r: Row) => String(r[xField]), keys = [...new Set(rows.map(k))];
   // A view has two dimensions at most and one is on x, so there is one to split by. Its order is the engine's, not the rows':
   // paint follows it, so a value keeps its colour when the ranking moves.
   const split = layers.map((l) => splitOf(catalog, l, xField)).find(Boolean) || null;
   const series = split ? [...new Set(((result.totalsBy && result.totalsBy[split]) || rows).map((r) => r[split] as string))] : [];
   if (series.length > SERIES) throw new Error('Splitting by "' + split + '" makes ' + series.length + ' series, and there are ' + SERIES + ' series colours. Add "limit": ' + SERIES + ' to the query, or less.');
   const isTime = catalog.dimensions[xField]!.type === 'time';
-  const scale = layers.some((l) => l.mark === 'bar') ? 'band' : 'point';
+  const shared = layers.some((l) => l.mark === 'bar') ? 'band' : 'point', scale = xOn ? 'linear' : shared;
   const yField = (l: Layer) => (l.series === 'previous' ? l.encode!.y + '@previous' : (l.encode!.y as string));
   // Where each row's mark starts and ends, in its metric's own terms: from zero, or from the series stacked under it.
   // A stack runs in the series' order, the first at the bottom, and a value below zero stacks downward.
@@ -167,7 +205,25 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     const [bottom, top] = y.domain() as [number, number];
     return { v: (n: number) => (n - bottom) / (top - bottom), ticks: y.ticks(4), coarse: y.ticks(2), text: (t: number) => (share ? fmtPct(t) : fmt(t, true)) };
   });
-  const unit = xScale(keys, scale, 0, 1);
+  let unit: Draw['unit'] = xScale(keys, shared, 0, 1), xv: Draw['xv'];
+  if (xOn) {
+    // A linear x. A row sits at its value, or where it has a bin, `<dimension>@end`, across it. A metric's scale holds
+    // zero and is rounded, as y's is. A dimension's runs from its first bin to its last and no further, so bars meet
+    // the edges of the plot. Its ticks are y's too, and all but the two ends are ranked, as the middle date is.
+    const at = new Map(rows.map((r) => [k(r), r])), lo = (key: string) => num(at.get(key)!, xOn), hi = (key: string) => (at.get(key)![xOn + '@end'] as number | undefined) ?? lo(key);
+    const vals = keys.flatMap((key) => [lo(key), hi(key)]).concat(layers.map((l) => l.encode && l.encode.x).filter((x): x is number => typeof x === 'number'));
+    const x = scaleLinear().domain(xDim ? [min(vals) ?? 0, max(vals) ?? 1] : [Math.min(0, min(vals) ?? 0), Math.max(0, max(vals) ?? 0) || 1]);
+    if (guides.x && !xDim) x.nice(4);
+    const [left, right] = x.domain() as [number, number], to = (n: number) => (n - left) / (right - left || 1);
+    xv = to;
+    unit = { x: (key) => to(lo(key)), w: 0, cx: (key) => to((lo(key) + hi(key)) / 2), span: (key) => to(hi(key)) - to(lo(key)) };
+    if (guides.x && keys.length) x.ticks(4).forEach((t, i, all) => {
+      nodes.push({ key: 'xtick:' + t, part: 'x-axis', kind: 'text', x: to(t), text: fmt(t, true), anchor: to(t) <= 0 ? 'start' : to(t) >= 1 ? 'end' : 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...(i > 0 && i < all.length - 1 && { rank: 1 }) });
+    });
+  }
+  // One metric sizes the dots of a plot, whichever layers name it.
+  const sizeBy = layers.map((l) => l.encode && l.encode.size).find((f): f is string => typeof f === 'string');
+  const size = sizeBy ? { field: sizeBy, top: max(rows, (r) => num(r, sizeBy)) || 1 } : undefined;
 
   if (guides.y) scales.forEach(({ v, ticks, coarse, text }, ui) => ticks.forEach((t) => {
     // A short plot keeps the ticks a count of 2 would give on this scale. The rest are ranked, to be given up there.
@@ -177,7 +233,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     if (guides.grid) nodes.push({ key: 'grid:' + t, part: 'plot', kind: 'line', t: v(t), paint: t === 0 ? 'axis' : 'grid', layer: 'guide', ...rank });
     nodes.push({ key: 'ytick:' + t, part: 'y-axis', kind: 'text', t: v(t), text: text(t), anchor: 'end', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...rank });
   }));
-  if (guides.x && keys.length) {
+  if (guides.x && keys.length && !xOn) {
     const last = keys.length - 1;
     // First, middle and last, each once: one row has one tick. The prototype emits it twice, under one key.
     const idx = isTime ? [...new Set([0, Math.floor(last / 2), last])] : keys.map((_, i) => i);
@@ -190,9 +246,12 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   const ids = layerKeys(layers), ends = new Map<string, number>();
   layers.forEach((l, i) => {
     const draw = PLOT_MARKS[l.mark], prev = l.series === 'previous', span = spans[i]!;
-    if (!draw) throw new Error('The "' + l.mark + '" mark has no rule for a time or category axis yet. Use line, area, bar or rule.');
+    if (!draw) throw new Error('The "' + l.mark + '" mark has no rule for a time or category axis yet. Use line, area, bar, rule, dot or text.');
+    // A bar stands on a row's share of x. A metric there gives it none, and neither does a number dimension that came with no bins.
+    if (l.mark === 'bar' && xOn && !xDim) throw new Error('Layer ' + (i + 1) + ' is a bar with the metric "' + xOn + '" on x, and a bar needs a dimension there to stand on. Use "dot" for a point at two metrics, or put a dimension on x.');
+    if (l.mark === 'bar' && xOn && rows.length && rows[0]![xOn + '@end'] == null) throw new Error('Bars on the number dimension "' + xOn + '" need its bins, and this result has no "' + xOn + '@end". Return where each bin ends from the query layer, or use line or dot.');
     const v = scaleOf(l).v;
-    const d: Draw = { id: ids[i]!, role: roleOf(l), paint: l.paint || (prev ? 'compare' : 'series.1'), prev, rows: rows.filter((r) => span.has(r)), k, unit, v,
+    const d: Draw = { id: ids[i]!, role: roleOf(l), paint: l.paint || (prev ? 'compare' : 'series.1'), prev, rows: rows.filter((r) => span.has(r)), k, unit, v, xv, size, points: !!xOn && !xDim,
       ends: (r) => { const [lo, hi] = span.get(r)!; return [v(lo), v(hi)]; } };
     if (!splitOf(catalog, l, xField)) return nodes.push(...draw(l, d));
     series.forEach((s, j) => {
@@ -215,6 +274,14 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
       nodes.push({ key: 'swatch:' + s, part: 'legend', kind: 'rect', series: s, paint: 'series.' + (j + 1), layer: 'data' });
       nodes.push({ key: 'legend:' + s, part: 'legend', kind: 'text', series: s, text: s, anchor: 'start', baseline: 'middle', font: 'label', paint: 'ink', layer: 'guide' });
     });
+  }
+  // The key to sizes: the metric's name, then each step with the most it stands for.
+  if (size) {
+    nodes.push({ key: 'size:title', part: 'size', kind: 'text', text: catalog.metrics[size.field]!.label, anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' });
+    for (let s = 1; s <= SIZES; s++) {
+      nodes.push({ key: 'size:' + s, part: 'size', kind: 'circle', pulse: false, size: s, paint: 'ink.muted', layer: 'guide' });
+      nodes.push({ key: 'size:' + s + ':label', part: 'size', kind: 'text', text: fmt(Math.round(size.top * (s / SIZES) ** 2), true), anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' });
+    }
   }
   return { nodes, rows: keys, ...(split && { series }), scale };
 }
@@ -390,7 +457,7 @@ function sceneNumber(catalog: Catalog, q: Query, result: Result, share: boolean)
   }
   if (result.meta.empty) { value('0'); sub('No visits yet'); return nodes; }
   let note: string | null = M.rangeTotal === 'sum of daily' ? 'Sum of daily counts' : M.target != null ? 'Target ' + fmt(M.target) : null;
-  if (by && catalog.dimensions[by]!.type !== 'time' && rows.length) {
+  if (by && catalog.dimensions[by]!.type === 'categorical' && rows.length) {
     const top = leader(result, by, m)!;                                      // with two dimensions a row is a pair, so the leader is the engine's
     note = share ? top[by] + ' ' + fmtPct(num(top, m) / (t[m] || 1)) : 'Top: ' + top[by];
   }
@@ -413,14 +480,17 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
   } else if (p.layout === 'cartesian') {
     side = p.side;                                                          // a bare plot, set beside the number
     if (side && !parts.length) parts.push('number');
-    body = sceneCartesian(catalog, p.layers, p.guides, result);
+    body = sceneCartesian(catalog, p.layers, p.guides, result, (q.by || [])[0]);
     const key = body.series ? p.guides.legend : undefined;                 // layers that were split may have been given up
     if (p.guides.y) parts.push('y-axis');
     parts.push('plot');
+    if (body.nodes.some((n) => n.part === 'points')) parts.push('points');
+    if (p.guides.pointLabels && body.nodes.some((n) => n.part === 'point-labels')) parts.push('point-labels');
     if (body.nodes.some((n) => n.part === 'y-axis-2')) parts.push('y-axis-2');
     if (key === 'labels') parts.push('labels');
     if (p.guides.x) parts.push('x-axis');
     if (key === 'full') parts.push('legend');
+    if (p.guides.size && body.nodes.some((n) => n.part === 'size')) parts.push('size');
   } else if (p.layout === 'matrix') {
     body = sceneMatrix(catalog, p.layers, result);
     if (p.guides.y) parts.push('y-axis');

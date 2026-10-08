@@ -1,5 +1,6 @@
 import { formatDimension, formatValue, partialNote, type Catalog, Query, RectNode, Result, Row, Scene } from '@universal-analytics/core';
 import { attr, ensure, paintVar } from './dom.ts';
+import { nearest } from './layouts/points.ts';
 
 /* Hit targets, the keyboard and the readout. A layout marks the element that holds its points with `data-hits`
  * ("x" where they run across, "y" where they run down), and each point is a child carrying `data-row`. Bars in a
@@ -70,6 +71,7 @@ export function hitNodes(scene: Scene): (RectNode & { c: number })[] {
     if (n.part !== 'plot') continue;
     if (n.kind === 'rect' && n.row != null && n.x != null) { const b = bars.get(n.row); bars.set(n.row, [Math.min(b?.[0] ?? n.x, n.x), Math.max(b?.[1] ?? n.x, n.x + (n.w || 0))]); }
     else if (n.kind === 'path') for (const p of n.points) cx.set(p.row, p.x);
+    else if (n.kind === 'circle' && n.row != null && n.x != null) cx.set(n.row, n.x);       // a dot on a time or category axis
   }
   bars.forEach(([lo, hi], row) => cx.set(row, lo + (hi - lo) / 2));
   const at = (scene.rows ?? []).filter((r) => cx.has(r)).map((r) => [r, cx.get(r)!] as const);
@@ -135,6 +137,12 @@ export class Keys {
       if (e.key === 'Escape') { if (this.#at != null) { e.preventDefault(); this.#show(null); } return; }
       const points = this.#points(box), at = points.findIndex((el) => el.getAttribute('data-row') === this.#at);
       if (e.key === 'Enter' || e.key === ' ') { if (at >= 0) { e.preventDefault(); this.#activate(); } return; }
+      // Points in two dimensions: an arrow goes to the nearest point that way (layouts/points.ts). A proposal, not version 4's.
+      if (box.dataset.hits === 'xy') {
+        const near = nearest(e.key, at, points.map((el) => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }));
+        if (near != null) { e.preventDefault(); this.#show(points[near]!.getAttribute('data-row')); }
+        return;
+      }
       const series = at >= 0 && box.dataset.hits === 'x' ? stepSeries(e.key, this.#order.indexOf(this.#series ?? ''), this.#order.length) : null;
       if (series != null) { e.preventDefault(); this.#show(this.#at, this.#order[series] ?? null); return; }
       const to = step(e.key, at, points.length, box.dataset.hits === 'y');

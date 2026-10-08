@@ -11,33 +11,46 @@ import type { Catalog, Container, Layer, Layout, Plan, PlanShape, PresetLibrary,
 const ROLE_NAMES: Partial<Record<Role, string>> = { comparison: 'comparison series', reference: 'reference lines', context: 'context fill' };
 
 /* The layout a layer's fields ask for: what is on x, on y and on color, first match first. `any` asks nothing of its channel. */
-type FieldKind = 'dimension' | 'any';
+type FieldKind = 'dimension' | 'metric' | 'any';
 const LAYOUTS: [x: FieldKind, y: FieldKind, color: FieldKind, layout: Layout][] = [
   ['dimension', 'dimension', 'any',       'matrix'],
   ['dimension', 'any',       'any',       'cartesian'],
   ['any',       'dimension', 'any',       'rows'],
+  ['metric',    'metric',    'any',       'cartesian'],    // a point for each row, at two metrics. Before the band, which asks nothing of x
   ['any',       'any',       'dimension', 'band'],
 ];
 
+/** A metric, or a companion the engine returns with one, such as "pageviews@density". */
+const isMetric = (catalog: Catalog, f: unknown): f is string => typeof f === 'string' && f.split('@')[0]! in catalog.metrics;
+/** Whether a plot sets one metric against another: a point for each row. It has a dimension to key its rows by, and none on x. */
+const isPoints = (catalog: Catalog, layers: Layer[]) => !xDimOf(catalog, layers) && layers.some((l) => isMetric(catalog, l.encode && l.encode.x));
+
 function detectLayout(catalog: Catalog, layers: Layer[]): Layout {
-  const is = (kind: FieldKind, f: unknown) => kind === 'any' || isDim(catalog, f);
+  const is = (kind: FieldKind, f: unknown) => kind === 'any' || (kind === 'metric' ? isMetric(catalog, f) : isDim(catalog, f));
   // Anything on angle is laid out about a centre, whatever else is encoded. It is not a row of the table: that asks about x, y and color.
   if (layers.some((l) => l.encode && l.encode.angle != null)) return 'radial';
   for (const [x, y, color, layout] of LAYOUTS) if (layers.some((l) => l.encode && is(x, l.encode.x) && is(y, l.encode.y) && is(color, l.encode.color))) return layout;
   throw new Error('These layers put no dimension on x, y or color, so there is nothing to lay out.');
 }
 
-function checkLayers(layers: Layer[], q: Query, catalog: Catalog): void {
+function checkLayers(layers: Layer[], q: Query, catalog: Catalog, result: Result): void {
   const by = q.by || [], known = by.concat(q.metrics);
   if (by.length > 2 || (by.length === 2 && by[0] === by[1])) throw new Error('A view is by one dimension or by two different ones, and query.by has: ' + by.join(', ') + '. Remove all but two.');
   layers.forEach((l, i) => {
-    if (!l || !l.mark) throw new Error('Layer ' + (i + 1) + ' has no "mark". Use one of: line, area, bar, rule, text, arc, cell.');
+    if (!l || !l.mark) throw new Error('Layer ' + (i + 1) + ' has no "mark". Use one of: line, area, bar, rule, text, arc, cell, dot.');
     if (l.stack && !isDim(catalog, l.encode && l.encode.color)) throw new Error('Layer ' + (i + 1) + ' has "stack" and no dimension on color, so there is nothing to stack. Encode the query\'s second dimension on color, or remove "stack".');
     Object.entries(l.encode || {}).forEach(([ch, f]) => {
       if (typeof f === 'number') return;
+      if (ch === 'size' && !(f in catalog.metrics)) throw new Error('Layer ' + (i + 1) + ' encodes "' + f + '" on size, and a size is a quantity. Encode one of the query\'s metrics: ' + q.metrics.join(', ') + '.');
+      // A companion of a field the query returns is the engine's to send, so it is looked for in the result. An empty result has none to show.
+      const row = result.rows[0], of = f.split('@')[0]!;
+      if (f !== of && known.indexOf(of) >= 0 && row && !(f in row)) throw new Error('Layer ' + (i + 1) + ' encodes "' + f + '" on ' + ch + ', which the result does not return. With "' + of + '" it returns: ' + (Object.keys(row).filter((c) => c.split('@')[0] === of && c !== of).join(', ') || 'nothing') + '.');
+      if (f !== of && known.indexOf(of) >= 0) return;
       if (known.indexOf(f) < 0) throw new Error('Layer ' + (i + 1) + ' encodes "' + f + '" on ' + ch + ', which the query does not return. It returns: ' + known.join(', ') + '.');
     });
   });
+  // A metric on x and on y is a point for each value of a dimension. With none there is one row at most.
+  if (!by.length && layers.some((l) => l.encode && [l.encode.x, l.encode.y].every((f) => typeof f === 'string' && f in catalog.metrics))) throw new Error('These layers set one metric against another, and the query has no dimension, so there is no row to draw a point for. Add one to query.by, for example ["page"].');
   // Rows come back one per pair. A dimension that no layer encodes would leave several rows drawn in one place.
   const unused = by.length === 2 && layers.length ? by.find((d) => !layers.some((l) => Object.values(l.encode || {}).indexOf(d) >= 0)) : null;
   if (unused) throw new Error('The query is by "' + unused + '", and no layer encodes it, so its rows would be drawn over each other. Encode it on color, or remove it from query.by.');
@@ -50,14 +63,17 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   const m = q.metrics[0]!, M = catalog.metrics[m]!, by = (q.by || [])[0], rules = container.rules || CONTAINER_RULES, keep = spec.keep || [], dropped: string[] = [];
   let layers = (spec.layers || []).slice();
   if (!layers.length && by) throw new Error('This spec has a dimension but no layers, so there is nothing to draw it with. Add "layers", or "use" one of: ' + Object.keys(presets).join(', ') + '.');
-  checkLayers(layers, q, catalog);
+  checkLayers(layers, q, catalog, result);
   if (layers.some((l) => l.series === 'previous') && (q.compare !== 'previous' || result.totals[m + '@previous'] == null)) {
     layers = layers.filter((l) => l.series !== 'previous');
     if (!result.meta.empty) dropped.push(q.compare === 'previous' ? 'comparison series (no prior data)' : 'comparison series (the query has no "compare")');
   }
   const share = layers.some((l) => l.stack === 'normalize' || l.mark === 'arc');
+  // A plot of points has no sparkline form: two metrics need both their axes to be read. So it has no bare rung, and
+  // below the room its axes need it is the number alone. Its `points` rule says so, where the others' is `axes`.
+  const points = !!layers.length && isPoints(catalog, layers);
   const p: PlanShape = { layout: layers.length ? detectLayout(catalog, layers) : 'none', layers, guides: {}, tldrValue: rules.tldrValue.above === 'always' || !!M.instant || !layers.length, side: false, rowLimit: null,
-                         share, text: tldrProse(q, result, share, catalog) };
+                         share, text: tldrProse(q, result, share, catalog, points) };
   if (p.layout === 'cartesian') p.guides = { x: true, y: true, grid: true };
   if (p.layout === 'matrix') { p.guides = { x: true, y: true, ramp: true }; p.text = gridProse(q, result, catalog) ?? p.text; }
   // A split plot starts with its legend. Its rules step that down to a label at the end of each line, where there
@@ -68,6 +84,10 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   // Layers that measure in two units have a y axis on each side, and the second is given up first.
   const twoUnits = p.layout === 'cartesian' && unitsOf(catalog, layers).length > 1;
   if (twoUnits && !short('axis-2')) p.guides.y2 = true;
+  // Labels on the points go first, then the key to sizes. Both are asked once, as the legend is.
+  const labelled = p.layout === 'cartesian' && layers.some((l) => l.mark === 'text'), sized = p.layout === 'cartesian' && layers.some((l) => l.encode && l.encode.size != null);
+  if (labelled && !short('point-labels')) p.guides.pointLabels = true;
+  if (sized && !short('size')) p.guides.size = true;
   if (p.layout === 'band') p.guides = { legend: 'full' };
   // A circle divided by a dimension has the band's legend. One that reads a metric against its range has none.
   if (p.layout === 'radial' && layers.some((l) => isDim(catalog, l.encode && l.encode.color))) p.guides = { legend: 'full' };
@@ -81,7 +101,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   // The view rule the layout stands on now, and the room beside its part that only measuring gives:
   // a number wider than the bare plot's rule allows it, or a row's widest value.
   function guard(): { rule?: FitRule; measured: number } {
-    if (p.layout === 'cartesian') return p.side ? { rule: rule('marks'), measured: Math.max(0, container.displayWidth(valueLen) - rules.bare.numberWidth) } : { rule: rule('axes'), measured: 0 };
+    if (p.layout === 'cartesian') return p.side ? { rule: rule('marks'), measured: Math.max(0, container.displayWidth(valueLen) - rules.bare.numberWidth) } : { rule: (points && rule('points')) || rule('axes'), measured: 0 };
     if (p.layout === 'rows') return { rule: rule('marks'), measured: valueRoomOf(catalog, p.layers, result.rows) };
     if (p.layout === 'band') return { rule: rule(p.guides.legend === 'full' ? 'legend' : 'marks'), measured: 0 };
     if (p.layout === 'radial') return { rule: rule(p.guides.legend === 'full' ? 'legend' : 'marks'), measured: 0 };
@@ -110,6 +130,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   }
   const act: Record<ReductionId, () => string | null> = {
     'drop-guides': () => {
+      if (p.layout === 'cartesian' && points) return null;                 // no bare plot: the next step that applies is the number
       if (p.layout === 'cartesian' && (p.guides.x || p.guides.y || p.guides.grid)) { p.guides = { x: false, y: false, grid: false }; p.tldrValue = true; p.side = true; return 'axes and grid (added the number to make up for them)'; }
       if (p.layout === 'band' && p.guides.legend === 'full') { p.guides = { legend: 'top' }; return 'the legend, except the largest segment'; }
       // A circle steps down as a band does, and then once more: it is still worth drawing with no legend at all.
@@ -159,8 +180,10 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   if (p.layout === 'cartesian' && p.guides.y && twoUnits && !p.guides.y2) dropped.push('the second y axis');
   // place() leaves the number out of a hole too small for it, by the `hole` rule and by the number's own width.
   if (p.layout === 'radial' && buildScene(p, q, result, catalog).parts.includes('hole') && !scene.nodes.some((n) => n.key === 'hole')) dropped.push('the number in the hole');
+  if (p.layout === 'cartesian' && p.guides.x && labelled && !p.guides.pointLabels) dropped.push('the labels on the points');
+  if (p.layout === 'cartesian' && p.guides.x && sized && !p.guides.size) dropped.push('the key to sizes');
   const midTick = rule('mid-tick');
-  if (p.layout === 'cartesian' && p.guides.x && midTick && applies(midTick, { view: { inline: container.width } }) && catalog.dimensions[xDimOf(catalog, p.layers)!]!.type === 'time') dropped.push('the middle date label');
+  if (p.layout === 'cartesian' && p.guides.x && midTick && applies(midTick, { view: { inline: container.width } }) && catalog.dimensions[xDimOf(catalog, p.layers)!]?.type === 'time') dropped.push('the middle date label');
 
   return {
     preset: spec0.use && !spec0.layers ? spec0.use : null, layout: p.layout,

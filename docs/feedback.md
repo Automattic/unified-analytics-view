@@ -313,6 +313,38 @@ Found while building `docs/chart-coverage-plan.md` on October 8, by the agents t
 - The colours, by a person.
 - After the merge with `dom-painter`: a structural pass of all 34 samples in both painters, the table on twelve, hover and data changes, in headless Chromium. No errors but item 1. Screenshots were not read again.
 
+## Before testing against real data
+
+October 8. Six items above were picked as the ones that would make real data read as wrong, and built by three agents on branches merged into `real-data-prep`. What the real data looks like was read from `spacefast-monorepo`, branch `jblz-tracker` at `ef798685ad`: a tracker and its wire contract, with no ingestion, store or query API yet. The merged tree was read in Chromium in `<ua-view>`: 175 views, no console errors, none blank.
+
+### Built
+
+1. **Units** (open item 25). `916a90c`, `49da2df`. `formatValue` branches on `count`, `ratio`, `percent`, `usd`, `ms`, `s` and `bytes`, and an unknown unit is an error that names the valid ones. The tldr value, ticks, point labels, the size key, the ramp's ends and the prose all go through it. Money is in major units, as the tracker sends it. Rates work at either scale, since the query API has not chosen one.
+2. **Time values** (review item 5). `be71d44`. A bare date or a full ISO datetime, always UTC; a bucket off midnight reads "Sep 8, 3 PM". Row labels and band and radial legend names go through `formatDimension`, a departure from the prototype with its own describe.
+3. **The one-line legend's key is `legend-top`** (review item 3). `2deb6b3`. Mapped in `ourKeys`; a segment named "top" has a test.
+4. **The containers are `vg-view` and `vg-plot`** (review item 1). `5206a81`. The fit rules' data keeps `view` and `plot`; the compiler writes the prefix. Inside a wrapper named `view` four views now match the unwrapped ones.
+5. **The readout and the table list only the companions a layer encodes** (open item 15). `6aff38c`. The dumbbell no longer says "rank". The box plot no longer says `lower` and `upper`, which it never drew.
+6. **Rows with no shape are counted in a note** (open item 18). `10ff680`, `a1899c6`, `079d953`. "4 countries not shown", under the map, dropped with the ramp by the `guides` rule. An empty or null value is counted too.
+7. **The shapes were keyed on country names,** so every real result would have matched nothing and thrown. `682883f`. 122 of 123 are keyed on ISO 3166-1 alpha-2 now, the name kept beside it; Somaliland has no code. The fixtures send codes. The match is exact.
+
+### Open, from building them
+
+1. **A country reads as its code** in the fallback list, the tldr prose, the readout and the table. They are written in core and the DOM painter from the row's value. Recommended: the catalog marks the dimension, and `formatDimension` names the value with `Intl.DisplayNames`. **To decide.**
+2. **The midnight bucket of an hourly result reads as a day.** Grain is read from the value. The result should state it. **To decide,** with the query API.
+3. **A number dimension has no unit** (reference, Open 11), so load time on an axis still has no "s".
+4. **Every companion is written in its metric's unit,** so a rank or a density of a duration would be mis-suffixed. No sample has one.
+5. **The instant value and its prose are still raw counts.**
+6. **A map 280 to 319 px wide shows neither its ramp nor the note.** The note goes with the `guides` rule; `plan.dropped` says only "the colour ramp".
+7. **The fallback list shows an unknown country as a blank label.**
+8. **The "$" widens the value column by 6.6 px,** so the conversions view drops it at 322 px, not 315.
+9. `geoMark` accepts a feature with a name and no id. It rejected one before.
+
+### Not verified
+
+- The pixel painter after the merge, beyond the test run. Each agent looked at it on its own branch.
+- Hover, the table and the dark theme after the merge. The spike page's seven verdicts after the container rename: they stayed at "running" in a background tab, on the baseline too.
+- Safari and Firefox.
+
 ## Bugs
 
 1. **Prototype: duplicate keys on a one-row time series.** A time series with exactly one row emits two `xtick` nodes with the same key. No swept case reaches it. Fixed in `37edd5d`, as a departure from the prototype on purpose: one row has one tick. It has its own test, which shows the prototype's two and says why ours differs. The prototype itself is unchanged.

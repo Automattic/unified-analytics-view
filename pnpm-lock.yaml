@@ -80,6 +80,9 @@ importers:
       '@universal-analytics/geo':
         specifier: workspace:*
         version: link:../../packages/geo
+      '@universal-analytics/spacefast':
+        specifier: workspace:*
+        version: link:../../packages/spacefast
       '@universal-analytics/tokens':
         specifier: workspace:*
         version: link:../../packages/tokens

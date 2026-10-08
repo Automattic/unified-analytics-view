@@ -368,6 +368,22 @@ Open:
 6. **`other` and `truncated` are dropped.** A result has no place for them.
 7. **A custom range reads as a count of days,** "last 31 days", whatever its ends. An hourly bucket at midnight still reads as a day: the answer states its grain and core does not take one.
 
+### On the live API
+
+October 8. The API is served for the synthetic `seed` space, and the bench's `live` page asks it from the browser: two batches a range, each answer through `adapt`, twenty views. Read in Chromium at 7, 30 and 90 days, light and dark, as tables: none blank, no console errors. The contract was reread at `b1e28cc` (spacefast/monorepo#3665) and the recorded examples replaced with that branch's.
+
+One thing the note above had wrong: buckets do not snap. A `window` ends now and starts as long before, so the first bucket of a series is `complete: false` as well as the last. The line builder took every partial row for the tail and drew a dash from the last whole day back to the first. It now dashes in from a leading partial bucket (`:partial:lead`) and out to a trailing one. The adapter's note about today is said only when the last bucket is the unfinished one.
+
+The page is now the prototype of the analytics sidebar the tracking snippet will open on a site: a panel against the page's edge, 400px wide, with a range of 7, 30 or 90 days and nothing of the bench around it. Its content is the Earn attention goal as far as the API serves it, the one goal whose headline metrics it answers in full: tiles for visitors (as visitor-days, which have a total over a range where visitors a day have none), page views and engaged time, a trend of each, top pages, pages then and now, engaged time by page, referrers with their change, and scroll depth. Scroll depth is the page views in each bucket of deepest scroll, not the share who reached each depth: that is a running total, which core does not compute. It borrows the chrome of the `sidebar` mock-up, without the parts nothing backs yet: this page or the whole site, now or trends, and a switch for the comparison.
+
+What the real answers showed, not fixed:
+
+- **The previous period's line dips at both ends.** Its first and last buckets are part days too, and a comparison is drawn whole. Asking in whole UTC days (`since` and `until` on midnights) would avoid it; a `window` cannot.
+- **A readout says "so far" of the first bucket,** which is not filling. `partialNote` has one wording for both ends.
+- **Visitors a day has no total over a range,** so its trend is headed by a dash and "No prior period", though there is one.
+- **A share bar's legend writes `null`** for a value that is null (operating system), where a bar list writes a dash.
+- **`@rank` goes on the first metric,** and the API now orders by the first that is not money. Nothing reads `@rank` yet.
+
 ## Bugs
 
 1. **Prototype: duplicate keys on a one-row time series.** A time series with exactly one row emits two `xtick` nodes with the same key. No swept case reaches it. Fixed in `37edd5d`, as a departure from the prototype on purpose: one row has one tick. It has its own test, which shows the prototype's two and says why ours differs. The prototype itself is unchanged.

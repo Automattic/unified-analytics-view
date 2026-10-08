@@ -1,0 +1,32 @@
+/* The analytics sidebar, where a site carries it: a sheet of frosted glass standing off the page's edge, the page's
+ * height, with its content scrolling under its header. The grid and the discs on the body stand in for the site. */
+body { min-block-size: 100vh; padding: 0; border-radius: 0; }
+#panel { --edge: var(--ua-space-xs); --move: var(--ua-charts-motion-duration-update) var(--ua-charts-motion-easing-update);
+  --enter: var(--ua-charts-motion-duration-entrance) var(--ua-charts-motion-easing-entrance); --exit: var(--ua-charts-motion-duration-exit) var(--ua-charts-motion-easing-exit);
+  position: fixed; inset: var(--edge) var(--edge) var(--edge) auto; inline-size: 400px; max-inline-size: calc(100% - 2 * var(--edge)); grid-template-rows: auto minmax(0, 1fr);
+  transition: inline-size var(--move), inset var(--move), border-radius var(--move), translate var(--enter), opacity var(--enter), visibility 0s; }
+#panel .content { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--ua-space-xs); align-content: start; overflow-y: auto; transition: opacity var(--enter); }
+#panel .content[aria-busy] { opacity: .5; }
+#panel .top { gap: var(--ua-space-2xs); }
+#panel .segmented button { white-space: nowrap; }
+.tools { display: flex; align-items: center; gap: var(--ua-space-5xs); }
+.tools button { display: grid; padding: var(--ua-space-3xs); }
+:is(.tools, #launcher) svg { inline-size: 16px; block-size: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+/* Expanded, the panel is the page: edge to edge, cards side by side as they fit, under the tiles. */
+#panel[data-full] { inset: 0 0 0 auto; inline-size: 100%; max-inline-size: 100%; border-radius: 0; }
+#panel[data-full] .content { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+#panel[data-full] .tiles { grid-column: 1 / -1; }
+/* Hidden, it is off the page's edge, and leaving is quicker than arriving. What arrives is visible at once, so it can take
+ * focus, and what leaves stays visible until it has gone. */
+#panel[data-hidden] { translate: calc(100% + var(--edge)) 0; opacity: 0; visibility: hidden;
+  transition: inline-size var(--move), inset var(--move), border-radius var(--move), translate var(--exit), opacity var(--exit), visibility 0s var(--ua-charts-motion-duration-exit); }
+/* All that is left then is the button that brings it back, where the panel's own button to hide it was. */
+#launcher { position: fixed; inset-block-start: calc(var(--ua-space-xs) + var(--ua-space-s)); inset-inline-end: calc(var(--ua-space-xs) + var(--ua-space-s)); display: grid; padding: var(--ua-space-3xs);
+  border: 0; border-radius: var(--ua-radius-md); color: var(--ua-color-foreground); cursor: pointer; opacity: 0; scale: .8; visibility: hidden;
+  transition: opacity var(--ua-charts-motion-duration-exit), scale var(--ua-charts-motion-duration-exit) var(--ua-charts-motion-easing-exit), visibility 0s var(--ua-charts-motion-duration-exit); }
+#panel[data-hidden] + #launcher { opacity: 1; scale: 1; visibility: visible;
+  transition: opacity var(--ua-charts-motion-duration-entrance), scale var(--ua-charts-motion-duration-entrance) var(--ua-charts-motion-easing-entrance), visibility 0s; }
+@media (prefers-reduced-motion: reduce) { #panel, #panel[data-hidden], #launcher, #panel[data-hidden] + #launcher { transition: none; } }
+/* The three numbers that head the panel: in a row on the glass itself, with no card around each. */
+#panel .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+#panel .tiles .card { padding: 0; background: none; border: 0; }

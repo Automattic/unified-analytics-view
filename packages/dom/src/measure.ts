@@ -65,13 +65,13 @@ export function apart(ys: number[], line: number, room: number): (number | null)
 export function readNumber(ruler: HTMLElement[]): NumberSizes {
   const child = (el: Element, cls: string) => el.querySelector<HTMLElement>(':scope > .' + cls);
   const size = (el: HTMLElement) => { const r = el.getBoundingClientRect(); return { inline: r.width, block: r.height }; };
-  const first = ruler[0]!, delta = child(first, 'vg-f-value'), note = child(first, 'vg-f-tick');
+  const first = ruler[0]!, delta = child(first, 'uav-f-value'), note = child(first, 'uav-f-tick');
   return {
     forms: ruler.flatMap((el) => {
-      const value = child(el, 'vg-f-display'), sub = child(el, 'vg-f-tick'), box = el.getBoundingClientRect();
+      const value = child(el, 'uav-f-display'), sub = child(el, 'uav-f-tick'), box = el.getBoundingClientRect();
       return value ? [{ fit: el.dataset.fit || '', inline: value.getBoundingClientRect().right - box.left, block: box.height - (sub ? size(sub).block : 0) }] : [];
     }),
-    delta: delta && child(delta, 'vg-short') ? size(delta).inline : null,
+    delta: delta && child(delta, 'uav-short') ? size(delta).inline : null,
     note: note && size(note),
   };
 }

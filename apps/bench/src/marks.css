@@ -8,7 +8,7 @@
 .specimen { margin: 0; min-inline-size: 0; }
 .specimen figcaption { margin-block-start: var(--ua-space-4xs); font-size: var(--ua-font-size-xs); color: var(--ua-color-muted-foreground); }
 /* A surface, with room around the view as a card gives it. A view's label halo takes the surface's colour. */
-.surface { box-sizing: border-box; padding: var(--ua-space-s); background: var(--surface); border: 1px solid var(--ua-color-border); border-radius: var(--ua-radius-lg); --a8c-charts-color-background: var(--surface); }
+.surface { box-sizing: border-box; padding: var(--ua-space-s); background: var(--surface); border: 1px solid var(--ua-color-border); border-radius: var(--ua-radius-lg); --ua-charts-color-background: var(--surface); }
 
 /* Both themes: the page twice, side by side. Each half is as tall as what it holds (marks.ts), so the page scrolls both. */
 .both { display: grid; grid-template-columns: 1fr 1fr; gap: var(--ua-space-s); align-items: start; }

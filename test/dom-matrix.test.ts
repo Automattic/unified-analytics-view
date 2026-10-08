@@ -26,17 +26,17 @@ describe('stepCell', () => {
 
 describe('the matrix layout', () => {
   const css = compileFitRules(FIT_RULES.filter((r) => r.layout === 'matrix'), { matrix: matrix.fit! });
-  const fig = (keep: string) => '.vg[data-layout="matrix"]:not([data-keep~="' + keep + '"])';
+  const fig = (keep: string) => '.uav[data-layout="matrix"]:not([data-keep~="' + keep + '"])';
   it('sets each cell in its track by two custom properties, in a grid whose tracks are counted by two more', () => {
-    expect(matrix.css).toContain('grid-template: repeat(var(--vg-ny), minmax(0, 1fr)) / repeat(var(--vg-nx), minmax(0, 1fr));');
-    expect(matrix.css).toContain('.vg-cells i { grid-area: var(--vg-cy) / var(--vg-cx);');
+    expect(matrix.css).toContain('grid-template: repeat(var(--uav-ny), minmax(0, 1fr)) / repeat(var(--uav-nx), minmax(0, 1fr));');
+    expect(matrix.css).toContain('.uav-cells i { grid-area: var(--uav-cy) / var(--uav-cx);');
   });
   it('gives up the ramp, then the body for the number, by width and by height', () => {
-    expect(css).toContain('@container vg-view (inline-size < 239.5px) {\n  ' + fig('guides') + ' .vg-ramp { display: none; }\n}');
-    expect(css).toContain('@container vg-view (block-size < 149.5px) {\n  ' + fig('guides') + ' .vg-ramp { display: none; }\n}');
-    const alone = ['  ' + fig('marks') + ' :is(.vg-plot, .vg-ramp) { display: none; }', '  ' + fig('marks') + ' .vg-number { display: block; }',
-      '  ' + fig('marks') + ' { grid-template: "number" auto / minmax(0, 1fr); }', '  ' + fig('marks') + ' .vg-body { display: none; }', '  ' + fig('marks') + ' .vg-number { margin: 0; }', '}'].join('\n');
-    expect(css).toContain('@container vg-view (inline-size < 149.5px) {\n' + alone);
-    expect(css).toContain('@container vg-view (block-size < 89.5px) {\n' + alone);
+    expect(css).toContain('@container uav-view (inline-size < 239.5px) {\n  ' + fig('guides') + ' .uav-ramp { display: none; }\n}');
+    expect(css).toContain('@container uav-view (block-size < 149.5px) {\n  ' + fig('guides') + ' .uav-ramp { display: none; }\n}');
+    const alone = ['  ' + fig('marks') + ' :is(.uav-plot, .uav-ramp) { display: none; }', '  ' + fig('marks') + ' .uav-number { display: block; }',
+      '  ' + fig('marks') + ' { grid-template: "number" auto / minmax(0, 1fr); }', '  ' + fig('marks') + ' .uav-body { display: none; }', '  ' + fig('marks') + ' .uav-number { margin: 0; }', '}'].join('\n');
+    expect(css).toContain('@container uav-view (inline-size < 149.5px) {\n' + alone);
+    expect(css).toContain('@container uav-view (block-size < 89.5px) {\n' + alone);
   });
 });

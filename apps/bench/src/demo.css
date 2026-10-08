@@ -36,7 +36,7 @@
 
 /* A card stands on the page as a surface one level up. The label halo in a view takes the card's colour. */
 .card { box-sizing: border-box; padding: var(--ua-space-xs) var(--ua-space-s) var(--ua-space-s); background: var(--ua-color-surface-card); border: 1px solid var(--ua-color-border);
-  border-radius: var(--ua-radius-lg); --a8c-charts-color-background: var(--ua-color-surface-card); }
+  border-radius: var(--ua-radius-lg); --ua-charts-color-background: var(--ua-color-surface-card); }
 .card h3, .panel h3 { font-weight: 500; color: var(--ua-color-muted-foreground); }
 
 .surfaces { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--ua-space-l); align-items: start; }
@@ -48,7 +48,7 @@
 .board .ua-row { min-block-size: 0; }
 /* The panel: frosted glass at sidebar width, over whatever page it opens on. */
 .stage { padding: var(--ua-space-l); border-radius: var(--ua-radius-xl); border: 1px solid var(--ua-color-border); }
-.panel { box-sizing: border-box; inline-size: 346px; padding: var(--ua-space-s); display: grid; gap: var(--ua-space-s); --a8c-charts-color-background: var(--ua-color-surface-card); }
+.panel { box-sizing: border-box; inline-size: 346px; padding: var(--ua-space-s); display: grid; gap: var(--ua-space-s); --ua-charts-color-background: var(--ua-color-surface-card); }
 .panel header { display: flex; justify-content: space-between; align-items: baseline; }
 .panel header b { font-size: var(--ua-font-size-sm); }
 .panel header span { font-size: var(--ua-font-size-xs); color: var(--ua-color-muted-foreground); }

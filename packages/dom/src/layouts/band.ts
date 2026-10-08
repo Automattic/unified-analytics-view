@@ -1,32 +1,34 @@
 import type { RectNode, Scene, TextNode } from '@universal-analytics/core';
 import { ensure, keyed, prop, text } from '../dom.ts';
+import { token } from '../tokens.ts';
 import { NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
 
 /* One band, split by colour, and its legend. Segments are flex items that grow by their share, so the band needs no
  * width. The scene holds both legends: the full one is a grid of swatch, label and share, the one-line one a line of
- * text. The stylesheet shows one of them. Sizes are the pixel painter's: a 24 px bar and 24 px to a legend row. */
+ * text. The stylesheet shows one of them. Sizes are the pixel painter's: a 24 px bar and 24 px to a legend row, of which
+ * 20 are the line's where a label is 13 px. The line follows the label's face from there (--uav-legend-line, view.ts). */
 const css = `
-.vg-band { display: flex; gap: 2px; block-size: 24px; }
-.vg-band i { flex: var(--vg-v) 1 0px; min-inline-size: 0; background: var(--vg-paint); border-radius: var(--a8c-charts-border-radius-bar, 2px); }
-.vg-legend { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; grid-auto-rows: 20px; gap: 4px 8px; align-items: center; margin-block-start: 10px; }
-.vg-legend i { grid-column: 1; block-size: 12px; border-radius: 2px; background: var(--vg-paint); }
-.vg-legend span, .vg-legend-top span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--vg-paint); }
-.vg-legend .vg-f-label { grid-column: 2; }
-.vg-legend .vg-f-value { grid-column: 3; justify-self: end; }
-.vg-legend-top { display: none; }
-.vg-legend-top span { display: block; padding-block-start: 3px; line-height: 21px; }
+.uav-band { display: flex; gap: 2px; block-size: 24px; }
+.uav-band i { flex: var(--uav-v) 1 0px; min-inline-size: 0; background: var(--uav-paint); border-radius: ${token('border-radius-bar')}; }
+.uav-legend { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; grid-auto-rows: var(--uav-legend-line); gap: 4px 8px; align-items: center; margin-block-start: 10px; }
+.uav-legend i { grid-column: 1; block-size: 12px; border-radius: ${token('border-radius-swatch')}; background: var(--uav-paint); }
+.uav-legend span, .uav-legend-top span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--uav-paint); }
+.uav-legend .uav-f-label { grid-column: 2; }
+.uav-legend .uav-f-value { grid-column: 3; justify-self: end; }
+.uav-legend-top { display: none; }
+.uav-legend-top span { display: block; padding-block-start: 3px; line-height: calc(21 / 13); }
 /* The plan names one legend, and with no limits it is the full one. */
-.vg[data-layout="band"]:not([data-parts~="legend"]) .vg-legend { display: none; }
-.vg[data-layout="band"][data-parts~="legend-top"] .vg-legend-top { display: block; }
+.uav[data-layout="band"]:not([data-parts~="legend"]) .uav-legend { display: none; }
+.uav[data-layout="band"][data-parts~="legend-top"] .uav-legend-top { display: block; }
 /* In a box the body is a size container, so cqb is the room the band and its legend have. The full legend needs the
- * bar, 10 px and 24 px a row less the last gap: a height that depends on the data, which a container query cannot
+ * bar, 10 px and a line and its 4 px gap for each row, less the last gap: a height that depends on the data, which a container query cannot
  * hold, so paint() states the row count and a clamp does the swap. The legend that goes gives up its gap as well, or
  * the one-line legend would stand 10 px low and be cut. A box too short for either clips. */
-@container vg-view (block-size >= 0px) {
-  .vg[data-layout="band"] .vg-body { container-type: size; overflow: hidden; --vg-legend-block: calc(30px + var(--vg-rows, 1) * 24px); }
-  .vg[data-layout="band"]:not([data-keep~="guides"]) .vg-legend { overflow: hidden; max-block-size: max(0px, (100cqb - var(--vg-legend-block) + 0.01px) * 999999);
-    margin-block-start: clamp(0px, (100cqb - var(--vg-legend-block) + 0.01px) * 999999, 10px); }
-  .vg[data-layout="band"]:not([data-keep~="guides"]) .vg-legend-top { display: block; overflow: hidden; max-block-size: max(0px, (var(--vg-legend-block) - 100cqb) * 999999); }
+@container uav-view (block-size >= 0px) {
+  .uav[data-layout="band"] .uav-body { container-type: size; overflow: hidden; --uav-legend-block: calc(30px + var(--uav-rows, 1) * (var(--uav-legend-line) + 4px)); }
+  .uav[data-layout="band"]:not([data-keep~="guides"]) .uav-legend { overflow: hidden; max-block-size: max(0px, (100cqb - var(--uav-legend-block) + 0.01px) * 999999);
+    margin-block-start: clamp(0px, (100cqb - var(--uav-legend-block) + 0.01px) * 999999, 10px); }
+  .uav[data-layout="band"]:not([data-keep~="guides"]) .uav-legend-top { display: block; overflow: hidden; max-block-size: max(0px, (var(--uav-legend-block) - 100cqb) * 999999); }
 }`;
 
 export const band: LayoutPainter = {
@@ -34,7 +36,7 @@ export const band: LayoutPainter = {
   css,
   fit: {
     // The rule's data only sets a switch. This is the swap, whatever the box's height says.
-    legend: { '.vg-legend': 'display: none;', '.vg-legend-top': 'display: block; max-block-size: none;' },
+    legend: { '.uav-legend': 'display: none;', '.uav-legend-top': 'display: block; max-block-size: none;' },
     // The number alone. The body goes whole, the one-line legend with it, and so does its grid row.
     marks: NUMBER_ALONE,
     'marks-block': NUMBER_ALONE,
@@ -45,10 +47,10 @@ export const band: LayoutPainter = {
 
   paint(body, scene) {
     const rows = scene.rows ?? [], nodes = (part: string) => scene.nodes.filter((n) => n.part === part);
-    const segs = ensure(body, 'div', 'vg-band');
+    const segs = ensure(body, 'div', 'uav-band');
     segs.setAttribute('data-hits', 'x');                                     // each segment is its own hit target
-    prop(body, '--vg-rows', rows.length);
-    keyed(segs, nodes('band').filter((n): n is RectNode => n.kind === 'rect'), () => 'i', (el, n) => prop(el, '--vg-v', n.v));
+    prop(body, '--uav-rows', rows.length);
+    keyed(segs, nodes('band').filter((n): n is RectNode => n.kind === 'rect'), () => 'i', (el, n) => prop(el, '--uav-v', n.v));
     paintLegend(body, scene);
   },
 };
@@ -56,6 +58,6 @@ export const band: LayoutPainter = {
 /** Both legends of a whole split by colour, after whatever the body holds already. A circle of arcs has the same two. */
 export function paintLegend(body: HTMLElement, scene: Scene): void {
   const nodes = (part: string) => scene.nodes.filter((n) => n.part === part);
-  keyed(ensure(body, 'div', 'vg-legend'), nodes('legend'), (n) => (n.kind === 'text' ? 'span' : 'i'), (el, n) => { if (n.kind === 'text') text(el, n); });
-  keyed(ensure(body, 'div', 'vg-legend-top'), nodes('legend-top').filter((n): n is TextNode => n.kind === 'text'), () => 'span', text);
+  keyed(ensure(body, 'div', 'uav-legend'), nodes('legend'), (n) => (n.kind === 'text' ? 'span' : 'i'), (el, n) => { if (n.kind === 'text') text(el, n); });
+  keyed(ensure(body, 'div', 'uav-legend-top'), nodes('legend-top').filter((n): n is TextNode => n.kind === 'text'), () => 'span', text);
 }

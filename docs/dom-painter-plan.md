@@ -53,19 +53,19 @@ The trend view's rules, carrying today's thresholds over unchanged:
 **Compiled** (by `compileFitRules` in `packages/dom`, once per rule set, into a constructed stylesheet the shadow root adopts). Corrected at step 4 from what the spike found: one `@container` block per need, never an `or` across both axes, because a width-only container passes over a query that names its height, the inline half included. Corrected again in review: each query asks for half a pixel under its need, because at a fractional zoom a container laid out at exactly the need measures a hair under it, and the part would go at the very size its rule says it fits.
 
 ```css
-@container vg-view (inline-size < 279.5px) {
-  .vg[data-layout="cartesian"]:not([data-keep~="guides"]) :is(.vg-x-axis, .vg-y-axis, .vg-grid) { display: none; }
-  .vg[data-layout="cartesian"]:not([data-keep~="guides"]) .vg-number { display: block; }
-  .vg[data-layout="cartesian"]:not([data-keep~="guides"]) { --vg-arrange: side; /* then what the layout module adds */ }
+@container uav-view (inline-size < 279.5px) {
+  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) :is(.uav-x-axis, .uav-y-axis, .uav-grid) { display: none; }
+  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) .uav-number { display: block; }
+  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) { --uav-arrange: side; /* then what the layout module adds */ }
 }
-@container vg-view (block-size < 119.5px) { /* the same three rules */ }
-@container vg-plot (inline-size < 179.5px) {
-  .vg[data-layout="cartesian"]:not([data-keep~="secondary"]) :is([data-role="comparison"], [data-role="reference"], [data-role="context"]) { display: none; }
+@container uav-view (block-size < 119.5px) { /* the same three rules */ }
+@container uav-plot (inline-size < 179.5px) {
+  .uav[data-layout="cartesian"]:not([data-keep~="secondary"]) :is([data-role="comparison"], [data-role="reference"], [data-role="context"]) { display: none; }
 }
-@container vg-plot (block-size < 89.5px) { /* the same rule */ }
+@container uav-plot (block-size < 89.5px) { /* the same rule */ }
 ```
 
-A rule's data cannot say everything that changes with it: the grid areas, the gap and the bare plot height all switch with the axes. Each layout module supplies those declarations by rule id, and the compiler writes them under the same condition and `keep`. A `set` entry is written as a custom property (`--vg-arrange: side`), which nothing styles from; it is there to be read. `x-tick.mid` compiles to the ranked x label, `.vg-x-axis [data-rank]`. The base styles sit in a cascade layer, so a compiled rule beats them whatever its specificity, and rules are written in order, so a later rule beats an earlier one.
+A rule's data cannot say everything that changes with it: the grid areas, the gap and the bare plot height all switch with the axes. Each layout module supplies those declarations by rule id, and the compiler writes them under the same condition and `keep`. A `set` entry is written as a custom property (`--uav-arrange: side`), which nothing styles from; it is there to be read. `x-tick.mid` compiles to the ranked x label, `.uav-x-axis [data-rank]`. The base styles sit in a cascade layer, so a compiled rule beats them whatever its specificity, and rules are written in order, so a later rule beats an earlier one.
 
 **Height on the view.** A view in a row or a tile is handed a height as well as a width, so the `view` rules carry a `block` need too: 120 px for a plot with axes and 46 px for a bare one, both from `CONTAINER_RULES`. A view that takes its natural height is a width-only container, where a `block-size` query is unknown and never matches, so the same compiled rules serve both. Step 1's sweep checks that these numbers reproduce what `resolve()` does under its six height limits; if they do not, that is reported, not tuned quietly.
 
@@ -116,60 +116,69 @@ One custom element, `<ua-view>`, with an open shadow root. It takes `spec`, `res
 ```html
 <ua-view>                                     <!-- :host is the `view` container -->
   #shadow-root
-  <figure class="vg" data-layout="cartesian" data-keep="" aria-describedby="s">
-    <figcaption id="s" class="vg-prose">Visitors: 10.5k in the last 28 days, up 12%…</figcaption>
-    <div class="vg-number">                   <!-- value, delta, note -->
-    <div class="vg-body">                     <!-- the layout's own: one module per layout paints into it -->
-      <div class="vg-y-axis"> <span style="--vg-t:.25" data-rank="1">200</span> … </div>
-      <div class="vg-plot">                   <!-- the `plot` container; definite block size -->
-        <div class="vg-grid"> <i style="--vg-t:.25"></i> … </div>
-        <div class="vg-bars"> <i data-row="2026-09-08" style="--vg-x:.01; --vg-w:.03; --vg-v:.6"></i> … </div>
+  <figure class="uav" data-layout="cartesian" data-keep="" aria-describedby="s">
+    <figcaption id="s" class="uav-prose">Visitors: 10.5k in the last 28 days, up 12%…</figcaption>
+    <div class="uav-number">                   <!-- value, delta, note -->
+    <div class="uav-body">                     <!-- the layout's own: one module per layout paints into it -->
+      <div class="uav-y-axis"> <span style="--uav-t:.25" data-rank="1">200</span> … </div>
+      <div class="uav-plot">                   <!-- the `plot` container; definite block size -->
+        <div class="uav-grid"> <i style="--uav-t:.25"></i> … </div>
+        <div class="uav-bars"> <i data-row="2026-09-08" style="--uav-x:.01; --uav-w:.03; --uav-v:.6"></i> … </div>
         <svg viewBox="0 0 100 100" preserveAspectRatio="none">
           <path data-key="context:area" data-role="context" />
           <path data-key="comparison:line" data-role="comparison" />
           <path data-key="primary:line" data-role="primary" />
           <path data-key="primary:line:partial" data-role="primary" />
         </svg>
-        <div class="vg-refs"> … </div>        <!-- rules and their labels -->
-        <div class="vg-hits"> <i data-row="2026-09-08" style="--vg-x:.0"></i> … </div>   <!-- step 5 -->
+        <div class="uav-refs"> … </div>        <!-- rules and their labels -->
+        <div class="uav-hits"> <i data-row="2026-09-08" style="--uav-x:.0"></i> … </div>   <!-- step 5 -->
       </div>
-      <div class="vg-x-axis"> <span style="--vg-x:0">Sep 8</span> <span data-rank="1" style="--vg-x:.5">Sep 21</span> … </div>
+      <div class="uav-x-axis"> <span style="--uav-x:0">Sep 8</span> <span data-rank="1" style="--uav-x:.5">Sep 21</span> … </div>
     </div>
-    <table class="vg-table">…</table>         <!-- the same result as a table; shown by the `table` attribute -->
+    <table class="uav-table">…</table>         <!-- the same result as a table; shown by the `table` attribute -->
   </figure>
 </ua-view>
 ```
 
-- **`view`** is the host element. In CSS the container is named `vg-view`, and the plot's `vg-plot`: a rule's data keeps the plain names and the compiler writes the prefix, so a page that names a container of its own `view` does not answer the view's queries. By default it is `container-type: inline-size`: it fills the width it is handed and takes its natural height. It cannot collapse, whatever it is dropped into. A surface layout that hands out a box (section 4.2) makes it `container-type: size`, and the plot fills the height left over. Both behaviours have to exist, because an element whose height can be queried cannot also take its height from its content. The view is never told which it is: the layout sets it, in the layout's own CSS.
-- **`plot`** is `container-type: size`. Its height is always definite: the leftover when the view was handed a box, and otherwise a size from the context's rule set, read as a custom property (`axes.height` and `bare.height`, 184 and 46 px by default). The painter hard-codes neither. That definite height is what makes height queries on the plot legal. As built at step 4, the stated `block-size` is on `.vg-body`, which holds the plot and its axes, so 184 px is the height of the whole view as it is in pixels; the plot takes what the x axis leaves. One rule, `@container vg-view (block-size >= 0px) { .vg-body { block-size: auto; } }`, matches only when the view was handed a box, and the body then fills it.
+- **`view`** is the host element. In CSS the container is named `uav-view`, and the plot's `uav-plot`: a rule's data keeps the plain names and the compiler writes the prefix, so a page that names a container of its own `view` does not answer the view's queries. By default it is `container-type: inline-size`: it fills the width it is handed and takes its natural height. It cannot collapse, whatever it is dropped into. A surface layout that hands out a box (section 4.2) makes it `container-type: size`, and the plot fills the height left over. Both behaviours have to exist, because an element whose height can be queried cannot also take its height from its content. The view is never told which it is: the layout sets it, in the layout's own CSS.
+- **`plot`** is `container-type: size`. Its height is always definite: the leftover when the view was handed a box, and otherwise a size from the context's rule set, read as a custom property (`axes.height` and `bare.height`, 184 and 46 px by default). The painter hard-codes neither. That definite height is what makes height queries on the plot legal. As built at step 4, the stated `block-size` is on `.uav-body`, which holds the plot and its axes, so 184 px is the height of the whole view as it is in pixels; the plot takes what the x axis leaves. One rule, `@container uav-view (block-size >= 0px) { .uav-body { block-size: auto; } }`, matches only when the view was handed a box, and the body then fills it.
 - A rule about axes queries `view`, never `plot`, because hiding the x axis changes the plot's size. A rule about roles queries `plot`, because those elements live inside it.
-- **Bars are HTML,** positioned by custom properties (`inset-inline-start: calc(var(--vg-x) * 100%)`, `block-size: calc(var(--vg-v) * 100%)`), so corner radii and hairlines stay true at any size. Lines and areas are the stretched SVG. Text is never inside the SVG.
-- **`rows`** is a grid per row: `minmax(0, 1fr) auto`, label ellipsized by CSS, the bar a background sized by `--vg-v`. No character-width estimates.
-- **`band`** segments use `flex-grow: var(--vg-v)`.
+- **Bars are HTML,** positioned by custom properties (`inset-inline-start: calc(var(--uav-x) * 100%)`, `block-size: calc(var(--uav-v) * 100%)`), so corner radii and hairlines stay true at any size. Lines and areas are the stretched SVG. Text is never inside the SVG.
+- **`rows`** is a grid per row: `minmax(0, 1fr) auto`, label ellipsized by CSS, the bar a background sized by `--uav-v`. No character-width estimates.
+- **`band`** segments use `flex-grow: var(--uav-v)`.
 - Paint tokens become custom properties on `:host`, so a surface themes a view from outside the shadow root. They use the `@automattic/charts` names; see section 4.1.
 - **The painter is safe under a strict content security policy,** because a browser's own panel and an agent harness's frame both impose one (`docs/shell-plan.md`, section 3). Nodes are made with `createElement`, never `innerHTML`. The `style` attributes in the sketch above show the result; they are written with `style.setProperty`. Styles are constructed stylesheets adopted by the shadow root, never a `<style>` element.
 
-### 4.1 Paint tokens as `@automattic/charts` custom properties
+### 4.1 Paint tokens as custom properties, named as `@automattic/charts` names its own
 
-Names on the right were read from `src/styles/chart-scope.scss` on Jetpack trunk. A page that already styles `@automattic/charts` themes a view with no extra work.
+Names on the right were read from `src/styles/chart-scope.scss` on Jetpack trunk, where the prefix is `--a8c-charts-`. Ours is `--ua-charts-` until the two interoperate, so that nobody takes one for the other. A page that already styles `@automattic/charts` themes a view by aliasing each token across: `--ua-charts-color-label: var(--a8c-charts-color-label)`.
 
 | Paint token | Custom property | Note |
 |---|---|---|
-| `ink` | `--a8c-charts-color-label` | |
-| `ink.muted` | `--a8c-charts-color-label-secondary` | Tick labels use `--a8c-charts-color-label-axis` |
-| `grid` | `--a8c-charts-color-grid` | |
-| `axis` | `--a8c-charts-color-axis-x`, `-axis-y` | |
-| `series.1` to `series.6` | `--a8c-charts-color-series-1` to `-6` | Theirs declares only slot 1 and generates the rest in script. We declare all six |
-| `rule` | `--a8c-charts-color-annotation` | |
-| `compare` | `--a8c-charts-color-comparison` | **New.** Theirs dashes the series colour instead |
-| `delta.good`, `delta.bad` | `--a8c-charts-color-delta-good`, `-delta-bad` | **New.** They default to `-trend-up` and `-trend-down`. Theirs names a direction; ours names a judgement, because polarity can make a rise bad |
-| flat delta | `--a8c-charts-color-trend-neutral` | |
-| `live` | `--a8c-charts-color-live` | **New** |
-| panel and tile surfaces | `--a8c-charts-color-surface`, `-surface-secondary`, `-background` | |
-| bar track | `--a8c-charts-color-track` | |
-| tooltip | `--a8c-charts-color-tooltip-surface` | |
-| bar corner | `--a8c-charts-border-radius-bar` | |
-| entrance motion | `--a8c-charts-motion-duration-entrance`, `-motion-easing-entrance` | Update and exit motion tokens are new |
+| `ink` | `--ua-charts-color-label` | |
+| `ink.muted` | `--ua-charts-color-label-secondary` | Tick labels use `--ua-charts-color-label-axis` |
+| `grid` | `--ua-charts-color-grid` | |
+| `axis` | `--ua-charts-color-axis-x`, `-axis-y` | |
+| `series.1` to `series.6` | `--ua-charts-color-series-1` to `-6` | Theirs declares only slot 1 and generates the rest in script. We declare all six |
+| `rule` | `--ua-charts-color-annotation` | |
+| `compare` | `--ua-charts-color-comparison` | **New.** Theirs dashes the series colour instead |
+| `delta.good`, `delta.bad` | `--ua-charts-color-delta-good`, `-delta-bad` | **New.** They default to `-trend-up` and `-trend-down`. Theirs names a direction; ours names a judgement, because polarity can make a rise bad |
+| flat delta | `--ua-charts-color-trend-neutral` | |
+| `live` | `--ua-charts-color-live` | **New** |
+| panel and tile surfaces | `--ua-charts-color-surface`, `-surface-secondary`, `-background` | |
+| bar track | `--ua-charts-color-track` | |
+| tooltip | `--ua-charts-color-tooltip-surface` | |
+| bar corner | `--ua-charts-border-radius-bar` | |
+| entrance motion | `--ua-charts-motion-duration-entrance`, `-motion-easing-entrance` | Update and exit motion tokens are new |
+| cell corner | `--ua-charts-border-radius-cell` | Theirs. A grid's cells and the swatches of its ramp |
+| swatch and readout corners | `--ua-charts-border-radius-swatch`, `-border-radius-tooltip` | **New** |
+| strokes | `--ua-charts-stroke-width-line`, `-rule`, `-active` | **New.** A line whose layer gives no width, a rule or grid line, and the outline of a chosen mark |
+| type faces | `--ua-charts-font-size-tick`, `-label`, `-value`, `-display`, `-display-small` | **New.** Each may be fluid, in `cqi`: the element works a face out once, against the view's width, so it is one size in every part |
+| weights and tracking | `--ua-charts-font-weight-value`, `-display`, `-heading`, `--ua-charts-letter-spacing-display` | **New** |
+
+The list the element reads from, with the value each token falls back to, is `packages/dom/src/tokens.ts`. `packages/tokens` declares the same names as its charts tier (`config/charts.tokens.json`), and `test/dom-tokens.test.ts` holds the two together: the tier declares every token the element reads and none it cannot.
+
+**Structure is not a token.** Gaps, gutters and the heights of rows, bars and axes are what the fit rules' needs are worked out from, so a theme that moved them would move what fits. What follows from a face is written from it instead: a line of a legend and the height of the x axis are ratios of the face they hold, so they follow a token that moves it. The fit rules' needs are still px, written for the faces at their least: every need across is under 380 px, where the fluid scale has hardly begun to climb, and ticks and labels are the two steps of it that hardly move at all (11.06 to 11.11 px, 12.4 to 13.3 px). The number is the face that grows, and it is measured.
 
 ### 4.2 Surface layouts
 
@@ -201,10 +210,10 @@ It never rebuilds the scene.
 ## 6. Keys, keyboard and transitions
 
 - Every element carries `data-key`. Repainting reconciles by key: new keys enter, missing keys exit, the rest update in place.
-- Positions are custom properties, so an update is a CSS transition on `--vg-x`, `--vg-w`, `--vg-v`, `--vg-t`, timed by motion tokens. They have to be registered as numbers to animate. `@property` is ignored inside a shadow root, so the painter registers them once on the document with `CSS.registerProperty`. Registration is global to the page, which is why they carry the `vg` prefix: a bare `--x` would change what a customer's own `--x` means. Where registration is missing or fails, values still apply and nothing animates.
+- Positions are custom properties, so an update is a CSS transition on `--uav-x`, `--uav-w`, `--uav-v`, `--uav-t`, timed by motion tokens. They have to be registered as numbers to animate. `@property` is ignored inside a shadow root, so the painter registers them once on the document with `CSS.registerProperty`. Registration is global to the page, which is why they carry the `uav` prefix: a bare `--x` would change what a customer's own `--x` means. Where registration is missing or fails, values still apply and nothing animates.
 - Path shapes cannot transition in CSS. On a data change the painter interpolates the values and regenerates `d` per frame. This is the one scripted animation.
 - No transition runs during a resize. Elements hidden by a container query simply go.
-- **Keyboard:** the `@automattic/charts` model, kept as is. One tab stop per view; left and right arrows step through points; Enter or Space activates the point; Tab and Escape leave; the tooltip is the readout. The arrows move across `vg-hits`, one per row of the result, which is also what hover and tooltips attach to. The readout announces the dimension value, the metric in its catalog format, and the comparison if present. Lines need this because a line is one path with no element per point.
+- **Keyboard:** the `@automattic/charts` model, kept as is. One tab stop per view; left and right arrows step through points; Enter or Space activates the point; Tab and Escape leave; the tooltip is the readout. The arrows move across `uav-hits`, one per row of the result, which is also what hover and tooltips attach to. The readout announces the dimension value, the metric in its catalog format, and the comparison if present. Lines need this because a line is one path with no element per point.
 - The tldr prose is the figure's description. The table is the same result and is reachable by a control the surface provides. The surface is outside the shadow root, so the switch is public: a `table` attribute on `<ua-view>` shows the table in place of the marks.
 
 ## 7. Things to prove first

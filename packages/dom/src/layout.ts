@@ -3,15 +3,15 @@ import type { Catalog, ContainerRules, FitRule, Layer, Layout, Query, Result, Ro
 /* The seam between <ua-view> and a layout. A layout is one module in layouts/, exporting one LayoutPainter.
  *
  * What the element owns, and a layout leaves alone:
- *   figure.vg[data-layout][data-keep][data-parts]      a grid: "number" above "body", or beside it
- *     figcaption.vg-prose                              the tldr prose
- *     div.vg-number                                    the number part, painted by the element
- *     div.vg-body                                      the layout's own
- *     table.vg-table
+ *   figure.uav[data-layout][data-keep][data-parts]      a grid: "number" above "body", or beside it
+ *     figcaption.uav-prose                              the tldr prose
+ *     div.uav-number                                    the number part, painted by the element
+ *     div.uav-body                                      the layout's own
+ *     table.uav-table
  *
  * What a layout is handed: `body`, the same element on every data change while the layout stays the same, and
  * empty the first time. It paints the scene's other parts into it, reconciling by key (`ensure` and `keyed` in
- * dom.ts), and gives each part's element the class `vg-<part>`, because that is what a fit rule's `hide` and
+ * dom.ts), and gives each part's element the class `uav-<part>`, because that is what a fit rule's `hide` and
  * `show` compile to. It runs once per data change and never on resize.
  *
  * The element that holds its points carries `data-hits` ("x" across, "y" down), and each point is a child with
@@ -25,9 +25,9 @@ export interface ViewData { layers: Layer[]; query: Query; result: Result; catal
 
 export interface LayoutPainter {
   layout: Layout;
-  /** Its stylesheet text. It joins the base sheet inside `@layer vg`, so every compiled fit rule beats it whatever
-   * the specificity. Begin selectors with `.vg[data-layout="…"]`. For a natural height other than its content's,
-   * set `--vg-body-block` on the figure; a view handed a box ignores it and the body fills what is left. A body
+  /** Its stylesheet text. It joins the base sheet inside `@layer uav`, so every compiled fit rule beats it whatever
+   * the specificity. Begin selectors with `.uav[data-layout="…"]`. For a natural height other than its content's,
+   * set `--uav-body-block` on the figure; a view handed a box ignores it and the body fills what is left. A body
    * whose content has a height of its own states the height of the part that has none (cartesian.ts). */
   css: string;
   /** What else changes when one of its fit rules applies, by rule id: a selector inside the figure ('' is the
@@ -48,4 +48,4 @@ export interface LayoutPainter {
 
 /** What changes with a rule that leaves the number alone: the figure's grid is the number's row, the body goes whole
  * so that its row holds no gap, and the number gives up the margin that stood between them. For a layout's `fit`. */
-export const NUMBER_ALONE: Record<string, string> = { '': 'grid-template: "number" auto / minmax(0, 1fr);', '.vg-body': 'display: none;', '.vg-number': 'margin: 0;' };
+export const NUMBER_ALONE: Record<string, string> = { '': 'grid-template: "number" auto / minmax(0, 1fr);', '.uav-body': 'display: none;', '.uav-number': 'margin: 0;' };

@@ -74,8 +74,8 @@ The page is `/spike.html` in the bench. It computes its seven verdicts in whatev
 What the spike changed from the plan, because the plan's CSS did not work:
 
 1. **Section 2's compiled `or` query is dead on a natural-height view.** The plan compiles `@container view (inline-size < 280px) or (block-size < 120px)` and says the block half is unknown on a width-only container, so the rule still serves. In Chrome and WebKit the whole rule never matches, the inline half included: a view at natural height never dropped its axes at any width. **Fix: one `@container` block per need.** The block-size one is inert until a layout makes the view a size container. The `plot` rule works with `or` as written, because the plot is always a size container.
-2. **The axes rule's `set` needs more than `grid-template-columns`.** The grid areas, the gap, the padding and the bare plot height all have to switch under the same condition. Nothing reads `--vg-arrange`.
-3. **The plot's height must be a stated `block-size`,** read from a custom property, with one added rule: `@container view (block-size >= 0px) { .vg-plot { block-size: auto; } }`, which matches only when the view was handed a box. `contain-intrinsic-block-size` and `min-block-size` lay out correctly in Chrome 155 but answer no `block-size` query. So one stylesheet does serve both sizings, and no `fit="box"` attribute is needed.
+2. **The axes rule's `set` needs more than `grid-template-columns`.** The grid areas, the gap, the padding and the bare plot height all have to switch under the same condition. Nothing reads `--uav-arrange`.
+3. **The plot's height must be a stated `block-size`,** read from a custom property, with one added rule: `@container view (block-size >= 0px) { .uav-plot { block-size: auto; } }`, which matches only when the view was handed a box. `contain-intrinsic-block-size` and `min-block-size` lay out correctly in Chrome 155 but answer no `block-size` query. So one stylesheet does serve both sizings, and no `fit="box"` attribute is needed.
 4. **Smaller ones.** Axis labels are grid items in one cell moved by a percentage inset, not absolutely positioned, so the y-axis column is sized by its content. X labels carry `start`, `mid` and `end` classes. The SVG is inset 2 px each side for the point scale's padding. The natural view is 210 px tall, where the prototype's 184 includes its margins. The `translate` used is physical, so right-to-left is not handled.
 
 Two things the real painter has to respect:
@@ -98,9 +98,9 @@ Where the plan did not hold as written:
 
 1. **A rule's `set` cannot be compiled from data alone.** The compiler takes per-rule declarations from the layout module (`fit` on a `LayoutPainter`). The `marks` rule needs them too, though it has no `set`.
 2. **`show` compiles to `display: block`,** so a shown part has to work as a block.
-3. **The stated `block-size` is on `.vg-body`, not the plot.** The plot stretches inside it and still answers `block-size` queries in Chrome and WebKit.
+3. **The stated `block-size` is on `.uav-body`, not the plot.** The plot stretches inside it and still answers `block-size` queries in Chrome and WebKit.
 4. **Ranked y ticks are thinned by a rule local to `packages/dom`,** on the view at `block: 152` (120 for the plot, 10 above, 22 for the x axis). The y axis sits outside the `plot` container, so a `plot` query cannot reach its labels. It is wrong when the number sits above the plot. A `plot` rule in core, with the y axis inside that container, would say it properly. Open.
-5. **Two additions beyond the plan:** base styles sit in `@layer vg`, so compiled rules win whatever the specificity; and rule names are validated before they reach a selector, because a rule set can arrive as markup JSON.
+5. **Two additions beyond the plan:** base styles sit in `@layer uav`, so compiled rules win whatever the specificity; and rule names are validated before they reach a selector, because a rule set can arrive as markup JSON.
 
 Where `<ua-view>` shows something other than what `resolve()` plans at that size. At natural height every checked case agrees (trend and layers, 346 to 80 px wide). In a box:
 
@@ -142,7 +142,7 @@ Rows:
 
 Band:
 
-1. **A full legend under a height limit is done in CSS, with no script.** The plan left it open for the DOM. The layout writes its row count as `--vg-rows`, and a `max-block-size` clamp on `100cqb` swaps the legends. It assumes fixed-height legend rows.
+1. **A full legend under a height limit is done in CSS, with no script.** The plan left it open for the DOM. The layout writes its row count as `--uav-rows`, and a `max-block-size` clamp on `100cqb` swaps the legends. It assumes fixed-height legend rows.
 2. **A rule local to the layout collapses the band under 48 px,** because core's band `marks` rule has no block need. It is wrong when the number sits above the band. A block need in core would remove it.
 3. **With `keep`, kept parts are clipped by the box** where `resolve()` would collapse. This is step 1's finding 3 again.
 4. **Reading order can drift.** A segment entering mid-list is placed with `order`, so DOM order and visual order differ until the layout is rebuilt. The legend is read by assistive technology. The fix belongs with transitions and keys, since moving a kept element cancels its transition. Open.
@@ -204,7 +204,7 @@ Each layout's points sit in a `listbox` of `option`s, with the readout text as e
 3. **The partial day is not marked in the readout.** The last trend row reads "Visitors 175" with no "so far". Core's half fixed in `fa96d14`: `partialNote(row)` gives "so far" for the unfinished bucket and nothing for a finished one, so the words are core's. The row's `partial` flag is all a painter needs to tell. The tldr prose says nothing of the unfinished day, so there was no wording to match; the scene's own `note` on the dashed tail still reads "incomplete bucket", as the prototype's does.
 4. **Rows lost their list semantics** to become a listbox. A screen reader in browse mode may read it as one control. Unverified.
 5. **Rows clipped by a height limit are still options** in the accessibility tree: "1 of 8" when five show.
-6. **The plan's `vg-hits` layer is only needed in cartesian.** In rows the row is the target, in band the segment, which is no longer `aria-hidden`.
+6. **The plan's `uav-hits` layer is only needed in cartesian.** In rows the row is the target, in band the segment, which is no longer `aria-hidden`.
 7. **The readout covers the number in a sparkline tile,** since it has to stay inside the view's box, and sits over the x labels under a full trend. It is placed once and does not follow a resize or scroll. The look is the owner's.
 8. **No focus token exists** among version 4's names, so the focus ring is the browser's own.
 9. **Chrome makes a scrolling table focusable,** so in table mode nine narrow views become tab stops on the figure. Not a trap.
@@ -226,7 +226,7 @@ Two of the fixes are choices to confirm. Marks keep the page's own colours in fo
 
 What it found and left, all open:
 
-1. **The container is named plain `view`.** `@container view (block-size …)` skips a host that is sized in width only, and is answered by any ancestor size container the page also names `view`. Seen in Chrome: a `container: view / size` wrapper 500 px tall around a stacked trend at 346 px gave a 46 px host with a 14 px plot, and a Channel mix 0 px tall. The plan names the containers `view` and `plot`. Recommended: prefix both, `vg-view` and `vg-plot`, and change the plan with them.
+1. **The container is named plain `view`.** `@container view (block-size …)` skips a host that is sized in width only, and is answered by any ancestor size container the page also names `view`. Seen in Chrome: a `container: view / size` wrapper 500 px tall around a stacked trend at 346 px gave a 46 px host with a 14 px plot, and a Channel mix 0 px tall. The plan names the containers `view` and `plot`. Recommended: prefix both, `uav-view` and `uav-plot`, and change the plan with them.
 2. **Ranked y ticks are thinned at two different heights.** The DOM's local rule asks 152 px of the view (cartesian finding 4); `place()` asks 120 px of the plot, gutters included. Bug 2's `plot` rule with `block: 120` would give both one number.
 3. **The `legend:top` key meets a segment named "top".** The one-line legend's key is `legend:top`, and so is the legend entry of a band segment whose dimension value is `top`. Keys must be unique.
 4. **`note-first` drops unranked lines under the number.** An empty state can show a bare "0" without "No visits yet". The reference marks this to confirm.
@@ -263,7 +263,7 @@ Found while building `docs/chart-coverage-plan.md` on October 8, by the agents t
 
 **Overflow and clipping**
 
-1. **The quadrant at 7 days overflows the view by 74 px.** The upright rule lands on the plot's right edge and its label sits to its right with no flip (`.vg-refs span[data-upright]` in `layouts/points.ts`). The pixel painter clips the same label. Seen again after the merge with `dom-painter`.
+1. **The quadrant at 7 days overflows the view by 74 px.** The upright rule lands on the plot's right edge and its label sits to its right with no flip (`.uav-refs span[data-upright]` in `layouts/points.ts`). The pixel painter clips the same label. Seen again after the merge with `dom-painter`.
 2. **A heatmap's hidden last column label keeps its box** 9 to 13 px past the view's edge. A host without `overflow: hidden` would scroll.
 3. **A label on a point near the top of a scatter is cut by about 4 px.** The pixel painter puts it under the point.
 4. **The first x label of the box plot and the error bars is cut at the left edge.** It is centred under its band with no start anchor. The pixel painter cuts it too, and overlaps all its categorical x labels where `<ua-view>` thins them.
@@ -294,7 +294,7 @@ Found while building `docs/chart-coverage-plan.md` on October 8, by the agents t
 20. **One-pixel range segments look grey in `<ua-view>`** and black in pixels. Whiskers, wicks and error bars sit at fractional positions and are antialiased.
 21. **`seq.none` and `seq.1` differ by hue only in dark** (contrast 1.27). Clear at 346 px, faint at 170, and likely to merge in greyscale.
 22. **Leaving labels, second-axis ticks and arcs go at once.** They are not in the motion sheet's fade list.
-23. **`points.ts` still sets `--vg-body-block`** where cartesian now states the plot's height. A plot with both a legend and a key to sizes would come out short. No sample has both.
+23. **`points.ts` still sets `--uav-body-block`** where cartesian now states the plot's height. A plot with both a legend and a key to sizes would come out short. No sample has both.
 24. **A heatmap's `marks` rule does not know its column count:** 24 columns at 150 px are about 5 px each.
 25. **Units are not formatted.** Revenue reads "63.5k", a rate's ticks read "2, 4, 6", and load time has no "s".
 26. **Symbols on a map sit at the centroid of the whole shape,** off the mainland for a country with far-flung parts. The map's fallback list has no limit: 15 countries is 476 px tall.
@@ -322,7 +322,7 @@ October 8. Six items above were picked as the ones that would make real data rea
 1. **Units** (open item 25). `916a90c`, `49da2df`. `formatValue` branches on `count`, `ratio`, `percent`, `usd`, `ms`, `s` and `bytes`, and an unknown unit is an error that names the valid ones. The tldr value, ticks, point labels, the size key, the ramp's ends and the prose all go through it. Money is in major units, as the tracker sends it. Rates work at either scale, since the query API has not chosen one.
 2. **Time values** (review item 5). `be71d44`. A bare date or a full ISO datetime, always UTC; a bucket off midnight reads "Sep 8, 3 PM". Row labels and band and radial legend names go through `formatDimension`, a departure from the prototype with its own describe.
 3. **The one-line legend's key is `legend-top`** (review item 3). `2deb6b3`. Mapped in `ourKeys`; a segment named "top" has a test.
-4. **The containers are `vg-view` and `vg-plot`** (review item 1). `5206a81`. The fit rules' data keeps `view` and `plot`; the compiler writes the prefix. Inside a wrapper named `view` four views now match the unwrapped ones.
+4. **The containers are `uav-view` and `uav-plot`** (review item 1). `5206a81`. The fit rules' data keeps `view` and `plot`; the compiler writes the prefix. Inside a wrapper named `view` four views now match the unwrapped ones.
 5. **The readout and the table list only the companions a layer encodes** (open item 15). `6aff38c`. The dumbbell no longer says "rank". The box plot no longer says `lower` and `upper`, which it never drew.
 6. **Rows with no shape are counted in a note** (open item 18). `10ff680`, `a1899c6`, `079d953`. "4 countries not shown", under the map, dropped with the ramp by the `guides` rule. An empty or null value is counted too.
 7. **The shapes were keyed on country names,** so every real result would have matched nothing and thrown. `682883f`. 122 of 123 are keyed on ISO 3166-1 alpha-2 now, the name kept beside it; Somaliland has no code. The fixtures send codes. The match is exact.

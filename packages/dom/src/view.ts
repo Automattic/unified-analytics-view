@@ -6,6 +6,7 @@ import { KEYS_CSS, Keys, companions } from './keys.ts';
 import { LAYOUTS } from './layouts/index.ts';
 import { NUMBER_FITS, fitNumber, readNumber } from './measure.ts';
 import { MOTION_CSS, begin, register, settle } from './motion.ts';
+import { FACES, token } from './tokens.ts';
 
 /* <ua-view>: one view, in whatever room it is handed. It plans once per data change, for a container with no
  * limits, builds the ratio scene and paints it. The stylesheet fits it. On resize only the measured pass runs
@@ -17,55 +18,63 @@ import { MOTION_CSS, begin, register, settle } from './motion.ts';
 const painters = Object.values(LAYOUTS);
 
 /* Everything the element owns, in one layer, so a compiled fit rule beats it whatever the specificity. */
-export const BASE_CSS = `@layer vg {
-:host { display: block; container: vg-view / inline-size; font-size: 11px; line-height: 1.3; text-align: start; text-indent: 0; color: ${paintVar('ink')}; }
+export const BASE_CSS = `@layer uav {
+:host { display: block; container: uav-view / inline-size; line-height: 1.3; text-align: start; text-indent: 0; color: ${paintVar('ink')}; }
 :host([hidden]), [hidden] { display: none !important; }
-.vg { position: relative; box-sizing: border-box; block-size: 100%; margin: 0; display: grid; grid-template: "number" auto "body" minmax(0, 1fr) / minmax(0, 1fr); print-color-adjust: exact; }
+/* The faces, worked out here and nowhere else. A page's type tokens may be fluid, in cqi, and these are the view's
+ * children: the view is their container, so a face is one size across the whole of it. Read inside the plot, which
+ * is a container itself, the same token would give another. They are registered as lengths (motion.ts), which is what
+ * makes each a size here and not a formula handed down. Where that fails a part reads the token for itself.
+ * What follows from a face is written from it: a line of the legend, and the x axis, are as tall as their text needs. */
+.uav, .uav-ruler, .uav-error { ${FACES.map((f) => `--uav-font-${f}: ${token('font-size-' + f)};`).join(' ')} font-size: var(--uav-font-tick);
+  --uav-legend-line: calc(var(--uav-font-label) * 20 / 13); --uav-x-axis-block: calc(5px + var(--uav-font-tick) * 17 / 11); }
+.uav { position: relative; box-sizing: border-box; block-size: 100%; margin: 0; display: grid; grid-template: "number" auto "body" minmax(0, 1fr) / minmax(0, 1fr); print-color-adjust: exact; }
 /* A bar, a segment, a swatch and a rule are backgrounds. A printer leaves those out unless told, and forced colours
  * repaint them as the page, so both are told to leave a mark its paint. */
-.vg-body i, .vg-pulse { forced-color-adjust: none; }
-.vg-prose { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.vg-body { grid-area: body; box-sizing: border-box; min-inline-size: 0; block-size: var(--vg-body-block, auto); }
-.vg-error { margin: 0; font-size: 13px; overflow-wrap: anywhere; color: ${paintVar('delta.bad')}; }
+.uav-body i, .uav-pulse { forced-color-adjust: none; }
+.uav-prose { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.uav-body { grid-area: body; box-sizing: border-box; min-inline-size: 0; block-size: var(--uav-body-block, auto); }
+.uav-error { margin: 0; font-size: var(--uav-font-label); overflow-wrap: anywhere; color: ${paintVar('delta.bad')}; }
 
-.vg-f-tick { font-size: 11px; }
-.vg-f-label { font-size: 13px; }
-.vg-f-value { font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; }
-.vg-f-display { font-size: 37px; line-height: 34px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+/* A line's height is a ratio of its face, so it follows a face that a token has moved. */
+.uav-f-tick { font-size: var(--uav-font-tick); }
+.uav-f-label { font-size: var(--uav-font-label); }
+.uav-f-value { font-size: var(--uav-font-value); font-weight: ${token('font-weight-value')}; font-variant-numeric: tabular-nums; }
+.uav-f-display { font-size: var(--uav-font-display); line-height: calc(34 / 37); font-weight: ${token('font-weight-display')}; font-variant-numeric: tabular-nums; letter-spacing: ${token('letter-spacing-display')}; }
 
 /* The number: a value, then a delta and a note, each on its own line. It is in every scene and shows when the
  * plan names it or a fit rule brings it in. */
-.vg-number { grid-area: number; display: none; white-space: nowrap; }
-.vg[data-parts~="number"] .vg-number { display: block; }
-.vg[data-parts~="number"]:not([data-layout="none"]) .vg-number { margin-block-end: 16px; }
-.vg-number > * { color: var(--vg-paint); }
-.vg-number > b { display: inline-block; vertical-align: middle; }
-.vg-number > span { display: block; line-height: 18px; overflow: hidden; text-overflow: ellipsis; }
-.vg-number > .vg-f-tick { line-height: 16px; }
-.vg-pulse { display: inline-block; vertical-align: middle; inline-size: 10px; block-size: 10px; margin-inline: 2px 8px; border-radius: 50%; background: var(--vg-paint); }
-.vg-short { display: none; }
+.uav-number { grid-area: number; display: none; white-space: nowrap; }
+.uav[data-parts~="number"] .uav-number { display: block; }
+.uav[data-parts~="number"]:not([data-layout="none"]) .uav-number { margin-block-end: 16px; }
+.uav-number > * { color: var(--uav-paint); }
+.uav-number > b { display: inline-block; vertical-align: middle; }
+.uav-number > span { display: block; line-height: calc(18 / 13); overflow: hidden; text-overflow: ellipsis; }
+.uav-number > .uav-f-tick { line-height: calc(16 / 11); }
+.uav-pulse { display: inline-block; vertical-align: middle; inline-size: 10px; block-size: 10px; margin-inline: 2px 8px; border-radius: 50%; background: var(--uav-paint); }
+.uav-short { display: none; }
 /* What the measured pass found, as data-fit on the number: its size, its forms, and whether its note fits. */
-.vg-number[data-fit~="short"] > .vg-f-display > .vg-full, .vg-number[data-fit~="delta-short"] > .vg-f-value > .vg-full { display: none; }
-.vg-number[data-fit~="short"] > .vg-f-display > .vg-short, .vg-number[data-fit~="delta-short"] > .vg-f-value > .vg-short { display: inline; }
-.vg-number[data-fit~="small"] > .vg-f-display { font-size: 26px; line-height: 24px; }
-.vg-number[data-fit~="no-note"] > .vg-f-tick { display: none; }
+.uav-number[data-fit~="short"] > .uav-f-display > .uav-full, .uav-number[data-fit~="delta-short"] > .uav-f-value > .uav-full { display: none; }
+.uav-number[data-fit~="short"] > .uav-f-display > .uav-short, .uav-number[data-fit~="delta-short"] > .uav-f-value > .uav-short { display: inline; }
+.uav-number[data-fit~="small"] > .uav-f-display { font-size: var(--uav-font-display-small); line-height: calc(24 / 26); }
+.uav-number[data-fit~="no-note"] > .uav-f-tick { display: none; }
 /* A number the pass has not set carries no data-fit: one beside a bare plot, which its layout sets, or any number
  * where the pass does not run. For that one the widths at which place() takes the shorter forms stand in. */
-@container vg-view (inline-size < 200px) { .vg-number:not([data-fit]) > .vg-f-value > .vg-full { display: none; } .vg-number:not([data-fit]) > .vg-f-value > .vg-short { display: inline; } }
-@container vg-view (inline-size < 160px) {
-  .vg-number:not([data-fit]) > .vg-f-display > .vg-full { display: none; } .vg-number:not([data-fit]) > .vg-f-display > .vg-short { display: inline; }
-  .vg-number:not([data-fit]) > .vg-f-display { font-size: 26px; line-height: 24px; }
+@container uav-view (inline-size < 200px) { .uav-number:not([data-fit]) > .uav-f-value > .uav-full { display: none; } .uav-number:not([data-fit]) > .uav-f-value > .uav-short { display: inline; } }
+@container uav-view (inline-size < 160px) {
+  .uav-number:not([data-fit]) > .uav-f-display > .uav-full { display: none; } .uav-number:not([data-fit]) > .uav-f-display > .uav-short { display: inline; }
+  .uav-number:not([data-fit]) > .uav-f-display { font-size: var(--uav-font-display-small); line-height: calc(24 / 26); }
 }
-@container vg-view (inline-size < 120px) { .vg-number:not([data-fit]) > .vg-f-tick { display: none; } }
+@container uav-view (inline-size < 120px) { .uav-number:not([data-fit]) > .uav-f-tick { display: none; } }
 
 /* What the measured pass reads. The room takes the view's width, and its height only when the view was handed a
  * box, so nothing the pass writes can resize it. The ruler holds the number set in each of its forms, clipped to
  * nothing so that it adds no overflow, and outside the figure so that no fit rule reaches it. */
-.vg-room { position: absolute; inset-inline: 0; inset-block-start: 0; block-size: 0; visibility: hidden; pointer-events: none; }
-@container vg-view (block-size >= 0px) { .vg-room { block-size: 100%; } }
-.vg-ruler { position: absolute; inline-size: 0; block-size: 0; overflow: hidden; visibility: hidden; pointer-events: none; }
-.vg-ruler > .vg-number { display: block; position: absolute; inline-size: max-content; }
-.vg-ruler > .vg-number > span { inline-size: max-content; }
+.uav-room { position: absolute; inset-inline: 0; inset-block-start: 0; block-size: 0; visibility: hidden; pointer-events: none; }
+@container uav-view (block-size >= 0px) { .uav-room { block-size: 100%; } }
+.uav-ruler { position: absolute; inline-size: 0; block-size: 0; overflow: hidden; visibility: hidden; pointer-events: none; }
+.uav-ruler > .uav-number { display: block; position: absolute; inline-size: max-content; }
+.uav-ruler > .uav-number > span { inline-size: max-content; }
 
 ${painters.map((p) => p.css).join('\n')}
 ${MOTION_CSS}
@@ -73,20 +82,20 @@ ${KEYS_CSS}
 
 /* Only a size container answers a block-size query, so this matches exactly when a layout has handed the view a
  * box. The body then takes the height left over. No attribute on the view. */
-@container vg-view (block-size >= 0px) { .vg-body { block-size: auto; } }
+@container uav-view (block-size >= 0px) { .uav-body { block-size: auto; } }
 
 /* The prose alone: the last rung, set by the plan or, when the number itself does not fit, by the measured pass. */
-.vg:is([data-layout="prose"], [data-fit="prose"]) > :not(.vg-prose, .vg-room) { display: none !important; }
-.vg:is([data-layout="prose"], [data-fit="prose"]) > .vg-prose { position: static; inline-size: auto; block-size: auto; clip-path: none; white-space: normal; font-size: 13px; }
+.uav:is([data-layout="prose"], [data-fit="prose"]) > :not(.uav-prose, .uav-room) { display: none !important; }
+.uav:is([data-layout="prose"], [data-fit="prose"]) > .uav-prose { position: static; inline-size: auto; block-size: auto; clip-path: none; white-space: normal; font-size: var(--uav-font-label); }
 
 /* The same result as a table, in place of the marks. The switch is public: the surface that offers it is outside the shadow root. */
-.vg-table { display: none; inline-size: 100%; border-collapse: collapse; font-size: 11px; font-variant-numeric: tabular-nums; }
-.vg-table :is(th, td) { padding: 2px 8px 2px 0; text-align: start; font-weight: 400; border-block-end: 1px solid ${paintVar('grid')}; }
-.vg-table :is(thead th, tfoot td, tfoot th) { font-weight: 600; }
-.vg-table [data-num] { text-align: end; padding-inline: 8px 0; }
-:host([table]) .vg > :not(.vg-table, .vg-prose, .vg-room) { display: none !important; }
-:host([table]) .vg { display: block; overflow: auto; }
-:host([table]) .vg-table { display: table; }
+.uav-table { display: none; inline-size: 100%; border-collapse: collapse; font-size: var(--uav-font-tick); font-variant-numeric: tabular-nums; }
+.uav-table :is(th, td) { padding: 2px 8px 2px 0; text-align: start; font-weight: 400; border-block-end: 1px solid ${paintVar('grid')}; }
+.uav-table :is(thead th, tfoot td, tfoot th) { font-weight: ${token('font-weight-heading')}; }
+.uav-table [data-num] { text-align: end; padding-inline: 8px 0; }
+:host([table]) .uav > :not(.uav-table, .uav-prose, .uav-room) { display: none !important; }
+:host([table]) .uav { display: block; overflow: auto; }
+:host([table]) .uav-table { display: table; }
 }`;
 
 /** The two surface layouts of docs/dom-painter-plan.md section 4.2. The surface owns them; they are here so that a
@@ -106,11 +115,11 @@ const EXTRAS: FitExtras = Object.fromEntries(painters.map((p) => [p.layout, p.fi
  * beside the figure, handed the same query, result, catalog and rules. That one is its own container, with its own
  * rules, keyboard and measured pass. The compiled rule shows one of the two, so nothing runs on resize. The table is
  * the same query's either way, so it is this view's. */
-export const FALLBACK_CSS = `@layer vg {
-.vg-fallback { display: none; }
-@container vg-view (block-size >= 0px) { .vg-fallback { block-size: 100%; container-type: size; } }
-:host([table]) .vg { display: block !important; }
-:host([table]) .vg-fallback { display: none !important; }
+export const FALLBACK_CSS = `@layer uav {
+.uav-fallback { display: none; }
+@container uav-view (block-size >= 0px) { .uav-fallback { block-size: 100%; container-type: size; } }
+:host([table]) .uav { display: block !important; }
+:host([table]) .uav-fallback { display: none !important; }
 }`;
 // One sheet per text and per document: a constructed sheet cannot be adopted outside the document it was made for,
 // and a view may be put into another one (a preview frame, a window opened from the page).
@@ -201,7 +210,7 @@ function paintTable(table: HTMLTableElement, title: string | undefined, q: Query
 
 function paintNumber(el: HTMLElement, nodes: SceneNode[]): void {
   keyed(el, nodes, (n) => (n.kind === 'circle' ? 'i' : n.kind === 'text' && n.font === 'display' ? 'b' : 'span'), (c, n) => {
-    if (n.kind === 'text') { text(c, n); (c as HTMLElement).title = n.note ?? ''; } else c.classList.add('vg-pulse');      // what the number counts, when it is pointed at
+    if (n.kind === 'text') { text(c, n); (c as HTMLElement).title = n.note ?? ''; } else c.classList.add('uav-pulse');      // what the number counts, when it is pointed at
   });
 }
 
@@ -235,19 +244,19 @@ export class UaView extends Base {
   constructor() {
     super();
     this.#root = this.attachShadow({ mode: 'open' });
-    this.#fig = ensure(this.#root as unknown as Element, 'figure', 'vg');
-    this.#prose = ensure(this.#fig, 'figcaption', 'vg-prose');
+    this.#fig = ensure(this.#root as unknown as Element, 'figure', 'uav');
+    this.#prose = ensure(this.#fig, 'figcaption', 'uav-prose');
     this.#prose.id = 'prose'; this.#fig.setAttribute('aria-describedby', 'prose');
-    this.#number = ensure(this.#fig, 'div', 'vg-number');
-    this.#body = ensure(this.#fig, 'div', 'vg-body');
-    this.#table = ensure(this.#fig, 'table', 'vg-table');
+    this.#number = ensure(this.#fig, 'div', 'uav-number');
+    this.#body = ensure(this.#fig, 'div', 'uav-body');
+    this.#table = ensure(this.#fig, 'table', 'uav-table');
     this.#keys = new Keys(this, this.#fig, this.#body);
-    this.#error = ensure(this.#root as unknown as Element, 'p', 'vg-error');
+    this.#error = ensure(this.#root as unknown as Element, 'p', 'uav-error');
     this.#error.setAttribute('role', 'alert'); this.#error.hidden = true;
-    this.#room = ensure(this.#fig, 'div', 'vg-room');
-    const ruler = ensure(this.#root as unknown as Element, 'div', 'vg-ruler');
+    this.#room = ensure(this.#fig, 'div', 'uav-room');
+    const ruler = ensure(this.#root as unknown as Element, 'div', 'uav-ruler');
     ruler.setAttribute('aria-hidden', 'true');
-    this.#ruler = NUMBER_FITS.map((fit) => { const el = ruler.appendChild(document.createElement('div')); el.className = 'vg-number'; el.dataset.fit = fit; return el; });
+    this.#ruler = NUMBER_FITS.map((fit) => { const el = ruler.appendChild(document.createElement('div')); el.className = 'uav-number'; el.dataset.fit = fit; return el; });
   }
 
   /** The view spec. A property wins over the JSON in a child script. */
@@ -312,11 +321,11 @@ export class UaView extends Base {
       const plan = resolve(spec, result, { ...unboundedContainer(), rules }, catalog);
       const scene = buildScene(plan, spec.query, result, catalog), fig = this.#fig;
 
-      this.#root.adoptedStyleSheets = [sheet(doc, BASE_CSS), sheet(doc, FALLBACK_CSS), ...more.map((p) => sheet(doc, '@layer vg {' + p.css + '}')), fit];
+      this.#root.adoptedStyleSheets = [sheet(doc, BASE_CSS), sheet(doc, FALLBACK_CSS), ...more.map((p) => sheet(doc, '@layer uav {' + p.css + '}')), fit];
       fig.dataset.layout = scene.layout; fig.dataset.keep = (spec.keep || []).join(' '); fig.dataset.parts = scene.parts.join(' ');
       if (spec.title) fig.setAttribute('aria-label', spec.title); else fig.removeAttribute('aria-label');
       // The plot's natural heights are the context's, read by the stylesheet. The painter hard-codes neither.
-      fig.style.setProperty('--vg-axes-height', rules.axes.height + 'px'); fig.style.setProperty('--vg-bare-height', rules.bare.height + 'px');
+      fig.style.setProperty('--uav-axes-height', rules.axes.height + 'px'); fig.style.setProperty('--uav-bare-height', rules.bare.height + 'px');
       begin(fig, changed && this.#layout === scene.layout);
       this.#prose.textContent = plan.text;
       for (const el of [this.#number, ...this.#ruler]) paintNumber(el, scene.nodes.filter((n) => n.part === 'number'));
@@ -328,7 +337,7 @@ export class UaView extends Base {
       else if (painter?.table) painter.table(this.#table, spec.title, scene, data); else paintTable(this.#table, spec.title, data.query, result, catalog, plan.layers);
       this.#keys.paint(scene, expand(spec).query, result, catalog, plan.layers);
       const swap = fallbackRule(fits, scene.layout, spec.keep, this.via), { layers: _layers, ...rest } = spec;
-      if (swap) Object.assign(this.#fallback ??= this.#root.appendChild(Object.assign(document.createElement(this.localName) as UaView, { className: 'vg-fallback' })),
+      if (swap) Object.assign(this.#fallback ??= this.#root.appendChild(Object.assign(document.createElement(this.localName) as UaView, { className: 'uav-fallback' })),
         { via: this.via.concat(scene.layout), spec: { ...rest, use: swap.fallback }, result, catalog, rules });
       else { this.#fallback?.remove(); this.#fallback = null; }
       fig.hidden = false; this.#error.hidden = true;
@@ -360,7 +369,7 @@ export class UaView extends Base {
     // Whether the number shows, and where, is the stylesheet's to say, and under the prose it has no box to read.
     // ponytail: so a view that is prose is laid out twice in a run. Keep both in the flow, hidden, if that ever costs.
     fig.removeAttribute('data-fit');
-    const note = number.querySelector<HTMLElement>(':scope > .vg-f-tick');
+    const note = number.querySelector<HTMLElement>(':scope > .uav-f-tick');
     if (note) note.hidden = false;
     let fit: string | null = null, prose = false;
     if (number.getClientRects().length) {

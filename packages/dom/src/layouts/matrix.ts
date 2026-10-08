@@ -1,5 +1,6 @@
 import { formatDimension, formatValue, type RectNode, type Row, type TextNode } from '@universal-analytics/core';
 import { attr, ensure, keyed, paintVar, prop, text } from '../dom.ts';
+import { token } from '../tokens.ts';
 import { readout } from '../keys.ts';
 import type { LayoutPainter } from '../layout.ts';
 import { thin } from '../measure.ts';
@@ -7,7 +8,7 @@ import { thin } from '../measure.ts';
 /* A dimension on x, another on y, a metric on colour: a grid of cells. The cells are a CSS grid, each set in its
  * track by two custom properties, so nothing here runs on resize. The axes are the plot's own: the row labels are a
  * column sized by the widest, the column labels a row under the grid, and both are placed by the stylesheet
- * cartesian.ts wrote for `.vg-y-axis`, `.vg-x-axis` and `.vg-plot`. Below them, the ramp.
+ * cartesian.ts wrote for `.uav-y-axis`, `.uav-x-axis` and `.uav-plot`. Below them, the ramp.
  *
  * A cell is its own hit target, and no cell carries `data-row`, so the element's keyboard (keys.ts) leaves this
  * layout alone and the one here stands in for it. It is version 4's model, taken to two dimensions: one tab stop,
@@ -15,19 +16,19 @@ import { thin } from '../measure.ts';
  * activate, Escape to let go. To assistive technology it is a grid of rows of cells, each named by its readout.
  * ponytail: version 4 has no model for two dimensions, so this one is a proposal (chart-coverage-plan, section 6). */
 const css = `
-.vg[data-layout="matrix"] { --vg-body-block: var(--vg-axes-height, 184px); }
-.vg[data-layout="matrix"] .vg-body { display: grid; grid-template: "y plot" minmax(0, 1fr) ". x" auto "ramp ramp" auto / auto minmax(0, 1fr); }
-.vg[data-layout="matrix"] [data-thin] { visibility: hidden; }
-.vg-cells { position: absolute; inset: 0; display: grid; gap: 1px; grid-template: repeat(var(--vg-ny), minmax(0, 1fr)) / repeat(var(--vg-nx), minmax(0, 1fr)); }
-.vg-cells:focus-visible { outline-offset: 2px; }
-.vg-cells > div { display: contents; }
-.vg-cells i { grid-area: var(--vg-cy) / var(--vg-cx); background: var(--vg-paint); border-radius: 1px; }
-.vg-cells [data-active] { z-index: 1; outline: 2px solid ${paintVar('ink')}; outline-offset: 1px; }
-.vg-ramp { grid-area: ramp; display: flex; align-items: center; gap: 1px; block-size: 24px; overflow: hidden; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.vg-ramp i { flex: none; inline-size: 14px; block-size: 10px; border-radius: 1px; background: var(--vg-paint); }
-.vg-ramp span { color: var(--vg-paint); margin-inline: 5px; }
-.vg-ramp span:first-child { margin-inline-start: 0; }
-.vg-ramp [data-key="ramp:none"] { margin-inline-start: 5px; }`;
+.uav[data-layout="matrix"] { --uav-body-block: var(--uav-axes-height, 184px); }
+.uav[data-layout="matrix"] .uav-body { display: grid; grid-template: "y plot" minmax(0, 1fr) ". x" auto "ramp ramp" auto / auto minmax(0, 1fr); }
+.uav[data-layout="matrix"] [data-thin] { visibility: hidden; }
+.uav-cells { position: absolute; inset: 0; display: grid; gap: 1px; grid-template: repeat(var(--uav-ny), minmax(0, 1fr)) / repeat(var(--uav-nx), minmax(0, 1fr)); }
+.uav-cells:focus-visible { outline-offset: 2px; }
+.uav-cells > div { display: contents; }
+.uav-cells i { grid-area: var(--uav-cy) / var(--uav-cx); background: var(--uav-paint); border-radius: ${token('border-radius-cell')}; }
+.uav-cells [data-active] { z-index: 1; outline: ${token('stroke-width-active')} solid ${paintVar('ink')}; outline-offset: 1px; }
+.uav-ramp { grid-area: ramp; display: flex; align-items: center; gap: 1px; block-size: 24px; overflow: hidden; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.uav-ramp i { flex: none; inline-size: 14px; block-size: 10px; border-radius: ${token('border-radius-cell')}; background: var(--uav-paint); }
+.uav-ramp span { color: var(--uav-paint); margin-inline: 5px; }
+.uav-ramp span:first-child { margin-inline-start: 0; }
+.uav-ramp [data-key="ramp:none"] { margin-inline-start: 5px; }`;
 
 /** Where a key moves to in a grid `nx` cells across and `ny` down, from `at` (null when none is chosen): left and
  * right along x, up and down along y, stopping at the edges. From nothing, any arrow is the first cell. Null when
@@ -49,7 +50,7 @@ function choose(cells: HTMLElement, el: HTMLElement | null): void {
   cells.querySelector('[data-active]')?.removeAttribute('data-active');
   el?.setAttribute('data-active', '');
   attr(cells, 'aria-activedescendant', el?.id);
-  const fig = cells.closest<HTMLElement>('.vg')!, tip = ensure(fig, 'div', 'vg-readout');
+  const fig = cells.closest<HTMLElement>('.uav')!, tip = ensure(fig, 'div', 'uav-readout');
   tip.hidden = !el;
   if (!el) return;
   tip.textContent = el.getAttribute('aria-label');
@@ -92,7 +93,7 @@ function bind(cells: HTMLElement): void {
 }
 
 // The number alone. The body goes whole, so kept axes do not stand with no grid between them.
-const alone = { '': 'grid-template: "number" auto / minmax(0, 1fr);', '.vg-body': 'display: none;', '.vg-number': 'margin: 0;' };
+const alone = { '': 'grid-template: "number" auto / minmax(0, 1fr);', '.uav-body': 'display: none;', '.uav-number': 'margin: 0;' };
 
 export const matrix: LayoutPainter = {
   layout: 'matrix',
@@ -114,25 +115,25 @@ export const matrix: LayoutPainter = {
       const fits = spans.map((s) => s.hi <= room + 1), gone = thin(spans.filter((_, i) => fits[i]), gap);
       all.forEach((el, i) => el.toggleAttribute('data-thin', !fits[i] || gone[fits.slice(0, i).filter(Boolean).length]));
     };
-    along('.vg-x-axis', '--vg-x', 'width', 6);
-    along('.vg-y-axis', '--vg-t', 'height', 0);
+    along('.uav-x-axis', '--uav-x', 'width', 6);
+    along('.uav-y-axis', '--uav-t', 'height', 0);
   },
 
   paint(body, scene, _rules, data) {
     const xs = scene.rows ?? [], ys = scene.ys ?? [], { x: xf, y: yf, color: m } = data.layers[0]!.encode as Record<string, string>;
-    const yAxis = ensure(body, 'div', 'vg-y-axis'), plot = ensure(body, 'div', 'vg-plot'), xAxis = ensure(body, 'div', 'vg-x-axis'), ramp = ensure(body, 'div', 'vg-ramp');
-    const cells = ensure(plot, 'div', 'vg-cells'), dims = data.catalog.dimensions;
+    const yAxis = ensure(body, 'div', 'uav-y-axis'), plot = ensure(body, 'div', 'uav-plot'), xAxis = ensure(body, 'div', 'uav-x-axis'), ramp = ensure(body, 'div', 'uav-ramp');
+    const cells = ensure(plot, 'div', 'uav-cells'), dims = data.catalog.dimensions;
     // The labels and the ramp say again what each cell's name says whole.
     for (const el of [yAxis, xAxis, ramp]) el.setAttribute('aria-hidden', 'true');
     const texts = (part: string) => scene.nodes.filter((n): n is TextNode => n.part === part && n.kind === 'text');
-    keyed(yAxis, texts('y-axis'), () => 'span', (el, n) => { text(el, n); prop(el, '--vg-t', n.t); });
-    keyed(xAxis, texts('x-axis'), () => 'span', (el, n) => { text(el, n); prop(el, '--vg-x', n.x); });
+    keyed(yAxis, texts('y-axis'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-t', n.t); });
+    keyed(xAxis, texts('x-axis'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-x', n.x); });
     keyed(ramp, scene.nodes.filter((n) => n.part === 'ramp'), (n) => (n.kind === 'text' ? 'span' : 'i'), (el, n) => { if (n.kind === 'text') text(el, n); });
 
     if (!grids.has(cells)) bind(cells);
     const at = new Map(data.result.rows.map((r) => [r[xf!] + '\n' + r[yf!], r])), rows = new Map<string, Row>();
     grids.set(cells, { nx: xs.length, ny: ys.length, rows, fresh: false });
-    prop(cells, '--vg-nx', xs.length); prop(cells, '--vg-ny', ys.length);
+    prop(cells, '--uav-nx', xs.length); prop(cells, '--uav-ny', ys.length);
     attr(cells, 'role', 'grid'); attr(cells, 'tabindex', xs.length && ys.length ? 0 : null);
     attr(cells, 'aria-label', dims[yf!]!.label + ' by ' + dims[xf!]!.label);
     const by = new Map<string, RectNode[]>();
@@ -143,7 +144,7 @@ export const matrix: LayoutPainter = {
       attr(el, 'role', 'row');
       keyed(el, by.get(r.key.slice(4)) ?? [], () => 'i', (c, n) => {
         const [x, y] = n.pair!, cx = xs.indexOf(x), cy = ys.indexOf(y), row = at.get(x + '\n' + y);
-        prop(c, '--vg-cx', cx + 1); prop(c, '--vg-cy', cy + 1);
+        prop(c, '--uav-cx', cx + 1); prop(c, '--uav-cy', cy + 1);
         attr(c, 'role', 'gridcell'); attr(c, 'id', id(cx, cy));
         // Never colour alone: the value is in the cell's name, which is also its readout. No value says so in words.
         attr(c, 'aria-label', row && row[m!] != null ? readout(row, data.query, data.catalog, data.layers)

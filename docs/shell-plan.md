@@ -53,7 +53,7 @@ Friday's panel hard-codes which views it shows. Its state is still one plain obj
 
 Raised against `docs/dom-painter-plan.md` as reviewed October 7, and written into it the same day (its section 8, item 6). None changes its design.
 
-1. **Registered property names leak.** Section 6 registers `--x`, `--w`, `--v` and `--t` on the document. Registration is global, so on a customer's page it changes what their own `--x` means, and it fails if they registered one first. Prefix them (`--vg-x`).
+1. **Registered property names leak.** Section 6 registers `--x`, `--w`, `--v` and `--t` on the document. Registration is global, so on a customer's page it changes what their own `--x` means, and it fails if they registered one first. Prefix them (`--uav-x`).
 2. **How the DOM is built is not stated.** Rule 4 above applies: the `style="--t:.25"` in section 4's sketch has to be set through the object model, and the compiled fit rules adopted as a constructed stylesheet.
 3. **Inputs are properties only.** Rule 3 above: accept `spec`, `result` and `catalog` as child JSON too.
 4. **The table has no switch.** Section 6 says a control the surface provides reveals it. The surface is outside the shadow root, so `<ua-view>` needs a public attribute for it.

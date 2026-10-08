@@ -15,9 +15,9 @@ const of = (sample: string) => {
 
 describe('a row\'s segments in a plot', () => {
   it('are placed by their two ends, and one set before the bars lies under them', () => {
-    expect(cartesian.css).toContain('.vg-ranges i { position: absolute;');
-    expect(cartesian.css).toContain('inset-block-end: calc(min(var(--vg-t), var(--vg-t2)) * 100%);');
-    expect(cartesian.css).toContain('.vg-ranges i[data-under] { z-index: -1; }');
+    expect(cartesian.css).toContain('.uav-ranges i { position: absolute;');
+    expect(cartesian.css).toContain('inset-block-end: calc(min(var(--uav-t), var(--uav-t2)) * 100%);');
+    expect(cartesian.css).toContain('.uav-ranges i[data-under] { z-index: -1; }');
   });
   it('every row of a box plot has one hit target, and of its medians alone', () => {
     const { scene } = of('box');
@@ -55,11 +55,11 @@ describe('the readout', () => {
 describe('a track beside its label', () => {
   it('gives up its body under its own rule, and only where the body says its track is beside', () => {
     const css = compileFitRules(FIT_RULES.filter((r) => r.layout === 'rows' && r.id === 'track'), { rows: rows.fit! });
-    const fig = '.vg[data-layout="rows"]:not([data-keep~="marks"])';
+    const fig = '.uav[data-layout="rows"]:not([data-keep~="marks"])';
     expect(css.split('\n')).toEqual([
-      '/* rows track */', '@container vg-view (inline-size < 159.5px) {',
-      '  ' + fig + ' .vg-track { display: none; }',
-      '  ' + fig + ' .vg-body[data-track] { display: none; }', '  ' + fig + ' .vg-number:has(~ .vg-body[data-track]) { display: block; margin: 0; }',
+      '/* rows track */', '@container uav-view (inline-size < 159.5px) {',
+      '  ' + fig + ' .uav-track { display: none; }',
+      '  ' + fig + ' .uav-body[data-track] { display: none; }', '  ' + fig + ' .uav-number:has(~ .uav-body[data-track]) { display: block; margin: 0; }',
       '}',
     ]);
   });

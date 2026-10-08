@@ -3,6 +3,13 @@
     "size": {
       "$type": "dimension",
       "$description": "Static type scale at 280px viewport",
+      "4xl": {
+        "$value": {
+          "value": 25.23,
+          "unit": "px"
+        },
+        "$description": "25.23px at 280px viewport"
+      },
       "3xl": {
         "$value": {
           "value": 22.43,

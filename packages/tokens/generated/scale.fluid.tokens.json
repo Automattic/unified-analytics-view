@@ -3,6 +3,10 @@
     "size": {
       "$type": "dimension",
       "$description": "Fluid type scale (280px → 720px)",
+      "4xl": {
+        "$value": "clamp(1.5768rem, 0.9967rem + 3.3147cqi, 2.4883rem)",
+        "$description": "25.23px → 39.81px"
+      },
       "3xl": {
         "$value": "clamp(1.4016rem, 0.9739rem + 2.4437cqi, 2.0736rem)",
         "$description": "22.43px → 33.18px"

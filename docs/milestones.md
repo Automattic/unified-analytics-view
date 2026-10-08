@@ -32,7 +32,7 @@ Port sections 1 to 7 of `prototype/prototype-bench.js` into `packages/core` and 
 
 `docs/positioning.md`, grounded in the code of both packages. The framing (decided Oct 5): this work is the next version of `@automattic/charts`, redone with what Jetpack Stats taught us and what Spacefast and Unified Analytics now require. It is a major version, consumers refactor, and it keeps the parts worth keeping.
 
-Three alignment choices follow from that and are already made: paint tokens use the `--a8c-charts-*` names, the keyboard model is version 4's, and presets are named after the chart they replace (`line`, `bar-list`).
+Three alignment choices follow from that and are already made: paint tokens use its token names under our own prefix (`--ua-charts-*` for `--a8c-charts-*`), the keyboard model is version 4's, and presets are named after the chart they replace (`line`, `bar-list`).
 
 **Done when:** Bob, Laura and Jeff can read it in five minutes and nobody has to ask "why not just use Automattic Charts". Proposing it to the charts and Stats owners comes after the Friday demo.
 

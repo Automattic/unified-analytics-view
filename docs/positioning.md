@@ -45,7 +45,7 @@ Stats depends on `@automattic/charts` and wraps every chart it uses. Those wrapp
 
 The parts of `@automattic/charts` worth keeping are kept by name.
 
-- **The tokens.** `--a8c-charts-color-series-1`, `-grid`, `-label`, `-annotation` and the rest, with their mapping onto the WordPress Design System. A page themed for version 4 themes the next version. Three tokens are new: a comparison colour, a live colour, and good and bad deltas, which default to the existing up and down colours.
+- **The tokens.** Its names, under our own prefix until the two interoperate: `--ua-charts-color-series-1`, `-grid`, `-label`, `-annotation` and the rest, for its `--a8c-charts-*`, with their mapping onto the WordPress Design System. A page themed for version 4 themes the next version by aliasing each token across, name for name. Three tokens are new: a comparison colour, a live colour, and good and bad deltas, which default to the existing up and down colours.
 - **The keyboard model.** One tab stop per chart, arrows step through points, Enter activates, Escape leaves.
 - **The accessibility groundwork:** forced-colours support, patterns as a second channel, reduced motion, colour-blind-safe palettes, labels that keep their contrast on a fill.
 - **The time axis:** bucket inference, declared resolution, locale and time zone.

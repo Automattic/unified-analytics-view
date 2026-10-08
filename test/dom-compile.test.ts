@@ -15,16 +15,16 @@ describe('compileFitRules', () => {
     const css = compileFitRules(only('cartesian', 'axes'));
     expect(css).toBe([
       '/* cartesian axes */',
-      '@container vg-view (inline-size < 279.5px) {',
-      '  .vg[data-layout="cartesian"]:not([data-keep~="guides"]) :is(.vg-x-axis, .vg-y-axis, .vg-grid) { display: none; }',
-      '  .vg[data-layout="cartesian"]:not([data-keep~="guides"]) .vg-number { display: block; }',
-      '  .vg[data-layout="cartesian"]:not([data-keep~="guides"]) { --vg-arrange: side; }',
+      '@container uav-view (inline-size < 279.5px) {',
+      '  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) :is(.uav-x-axis, .uav-y-axis, .uav-grid) { display: none; }',
+      '  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) .uav-number { display: block; }',
+      '  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) { --uav-arrange: side; }',
       '}',
       '/* cartesian axes */',
-      '@container vg-view (block-size < 119.5px) {',
-      '  .vg[data-layout="cartesian"]:not([data-keep~="guides"]) :is(.vg-x-axis, .vg-y-axis, .vg-grid) { display: none; }',
-      '  .vg[data-layout="cartesian"]:not([data-keep~="guides"]) .vg-number { display: block; }',
-      '  .vg[data-layout="cartesian"]:not([data-keep~="guides"]) { --vg-arrange: side; }',
+      '@container uav-view (block-size < 119.5px) {',
+      '  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) :is(.uav-x-axis, .uav-y-axis, .uav-grid) { display: none; }',
+      '  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) .uav-number { display: block; }',
+      '  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) { --uav-arrange: side; }',
       '}',
     ].join('\n'));
     expect(compileFitRules(FIT_RULES)).not.toMatch(/\bor\b/);
@@ -32,46 +32,46 @@ describe('compileFitRules', () => {
 
   it('maps roles to data-role, on the plot container', () => {
     expect(compileFitRules(only('cartesian', 'secondary'))).toContain(
-      '@container vg-plot (block-size < 89.5px) {\n  .vg[data-layout="cartesian"]:not([data-keep~="secondary"]) :is([data-role="comparison"], [data-role="reference"], [data-role="context"]) { display: none; }\n}');
+      '@container uav-plot (block-size < 89.5px) {\n  .uav[data-layout="cartesian"]:not([data-keep~="secondary"]) :is([data-role="comparison"], [data-role="reference"], [data-role="context"]) { display: none; }\n}');
   });
 
   it('maps the middle tick to the ranked x label, and a rule with no keep to a bare figure', () => {
     expect(compileFitRules(only('cartesian', 'mid-tick'))).toBe(
-      '/* cartesian mid-tick */\n@container vg-view (inline-size < 379.5px) {\n  .vg[data-layout="cartesian"] .vg-x-axis [data-rank] { display: none; }\n}');
+      '/* cartesian mid-tick */\n@container uav-view (inline-size < 379.5px) {\n  .uav[data-layout="cartesian"] .uav-x-axis [data-rank] { display: none; }\n}');
   });
 
   it('writes a set with nothing hidden, as the band legend has', () => {
     expect(compileFitRules(only('band', 'legend'))).toBe(
-      '/* band legend */\n@container vg-view (inline-size < 169.5px) {\n  .vg[data-layout="band"]:not([data-keep~="guides"]) { --vg-legend: top; }\n}');
+      '/* band legend */\n@container uav-view (inline-size < 169.5px) {\n  .uav[data-layout="band"]:not([data-keep~="guides"]) { --uav-legend: top; }\n}');
   });
 
   it('adds what a layout says changes with a rule, under the same condition and keep', () => {
-    const css = compileFitRules(only('cartesian', 'marks'), { cartesian: { marks: { '': 'grid-template: none;', '.vg-body': 'display: none;' } } });
-    const fig = '.vg[data-layout="cartesian"]:not([data-keep~="marks"])';
+    const css = compileFitRules(only('cartesian', 'marks'), { cartesian: { marks: { '': 'grid-template: none;', '.uav-body': 'display: none;' } } });
+    const fig = '.uav[data-layout="cartesian"]:not([data-keep~="marks"])';
     expect(css.split('\n').slice(0, 6)).toEqual([
-      '/* cartesian marks */', '@container vg-view (inline-size < 151.5px) {',
-      '  ' + fig + ' .vg-plot { display: none; }', '  ' + fig + ' .vg-number { display: block; }',
-      '  ' + fig + ' { grid-template: none; }', '  ' + fig + ' .vg-body { display: none; }',
+      '/* cartesian marks */', '@container uav-view (inline-size < 151.5px) {',
+      '  ' + fig + ' .uav-plot { display: none; }', '  ' + fig + ' .uav-number { display: block; }',
+      '  ' + fig + ' { grid-template: none; }', '  ' + fig + ' .uav-body { display: none; }',
     ]);
   });
 
-  // A page may name a container of its own "view" or "plot". Ours are `vg-view` and `vg-plot`, so its does not answer our queries.
-  it('names its containers vg-view and vg-plot wherever one is declared or queried', () => {
+  // A page may name a container of its own "view" or "plot". Ours are `uav-view` and `uav-plot`, so its does not answer our queries.
+  it('names its containers uav-view and uav-plot wherever one is declared or queried', () => {
     const painters = [...Object.values(LAYOUTS).filter((p) => p.layout !== 'geo'), geoPainter];
     const compiled = compileFitRules([...FIT_RULES, ...GEO_RULES, ...painters.flatMap((p) => (p === geoPainter ? [] : p.rules?.(CONTAINER_RULES) ?? []))], Object.fromEntries(painters.map((p) => [p.layout, p.fit ?? {}])));
     const css = [BASE_CSS, FALLBACK_CSS, ...painters.map((p) => p.css), compiled].join('\n');
-    expect(css).toContain(':host { display: block; container: vg-view / inline-size;');
-    expect(css).toContain('container: vg-plot / size;');
-    expect(compiled).toContain('@container vg-plot (');
-    expect(css.match(/@container (?!vg-(view|plot) \()[^{]*/g)).toBeNull();
-    expect(css.match(/container(-name)?:\s*(?!\s|vg-(view|plot)\b)[^;]*/g)).toBeNull();
+    expect(css).toContain(':host { display: block; container: uav-view / inline-size;');
+    expect(css).toContain('container: uav-plot / size;');
+    expect(compiled).toContain('@container uav-plot (');
+    expect(css.match(/@container (?!uav-(view|plot) \()[^{]*/g)).toBeNull();
+    expect(css.match(/container(-name)?:\s*(?!\s|uav-(view|plot)\b)[^;]*/g)).toBeNull();
   });
   it('handles every default rule, in order, one block per need', () => {
     const css = compileFitRules(FIT_RULES);
     const needs = FIT_RULES.reduce((n, r) => n + Object.keys(r.needs).length, 0);
     expect(css.match(/@container /g)).toHaveLength(needs);
     expect(css.match(/\/\* (\w+ [\w-]+) \*\//g)!.filter((c, i, a) => c !== a[i - 1])).toEqual(FIT_RULES.map((r) => '/* ' + r.layout + ' ' + r.id + ' */'));
-    for (const r of FIT_RULES) for (const part of r.show ?? []) expect(css).toContain('.vg-' + part + ' { display: block; }');
+    for (const r of FIT_RULES) for (const part of r.show ?? []) expect(css).toContain('.uav-' + part + ' { display: block; }');
   });
 
   it('refuses a name that would escape its selector, and says what a name is', () => {

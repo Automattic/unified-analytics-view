@@ -1,4 +1,5 @@
 import { pathD, type PathNode } from '@universal-analytics/core';
+import { FACES, token } from './tokens.ts';
 
 /* Motion: what a data change animates. A resize animates nothing, because nothing here runs on one and a ratio
  * does not change with the room.
@@ -12,37 +13,40 @@ import { pathD, type PathNode } from '@universal-analytics/core';
  * What takes room in the flow (the number's lines, a row, a legend entry) leaves at once. So nothing kept for a
  * fade can change a size the measured pass reads. */
 
-const TOKEN = (kind: string, duration: string, easing: string) =>
-  `var(--a8c-charts-motion-duration-${kind}, ${duration}) var(--a8c-charts-motion-easing-${kind}, ${easing})`;
-const UPDATE = TOKEN('update', '300ms', 'cubic-bezier(0.4, 0, 0.2, 1)'), EXIT = TOKEN('exit', '150ms', 'cubic-bezier(0.4, 0, 1, 1)');
-/** The ratios, and `--vg-p`, which a path's morph is timed by. */
-const MOVED = ['--vg-x', '--vg-w', '--vg-v', '--vg-v0', '--vg-t', '--vg-p', '--vg-x2', '--vg-t2'];
+const TOKEN = (kind: string) => token('motion-duration-' + kind) + ' ' + token('motion-easing-' + kind);
+const UPDATE = TOKEN('update'), EXIT = TOKEN('exit');
+/** The ratios, and `--uav-p`, which a path's morph is timed by. */
+const MOVED = ['--uav-x', '--uav-w', '--uav-v', '--uav-v0', '--uav-t', '--uav-p', '--uav-x2', '--uav-t2'];
 
 let registered = false;
 /** Register them as numbers, which is what lets them animate. `@property` is ignored in a shadow root, so this is
- * on the document, which is why they carry a prefix. Where it fails, values still apply and nothing moves. */
+ * on the document, which is why they carry a prefix. Where it fails, values still apply and nothing moves.
+ * The faces are registered with them, as lengths that inherit: a face is then worked out where it is set, against
+ * the view, and handed down as a size (view.ts). Where that fails each part works the token out for itself. */
 export function register(): void {
-  registered = MOVED.every((name) => {
-    try { CSS.registerProperty({ name, syntax: '<number>', inherits: false, initialValue: '0' }); return true; }
+  const add = (name: string, syntax: string, inherits: boolean, initialValue: string) => {
+    try { CSS.registerProperty({ name, syntax, inherits, initialValue }); return true; }
     catch (e) { return (e as Error).name === 'InvalidModificationError'; }           // registered already
-  });
+  };
+  registered = MOVED.every((name) => add(name, '<number>', false, '0'));
+  for (const face of FACES) add('--uav-font-' + face, '<length>', true, '0px');
 }
 
-/** It joins the base sheet inside `@layer vg`. With reduced motion none of it applies, so nothing moves. */
+/** It joins the base sheet inside `@layer uav`. With reduced motion none of it applies, so nothing moves. */
 export const MOTION_CSS = `
 @media (prefers-reduced-motion: no-preference) {
-  .vg[data-moving] [data-key] { transition: ${MOVED.map((p) => p + ' ' + UPDATE).join(', ')}, opacity ${TOKEN('entrance', '200ms', 'cubic-bezier(0, 0, 0.2, 1)')}; }
+  .uav[data-moving] [data-key] { transition: ${MOVED.map((p) => p + ' ' + UPDATE).join(', ')}, opacity ${TOKEN('entrance')}; }
   /* Inline values are the end state, so the start has to outrank them. A bar grows from where it starts, a segment from nothing. */
   @starting-style {
-    .vg[data-moving] [data-key] { opacity: 0 !important; }
-    .vg[data-moving] :is(.vg-bars, .vg-band, .vg-row) > i { --vg-v: var(--vg-v0, 0) !important; }
+    .uav[data-moving] [data-key] { opacity: 0 !important; }
+    .uav[data-moving] :is(.uav-bars, .uav-band, .uav-row) > i { --uav-v: var(--uav-v0, 0) !important; }
   }
-  /* Leaving. Only what is placed by a ratio is kept to fade: --vg-leaving says so, and settle() reads it. */
-  .vg[data-moving] :is(.vg-plot, .vg-x-axis, .vg-y-axis, .vg-band) [data-exit] { --vg-leaving: 1; opacity: 0 !important; pointer-events: none; transition: opacity ${EXIT}, --vg-v ${EXIT}; }
-  .vg[data-moving] :is(.vg-bars, .vg-band) [data-exit] { --vg-v: var(--vg-v0, 0) !important; }
+  /* Leaving. Only what is placed by a ratio is kept to fade: --uav-leaving says so, and settle() reads it. */
+  .uav[data-moving] :is(.uav-plot, .uav-x-axis, .uav-y-axis, .uav-band) [data-exit] { --uav-leaving: 1; opacity: 0 !important; pointer-events: none; transition: opacity ${EXIT}, --uav-v ${EXIT}; }
+  .uav[data-moving] :is(.uav-bars, .uav-band) [data-exit] { --uav-v: var(--uav-v0, 0) !important; }
   /* A y label sizes its column, so one that is leaving is taken out of the flow and the column is the new labels'. */
-  .vg-y-axis { position: relative; }
-  .vg[data-moving] .vg-y-axis [data-exit] { position: absolute; inset-inline-end: 0; }
+  .uav-y-axis { position: relative; }
+  .uav[data-moving] .uav-y-axis [data-exit] { position: absolute; inset-inline-end: 0; }
 }`;
 
 /** A point of a path: where it is, and for an area where it starts when that is not the bottom. */
@@ -76,7 +80,7 @@ export function begin(fig: HTMLElement, moving: boolean): void {
 
 /** A node whose key has gone. Where nothing moves it goes now. Otherwise it is marked, and settle() says when. */
 export function leave(el: Element): void {
-  if (el.closest('.vg[data-moving]')) el.setAttribute('data-exit', ''); else el.remove();
+  if (el.closest('.uav[data-moving]')) el.setAttribute('data-exit', ''); else el.remove();
 }
 
 const transitions = (el: Element, subtree = false) => el.getAnimations({ subtree }).filter((a) => a instanceof CSSTransition);
@@ -91,7 +95,7 @@ export function settle(fig: HTMLElement): void {
   // reads lays the page out again for each node, and a node's own getAnimations() slows with every transition running.
   const fades = new Map<Element, Animation[]>();
   for (const t of transitions(fig, true)) { const e = t.effect as KeyframeEffect | null; if (e?.target && !e.pseudoElement) fades.set(e.target, (fades.get(e.target) ?? []).concat(t)); }
-  const leaving = Array.from(fig.querySelectorAll('[data-exit]'), (el) => [el, getComputedStyle(el).getPropertyValue('--vg-leaving') ? fades.get(el) ?? [] : []] as const);
+  const leaving = Array.from(fig.querySelectorAll('[data-exit]'), (el) => [el, getComputedStyle(el).getPropertyValue('--uav-leaving') ? fades.get(el) ?? [] : []] as const);
   for (const [el, fading] of leaving) {
     // A key that comes back takes its element back, and the mark with it.
     if (fading.length) over(fading).then(() => { if (el.hasAttribute('data-exit')) el.remove(); }); else el.remove();
@@ -109,12 +113,12 @@ interface Morph { now: XV[]; from: XV[]; to: PathNode; frame: number; clock?: An
 const morphs = new WeakMap<Element, Morph>();
 
 /** Set a path's shape. A new path, or one in a view that is not moving, takes it at once. A kept one goes there
- * from wherever it is now: `--vg-p` is given a new value, the stylesheet's transition on it is the clock, and each
+ * from wherever it is now: `--uav-p` is given a new value, the stylesheet's transition on it is the clock, and each
  * frame draws the points that far along. With no transition (reduced motion, no registered property, a path a
  * rule has hidden) the first frame is the last. At rest `d` is core's own string. */
 export function morph(el: SVGElement, n: PathNode): void {
   const m = morphs.get(el);
-  if (!m || !el.closest('.vg[data-moving]')) {
+  if (!m || !el.closest('.uav[data-moving]')) {
     if (m?.frame) cancelAnimationFrame(m.frame);
     el.setAttribute('d', n.d ?? '');
     morphs.set(el, { now: n.points, from: n.points, to: n, frame: 0 });
@@ -122,12 +126,12 @@ export function morph(el: SVGElement, n: PathNode): void {
   }
   if (!m.frame && n.d === m.to.d) { m.to = n; return; }                  // at rest on this shape already: the same data again
   m.from = resample(m.now, n.points); m.to = n; m.clock = undefined;
-  el.style.setProperty('--vg-p', String(++turn));
+  el.style.setProperty('--uav-p', String(++turn));
   m.frame ||= requestAnimationFrame(() => step(el, m));
 }
 function step(el: SVGElement, m: Morph): void {
   // The clock is found once for a morph. Asking each frame flushes style after the path before has been redrawn.
-  if (m.clock === undefined) m.clock = transitions(el).find((t) => (t as CSSTransition).transitionProperty === '--vg-p') ?? null;
+  if (m.clock === undefined) m.clock = transitions(el).find((t) => (t as CSSTransition).transitionProperty === '--uav-p') ?? null;
   const p = m.clock?.effect?.getComputedTiming().progress ?? 1;
   m.now = mix(m.from, m.to.points, p);
   el.setAttribute('d', (p < 1 ? pathD(m.now, m.to.curve, m.to.fill) : m.to.d) ?? '');

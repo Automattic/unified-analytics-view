@@ -1,0 +1,276 @@
+{
+  "charts": {
+    "$description": "The component tier: the tokens <ua-view> reads, as aliases into the common and base tiers. packages/dom lists the same names with the value each falls back to where a page loads no tokens (src/tokens.ts), and a test holds the two together.",
+    "color": {
+      "$type": "color",
+      "$description": "What a view paints with, under the names @automattic/charts gives its own colours (its prefix is --a8c-charts-). A series colour is three: the mark, text in its colour, and its tint. `background` is the surface a view stands on, for the halo behind a label; a surface that is not the page sets it for the views it holds.",
+      "label": {
+        "$value": "{color.foreground}"
+      },
+      "label-secondary": {
+        "$value": "{color.muted-foreground}"
+      },
+      "grid": {
+        "$value": "{color.border}"
+      },
+      "axis-x": {
+        "$value": "{color.foreground-50}"
+      },
+      "series-1": {
+        "$value": "{color.mark.chartreuse}"
+      },
+      "series-1-text": {
+        "$value": "{color.mark.chartreuse-text}"
+      },
+      "series-1-soft": {
+        "$value": "{color.mark.chartreuse-soft}"
+      },
+      "series-2": {
+        "$value": "{color.mark.grass}"
+      },
+      "series-2-text": {
+        "$value": "{color.mark.grass-text}"
+      },
+      "series-2-soft": {
+        "$value": "{color.mark.grass-soft}"
+      },
+      "series-3": {
+        "$value": "{color.mark.teal}"
+      },
+      "series-3-text": {
+        "$value": "{color.mark.teal-text}"
+      },
+      "series-3-soft": {
+        "$value": "{color.mark.teal-soft}"
+      },
+      "series-4": {
+        "$value": "{color.mark.steel}"
+      },
+      "series-4-text": {
+        "$value": "{color.mark.steel-text}"
+      },
+      "series-4-soft": {
+        "$value": "{color.mark.steel-soft}"
+      },
+      "series-5": {
+        "$value": "{color.mark.rose}"
+      },
+      "series-5-text": {
+        "$value": "{color.mark.rose-text}"
+      },
+      "series-5-soft": {
+        "$value": "{color.mark.rose-soft}"
+      },
+      "series-6": {
+        "$value": "{color.mark.orange}"
+      },
+      "series-6-text": {
+        "$value": "{color.mark.orange-text}"
+      },
+      "series-6-soft": {
+        "$value": "{color.mark.orange-soft}"
+      },
+      "seq-1": {
+        "$value": "{color.seq-1}"
+      },
+      "seq-2": {
+        "$value": "{color.seq-2}"
+      },
+      "seq-3": {
+        "$value": "{color.seq-3}"
+      },
+      "seq-4": {
+        "$value": "{color.seq-4}"
+      },
+      "seq-5": {
+        "$value": "{color.seq-5}"
+      },
+      "seq-6": {
+        "$value": "{color.seq-6}"
+      },
+      "seq-7": {
+        "$value": "{color.seq-7}"
+      },
+      "seq-8": {
+        "$value": "{color.seq-8}"
+      },
+      "seq-9": {
+        "$value": "{color.seq-9}"
+      },
+      "seq-10": {
+        "$value": "{color.seq-10}"
+      },
+      "seq-none": {
+        "$value": "{color.seq-none}"
+      },
+      "annotation": {
+        "$value": "{color.muted-foreground}"
+      },
+      "comparison": {
+        "$value": "{color.foreground-50}"
+      },
+      "delta-good": {
+        "$value": "{color.success-text}"
+      },
+      "delta-bad": {
+        "$value": "{color.destructive-text}"
+      },
+      "trend-neutral": {
+        "$value": "{color.muted-foreground}"
+      },
+      "live": {
+        "$value": "{color.live}"
+      },
+      "background": {
+        "$value": "{color.background}"
+      },
+      "trend-up": {
+        "$value": "{color.success-text}"
+      },
+      "trend-down": {
+        "$value": "{color.destructive-text}"
+      },
+      "label-axis": {
+        "$value": "{color.muted-foreground}"
+      },
+      "label-inverse": {
+        "$value": "{color.background}"
+      },
+      "tooltip-surface": {
+        "$value": "{color.foreground}"
+      }
+    },
+    "border-radius": {
+      "$type": "dimension",
+      "$description": "Corners. `bar` and `cell` are @automattic/charts' names; a legend's swatch and the readout have their own.",
+      "bar": {
+        "$value": "{radius.xs}"
+      },
+      "cell": {
+        "$value": {
+          "value": 1,
+          "unit": "px"
+        }
+      },
+      "swatch": {
+        "$value": "{radius.xs}"
+      },
+      "tooltip": {
+        "$value": "{radius.xs}"
+      }
+    },
+    "stroke-width": {
+      "$type": "dimension",
+      "$description": "A line of the data where its layer gives no width, a rule or a grid line, and the outline of the mark a reader has chosen.",
+      "line": {
+        "$value": {
+          "value": 2,
+          "unit": "px"
+        }
+      },
+      "rule": {
+        "$value": {
+          "value": 1,
+          "unit": "px"
+        }
+      },
+      "active": {
+        "$value": {
+          "value": 2,
+          "unit": "px"
+        }
+      }
+    },
+    "font-size": {
+      "$type": "dimension",
+      "$description": "The four faces of a view's text, and the smaller one its number takes where the larger does not fit. They are the fluid scale's steps, so a face follows the width of the view it is in. Ticks and labels are the two steps that hardly move, because the room a fit rule asks for is worked out from them.",
+      "tick": {
+        "$value": "{font.size.xs}"
+      },
+      "label": {
+        "$value": "{font.size.sm}"
+      },
+      "value": {
+        "$value": "{font.size.sm}"
+      },
+      "display": {
+        "$value": "{font.size.4xl}"
+      },
+      "display-small": {
+        "$value": "{font.size.2xl}"
+      }
+    },
+    "font-weight": {
+      "$type": "fontWeight",
+      "value": {
+        "$value": 500
+      },
+      "display": {
+        "$value": 600
+      },
+      "heading": {
+        "$value": 600
+      }
+    },
+    "letter-spacing": {
+      "$type": "dimension",
+      "display": {
+        "$value": {
+          "value": -0.01,
+          "unit": "em"
+        }
+      }
+    },
+    "motion": {
+      "$description": "What a data change is timed by. `entrance` is @automattic/charts' own; a node that moves and one that leaves have theirs.",
+      "duration-entrance": {
+        "$type": "duration",
+        "$value": {
+          "value": 200,
+          "unit": "ms"
+        }
+      },
+      "easing-entrance": {
+        "$type": "cubicBezier",
+        "$value": [
+          0,
+          0,
+          0.2,
+          1
+        ]
+      },
+      "duration-update": {
+        "$type": "duration",
+        "$value": {
+          "value": 300,
+          "unit": "ms"
+        }
+      },
+      "easing-update": {
+        "$type": "cubicBezier",
+        "$value": [
+          0.4,
+          0,
+          0.2,
+          1
+        ]
+      },
+      "duration-exit": {
+        "$type": "duration",
+        "$value": {
+          "value": 150,
+          "unit": "ms"
+        }
+      },
+      "easing-exit": {
+        "$type": "cubicBezier",
+        "$value": [
+          0.4,
+          0,
+          1,
+          1
+        ]
+      }
+    }
+  }
+}

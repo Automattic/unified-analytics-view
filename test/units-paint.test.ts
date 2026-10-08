@@ -65,11 +65,11 @@ describe('a tint, and text in a series colour', () => {
     expect(scene(visitors('bar-list', 'source'), flat).scene.nodes.filter((n) => n.kind === 'rect').every((n) => n.tone === 'soft')).toBe(true);
   });
   it('a tint is the paint\'s soft colour, whole, and the paint at its opacity where the tokens have none', () => {
-    expect(nodePaint({ paint: 'series.2', kind: 'rect', tone: 'soft', opacity: 0.2 })).toBe('var(--a8c-charts-color-series-2-soft, color-mix(in srgb, var(--a8c-charts-color-series-2, currentColor) 20%, transparent))');
-    expect(nodePaint({ paint: 'series.2', kind: 'rect', opacity: 0.4 })).toBe('var(--a8c-charts-color-series-2, currentColor)');
+    expect(nodePaint({ paint: 'series.2', kind: 'rect', tone: 'soft', opacity: 0.2 })).toBe('var(--ua-charts-color-series-2-soft, color-mix(in srgb, var(--ua-charts-color-series-2, currentColor) 20%, transparent))');
+    expect(nodePaint({ paint: 'series.2', kind: 'rect', opacity: 0.4 })).toBe('var(--ua-charts-color-series-2, currentColor)');
   });
   it('text in a series colour takes the step for text, and other text its own paint', () => {
-    expect(nodePaint({ paint: 'series.3', kind: 'text' })).toBe('var(--a8c-charts-color-series-3-text, var(--a8c-charts-color-series-3, currentColor))');
+    expect(nodePaint({ paint: 'series.3', kind: 'text' })).toBe('var(--ua-charts-color-series-3-text, var(--ua-charts-color-series-3, currentColor))');
     expect(nodePaint({ paint: 'ink.muted', kind: 'text' })).toBe(nodePaint({ paint: 'ink.muted', kind: 'rect' }));
   });
 });

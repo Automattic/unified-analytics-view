@@ -41,64 +41,64 @@ export function shapes(d: TrendData, x: (i: number) => number, y: (v: number) =>
  * until a layout makes the view a size container. */
 const unless = (container: string, needs: { inline?: number; block?: number }, body: string) =>
   Object.entries(needs).map(([axis, px]) => `@container ${container} (${axis}-size < ${px}px) {${body}}`).join('\n');
-const GUIDES = '.vg[data-layout="cartesian"]:not([data-keep~="guides"])', MARKS = '.vg[data-layout="cartesian"]:not([data-keep~="marks"])';
+const GUIDES = '.uav[data-layout="cartesian"]:not([data-keep~="guides"])', MARKS = '.uav[data-layout="cartesian"]:not([data-keep~="marks"])';
 
 /* The base sheet, then the four cartesian fit rules of section 2 compiled by hand.
  * Where this departs from the plan's text it says CHANGED; the report lists each one. */
 const CSS_TEXT = `
-:host { display: block; container: vg-view / inline-size; font: 11px/1.3 system-ui, sans-serif; color: var(--a8c-charts-color-label); }
-.vg { position: relative; box-sizing: border-box; block-size: 100%; margin: 0; padding-block-start: 8px; display: grid; column-gap: 6px;
-  grid-template: "y plot" minmax(0, 1fr) ". x" auto / auto minmax(0, 1fr); --vg-plot-block: var(--vg-axes-height, 184px); }
-.vg-prose { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.vg-number { display: none; grid-area: number; align-self: center; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.vg-number b { display: block; font-size: 24px; line-height: 1.1; font-weight: 600; letter-spacing: -0.01em; }
-.vg-number [data-judge="good"] { color: var(--a8c-charts-color-delta-good); }
-.vg-number [data-judge="bad"] { color: var(--a8c-charts-color-delta-bad); }
-.vg-y-axis, .vg-x-axis { display: grid; color: var(--a8c-charts-color-label-secondary); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.vg-y-axis { grid-area: y; }
-.vg-y-axis span { grid-area: 1 / 1; align-self: start; justify-self: end; position: relative; inset-block-start: calc((1 - var(--vg-t)) * 100%); translate: 0 -50%; }
-.vg-x-axis { grid-area: x; margin-inline: 2px; padding-block-start: 4px; }
+:host { display: block; container: uav-view / inline-size; font: 11px/1.3 system-ui, sans-serif; color: var(--ua-charts-color-label); }
+.uav { position: relative; box-sizing: border-box; block-size: 100%; margin: 0; padding-block-start: 8px; display: grid; column-gap: 6px;
+  grid-template: "y plot" minmax(0, 1fr) ". x" auto / auto minmax(0, 1fr); --uav-plot-block: var(--uav-axes-height, 184px); }
+.uav-prose { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.uav-number { display: none; grid-area: number; align-self: center; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.uav-number b { display: block; font-size: 24px; line-height: 1.1; font-weight: 600; letter-spacing: -0.01em; }
+.uav-number [data-judge="good"] { color: var(--ua-charts-color-delta-good); }
+.uav-number [data-judge="bad"] { color: var(--ua-charts-color-delta-bad); }
+.uav-y-axis, .uav-x-axis { display: grid; color: var(--ua-charts-color-label-secondary); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.uav-y-axis { grid-area: y; }
+.uav-y-axis span { grid-area: 1 / 1; align-self: start; justify-self: end; position: relative; inset-block-start: calc((1 - var(--uav-t)) * 100%); translate: 0 -50%; }
+.uav-x-axis { grid-area: x; margin-inline: 2px; padding-block-start: 4px; }
 /* ponytail: physical translate, so not right for RTL; the painter wants anchor classes that flip. */
-.vg-x-axis span { grid-area: 1 / 1; justify-self: start; position: relative; inset-inline-start: calc(var(--vg-x) * 100%); translate: -50%; }
-.vg-x-axis .start { translate: 0; }
-.vg-x-axis .end { translate: -100%; }
+.uav-x-axis span { grid-area: 1 / 1; justify-self: start; position: relative; inset-inline-start: calc(var(--uav-x) * 100%); translate: -50%; }
+.uav-x-axis .start { translate: 0; }
+.uav-x-axis .end { translate: -100%; }
 /* The height has to be a stated block-size. Chrome 155 answers no block-size query on a plot whose height comes from
  * contain-intrinsic-block-size or min-block-size through a stretched grid row, though it lays it out at that height. */
-.vg-plot { grid-area: plot; position: relative; container: vg-plot / size; block-size: var(--vg-plot-block); }
-.vg-grid i { position: absolute; inset-inline: 0; inset-block-start: calc((1 - var(--vg-t)) * 100%); border-block-start: 1px solid var(--a8c-charts-color-grid); }
-.vg-grid i[data-key="grid:0"] { border-color: var(--a8c-charts-color-axis-x); }
-.vg-grid i, .vg-y-axis span { transition: --vg-t 600ms linear; }
+.uav-plot { grid-area: plot; position: relative; container: uav-plot / size; block-size: var(--uav-plot-block); }
+.uav-grid i { position: absolute; inset-inline: 0; inset-block-start: calc((1 - var(--uav-t)) * 100%); border-block-start: 1px solid var(--ua-charts-color-grid); }
+.uav-grid i[data-key="grid:0"] { border-color: var(--ua-charts-color-axis-x); }
+.uav-grid i, .uav-y-axis span { transition: --uav-t 600ms linear; }
 svg { position: absolute; inset-block-start: 0; inset-inline-start: 2px; inline-size: calc(100% - 4px); block-size: 100%; overflow: visible; }
-path { fill: none; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke: var(--a8c-charts-color-series-1); stroke-width: 2; }
-[data-role="context"] { fill: var(--a8c-charts-color-series-1); stroke: none; opacity: 0.14; }
-[data-role="comparison"] { stroke: var(--a8c-charts-color-comparison); stroke-width: 1.5; stroke-dasharray: 3 3; }
+path { fill: none; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke: var(--ua-charts-color-series-1); stroke-width: 2; }
+[data-role="context"] { fill: var(--ua-charts-color-series-1); stroke: none; opacity: 0.14; }
+[data-role="comparison"] { stroke: var(--ua-charts-color-comparison); stroke-width: 1.5; stroke-dasharray: 3 3; }
 [data-key$=":partial"] { stroke-dasharray: 2 4; opacity: 0.75; }
 
 /* axes */
-${unless('vg-view', { inline: 280, block: 120 }, `
-  ${GUIDES} :is(.vg-x-axis, .vg-y-axis, .vg-grid) { display: none; }
-  ${GUIDES} .vg-number { display: block; }
+${unless('uav-view', { inline: 280, block: 120 }, `
+  ${GUIDES} :is(.uav-x-axis, .uav-y-axis, .uav-grid) { display: none; }
+  ${GUIDES} .uav-number { display: block; }
   /* CHANGED: the plan sets only grid-template-columns. The areas, the gap, the padding and the bare height have to switch too. */
-  ${GUIDES} { --vg-arrange: side; grid-template: "number plot" minmax(0, 1fr) / auto minmax(0, 1fr); column-gap: 12px; padding-block-start: 0; --vg-plot-block: var(--vg-bare-height, 46px); }
+  ${GUIDES} { --uav-arrange: side; grid-template: "number plot" minmax(0, 1fr) / auto minmax(0, 1fr); column-gap: 12px; padding-block-start: 0; --uav-plot-block: var(--uav-bare-height, 46px); }
 `)}
 /* mid-tick */
-${unless('vg-view', { inline: 380 }, `
-  .vg[data-layout="cartesian"] .vg-x-axis .mid { display: none; }
+${unless('uav-view', { inline: 380 }, `
+  .uav[data-layout="cartesian"] .uav-x-axis .mid { display: none; }
 `)}
 /* secondary: as the plan writes it. The plot is always a size container, so here one query with "or" is answered. */
-@container vg-plot (inline-size < 180px) or (block-size < 90px) {
-  .vg:not([data-keep~="secondary"]) :is([data-role="comparison"], [data-role="reference"], [data-role="context"]) { display: none; }
+@container uav-plot (inline-size < 180px) or (block-size < 90px) {
+  .uav:not([data-keep~="secondary"]) :is([data-role="comparison"], [data-role="reference"], [data-role="context"]) { display: none; }
 }
 /* marks */
-${unless('vg-view', { inline: 152, block: 46 }, `
-  ${MARKS} .vg-plot { display: none; }
-  ${MARKS} .vg-number { display: block; }
+${unless('uav-view', { inline: 152, block: 46 }, `
+  ${MARKS} .uav-plot { display: none; }
+  ${MARKS} .uav-number { display: block; }
   ${MARKS} { grid-template: "number" auto / minmax(0, 1fr); }
 `)}
 /* ADDED, for item 6. Only a size container answers a block-size query, so this matches exactly when a layout has
  * handed the view a box, and the plot then takes the height left over. No attribute on the view. */
-@container vg-view (block-size >= 0px) {
-  .vg-plot { block-size: auto; }
+@container uav-view (block-size >= 0px) {
+  .uav-plot { block-size: auto; }
 }`;
 
 const SVG = 'http://www.w3.org/2000/svg';
@@ -127,15 +127,15 @@ export class SpikeView extends HTMLElement {
     super();
     const root = this.attachShadow({ mode: 'open' });
     root.adoptedStyleSheets = [SpikeView.sheet];
-    const fig = make('figure', 'vg', root);
+    const fig = make('figure', 'uav', root);
     fig.dataset.layout = 'cartesian'; fig.dataset.keep = '';
-    this.#prose = make('figcaption', 'vg-prose', fig);
+    this.#prose = make('figcaption', 'uav-prose', fig);
     this.#prose.id = 's'; fig.setAttribute('aria-describedby', 's');
-    const number = make('div', 'vg-number', fig);
+    const number = make('div', 'uav-number', fig);
     this.#value = make('b', '', number); this.#delta = make('span', '', number);
-    this.#yAxis = make('div', 'vg-y-axis', fig);
-    const plot = make('div', 'vg-plot', fig);
-    this.#grid = make('div', 'vg-grid', plot);
+    this.#yAxis = make('div', 'uav-y-axis', fig);
+    const plot = make('div', 'uav-plot', fig);
+    this.#grid = make('div', 'uav-grid', plot);
     const svg = plot.appendChild(document.createElementNS(SVG, 'svg'));
     svg.setAttribute('viewBox', '0 0 100 100'); svg.setAttribute('preserveAspectRatio', 'none');
     for (const key of PATHS) {
@@ -143,7 +143,7 @@ export class SpikeView extends HTMLElement {
       p.dataset.key = key; p.dataset.role = ROLES[key];
       this.#paths.set(key, p);
     }
-    this.#xAxis = make('div', 'vg-x-axis', fig);
+    this.#xAxis = make('div', 'uav-x-axis', fig);
   }
 
   set data(d: TrendData) {
@@ -154,14 +154,14 @@ export class SpikeView extends HTMLElement {
     this.#delta.dataset.judge = pct == null ? '' : pct > 0 ? 'good' : 'bad';
     this.#prose.textContent = d.title + ': ' + fmt(d.total) + ' in the last ' + d.days + ' days' + (pct == null ? '.' : ', ' + (pct > 0 ? 'up ' : 'down ') + Math.round(Math.abs(pct) * 100) + '% on the ' + d.days + ' before.');
 
-    const t = (el: HTMLElement, i: number) => el.style.setProperty('--vg-t', String(ticks[i]! / top));
+    const t = (el: HTMLElement, i: number) => el.style.setProperty('--uav-t', String(ticks[i]! / top));
     keyed(this.#yAxis, ticks.map((v) => 'ytick:' + v), () => document.createElement('span'), (el, i) => { el.textContent = fmt(ticks[i]!); t(el, i); });
     keyed(this.#grid, ticks.map((v) => 'grid:' + v), () => document.createElement('i'), t);
     const at = last < 2 ? [0, last] : [0, Math.floor(last / 2), last];
     keyed(this.#xAxis, at.map((i) => 'xtick:' + d.rows[i]!['date.day']), () => document.createElement('span'), (el, j) => {
       el.textContent = day(d.rows[at[j]!]!['date.day'] as string);
       el.className = j === 0 ? 'start' : j === at.length - 1 ? 'end' : 'mid';
-      el.style.setProperty('--vg-x', String(at[j]! / last));
+      el.style.setProperty('--uav-x', String(at[j]! / last));
     });
     const s = shapes(d, (i) => (100 * i) / last, (v) => 100 * (1 - v / top));
     for (const key of PATHS) this.#paths.get(key)!.setAttribute('d', s[key] ?? '');
@@ -173,7 +173,7 @@ export function defineSpikeView() {
   SpikeView.sheet = new CSSStyleSheet();
   SpikeView.sheet.replaceSync(CSS_TEXT);
   // @property is ignored in a shadow root, so these go on the document. Where it fails, values still apply and nothing animates.
-  for (const name of ['--vg-x', '--vg-w', '--vg-v', '--vg-t']) {
+  for (const name of ['--uav-x', '--uav-w', '--uav-v', '--uav-t']) {
     try { CSS.registerProperty({ name, syntax: '<number>', inherits: false, initialValue: '0' }); } catch { /* registered already, or unsupported */ }
   }
   customElements.define('ua-spike-view', SpikeView);

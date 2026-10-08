@@ -1,41 +1,7 @@
 @import '@universal-analytics/tokens/generated/tokens.css';
 
-/* Paint tokens, under the @automattic/charts names (docs/dom-painter-plan.md, 4.1). */
-:root {
-  color-scheme: light dark;
-  --a8c-charts-color-label: var(--ua-color-foreground);
-  --a8c-charts-color-label-secondary: var(--ua-color-muted-foreground);
-  --a8c-charts-color-grid: var(--ua-color-border);
-  --a8c-charts-color-axis-x: var(--ua-color-foreground-50);
-  /* A series colour is three: the mark, its text, and its tint. The tokens choose each per theme: the hue at its
-   * brightest where that holds the contrast the element needs, and the ramp's step for that contrast where not. */
-  --a8c-charts-color-series-1: var(--ua-color-mark-chartreuse); --a8c-charts-color-series-1-text: var(--ua-color-mark-chartreuse-text); --a8c-charts-color-series-1-soft: var(--ua-color-mark-chartreuse-soft);
-  --a8c-charts-color-series-2: var(--ua-color-mark-grass); --a8c-charts-color-series-2-text: var(--ua-color-mark-grass-text); --a8c-charts-color-series-2-soft: var(--ua-color-mark-grass-soft);
-  --a8c-charts-color-series-3: var(--ua-color-mark-teal); --a8c-charts-color-series-3-text: var(--ua-color-mark-teal-text); --a8c-charts-color-series-3-soft: var(--ua-color-mark-teal-soft);
-  --a8c-charts-color-series-4: var(--ua-color-mark-steel); --a8c-charts-color-series-4-text: var(--ua-color-mark-steel-text); --a8c-charts-color-series-4-soft: var(--ua-color-mark-steel-soft);
-  --a8c-charts-color-series-5: var(--ua-color-mark-rose); --a8c-charts-color-series-5-text: var(--ua-color-mark-rose-text); --a8c-charts-color-series-5-soft: var(--ua-color-mark-rose-soft);
-  --a8c-charts-color-series-6: var(--ua-color-mark-orange); --a8c-charts-color-series-6-text: var(--ua-color-mark-orange-text); --a8c-charts-color-series-6-soft: var(--ua-color-mark-orange-soft);
-  /* The sequential ramp, for a grid of cells, and the cell with no value. */
-  --a8c-charts-color-seq-1: var(--ua-color-seq-1);
-  --a8c-charts-color-seq-2: var(--ua-color-seq-2);
-  --a8c-charts-color-seq-3: var(--ua-color-seq-3);
-  --a8c-charts-color-seq-4: var(--ua-color-seq-4);
-  --a8c-charts-color-seq-5: var(--ua-color-seq-5);
-  --a8c-charts-color-seq-6: var(--ua-color-seq-6);
-  --a8c-charts-color-seq-7: var(--ua-color-seq-7);
-  --a8c-charts-color-seq-8: var(--ua-color-seq-8);
-  --a8c-charts-color-seq-9: var(--ua-color-seq-9);
-  --a8c-charts-color-seq-10: var(--ua-color-seq-10);
-  --a8c-charts-color-seq-none: var(--ua-color-seq-none);
-  /* Not the lime marker: an annotation is a thin rule and its label, and both have to hold contrast. */
-  --a8c-charts-color-annotation: var(--ua-color-muted-foreground);
-  --a8c-charts-color-comparison: var(--ua-color-foreground-50);
-  --a8c-charts-color-delta-good: var(--ua-color-success-text);
-  --a8c-charts-color-delta-bad: var(--ua-color-destructive-text);
-  --a8c-charts-color-trend-neutral: var(--ua-color-muted-foreground);
-  --a8c-charts-color-live: var(--ua-color-live);
-  --a8c-charts-color-background: var(--ua-color-background);
-}
+/* What a view paints with is the token package's charts tier (config/charts.tokens.json). */
+:root { color-scheme: light dark; }
 :root[data-theme="light"] { color-scheme: light; }
 :root[data-theme="dark"] { color-scheme: dark; }
 
@@ -74,7 +40,7 @@ h2 small { display: inline; }
 .fluid { container-type: inline-size; inline-size: 720px; padding: var(--ua-space-xs); border: 1px solid var(--ua-color-border); border-radius: var(--ua-radius-md); display: grid; gap: var(--ua-space-2xs); }
 .type span { display: block; line-height: 1.2; }
 .bar { display: grid; grid-template-columns: 9em auto 1fr; gap: var(--ua-space-xs); align-items: center; }
-.bar i { display: block; block-size: 12px; background: var(--a8c-charts-color-series-1); border-radius: 2px; }
+.bar i { display: block; block-size: 12px; background: var(--ua-charts-color-series-1); border-radius: 2px; }
 
 /* The spike page (docs/dom-painter-plan.md, section 7). Throwaway.
  * The two surface layouts, as section 4.2 writes them, on the spike's element. */

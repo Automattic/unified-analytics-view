@@ -24,7 +24,8 @@ function target(t: string, rule: FitRule, what: string): string {
 }
 const anyOf = (sel: string[]) => (sel.length > 1 ? ':is(' + sel.join(', ') + ')' : sel[0]!);
 
-/** CSS for a set of fit rules. Each need gets its own @container block: a query naming both axes is passed over
+/** CSS for a set of fit rules. A rule names its container "view" or "plot"; in CSS they are `vg-view` and `vg-plot`, so a page's
+ * own container named "view" does not answer these queries. Each need gets its own @container block: a query naming both axes is passed over
  * whole by a width-only container, so a rule's block need is simply inert until a layout hands the view a box.
  * A query asks for half a pixel under the need: at a fractional zoom a container laid out at exactly its need
  * measures a hair under it, and its part would go at the very size the rule says it fits.
@@ -49,7 +50,7 @@ export function compileFitRules(rules: FitRule[], extras: FitExtras = {}): strin
     ].filter(Boolean).map((line) => '  ' + line).join('\n');
     return Object.entries(r.needs ?? {}).filter(([, px]) => px != null).map(([axis, px]) => {
       if ((axis !== 'inline' && axis !== 'block') || !Number.isFinite(px)) throw new Error('Fit rule "' + r.id + '" needs ' + JSON.stringify(r.needs) + '. Give "inline" or "block" as a number of px.');
-      return '/* ' + r.layout + ' ' + r.id + ' */\n@container ' + r.container + ' (' + axis + '-size < ' + (px - 0.5) + 'px) {\n' + body + '\n}';
+      return '/* ' + r.layout + ' ' + r.id + ' */\n@container vg-' + r.container + ' (' + axis + '-size < ' + (px - 0.5) + 'px) {\n' + body + '\n}';
     }).join('\n');
   }).filter(Boolean).join('\n');
 }

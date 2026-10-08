@@ -52,6 +52,6 @@ describe('fallback on a fit rule', () => {
   });
   it('compiles to the swap: under the need the figure goes and the view beside it shows, unless the spec keeps the marks', () => {
     const fig = '.vg[data-layout="band"]:not([data-keep~="marks"])', body = '  ' + fig + ' { display: none; }\n  ' + fig + ' ~ .vg-fallback { display: block; }\n}';
-    expect(compileFitRules([swap])).toBe('/* band swap */\n@container view (inline-size < 199.5px) {\n' + body + '\n/* band swap */\n@container view (block-size < 59.5px) {\n' + body);
+    expect(compileFitRules([swap])).toBe('/* band swap */\n@container vg-view (inline-size < 199.5px) {\n' + body + '\n/* band swap */\n@container vg-view (block-size < 59.5px) {\n' + body);
   });
 });

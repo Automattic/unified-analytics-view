@@ -22,7 +22,7 @@ const css = `
  * bar, 10 px and 24 px a row less the last gap: a height that depends on the data, which a container query cannot
  * hold, so paint() states the row count and a clamp does the swap. The legend that goes gives up its gap as well, or
  * the one-line legend would stand 10 px low and be cut. A box too short for either clips. */
-@container view (block-size >= 0px) {
+@container vg-view (block-size >= 0px) {
   .vg[data-layout="band"] .vg-body { container-type: size; overflow: hidden; --vg-legend-block: calc(30px + var(--vg-rows, 1) * 24px); }
   .vg[data-layout="band"]:not([data-keep~="guides"]) .vg-legend { overflow: hidden; max-block-size: max(0px, (100cqb - var(--vg-legend-block) + 0.01px) * 999999);
     margin-block-start: clamp(0px, (100cqb - var(--vg-legend-block) + 0.01px) * 999999, 10px); }

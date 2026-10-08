@@ -46,7 +46,7 @@ const GUIDES = '.vg[data-layout="cartesian"]:not([data-keep~="guides"])', MARKS 
 /* The base sheet, then the four cartesian fit rules of section 2 compiled by hand.
  * Where this departs from the plan's text it says CHANGED; the report lists each one. */
 const CSS_TEXT = `
-:host { display: block; container: view / inline-size; font: 11px/1.3 system-ui, sans-serif; color: var(--a8c-charts-color-label); }
+:host { display: block; container: vg-view / inline-size; font: 11px/1.3 system-ui, sans-serif; color: var(--a8c-charts-color-label); }
 .vg { position: relative; box-sizing: border-box; block-size: 100%; margin: 0; padding-block-start: 8px; display: grid; column-gap: 6px;
   grid-template: "y plot" minmax(0, 1fr) ". x" auto / auto minmax(0, 1fr); --vg-plot-block: var(--vg-axes-height, 184px); }
 .vg-prose { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
@@ -64,7 +64,7 @@ const CSS_TEXT = `
 .vg-x-axis .end { translate: -100%; }
 /* The height has to be a stated block-size. Chrome 155 answers no block-size query on a plot whose height comes from
  * contain-intrinsic-block-size or min-block-size through a stretched grid row, though it lays it out at that height. */
-.vg-plot { grid-area: plot; position: relative; container: plot / size; block-size: var(--vg-plot-block); }
+.vg-plot { grid-area: plot; position: relative; container: vg-plot / size; block-size: var(--vg-plot-block); }
 .vg-grid i { position: absolute; inset-inline: 0; inset-block-start: calc((1 - var(--vg-t)) * 100%); border-block-start: 1px solid var(--a8c-charts-color-grid); }
 .vg-grid i[data-key="grid:0"] { border-color: var(--a8c-charts-color-axis-x); }
 .vg-grid i, .vg-y-axis span { transition: --vg-t 600ms linear; }
@@ -75,29 +75,29 @@ path { fill: none; vector-effect: non-scaling-stroke; stroke-linejoin: round; st
 [data-key$=":partial"] { stroke-dasharray: 2 4; opacity: 0.75; }
 
 /* axes */
-${unless('view', { inline: 280, block: 120 }, `
+${unless('vg-view', { inline: 280, block: 120 }, `
   ${GUIDES} :is(.vg-x-axis, .vg-y-axis, .vg-grid) { display: none; }
   ${GUIDES} .vg-number { display: block; }
   /* CHANGED: the plan sets only grid-template-columns. The areas, the gap, the padding and the bare height have to switch too. */
   ${GUIDES} { --vg-arrange: side; grid-template: "number plot" minmax(0, 1fr) / auto minmax(0, 1fr); column-gap: 12px; padding-block-start: 0; --vg-plot-block: var(--vg-bare-height, 46px); }
 `)}
 /* mid-tick */
-${unless('view', { inline: 380 }, `
+${unless('vg-view', { inline: 380 }, `
   .vg[data-layout="cartesian"] .vg-x-axis .mid { display: none; }
 `)}
 /* secondary: as the plan writes it. The plot is always a size container, so here one query with "or" is answered. */
-@container plot (inline-size < 180px) or (block-size < 90px) {
+@container vg-plot (inline-size < 180px) or (block-size < 90px) {
   .vg:not([data-keep~="secondary"]) :is([data-role="comparison"], [data-role="reference"], [data-role="context"]) { display: none; }
 }
 /* marks */
-${unless('view', { inline: 152, block: 46 }, `
+${unless('vg-view', { inline: 152, block: 46 }, `
   ${MARKS} .vg-plot { display: none; }
   ${MARKS} .vg-number { display: block; }
   ${MARKS} { grid-template: "number" auto / minmax(0, 1fr); }
 `)}
 /* ADDED, for item 6. Only a size container answers a block-size query, so this matches exactly when a layout has
  * handed the view a box, and the plot then takes the height left over. No attribute on the view. */
-@container view (block-size >= 0px) {
+@container vg-view (block-size >= 0px) {
   .vg-plot { block-size: auto; }
 }`;
 

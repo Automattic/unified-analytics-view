@@ -19,7 +19,7 @@ describe('the band layout', () => {
 
   it('swaps the legends under the legend rule, which alone only sets a switch', () => {
     expect(css).toContain([
-      '@container view (inline-size < 169.5px) {',
+      '@container vg-view (inline-size < 169.5px) {',
       '  ' + fig('guides') + ' { --vg-legend: top; }',
       '  ' + fig('guides') + ' .vg-legend { display: none; }',
       '  ' + fig('guides') + ' .vg-legend-top { display: block; max-block-size: none; }',
@@ -36,8 +36,8 @@ describe('the band layout', () => {
       '  ' + fig('marks') + ' .vg-number { margin: 0; }',
       '}',
     ].join('\n');
-    expect(css).toContain('@container view (inline-size < 109.5px) {\n' + alone);
-    expect(css).toContain('@container view (block-size < 47.5px) {\n' + alone);
+    expect(css).toContain('@container vg-view (inline-size < 109.5px) {\n' + alone);
+    expect(css).toContain('@container vg-view (block-size < 47.5px) {\n' + alone);
     expect(css.indexOf('inline-size < 169.5px')).toBeLessThan(css.indexOf('inline-size < 109.5px'));
   });
 });

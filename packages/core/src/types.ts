@@ -2,9 +2,12 @@ import type { FitRule } from './fit.ts';
 
 /* Catalog: the slice of the semantic model the front end needs. */
 export type Polarity = 'up' | 'down' | 'none';
+export type Unit = 'count' | 'ratio' | 'percent' | 'usd' | 'ms' | 's' | 'bytes';
 export interface MetricDef {
   label: string;
-  unit: string;
+  /** What the metric is measured in, which is how its values are written (format.ts). `ratio` is a rate from 0 to 1 and
+   * `percent` one from 0 to 100; `usd` is in dollars, not cents; `ms` and `s` are lengths of time. */
+  unit: Unit;
   polarity: Polarity;
   rangeTotal?: 'sum' | 'sum of daily';
   instant?: boolean;
@@ -21,6 +24,9 @@ export interface DimensionDef {
   /** `number` is a quantity the engine has cut into bins, or sampled along. Each row holds where its bin starts, and where it
    * ends as `<dimension>@end`. Proposed to the API's owners (chart-coverage-plan, section 3.5). */
   type: 'time' | 'categorical' | 'number';
+  /** What the values are codes of, when the engine sends codes: `country` is ISO 3166-1 alpha-2, in capitals, and is
+   * written as the country's name. */
+  values?: 'country';
 }
 export interface Catalog {
   metrics: Record<string, MetricDef>;
@@ -154,7 +160,9 @@ export interface Plan extends PlanShape {
 export type Part = 'number' | 'plot' | 'x-axis' | 'y-axis' | 'y-axis-2' | 'labels' | 'columns' | 'rows' | 'band' | 'legend' | 'legend-top' | 'radial' | 'hole' | 'ramp' | 'notice'
   /* `points` holds the dots of a plot that sets one metric against another, and `point-labels` the labels on a plot's
    * points. Both lie over the plot and share its box. `size` is the key to the sizes of its dots. */
-  | 'points' | 'point-labels' | 'size';
+  | 'points' | 'point-labels' | 'size'
+  /* `note` is a line of text under a custom mark's own parts, saying what they could not draw. It goes with the guides. */
+  | 'note';
 interface NodeBase {
   key: string;
   part: Part;

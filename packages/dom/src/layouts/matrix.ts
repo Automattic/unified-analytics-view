@@ -146,7 +146,7 @@ export const matrix: LayoutPainter = {
         prop(c, '--vg-cx', cx + 1); prop(c, '--vg-cy', cy + 1);
         attr(c, 'role', 'gridcell'); attr(c, 'id', id(cx, cy));
         // Never colour alone: the value is in the cell's name, which is also its readout. No value says so in words.
-        attr(c, 'aria-label', row && row[m!] != null ? readout(row, data.query, data.catalog)
+        attr(c, 'aria-label', row && row[m!] != null ? readout(row, data.query, data.catalog, data.layers)
           : (data.query.by || []).map((d) => formatDimension(d === xf ? x : y, dims[d]!)).join(', ') + ': No data');
         if (row) rows.set(c.id, row);
       });

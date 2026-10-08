@@ -9,7 +9,7 @@ describe('the rows layout', () => {
     const css = compileFitRules(FIT_RULES.filter((r) => r.layout === 'rows' && r.id === 'marks'), { rows: rows.fit! });
     const fig = '.vg[data-layout="rows"]:not([data-keep~="marks"])';
     expect(css.split('\n')).toEqual([
-      '/* rows marks */', '@container view (inline-size < 89.5px) {',
+      '/* rows marks */', '@container vg-view (inline-size < 89.5px) {',
       '  ' + fig + ' .vg-rows { display: none; }', '  ' + fig + ' .vg-number { display: block; }',
       '  ' + fig + ' { grid-template: "number" auto / minmax(0, 1fr); }', '  ' + fig + ' .vg-body { display: none; }', '  ' + fig + ' .vg-number { margin: 0; }',
       '}',
@@ -18,7 +18,7 @@ describe('the rows layout', () => {
 
   it('gives up its headers in a short box, unless the spec keeps its guides', () => {
     expect(compileFitRules(FIT_RULES.filter((r) => r.layout === 'rows' && r.id === 'columns'), { rows: rows.fit! }))
-      .toBe('/* rows columns */\n@container view (block-size < 79.5px) {\n  .vg[data-layout="rows"]:not([data-keep~="guides"]) .vg-columns { display: none; }\n}');
+      .toBe('/* rows columns */\n@container vg-view (block-size < 79.5px) {\n  .vg[data-layout="rows"]:not([data-keep~="guides"]) .vg-columns { display: none; }\n}');
   });
 
   it('sets no column\'s width: the headers and the rows are subgrids, and a ranked column goes by a need written on its cell', () => {
@@ -31,11 +31,11 @@ describe('the rows layout', () => {
     const css = (rowHeight: number) => compileFitRules(rows.rules!({ ...CONTAINER_RULES, rows: { ...CONTAINER_RULES.rows, rowHeight } }), { rows: rows.fit! });
     const fig = '.vg[data-layout="rows"]:not([data-keep~="marks"])';
     expect(css(28).split('\n').slice(0, 5)).toEqual([
-      '/* rows marks-block */', '@container view (block-size < 27.5px) {',
+      '/* rows marks-block */', '@container vg-view (block-size < 27.5px) {',
       '  ' + fig + ' .vg-rows { display: none; }', '  ' + fig + ' .vg-number { display: block; }',
       '  ' + fig + ' { grid-template: "number" auto / minmax(0, 1fr); }',
     ]);
-    expect(css(40)).toContain('@container view (block-size < 39.5px) {');
+    expect(css(40)).toContain('@container vg-view (block-size < 39.5px) {');
   });
 
   it('takes its row height and gap from the rule set, never from its stylesheet', () => {

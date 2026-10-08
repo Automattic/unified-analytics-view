@@ -60,14 +60,14 @@ describe('the cartesian layout\'s guides', () => {
 
   it('swaps the legend for the labels at the line ends, as a grid, and then gives those up', () => {
     expect(compileFitRules(rules('legend'), { cartesian: cartesian.fit! }).split('\n').slice(0, 6)).toEqual([
-      '/* cartesian legend */', '@container view (inline-size < 319.5px) {',
+      '/* cartesian legend */', '@container vg-view (inline-size < 319.5px) {',
       '  ' + fig + ' .vg-legend { display: none; }', '  ' + fig + ' .vg-labels { display: block; }', '  ' + fig + ' .vg-labels { display: grid; }', '}',
     ]);
     const css = compileFitRules(CONTAINER_RULES.fit, { cartesian: cartesian.fit! });
     expect(css.indexOf(fig + ' .vg-labels { display: none; }')).toBeGreaterThan(css.lastIndexOf(fig + ' .vg-labels { display: grid; }'));
   });
   it('gives up the second axis before the first, and with it whenever the axes go', () => {
-    expect(compileFitRules(rules('axis-2'))).toBe('/* cartesian axis-2 */\n@container view (inline-size < 339.5px) {\n  ' + fig + ' .vg-y-axis-2 { display: none; }\n}');
+    expect(compileFitRules(rules('axis-2'))).toBe('/* cartesian axis-2 */\n@container vg-view (inline-size < 339.5px) {\n  ' + fig + ' .vg-y-axis-2 { display: none; }\n}');
     expect(compileFitRules(rules('axes'), { cartesian: cartesian.fit! })).toContain(fig + ' .vg-y-axis-2 { display: none; }');
   });
   it('keeps the labels out until a rule brings them in, and the legend out of a plot that is not split', () => {
@@ -144,11 +144,11 @@ describe('the readout of a split plot', () => {
   });
   it('says one pair as any row is said', () => {
     const { rows, q } = at('grouped');
-    expect(readout(rows[0]![1]!, q, catalog)).toMatch(/^Search, Mobile: Visitors [\d,]+$/);
+    expect(readout(rows[0]![1]!, q, catalog, [])).toMatch(/^Search, Mobile: Visitors [\d,]+$/);
   });
   it('reads two units at one x', () => {
     const { rows, q } = at('dual');
-    expect(readout(rows[0]![0]!, q, catalog)).toBe('Sep 8: Visitors 416; Revenue 2,453');
+    expect(readout(rows[0]![0]!, q, catalog, [])).toBe('Sep 8: Visitors 416; Revenue $2,453');
   });
 });
 

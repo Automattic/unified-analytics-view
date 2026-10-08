@@ -4,6 +4,7 @@ import { hitNodes } from '../keys.ts';
 import type { LayoutPainter } from '../layout.ts';
 import { thin } from '../measure.ts';
 import { morph } from '../motion.ts';
+import { POINTS_CSS, POINTS_FIT, measurePoints, paintPoints } from './points.ts';
 
 /* A dimension on x, a metric on y. The y axis is a column sized by its labels, the x axis a row under the plot,
  * and the plot a size container, so rules about roles can ask how much room the marks have.
@@ -42,7 +43,7 @@ const inPlot = (n: SceneNode) => n.part === 'plot';
 
 export const cartesian: LayoutPainter = {
   layout: 'cartesian',
-  css,
+  css: css + POINTS_CSS,
   fit: {
     // Without its axes the plot is a sparkline beside the number, which takes its short forms and gives up its note.
     // A number the measured pass has set carries data-fit and is left to it: that is the number alone, under `marks`.
@@ -56,6 +57,7 @@ export const cartesian: LayoutPainter = {
     },
     // The number alone. The body goes whole, so kept axes do not stand with no plot between them.
     marks: { '': 'grid-template: "number" auto / minmax(0, 1fr);', '.vg-body': 'display: none;', '.vg-number': 'margin: 0;' },
+    ...POINTS_FIT,
   },
   // ponytail: no rule in core carries the 120 px under which place() drops ranked y ticks, and the y axis sits outside the
   // plot container, so this asks the view: 120 for the plot, 10 above it and 22 for the x axis. Wrong when the number
@@ -72,6 +74,7 @@ export const cartesian: LayoutPainter = {
       return { lo, hi: lo + w, rank: Number(el.dataset.rank) || 0 };
     }));
     labels.forEach((el, i) => el.toggleAttribute('data-thin', gone[i]));
+    measurePoints(body);
   },
 
   paint(body, scene) {
@@ -104,5 +107,6 @@ export const cartesian: LayoutPainter = {
     const hits = ensure(plot, 'div', 'vg-hits');
     hits.setAttribute('data-hits', 'x');
     keyed(hits, hitNodes(scene), () => 'i', (el, n) => { prop(el, '--vg-x', n.x); prop(el, '--vg-w', n.w); prop(el, '--vg-c', n.c); });
+    paintPoints(body, plot, scene);
   },
 };

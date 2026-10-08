@@ -1,4 +1,4 @@
-import { delta, fmt, fmtPct, rangeLabel } from './format.ts';
+import { delta, fmt, fmtPct, formatDimension, rangeLabel } from './format.ts';
 import type { Catalog, Query, Result, Row } from './types.ts';
 
 /** The row for the value of a dimension that has the most of a metric: from the engine's totals by dimension where the
@@ -48,6 +48,18 @@ export function tldrProse(q: Query, result: Result, share: boolean, catalog: Cat
     if (M.rangeTotal === 'sum of daily') s += ' This is a sum of daily counts, not unique people.';
     return s;
   }).join(' ');
+}
+
+/** The tldr prose for a metric by two dimensions on a grid: the cell that holds the most, and the busiest value of each
+ * dimension as a share of the engine's total. The peak is a comparison of the engine's rows and the rest are its totals
+ * by dimension: nothing is summed. Null where there is nothing to say it of, and the query's own sentence stands. */
+export function gridProse(q: Query, result: Result, catalog: Catalog): string | null {
+  const m = q.metrics[0]!, [a, b] = q.by || [], rows = result.rows.filter((r) => r[m] != null);
+  if (result.meta.empty || !a || !b || !result.totalsBy || !rows.length) return null;
+  const peak = rows.reduce((top, r) => ((r[m] as number) > (top[m] as number) ? r : top)), name = catalog.metrics[m]!.label.toLowerCase();
+  const say = (d: string, r: Row) => formatDimension(r[d], catalog.dimensions[d]!);
+  const busiest = (d: string, is: string) => { const top = leader(result, d, m)!; return say(d, top) + is + ' the busiest ' + catalog.dimensions[d]!.label.toLowerCase() + ' at ' + fmtPct((top[m] as number) / (result.totals[m] || 1)); };
+  return 'Most ' + name + ' at ' + say(a, peak) + ', ' + say(b, peak) + ' (' + fmt(peak[m] as number) + ') in the ' + rangeLabel(result.meta.range) + '. ' + busiest(a, ' is') + ' of ' + name + ', and ' + busiest(b, '') + '.';
 }
 
 /** What follows a value from the unfinished bucket, as in "Visitors 175 so far". Empty for a finished one, so it also answers whether the row is partial. */

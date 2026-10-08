@@ -30,6 +30,8 @@ export function register(): void {
   };
   registered = MOVED.every((name) => add(name, '<number>', false, '0'));
   for (const face of FACES) add('--uav-font-' + face, '<length>', true, '0px');
+  // How far a number in dots has run along its screen (dots.ts). A number, so that it moves and does not jump.
+  add('--uav-s', '<number>', true, '0');
 }
 
 /** It joins the base sheet inside `@layer uav`. With reduced motion none of it applies, so nothing moves. */
@@ -107,6 +109,19 @@ export function settle(fig: HTMLElement): void {
     if (moving.length) over(moving).then(rest); else delete fig.dataset.moving;
   };
   rest();
+}
+
+/** For an animation that plays once: a line drawing in when its plot loads, a character of the number rolling to
+ * the next. The element carries attributes the stylesheet animates by, and they come off when what they started is
+ * over, or at once where nothing started: a part a fit rule has hidden, reduced motion, no frames. So a part that
+ * a resize brings back later stands as it is and does not play again. */
+export function once(el: Element, attrs: string[]): void {
+  const done = () => { for (const a of attrs) el.removeAttribute(a); };
+  if (typeof requestAnimationFrame !== 'function') { done(); return; }
+  requestAnimationFrame(() => {
+    const playing = el.getAnimations({ subtree: true }).filter((a) => a instanceof CSSAnimation);
+    if (playing.length) over(playing).then(done); else done();
+  });
 }
 
 interface Morph { now: XV[]; from: XV[]; to: PathNode; frame: number; clock?: Animation | null }

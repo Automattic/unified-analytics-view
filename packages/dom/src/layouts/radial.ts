@@ -1,6 +1,5 @@
 import { arcD, type ArcNode } from '@universal-analytics/core';
 import { ensure, keyed, paintVar, prop, text } from '../dom.ts';
-import { token } from '../tokens.ts';
 import type { LayoutPainter } from '../layout.ts';
 import { paintLegend } from './band.ts';
 
@@ -15,7 +14,6 @@ const css = `
 .uav-radial { position: relative; flex: none; align-self: center; inline-size: min(100%, 160px); aspect-ratio: var(--uav-aspect, 1); container: uav-plot / inline-size; }
 .uav-radial svg { display: block; inline-size: 100%; block-size: 100%; overflow: visible; }
 .uav-radial path { fill: var(--uav-paint); }
-.uav-radial path[data-active] { stroke: ${paintVar('ink')}; stroke-width: ${token('stroke-width-active')}; vector-effect: non-scaling-stroke; }
 .uav-hole { position: absolute; inset: 0; display: none; place-items: center; overflow: hidden; pointer-events: none; color: var(--uav-paint); }
 /* The small face of the number, and smaller with the circle: there is no measuring the hole from a stylesheet. */
 .uav-hole.uav-f-display { font-size: clamp(14px, 18cqi, var(--uav-font-display-small)); line-height: 0.92; }

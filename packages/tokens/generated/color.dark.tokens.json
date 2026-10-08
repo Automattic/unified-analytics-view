@@ -1164,7 +1164,7 @@
       "$description": "The sequential ramp, for a value quantized to colour (a heatmap cell, a region of a map). Ten steps chosen by hand, from indigo through teal to chartreuse, each lighter than the last. A primitive with a value per theme, as a generated ramp is: step 100 is the end nearest the page, the chartreuse end in light and the indigo end in dark, so the common tier names one step in both."
     },
     "surface": {
-      "$description": "The surface set: the page and the two levels that rise from it, with a value per theme. Spacefast raises a surface by making it lighter than the page in both themes, which no single ramp step can say, so the pairing is made here and the common tier aliases one name. The screen is the one that sinks: a little darker than the page in both themes, for a container set into its surface as an LCD is.",
+      "$description": "The surface set: the page and the two levels that rise from it, with a value per theme. Spacefast raises a surface by making it lighter than the page in both themes, which no single ramp step can say, so the pairing is made here and the common tier aliases one name. The screen is the one that sinks, for a container set into its surface as an LCD is. It is one primitive in both themes, the step after the page: a little darker than the page in light, and a little lighter than it in dark, where its inset shadow is what sinks it.",
       "page": {
         "$value": "{color.neutral.200}"
       },
@@ -1175,7 +1175,7 @@
         "$value": "{color.neutral.400}"
       },
       "screen": {
-        "$value": "{color.neutral.100}"
+        "$value": "{color.neutral.300}"
       }
     },
     "mark": {

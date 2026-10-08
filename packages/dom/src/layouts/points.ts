@@ -1,5 +1,5 @@
 import { declutter, type CircleNode, type Scene, type SceneNode, type TextNode } from '@universal-analytics/core';
-import { attr, ensure, keyed, paintVar, prop, text } from '../dom.ts';
+import { attr, ensure, keyed, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
 
 /* What a plot gains with `dot`, with `text` on its points, and with a metric on x: dots, the labels on them, the key
@@ -24,7 +24,6 @@ export const POINTS_CSS = `
 /* ponytail: physical translate, as the x axis has, so not right for right-to-left. */
 :is(.uav-dots, .uav-points) i { position: absolute; inset-inline-start: calc(var(--uav-x) * 100%); inset-block-start: calc((1 - var(--uav-t)) * 100%); translate: -50% -50%;
   inline-size: ${DOT}; block-size: ${DOT}; border-radius: 50%; background: var(--uav-paint); }
-.uav-points [data-active] { outline: ${token('stroke-width-active')} solid ${paintVar('ink')}; outline-offset: 1px; }
 /* A label sits above its point, clear of the dot. --uav-nudge is the measured pass's: what keeps it inside the plot. */
 .uav-point-labels span { position: absolute; inset-inline-start: calc(var(--uav-x) * 100%); inset-block-start: calc((1 - var(--uav-t)) * 100%);
   translate: calc(-50% + var(--uav-nudge, 0px)) calc(-100% - 2px - ${DOT} / 2); max-inline-size: 14ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--uav-paint); }

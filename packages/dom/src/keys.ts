@@ -1,6 +1,7 @@
-import { formatDimension, formatValue, partialNote, type Catalog, type Layer, type Query, type RectNode, type Result, type Row, type Scene } from '@universal-analytics/core';
-import { attr, ensure, paintVar } from './dom.ts';
-import { token } from './tokens.ts';
+import { formatDimension, formatValue, layerKeys, partialNote, unitsOf, type Catalog, type Layer, type Query, type RectNode, type Result, type Row, type Scene } from '@universal-analytics/core';
+import { attr, ensure, paintVar, prop } from './dom.ts';
+import { apart } from './measure.ts';
+import { FOCUS, HOVER, token } from './tokens.ts';
 import { nearest } from './layouts/points.ts';
 
 /* Hit targets, the keyboard and the readout. A layout marks the element that holds its points with `data-hits`
@@ -58,6 +59,37 @@ export function rowsAt(scene: Scene, q: Query, result: Result): { rows: Row[][];
   return { rows: keys.map((k) => result.rows.filter((r) => String(r[x]) === k).sort((a, b) => rank(a) - rank(b))), x, split };
 }
 
+/** A value a crosshair marks at one point of a plot: how far up the plot it is, what it says, which y axis it is read
+ * on (the second unit's is the far one), and the line it is a point of. */
+export interface CrossMark { t: number; text: string; side: 0 | 1; role?: string; series?: string }
+
+/** What each line of a plot draws at each of its rows, by row: a line's value there, in its metric's format, and where
+ * the scene set it. A line is read against the axes, so these are what a crosshair says on them. A filled area says
+ * nothing of its own, and neither does a bar or a dot, which wears the outline and keeps the readout.
+ * `rows` are the result's at each point, as rowsAt() gives them, and `split` the dimension a split plot's series are of. */
+export function crossMarks(scene: Scene, layers: Layer[], rows: Row[][], catalog: Catalog, split?: string): Map<string, CrossMark[]> {
+  const out = new Map<string, CrossMark[]>(), keys = scene.rows ?? [];
+  if (scene.layout !== 'cartesian') return out;
+  const ids = layerKeys(layers), units = unitsOf(catalog, layers), seen = new Set<string>();
+  layers.forEach((l, li) => {
+    const y = l.encode?.y, def = typeof y === 'string' ? catalog.metrics[y.split('@')[0]!] : undefined;
+    if (l.mark !== 'line' || typeof y !== 'string' || !def) return;
+    const prev = l.series === 'previous', field = prev ? y + '@previous' : y, side = units.indexOf(unitsOf(catalog, [l])[0]!) > 0 ? 1 : 0;
+    for (const n of scene.nodes) {
+      // A line's unfinished tail, and an unfinished lead, are paths of their own, and the row where two meet is in both.
+      if (n.kind !== 'path' || n.fill || n.part !== 'plot' || n.key.replace(/:partial(:lead)?$/, '') !== (n.series == null ? ids[li] : ids[li] + ':' + n.series)) continue;
+      for (const p of n.points) {
+        const at = rows[keys.indexOf(p.row)] ?? [], row = n.series == null ? at[0] : at.find((r) => String(r[split!]) === n.series), id = li + ':' + (n.series ?? '') + ':' + p.row;
+        if (row?.[field] == null || seen.has(id)) continue;
+        seen.add(id);
+        const partial = prev ? '' : partialNote(row);
+        out.set(p.row, (out.get(p.row) ?? []).concat({ t: p.v, text: formatValue(row[field] as number, def) + (partial && ' ' + partial), side, ...(n.role && { role: n.role }), ...(n.series != null && { series: n.series }) }));
+      }
+    }
+  });
+  return out;
+}
+
 /** Where up and down move to among the series at one point, from `at` (-1 when the whole point is chosen). Null
  * when the key is not such a step. It stops at the last series, and at the whole point on the way back. */
 export function stepSeries(key: string, at: number, count: number): number | null {
@@ -93,13 +125,50 @@ export function hitNodes(scene: Scene): (RectNode & { c: number })[] {
 }
 
 /* Nothing here changes a size the measured pass reads: the readout is out of flow, and a chosen point gains only
- * an outline, an underline or a rule. The focus ring is the browser's own, drawn inside the box, because whatever
- * holds a view may clip at its edge. */
+ * an outline, an underline, a tint or a rule.
+ *
+ * A chosen mark says how it was chosen: `data-active` is "keys" or "pointer". The holder with focus and the mark an
+ * arrow key chose in it wear one outline (FOCUS in tokens.ts): inside a holder and a row, which are clipped at their
+ * edge, about a mark that stands free, and as the edge of a shape in an SVG. What the pointer is over wears the
+ * quieter one (HOVER): a hairline in those places, and a tint behind a row. A plot of lines has no mark at a point to
+ * wear either, so a rule stands there, in the width and colour of whichever it is; where a bar or a dot is there to
+ * wear it, the rule goes. */
 export const KEYS_CSS = `
-[data-hits]:focus-visible { outline-offset: -2px; }
-.uav-readout { position: absolute; z-index: 1; left: 0; top: 0; box-sizing: border-box; inline-size: max-content; max-inline-size: 100%; padding: 2px 6px; border-radius: ${token('border-radius-tooltip')};
+:is([data-hits], .uav-cells):focus-visible { ${FOCUS.inside} }
+/* A row's bar and its text are positioned, and so are the rows of a list, so they are painted over an outline drawn
+ * inside the row or the list that holds them. There the outline is a box of its own, over them all. */
+.uav-rows:focus-visible { outline: none; }
+.uav-rows:focus-visible::after, .uav-row[data-active="keys"]::after { content: ""; position: absolute; inset: 0; pointer-events: none; ${FOCUS.inside} }
+:is(.uav-bars, .uav-dots, .uav-points, .uav-band, .uav-cells) [data-active="keys"] { ${FOCUS.around} }
+svg[data-hits] path[data-active="keys"] { ${FOCUS.stroke} }
+.uav-row[data-active="pointer"] { ${HOVER.row} }
+:is(.uav-bars, .uav-dots, .uav-points, .uav-band, .uav-cells) [data-active="pointer"] { ${HOVER.around} }
+svg[data-hits] path[data-active="pointer"] { ${HOVER.stroke} }
+.uav-readout { position: absolute; z-index: 1; left: 0; top: 0; box-sizing: border-box; inline-size: max-content; max-inline-size: 100%; padding: 2px 6px; border: ${token('stroke-width-rule')} solid ${token('color-tooltip-border')}; border-radius: ${token('border-radius-tooltip')};
   pointer-events: none; font-size: var(--uav-font-tick); font-variant-numeric: tabular-nums;
-  color: ${token('color-label-inverse')}; background: ${token('color-tooltip-surface')}; }
+  color: ${token('color-label-inverse')}; background: ${token('color-tooltip-surface')}; box-shadow: ${token('elevation-tooltip')}; }
+/* A line is read against the axes, so at a point of one the readout is a crosshair: the rule that stands at the point,
+ * one that lies at each line's value there, and that value said on the axis it is read from, with the point's own
+ * name on the x axis. It is drawn in the plot's box and its words stand over the tick labels they are among. A value
+ * wider than its axis's gutter grows into the plot and never out of the view. The second line of a comparison is
+ * said more quietly, on the secondary surface. */
+.uav-cross { position: absolute; inset: 0; z-index: 1; pointer-events: none; --uav-rule: ${HOVER.width}; --uav-rule-paint: ${paintVar('rule')}; }
+.uav-cross[data-active="keys"] { --uav-rule: ${FOCUS.width}; --uav-rule-paint: ${FOCUS.color}; }
+.uav-cross i { position: absolute; inset-inline: 0; inset-block-start: calc((1 - var(--uav-t)) * 100% - var(--uav-rule) / 2); block-size: var(--uav-rule); background: var(--uav-rule-paint); }
+.uav-cross span { position: absolute; box-sizing: border-box; padding: 1px 5px; border: ${token('stroke-width-rule')} solid ${token('color-tooltip-border')}; border-radius: ${token('border-radius-tooltip')}; white-space: nowrap;
+  font-size: var(--uav-font-tick); font-variant-numeric: tabular-nums; color: ${token('color-label-inverse')}; background: ${token('color-tooltip-surface')}; box-shadow: ${token('elevation-tooltip')}; }
+.uav-cross-x { inset-block-start: calc(100% + 3px); }
+.uav-cross-y { translate: 0 -50%; text-align: end; }
+.uav-cross-y[data-side="1"] { text-align: start; }
+.uav-cross-y[data-role="comparison"] { background: ${token('color-tooltip-surface-secondary')}; }
+.uav-cross [data-thin] { visibility: hidden; }
+/* A row that says its own value has told the reader what the readout would, so there the readout waits, as a tooltip
+ * does, and is not in the way of the list. A mark that is read against an axis, a ramp or a legend says no number, so
+ * its readout comes at once. It waits only to appear: once it is up it follows the pointer or the keys from row to
+ * row, and it is hidden again by leaving. The words a screen reader is given do not wait.
+ * The readout is taken out with \`hidden\`, so its first style is where the wait starts from. */
+.uav:has(.uav-row > .uav-f-value) > .uav-readout { transition: visibility 0s ${token('motion-delay-tooltip')}; }
+@starting-style { .uav:has(.uav-row > .uav-f-value) > .uav-readout { visibility: hidden; } }
 .uav-hits { position: absolute; inset: 0; }
 .uav-body[data-scale="point"] .uav-hits { inset-inline: 2px; }
 .uav-hits i { position: absolute; inset-block: 0; inset-inline-start: calc(var(--uav-x) * 100%); inline-size: calc(var(--uav-w) * 100%); }
@@ -107,9 +176,10 @@ export const KEYS_CSS = `
  * goes at once: motion.ts keeps a leaving node only while --uav-leaving is set. */
 .uav[data-moving] .uav-hits [data-key] { transition: none; }
 .uav[data-moving] .uav-plot .uav-hits [data-exit] { --uav-leaving: initial; transition: none; }
-.uav-hits [data-active]::before { content: ""; position: absolute; inset-block: 0; inset-inline-start: calc(var(--uav-c) * 100% - 0.5px); inline-size: 1px; background: var(--uav-paint); }
-.uav-row[data-active] { outline: 1px solid ${paintVar('rule')}; outline-offset: -1px; }
-.uav-band [data-active] { outline: ${token('stroke-width-active')} solid ${paintVar('ink')}; outline-offset: 1px; }
+.uav-hits [data-active] { --uav-rule: ${HOVER.width}; --uav-rule-paint: ${paintVar('rule')}; }
+.uav-hits [data-active="keys"] { --uav-rule: ${FOCUS.width}; --uav-rule-paint: ${FOCUS.color}; }
+.uav-hits [data-active]::before { content: ""; position: absolute; inset-block: 0; inset-inline-start: calc(var(--uav-c) * 100% - var(--uav-rule) / 2); inline-size: var(--uav-rule); background: var(--uav-rule-paint); }
+.uav-plot:has(:is(.uav-bars, .uav-dots) > [data-active]) .uav-hits [data-active]::before { display: none; }
 .uav-legend span[data-active] { text-decoration: underline; }
 /* A series chosen at a point: the rest of the plot stands back, and its name is marked wherever it is written. */
 .uav-plot:has([data-chosen]) :is(.uav-bars i, path):not([data-chosen]) { opacity: 0.3 !important; }
@@ -124,6 +194,10 @@ export class Keys {
   #order: string[] = []; #series: string | null = null; #split: string | undefined; #q: Query | null = null; #catalog: Catalog | null = null; #layers: Layer[] = [];
   // A touch that has only just chosen a point shows its readout. The next one activates it.
   #fresh = false;
+  // How the chosen point was chosen. Each has its own look, and a paint keeps the one it found.
+  #how: 'keys' | 'pointer' = 'pointer';
+  // What a crosshair says at each row of a plot of lines, the dimension on x, and the crosshair once one is drawn.
+  #cross = new Map<string, CrossMark[]>(); #x: string | undefined; #crossEl: HTMLElement | null = null;
 
   constructor(host: HTMLElement, fig: HTMLElement, body: HTMLElement) {
     this.#host = host; this.#fig = fig; this.#body = body;
@@ -134,7 +208,7 @@ export class Keys {
       const k = row(e);
       if (k == null) return;
       this.#fresh = e.pointerType !== 'mouse' && k !== this.#at;
-      this.#show(k);
+      this.#show(k, null, 'pointer');
     });
     // As version 4: the point goes with the mouse, focus or none, and the next arrow starts from nothing. A touch has
     // no leaving to speak of.
@@ -153,15 +227,15 @@ export class Keys {
       // Points in two dimensions: an arrow goes to the nearest point that way (layouts/points.ts). A proposal, not version 4's.
       if (box.dataset.hits === 'xy') {
         const near = nearest(e.key, at, points.map((el) => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }));
-        if (near != null) { e.preventDefault(); this.#show(points[near]!.getAttribute('data-row')); }
+        if (near != null) { e.preventDefault(); this.#show(points[near]!.getAttribute('data-row'), null, 'keys'); }
         return;
       }
       const series = at >= 0 && box.dataset.hits === 'x' ? stepSeries(e.key, this.#order.indexOf(this.#series ?? ''), this.#order.length) : null;
-      if (series != null) { e.preventDefault(); this.#show(this.#at, this.#order[series] ?? null); return; }
+      if (series != null) { e.preventDefault(); this.#show(this.#at, this.#order[series] ?? null, 'keys'); return; }
       const to = step(e.key, at, points.length, box.dataset.hits === 'y');
       if (to == null) return;
       e.preventDefault();
-      this.#show(points[to]!.getAttribute('data-row'), this.#series);
+      this.#show(points[to]!.getAttribute('data-row'), this.#series, 'keys');
     });
   }
 
@@ -169,6 +243,7 @@ export class Keys {
   paint(scene: Scene, q: Query, result: Result, catalog: Catalog, layers: Layer[]): void {
     const { rows, x, split } = rowsAt(scene, q, result), totals = (x != null && split != null && result.totalsBy?.[x]) || [];
     this.#keys = scene.rows ?? []; this.#rows = rows; this.#order = split == null ? [] : scene.series ?? []; this.#split = split; this.#q = q; this.#catalog = catalog; this.#layers = layers;
+    this.#x = x; this.#cross = crossMarks(scene, layers, rows, catalog, split);
     this.#says = this.#keys.map((k, i) => (split == null ? readout(rows[i]![0] ?? {}, q, catalog, layers) : readoutAt(rows[i]!, totals.find((t) => String(t[x!]) === k), q, catalog, x!, split)));
     const box = this.#box();
     if (box) {
@@ -194,24 +269,27 @@ export class Keys {
 
   /** Choose a row, or none, and with it one series there, or all. Everything drawn from the row is marked, and so is
    * what is drawn from the series: its mark at the row, its line, its name. The readout is set by the row's point. */
-  #show(key: string | null, series: string | null = null): void {
-    this.#at = key; this.#series = series = key == null ? null : series;
+  #show(key: string | null, series: string | null = null, how = this.#how): void {
+    this.#at = key; this.#series = series = key == null ? null : series; this.#how = how;
     const box = this.#box(), tip = this.#tip;
     let point: Element | null = null;
     this.#body.querySelectorAll('[data-row], [data-series]').forEach((el) => {
       const row = el.getAttribute('data-row'), of = el.getAttribute('data-series'), on = key != null && row === key;
-      if (row != null) el.toggleAttribute('data-active', on);
+      if (row != null) attr(el, 'data-active', on ? how : null);
       if (of != null) el.toggleAttribute('data-chosen', of === series && (row == null || on));
       if (on && el.parentElement === box) point = el;
     });
     if (box) attr(box, 'aria-activedescendant', (point as Element | null)?.id);
-    tip.hidden = !point;
+    const marks = point ? this.#crossAt(key!, series) : [];
+    tip.hidden = !point || marks.length > 0;
+    this.#drawCross(point, marks, how);
     if (!point) return;
     const i = this.#keys.indexOf(key!), pair = this.#pair(i);
     const says = pair ? readout(pair, this.#q!, this.#catalog!, this.#layers) : this.#says[i] ?? '';
     // The option is named by what is read out, so a series chosen inside it is announced as it is shown.
     // ponytail: the name of the option in focus changes under it. Whether a screen reader says so is not checked.
     if (this.#order.length) for (const el of Array.from(box!.children)) attr(el, 'aria-label', el === point ? says : this.#says[this.#keys.indexOf(el.getAttribute('data-row') ?? '')]);
+    if (marks.length) return;
     tip.textContent = says;
     // Above the point, or below it, or over the top of a view too small for either: always inside the view, because
     // whatever holds a view may clip at its edge.
@@ -223,6 +301,47 @@ export class Keys {
     const above = (r.top - f.top) * ky - h - 2, below = (r.bottom - f.top) * ky + 2;
     tip.style.setProperty('left', Math.max(0, Math.min(x, f.width * kx - w)) + 'px');
     tip.style.setProperty('top', (above >= 0 ? above : below + h <= f.height * ky ? below : 0) + 'px');
+  }
+
+  /** What the crosshair says at a row, or nothing where the readout says it instead: where an axis is not on show
+   * to read a value against, where a bar or a dot at the point wears the outline, and at the whole of a point of a
+   * split plot, whose series the readout names one by one. A series chosen there has the crosshair to itself. */
+  #crossAt(key: string, series: string | null): CrossMark[] {
+    const marks = this.#cross.get(key) ?? [], body = this.#body;
+    if (!marks.length) return [];
+    const shown = (sel: string) => (body.querySelector(sel)?.getClientRects().length ?? 0) > 0;
+    if (!shown('.uav-x-axis') || !shown('.uav-y-axis') || body.querySelector(':is(.uav-bars, .uav-dots) > [data-active]')) return [];
+    return this.#order.length ? marks.filter((m) => series != null && m.series === series) : marks;
+  }
+
+  /** Draw the crosshair at a point, or take it away. The rules lie where the scene set each value. The words are
+   * placed once, as the readout is: the point's name under it and inside the view, and each value on its axis, a
+   * line clear of the next (measure.ts), with the one there is no room for left out.
+   * ponytail: placed in the page's px over the plot's own, so under a transform the words are off by its scale. */
+  #drawCross(point: Element | null, marks: CrossMark[], how: 'keys' | 'pointer'): void {
+    if (!point || !marks.length) { if (this.#crossEl?.isConnected) this.#crossEl.replaceChildren(); this.#crossEl = null; return; }
+    const plot = point.closest<HTMLElement>('.uav-plot')!, cross = this.#crossEl = ensure(plot, 'div', 'uav-cross');
+    const add = <K extends 'i' | 'span'>(tag: K, cls: string) => { const el = cross.appendChild(document.createElement(tag)); if (cls) el.className = cls; return el; };
+    attr(cross, 'data-active', how); cross.setAttribute('aria-hidden', 'true'); cross.replaceChildren();
+    for (const m of marks) prop(add('i', ''), '--uav-t', m.t);
+    const p = plot.getBoundingClientRect(), b = this.#body.getBoundingClientRect(), r = point.getBoundingClientRect();
+    // How far the body runs to either side of the plot: the gutters the axes are in.
+    const before = p.left - b.left, after = b.right - p.right, far = this.#body.querySelector('.uav-y-axis-2')?.getBoundingClientRect().width ?? 0;
+    const row = this.#rows[this.#keys.indexOf(point.getAttribute('data-row') ?? '')]?.[0], dim = this.#x == null ? undefined : this.#catalog!.dimensions[this.#x];
+    if (row && dim) {
+      const name = add('span', 'uav-cross-x'), c = parseFloat((point as HTMLElement).style.getPropertyValue('--uav-c'));
+      name.textContent = formatDimension(row[this.#x!], dim);
+      const w = name.offsetWidth, x = r.left + r.width * (Number.isFinite(c) ? c : 0.5) - p.left;
+      prop(name, 'left', Math.max(-before, Math.min(x - w / 2, p.width + after - w)) + 'px');
+    }
+    for (const side of [0, 1] as const) {
+      const at = marks.filter((m) => m.side === side), gutter = side ? far : before;
+      const says = at.map((m) => { const el = add('span', 'uav-cross-y'); el.textContent = m.text; attr(el, 'data-role', m.role); attr(el, 'data-side', side); return el; });
+      if (!says.length) continue;
+      // Over its axis from the edge of the view, at least as wide as the gutter, and into the plot where it is wider.
+      for (const el of says) { prop(el, side ? 'inset-inline-end' : 'inset-inline-start', -gutter + 'px'); prop(el, 'min-inline-size', Math.max(0, gutter - 3) + 'px'); }
+      apart(at.map((m) => (1 - m.t) * p.height), says[0]!.offsetHeight + 1, p.height).forEach((y, i) => { says[i]!.toggleAttribute('data-thin', y == null); prop(says[i]!, 'top', y == null ? null : y + 'px'); });
+    }
   }
 
   /** The row of the chosen series at a point, when one is chosen and has a row there. */

@@ -20,7 +20,7 @@ const css = `
 .uav-columns, .uav-rows, .uav-row { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; }
 .uav-columns { grid-row: 1; align-items: center; block-size: var(--uav-columns-block); max-block-size: max(0px, ${short}); overflow: hidden; }
 .uav[data-layout="rows"]:not([data-parts~="columns"]) .uav-columns { display: none; }
-.uav-rows { grid-row: 2; align-content: start; row-gap: var(--uav-row-gap); overflow: hidden; }
+.uav-rows { position: relative; grid-row: 2; align-content: start; row-gap: var(--uav-row-gap); overflow: hidden; }
 .uav-row { position: relative; align-items: center; block-size: var(--uav-row-block); }
 .uav-row > i { position: absolute; grid-column: var(--uav-track, 1 / 3); inset-block: 0; inset-inline-start: calc(var(--uav-x, 0) * 100%); inline-size: max(3px, calc(var(--uav-v) * 100%));
   background: var(--uav-paint); border-radius: ${token('border-radius-bar', '3px')}; }

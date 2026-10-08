@@ -134,10 +134,34 @@
         "$value": "{color.muted-foreground}"
       },
       "label-inverse": {
-        "$value": "{color.background}"
+        "$value": "{color.black}",
+        "$description": "Text on the tooltip surface. Black in both themes, as the surface is one colour in both."
       },
       "tooltip-surface": {
-        "$value": "{color.foreground}"
+        "$value": "{color.constant.lime}",
+        "$description": "The readout and the crosshair's words: the marker colour, from the constants, so it is the same in both themes."
+      },
+      "focus": {
+        "$value": "{color.ring}"
+      },
+      "hover": {
+        "$value": "{color.row-hover}"
+      },
+      "tooltip-surface-secondary": {
+        "$value": "{color.white}",
+        "$description": "The crosshair's word for a comparison: quieter than the surface, edged in it, and the same in both themes."
+      },
+      "tooltip-border": {
+        "$value": "{color.black}",
+        "$description": "The stroke about the readout and the words of a crosshair. Black in both themes, as their text is."
+      },
+      "screen": {
+        "$value": "{color.lime.300}",
+        "$description": "The screen a number in dots is on: the lime ramp's third step in both themes."
+      },
+      "label-screen": {
+        "$value": "{color.lime.1000}",
+        "$description": "The lit cells of a number in dots, and at a tenth of it the unlit ones: the lime ramp's last step in both themes."
       }
     },
     "border-radius": {
@@ -156,12 +180,15 @@
         "$value": "{radius.xs}"
       },
       "tooltip": {
+        "$value": "{radius.sm}"
+      },
+      "screen": {
         "$value": "{radius.xs}"
       }
     },
     "stroke-width": {
       "$type": "dimension",
-      "$description": "A line of the data where its layer gives no width, a rule or a grid line, and the outline of the mark a reader has chosen.",
+      "$description": "A line of the data where its layer gives no width, a rule or a grid line, and the outline of whatever has the reader's attention: the holder with focus, and the mark chosen in it.",
       "line": {
         "$value": {
           "value": 2,
@@ -174,7 +201,7 @@
           "unit": "px"
         }
       },
-      "active": {
+      "focus": {
         "$value": {
           "value": 2,
           "unit": "px"
@@ -222,7 +249,7 @@
       }
     },
     "motion": {
-      "$description": "What a data change is timed by. `entrance` is @automattic/charts' own; a node that moves and one that leaves have theirs.",
+      "$description": "What a data change is timed by. `entrance` is @automattic/charts' own; a node that moves and one that leaves have theirs. `delay-tooltip` is how long the readout waits over a row that already says its value. `duration-roll` is one character of a number in dots rolling to the next, in eight steps. `duration-draw` is a line drawing in when its plot first shows.",
       "duration-entrance": {
         "$type": "duration",
         "$value": {
@@ -270,6 +297,37 @@
           1,
           1
         ]
+      },
+      "delay-tooltip": {
+        "$type": "duration",
+        "$value": {
+          "value": 500,
+          "unit": "ms"
+        }
+      },
+      "duration-roll": {
+        "$type": "duration",
+        "$value": {
+          "value": 384,
+          "unit": "ms"
+        }
+      },
+      "duration-draw": {
+        "$type": "duration",
+        "$value": {
+          "value": 1400,
+          "unit": "ms"
+        }
+      }
+    },
+    "elevation": {
+      "$type": "shadow",
+      "$description": "How far a thing stands from the view, as a box-shadow: the readout and the words of a crosshair above it, and the screen a number is on sunk into it.",
+      "tooltip": {
+        "$value": "{elevation.2}"
+      },
+      "screen": {
+        "$value": "{elevation.inset}"
       }
     }
   }

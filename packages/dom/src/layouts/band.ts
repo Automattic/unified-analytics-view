@@ -1,4 +1,4 @@
-import type { RectNode, TextNode } from '@universal-analytics/core';
+import type { RectNode, Scene, TextNode } from '@universal-analytics/core';
 import { ensure, keyed, prop, text } from '../dom.ts';
 import type { LayoutPainter } from '../layout.ts';
 
@@ -45,11 +45,17 @@ export const band: LayoutPainter = {
 
   paint(body, scene) {
     const rows = scene.rows ?? [], nodes = (part: string) => scene.nodes.filter((n) => n.part === part);
-    const segs = ensure(body, 'div', 'vg-band'), legend = ensure(body, 'div', 'vg-legend'), top = ensure(body, 'div', 'vg-legend-top');
+    const segs = ensure(body, 'div', 'vg-band');
     segs.setAttribute('data-hits', 'x');                                     // each segment is its own hit target
     prop(body, '--vg-rows', rows.length);
     keyed(segs, nodes('band').filter((n): n is RectNode => n.kind === 'rect'), () => 'i', (el, n) => prop(el, '--vg-v', n.v));
-    keyed(legend, nodes('legend'), (n) => (n.kind === 'text' ? 'span' : 'i'), (el, n) => { if (n.kind === 'text') text(el, n); });
-    keyed(top, nodes('legend-top').filter((n): n is TextNode => n.kind === 'text'), () => 'span', text);
+    paintLegend(body, scene);
   },
 };
+
+/** Both legends of a whole split by colour, after whatever the body holds already. A circle of arcs has the same two. */
+export function paintLegend(body: HTMLElement, scene: Scene): void {
+  const nodes = (part: string) => scene.nodes.filter((n) => n.part === part);
+  keyed(ensure(body, 'div', 'vg-legend'), nodes('legend'), (n) => (n.kind === 'text' ? 'span' : 'i'), (el, n) => { if (n.kind === 'text') text(el, n); });
+  keyed(ensure(body, 'div', 'vg-legend-top'), nodes('legend-top').filter((n): n is TextNode => n.kind === 'text'), () => 'span', text);
+}

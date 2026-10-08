@@ -329,13 +329,13 @@ October 8. Six items above were picked as the ones that would make real data rea
 
 ### Open, from building them
 
-1. **A country reads as its code** in the fallback list, the tldr prose, the readout and the table. They are written in core and the DOM painter from the row's value. Recommended: the catalog marks the dimension, and `formatDimension` names the value with `Intl.DisplayNames`. **To decide.**
+1. **A country read as its code** in the fallback list, the tldr prose, the readout and the table. Decided October 8 and built: a dimension's catalog entry may carry `values: 'country'`, and `formatDimension` names the code with `Intl.DisplayNames`. The "Top:" line under the number goes through it too. Names are `en-US`, as every other format in core is.
 2. **The midnight bucket of an hourly result reads as a day.** Grain is read from the value. The result should state it. **To decide,** with the query API.
 3. **A number dimension has no unit** (reference, Open 11), so load time on an axis still has no "s".
 4. **Every companion is written in its metric's unit,** so a rank or a density of a duration would be mis-suffixed. No sample has one.
 5. **The instant value and its prose are still raw counts.**
 6. **A map 280 to 319 px wide shows neither its ramp nor the note.** The note goes with the `guides` rule; `plan.dropped` says only "the colour ramp".
-7. **The fallback list shows an unknown country as a blank label.**
+7. **The fallback list showed an unknown country as a blank label.** It reads "–" now, as a missing value does.
 8. **The "$" widens the value column by 6.6 px,** so the conversions view drops it at 322 px, not 315.
 9. `geoMark` accepts a feature with a name and no id. It rejected one before.
 

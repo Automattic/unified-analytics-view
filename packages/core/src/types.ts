@@ -24,6 +24,9 @@ export interface DimensionDef {
   /** `number` is a quantity the engine has cut into bins, or sampled along. Each row holds where its bin starts, and where it
    * ends as `<dimension>@end`. Proposed to the API's owners (chart-coverage-plan, section 3.5). */
   type: 'time' | 'categorical' | 'number';
+  /** What the values are codes of, when the engine sends codes: `country` is ISO 3166-1 alpha-2, in capitals, and is
+   * written as the country's name. */
+  values?: 'country';
 }
 export interface Catalog {
   metrics: Record<string, MetricDef>;

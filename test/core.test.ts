@@ -147,6 +147,9 @@ describe('what a painter says with: values and dimensions in catalog format', ()
     expect(time('yesterday')).toBe('Invalid Date');
     expect(formatDimension('/pricing', catalog.dimensions.page!)).toBe('/pricing');
     expect(formatDimension(null, catalog.dimensions.page!)).toBe('–');
+    // A country arrives as its code and is said by name. An empty code is no value; what is not a code is said as it came.
+    const country = (v: string) => formatDimension(v, catalog.dimensions.country!);
+    expect([country('US'), country('DE'), country(''), country('us'), country('China')]).toEqual(['United States', 'Germany', '–', 'us', 'China']);
     expect([partialNote(rows[0]!), partialNote(last)]).toEqual(['', 'so far']);
   });
   it('a value in each unit the catalog may give: as a readout says it, short, and exact', () => {

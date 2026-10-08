@@ -36,8 +36,8 @@ export const catalog: Catalog = {
     load_time:  { label: 'Load time', type: 'number' },
     event:      { label: 'Event',   type: 'categorical' },
     step:       { label: 'Step',    type: 'categorical' },
-    country:    { label: 'Country', type: 'categorical' },
-    visitor_country: { label: 'Country', type: 'categorical' },
+    country:    { label: 'Country', type: 'categorical', values: 'country' },
+    visitor_country: { label: 'Country', type: 'categorical', values: 'country' },
   },
 };
 

@@ -245,7 +245,7 @@ describe('prose, the number and errors', () => {
     expect(run(map, 346).plan.text).toBe('Top countries by visitors, last 28 days: US (3,265), IN (1,264), GB (948).');
     expect(run(map, 250).plan.text).toBe(run(map, 346).plan.text);
     expect(run(map, 346, null, 'empty').plan.text).toBe('No visitors recorded in the last 28 days.');
-    expect((run(map, 120).ratio.nodes.find((n) => n.key === 'sub') as { text: string }).text).toBe('Top: US');
+    expect((run(map, 120).ratio.nodes.find((n) => n.key === 'sub') as { text: string }).text).toBe('Top: United States');
   });
   it('errors name the fix: no dimension on x, no metric to draw by, more than one layer, and values that join to no shape', () => {
     const q = map.query, of = (layers: Spec['layers'], query = q) => err(() => run({ spec: 'view/0', query, layers }, 346));

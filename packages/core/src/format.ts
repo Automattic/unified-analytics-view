@@ -4,6 +4,7 @@ const NF = new Intl.NumberFormat('en-US');
 const CF = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
 const DF = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });                    // Sep 8
 const HF = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', timeZone: 'UTC' });   // Sep 8, 3 PM
+const RN = new Intl.DisplayNames('en-US', { type: 'region' });                                                        // US: United States
 export const CHAR_W = 6.6; // rough advance of the 13px label face, for clipping
 
 export function fmt(v: number | null | undefined, compact?: boolean): string {
@@ -66,9 +67,12 @@ export function formatUnit(v: number | null | undefined, unit: string, form?: 'c
 export function formatValue(v: number | null | undefined, metric: MetricDef, form?: 'compact' | 'exact'): string {
   return formatUnit(v, metric.unit, form);
 }
-/** A dimension's value as its catalog entry sets it: a day as "Sep 8", an hour as "Sep 8, 3 PM", a category as itself. */
+/** A dimension's value as its catalog entry sets it: a day as "Sep 8", an hour as "Sep 8, 3 PM", a country's code as its
+ * name, a category as itself. A code the engine left empty is no value, and one that is not a code is said as it came. */
 export function formatDimension(v: Row[string], dim: DimensionDef): string {
-  return v == null ? '–' : dim.type === 'time' ? fmtTime(String(v)) : String(v);
+  if (v == null || (dim.values && v === '')) return '–';
+  if (dim.values === 'country') return /^[A-Z]{2}$/.test(String(v)) ? RN.of(String(v)) ?? String(v) : String(v);
+  return dim.type === 'time' ? fmtTime(String(v)) : String(v);
 }
 export function rangeLabel(r: string | null | undefined): string {
   const m = /^(\d+)d$/.exec(r || '');

@@ -584,7 +584,8 @@ function sceneNumber(catalog: Catalog, q: Query, result: Result, share: boolean)
   let note: string | null = M.rangeTotal === 'sum of daily' ? 'Sum of daily counts' : M.target != null ? 'Target ' + formatValue(M.target, M) : null;
   if (by && catalog.dimensions[by]!.type === 'categorical' && rows.length) {
     const top = leader(result, by, m)!;                                      // with two dimensions a row is a pair, so the leader is the engine's
-    note = share ? top[by] + ' ' + fmtPct(num(top, m) / (t[m] || 1)) : 'Top: ' + top[by];
+    const name = formatDimension(top[by], catalog.dimensions[by]!);
+    note = share ? name + ' ' + fmtPct(num(top, m) / (t[m] || 1)) : 'Top: ' + name;
   }
   const dl = q.compare === 'previous' ? delta(t[m] as number, t[m + '@previous'], M.polarity) : null;
   value(formatValue(t[m], M), formatValue(t[m], M, 'compact'));

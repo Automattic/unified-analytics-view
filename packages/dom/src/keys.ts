@@ -16,12 +16,14 @@ import { nearest } from './layouts/points.ts';
  * down again to the whole. Left and right keep the series. Version 4 was not read for this; it is ours until it is. */
 
 /** What the readout says for one row of the result, in the catalog's formats: the dimension value, each metric
- * (marked when its bucket is unfinished), and its comparison if the row has one. */
+ * (marked when its bucket is unfinished), its comparison if the row has one, and each companion the engine returned
+ * with it, under its suffix: what a range or a tick is drawn from is said as well as shown. */
 export function readout(row: Row, q: Query, catalog: Catalog): string {
   const dims = (q.by || []).map((d) => formatDimension(row[d], catalog.dimensions[d]!)).join(', '), partial = partialNote(row);
   const values = q.metrics.map((m) => {
     const def = catalog.metrics[m]!, prev = q.compare === 'previous' ? row[m + '@previous'] : null;
-    return def.label + ' ' + formatValue(row[m] as number | null, def) + (partial && ' ' + partial) + (prev == null ? '' : ', previous period ' + formatValue(prev as number, def));
+    const more = Object.keys(row).filter((f) => f.startsWith(m + '@') && f !== m + '@previous' && row[f] != null).map((f) => ', ' + f.slice(m.length + 1) + ' ' + formatValue(row[f] as number, def)).join('');
+    return def.label + ' ' + formatValue(row[m] as number | null, def) + (partial && ' ' + partial) + (prev == null ? '' : ', previous period ' + formatValue(prev as number, def)) + more;
   }).join('; ');
   return dims ? dims + ': ' + values : values;
 }

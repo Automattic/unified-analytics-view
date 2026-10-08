@@ -570,6 +570,25 @@ Merged. 539 tests pass and the typecheck is clean; every golden scene matches th
 9. Symbols sit at the centroid of the whole shape, which is off the mainland for a country with far-flung parts. Under symbols the land is painted `seq.none`, for want of a neutral land token.
 10. **`ShadowRoot.querySelector(":scope > …")` returned null in Chromium** in the agent's probe, and `ensure()` in `dom.ts` is called on the shadow root with that selector. It works today because each call happens once. To look at.
 
+### The fully merged tree in a browser (October 8, after steps 3 and 8)
+
+Headless Chromium and WebKit, both painters: all 34 samples at five widths in the three data states and dark, a resize in place down to 40 px and back twice, pointer on 24 cases, keyboard on 17, the table on 16, and data changes including five rapid ones mid-transition. No script errors in either engine. **Nothing was broken by the last two merges, and nothing was changed.**
+
+- **The fallback holds.** The map crossed its threshold 36 times and was left with one figure, one list, one prose and one tab stop. It does not double the table or the accessible name.
+- **`ensure()` on the shadow root:** `:scope >` does return null there in Chromium. It does no harm today, since `ensure()` is called on the root only in the constructor. A later call outside it would duplicate. To fix before someone adds one.
+- **Hover and click work on the trend,** at 346 px and as a bare sparkline at 250, and on the bar list.
+
+**Found and left, as each is a step's own design**
+
+1. **The quadrant at 7 days overflows the view by 74 px.** The upright rule lands on the plot's right edge and its label sits to its right with no flip. Step 4's; the first check missed it because it shows only at that range.
+2. **One-pixel range segments look grey in `<ua-view>`** and black in the pixel painter: they sit at fractional positions and are antialiased.
+3. **The first x label of the box plot and the error bars is cut at the left edge.** It is centred under its band with no start anchor.
+4. **The league table at 120 px shows rank, "/…" and the value.** The rows rules ignore the value's room, and the rank column makes it plain.
+5. **A companion the view did not ask for shows in the readout and the table:** the dumbbell says "rank 2", because both list every companion the engine returns.
+6. **Donut, pie and half go from marks straight to prose** in `<ua-view>`, with no number-alone rung.
+
+Still not checked: Firefox, a screen reader, touch, reduced motion, and the transitions frame by frame. Screenshots were read for the six originals and for steps 3 and 8; the other 18 samples had the structural pass.
+
 ## 9. What the build leaves to decide
 
 Collected from section 8. Nothing here was settled by the build; where an agent had to choose to keep going, the choice is named.

@@ -151,6 +151,13 @@
   --ua-color-qual-rose-800: #9e0643; /** Contrast ratio: 7.50 */
   --ua-color-qual-rose-900: #66142e; /** Contrast ratio: 11.30 */
   --ua-color-qual-rose-1000: #230b11; /** Contrast ratio: 17.00 */
+  --ua-color-seq-100: #66d0b8; /** Contrast ratio: 1.70 */
+  --ua-color-seq-200: #16b69b; /** Contrast ratio: 2.35 */
+  --ua-color-seq-300: #009981; /** Contrast ratio: 3.26 */
+  --ua-color-seq-400: #097f6c; /** Contrast ratio: 4.52 */
+  --ua-color-seq-500: #1b6557; /** Contrast ratio: 6.26 */
+  --ua-color-seq-600: #1f4d43; /** Contrast ratio: 8.67 */
+  --ua-color-seq-700: #1b352f; /** Contrast ratio: 12.00 */
   --ua-color-white: #ffffff;
   --ua-color-black: #000000;
   --ua-color-constant-lime: #d8f24b;
@@ -434,6 +441,13 @@
   --ua-color-qual-rose-800: #ff709e; /** Contrast ratio: 7.50 */
   --ua-color-qual-rose-900: #ffaec6; /** Contrast ratio: 11.30 */
   --ua-color-qual-rose-1000: #ffeaee; /** Contrast ratio: 17.00 */
+  --ua-color-seq-100: #1d4037; /** Contrast ratio: 1.70 */
+  --ua-color-seq-200: #1e574b; /** Contrast ratio: 2.35 */
+  --ua-color-seq-300: #176f5f; /** Contrast ratio: 3.26 */
+  --ua-color-seq-400: #008974; /** Contrast ratio: 4.52 */
+  --ua-color-seq-500: #00a48b; /** Contrast ratio: 6.26 */
+  --ua-color-seq-600: #37c0a6; /** Contrast ratio: 8.67 */
+  --ua-color-seq-700: #87dac5; /** Contrast ratio: 12.00 */
   --ua-color-white: #ffffff;
   --ua-color-black: #000000;
   --ua-color-constant-lime: #d8f24b;
@@ -661,6 +675,13 @@
   --ua-color-qual-rose-800: #ff709e; /** Contrast ratio: 7.50 */
   --ua-color-qual-rose-900: #ffaec6; /** Contrast ratio: 11.30 */
   --ua-color-qual-rose-1000: #ffeaee; /** Contrast ratio: 17.00 */
+  --ua-color-seq-100: #1d4037; /** Contrast ratio: 1.70 */
+  --ua-color-seq-200: #1e574b; /** Contrast ratio: 2.35 */
+  --ua-color-seq-300: #176f5f; /** Contrast ratio: 3.26 */
+  --ua-color-seq-400: #008974; /** Contrast ratio: 4.52 */
+  --ua-color-seq-500: #00a48b; /** Contrast ratio: 6.26 */
+  --ua-color-seq-600: #37c0a6; /** Contrast ratio: 8.67 */
+  --ua-color-seq-700: #87dac5; /** Contrast ratio: 12.00 */
   --ua-color-white: #ffffff;
   --ua-color-black: #000000;
   --ua-color-constant-lime: #d8f24b;

@@ -120,8 +120,22 @@ let orange = hue("Orange", '#fe9a00');
 let coral = hue("Coral", '#ff503b');
 let rose = hue("Rose", '#f5006b');
 
+// The sequential ramp, for a value quantized to colour (a heatmap cell). One hue, the
+// teal seed above, on ratios of its own: the shared ten bunch up at the surface, where
+// steps must be told apart here. Seven steps, 100 to 700, each 1.385 times the last, so
+// a neighbour is always the same distance away. It starts at 1.7, clear of the page, both
+// raised surfaces and the no-data colour (color.seq-none), and stops at 12, where the hue
+// still shows. It flips with the theme: 100 is nearest the page in both.
+let seq = new Leo.Color({
+  name: "Seq",
+  colorKeys: ['#00b297'],
+  ratios: [1.7,2.35,3.26,4.52,6.26,8.67,12],
+  colorSpace: "CAM02p",
+  smooth: true
+});
+
 let Untitled = new Leo.Theme({
-  colors: [neutral,lime,blue,amber,green,red,indigo,steel,teal,grass,chartreuse,yellow,orange,coral,rose],
+  colors: [neutral,lime,blue,amber,green,red,indigo,steel,teal,grass,chartreuse,yellow,orange,coral,rose,seq],
   backgroundColor: neutral,
   lightness: 97,
   contrast: 1,

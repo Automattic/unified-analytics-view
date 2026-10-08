@@ -49,6 +49,17 @@ export function thin(spans: Span[], gap = 6): boolean[] {
   return gone;
 }
 
+/** Where to set labels so that each stands at least `line` from the next: every one as near its own place as that
+ * allows, pushed down from the highest and then back up from the bottom of the room, as place() sets them. Null for
+ * one there is no room for; the lowest go first. */
+export function apart(ys: number[], line: number, room: number): (number | null)[] {
+  const order = ys.map((_, i) => i).sort((a, b) => ys[a]! - ys[b]!).slice(0, Math.max(0, Math.floor(room / line) + 1));
+  const at: (number | null)[] = ys.map(() => null);
+  order.reduce((least, i) => { at[i] = Math.max(ys[i]!, least); return at[i]! + line; }, -Infinity);
+  order.reverse().reduce((most, i) => { at[i] = Math.min(at[i]!, most); return at[i]! - line; }, room);
+  return at;
+}
+
 /** Read the ruler: one painted number per entry of NUMBER_FITS.
  * ponytail: the value's extent is taken from the left, so not right for right-to-left, as the x axis is not. */
 export function readNumber(ruler: HTMLElement[]): NumberSizes {

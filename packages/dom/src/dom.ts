@@ -81,9 +81,9 @@ export function attr(el: Element, name: string, v: string | number | null | unde
 export function prop(el: HTMLElement | SVGElement, name: string, v: string | number | null | undefined): void {
   if (v == null) el.style.removeProperty(name); else el.style.setProperty(name, String(v));
 }
-/** What every painted node carries: its key, what the fit rules select on, and its paint. */
+/** What every painted node carries: its key, what the fit rules select on, the row and series it came from, and its paint. */
 function mark(el: HTMLElement | SVGElement, n: SceneNode): void {
-  attr(el, 'data-key', n.key); attr(el, 'data-role', n.role); attr(el, 'data-rank', n.rank); attr(el, 'data-row', n.row);
+  attr(el, 'data-key', n.key); attr(el, 'data-role', n.role); attr(el, 'data-rank', n.rank); attr(el, 'data-row', n.row); attr(el, 'data-series', n.series);
   prop(el, '--vg-paint', paintVar(n.paint));
   prop(el, 'opacity', n.opacity);
 }

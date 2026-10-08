@@ -124,6 +124,23 @@ function check(spec: Spec, result: Result, catalog: Catalog): void {
   (Array.isArray(q.by) ? q.by : []).forEach((d) => { if (!catalog.dimensions[d]) throw new Error('The catalog has no dimension "' + d + '". It has: ' + (Object.keys(catalog.dimensions).join(', ') || 'none') + '. Pass the catalog the query was run against.'); });
 }
 
+/** A result by two dimensions as a pivot: a row per value of the first, a column per value of the second for each
+ * field, then the field over all of them. Totals are the engine's, per value of each dimension, so a cell is empty
+ * where the result has none. The columns run in the engine's order, as the series of a plot do. */
+export function pivot(q: Query, result: Result, fields: string[]): { cols: Row[string][]; rows: { key: Row[string]; cells: Row[string][] }[]; foot: Row[string][] } {
+  const [a, b] = q.by as [string, string], uniq = (rows: Row[], d: string) => [...new Set(rows.map((r) => r[d]))];
+  const of = (d: string, v: Row[string]) => result.totalsBy?.[d]?.find((t) => t[d] === v);
+  const cols = uniq(result.totalsBy?.[b] ?? result.rows, b);
+  return {
+    cols,
+    rows: uniq(result.rows, a).map((key) => {
+      const at = result.rows.filter((r) => r[a] === key);
+      return { key, cells: [...cols.flatMap((c) => fields.map((f) => at.find((r) => r[b] === c)?.[f])), ...fields.map((f) => of(a, key)?.[f])] };
+    }),
+    foot: [...cols.flatMap((c) => fields.map((f) => of(b, c)?.[f])), ...fields.map((f) => result.totals[f])],
+  };
+}
+
 /* The table is rebuilt whole: nothing in it moves, so there is nothing to keep. Totals are the engine's, never a sum of the rows. */
 function paintTable(table: HTMLTableElement, title: string | undefined, q: Query, result: Result, catalog: Catalog): void {
   const by = q.by || [], prev = q.compare === 'previous';
@@ -135,6 +152,16 @@ function paintTable(table: HTMLTableElement, title: string | undefined, q: Query
   };
   table.replaceChildren();
   if (title) table.createCaption().textContent = title;
+  if (by.length === 2) {
+    // Two dimensions: the first down the side, the second across, and each field once more for the whole row.
+    const p = pivot(q, result, fields), per = (v: Row[string][]) => v.map((x, i): [string, 'td', boolean] => [x === undefined ? '' : cell(x, fields[i % fields.length]!), 'td', true]);
+    const cell = (v: Row[string], f: string) => formatValue(v as number | null, catalog.metrics[f.replace('@previous', '')]!, 'exact'), dim = (i: number, v: Row[string]) => formatDimension(v, catalog.dimensions[by[i]!]!);
+    row(table.createTHead(), [[catalog.dimensions[by[0]!]!.label, 'th'], ...p.cols.flatMap((c) => fields.map((f): [string, 'th', boolean] => [dim(1, c) + (fields.length > 1 ? ', ' + label(f) : ''), 'th', true])), ...fields.map((f): [string, 'th', boolean] => [label(f), 'th', true])]);
+    const tbody = table.createTBody();
+    for (const r of p.rows) row(tbody, [[dim(0, r.key), 'th'], ...per(r.cells)]);
+    row(table.createTFoot(), [['Total', 'th'], ...per(p.foot)]);
+    return;
+  }
   row(table.createTHead(), [...by.map((d): [string, 'th'] => [catalog.dimensions[d]!.label, 'th']), ...fields.map((f): [string, 'th', boolean] => [label(f), 'th', true])]);
   const value = (v: Row[string], f: string) => formatValue(v as number | null, catalog.metrics[f.replace('@previous', '')]!, 'exact');
   const body = table.createTBody(), totals = fields.map((f): [string, 'td', boolean] => [value(result.totals[f], f), 'td', true]);

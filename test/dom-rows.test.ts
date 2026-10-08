@@ -16,6 +16,17 @@ describe('the rows layout', () => {
     ]);
   });
 
+  it('gives up its headers in a short box, unless the spec keeps its guides', () => {
+    expect(compileFitRules(FIT_RULES.filter((r) => r.layout === 'rows' && r.id === 'columns'), { rows: rows.fit! }))
+      .toBe('/* rows columns */\n@container view (block-size < 80px) {\n  .vg[data-layout="rows"]:not([data-keep~="guides"]) .vg-columns { display: none; }\n}');
+  });
+
+  it('sets no column\'s width: the headers and the rows are subgrids, and a ranked column goes by a need written on its cell', () => {
+    expect(rows.css).toContain('grid-template-columns: subgrid');
+    expect(rows.css).toContain('> [data-rank] { max-inline-size: max(0px, (100cqi - var(--vg-need) + 0.01px) * 999999);');
+    expect(rows.css).not.toMatch(/\bch\b/);
+  });
+
   it('takes its row height and gap from the rule set, never from its stylesheet', () => {
     expect(rows.css).toContain('block-size: var(--vg-row-block)');
     expect(rows.css).toContain('gap: var(--vg-row-gap)');

@@ -1,8 +1,21 @@
 {
-  "description": "The surface set: the page and the two levels that rise from it, with a value per theme. Spacefast raises a surface by making it lighter than the page in both themes, which no single ramp step can say, so the pairing is made here and the common tier aliases one name.",
+  "description": "The surface set: the page and the two levels that rise from it, with a value per theme. Spacefast raises a surface by making it lighter than the page in both themes, which no single ramp step can say, so the pairing is made here and the common tier aliases one name. The screen is the one that sinks: a little darker than the page in both themes, for a container set into its surface as an LCD is.",
   "set": {
-    "page": { "light": "{color.neutral.200}", "dark": "{color.neutral.200}" },
-    "card": { "light": "{color.neutral.100}", "dark": "{color.neutral.300}" },
-    "raised": { "light": "{color.white}", "dark": "{color.neutral.400}" }
+    "page": {
+      "light": "{color.neutral.200}",
+      "dark": "{color.neutral.200}"
+    },
+    "card": {
+      "light": "{color.neutral.100}",
+      "dark": "{color.neutral.300}"
+    },
+    "raised": {
+      "light": "{color.white}",
+      "dark": "{color.neutral.400}"
+    },
+    "screen": {
+      "light": "{color.neutral.400}",
+      "dark": "{color.neutral.100}"
+    }
   }
 }

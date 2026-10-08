@@ -279,5 +279,24 @@
     "3_5": {
       "$value": "{space.xs}"
     }
+  },
+  "elevation": {
+    "$type": "shadow",
+    "$description": "How far a container stands from the surface it is on, as a box-shadow. 0 is flat, and the default. inset is level -1: sunk into the surface, as a screen sits behind its bezel. 1, 2 and 3 stand above it, each further. Shadows fall away from the one light a page has (--ua-light-x and -y, a unit vector toward it), and straight down where a page sets none. A raised level also has a lit edge facing the light, which is what lifts it in dark, where a shadow has nothing to darken.",
+    "inset": {
+      "$value": "inset calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 2px color-mix(in srgb, {color.black} 20%, transparent), inset calc(var(--ua-light-x, 0) * -3px) calc(var(--ua-light-y, -1) * -3px) 8px color-mix(in srgb, {color.black} 10%, transparent), calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 0 {color.surface.raised}"
+    },
+    "0": {
+      "$value": "none"
+    },
+    "1": {
+      "$value": "calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 2px color-mix(in srgb, {color.black} 10%, transparent), calc(var(--ua-light-x, 0) * -2px) calc(var(--ua-light-y, -1) * -2px) 4px color-mix(in srgb, {color.black} 6%, transparent), inset calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 0 color-mix(in srgb, {color.white} calc(12% * var(--ua-light-hi, 1)), transparent)"
+    },
+    "2": {
+      "$value": "calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 2px color-mix(in srgb, {color.black} 8%, transparent), calc(var(--ua-light-x, 0) * -4px) calc(var(--ua-light-y, -1) * -4px) 10px color-mix(in srgb, {color.black} 10%, transparent), inset calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 0 color-mix(in srgb, {color.white} calc(14% * var(--ua-light-hi, 1)), transparent)"
+    },
+    "3": {
+      "$value": "calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 1px color-mix(in srgb, {color.black} 8%, transparent), calc(var(--ua-light-x, 0) * -4px) calc(var(--ua-light-y, -1) * -4px) 8px color-mix(in srgb, {color.black} 8%, transparent), calc(var(--ua-light-x, 0) * -18px) calc(var(--ua-light-y, -1) * -18px) 36px color-mix(in srgb, {color.black} 14%, transparent), inset calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 0 color-mix(in srgb, {color.white} calc(16% * var(--ua-light-hi, 1)), transparent)"
+    }
   }
 }

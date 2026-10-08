@@ -142,9 +142,11 @@
   --ua-radius-2xl: 16px;
   --ua-radius-full: 9999px;
   --ua-spacing-0: 0px;
+  --ua-elevation-0: none;
   --ua-color-surface-page: var(--ua-color-neutral-200);
   --ua-color-surface-card: var(--ua-color-neutral-100);
   --ua-color-surface-raised: var(--ua-color-white);
+  --ua-color-surface-screen: var(--ua-color-neutral-400);
   --ua-color-mark-steel: var(--ua-color-constant-steel);
   --ua-color-mark-steel-text: var(--ua-color-constant-steel);
   --ua-color-mark-steel-soft: var(--ua-color-qual-steel-100);
@@ -231,6 +233,10 @@
   --ua-spacing-1-5: var(--ua-space-5xs);
   --ua-spacing-2-5: var(--ua-space-3xs);
   --ua-spacing-3-5: var(--ua-space-xs);
+  --ua-elevation-1: calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 2px color-mix(in srgb, var(--ua-color-black) 10%, transparent), calc(var(--ua-light-x, 0) * -2px) calc(var(--ua-light-y, -1) * -2px) 4px color-mix(in srgb, var(--ua-color-black) 6%, transparent), inset calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 0 color-mix(in srgb, var(--ua-color-white) calc(12% * var(--ua-light-hi, 1)), transparent);
+  --ua-elevation-2: calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 2px color-mix(in srgb, var(--ua-color-black) 8%, transparent), calc(var(--ua-light-x, 0) * -4px) calc(var(--ua-light-y, -1) * -4px) 10px color-mix(in srgb, var(--ua-color-black) 10%, transparent), inset calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 0 color-mix(in srgb, var(--ua-color-white) calc(14% * var(--ua-light-hi, 1)), transparent);
+  --ua-elevation-3: calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 1px color-mix(in srgb, var(--ua-color-black) 8%, transparent), calc(var(--ua-light-x, 0) * -4px) calc(var(--ua-light-y, -1) * -4px) 8px color-mix(in srgb, var(--ua-color-black) 8%, transparent), calc(var(--ua-light-x, 0) * -18px) calc(var(--ua-light-y, -1) * -18px) 36px color-mix(in srgb, var(--ua-color-black) 14%, transparent), inset calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 0 color-mix(in srgb, var(--ua-color-white) calc(16% * var(--ua-light-hi, 1)), transparent);
+  --ua-elevation-inset: inset calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 2px color-mix(in srgb, var(--ua-color-black) 20%, transparent), inset calc(var(--ua-light-x, 0) * -3px) calc(var(--ua-light-y, -1) * -3px) 8px color-mix(in srgb, var(--ua-color-black) 10%, transparent), calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 0 var(--ua-color-surface-raised);
   --ua-color-background: var(--ua-color-surface-page);
   --ua-color-card: var(--ua-color-surface-card);
   --ua-color-card-raised: var(--ua-color-surface-raised);
@@ -358,6 +364,7 @@
   --ua-color-surface-page: var(--ua-color-neutral-200);
   --ua-color-surface-card: var(--ua-color-neutral-300);
   --ua-color-surface-raised: var(--ua-color-neutral-400);
+  --ua-color-surface-screen: var(--ua-color-neutral-100);
   --ua-color-mark-steel: var(--ua-color-qual-steel-200);
   --ua-color-mark-steel-text: var(--ua-color-qual-steel-300);
   --ua-color-mark-steel-soft: var(--ua-color-qual-steel-100);
@@ -558,6 +565,7 @@
   --ua-color-surface-page: var(--ua-color-neutral-200);
   --ua-color-surface-card: var(--ua-color-neutral-300);
   --ua-color-surface-raised: var(--ua-color-neutral-400);
+  --ua-color-surface-screen: var(--ua-color-neutral-100);
   --ua-color-mark-steel: var(--ua-color-qual-steel-200);
   --ua-color-mark-steel-text: var(--ua-color-qual-steel-300);
   --ua-color-mark-steel-soft: var(--ua-color-qual-steel-100);

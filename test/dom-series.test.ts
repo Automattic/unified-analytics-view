@@ -7,6 +7,7 @@ import { cartesian } from '../packages/dom/src/layouts/cartesian.ts';
 import { hitNodes, readout, readoutAt, rowsAt, stepSeries } from '../packages/dom/src/keys.ts';
 import { apart } from '../packages/dom/src/measure.ts';
 import { mix, resample } from '../packages/dom/src/motion.ts';
+import { pivot } from '../packages/dom/src/view.ts';
 
 // What <ua-view> adds for a plot split into series, a stack, a signed scale and a second unit, where it is a plain
 // function or a string. That they draw, fit and move is checked in a browser on the bench.
@@ -165,5 +166,25 @@ describe('stepSeries', () => {
   it('leaves left and right, and a plot with no series, alone', () => {
     expect(stepSeries('ArrowRight', 0, 3)).toBeNull();
     expect(stepSeries('ArrowUp', -1, 0)).toBeNull();
+  });
+});
+
+describe('the table of two dimensions', () => {
+  it('is a pivot: a row per x, a column per series and the metric over all of them', () => {
+    const { spec, result, scene } = of('stacked'), p = pivot(expand(spec).query, result, ['visitors']);
+    expect(p.cols).toEqual(scene.series);
+    expect(p.rows.map((r) => r.key)).toEqual(scene.rows);
+    expect(p.rows[0]!.cells).toEqual([217, 173, 26, 416]);
+  });
+  it('takes every total from the engine', () => {
+    const { spec, result } = of('grouped'), p = pivot(expand(spec).query, result, ['visitors']);
+    expect(p.foot).toEqual([...result.totalsBy!.device!.map((t) => t.visitors), result.totals.visitors]);
+    expect(p.rows.map((r) => r.cells.at(-1))).toEqual(result.totalsBy!.channel!.map((t) => t.visitors));
+  });
+  it('leaves a cell empty where the result has no row or no total', () => {
+    const { spec, result } = of('grouped'), q = expand(spec).query;
+    const p = pivot(q, { ...result, rows: result.rows.slice(1), totalsBy: undefined }, ['visitors']);
+    // With no totals the columns run as the rows come: Mobile, Tablet, then Desktop, which Search has lost.
+    expect(p.rows[0]!.cells).toEqual([result.rows[1]!.visitors, result.rows[2]!.visitors, undefined, undefined]);
   });
 });

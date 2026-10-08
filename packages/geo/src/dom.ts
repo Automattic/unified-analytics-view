@@ -34,7 +34,7 @@ const css = `
 .vg[data-layout="geo"] .vg-points i { pointer-events: auto; }
 .vg[data-layout="geo"] .vg-ramp:empty { display: none; }
 /* In a box the part gives way to the height and its width follows, as a circle of arcs does. */
-@container view (block-size >= 0px) {
+@container vg-view (block-size >= 0px) {
   .vg[data-layout="geo"] .vg-body { container-type: size; overflow: hidden; }
   .vg[data-layout="geo"] .vg-plot { flex: 0 1 calc(min(100cqi, 480px) / var(--vg-aspect, 2)); min-block-size: 0; inline-size: auto; max-inline-size: 100%; }
   .vg[data-layout="geo"] :is(.vg-ramp, .vg-size) { flex: none; }

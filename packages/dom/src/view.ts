@@ -17,8 +17,8 @@ import { MOTION_CSS, begin, register, settle } from './motion.ts';
 const painters = Object.values(LAYOUTS);
 
 /* Everything the element owns, in one layer, so a compiled fit rule beats it whatever the specificity. */
-const BASE_CSS = `@layer vg {
-:host { display: block; container: view / inline-size; font-size: 11px; line-height: 1.3; text-align: start; text-indent: 0; color: ${paintVar('ink')}; }
+export const BASE_CSS = `@layer vg {
+:host { display: block; container: vg-view / inline-size; font-size: 11px; line-height: 1.3; text-align: start; text-indent: 0; color: ${paintVar('ink')}; }
 :host([hidden]), [hidden] { display: none !important; }
 .vg { position: relative; box-sizing: border-box; block-size: 100%; margin: 0; display: grid; grid-template: "number" auto "body" minmax(0, 1fr) / minmax(0, 1fr); print-color-adjust: exact; }
 /* A bar, a segment, a swatch and a rule are backgrounds. A printer leaves those out unless told, and forced colours
@@ -51,18 +51,18 @@ const BASE_CSS = `@layer vg {
 .vg-number[data-fit~="no-note"] > .vg-f-tick { display: none; }
 /* A number the pass has not set carries no data-fit: one beside a bare plot, which its layout sets, or any number
  * where the pass does not run. For that one the widths at which place() takes the shorter forms stand in. */
-@container view (inline-size < 200px) { .vg-number:not([data-fit]) > .vg-f-value > .vg-full { display: none; } .vg-number:not([data-fit]) > .vg-f-value > .vg-short { display: inline; } }
-@container view (inline-size < 160px) {
+@container vg-view (inline-size < 200px) { .vg-number:not([data-fit]) > .vg-f-value > .vg-full { display: none; } .vg-number:not([data-fit]) > .vg-f-value > .vg-short { display: inline; } }
+@container vg-view (inline-size < 160px) {
   .vg-number:not([data-fit]) > .vg-f-display > .vg-full { display: none; } .vg-number:not([data-fit]) > .vg-f-display > .vg-short { display: inline; }
   .vg-number:not([data-fit]) > .vg-f-display { font-size: 26px; line-height: 24px; }
 }
-@container view (inline-size < 120px) { .vg-number:not([data-fit]) > .vg-f-tick { display: none; } }
+@container vg-view (inline-size < 120px) { .vg-number:not([data-fit]) > .vg-f-tick { display: none; } }
 
 /* What the measured pass reads. The room takes the view's width, and its height only when the view was handed a
  * box, so nothing the pass writes can resize it. The ruler holds the number set in each of its forms, clipped to
  * nothing so that it adds no overflow, and outside the figure so that no fit rule reaches it. */
 .vg-room { position: absolute; inset-inline: 0; inset-block-start: 0; block-size: 0; visibility: hidden; pointer-events: none; }
-@container view (block-size >= 0px) { .vg-room { block-size: 100%; } }
+@container vg-view (block-size >= 0px) { .vg-room { block-size: 100%; } }
 .vg-ruler { position: absolute; inline-size: 0; block-size: 0; overflow: hidden; visibility: hidden; pointer-events: none; }
 .vg-ruler > .vg-number { display: block; position: absolute; inline-size: max-content; }
 .vg-ruler > .vg-number > span { inline-size: max-content; }
@@ -73,7 +73,7 @@ ${KEYS_CSS}
 
 /* Only a size container answers a block-size query, so this matches exactly when a layout has handed the view a
  * box. The body then takes the height left over. No attribute on the view. */
-@container view (block-size >= 0px) { .vg-body { block-size: auto; } }
+@container vg-view (block-size >= 0px) { .vg-body { block-size: auto; } }
 
 /* The prose alone: the last rung, set by the plan or, when the number itself does not fit, by the measured pass. */
 .vg:is([data-layout="prose"], [data-fit="prose"]) > :not(.vg-prose, .vg-room) { display: none !important; }
@@ -106,9 +106,9 @@ const EXTRAS: FitExtras = Object.fromEntries(painters.map((p) => [p.layout, p.fi
  * beside the figure, handed the same query, result, catalog and rules. That one is its own container, with its own
  * rules, keyboard and measured pass. The compiled rule shows one of the two, so nothing runs on resize. The table is
  * the same query's either way, so it is this view's. */
-const FALLBACK_CSS = `@layer vg {
+export const FALLBACK_CSS = `@layer vg {
 .vg-fallback { display: none; }
-@container view (block-size >= 0px) { .vg-fallback { block-size: 100%; container-type: size; } }
+@container vg-view (block-size >= 0px) { .vg-fallback { block-size: 100%; container-type: size; } }
 :host([table]) .vg { display: block !important; }
 :host([table]) .vg-fallback { display: none !important; }
 }`;

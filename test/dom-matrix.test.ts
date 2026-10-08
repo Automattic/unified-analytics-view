@@ -32,11 +32,11 @@ describe('the matrix layout', () => {
     expect(matrix.css).toContain('.vg-cells i { grid-area: var(--vg-cy) / var(--vg-cx);');
   });
   it('gives up the ramp, then the body for the number, by width and by height', () => {
-    expect(css).toContain('@container view (inline-size < 239.5px) {\n  ' + fig('guides') + ' .vg-ramp { display: none; }\n}');
-    expect(css).toContain('@container view (block-size < 149.5px) {\n  ' + fig('guides') + ' .vg-ramp { display: none; }\n}');
+    expect(css).toContain('@container vg-view (inline-size < 239.5px) {\n  ' + fig('guides') + ' .vg-ramp { display: none; }\n}');
+    expect(css).toContain('@container vg-view (block-size < 149.5px) {\n  ' + fig('guides') + ' .vg-ramp { display: none; }\n}');
     const alone = ['  ' + fig('marks') + ' :is(.vg-plot, .vg-ramp) { display: none; }', '  ' + fig('marks') + ' .vg-number { display: block; }',
       '  ' + fig('marks') + ' { grid-template: "number" auto / minmax(0, 1fr); }', '  ' + fig('marks') + ' .vg-body { display: none; }', '  ' + fig('marks') + ' .vg-number { margin: 0; }', '}'].join('\n');
-    expect(css).toContain('@container view (inline-size < 149.5px) {\n' + alone);
-    expect(css).toContain('@container view (block-size < 89.5px) {\n' + alone);
+    expect(css).toContain('@container vg-view (inline-size < 149.5px) {\n' + alone);
+    expect(css).toContain('@container vg-view (block-size < 89.5px) {\n' + alone);
   });
 });

@@ -375,11 +375,11 @@ For browser containers, each element should break only when it needs to, using i
 A sketch, untested. The worked rules are in `docs/dom-painter-plan.md`, section 2, where the axes rule queries the view and not the plot, because hiding an axis changes the plot's size:
 
 ```css
-.vg-plot { container: plot / size; }           /* needs a definite height; use inline-size otherwise */
-@container plot (inline-size < 280px) or (block-size < 120px) {
+.vg-plot { container: vg-plot / size; }           /* needs a definite height; use inline-size otherwise */
+@container vg-plot (inline-size < 280px) or (block-size < 120px) {
   .vg-axis, .vg-grid { display: none; }
 }
-@container plot (inline-size < 180px) or (block-size < 90px) {
+@container vg-plot (inline-size < 180px) or (block-size < 90px) {
   [data-role="comparison"], [data-role="reference"], [data-role="context"] { display: none; }
 }
 ```

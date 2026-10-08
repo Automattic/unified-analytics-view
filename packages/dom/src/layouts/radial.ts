@@ -11,7 +11,7 @@ import { paintLegend } from './band.ts';
  * donut, and at the foot of a half circle. Sizes are the pixel painter's. */
 const css = `
 .vg[data-layout="radial"] .vg-body { display: flex; flex-direction: column; }
-.vg-radial { position: relative; flex: none; align-self: center; inline-size: min(100%, 160px); aspect-ratio: var(--vg-aspect, 1); container: plot / inline-size; }
+.vg-radial { position: relative; flex: none; align-self: center; inline-size: min(100%, 160px); aspect-ratio: var(--vg-aspect, 1); container: vg-plot / inline-size; }
 .vg-radial svg { display: block; inline-size: 100%; block-size: 100%; overflow: visible; }
 .vg-radial path { fill: var(--vg-paint); }
 .vg-radial path[data-active] { stroke: ${paintVar('ink')}; stroke-width: 2px; vector-effect: non-scaling-stroke; }
@@ -27,7 +27,7 @@ const css = `
  * width allows its shape, which cqi is here, the part being a container itself. The legends swap as a band's do:
  * the full one needs the least circle of 64 px, 10 px and 24 px a row less the last gap. Under the one-line legend's
  * need the \`legend-top\` rule takes both away. */
-@container view (block-size >= 0px) {
+@container vg-view (block-size >= 0px) {
   .vg[data-layout="radial"] .vg-body { container-type: size; overflow: hidden; --vg-legend-block: calc(70px + var(--vg-rows, 1) * 24px); }
   .vg[data-layout="radial"] .vg-radial { flex: 0 1 calc(160px / var(--vg-aspect, 1)); min-block-size: 0; max-block-size: calc(100cqi / var(--vg-aspect, 1)); inline-size: auto; max-inline-size: 100%; }
   .vg[data-layout="radial"] :is(.vg-legend, .vg-legend-top) { flex: none; }

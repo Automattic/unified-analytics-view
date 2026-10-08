@@ -20,7 +20,7 @@ const css = `
 .vg[data-layout="cartesian"] .vg-body { display: grid; padding-block-start: 10px;
   grid-template: "y plot y2 labels" var(--vg-plot-block) ". x . ." auto "legend legend legend legend" auto / auto minmax(0, 1fr) auto auto; }
 /* On the body, where it outranks whatever a fit rule sets on the figure. */
-@container view (block-size >= 0px) { .vg[data-layout="cartesian"] .vg-body { --vg-plot-block: minmax(0, 1fr); } }
+@container vg-view (block-size >= 0px) { .vg[data-layout="cartesian"] .vg-body { --vg-plot-block: minmax(0, 1fr); } }
 .vg-y-axis, .vg-y-axis-2, .vg-x-axis, .vg-labels { display: grid; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .vg-y-axis { grid-area: y; }
 .vg-y-axis-2 { grid-area: y2; }
@@ -47,7 +47,7 @@ const css = `
 .vg-x-axis [data-anchor="end"] { translate: -100%; }
 /* A label the measured pass gave up keeps its box, so the next measurement reads the same. */
 .vg-x-axis [data-thin] { visibility: hidden; }
-.vg-plot { grid-area: plot; position: relative; container: plot / size; }
+.vg-plot { grid-area: plot; position: relative; container: vg-plot / size; }
 .vg-grid, .vg-bars, .vg-refs { position: absolute; inset: 0; }
 .vg-line { position: absolute; inset-inline: 0; inset-block-start: calc((1 - var(--vg-t)) * 100%); block-size: var(--vg-stroke, 1px); background: var(--vg-paint); }
 .vg-line[data-dash] { background: repeating-linear-gradient(90deg, var(--vg-paint) 0 var(--vg-dash), transparent 0 calc(var(--vg-dash) + var(--vg-gap))); }

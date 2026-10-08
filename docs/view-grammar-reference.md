@@ -124,7 +124,7 @@ A query is written in catalog names:
 | Field | Notes |
 |---|---|
 | `metrics` | Required. The first is the primary metric |
-| `by` | Zero or one dimension today. More than one is Open |
+| `by` | Zero or one dimension today. Two is decided and not built (section 19, Decided 24) |
 | `range` | `"28d"` style. Presets and custom ranges are Open |
 | `compare` | `"previous"` or absent. Other modes (year over year, baseline) are Open |
 | `limit` | Top-N for categorical dimensions |
@@ -245,7 +245,7 @@ A custom mark registered in code and referenced by name is the escape hatch for 
 | `rows` | A dimension on y | The ranked bar list: a bar behind a label and a value per row |
 | `band` | A dimension on color only | One stacked, normalized bar with a legend |
 
-These are chart types hiding in the scene builder. Generalizing them (facets, two dimensions, a metric on both axes) is Open and is the most important structural work after the port.
+These are chart types hiding in the scene builder. Generalizing them (facets, two dimensions, a metric on both axes) is the most important structural work after the port. How was decided on October 7 (section 19, Decided 23) and is planned in `docs/chart-coverage-plan.md`.
 
 ---
 
@@ -591,21 +591,29 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 20. One scene, in ratios, with a `part` on every node. Pixel painters go through `place(scene, size)`. (October 7)
 21. Y ticks always round to 4, thinned by a rule on short plots. A deliberate departure from the prototype. (October 7)
 22. In the DOM, bars are HTML and lines and areas are a stretched SVG. (October 7)
+23. Layouts stay, as arrangements of parts that fit rules and painters hang on. A channel's scale comes from its field; `rows` becomes a track per row; `radial` is added for `arc`. Detail and the build order are in `docs/chart-coverage-plan.md`. (October 7)
+24. A query may have two dimensions in `by`, no more. The second goes to `color`, to `facet`, or to the other axis. (October 7)
+25. Statistics (bins, quantiles, density, running totals) come from the engine as companion fields, as `metric@previous` does. Core gains no transform for them. (October 7)
+26. A facet is a small board: a plan per value with one shared domain, laid out by the container. (October 7)
+27. A layer may carry a shape parameter from a closed set, starting with `sweep: "half"` for `arc`. Count them; chart types must not come back as parameters. (October 7)
+28. A delta per row is `series: "delta"` on a `text` layer. A ranged bar is painted by its direction and the metric's polarity. (October 7)
+29. A fit rule may name a `fallback` preset that the view becomes below the rule's need. (October 7)
+30. `d3-geo` is allowed in a `packages/geo` of its own. Core keeps its three dependencies. (October 7)
 
 ### Open
 
 1. The format for per-element fit rules, such that they compile to container queries and also run in code. Proposed in `docs/dom-painter-plan.md`, section 2. Step 1 of that plan built it (`packages/core/src/fit.ts`) and it holds for running in code: `resolve()` reads the rules with no change to any plan. It stays here until the rules are compiled, and until the differences step 1 found are settled: the view's block needs when the number sits above the plot, and what `keep` means to a compiled rule.
 2. Settled October 7: see Decided 20. The number is kept so later items keep theirs.
 3. How a preset pins a hand-tuned form.
-4. Generalizing the three hard-coded layouts.
+4. Settled October 7: see Decided 23. Not built.
 5. Label collision: build or source.
 6. Bar list behaviour when narrow, and what a collapsed ranking should show.
 7. Whether a trend shows the tldr value above the plot by default. This is now the container rule `tldrValue.above` and not a spec field; the default says no.
 8. Whether deltas exclude the partial day.
 9. Params and selections. Not started. The design intent: a selection is a filter predicate, not pixels or row IDs; three kinds (interval, point, set); several views combine by union, intersection or cross-filter; dragging is transient and local, releasing commits to the context.
-10. More than one dimension in `by`.
-11. Catalog properties beyond the stub, and where polarity and thresholds are declared.
-12. How a board composes views that share params.
+10. Settled October 7: see Decided 24. Not built.
+11. Catalog properties beyond the stub, and where polarity and thresholds are declared. What this repo will propose to the API's owners is listed in `docs/chart-coverage-plan.md`, section 3.5: a `number` dimension type; `domain`, `target` and `bands` on a metric; a colour role per dimension value; and totals per split on the result.
+12. How a board composes views that share params. A facet is a small board (Decided 26), so a facet waits for this.
 13. The name.
 14. Which survives at the smallest size, the marks or the tldr value. Today the tldr value does; a sparkline in a table cell wants the line alone. To settle in testing.
 15. Whether the tldr prose rung can be anything but measured. The plan proposes a measured pass, because the threshold is the width of the number itself. It is the one place the fit is not intrinsic.

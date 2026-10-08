@@ -229,17 +229,45 @@ export function valueRoomOf(catalog: Catalog, layers: Layer[], rows: Row[]): num
   return room;
 }
 
-// A dimension on y, a metric on x: the ranked bar list.
+/* What a mark in a row's track is drawn with: its layer's key, role and paint, the row, and the track's scale. */
+interface Track {
+  id: string;
+  role: Role;
+  paint: string;
+  row: Row;
+  k: string;
+  /** A value on the track's x, as a ratio of its width. */
+  v: (n: number) => number;
+}
+type TrackFn = (l: Layer, d: Track) => SceneNode[];
+
+// A bar runs from zero to its value, so one below zero lies to the left of where the others start.
+const trackBar: TrackFn = (l, { id, role, paint, row, k, v }) => {
+  const v0 = v(0);
+  return [{ key: id + ':' + k, part: 'rows', kind: 'rect', v: v(num(row, l.encode!.x as string)), ...(v0 && { v0 }), row: k, paint, opacity: 0.2, layer: 'data', role }];
+};
+/* The marks a row's track draws, by name. A new mark is a function here. Text is not among them: it is set in the row, not on the scale. */
+const TRACK_MARKS: Partial<Record<Mark, TrackFn>> = { bar: trackBar };
+
+// A dimension on y: a row for each of its values, with a track that has a metric on x. The ranked bar list is the first of these.
+// The track's scale is derived here, once, from what its layers put on x. It is linear and holds zero and whatever is on
+// either side of it, and it is not rounded: a row's track has no axis to read against.
 function sceneRows(catalog: Catalog, layers: Layer[], rows: Row[]): Body {
   const nodes: SceneNode[] = [];
   const dim = layers.map((l) => l.encode && l.encode.y).find((f) => isDim(catalog, f)) as string;
-  const barL = layers.find((l) => l.mark === 'bar');
-  const top = barL ? max(rows, (r) => num(r, barL.encode!.x as string)) || 1 : 1, ids = layerKeys(layers);
+  const tracked = layers.filter((l) => TRACK_MARKS[l.mark]), units = [...new Set(tracked.map((l) => catalog.metrics[l.encode!.x as string]?.unit))];
+  if (units.length > 1) throw new Error('These rows have marks that measure in ' + units.length + ' units (' + units.join(', ') + '), and a row has one track. Keep the marks of one unit, and show the other metric as a text layer.');
+  const vals = tracked.flatMap((l) => rows.map((r) => num(r, l.encode!.x as string)));
+  const lo = Math.min(0, min(vals) ?? 0), hi = Math.max(0, max(vals) ?? 0) || (lo ? 0 : 1), v = (n: number) => (n - lo) / (hi - lo);
+  const ids = layerKeys(layers);
   rows.forEach((r) => {
     const k = r[dim] as string;
+    // The row itself: what a painter keys, and what is chosen and named when the row is.
+    nodes.push({ key: 'row:' + k, part: 'rows', kind: 'row', row: k, paint: 'ink', layer: 'data' });
     layers.forEach((l, li) => {
-      if (l.mark === 'bar') {
-        nodes.push({ key: ids[li] + ':' + k, part: 'rows', kind: 'rect', v: num(r, l.encode!.x as string) / top, row: k, paint: l.paint || 'series.1', opacity: 0.2, layer: 'data', role: roleOf(l) });
+      const draw = TRACK_MARKS[l.mark];
+      if (draw) {
+        nodes.push(...draw(l, { id: ids[li]!, role: roleOf(l), paint: l.paint || 'series.1', row: r, k, v }));
       } else if (l.mark === 'text') {
         const f = l.encode!.text as string, metric = f in catalog.metrics;
         nodes.push({ key: ids[li] + ':' + k, part: 'rows', kind: 'text', row: k, text: metric ? fmt(num(r, f)) : String(r[f]),

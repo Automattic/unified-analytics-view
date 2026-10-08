@@ -106,7 +106,8 @@ function placeRows(scene: Scene, W: number): Block {
   scene.nodes.forEach((n) => {
     if (n.part !== 'rows') return;
     const top = rows.indexOf(n.row!) * (rowH + gap);
-    if (n.kind === 'rect') nodes.push(rect(n, 0, top, Math.max(3, x(n.v!)), rowH, 3));
+    // A bar lies from where its track has zero to its value, and is never thinner than 3 px.
+    if (n.kind === 'rect') { const from = x(n.v0 ?? 0), to = x(n.v!); nodes.push(rect(n, Math.min(from, to), top, Math.max(3, Math.abs(to - from)), rowH, 3)); }
     else if (n.kind === 'text') nodes.push(n.anchor === 'end' ? text(n, W - 8, top + rowH / 2) : text(n, 8, top + rowH / 2, fit(n.text, W - 16 - valueRoom)));
   });
   return { nodes, height: Math.max(0, rows.length * (rowH + gap) - gap) };

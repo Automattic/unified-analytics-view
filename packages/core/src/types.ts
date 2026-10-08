@@ -143,8 +143,8 @@ interface NodeBase {
   opacity?: number;
   note?: string;
 }
-/** A bar in the plot (`x` and `w` across, and up the plot from `v0` to `v`), a row's bar (`v` across), a band segment (`v` is its share) or a legend swatch.
- * `v0` is absent where a bar starts at the bottom of the plot. A bar that hangs below its start has `v` under `v0`. */
+/** A bar in the plot (`x` and `w` across, and up the plot from `v0` to `v`), a row's bar (across its track from `v0` to `v`), a band segment (`v` is its share) or a legend swatch.
+ * `v0` is absent where a bar starts at the bottom of the plot, or at the start of the track. A bar that hangs below its start has `v` under `v0`. */
 export interface RectNode extends NodeBase { kind: 'rect'; x?: number; w?: number; v?: number; v0?: number }
 /** `d` is drawn in a 100 by 100 box, for the painter to stretch. `points` are what it was drawn from. An area's point has `v0` where it starts above the bottom of the plot. */
 export interface PathNode extends NodeBase {
@@ -159,6 +159,8 @@ export interface PathNode extends NodeBase {
 /** A line across the plot at height `t`. The one at zero is painted `axis`, and sits above the bottom of the plot where values go below zero. */
 export interface LineNode extends NodeBase { kind: 'line'; t: number; width?: number; dash?: string }
 export interface CircleNode extends NodeBase { kind: 'circle'; pulse: boolean }
+/** One row of the `rows` part: the thing a painter keys and a reader chooses. It draws nothing itself, and place() leaves it out. */
+export interface RowNode extends NodeBase { kind: 'row'; row: string }
 /** Text in the number, rows, legend and notice parts is set in order and carries no position. In `labels` it sits beside the plot at height `t`. */
 export interface TextNode extends NodeBase {
   kind: 'text';
@@ -172,7 +174,7 @@ export interface TextNode extends NodeBase {
   font: 'tick' | 'label' | 'value' | 'display';
   halo?: boolean;
 }
-export type SceneNode = RectNode | PathNode | LineNode | CircleNode | TextNode;
+export type SceneNode = RectNode | PathNode | LineNode | CircleNode | TextNode | RowNode;
 export interface Scene {
   layout: Layout;
   /** The parts the plan shows. The number's nodes are in the scene either way, so a fit rule can show it in compensation.

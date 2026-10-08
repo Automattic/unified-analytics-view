@@ -126,6 +126,23 @@ function render() {
   }
   section('Radius', '', radii);
 
+  // Elevation is seen as a container on a surface: sunk into it, flat, or standing above it. The light is the materials' below.
+  const ORDER = ['inset', '0', '1', '2', '3'];
+  const levels = el('div', 'elevations');
+  for (const [name, value] of take(/^--ua-elevation-/).sort(([a], [b]) => ORDER.indexOf(a.slice(15)) - ORDER.indexOf(b.slice(15)))) {
+    const fig = el('figure'), box = el('div', 'elevation'), level = name.slice(15);
+    box.style.boxShadow = `var(${name})`;
+    if (level === 'inset') box.classList.add('sunk');
+    box.append(el('b', '', level === 'inset' ? '−1' : level));
+    fig.append(box, el('span', '', name.replace('--ua-', '')), el('small', '', level === '0' ? 'flat, the default' : value.split('),').length + ' shadows'));
+    levels.append(fig);
+  }
+  section('Elevation', 'how far a container stands from its surface; shadows fall away from the light, which the Light control moves', levels);
+
+  const light = el('div', 'chips');
+  for (const [name, value] of take(/^--ua-(light|crystal|grain|frost)/)) { const chip = el('div', 'chip'), text = el('div'); text.append(el('span', '', name.replace('--ua-', '')), el('small', '', value.length > 60 ? value.slice(0, 40) + '…' : value)); chip.append(text); light.append(chip); }
+  section('Light and materials', 'the light model and what each material is tuned by; the materials are at the foot of the page', light);
+
   // Whatever no section claimed still shows, so a new kind of token is never hidden.
   if (all.size) {
     const rest = el('div', 'chips');
@@ -140,7 +157,9 @@ for (const [k, v] of params) { const input = controls.querySelector<HTMLInputEle
 function apply() {
   const theme = String(new FormData(controls).get('theme'));
   if (theme) root.dataset.theme = theme; else delete root.dataset.theme;
-  history.replaceState(null, '', '?' + new URLSearchParams({ theme }));
+  // The materials below share this page's controls and keep theirs in the URL too.
+  const kept = new URLSearchParams(location.search); kept.set('theme', theme);
+  history.replaceState(null, '', '?' + kept);
   render();
 }
 controls.addEventListener('change', apply);

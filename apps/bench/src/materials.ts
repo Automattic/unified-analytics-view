@@ -1,5 +1,5 @@
-/* The materials page: each material over the page and over each surface it has to sit on, at the sizes it has
- * to hold up at, under one light the controls move. The material's surface is material.css; this file builds
+/* The materials, on the tokens page: each material over the page and over each surface it has to sit on, at the sizes it has
+ * to hold up at, under one light the controls move. The same light is the one elevation's shadows fall away from. The material's surface is material.css; this file builds
  * the stage and the lens filter. */
 const root = document.documentElement;
 const controls = document.querySelector<HTMLFormElement>('#controls')!;
@@ -87,15 +87,55 @@ function swatches(material: (size: number) => HTMLElement) {
   }
 }
 
-heading('Crystal', 'clear glass over the page and over three surfaces; the dot outside each is where the light is');
+heading('Crystal', 'clear glass over the page and over three surfaces; the dot outside each is where the light is. Then as a surface: a container of any fill under a sheet of it');
 swatches((size) => {
   const glass = crystal();
   crystals.push({ size, el: glass });
   return glass;
 });
 
-heading('Frost', 'frosted glass: the light model, blur and vibrancy on what is behind, and grain');
+// The same glass as a surface: a container of any fill, with a little elevation, under a sheet of it.
+{
+  const row = el('div', 'stages panels');
+  for (const fill of ['surface-card', 'surface-raised', 'surface-screen', 'marker']) {
+    const fig = el('figure'), panel = el('div', 'ua-crystal-surface');
+    panel.style.background = `var(--ua-color-${fill})`;
+    panel.append(el('b', '', '10.5k'), el('span', '', 'Visitors, last 28 days'));
+    fig.append(panel, el('small', '', 'a container · ' + fill.replace('surface-', '')));
+    row.append(fig);
+  }
+  main.append(row);
+}
+
+heading('Frost', 'frosted glass: the light model, blur and vibrancy on what is behind, grain, and an elevation; as a disc over each surface, then as a panel');
 swatches(() => el('div', 'ua-frost'));
+
+// The same glass as a surface: a panel at each elevation it can stand at, over something for it to blur.
+{
+  const row = el('div', 'stages panels');
+  for (const level of [1, 2, 3]) {
+    const fig = el('figure'), back = el('div', 'backdrop'), panel = el('div', 'ua-frost');
+    panel.dataset.elevation = String(level);
+    panel.append(el('b', '', '10.5k'), el('span', '', 'Visitors, last 28 days'));
+    back.append(panel);
+    fig.append(back, el('small', '', 'a panel · elevation ' + level + (level === 3 ? ', the default' : '')));
+    row.append(fig);
+  }
+  main.append(row);
+}
+
+heading('Screen', 'a surface sunk into the page, as an LCD is: the inset elevation, a darker fill, grain, and a small shadow under what is on it');
+{
+  const row = el('div', 'stages screens');
+  for (const [w, text] of [[320, '10.5k'], [200, '3m 48s'], [120, '38%']] as const) {
+    const fig = el('figure'), screen = el('div', 'ua-screen');
+    screen.style.inlineSize = w + 'px';
+    screen.append(el('b', '', text), el('span', '', 'Visitors, last 28 days'));
+    fig.append(screen, el('small', '', `page · ${w} px`));
+    row.append(fig);
+  }
+  main.append(row);
+}
 
 const params = new URLSearchParams(location.search);
 for (const [k, v] of params) {

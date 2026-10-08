@@ -67,22 +67,22 @@
   mask: radial-gradient(closest-side, transparent 96.4%, #000 98.4%, #000 99.4%, transparent 100%); }
 
 /* ───────── Frost ─────────
- * Frosted glass for a panel: what is behind it is blurred and made more vivid, under a tint of the card
+ * Frosted glass, as a surface for a panel: what is behind it is blurred and made more vivid, under a tint of the card
  * surface. No extra elements; the lit edge and the grain are the two pseudo-elements, and sit under the content.
- * The light model gives it three shadows cast away from the light, a highlight on the edge facing the light
- * and a shade on the edge facing away.
- * --ua-frost-blur, --ua-frost-saturate and --ua-frost-tint set how much of each. */
+ * It stands above what it is over, at an elevation: level 3 unless data-elevation says 1 or 2. Over that shadow the
+ * light model gives it a highlight on the edge facing the light and a shade on the edge facing away.
+ * --ua-frost-blur, --ua-frost-saturate and --ua-frost-tint set how much of each, and --ua-grain the grain. */
 .ua-frost { position: relative; border-radius: var(--ua-radius-2xl);
   --w: var(--ua-color-white); --k: var(--ua-color-black); --ax: calc(-1 * var(--ua-light-x)); --ay: calc(-1 * var(--ua-light-y));
   background: color-mix(in srgb, var(--ua-color-card) var(--ua-frost-tint, 45%), transparent);
   -webkit-backdrop-filter: blur(var(--ua-frost-blur, 18px)) saturate(var(--ua-frost-saturate, 180%));
           backdrop-filter: blur(var(--ua-frost-blur, 18px)) saturate(var(--ua-frost-saturate, 180%));
-  box-shadow:
-    calc(var(--ax) * 1px) calc(var(--ay) * 1px) 1px color-mix(in srgb, var(--k) 8%, transparent),
-    calc(var(--ax) * 4px) calc(var(--ay) * 4px) 8px color-mix(in srgb, var(--k) 8%, transparent),
-    calc(var(--ax) * 18px) calc(var(--ay) * 18px) 36px color-mix(in srgb, var(--k) 14%, transparent),
+  --ua-frost-elevation: var(--ua-elevation-3); --a8c-charts-color-background: var(--ua-color-card);
+  box-shadow: var(--ua-frost-elevation),
     inset calc(var(--ax) * 1px) calc(var(--ay) * 1px) 0 color-mix(in srgb, var(--w) calc(55% * var(--ua-light-hi)), transparent),
     inset calc(var(--ua-light-x) * 1px) calc(var(--ua-light-y) * 1px) 0 color-mix(in srgb, var(--k) calc(8% * var(--ua-light-lo)), transparent); }
+.ua-frost[data-elevation="1"] { --ua-frost-elevation: var(--ua-elevation-1); }
+.ua-frost[data-elevation="2"] { --ua-frost-elevation: var(--ua-elevation-2); }
 .ua-frost::before, .ua-frost::after { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none; }
 /* The lit edge: a 1px ring, bright toward the light and shaded away from it. */
 .ua-frost::before { padding: 1px;
@@ -91,3 +91,42 @@
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
           mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; }
 .ua-frost::after { background: var(--ua-grain-image); mix-blend-mode: overlay; opacity: var(--ua-grain); }
+
+/* ───────── Screen ─────────
+ * A surface sunk into the one it is on, as an LCD sits behind its bezel: the inset elevation, a fill a little
+ * darker than the page, and grain over it. What is on it stands just off the backing, as an LCD's segments do, so
+ * each child casts a small shadow away from the light. No extra elements; the grain is a pseudo-element under the content.
+ * --ua-screen-grain is how much grain shows, and --ua-screen-shadow how dark the contents' shadow is. */
+.ua-screen { position: relative; isolation: isolate; border-radius: var(--ua-radius-lg); background: var(--ua-color-surface-screen); box-shadow: var(--ua-elevation-inset);
+  --a8c-charts-color-background: var(--ua-color-surface-screen); }
+.ua-screen::after { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+  background: var(--ua-grain-image); mix-blend-mode: overlay; opacity: var(--ua-screen-grain, .35); }
+.ua-screen > * { filter: drop-shadow(calc(var(--ua-light-x) * -1.5px) calc(var(--ua-light-y) * -1.5px) .5px color-mix(in srgb, var(--ua-color-black) var(--ua-screen-shadow, 22%), transparent)); }
+
+/* ───────── Crystal, as a surface ─────────
+ * A container under a sheet of the same clear glass. The container keeps whatever fill it has; this gives it a little
+ * elevation and lays the crystal over it and what it holds. No extra elements: the rim is one pseudo-element and the
+ * bevel and the sheen the other, both over the content and out of the pointer's way.
+ * The disc's layers, for a shape with corners: the rim is its lit ring; the bevel is soft light inside the edge,
+ * bright toward the light, fainter and shaded away from it, with the body's tint; the sheen is one straight reflection
+ * across the side the light is on. --ua-crystal-edge is how wide the bevel is.
+ * There is no lens here: the disc's bends the backdrop with a map made for its size, and this would have to bend its own content. */
+.ua-crystal-surface { position: relative; isolation: isolate; border-radius: var(--ua-radius-lg); box-shadow: var(--ua-elevation-1);
+  --w: var(--ua-color-white); --k: var(--ua-color-black); --hi: var(--ua-light-hi); --lo: var(--ua-light-lo); --e: var(--ua-crystal-edge, 10px);
+  --ax: calc(-1 * var(--ua-light-x)); --ay: calc(-1 * var(--ua-light-y)); }
+.ua-crystal-surface::before, .ua-crystal-surface::after { content: ''; position: absolute; inset: 0; z-index: 1; border-radius: inherit; pointer-events: none; }
+.ua-crystal-surface::before { padding: 1px;
+  background: conic-gradient(from var(--ua-light),
+    color-mix(in srgb, var(--w) 96%, transparent) 0deg, color-mix(in srgb, var(--w) 30%, transparent) 34deg, color-mix(in srgb, var(--k) calc(8% + 20% * var(--lo)), transparent) 104deg,
+    color-mix(in srgb, var(--w) 46%, transparent) 168deg, color-mix(in srgb, var(--w) 72%, transparent) 180deg, color-mix(in srgb, var(--w) 46%, transparent) 192deg,
+    color-mix(in srgb, var(--k) calc(8% + 20% * var(--lo)), transparent) 256deg, color-mix(in srgb, var(--w) 30%, transparent) 326deg, color-mix(in srgb, var(--w) 96%, transparent) 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; }
+.ua-crystal-surface::after {
+  background: linear-gradient(calc(var(--ua-light) + 180deg), color-mix(in srgb, var(--w) calc(20% * var(--ua-crystal-sheen)), transparent),
+    color-mix(in srgb, var(--w) calc(100% * var(--ua-crystal-sheen)), transparent) 34%, transparent 36%);
+  box-shadow:
+    inset calc(var(--ax) * var(--e) * .45) calc(var(--ay) * var(--e) * .45) var(--e) color-mix(in srgb, var(--w) calc(62% * var(--hi)), transparent),
+    inset calc(var(--ax) * var(--e) * -.45) calc(var(--ay) * var(--e) * -.45) var(--e) color-mix(in srgb, var(--w) calc(30% * var(--hi)), transparent),
+    inset calc(var(--ax) * var(--e) * -.2) calc(var(--ay) * var(--e) * -.2) calc(var(--e) * .5) color-mix(in srgb, var(--k) calc(14% * var(--lo)), transparent),
+    inset 0 0 var(--e) color-mix(in srgb, var(--w) calc(100% * var(--ua-crystal-body)), transparent); }

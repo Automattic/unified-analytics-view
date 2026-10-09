@@ -32,6 +32,7 @@ export function register(): void {
   for (const face of FACES) add('--uav-font-' + face, '<length>', true, '0px');
   // How far a number in dots has run along its screen (dots.ts). A number, so that it moves and does not jump.
   add('--uav-s', '<number>', true, '0');
+  add('--uav-e', '<number>', true, '0');
 }
 
 /** It joins the base sheet inside `@layer uav`. With reduced motion none of it applies, so nothing moves. */
@@ -49,7 +50,17 @@ export const MOTION_CSS = `
   /* A y label sizes its column, so one that is leaving is taken out of the flow and the column is the new labels'. */
   .uav-y-axis { position: relative; }
   .uav[data-moving] .uav-y-axis [data-exit] { position: absolute; inset-inline-end: 0; }
-}`;
+  /* A change's arrow, every so often, goes the way it points: out of its box and in again from the other side, in
+   * steps as the face's pixels are. Most of the time it stands still. */
+  .uav-trend > b { animation: uav-beat-up 9s steps(6) var(--uav-beat, 0s) infinite; }
+  .uav-trend[data-dir="down"] > b { animation-name: uav-beat-down; }
+}
+/* Half a space parts the arrow from its number: a whole one of a fixed-width face is a gap. */
+:has(> .uav-trend) { word-spacing: -0.375em; }
+.uav-trend { display: inline-block; overflow: hidden; block-size: 1lh; vertical-align: bottom; font-style: normal; }
+.uav-trend > b { display: block; font-weight: inherit; }
+@keyframes uav-beat-up { 0%, 88% { translate: 0 0; } 94% { translate: 0 -100%; } 94.001% { translate: 0 100%; } 100% { translate: 0 0; } }
+@keyframes uav-beat-down { 0%, 88% { translate: 0 0; } 94% { translate: 0 100%; } 94.001% { translate: 0 -100%; } 100% { translate: 0 0; } }`;
 
 /** A point of a path: where it is, and for an area where it starts when that is not the bottom. */
 export interface XV { x: number; v: number; v0?: number }

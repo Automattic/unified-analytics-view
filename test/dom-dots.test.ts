@@ -52,13 +52,13 @@ describe('the dot-matrix face', () => {
     expect(DOTS_CSS).toContain(' inline-size: round(down, 100%, var(--uav-u));');
     // It has no surface of its own: the cells sit on what the view is on.
     // The one room it adds is a row of cells under the words that share a view's screen.
-    expect(DOTS_CSS).not.toMatch(/color-screen|elevation-screen|radius-screen|padding(?!-block-end: var\(--uav-u\))/);
+    expect(DOTS_CSS).not.toMatch(/color-screen|elevation-screen|radius-screen|padding(?!: var\(--uav-u\))/);
     expect(DOTS_CSS).not.toContain('tight');
   });
-  it('sets a unit in type, in capitals, beside the cells', () => {
+  it('sets a unit in type, in small capitals at the number\'s size, beside the cells', () => {
     expect(['k', 'M', '%', 's', '$', '€'].every(unit)).toBe(true);
     expect(Array.from('1,234.5 -–').some(unit)).toBe(false);
-    expect(DOTS_CSS).toMatch(/\.uav-glyph-run sup \{[^}]*font-size: var\(--uav-font-value\);[^}]*text-transform: uppercase;/);
+    expect(DOTS_CSS).toMatch(/\.uav-glyph-run sup \{[^}]*font: normal 400 calc\(var\(--uav-u\) \* 8\)[^}]*font-variant-caps: all-small-caps;/);
   });
   it('shares a view\'s screen with the change and the note under the number, each line a whole number of cells', () => {
     expect(DOTS_CSS).toContain('.uav-number:has(> b .uav-glyphs)::before { content: ""; position: absolute; z-index: -1;');
@@ -69,10 +69,13 @@ describe('the dot-matrix face', () => {
     expect(DOTS_CSS).toContain('.uav-number:has(> b .uav-glyphs) > .uav-f-tick { line-height: calc(var(--uav-u) * 4); }');
     expect(DOTS_CSS).toContain('.uav-number:has(> b .uav-glyphs) > b + span { margin-block-start: var(--uav-u); }');
   });
-  it('runs the number along the screen under the pointer, a cell at a time, and shows its end at once with reduced motion', () => {
-    expect(DOTS_CSS).toContain('.uav-glyph-run { display: flex; flex: none; min-inline-size: 100%; position: relative; left: round(to-zero, calc(var(--uav-s, 0) * 100%), var(--uav-u)); translate: round(to-zero, calc(var(--uav-s, 0) * -100%), var(--uav-u)) 0; }');
-    expect(DOTS_CSS).toContain('.uav-glyphs:hover .uav-glyph-run { animation: uav-run');
-    expect(DOTS_CSS).toContain('@media (prefers-reduced-motion: reduce) { .uav-glyphs:hover .uav-glyph-run { animation: none; --uav-s: 1; } }');
+  it('runs a number too wide for its screen past under the pointer, right to left and round again, and shows its end at once with reduced motion', () => {
+    expect(DOTS_CSS).toContain('left: round(to-zero, calc(var(--uav-e, 0) * 100%), var(--uav-u)); translate: round(to-zero, calc(var(--uav-s, 0) * -100%), var(--uav-u)) 0; }');
+    // It leaves by its own width, and comes in again from the screen's far edge.
+    expect(DOTS_CSS).toContain('55% { --uav-s: 1; --uav-e: 0; } 55.001% { --uav-s: 0; --uav-e: 1; }');
+    // One that fits does not move: only a screen the measured pass found too narrow runs.
+    expect(DOTS_CSS).toContain('.uav-glyphs[data-over]:hover .uav-glyph-run { animation: uav-run 6s linear infinite; }');
+    expect(DOTS_CSS).toContain('@media (prefers-reduced-motion: reduce) { .uav-glyphs[data-over]:hover .uav-glyph-run { animation: none; --uav-s: 1; --uav-e: 1; } }');
   });
   it('keeps a number on a screen where no form fits its room, down to the least a screen is, and gives up one in type', () => {
     const forms = [{ fit: '', inline: 130, block: 52 }, { fit: 'short', inline: 105, block: 52 }, { fit: 'small short', inline: 90, block: 42 }];

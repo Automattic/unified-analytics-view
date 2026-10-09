@@ -98,7 +98,17 @@ export function text(el: Element, n: TextNode): void {
   // A kept key can change its face, and would otherwise carry both.
   if (!el.classList.contains(face)) { for (const c of Array.from(el.classList)) if (c.startsWith('uav-f-')) el.classList.remove(c); el.classList.add(face); }
   // A change's triangle is written as an arrow: every face has one, a pixel face among them, and few have the triangle.
-  const set = n.font === 'display' ? dots : (to: Element, s: string) => { to.textContent = s.replace('▲', '↑').replace('▼', '↓'); };
+  const set = n.font === 'display' ? dots : (to: Element, s: string) => {
+    const said = s.replace('▲', '↑').replace('▼', '↓'), dir = said[0] === '↑' ? 'up' : said[0] === '↓' ? 'down' : null;
+    if (!dir) { to.textContent = said; return; }
+    // A change's arrow is an element of its own, in a box it can leave by and come back into (motion.ts): now and
+    // then it runs the way it points. Each starts its wait somewhere else, so a page of them does not beat as one.
+    if (to.textContent === said && to.firstElementChild?.getAttribute('data-dir') === dir) return;
+    const box = document.createElement('i'), arrow = box.appendChild(document.createElement('b'));
+    box.className = 'uav-trend'; box.setAttribute('data-dir', dir); box.style.setProperty('--uav-beat', (-9 * Math.random()).toFixed(1) + 's');
+    arrow.textContent = said[0]!;
+    to.replaceChildren(box, said.slice(1));
+  };
   if (n.short == null) { set(el, n.text); return; }
   if (!el.querySelector(':scope > .uav-full')) { el.removeAttribute('data-dots'); el.textContent = ''; }
   set(ensure(el, 'span', 'uav-full'), n.text);

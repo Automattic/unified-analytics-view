@@ -80,11 +80,12 @@ const ROLL = token('motion-duration-roll');
 const U = 'var(--uav-u)', OPSZ = token('font-optical-size-display'), at = (scroll: number) => `font-variation-settings: "opsz" ${OPSZ}, "SCRL" ${scroll};`;
 
 /** It joins the base sheet inside `@layer uav`. `--uav-u` is a cell, `--uav-d` the dot in it (a cell less a px, or
- * less two from eight px up, as the prototype's are) and `--uav-g` the gap. The run is at least as wide as the screen,
- * so that one that fits has nowhere to run to.
- * `--uav-s` is how far along its run the number is, from 0 to 1 (registered in motion.ts, which is what lets it
- * move): the track is set that share of the screen's width forward and of its own back, each to a whole cell, which
- * is nothing at all where the number fits. With reduced motion the pointer shows the end of the number at once.
+ * less two from eight px up, as the prototype's are) and `--uav-g` the gap.
+ * A number wider than its screen (`data-over`, which the view's measured pass sets) runs past under the pointer, right
+ * to left and round again: `--uav-s` is how far it has gone off the left, in its own widths, and `--uav-e` how far in
+ * from the right it stands, in the screen's (both registered in motion.ts, which is what lets them move). It leaves
+ * whole, comes in at the far edge and stops where it began, a whole cell at a time. With reduced motion the pointer
+ * shows the end of the number at once.
  * The words stay in the document for a screen reader and for a copy, and are what shows where a shadow is not
  * drawn: under forced colours. */
 export const DOTS_CSS = `
@@ -96,27 +97,30 @@ export const DOTS_CSS = `
 /* A view's number is on one screen with what is said under it: the unlit cells run under the value, its change and
  * its note, a row past the last of them, to a whole cell each way. Every line there is a whole number of cells, a
  * row parts the value from the words, and so the words sit on the screen's rows as the value's cells do. */
-.uav-number:has(> b .uav-glyphs) { position: relative; isolation: isolate; padding-block-end: var(--uav-u); }
+/* A cell of the screen is left clear on every side of what is set on it, so nothing is hard against its edge. */
+.uav-number:has(> b .uav-glyphs) { position: relative; isolation: isolate; padding: var(--uav-u); }
 .uav-number:has(> b .uav-glyphs)::before { content: ""; position: absolute; z-index: -1; inset-block-start: 0; inset-inline-start: 0;
   inline-size: round(down, 100%, var(--uav-u)); block-size: round(down, 100%, var(--uav-u)); background: var(--uav-cells); }
 .uav-number .uav-glyphs { background: none; }
 .uav-number:has(> b .uav-glyphs) > span { line-height: calc(var(--uav-u) * 5); }
 .uav-number:has(> b .uav-glyphs) > .uav-f-tick { line-height: calc(var(--uav-u) * 4); }
 .uav-number:has(> b .uav-glyphs) > b + span { margin-block-start: var(--uav-u); }
-.uav-glyph-run { display: flex; flex: none; min-inline-size: 100%; position: relative; left: round(to-zero, calc(var(--uav-s, 0) * 100%), var(--uav-u)); translate: round(to-zero, calc(var(--uav-s, 0) * -100%), var(--uav-u)) 0; }
-@keyframes uav-run { 0%, 15% { --uav-s: 0; } 85%, 100% { --uav-s: 1; } }
-.uav-glyphs:hover .uav-glyph-run { animation: uav-run 4s linear infinite alternate; }
-@media (prefers-reduced-motion: reduce) { .uav-glyphs:hover .uav-glyph-run { animation: none; --uav-s: 1; } }
+.uav-glyph-run { display: flex; flex: none; min-inline-size: 100%; position: relative; left: round(to-zero, calc(var(--uav-e, 0) * 100%), var(--uav-u)); translate: round(to-zero, calc(var(--uav-s, 0) * -100%), var(--uav-u)) 0; }
+@keyframes uav-run { 0%, 10% { --uav-s: 0; --uav-e: 0; } 55% { --uav-s: 1; --uav-e: 0; } 55.001% { --uav-s: 0; --uav-e: 1; } 100% { --uav-s: 0; --uav-e: 0; } }
+.uav-glyphs[data-over]:hover .uav-glyph-run { animation: uav-run 6s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .uav-glyphs[data-over]:hover .uav-glyph-run { animation: none; --uav-s: 1; --uav-e: 1; } }
 /* A slot is six cells by seven, and its character is set from the slot's corner at eight cells to the em: seven rows
  * of it are the slot's, and the eighth, where a comma's tail is, is the row under it. The face is as wide as a slot. */
 .uav-glyph-run i { position: relative; flex: none; inline-size: calc(${U} * 6); block-size: calc(${U} * 7);
   font: normal 400 calc(${U} * 8) / 1 "${FAMILY}", "Ans Mono", monospace; letter-spacing: 0; font-optical-sizing: none; }
 .uav-glyph-run i:last-child { margin-inline-end: calc(${U} * -1); }
-/* A unit, in type: in capitals, in the face, size and weight of the change under the number, so the two read as one voice.
- * It is three cells wide a character so that what follows it is still on the grid, and four rows tall at the top of
- * the screen. */
-.uav-glyph-run sup { flex: none; align-self: flex-start; inline-size: calc(${U} * 3); font-family: ${token('font-family-value')}; font-size: var(--uav-font-value); line-height: calc(${U} * 4);
-  font-weight: ${token('font-weight-value')}; font-variant-numeric: tabular-nums; letter-spacing: 0; text-transform: uppercase; vertical-align: baseline; white-space: nowrap; }
+/* A unit, in type: in the face's small capitals, whichever case it was written in, at the number's own size and
+ * with its pixels as far apart, so it reads as part of the number and a step quieter. It is a slot wide, so what follows
+ * it is still on the grid, and it stands on the number's baseline, the foot of the slots: a line three quarters of the
+ * face's size ends where the face's baseline is. */
+.uav-glyph-run sup { flex: none; align-self: flex-end; inline-size: calc(${U} * 6); font: normal 400 calc(${U} * 8) / 0.75 "Ans Mono", monospace; font-optical-sizing: none;
+  font-variation-settings: "opsz" ${OPSZ}; font-variant-caps: all-small-caps; letter-spacing: 0; vertical-align: baseline; white-space: nowrap; }
+.uav-glyph-run sup:last-child { margin-inline-end: calc(${U} * -1); }
 .uav-glyph-run i::before, .uav-glyph-run i[data-roll]::after { position: absolute; inset-block-start: 0; left: 0; ${at(0)} }
 .uav-glyph-run i::before { content: attr(data-ch); }
 .uav-glyph-run i[data-roll]::after { content: attr(data-was); }

@@ -74,7 +74,7 @@ export function readNumber(ruler: HTMLElement[]): NumberSizes {
   return {
     forms: ruler.flatMap((el) => {
       const value = child(el, 'uav-f-display'), sub = child(el, 'uav-f-tick'), box = el.getBoundingClientRect();
-      return value ? [{ fit: el.dataset.fit || '', inline: value.getBoundingClientRect().right - box.left, block: box.height - (sub ? size(sub).block : 0) }] : [];
+      return value ? [{ fit: el.dataset.fit || '', inline: value.getBoundingClientRect().right - box.left + (value.getBoundingClientRect().left - box.left), block: box.height - (sub ? size(sub).block : 0) }] : [];
     }),
     delta: delta && child(delta, 'uav-short') ? size(delta).inline : null,
     screen: !!first.querySelector('.uav-glyphs'),

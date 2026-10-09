@@ -55,9 +55,13 @@ const css = `
 .uav-line[data-dash] { background: repeating-linear-gradient(90deg, var(--uav-paint) 0 var(--uav-dash), transparent 0 calc(var(--uav-dash) + var(--uav-gap))); }
 /* A bar runs from where it starts to its value, whichever is the higher: a stack's segment starts on the one under
  * it, and a value below zero hangs from the zero line. With no start it rises from the bottom. */
-.uav-bars i { position: absolute; inset-inline-start: calc(var(--uav-x) * 100%); inline-size: calc(var(--uav-w) * 100%);
-  inset-block-end: calc(min(var(--uav-v0, 0), var(--uav-v)) * 100%); block-size: calc(max(var(--uav-v) - var(--uav-v0, 0), var(--uav-v0, 0) - var(--uav-v)) * 100%);
+.uav-bars i { position: absolute; inset-inline-start: calc(var(--uav-x) * 100%); inline-size: calc(var(--uav-w) * 100% - var(--uav-gap-x, 0px));
+  inset-block-end: calc(min(var(--uav-v0, 0), var(--uav-v)) * 100%); block-size: max(0px, calc(max(var(--uav-v) - var(--uav-v0, 0), var(--uav-v0, 0) - var(--uav-v)) * 100% - var(--uav-gap-y, 0px)));
   background: var(--uav-paint); border-radius: ${token('border-radius-bar')}; }
+/* Bars that share a row are parted by a line's width, as a pie's segments are: the ones side by side give it up at
+ * their far edge, and the ones in a stack at their top. The scene sets them edge to edge, and the gap is px, so it is here. */
+.uav-bars i[data-beside] { --uav-gap-x: ${token('stroke-width-rule')}; }
+.uav-bars i[data-stacked] { --uav-gap-y: ${token('stroke-width-rule')}; }
 .uav-plot svg { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; overflow: visible; }
 /* A point scale puts its first and last marks 2 px inside the plot. */
 .uav-body[data-scale="point"] svg { inset-inline-start: 2px; inline-size: calc(100% - 4px); }
@@ -152,7 +156,14 @@ export const cartesian: LayoutPainter = {
     keyed(legend, texts('legend'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-swatch', paintVar(swatch.get(n.series) ?? n.paint)); });
     keyed(xAxis, texts('x-axis'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-x', n.x); el.setAttribute('data-anchor', n.anchor); });
     keyed(grid, nodes.filter((n): n is LineNode => inPlot(n) && n.kind === 'line' && n.layer === 'guide'), () => 'i', line);
-    keyed(bars, nodes.filter((n): n is RectNode => inPlot(n) && n.kind === 'rect'), () => 'i', (el, n) => { prop(el, '--uav-x', n.x); prop(el, '--uav-w', n.w); prop(el, '--uav-v', n.v); prop(el, '--uav-v0', n.v0); });
+    // Which rows hold bars side by side, and which hold a stack: more than one bar, at different places along x or at one.
+    const rects = nodes.filter((n): n is RectNode => inPlot(n) && n.kind === 'rect'), places = new Map<string, Set<number>>(), counts = new Map<string, number>();
+    for (const n of rects) { const row = n.row ?? ''; places.set(row, (places.get(row) ?? new Set()).add(n.x ?? 0)); counts.set(row, (counts.get(row) ?? 0) + 1); }
+    keyed(bars, rects, () => 'i', (el, n) => {
+      prop(el, '--uav-x', n.x); prop(el, '--uav-w', n.w); prop(el, '--uav-v', n.v); prop(el, '--uav-v0', n.v0);
+      const here = places.get(n.row ?? '')!.size, all = counts.get(n.row ?? '')!;
+      el.toggleAttribute('data-beside', here > 1); el.toggleAttribute('data-stacked', all > here);
+    });
     keyed(svg, nodes.filter((n): n is PathNode => inPlot(n) && n.kind === 'path'), () => 'path', (el, n) => {
       morph(el as SVGElement, n); el.toggleAttribute('data-fill', !!n.fill);
       prop(el, 'stroke-width', n.fill ? null : n.width || null); prop(el, 'stroke-dasharray', n.dash);

@@ -21,7 +21,12 @@ const names = Object.keys(moreSamples).filter((k) => of(k).scene.layout === 'car
 describe('bars', () => {
   it('run from where they start to their value, whichever is the higher', () => {
     expect(cartesian.css).toContain('inset-block-end: calc(min(var(--uav-v0, 0), var(--uav-v)) * 100%);');
-    expect(cartesian.css).toContain('block-size: calc(max(var(--uav-v) - var(--uav-v0, 0), var(--uav-v0, 0) - var(--uav-v)) * 100%);');
+    expect(cartesian.css).toContain('block-size: max(0px, calc(max(var(--uav-v) - var(--uav-v0, 0), var(--uav-v0, 0) - var(--uav-v)) * 100% - var(--uav-gap-y, 0px)));');
+  });
+  it('are parted from the next in their row by a line\'s width: side by side at the far edge, in a stack at the top', () => {
+    expect(cartesian.css).toContain('inline-size: calc(var(--uav-w) * 100% - var(--uav-gap-x, 0px));');
+    expect(cartesian.css).toContain('.uav-bars i[data-beside] { --uav-gap-x: var(--ua-charts-stroke-width-rule, 1px); }');
+    expect(cartesian.css).toContain('.uav-bars i[data-stacked] { --uav-gap-y: var(--ua-charts-stroke-width-rule, 1px); }');
   });
   it('have a start to read in a stack and below zero, and none in a group', () => {
     const rects = (sample: string) => of(sample).scene.nodes.filter((n): n is RectNode => n.part === 'plot' && n.kind === 'rect');

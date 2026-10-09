@@ -103,9 +103,9 @@ export function geoMark(shapes: Shapes, projection: GeoProjection = geoEqualEart
       const nodes: PlacedNode[] = [];
       for (const n of scene.nodes) {
         if (n.part === 'plot' && n.kind === 'path') nodes.push({ key: n.key, kind: 'path', d: scaled(n.d!, w / BOX), fill: true, paint: n.paint, layer: n.layer, ...(left && { tx: left }) });
-        else if (n.part === 'points' && n.kind === 'circle') nodes.push({ key: n.key, kind: 'circle', cx: left + n.x! * w, cy: (1 - n.t!) * h, r: dotRadius(n.size), pulse: false, paint: n.paint, layer: n.layer, opacity: n.opacity });
+        else if (n.part === 'points' && n.kind === 'circle') nodes.push({ key: n.key, kind: 'circle', cx: left + n.x! * w, cy: (1 - n.t!) * h, r: dotRadius(n.size), pulse: false, paint: n.paint, layer: n.layer, ...(n.opacity != null && { opacity: n.opacity }) });
       }
-      if (note) nodes.push({ key: note.key, kind: 'text', x: 0, y: h + NOTE / 2 + 2, text: note.text, anchor: note.anchor, baseline: note.baseline, font: note.font, paint: note.paint, layer: note.layer });
+      if (note) nodes.push({ key: note.key, kind: 'text', x: 0, y: h + NOTE / 2 + 2, text: note.text, anchor: note.anchor, ...(note.baseline && { baseline: note.baseline }), font: note.font, paint: note.paint, layer: note.layer });
       return { nodes, height: h + under, plot: { w, h } };
     },
   };

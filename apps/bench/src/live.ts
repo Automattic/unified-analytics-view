@@ -39,7 +39,7 @@ const CARDS: { title: string; of: string; make: Make }[] = [
   { title: 'Visitors', of: 'traffic', make: one('line') },
   { title: 'Engaged time', of: 'traffic', make: one('line', 2) },
   { title: 'Top pages', of: 'pages', make: columns },
-  { title: 'Pages, then and now', of: 'pages', make: one('dumbbell') },
+  { title: 'Pages, then and now', of: 'pages', make: (q) => changes({ ...q, metrics: [q.metrics[0]!] }) },
   { title: 'Engaged time by page', of: 'engaged', make: one('bar-list') },
   { title: 'Where readers come from', of: 'referrers', make: changes },
   { title: 'How far people read', of: 'scroll', make: (q) => ({ query: q, layers: [{ mark: 'cell', encode: { y: 'scroll_depth_bucket', color: 'page_views' } }] }) },

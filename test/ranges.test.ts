@@ -237,10 +237,14 @@ describe('paint by direction and polarity', () => {
     expect(paints(candlestick!, turned('response_time', 'up')).paints).toEqual(got.map((p) => (p === 'delta.good' ? 'delta.bad' : 'delta.good')));
     expect(new Set(paints(candlestick!, turned('response_time', 'none')).paints)).toEqual(new Set(['series.1']));
   });
-  it('is no spec field: a layer that states its paint keeps it, and a bar with one end is never toned', () => {
+  it('is no spec field: a layer that states its paint keeps it, and a bar with one end is toned only where the bars go both ways from nothing', () => {
     expect(new Set(paints(box!).paints)).toEqual(new Set(['series.1']));
     expect(new Set(paints({ ...waterfall!, layers: [{ ...expand(waterfall!).layers![0]!, paint: 'series.3' }] }).paints)).toEqual(new Set(['series.3']));
-    expect(new Set(paints(moreSamples.diverging!.spec).paints)).toEqual(new Set(['series.1']));
+    // Bars that rise and fall from nothing are gains and losses: each is good or bad by its metric's polarity.
+    expect(new Set(paints(moreSamples.diverging!.spec).paints)).toEqual(new Set(['delta.good', 'delta.bad']));
+    expect(new Set(paints({ ...moreSamples.diverging!.spec, layers: [{ ...moreSamples.diverging!.spec.layers![0]!, paint: 'series.3' }] }).paints)).toEqual(new Set(['series.3']));
+    // Bars that only rise are not.
+    expect(new Set(paints({ spec: 'view/0', query: { metrics: ['visitors'], by: ['date.day'], range: '28d' }, layers: [{ mark: 'bar', encode: { x: 'date.day', y: 'visitors' } }] }).paints)).toEqual(new Set(['series.1']));
     expect(view({ spec: 'view/0', query: waterfall!.query, layers: [{ mark: 'bar', encode: { x: 'date.day', y: 'net_subscribers' }, direction: 'up' }] })).toBe(false);
   });
   it('a waterfall\'s bars each start where the one before ended', () => {

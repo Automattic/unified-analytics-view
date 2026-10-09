@@ -69,7 +69,7 @@ interface Draw {
   ends: (r: Row) => [number, number];
   /** A bar's place among those beside it at one x: which, of how many. */
   slot?: [number, number];
-  /** For a bar with two ends: its metric's polarity, which turns the paint of the way it goes. */
+  /** For a bar with two ends, and for bars that go both ways from nothing: its metric's polarity, which turns the paint of the way it goes. */
   polarity?: Polarity | undefined;
 }
 type MarkFn = (l: Layer, d: Draw) => SceneNode[];
@@ -286,6 +286,9 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     });
   }
   const ids = layerKeys(layers), ends = new Map<string, number>();
+  // Bars of one metric that fall below nothing as well as rise from it: each is a gain or a loss, and is painted as one.
+  // A split plot's bars are painted by their series, and are not these.
+  const diverges = (l: Layer) => { const y = l.encode!.y; return typeof y === 'string' && !splitOf(catalog, l, xField) && rows.some((r) => (r[y] as number) < 0); };
   const say: Draw['say'] = (r, f) => { const M = metricOf(catalog, f); return typeof r[f] !== 'number' ? String(r[f]) : M ? formatValue(r[f] as number, M) : fmt(r[f] as number); };
   layers.forEach((l, i) => {
     const draw = PLOT_MARKS[l.mark], prev = l.series === 'previous', span = spans[i]!;
@@ -296,7 +299,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     const v = scaleOf(l).v;
     const d: Draw = { say, id: ids[i]!, role: roleOf(l), paint: paintOf(l, catalog, result) || (prev ? 'compare' : 'series.1'), prev, rows: rows.filter((r) => span.has(r)), k, unit, v, xv, size, points: !!xOn && !xDim,
       ends: (r) => { const [lo, hi] = span.get(r)!; return [v(lo), v(hi)]; },
-      ...(l.mark === 'bar' && l.encode!.y2 != null && !l.paint && { polarity: metricOf(catalog, l.encode!.y)?.polarity }) };
+      ...(l.mark === 'bar' && !l.paint && (l.encode!.y2 != null || diverges(l)) && { polarity: metricOf(catalog, l.encode!.y)?.polarity }) };
     if (!splitOf(catalog, l, xField)) return nodes.push(...draw(l, d));
     series.forEach((s, j) => {
       // Bars of one x that are not stacked sit side by side: overlapping bars are never what was meant. Lines and areas overlay.

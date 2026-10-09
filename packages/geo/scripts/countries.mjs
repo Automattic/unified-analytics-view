@@ -1,9 +1,9 @@
 // Builds shapes/countries-110m.json: every country Natural Earth draws at 1:110m, for a page that hands the `geo` mark
 // the world. Natural Earth by way of world-atlas 2.0.2 (a TopoJSON file), as the countries are drawn there, islands and
 // all, to a tenth of a degree. A shape's id is its ISO 3166-1 alpha-2 code in capitals, and its name is the one that code
-// is written by. The fixtures keep their own, shorter file (packages/fixtures/scripts/countries.mjs): its tests count on
-// which countries it leaves out.
-//   node packages/geo/scripts/countries.mjs [path to countries-110m.json]
+// is written by. Where this package is developed, the test fixtures keep a shorter file of their own.
+// From this package's folder:
+//   node scripts/countries.mjs [path to countries-110m.json]
 // With no path it fetches https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json.
 import { readFileSync, writeFileSync } from 'node:fs';
 
@@ -33,7 +33,7 @@ const whole = (rings) => rings.map(ring).filter((r) => r.length >= 4);
 const named = new Intl.DisplayNames('en', { type: 'region' });
 const features = topo.objects.countries.geometries.filter((g) => !LEFT_OUT.has(g.id)).map((g) => {
   const loose = g.id == null ? UNNUMBERED[g.properties.name] : undefined, id = g.id == null ? loose?.id : ALPHA2[g.id];
-  if (g.id == null ? !loose : !id) throw new Error('world-atlas draws "' + g.properties.name + '" (' + g.id + '), and this script has no code for it. Add its number to ALPHA2, or its name to UNNUMBERED, in packages/geo/scripts/countries.mjs.');
+  if (g.id == null ? !loose : !id) throw new Error('world-atlas draws "' + g.properties.name + '" (' + g.id + '), and this script has no code for it. Add its number to ALPHA2, or its name to UNNUMBERED, in this script (scripts/countries.mjs).');
   const polygons = (g.type === 'Polygon' ? [g.arcs] : g.arcs).map(whole).filter((p) => p.length);
   return { type: 'Feature', ...(id && { id }), properties: { name: id ? named.of(id) : loose.name },
     geometry: polygons.length === 1 ? { type: 'Polygon', coordinates: polygons[0] } : { type: 'MultiPolygon', coordinates: polygons } };

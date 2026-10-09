@@ -12,7 +12,7 @@ const views = document.querySelector('#views')!;
 
 const params = new URLSearchParams(location.search);
 for (const [k, v] of params) { const input = controls.querySelector<HTMLInputElement>(`[name="${k}"][value="${v}"]`); if (input) input.checked = true; }
-const state = () => Object.fromEntries(new FormData(controls)) as { scenario: Scenario; range: string; height: string; theme: string };
+const state = () => Object.fromEntries(new FormData(controls)) as { scenario: Scenario; range: string; height: string; theme: string; marks: string };
 
 // The surface layouts are the surface's to adopt. Here the page is the surface, and each frame a stack or a row of one.
 defineUaView();
@@ -59,6 +59,8 @@ for (const [name, sample] of Object.entries(samples)) {
 function apply() {
   const s = state();
   if (s.theme) document.documentElement.dataset.theme = s.theme; else delete document.documentElement.dataset.theme;
+  // The pixel look is a token: a square of nothing is the marks as clean vector. A view reads it when it next paints, which is below.
+  if (s.marks === 'vector') document.documentElement.style.setProperty('--ua-charts-size-pixel', '0px'); else document.documentElement.style.removeProperty('--ua-charts-size-pixel');
   history.replaceState(null, '', '?' + new URLSearchParams(s));
   document.querySelectorAll<HTMLElement>('.frame').forEach(paint);
 }

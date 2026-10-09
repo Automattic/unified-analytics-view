@@ -21,7 +21,7 @@ const err = (f: () => unknown) => { try { f(); } catch (e) { return (e as Error)
 const view = new Ajv().compile(viewSchema);
 const shapes = (ratio: { nodes: unknown[] }) => (ratio.nodes as PathNode[]).filter((n) => n.part === 'plot' && n.kind === 'path');
 const dots = (ratio: { nodes: unknown[] }) => (ratio.nodes as CircleNode[]).filter((n) => n.part === 'points' && n.kind === 'circle');
-const ASPECT = 1.886;   // Equal Earth, fitted to the fixture's shapes
+const ASPECT = 2.029;   // Equal Earth, fitted to the fixture's shapes
 
 describe('the sweep', () => {
   for (const [name, spec] of Object.entries({ map, symbols, both, unmapped })) {
@@ -100,7 +100,8 @@ describe('the fixture: visitors by country', () => {
       .toEqual({ US: 'United States', GB: 'United Kingdom', EH: 'W. Sahara', CD: 'Dem. Rep. Congo', CG: 'Congo', KP: 'North Korea', KR: 'South Korea', SS: 'S. Sudan', RS: 'Serbia', CI: 'Côte d\'Ivoire' });
     // The one shape with no code of its own has no id: it is drawn, and no row is its.
     expect(countries.features.filter((f) => f.id == null).map((f) => f.properties!.name)).toEqual(['Somaliland']);
-    expect(JSON.stringify(countries).length).toBeLessThan(30000);
+    // Borders as Natural Earth's 1:110m has them, to a tenth of a degree: about 9,000 points.
+    expect(JSON.stringify(countries).length).toBeLessThan(130000);
   });
 });
 
@@ -180,7 +181,8 @@ describe('geo, with a symbol for each region', () => {
     expect((ratio.nodes.filter((n) => n.part === 'size' && n.kind === 'text') as { text: string }[]).map((n) => n.text)).toEqual(['Page views', '486', '1.9k', '4.4k', '7.8k']);
     const { scene } = run(symbols, 346), us = scene.nodes.find((n) => n.key === 'primary:geo:US:symbol') as unknown as { cx: number; cy: number; r: number };
     const node = dots(ratio).find((n) => n.row === 'US')!;
-    expect(us).toMatchObject({ r: 12, cx: node.x! * 346, cy: (1 - node.t!) * 346 / ASPECT });
+    expect(us.r).toBe(12);
+    expect([us.cx, us.cy].map((n) => +n.toFixed(9))).toEqual([node.x! * 346, (1 - node.t!) * 346 / ASPECT].map((n) => +n.toFixed(9)));
     expect(scene.height).toBe(Math.ceil(346 / ASPECT + 28));
   });
   it('one layer may fill by one metric and size by another, and then it has both keys', () => {

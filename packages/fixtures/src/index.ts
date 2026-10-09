@@ -4,8 +4,9 @@ import shapes from './countries.json';
 
 /** Boundary shapes for the `geo` mark: 123 countries. A shape's id is its ISO 3166-1 alpha-2 code in capitals, which is
  * the value the `country` dimension has for it, and its name is beside it in `properties.name`. Somaliland has no code
- * of its own, so it has a name and no id: it is drawn, and no row can be its. Natural Earth's 1:110m countries, by way of world-atlas 2.0.2, cut down for a fixture: borders
- * simplified to within 1.5 degrees, islands and countries under 6 square degrees left out, and Antarctica. Not for a product. */
+ * of its own, so it has a name and no id: it is drawn, and no row can be its. Natural Earth's 1:110m countries, by way of world-atlas 2.0.2, as they are
+ * drawn there, islands and all, to a tenth of a degree (scripts/countries.mjs writes the file). Which countries is still a
+ * fixture's choice: those under 6 square degrees are left out, and Antarctica, so a sample has rows with no shape. Not for a product. */
 export const countries: Shapes = shapes;
 // Handed to the mark here, as a product would at startup, so every sample resolves wherever the fixtures are loaded.
 registerGeo(countries);

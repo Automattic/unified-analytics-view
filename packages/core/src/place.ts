@@ -189,7 +189,8 @@ function placeSize(scene: Scene): Block {
 export function columnRooms(scene: Scene): number[] {
   const room: number[] = [];
   scene.nodes.forEach((n) => {
-    if (n.kind !== 'text' || !(n.part === 'columns' || (n.part === 'rows' && n.font === 'value'))) return;
+    // The header over the labels is no column of values: it starts where they do and takes no room of its own.
+    if (n.kind !== 'text' || !((n.part === 'columns' && n.anchor !== 'start') || (n.part === 'rows' && n.font === 'value'))) return;
     const i = n.rank || 0;
     room[i] = Math.max(room[i] || 0, n.text.length * (n.part === 'columns' ? TICK_W : CHAR_W) + 14);
   });
@@ -216,7 +217,7 @@ function placeRows(scene: Scene, W: number, { rowHeight: rowH, gap }: Container[
   const x = scaleLinear().domain([0, 1]).range(beside ? [left(last) + own + 12, track - valueRoom - 4] : [0, track]);
   const nodes: PlacedNode[] = [];
   scene.nodes.forEach((n) => {
-    if (head && n.part === 'columns' && n.kind === 'text') nodes.push(text(n, edge(n.rank || 0), head / 2));
+    if (head && n.part === 'columns' && n.kind === 'text') nodes.push(text(n, n.anchor === 'start' ? 8 : edge(n.rank || 0), head / 2));
     if (n.part !== 'rows' || n.kind === 'row') return;
     const top = head + rows.indexOf(n.row!) * (rowH + gap);
     // A bar lies from where its track has zero to its value, and is never thinner than 3 px. Beside the label it is a band through the middle of the row.

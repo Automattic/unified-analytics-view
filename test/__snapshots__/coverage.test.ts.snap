@@ -1130,6 +1130,18 @@ exports[`golden scenes > conversions at 346 by 100 1`] = `
   "height": 80,
   "nodes": [
     {
+      "anchor": "start",
+      "baseline": "middle",
+      "font": "tick",
+      "key": "column:event",
+      "kind": "text",
+      "layer": "guide",
+      "paint": "ink.muted",
+      "text": "Event",
+      "x": 8,
+      "y": 10,
+    },
+    {
       "anchor": "end",
       "baseline": "middle",
       "font": "tick",
@@ -1294,6 +1306,18 @@ exports[`golden scenes > conversions at 346 by any 1`] = `
 {
   "height": 208,
   "nodes": [
+    {
+      "anchor": "start",
+      "baseline": "middle",
+      "font": "tick",
+      "key": "column:event",
+      "kind": "text",
+      "layer": "guide",
+      "paint": "ink.muted",
+      "text": "Event",
+      "x": 8,
+      "y": 10,
+    },
     {
       "anchor": "end",
       "baseline": "middle",
@@ -4830,6 +4854,18 @@ exports[`golden scenes > funnel at 346 by 100 1`] = `
   "height": 80,
   "nodes": [
     {
+      "anchor": "start",
+      "baseline": "middle",
+      "font": "tick",
+      "key": "column:step",
+      "kind": "text",
+      "layer": "guide",
+      "paint": "ink.muted",
+      "text": "Step",
+      "x": 8,
+      "y": 10,
+    },
+    {
       "anchor": "end",
       "baseline": "middle",
       "font": "tick",
@@ -4958,6 +4994,18 @@ exports[`golden scenes > funnel at 346 by any 1`] = `
 {
   "height": 144,
   "nodes": [
+    {
+      "anchor": "start",
+      "baseline": "middle",
+      "font": "tick",
+      "key": "column:step",
+      "kind": "text",
+      "layer": "guide",
+      "paint": "ink.muted",
+      "text": "Step",
+      "x": 8,
+      "y": 10,
+    },
     {
       "anchor": "end",
       "baseline": "middle",
@@ -7107,6 +7155,18 @@ exports[`golden scenes > league at 234 by any 1`] = `
   "height": 272,
   "nodes": [
     {
+      "anchor": "start",
+      "baseline": "middle",
+      "font": "tick",
+      "key": "column:page",
+      "kind": "text",
+      "layer": "guide",
+      "paint": "ink.muted",
+      "text": "Page",
+      "x": 8,
+      "y": 10,
+    },
+    {
       "anchor": "end",
       "baseline": "middle",
       "font": "tick",
@@ -7524,6 +7584,18 @@ exports[`golden scenes > league at 346 by 100 1`] = `
   "height": 80,
   "nodes": [
     {
+      "anchor": "start",
+      "baseline": "middle",
+      "font": "tick",
+      "key": "column:page",
+      "kind": "text",
+      "layer": "guide",
+      "paint": "ink.muted",
+      "text": "Page",
+      "x": 8,
+      "y": 10,
+    },
+    {
       "anchor": "end",
       "baseline": "middle",
       "font": "tick",
@@ -7652,6 +7724,18 @@ exports[`golden scenes > league at 346 by any 1`] = `
 {
   "height": 272,
   "nodes": [
+    {
+      "anchor": "start",
+      "baseline": "middle",
+      "font": "tick",
+      "key": "column:page",
+      "kind": "text",
+      "layer": "guide",
+      "paint": "ink.muted",
+      "text": "Page",
+      "x": 8,
+      "y": 10,
+    },
     {
       "anchor": "end",
       "baseline": "middle",

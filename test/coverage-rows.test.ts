@@ -61,7 +61,9 @@ describe('columns', () => {
   });
   it('a `columns` part holds a header for each, as a guide, with its column\'s rank', () => {
     const heads = run(conversions, 346).ratio.nodes.filter((n) => n.part === 'columns');
+    // The first is over the labels: the name of what the rows are.
     expect(heads.map((n) => [n.key, (n as { text: string }).text, n.rank, n.layer])).toEqual([
+      ['column:event', 'Event', undefined, 'guide'],
       ['column:primary:text#2', 'Conversions', undefined, 'guide'], ['column:primary:text#3', 'Conversion rate', 1, 'guide'], ['column:primary:text#4', 'Value', 2, 'guide'],
     ]);
   });
@@ -72,7 +74,7 @@ describe('columns', () => {
     expect(ratio.nodes.some((n) => n.part === 'columns' || (n.part === 'rows' && n.rank != null))).toBe(false);
   });
   it('a row short of room gives up its columns from the right, in every data state, and then its marks', () => {
-    const shown = (w: number, sc: (typeof scenarios)[number]) => { const { plan, scene } = run(conversions, w, null, sc); return [plan.layout, texts(scene.nodes, /^column:/).length || texts(scene.nodes, /^primary:text.*:Purchase$/).length - 1, plan.dropped] as const; };
+    const shown = (w: number, sc: (typeof scenarios)[number]) => { const { plan, scene } = run(conversions, w, null, sc); return [plan.layout, texts(scene.nodes, /^column:primary/).length || texts(scene.nodes, /^primary:text.*:Purchase$/).length - 1, plan.dropped] as const; };
     for (const sc of ['typical', 'no-prior'] as const) {
       // The label needs 90 px, by the `marks` rule. The columns need 77.8, 101 and 53.6 px: a header or a value, and 14 px.
       expect(shown(700, sc), sc).toEqual(['rows', 3, []]);
@@ -97,7 +99,9 @@ describe('columns', () => {
     // The track ends 154.6 px short of the right edge. The longest bar fills it, and the first column's text ends 8 px inside it.
     expect(px<{ x: number; w: number }>('primary:bar:Add to cart')).toMatchObject({ x: 0, w: 346 - 154.6 });
     expect(['primary:text#2:Purchase', 'primary:text#3:Purchase', 'primary:text#4:Purchase'].map((k) => px<{ x: number }>(k).x)).toEqual([346 - 154.6 - 8, 346 - 53.6 - 8, 346 - 8]);
-    expect(texts(scene.nodes, /^column:/).length).toBe(3);
+    // And one more over the labels, for what the rows are, set from the start where they are.
+    expect(texts(scene.nodes, /^column:primary/).length).toBe(3);
+    expect(px<{ x: number; y: number; anchor: string }>('column:event')).toMatchObject({ x: 8, y: 10, anchor: 'start' });
     expect(['column:primary:text#2', 'column:primary:text#3', 'column:primary:text#4'].map((k) => px<{ x: number; y: number }>(k))).toMatchObject([{ x: 346 - 154.6 - 8, y: 10 }, { x: 346 - 53.6 - 8, y: 10 }, { x: 338, y: 10 }]);
     // Headers take 20 px, and each row is 28 px with 4 px between.
     expect(px<{ y: number }>('primary:bar:Add to cart').y).toBe(20);
@@ -121,7 +125,7 @@ describe('a delta per row', () => {
     expect(cells.map((n) => n.text)).toEqual(['▲ 9.3%', '▲ 28%', '▲ 229%', '▼ 4%', '▼ 6.9%', '▲ 5.2%', '–', '▼ 6.5%']);
     expect(cells.map((n) => n.paint)).toEqual(['delta.good', 'delta.good', 'delta.good', 'delta.bad', 'delta.bad', 'delta.good', 'ink.muted', 'delta.bad']);
     expect(cells.every((n) => n.rank === 1 && n.font === 'value')).toBe(true);
-    expect(texts(ratio.nodes, /^column:/)).toEqual(['Page views', 'Change']);
+    expect(texts(ratio.nodes, /^column:/)).toEqual(['Page', 'Page views', 'Change']);
     // A metric that is better when it falls turns the paint, and one with no better way has none.
     const down = { ...catalog, metrics: { ...catalog.metrics, pageviews: { ...catalog.metrics.pageviews!, polarity: 'down' as const } } }, result = runQuery(league.query);
     const turned = buildScene(resolve(league, result, makeContainer(346), down), league.query, result, down);

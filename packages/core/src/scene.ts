@@ -421,6 +421,8 @@ function sceneRows(catalog: Catalog, layers: Layer[], rows: Row[], result: Resul
   const ids = layerKeys(layers), cols = columnsOf(catalog, layers);
   // A column after the first is ranked by its place, so the last goes first. One column of values needs no header: the view's title says what it is.
   const rank = (l: Layer) => { const j = cols.indexOf(l); return j > 0 && { rank: j }; };
+  // Where the columns are headed, so is what the rows are: the dimension's name over the labels, from the start.
+  if (cols.length > 1) nodes.push({ key: 'column:' + dim, part: 'columns', kind: 'text', text: catalog.dimensions[dim]!.label, anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' });
   if (cols.length > 1) cols.forEach((l) => {
     nodes.push({ key: 'column:' + ids[layers.indexOf(l)], part: 'columns', kind: 'text', text: columnLabel(catalog, l), anchor: 'end', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...rank(l) });
   });

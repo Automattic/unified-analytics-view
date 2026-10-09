@@ -31,7 +31,7 @@ function roomsHere(body: HTMLElement, scene: Scene): number[] {
   const tick = advance('tick'), value = advance('value'), room: number[] = [];
   if (!tick || !value) return columnRooms(scene);
   for (const n of scene.nodes) {
-    if (n.kind !== 'text' || !(n.part === 'columns' || (n.part === 'rows' && n.font === 'value'))) continue;
+    if (n.kind !== 'text' || !((n.part === 'columns' && n.anchor !== 'start') || (n.part === 'rows' && n.font === 'value'))) continue;
     const i = n.rank || 0;
     room[i] = Math.max(room[i] || 0, Math.ceil(n.text.length * (n.part === 'columns' ? tick : value)) + 16);
   }
@@ -84,7 +84,9 @@ export const rows: LayoutPainter = {
     // A column's cell says which track is its own, so one that is given up leaves the others where they are.
     const cell = (c: HTMLElement | SVGElement, n: TextNode) => {
       text(c, n); c.setAttribute('data-anchor', n.anchor);
-      if (n.font !== 'label') { prop(c, '--uav-col', (n.rank || 0) + first); prop(c, '--uav-need', need(n.rank)); }
+      // The header over the labels stands in their column, the first, and is never given up for room.
+      if (n.part === 'columns' && n.anchor === 'start') prop(c, '--uav-col', 1);
+      else if (n.font !== 'label') { prop(c, '--uav-col', (n.rank || 0) + first); prop(c, '--uav-need', need(n.rank)); }
       else prop(c, '--uav-col', lead ? col.get(n.key) : null);
     };
     // Headers stand over more than one column, so they go with the second.

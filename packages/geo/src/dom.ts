@@ -31,7 +31,9 @@ const css = `
  * has no box of its own to outline, so the part wears the holder's for it. */
 .uav[data-layout="geo"] .uav-plot path[data-active="keys"] { ${FOCUS.stroke} }
 .uav[data-layout="geo"] .uav-plot path[data-active="pointer"] { ${HOVER.stroke} }
-.uav[data-layout="geo"] .uav-regions:focus-visible { outline: none; }
+/* Nothing inside the SVG wears an outline of its own, the browser's ring among them: an outline there is drawn in
+ * the SVG's units, which the map's box stretches, and comes out many times its width. */
+.uav[data-layout="geo"] .uav-plot svg, .uav[data-layout="geo"] .uav-plot svg * { outline: none; }
 .uav[data-layout="geo"] .uav-plot:has(.uav-regions:focus-visible) { ${FOCUS.inside} }
 /* The symbols' holder lies over the regions, and only a symbol takes the pointer from them. */
 .uav[data-layout="geo"] .uav-points { pointer-events: none; }

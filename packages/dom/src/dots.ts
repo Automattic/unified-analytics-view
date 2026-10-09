@@ -156,7 +156,8 @@ export function dots(el: Element, s: string): void {
   // Without the face there is no screen: the words stand as they are, and are set again when the face has come.
   if (chars && !fonts?.check(`32px "${FAMILY}"`)) {
     waiting.set(el, s);
-    if (fonts && !listening.has(fonts)) { listening.add(fonts); fonts.addEventListener('loadingdone', () => { for (const [late, says] of waiting) if (fonts.check(`32px "${FAMILY}"`)) { waiting.delete(late); if (late.isConnected && late.textContent === says) dots(late, says); } }); }
+    // Nothing on the page is set in the face until a number is, so it is asked for: a declared face loads only when used.
+    if (fonts && !listening.has(fonts)) { listening.add(fonts); void fonts.load(`32px "${FAMILY}"`).catch(() => {}); fonts.addEventListener('loadingdone', () => { for (const [late, says] of waiting) if (fonts.check(`32px "${FAMILY}"`)) { waiting.delete(late); if (late.isConnected && late.textContent === says) dots(late, says); } }); }
   }
   if (!chars || waiting.has(el) && !fonts?.check(`32px "${FAMILY}"`)) { el.removeAttribute('data-dots'); el.textContent = s; return; }
   waiting.delete(el);

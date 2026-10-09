@@ -3,7 +3,8 @@
  * shape only decides which cells are lit, and the cells that are not are still there, faintly.
  *
  * The number is on a screen with no surface of its own: its cells sit on whatever the view is on. The unlit cells are
- * the screen's and do not move.
+ * the screen's and do not move. A view's number shares its screen with the change and the note under it, which are
+ * words set on the screen's rows; a donut's hole has a screen to itself.
  *
  * It is drawn by the stylesheet. A character is one element, and its lit cells are that element's shadows, each a
  * whole number of cells from the first. The unlit cells are one background. So a number is as many elements as it
@@ -55,6 +56,12 @@ export const FONT: Record<string, string[]> = {
 /** A character that takes less than a glyph and its gap: how many cells it advances by, and how far its glyph is
  * set back to sit at the start of them. The rest advance by six. */
 const NARROW: Record<string, [advance: number, back: number]> = { '.': [4, 1], ',': [4, 1], ' ': [3, 0] };
+/** What a value is counted in, and the letter that shortens it: `k`, `%`, `s`, `$`. These are words about the number
+ * and not the number, so they are set in type beside the cells, in capitals at the top of them, and do not roll. The
+ * face keeps their glyphs: a donut's hole and the ruler are the same string either way. */
+const UNIT = /[^\d.,\-– ]/;
+/** Whether a character is set in type on the screen, and not in cells. */
+export const unit = (ch: string): boolean => UNIT.test(ch);
 
 /** What a value comes to, for telling a rise from a fall: its first number, in the thousands its suffix says. Null
  * where it has none. A length of time is read by its first part, which is enough to tell which way it went. */
@@ -93,17 +100,32 @@ const shadows = (ch: string) => lit(ch).map(([x, y]) => `calc(${U} * ${x + 1 - (
  * The words stay in the document for a screen reader and for a copy, and are what shows where a shadow is not
  * drawn: under forced colours. */
 export const DOTS_CSS = `
+.uav-glyphs, .uav-number { --uav-u: ${CELL}px; --uav-d: calc(var(--uav-u) - max(1px, round(down, var(--uav-u) / 4, 1px))); --uav-g: calc(var(--uav-u) - var(--uav-d));
+  --uav-cells: conic-gradient(at var(--uav-d) var(--uav-d), transparent 75%, color-mix(in srgb, ${token('color-label-screen')} 9%, transparent) 0) 0 0 / var(--uav-u) var(--uav-u); }
 .uav-glyphs { display: flex; box-sizing: border-box; overflow: hidden; vertical-align: middle; color: ${token('color-label-screen')};
-  --uav-u: ${CELL}px; --uav-d: calc(var(--uav-u) - max(1px, round(down, var(--uav-u) / 4, 1px))); --uav-g: calc(var(--uav-u) - var(--uav-d));
-  inline-size: round(down, 100%, var(--uav-u));
-  background: conic-gradient(at var(--uav-d) var(--uav-d), transparent 75%, color-mix(in srgb, currentColor 9%, transparent) 0) 0 0 / var(--uav-u) var(--uav-u); }
+  inline-size: round(down, 100%, var(--uav-u)); background: var(--uav-cells); }
 .uav-hole .uav-glyphs { display: inline-flex; inline-size: auto; }
+/* A view's number is on one screen with what is said under it: the unlit cells run under the value, its change and
+ * its note, a row past the last of them, to a whole cell each way. Every line there is a whole number of cells, a
+ * row parts the value from the words, and so the words sit on the screen's rows as the value's cells do. */
+.uav-number:has(> b .uav-glyphs) { position: relative; isolation: isolate; padding-block-end: var(--uav-u); }
+.uav-number:has(> b .uav-glyphs)::before { content: ""; position: absolute; z-index: -1; inset-block-start: 0; inset-inline-start: 0;
+  inline-size: round(down, 100%, var(--uav-u)); block-size: round(down, 100%, var(--uav-u)); background: var(--uav-cells); }
+.uav-number .uav-glyphs { background: none; }
+.uav-number:has(> b .uav-glyphs) > span { line-height: calc(var(--uav-u) * 5); }
+.uav-number:has(> b .uav-glyphs) > .uav-f-tick { line-height: calc(var(--uav-u) * 4); }
+.uav-number:has(> b .uav-glyphs) > b + span { margin-block-start: var(--uav-u); }
 .uav-glyph-run { display: flex; flex: none; min-inline-size: 100%; position: relative; left: round(to-zero, calc(var(--uav-s, 0) * 100%), var(--uav-u)); translate: round(to-zero, calc(var(--uav-s, 0) * -100%), var(--uav-u)) 0; }
 @keyframes uav-run { 0%, 15% { --uav-s: 0; } 85%, 100% { --uav-s: 1; } }
 .uav-glyphs:hover .uav-glyph-run { animation: uav-run 4s linear infinite alternate; }
 @media (prefers-reduced-motion: reduce) { .uav-glyphs:hover .uav-glyph-run { animation: none; --uav-s: 1; } }
 .uav-glyph-run i { position: relative; flex: none; inline-size: calc(${U} * 6); block-size: calc(${U} * 7); overflow: hidden; }
 .uav-glyph-run i:last-child { margin-inline-end: calc(${U} * -1); }
+/* A unit, in type: in capitals, in the face, size and weight of the change under the number, so the two read as one voice.
+ * It is three cells wide a character so that what follows it is still on the grid, and four rows tall at the top of
+ * the screen. */
+.uav-glyph-run sup { flex: none; align-self: flex-start; inline-size: calc(${U} * 3); font-family: ${token('font-family-value')}; font-size: var(--uav-font-value); line-height: calc(${U} * 4);
+  font-weight: ${token('font-weight-value')}; font-variant-numeric: tabular-nums; letter-spacing: 0; text-transform: uppercase; vertical-align: baseline; white-space: nowrap; }
 .uav-glyph-run i::before, .uav-glyph-run i[data-roll]::after { content: ""; position: absolute; inset-block-start: 0; left: calc(${U} * -1); inline-size: var(--uav-d); block-size: var(--uav-d); }
 ${Object.entries(NARROW).map(([ch, [advance]]) => `.uav-glyph-run i[data-ch="${ch}"] { inline-size: calc(${U} * ${advance}); }`).join('\n')}
 ${Object.keys(FONT).filter((ch) => lit(ch).length).map((ch) => `.uav-glyph-run i[data-ch="${ch}"]::before, .uav-glyph-run i[data-was="${ch}"]::after { box-shadow: ${shadows(ch)}; }`).join('\n')}
@@ -138,6 +160,7 @@ export function dots(el: Element, s: string): void {
   if (had === s && el.firstChild) return;
   // A slot, and with `was` one that rolls there from it. What the roll goes by comes off when it is over (motion.ts).
   const slot = (ch: string, roll?: { was: string; wait: number }, dir = 'u') => {
+    if (unit(ch)) { const sup = document.createElement('sup'); sup.textContent = ch; return sup; }
     const i = document.createElement('i');
     i.setAttribute('data-ch', ch);
     if (roll) { i.setAttribute('data-was', roll.was); i.setAttribute('data-roll', dir); i.style.setProperty('--uav-wait', String(roll.wait)); once(i, ['data-roll', 'data-was']); }
@@ -149,7 +172,8 @@ export function dots(el: Element, s: string): void {
     const old = Array.from(run.children), plan = rolls(from, chars), a = amount(had!), b = amount(s), dir = a != null && b != null && b < a ? 'd' : 'u';
     run.replaceChildren(...chars.map((ch, i) => {
       const roll = plan[i], kept = old[i - (chars.length - from.length)];
-      return !roll && kept ? kept : slot(ch, roll ?? undefined, dir);
+      // A cell that held a unit has nothing to roll from: what comes after it rolls up from an empty one.
+      return !roll && kept ? kept : slot(ch, roll && unit(roll.was) ? { ...roll, was: ' ' } : roll ?? undefined, dir);
     }));
     el.querySelector(':scope > .uav-glyphs-text')!.textContent = s;
     return;

@@ -3,6 +3,7 @@ import type { Catalog, ContainerRules, Layer, Layout, Query, Result, Row, SceneN
 import { compileFitRules, type FitExtras } from './compile.ts';
 import { attr, ensure, keyed, paintVar, text } from './dom.ts';
 import { DOTS_CSS } from './dots.ts';
+import { PIXELS_CSS, pixels } from './pixels.ts';
 import { KEYS_CSS, Keys, companions } from './keys.ts';
 import { LAYOUTS } from './layouts/index.ts';
 import { NUMBER_FITS, fitNumber, readNumber } from './measure.ts';
@@ -38,9 +39,12 @@ export const BASE_CSS = `@layer uav {
 .uav-error { margin: 0; font-size: var(--uav-font-label); overflow-wrap: anywhere; color: ${paintVar('delta.bad')}; }
 
 /* A line's height is a ratio of its face, so it follows a face that a token has moved. */
-.uav-f-tick { font-size: var(--uav-font-tick); }
+.uav-f-tick { font-size: var(--uav-font-tick); font-family: ${token('font-family-tick')}; }
 .uav-f-label { font-size: var(--uav-font-label); }
-.uav-f-value { font-size: var(--uav-font-value); font-weight: ${token('font-weight-value')}; font-variant-numeric: tabular-nums; }
+.uav-f-value { font-size: var(--uav-font-value); font-family: ${token('font-family-value')}; font-weight: ${token('font-weight-value')}; font-variant-numeric: tabular-nums; }
+/* Words set among the marks, a point's name or what a rule stands for, are read as words: in the page's own face,
+ * whatever face the axis and the small numbers have. */
+.uav-plot :is(.uav-f-tick, .uav-f-value) { font-family: inherit; }
 .uav-f-display { font-size: var(--uav-font-display); line-height: calc(34 / 37); font-weight: ${token('font-weight-display')}; font-variant-numeric: tabular-nums; letter-spacing: ${token('letter-spacing-display')}; }
 
 /* The number: a value, then a delta and a note, each on its own line. It is in every scene and shows when the
@@ -85,6 +89,7 @@ ${painters.map((p) => p.css).join('\n')}
 ${MOTION_CSS}
 ${KEYS_CSS}
 ${DOTS_CSS}
+${PIXELS_CSS}
 
 /* Only a size container answers a block-size query, so this matches exactly when a layout has handed the view a
  * box. The body then takes the height left over. No attribute on the view. */
@@ -338,6 +343,7 @@ export class UaView extends Base {
       if (this.#layout !== scene.layout) { this.#body.replaceChildren(); this.#body.removeAttribute('data-scale'); this.#layout = scene.layout; }
       const painter = LAYOUTS[scene.layout], data = { layers: plan.layers, query: expand(spec).query, result, catalog };
       painter?.paint(this.#body, scene, rules, data);
+      pixels(fig);
       // Only while it shows: nothing reads a hidden table, and it is a row per row of the result.
       if (!this.hasAttribute('table')) this.#table.replaceChildren();
       else if (painter?.table) painter.table(this.#table, spec.title, scene, data); else paintTable(this.#table, spec.title, data.query, result, catalog, plan.layers);
@@ -367,6 +373,7 @@ export class UaView extends Base {
    * and writes data-fit, on the number for its size and forms and on the figure for the prose rung, then hands the
    * body to its layout. Nothing it reads depends on what it writes, so one run settles it. */
   #measure(painted: boolean): void {
+    pixels(this.#fig);
     const box = this.#room.getBoundingClientRect(), room = { inline: box.width, block: box.height || null }, sizes = readNumber(this.#ruler);
     const seen = JSON.stringify([room, sizes]);
     if (!painted && seen === this.#seen) return;

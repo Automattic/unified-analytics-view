@@ -1,0 +1,8 @@
+/* Ans Mono: a 5 by 7 pixel monospace in the style of a graphing calculator's LCD type, for a view's axis labels and
+ * small numbers and a surface's titles. Its em is eight of its own pixels, so it is sharp at 8 px, where one of its
+ * pixels is 1 px, and at whole multiples of that. The charts tier sets a face in it to twelve times `size-pixel`, 12 px:
+ * a pixel and a half to each of its own, which is three whole device pixels on a screen of two to one, and is not
+ * sharp on a screen of one to one.
+ * It has ASCII and a few signs. What it lacks, an en dash or a delta's arrow, comes from the face after it.
+ * A page loads this file itself: a font is declared for a document, and a shadow tree cannot do it. */
+@font-face { font-family: "Ans Mono"; src: url("./AnsMono-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }

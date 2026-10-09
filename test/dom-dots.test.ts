@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildScene, resolve, unboundedContainer } from '@universal-analytics/core';
 import { catalog, runQuery, samples } from '@universal-analytics/fixtures';
-import { CELL, DOTS_CSS, FONT, amount, dotted, rolls } from '../packages/dom/src/dots.ts';
+import { CELL, DOTS_CSS, FONT, amount, dotted, rolls, unit } from '../packages/dom/src/dots.ts';
 import { NUMBER_FITS, SCREEN_LEAST, fitNumber } from '../packages/dom/src/measure.ts';
 import { cartesian } from '../packages/dom/src/layouts/cartesian.ts';
 import { once } from '../packages/dom/src/motion.ts';
@@ -50,8 +50,25 @@ describe('the dot-matrix face', () => {
     expect(DOTS_CSS).toContain('overflow: hidden;');
     expect(DOTS_CSS).toContain(' inline-size: round(down, 100%, var(--uav-u));');
     // It has no surface of its own: the cells sit on what the view is on.
-    expect(DOTS_CSS).not.toMatch(/color-screen|elevation-screen|radius-screen|padding/);
+    // The one room it adds is a row of cells under the words that share a view's screen.
+    expect(DOTS_CSS).not.toMatch(/color-screen|elevation-screen|radius-screen|padding(?!-block-end: var\(--uav-u\))/);
     expect(DOTS_CSS).not.toContain('tight');
+  });
+  it('lights a cell as a shadow of the one box a character has, and sets a unit in type, in capitals', () => {
+    expect(DOTS_CSS).toContain('.uav-glyph-run i::before, .uav-glyph-run i[data-roll]::after { content: ""; position: absolute;');
+    expect(DOTS_CSS).toMatch(/\.uav-glyph-run i\[data-ch="7"\]::before, .* \{ box-shadow: /);
+    expect(['k', 'M', '%', 's', '$', '€'].every(unit)).toBe(true);
+    expect(Array.from('1,234.5 -–').some(unit)).toBe(false);
+    expect(DOTS_CSS).toMatch(/\.uav-glyph-run sup \{[^}]*font-size: var\(--uav-font-value\);[^}]*text-transform: uppercase;/);
+  });
+  it('shares a view\'s screen with the change and the note under the number, each line a whole number of cells', () => {
+    expect(DOTS_CSS).toContain('.uav-number:has(> b .uav-glyphs)::before { content: ""; position: absolute; z-index: -1;');
+    expect(DOTS_CSS).toContain('inline-size: round(down, 100%, var(--uav-u)); block-size: round(down, 100%, var(--uav-u)); background: var(--uav-cells); }');
+    // The value's own screen draws no cells there, or they would be drawn twice.
+    expect(DOTS_CSS).toContain('.uav-number .uav-glyphs { background: none; }');
+    expect(DOTS_CSS).toContain('.uav-number:has(> b .uav-glyphs) > span { line-height: calc(var(--uav-u) * 5); }');
+    expect(DOTS_CSS).toContain('.uav-number:has(> b .uav-glyphs) > .uav-f-tick { line-height: calc(var(--uav-u) * 4); }');
+    expect(DOTS_CSS).toContain('.uav-number:has(> b .uav-glyphs) > b + span { margin-block-start: var(--uav-u); }');
   });
   it('runs the number along the screen under the pointer, a cell at a time, and shows its end at once with reduced motion', () => {
     expect(DOTS_CSS).toContain('.uav-glyph-run { display: flex; flex: none; min-inline-size: 100%; position: relative; left: round(to-zero, calc(var(--uav-s, 0) * 100%), var(--uav-u)); translate: round(to-zero, calc(var(--uav-s, 0) * -100%), var(--uav-u)) 0; }');

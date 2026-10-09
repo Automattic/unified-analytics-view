@@ -72,7 +72,7 @@ Per element from the start (decided Oct 5). `docs/dom-painter-plan.md` is the de
 
 The visual language for the views and the chrome around them: tokens for both themes, type, the tldr value treatment, the material for the panel with fallbacks outside Chromium, motion, and every state in section 13 of the reference. The chrome primitives the prototype lacks are designed and built here: delta badge, scope and filter chips, compact date and compare control, tabs, notices for empty, loading and stale.
 
-Direction (decided Oct 5): the instrument look, selectively. The dot-matrix or VFD treatment carries the tldr values and the live counter; marks are clean vector, and the material is restrained. Inputs: the three files in `sketches/`.
+Direction (decided Oct 5): the instrument look, selectively. The dot-matrix or VFD treatment carries the tldr values and the live counter, and the material is restrained. Marks were to be clean vector; since Oct 8 they are drawn in squares of 1 px with no gap between them, the prototype's dot painter at a higher resolution, each square on or off, and the square is the token `size-pixel` (`packages/dom/src/pixels.ts`). Inputs: the three files in `sketches/`.
 
 Split (decided Oct 5): David owns the look of the tldr value, the materials and motion. Claude proposes the data views and the chrome in the bench. They merge in the bench.
 

@@ -40,10 +40,16 @@ export const TOKENS: Record<string, string> = {
   // The readout stands above the view. Unthemed, a plain shadow straight down.
   'elevation-tooltip': '0 1px 3px color-mix(in srgb, CanvasText 25%, transparent)',
 
+  // The square a mark is drawn in: a line's steps and a bar's edges (pixels.ts). At 0 the marks are clean vector.
+  'size-pixel': '1px',
+
   'stroke-width-line': '2px',
   'stroke-width-rule': '1px',
   'stroke-width-focus': '2px',
 
+  // The face of the axis labels and notes, and of the small numbers. Unthemed, the page's own.
+  'font-family-tick': 'inherit',
+  'font-family-value': 'inherit',
   // The four faces of a scene's text, and the smaller one the number takes where the larger does not fit.
   'font-size-tick': '11px',
   'font-size-label': '13px',

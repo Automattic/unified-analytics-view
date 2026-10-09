@@ -107,7 +107,7 @@
         "$value": "{color.muted-foreground}"
       },
       "comparison": {
-        "$value": "{color.foreground-50}"
+        "$value": "{color.muted-foreground}"
       },
       "delta-good": {
         "$value": "{color.success-text}"
@@ -179,6 +179,16 @@
         "$value": "{radius.sm}"
       }
     },
+    "size": {
+      "$type": "dimension",
+      "$description": "The square a mark is drawn in: a line's steps and a bar's edges. At 0 the marks are clean vector.",
+      "pixel": {
+        "$value": {
+          "value": 1,
+          "unit": "px"
+        }
+      }
+    },
     "stroke-width": {
       "$type": "dimension",
       "$description": "A line of the data where its layer gives no width, a rule or a grid line, and the outline of whatever has the reader's attention: the holder with focus, and the mark chosen in it.",
@@ -201,17 +211,29 @@
         }
       }
     },
+    "font-family": {
+      "$type": "fontFamily",
+      "$description": "The face of a view's axis labels and notes, and of its small numbers: Ans Mono, a pixel face, where the page has loaded it (fonts/ans-mono.css). The words a view is read by, a row's label and the prose, stay in the page's own face.",
+      "tick": {
+        "$value": "\"Ans Mono\", ui-monospace, monospace"
+      },
+      "value": {
+        "$value": "\"Ans Mono\", ui-monospace, monospace"
+      }
+    },
     "font-size": {
       "$type": "dimension",
-      "$description": "The four faces of a view's text, and the smaller one its number takes where the larger does not fit. They are the fluid scale's steps, so a face follows the width of the view it is in. Ticks and labels are the two steps that hardly move, because the room a fit rule asks for is worked out from them.",
+      "$description": "The four faces of a view's text, and the smaller one its number takes where the larger does not fit. Ticks and small numbers are in a pixel face of eight pixels to the em, set at a pixel and a half of the square a mark is drawn in, which is 12 px and whole device pixels on a screen of two to one. The rest are the fluid scale's steps, so a face follows the width of the view it is in.",
       "tick": {
-        "$value": "{font.size.xs}"
+        "$type": "dimension",
+        "$value": "max(12px, {charts.size.pixel} * 12)"
       },
       "label": {
         "$value": "{font.size.sm}"
       },
       "value": {
-        "$value": "{font.size.sm}"
+        "$type": "dimension",
+        "$value": "max(12px, {charts.size.pixel} * 12)"
       },
       "display": {
         "$value": "{font.size.4xl}"

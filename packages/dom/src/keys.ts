@@ -211,8 +211,11 @@ export function readoutOf(fig: HTMLElement): HTMLElement {
 /** Take the readout away. */
 export function hideReadout(tip: HTMLElement): void {
   tip.hidden = true;
+  watching.get(tip)?.abort(); watching.delete(tip);
   if (tip.hasAttribute('popover') && tip.isConnected && tip.matches(':popover-open')) tip.hidePopover();
 }
+// What is listening for the scroll that takes a shown readout away. Let go when it is hidden, however that came about.
+const watching = new WeakMap<HTMLElement, AbortController>();
 /** Show the readout, with the words it already has, at a point: over the point's middle, `--uav-c` along it where
  * the point says, and above it, or below where there is no room above.
  * ponytail: placed once, when chosen. It does not follow a resize, and a scroll takes it away. */
@@ -221,8 +224,15 @@ export function placeReadout(tip: HTMLElement, fig: HTMLElement, point: HTMLElem
   const floats = tip.hasAttribute('popover') && tip.isConnected;
   if (floats && !tip.matches(':popover-open')) {
     tip.showPopover();
-    // It is set on the screen and not in the page, so it would be left behind by a scroll. It goes instead.
-    addEventListener('scroll', () => hideReadout(tip), { capture: true, passive: true, once: true });
+    // It is set on the screen and not in the page, so it would be left behind by a scroll. It goes instead. A scroll
+    // does not leave the shadow tree it happens in, so every tree the view is inside is listened to, and the window.
+    const gone = new AbortController(), heard = { capture: true, passive: true, signal: gone.signal };
+    watching.set(tip, gone);
+    for (let node: Node | null = fig; node; node = node instanceof ShadowRoot ? node.host : null) {
+      node = node.getRootNode();
+      node.addEventListener('scroll', () => hideReadout(tip), heard);
+    }
+    addEventListener('scroll', () => hideReadout(tip), heard);
   }
   const f = fig.getBoundingClientRect(), r = point.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
   const c = parseFloat(point.style.getPropertyValue('--uav-c')), mid = r.left + r.width * (Number.isFinite(c) ? c : 0.5);

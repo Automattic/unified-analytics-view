@@ -5,7 +5,7 @@ import viewSchema from '@universal-analytics/core/schema/view.schema.json';
 import { compileFitRules } from '@universal-analytics/dom';
 import { catalog, countries, moreSamples, runQuery, scenarios } from '@universal-analytics/fixtures';
 import { GEO_RULES, geoMark, type Shapes } from '@universal-analytics/geo';
-import { geoPainter } from '@universal-analytics/geo/dom';
+import { geoPainter, zoomBox } from '@universal-analytics/geo/dom';
 
 // Step 8 of docs/chart-coverage-plan.md: the `geo` mark, which is a custom mark, registered by the fixtures with their
 // boundary shapes. No prototype knows it, so it is held to a sweep, facts and golden scenes of its own. The registry
@@ -285,5 +285,22 @@ describe('the painter\'s half, as strings', () => {
     const swap = '  ' + fig('marks') + ' { display: none; }\n  ' + fig('marks') + ' ~ .uav-fallback { display: block; }\n}';
     expect(css).toContain('@container uav-view (inline-size < 279.5px) {\n' + swap);
     expect(css).toContain('@container uav-view (block-size < 119.5px) {\n' + swap);
+  });
+});
+
+describe('a map brought in to a region', () => {
+  const home = [0, 0, 100, 50];
+  it('shows the region with room around it, in the map\'s own shape', () => {
+    const [x, y, w, h] = zoomBox({ x: 40, y: 20, width: 20, height: 6 }, home) as [number, number, number, number];
+    expect([w, h]).toEqual([30, 15]);
+    expect([x + w / 2, y + h / 2]).toEqual([50, 23]);
+    // A tall region is fitted by its height.
+    expect(zoomBox({ x: 40, y: 10, width: 4, height: 20 }, home).slice(2)).toEqual([60, 30]);
+  });
+  it('stays inside the map, is never closer than a small country can bear, and never wider than the map', () => {
+    expect(zoomBox({ x: 1, y: 1, width: 10, height: 4 }, home).slice(0, 2)).toEqual([0, 0]);
+    expect(zoomBox({ x: 95, y: 46, width: 4, height: 3 }, home)).toEqual([86, 43, 14, 7]);
+    expect(zoomBox({ x: 50, y: 25, width: 0.5, height: 0.5 }, home).slice(2)).toEqual([14, 7]);
+    expect(zoomBox({ x: 5, y: 5, width: 90, height: 40 }, home)).toEqual(home);
   });
 });

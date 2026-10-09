@@ -97,7 +97,8 @@ export function text(el: Element, n: TextNode): void {
   const face = 'uav-f-' + n.font;
   // A kept key can change its face, and would otherwise carry both.
   if (!el.classList.contains(face)) { for (const c of Array.from(el.classList)) if (c.startsWith('uav-f-')) el.classList.remove(c); el.classList.add(face); }
-  const set = n.font === 'display' ? dots : (to: Element, s: string) => { to.textContent = s; };
+  // A change's triangle is written as an arrow: every face has one, a pixel face among them, and few have the triangle.
+  const set = n.font === 'display' ? dots : (to: Element, s: string) => { to.textContent = s.replace('▲', '↑').replace('▼', '↓'); };
   if (n.short == null) { set(el, n.text); return; }
   if (!el.querySelector(':scope > .uav-full')) { el.removeAttribute('data-dots'); el.textContent = ''; }
   set(ensure(el, 'span', 'uav-full'), n.text);

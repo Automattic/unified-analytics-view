@@ -6,6 +6,7 @@ import { compileFitRules } from '@universal-analytics/dom';
 import { catalog, countries, moreSamples, runQuery, scenarios } from '@universal-analytics/fixtures';
 import { GEO_RULES, geoMark, type Shapes } from '@universal-analytics/geo';
 import { geoPainter, zoomBox } from '@universal-analytics/geo/dom';
+import world from '@universal-analytics/geo/countries-110m.json';
 
 // Step 8 of docs/chart-coverage-plan.md: the `geo` mark, which is a custom mark, registered by the fixtures with their
 // boundary shapes. No prototype knows it, so it is held to a sweep, facts and golden scenes of its own. The registry
@@ -302,5 +303,34 @@ describe('a map brought in to a region', () => {
     expect(zoomBox({ x: 95, y: 46, width: 4, height: 3 }, home)).toEqual([86, 43, 14, 7]);
     expect(zoomBox({ x: 50, y: 25, width: 0.5, height: 0.5 }, home).slice(2)).toEqual([14, 7]);
     expect(zoomBox({ x: 5, y: 5, width: 90, height: 40 }, home)).toEqual(home);
+  });
+});
+
+// The world, for a page that hands the mark every country: packages/geo/scripts/countries.mjs writes it.
+describe('the shapes of every country (countries-110m)', () => {
+  const shapes: Shapes = world, ids = shapes.features.flatMap((f) => (f.id == null ? [] : [String(f.id)]));
+  it('names each by its ISO alpha-2 code, once, and draws the two it has no code for with no id', () => {
+    expect(shapes.features.length).toBe(176);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids.every((id) => /^[A-Z]{2}$/.test(id))).toBe(true);
+    expect(shapes.features.filter((f) => f.id == null).map((f) => f.properties!.name)).toEqual(['Northern Cyprus', 'Somaliland']);
+  });
+  it('has the countries the fixtures leave out, and every one they have, drawn as they draw it', () => {
+    for (const id of ['NL', 'BE', 'CH', 'PT', 'DK', 'IE', 'IL', 'TW', 'XK']) expect(ids, id).toContain(id);
+    const drawn = new Map(shapes.features.map((f) => [f.id, f.geometry]));
+    for (const f of countries.features) if (f.id != null) expect(drawn.get(f.id), String(f.id)).toEqual(f.geometry);
+  });
+  it('is named as a code is written, has no Antarctica, and is small enough to send', () => {
+    expect(shapes.features.find((f) => f.id === 'US')!.properties!.name).toBe('United States');
+    expect(ids).not.toContain('AQ');
+    expect(JSON.stringify(world).length).toBeLessThan(145000);
+  });
+  it('draws: a row for each of its codes is on the map, with nothing left out', () => {
+    registerMark('world', geoMark(shapes));
+    const spec: Spec = { ...map, layers: [{ mark: 'world', encode: { x: 'country', color: 'visitors' } }] }, was = runQuery(spec.query);
+    const result = { ...was, rows: ids.map((country, i) => ({ country, visitors: i + 1 })) };
+    const scene = buildScene(resolve(spec, result, makeContainer(700), catalog), spec.query, result, catalog);
+    expect(scene.nodes.some((n) => n.part === 'note')).toBe(false);
+    expect(scene.nodes.filter((n) => n.part === 'plot' && n.kind === 'path').length).toBe(176);
   });
 });

@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./dom": "./src/dom.ts"
+    "./dom": "./src/dom.ts",
+    "./countries-110m.json": "./shapes/countries-110m.json"
   },
   "dependencies": {
     "@universal-analytics/core": "workspace:*",

@@ -145,7 +145,8 @@
   --ua-spacing-0: 0px;
   --ua-elevation-0: none;
   --ua-charts-border-radius-cell: 1px;
-  --ua-charts-stroke-width-line: 2px;
+  --ua-charts-border-radius-tooltip: 0px;
+  --ua-charts-stroke-width-line: 1px;
   --ua-charts-stroke-width-rule: 1px;
   --ua-charts-stroke-width-focus: 2px;
   --ua-charts-font-family-tick: "Ans Mono", "Ans Mono Scroll", ui-monospace, monospace;
@@ -262,12 +263,10 @@
   --ua-elevation-inset: inset calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 2px color-mix(in srgb, var(--ua-color-black) 20%, transparent), inset calc(var(--ua-light-x, 0) * -3px) calc(var(--ua-light-y, -1) * -3px) 8px color-mix(in srgb, var(--ua-color-black) 10%, transparent), calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 0 var(--ua-color-surface-raised);
   --ua-charts-color-label-inverse: var(--ua-color-black); /** Text on the tooltip surface. Black in both themes, as the surface is one colour in both. */
   --ua-charts-color-tooltip-surface: var(--ua-color-constant-lime); /** The readout and the crosshair's words: the marker colour, from the constants, so it is the same in both themes. */
-  --ua-charts-color-tooltip-surface-secondary: var(--ua-color-white); /** The crosshair's word for a comparison: quieter than the surface, edged in it, and the same in both themes. */
-  --ua-charts-color-tooltip-border: var(--ua-color-black); /** The stroke about the readout and the words of a crosshair. Black in both themes, as their text is. */
+  --ua-charts-color-tooltip-surface-secondary: var(--ua-color-white); /** The crosshair's word for a comparison: quieter than the surface, and the same in both themes. */
   --ua-charts-color-label-screen: var(--ua-color-lime-1000); /** The lit cells of a number in dots, and at a tenth of it the unlit ones: the lime ramp's last step in both themes. */
   --ua-charts-border-radius-bar: var(--ua-radius-xs);
   --ua-charts-border-radius-swatch: var(--ua-radius-xs);
-  --ua-charts-border-radius-tooltip: var(--ua-radius-sm);
   --ua-charts-font-size-label: var(--ua-font-size-sm);
   --ua-charts-font-size-display: var(--ua-font-size-4xl);
   --ua-charts-font-size-display-small: var(--ua-font-size-2xl);
@@ -518,8 +517,7 @@
   --ua-color-overlay: color-mix(in srgb, var(--ua-color-black) 80%, transparent);
   --ua-charts-color-label-inverse: var(--ua-color-black); /** Text on the tooltip surface. Black in both themes, as the surface is one colour in both. */
   --ua-charts-color-tooltip-surface: var(--ua-color-constant-lime); /** The readout and the crosshair's words: the marker colour, from the constants, so it is the same in both themes. */
-  --ua-charts-color-tooltip-surface-secondary: var(--ua-color-white); /** The crosshair's word for a comparison: quieter than the surface, edged in it, and the same in both themes. */
-  --ua-charts-color-tooltip-border: var(--ua-color-black); /** The stroke about the readout and the words of a crosshair. Black in both themes, as their text is. */
+  --ua-charts-color-tooltip-surface-secondary: var(--ua-color-white); /** The crosshair's word for a comparison: quieter than the surface, and the same in both themes. */
   --ua-charts-color-label-screen: var(--ua-color-lime-1000); /** The lit cells of a number in dots, and at a tenth of it the unlit ones: the lime ramp's last step in both themes. */
   --ua-color-mark-chartreuse: var(--ua-color-constant-chartreuse);
   --ua-color-mark-chartreuse-text: var(--ua-color-constant-chartreuse);
@@ -769,8 +767,7 @@
   --ua-color-overlay: color-mix(in srgb, var(--ua-color-black) 80%, transparent);
   --ua-charts-color-label-inverse: var(--ua-color-black); /** Text on the tooltip surface. Black in both themes, as the surface is one colour in both. */
   --ua-charts-color-tooltip-surface: var(--ua-color-constant-lime); /** The readout and the crosshair's words: the marker colour, from the constants, so it is the same in both themes. */
-  --ua-charts-color-tooltip-surface-secondary: var(--ua-color-white); /** The crosshair's word for a comparison: quieter than the surface, edged in it, and the same in both themes. */
-  --ua-charts-color-tooltip-border: var(--ua-color-black); /** The stroke about the readout and the words of a crosshair. Black in both themes, as their text is. */
+  --ua-charts-color-tooltip-surface-secondary: var(--ua-color-white); /** The crosshair's word for a comparison: quieter than the surface, and the same in both themes. */
   --ua-charts-color-label-screen: var(--ua-color-lime-1000); /** The lit cells of a number in dots, and at a tenth of it the unlit ones: the lime ramp's last step in both themes. */
   --ua-color-mark-chartreuse: var(--ua-color-constant-chartreuse);
   --ua-color-mark-chartreuse-text: var(--ua-color-constant-chartreuse);

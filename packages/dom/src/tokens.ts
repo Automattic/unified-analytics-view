@@ -29,18 +29,17 @@ export const TOKENS: Record<string, string> = {
   'color-label-screen': 'currentColor',
   'color-tooltip-surface': 'CanvasText',
   'color-tooltip-surface-secondary': 'GrayText',
-  'color-tooltip-border': 'CanvasText',
   'color-focus': 'Highlight',
   'color-hover': 'color-mix(in srgb, currentColor 8%, transparent)',
 
   'border-radius-bar': '2px',
   'border-radius-cell': '1px',
   'border-radius-swatch': '2px',
-  'border-radius-tooltip': '2px',
+  'border-radius-tooltip': '0px',
   // The readout stands above the view. Unthemed, a plain shadow straight down.
   'elevation-tooltip': '0 1px 3px color-mix(in srgb, CanvasText 25%, transparent)',
 
-  'stroke-width-line': '2px',
+  'stroke-width-line': '1px',
   'stroke-width-rule': '1px',
   'stroke-width-focus': '2px',
 

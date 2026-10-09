@@ -149,11 +149,7 @@
       },
       "tooltip-surface-secondary": {
         "$value": "{color.white}",
-        "$description": "The crosshair's word for a comparison: quieter than the surface, edged in it, and the same in both themes."
-      },
-      "tooltip-border": {
-        "$value": "{color.black}",
-        "$description": "The stroke about the readout and the words of a crosshair. Black in both themes, as their text is."
+        "$description": "The crosshair's word for a comparison: quieter than the surface, and the same in both themes."
       },
       "label-screen": {
         "$value": "{color.lime.1000}",
@@ -176,7 +172,10 @@
         "$value": "{radius.xs}"
       },
       "tooltip": {
-        "$value": "{radius.sm}"
+        "$value": {
+          "value": 0,
+          "unit": "px"
+        }
       }
     },
     "stroke-width": {
@@ -184,7 +183,7 @@
       "$description": "A line of the data where its layer gives no width, a rule or a grid line, and the outline of whatever has the reader's attention: the holder with focus, and the mark chosen in it.",
       "line": {
         "$value": {
-          "value": 2,
+          "value": 1,
           "unit": "px"
         }
       },

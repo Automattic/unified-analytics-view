@@ -38,6 +38,16 @@ export function readout(row: Row, q: Query, catalog: Catalog, layers: Layer[]): 
   return dims ? dims + ': ' + values : values;
 }
 
+/** Whether a row's own words already say every value its readout would: each metric's, the period before where the
+ * query compares, and what the engine sent with it. Such a row has no readout to show: it would be the row again.
+ * ponytail: by the values alone. A label cut short for room is not counted as unsaid; the table has it whole. */
+export function written(shown: string, row: Row, q: Query, catalog: Catalog, layers: Layer[]): boolean {
+  return q.metrics.every((m) => {
+    const def = catalog.metrics[m]!, also = q.compare === 'previous' && row[m + '@previous'] != null ? [m + '@previous'] : [];
+    return [m, ...also, ...companions(m, row, layers).filter((f) => row[f] != null)].every((f) => shown.includes(formatValue(row[f] as number | null, def)));
+  });
+}
+
 /** What the readout says for one point of a split plot, from the rows there: the x value, each metric with the
  * engine's total for that x when the result has one, and the value of every series. */
 export function readoutAt(rows: Row[], total: Row | undefined, q: Query, catalog: Catalog, x: string, split: string): string {
@@ -145,21 +155,24 @@ svg[data-hits] path[data-active="keys"] { ${FOCUS.stroke} }
 .uav-row[data-active="pointer"] { ${HOVER.row} }
 :is(.uav-bars, .uav-dots, .uav-points, .uav-band, .uav-cells) [data-active="pointer"] { ${HOVER.around} }
 svg[data-hits] path[data-active="pointer"] { ${HOVER.stroke} }
-.uav-readout { position: absolute; z-index: 1; left: 0; top: 0; box-sizing: border-box; inline-size: max-content; max-inline-size: 100%; padding: 2px 6px; border: ${token('stroke-width-rule')} solid ${token('color-tooltip-border')}; border-radius: ${token('border-radius-tooltip')};
-  pointer-events: none; font-size: var(--uav-font-tick); font-variant-numeric: tabular-nums;
+.uav-readout { position: absolute; z-index: 1; left: 0; top: 0; box-sizing: border-box; inline-size: max-content; max-inline-size: 100%; padding: 2px 6px; border-radius: ${token('border-radius-tooltip')};
+  pointer-events: none; font-family: ${token('font-family-tick')}; font-size: var(--uav-font-tick); font-optical-sizing: none; font-variant-numeric: tabular-nums;
   color: ${token('color-label-inverse')}; background: ${token('color-tooltip-surface')}; box-shadow: ${token('elevation-tooltip')}; }
 /* In the top layer it is placed on the screen, over whatever holds the view, and is as wide as its words up to a width of its own. */
-.uav-readout[popover] { position: fixed; inset: auto; margin: 0; overflow: visible; max-inline-size: min(320px, 100vw - 8px); }
+.uav-readout[popover] { position: fixed; inset: auto; margin: 0; border: 0; overflow: visible; max-inline-size: min(320px, 100vw - 8px); }
 /* A line is read against the axes, so at a point of one the readout is a crosshair: the rule that stands at the point,
  * one that lies at each line's value there, and that value said on the axis it is read from, with the point's own
  * name on the x axis. It is drawn in the plot's box and its words stand over the tick labels they are among. A value
  * wider than its axis's gutter grows into the plot and never out of the view. The second line of a comparison is
  * said more quietly, on the secondary surface. */
+/* The crosshair's words hang past the plot, over the axes. The plot is a layer of its own, so it is the plot that is
+ * raised while it has a crosshair, or the axis labels after it would be drawn over them. */
+.uav-plot:has(> .uav-cross) { z-index: 2; }
 .uav-cross { position: absolute; inset: 0; z-index: 1; pointer-events: none; --uav-rule: ${HOVER.width}; --uav-rule-paint: ${paintVar('rule')}; }
 .uav-cross[data-active="keys"] { --uav-rule: ${FOCUS.width}; --uav-rule-paint: ${FOCUS.color}; }
 .uav-cross i { position: absolute; inset-inline: 0; inset-block-start: calc((1 - var(--uav-t)) * 100% - var(--uav-rule) / 2); block-size: var(--uav-rule); background: var(--uav-rule-paint); }
-.uav-cross span { position: absolute; box-sizing: border-box; padding: 1px 5px; border: ${token('stroke-width-rule')} solid ${token('color-tooltip-border')}; border-radius: ${token('border-radius-tooltip')}; white-space: nowrap;
-  font-size: var(--uav-font-tick); font-variant-numeric: tabular-nums; color: ${token('color-label-inverse')}; background: ${token('color-tooltip-surface')}; box-shadow: ${token('elevation-tooltip')}; }
+.uav-cross span { position: absolute; box-sizing: border-box; padding: 1px 5px; border-radius: ${token('border-radius-tooltip')}; white-space: nowrap;
+  font-family: ${token('font-family-tick')}; font-size: var(--uav-font-tick); font-optical-sizing: none; font-variant-numeric: tabular-nums; color: ${token('color-label-inverse')}; background: ${token('color-tooltip-surface')}; box-shadow: ${token('elevation-tooltip')}; }
 .uav-cross-x { inset-block-start: calc(100% + 3px); }
 .uav-cross-y { translate: 0 -50%; text-align: end; }
 .uav-cross-y[data-side="1"] { text-align: start; }
@@ -334,6 +347,9 @@ export class Keys {
     // ponytail: the name of the option in focus changes under it. Whether a screen reader says so is not checked.
     if (this.#order.length) for (const el of Array.from(box!.children)) attr(el, 'aria-label', el === point ? says : this.#says[this.#keys.indexOf(el.getAttribute('data-row') ?? '')]);
     if (marks.length) return;
+    // A row that has every value in writing is its own readout. The option's name above still says it to a screen reader.
+    const row = pair ?? (this.#order.length ? undefined : this.#rows[i]?.[0]);
+    if (row && (point as Element).classList?.contains('uav-row') && written((point as Element).textContent ?? '', row, this.#q!, this.#catalog!, this.#layers)) { hideReadout(tip); return; }
     tip.textContent = says;
     placeReadout(tip, this.#fig, point as HTMLElement);
   }

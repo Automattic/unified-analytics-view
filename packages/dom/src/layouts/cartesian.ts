@@ -166,7 +166,9 @@ export const cartesian: LayoutPainter = {
     });
     keyed(svg, nodes.filter((n): n is PathNode => inPlot(n) && n.kind === 'path'), () => 'path', (el, n) => {
       morph(el as SVGElement, n); el.toggleAttribute('data-fill', !!n.fill);
-      prop(el, 'stroke-width', n.fill ? null : n.width || null); prop(el, 'stroke-dasharray', n.dash);
+      // A scene's width is a weight, against the 2 it gives a line of the data: the line token is that line's width here,
+      // and a comparison's or a rule's is the same share of it.
+      prop(el, 'stroke-width', n.fill || !n.width ? null : `calc(${token('stroke-width-line')} * ${n.width / 2})`); prop(el, 'stroke-dasharray', n.dash);
     });
     keyed(refs, nodes.filter((n): n is LineNode | TextNode => inPlot(n) && ((n.kind === 'line' && n.layer === 'data' && n.row == null) || n.kind === 'text')), (n) => (n.kind === 'line' ? 'i' : 'span'), (el, n) => {
       if (n.kind === 'line') return line(el, n);

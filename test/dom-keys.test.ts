@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildScene, resolve, unboundedContainer, type Catalog, type Spec } from '@universal-analytics/core';
 import { catalog, runQuery, samples, type Scenario } from '@universal-analytics/fixtures';
-import { Keys, crossMarks, hitNodes, readout, rowsAt, step } from '../packages/dom/src/keys.ts';
+import { Keys, crossMarks, hitNodes, readout, rowsAt, step, written } from '../packages/dom/src/keys.ts';
 
 // Which point a key moves to, what the readout says and where a plot's hit targets lie are plain functions, held
 // here with no DOM. Focus, hover and the event are checked in a browser on the bench. What the mouse leaving does
@@ -12,6 +12,19 @@ const of = (sample: string, scenario: Scenario = 'typical') => {
   const plan = resolve(spec, result, unboundedContainer(), catalog), scene = buildScene(plan, spec.query, result, catalog);
   return { result, scene, says: result.rows.map((r) => readout(r, q, catalog, plan.layers)) };
 };
+
+describe('written', () => {
+  const cat = { metrics: { views: { label: 'Page views', unit: 'count' as const, polarity: 'up' as const }, time: { label: 'Engaged time', unit: 'ms' as const, polarity: 'up' as const } }, dimensions: { path: { label: 'Page', type: 'categorical' as const } } };
+  const row = { path: '/a', views: 1113, time: 25100, 'views@previous': 999 };
+  it('is a row whose words already say every value its readout would', () => {
+    expect(written('/a1,11325.1s', row, { metrics: ['views', 'time'], by: ['path'] }, cat, [])).toBe(true);
+    expect(written('/a1,113', row, { metrics: ['views', 'time'], by: ['path'] }, cat, [])).toBe(false);
+  });
+  it('is not one that leaves the period before unsaid', () => {
+    expect(written('/a1,113', row, { metrics: ['views'], by: ['path'], compare: 'previous' }, cat, [])).toBe(false);
+    expect(written('/a1,113999', row, { metrics: ['views'], by: ['path'], compare: 'previous' }, cat, [])).toBe(true);
+  });
+});
 
 describe('step', () => {
   it('moves left and right and stops at the ends, as version 4 does', () => {

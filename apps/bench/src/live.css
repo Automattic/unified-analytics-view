@@ -39,6 +39,6 @@ body { min-block-size: 100vh; padding: 0; border-radius: 0; }
 /* Titles are in the pixel face of a view's axis labels, at its size, so the panel's small type is one voice.
  * A title is words and not columns of figures, so the space between two is half the face's own: three of its pixels
  * and not six, an em being eight. */
-#panel h3 { font-family: var(--ua-charts-font-family-tick); font-size: var(--ua-charts-font-size-tick); font-weight: 400; letter-spacing: 0; word-spacing: -0.375em; font-optical-sizing: none; }
+#panel h3 { font-family: var(--ua-charts-font-family-tick); font-size: var(--ua-charts-font-size-value); font-weight: 400; letter-spacing: 0; word-spacing: -0.375em; font-optical-sizing: none; }
 /* A tile's title stays on one line, so the three numbers stand level. */
 #panel .tiles h3 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

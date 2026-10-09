@@ -8,7 +8,7 @@
         "$value": "{color.foreground}"
       },
       "label-secondary": {
-        "$value": "{color.muted-foreground}"
+        "$value": "{color.foreground-70}"
       },
       "grid": {
         "$value": "{color.border}"
@@ -213,11 +213,11 @@
     },
     "font-size": {
       "$type": "dimension",
-      "$description": "The four faces of a view's text, and the smaller one its number takes where the larger does not fit. Ticks and small numbers are in a pixel face of eight pixels to the em, set at 12 px: a pixel and a half to each of its own, which is whole device pixels on a screen of two to one. The rest are the fluid scale's steps, so a face follows the width of the view it is in.",
+      "$description": "The four faces of a view's text, and the smaller one its number takes where the larger does not fit. Ticks and small numbers are in a pixel face of eight pixels to the em. A tick is set at 8 px, a pixel to each of its own, and a small number at 12 px, a pixel and a half, which is whole device pixels on a screen of two to one. The rest are the fluid scale's steps, so a face follows the width of the view it is in.",
       "tick": {
         "$type": "dimension",
         "$value": {
-          "value": 12,
+          "value": 8,
           "unit": "px"
         }
       },

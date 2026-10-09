@@ -147,6 +147,8 @@ svg[data-hits] path[data-active="pointer"] { ${HOVER.stroke} }
 .uav-readout { position: absolute; z-index: 1; left: 0; top: 0; box-sizing: border-box; inline-size: max-content; max-inline-size: 100%; padding: 2px 6px; border: ${token('stroke-width-rule')} solid ${token('color-tooltip-border')}; border-radius: ${token('border-radius-tooltip')};
   pointer-events: none; font-size: var(--uav-font-tick); font-variant-numeric: tabular-nums;
   color: ${token('color-label-inverse')}; background: ${token('color-tooltip-surface')}; box-shadow: ${token('elevation-tooltip')}; }
+/* In the top layer it is placed on the screen, over whatever holds the view, and is as wide as its words up to a width of its own. */
+.uav-readout[popover] { position: fixed; inset: auto; margin: 0; overflow: visible; max-inline-size: min(320px, 100vw - 8px); }
 /* A line is read against the axes, so at a point of one the readout is a crosshair: the rule that stands at the point,
  * one that lies at each line's value there, and that value said on the axis it is read from, with the point's own
  * name on the x axis. It is drawn in the plot's box and its words stand over the tick labels they are among. A value
@@ -185,6 +187,47 @@ svg[data-hits] path[data-active="pointer"] { ${HOVER.stroke} }
 .uav-plot:has([data-chosen]) :is(.uav-bars i, path):not([data-chosen]) { opacity: 0.3 !important; }
 :is(.uav-legend, .uav-labels) span[data-chosen] { text-decoration: underline; }`;
 
+/** A view's readout: one element, the figure's own, which every layout that says what is under the pointer sets.
+ * In the top layer where there is one, so nothing that holds the view can clip it: a card, a scrolling panel. */
+export function readoutOf(fig: HTMLElement): HTMLElement {
+  const tip = ensure(fig, 'div', 'uav-readout');
+  if (typeof tip.showPopover === 'function') tip.setAttribute('popover', 'manual');
+  return tip;
+}
+/** Take the readout away. */
+export function hideReadout(tip: HTMLElement): void {
+  tip.hidden = true;
+  if (tip.hasAttribute('popover') && tip.isConnected && tip.matches(':popover-open')) tip.hidePopover();
+}
+/** Show the readout, with the words it already has, at a point: over the point's middle, `--uav-c` along it where
+ * the point says, and above it, or below where there is no room above.
+ * ponytail: placed once, when chosen. It does not follow a resize, and a scroll takes it away. */
+export function placeReadout(tip: HTMLElement, fig: HTMLElement, point: HTMLElement): void {
+  tip.hidden = false;
+  const floats = tip.hasAttribute('popover') && tip.isConnected;
+  if (floats && !tip.matches(':popover-open')) {
+    tip.showPopover();
+    // It is set on the screen and not in the page, so it would be left behind by a scroll. It goes instead.
+    addEventListener('scroll', () => hideReadout(tip), { capture: true, passive: true, once: true });
+  }
+  const f = fig.getBoundingClientRect(), r = point.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
+  const c = parseFloat(point.style.getPropertyValue('--uav-c')), mid = r.left + r.width * (Number.isFinite(c) ? c : 0.5);
+  if (floats) {
+    // On the screen, a little in from its edge.
+    const above = r.top - h - 2;
+    tip.style.setProperty('left', Math.max(4, Math.min(mid - w / 2, document.documentElement.clientWidth - w - 4)) + 'px');
+    tip.style.setProperty('top', (above >= 4 ? above : r.bottom + 2) + 'px');
+    return;
+  }
+  // Without a top layer: always inside the view, over its top where it is too small for above or below, because whatever
+  // holds a view may clip at its edge. Rects are in the page's px and the readout is placed in the figure's own: under a
+  // transform the two differ, by kx and ky.
+  const W = fig.offsetWidth, H = fig.offsetHeight, kx = W > 0 && f.width > 0 ? W / f.width : 1, ky = H > 0 && f.height > 0 ? H / f.height : 1;
+  const x = (mid - f.left) * kx - w / 2, above = (r.top - f.top) * ky - h - 2, below = (r.bottom - f.top) * ky + 2;
+  tip.style.setProperty('left', Math.max(0, Math.min(x, f.width * kx - w)) + 'px');
+  tip.style.setProperty('top', (above >= 0 ? above : below + h <= f.height * ky ? below : 0) + 'px');
+}
+
 /** The interaction of one view. It listens on the body, which outlives every paint, so nothing is bound per point. */
 export class Keys {
   #host: HTMLElement; #fig: HTMLElement; #body: HTMLElement; #tip: HTMLElement;
@@ -201,7 +244,7 @@ export class Keys {
 
   constructor(host: HTMLElement, fig: HTMLElement, body: HTMLElement) {
     this.#host = host; this.#fig = fig; this.#body = body;
-    this.#tip = ensure(fig, 'div', 'uav-readout');
+    this.#tip = readoutOf(fig);
     this.#tip.setAttribute('aria-hidden', 'true'); this.#tip.hidden = true;
     const row = (e: Event) => { const k = (e.target as Element).closest?.('[data-row]')?.getAttribute('data-row'); return k != null && this.#keys.includes(k) ? k : null; };
     body.addEventListener('pointerover', (e) => {
@@ -281,7 +324,7 @@ export class Keys {
     });
     if (box) attr(box, 'aria-activedescendant', (point as Element | null)?.id);
     const marks = point ? this.#crossAt(key!, series) : [];
-    tip.hidden = !point || marks.length > 0;
+    if (!point || marks.length) hideReadout(tip);
     this.#drawCross(point, marks, how);
     if (!point) return;
     const i = this.#keys.indexOf(key!), pair = this.#pair(i);
@@ -291,16 +334,7 @@ export class Keys {
     if (this.#order.length) for (const el of Array.from(box!.children)) attr(el, 'aria-label', el === point ? says : this.#says[this.#keys.indexOf(el.getAttribute('data-row') ?? '')]);
     if (marks.length) return;
     tip.textContent = says;
-    // Above the point, or below it, or over the top of a view too small for either: always inside the view, because
-    // whatever holds a view may clip at its edge.
-    // ponytail: placed once, when chosen. It does not follow a resize or a scroll inside the view.
-    // Rects are in the page's px and the readout is placed in the figure's own. Under a transform the two differ, by kx and ky.
-    const f = this.#fig.getBoundingClientRect(), r = (point as HTMLElement).getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
-    const W = this.#fig.offsetWidth, H = this.#fig.offsetHeight, kx = W > 0 && f.width > 0 ? W / f.width : 1, ky = H > 0 && f.height > 0 ? H / f.height : 1;
-    const c = parseFloat((point as HTMLElement).style.getPropertyValue('--uav-c')), x = (r.left + r.width * (Number.isFinite(c) ? c : 0.5) - f.left) * kx - w / 2;
-    const above = (r.top - f.top) * ky - h - 2, below = (r.bottom - f.top) * ky + 2;
-    tip.style.setProperty('left', Math.max(0, Math.min(x, f.width * kx - w)) + 'px');
-    tip.style.setProperty('top', (above >= 0 ? above : below + h <= f.height * ky ? below : 0) + 'px');
+    placeReadout(tip, this.#fig, point as HTMLElement);
   }
 
   /** What the crosshair says at a row, or nothing where the readout says it instead: where an axis is not on show

@@ -1,7 +1,7 @@
 import { formatDimension, formatValue, type RectNode, type Row, type TextNode } from '@universal-analytics/core';
 import { attr, ensure, keyed, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
-import { readout } from '../keys.ts';
+import { hideReadout, placeReadout, readout, readoutOf } from '../keys.ts';
 import type { LayoutPainter } from '../layout.ts';
 import { thin } from '../measure.ts';
 
@@ -43,20 +43,16 @@ interface Grid { nx: number; ny: number; rows: Map<string, Row>; fresh: boolean 
 const grids = new WeakMap<HTMLElement, Grid>();
 const id = (x: number, y: number) => 'cell-' + x + '-' + y;
 
-/** Choose a cell, or none, and say how: by the keys or by the pointer, as keys.ts does. The readout is the cell's own name, set by it and always inside the view, as keys.ts sets one.
- * ponytail: its placing is keys.ts's, written again, since that one is private to its class. One function when the two meet. */
+/** Choose a cell, or none, and say how: by the keys or by the pointer, as keys.ts does. The readout is the cell's own
+ * name, and is the view's one readout, shown and placed as keys.ts shows it. */
 function choose(cells: HTMLElement, el: HTMLElement | null, how: 'keys' | 'pointer' = 'pointer'): void {
   cells.querySelector('[data-active]')?.removeAttribute('data-active');
   el?.setAttribute('data-active', how);
   attr(cells, 'aria-activedescendant', el?.id);
-  const fig = cells.closest<HTMLElement>('.uav')!, tip = ensure(fig, 'div', 'uav-readout');
-  tip.hidden = !el;
-  if (!el) return;
+  const fig = cells.closest<HTMLElement>('.uav')!, tip = readoutOf(fig);
+  if (!el) { hideReadout(tip); return; }
   tip.textContent = el.getAttribute('aria-label');
-  const f = fig.getBoundingClientRect(), r = el.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
-  const above = r.top - f.top - h - 3, below = r.bottom - f.top + 3;
-  tip.style.setProperty('left', Math.max(0, Math.min(r.left + r.width / 2 - f.left - w / 2, f.width - w)) + 'px');
-  tip.style.setProperty('top', (above >= 0 ? above : below + h <= f.height ? below : 0) + 'px');
+  placeReadout(tip, fig, el);
 }
 
 function bind(cells: HTMLElement): void {

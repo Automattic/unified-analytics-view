@@ -1,4 +1,4 @@
-import { COLUMNS_BLOCK, columnRooms, type RowNode, type SceneNode, type TextNode } from '@universal-analytics/core';
+import { COLUMNS_BLOCK, columnRooms, type RowNode, type Scene, type SceneNode, type TextNode } from '@universal-analytics/core';
 import { attr, ensure, keyed, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
@@ -15,6 +15,28 @@ import { TRACK_CSS, TRACK_FIT, trackMark } from './track.ts';
  *
  * Under a height limit only whole rows show: the list is as tall as the rows that fit, rounded down. */
 const short = '(100cqi - var(--uav-need) + 0.01px) * 999999';
+
+/** The room each column takes, as core reckons it (columnRooms), at the width a character has in this view. Core's is
+ * for the faces a view has with no tokens, and a page's may be wider, as a pixel face is: a column that is kept past
+ * the room it really takes leaves the label none. Where a width cannot be read, core's stands. */
+function roomsHere(body: HTMLElement, scene: Scene): number[] {
+  const advance = (face: string) => {
+    const probe = body.appendChild(document.createElement('span'));
+    probe.className = 'uav-f-' + face; probe.textContent = '0'.repeat(10);
+    probe.style.position = 'absolute'; probe.style.visibility = 'hidden'; probe.style.whiteSpace = 'nowrap';
+    const width = probe.getBoundingClientRect().width / 10;
+    probe.remove();
+    return width;
+  };
+  const tick = advance('tick'), value = advance('value'), room: number[] = [];
+  if (!tick || !value) return columnRooms(scene);
+  for (const n of scene.nodes) {
+    if (n.kind !== 'text' || !(n.part === 'columns' || (n.part === 'rows' && n.font === 'value'))) continue;
+    const i = n.rank || 0;
+    room[i] = Math.max(room[i] || 0, Math.ceil(n.text.length * (n.part === 'columns' ? tick : value)) + 16);
+  }
+  return room;
+}
 const css = `
 .uav[data-layout="rows"] .uav-body { display: grid; grid-template: auto minmax(0, 1fr) / var(--uav-tracks, minmax(0, 1fr)); }
 .uav-columns, .uav-rows, .uav-row { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; }
@@ -47,7 +69,7 @@ export const rows: LayoutPainter = {
   paint(body, scene, rules) {
     const head = ensure(body, 'div', 'uav-columns'), list = ensure(body, 'div', 'uav-rows'), by = new Map<string, SceneNode[]>();
     const beside = scene.track === 'beside', room = (id: string) => rules.fit.find((r) => r.layout === 'rows' && r.id === id)?.needs.inline;
-    const rooms = columnRooms(scene), label = (beside ? room('track') : undefined) ?? room('marks') ?? 0;
+    const rooms = roomsHere(body, scene), label = (beside ? room('track') : undefined) ?? room('marks') ?? 0;
     // A row's labels stand side by side in the order they come, each before the last in a column as wide as its text.
     // Beside its label the track is a column too. `first` is the column of the first value.
     const col = new Map<string, number>(), count = new Map<string, number>();

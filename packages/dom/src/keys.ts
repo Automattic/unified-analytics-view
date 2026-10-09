@@ -1,4 +1,4 @@
-import { formatDimension, formatValue, layerKeys, partialNote, unitsOf, type Catalog, type Layer, type Query, type RectNode, type Result, type Row, type Scene } from '@universal-analytics/core';
+import { formatBin, formatDimension, formatValue, layerKeys, partialNote, unitsOf, type Catalog, type Layer, type Query, type RectNode, type Result, type Row, type Scene } from '@universal-analytics/core';
 import { attr, ensure, paintVar, prop } from './dom.ts';
 import { apart } from './measure.ts';
 import { FOCUS, HOVER, token } from './tokens.ts';
@@ -28,7 +28,8 @@ export function companions(m: string, row: Row | undefined, layers: Layer[]): st
  * (marked when its bucket is unfinished), its comparison if the row has one, and each companion of it that a layer
  * encodes, under its suffix: what a range or a tick is drawn from is said as well as shown. */
 export function readout(row: Row, q: Query, catalog: Catalog, layers: Layer[]): string {
-  const dims = (q.by || []).map((d) => formatDimension(row[d], catalog.dimensions[d]!)).join(', '), partial = partialNote(row);
+  // A bin is named by both its ends, as its label on an axis is.
+  const dims = (q.by || []).map((d) => (row[d + '@end'] == null ? formatDimension(row[d], catalog.dimensions[d]!) : formatBin(row[d], row[d + '@end']))).join(', '), partial = partialNote(row);
   const values = q.metrics.map((m) => {
     const def = catalog.metrics[m]!, prev = q.compare === 'previous' ? row[m + '@previous'] : null;
     const more = companions(m, row, layers).filter((f) => row[f] != null).map((f) => ', ' + f.slice(m.length + 1) + ' ' + formatValue(row[f] as number, def)).join('');

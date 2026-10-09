@@ -1,6 +1,6 @@
 import { max, min } from 'd3-array';
 import { scaleBand, scaleLinear, scalePoint, scaleQuantize } from 'd3-scale';
-import { CHAR_W, delta, fmt, fmtPct, fmtTime, formatDimension, formatUnit, formatValue } from './format.ts';
+import { CHAR_W, delta, fmt, fmtPct, fmtTime, formatBin, formatDimension, formatUnit, formatValue } from './format.ts';
 import { arcD, pathD } from './path.ts';
 import { customMarks } from './marks.ts';
 import { leader } from './prose.ts';
@@ -548,25 +548,34 @@ export function seqScale(vals: number[], metric?: MetricDef): { paint(v: number 
 }
 
 // A dimension on x and another on y, and a metric on color: a grid of cells, each painted a step of the sequential ramp.
+// With none on x the grid is one column wide, a strip, and with none on y it is one row tall.
 // Both positions are discrete and the cells meet; the gap between them is the painter's. A cell with no value is
 // `seq.none` and not the lowest step: nothing is not a little. A pair the result has no row for is drawn the same way.
 function sceneMatrix(catalog: Catalog, layers: Layer[], result: Result): Body {
   const l = layers[0]!, { x: xf, y: yf, color: m } = l.encode || {};
-  if (layers.length > 1 || l.mark !== 'cell' || !isDim(catalog, xf) || !isDim(catalog, yf) || typeof m !== 'string' || !(m in catalog.metrics)) {
-    throw new Error('A dimension on both x and y makes a grid, and a grid draws one layer: a "cell" with a metric on color. Write { "mark": "cell", "encode": { "x": "' + xf + '", "y": "' + yf + '", "color": a metric } } alone, or move a dimension off an axis.');
+  if (layers.length > 1 || l.mark !== 'cell' || (xf != null && !isDim(catalog, xf)) || (yf != null && !isDim(catalog, yf)) || (xf == null && yf == null) || typeof m !== 'string' || !(m in catalog.metrics)) {
+    throw new Error('A dimension on both x and y makes a grid, and a grid draws one layer: a "cell" with a metric on color. Write { "mark": "cell", "encode": { "x": "' + xf + '", "y": "' + yf + '", "color": a metric } } alone, leave x or y out for one column or one row, or move a dimension off an axis.');
   }
   // Each dimension in its own order, which is the engine's, so the grid does not turn with the ranking.
-  const domain = (f: string) => [...new Set(((result.totalsBy && result.totalsBy[f]) || result.rows).map((r) => r[f] as string))];
-  const xs = domain(xf), ys = domain(yf), at = new Map(result.rows.map((r) => [r[xf] + '\n' + r[yf], r[m] as number | null | undefined]));
+  const domain = (f: string) => [...new Set(((result.totalsBy && result.totalsBy[f]) || result.rows).map((r) => String(r[f])))];
+  // A binned quantity has an order of its own, least first, whatever the engine ranked its rows by.
+  const binned = (f: string | undefined) => (f == null ? [''] : catalog.dimensions[f]!.type === 'number' ? domain(f).sort((a, b) => Number(a) - Number(b)) : domain(f));
+  const of = (r: Row, f: string | undefined) => (f == null ? '' : String(r[f]));
+  const xs = binned(xf), ys = binned(yf), at = new Map(result.rows.map((r) => [of(r, xf) + '\n' + of(r, yf), r[m] as number | null | undefined]));
   // The colour scale runs from the least to the most of the cells drawn. That is geometry, as the top of a y scale is,
   // and not a total, so it is read from the rows. A domain the catalog states for the metric comes before it.
   const vals = [...at.values()].filter((v): v is number => v != null), seq = seqScale(vals, catalog.metrics[m]!);
   const nodes: SceneNode[] = [], id = layerKeys(layers)[0]!, role = roleOf(l), nx = xs.length, ny = ys.length;
   // Every sixth label stays, and the rest are ranked to be given up where they would meet: every third goes last.
   const rank = (i: number) => (i % 6 ? { rank: i % 3 ? 2 : 1 } : {});
+  const end = (f: string, v: string) => result.rows.find((r) => String(r[f]) === v)?.[f + '@end'];
   const tick = (f: string, v: string) => formatDimension(v, catalog.dimensions[f]!);
-  ys.forEach((y, j) => nodes.push({ key: 'ytick:' + y, part: 'y-axis', kind: 'text', t: 1 - (j + 0.5) / ny, text: tick(yf, y), anchor: 'end', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...rank(j) }));
-  xs.forEach((x, i) => nodes.push({ key: 'xtick:' + x, part: 'x-axis', kind: 'text', x: (i + 0.5) / nx, text: tick(xf, x), anchor: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...rank(i) }));
+  // Down the side a bin's label is the bin, start to end. Along the foot there is no room for that, and a bin is read
+  // as on any binned axis: an edge at each end of it.
+  if (yf != null) ys.forEach((y, j) => nodes.push({ key: 'ytick:' + y, part: 'y-axis', kind: 'text', t: 1 - (j + 0.5) / ny, text: end(yf, y) == null ? tick(yf, y) : formatBin(y, end(yf, y)), anchor: 'end', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...rank(j) }));
+  const edges = xf != null && xs.length > 0 && xs.every((x) => end(xf, x) != null);
+  if (xf != null) xs.forEach((x, i) => nodes.push({ key: 'xtick:' + x, part: 'x-axis', kind: 'text', x: (i + (edges ? 0 : 0.5)) / nx, text: tick(xf, x), anchor: edges && !i ? 'start' : 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...rank(i) }));
+  if (edges) nodes.push({ key: 'xtick:end', part: 'x-axis', kind: 'text', x: 1, text: String(end(xf!, xs[nx - 1]!)), anchor: 'end', font: 'tick', paint: 'ink.muted', layer: 'guide' });
   // A row of the grid at a time, from the top: reading order.
   ys.forEach((y, j) => xs.forEach((x, i) => {
     const v = at.get(x + '\n' + y);

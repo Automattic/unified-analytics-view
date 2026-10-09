@@ -19,6 +19,8 @@ const css = `
 .uav[data-layout="matrix"] { --uav-body-block: var(--uav-axes-height, 184px); }
 .uav[data-layout="matrix"] .uav-body { display: grid; grid-template: "y plot" minmax(0, 1fr) ". x" auto "ramp ramp" auto / auto minmax(0, 1fr); }
 .uav[data-layout="matrix"] [data-thin] { visibility: hidden; }
+.uav[data-layout="matrix"]:has(> .uav-body[data-strip]) { --uav-body-block: 52px; }
+.uav-body[data-strip] .uav-ramp { display: none; }
 .uav-cells { position: absolute; inset: 0; display: grid; gap: 1px; grid-template: repeat(var(--uav-ny), minmax(0, 1fr)) / repeat(var(--uav-nx), minmax(0, 1fr)); }
 .uav-cells > div { display: contents; }
 .uav-cells i { grid-area: var(--uav-cy) / var(--uav-cx); background: var(--uav-paint); border-radius: ${token('border-radius-cell')}; }
@@ -103,7 +105,8 @@ export const matrix: LayoutPainter = {
       if (!box) return;
       const all = Array.from(box.querySelectorAll<HTMLElement>(':scope > span:not([data-exit])')).filter((el) => el.getClientRects().length), room = box.getBoundingClientRect()[size];
       const spans = all.map((el) => {
-        const s = el.getBoundingClientRect()[size], lo = Number(el.style.getPropertyValue(at)) * room - s / 2;
+        // A label stands about its ratio, or from it or up to it where it is anchored at an end.
+        const s = el.getBoundingClientRect()[size], lo = Number(el.style.getPropertyValue(at)) * room - s * ({ start: 0, end: 1 }[el.dataset.anchor ?? ''] ?? 0.5);
         return { lo, hi: lo + s, rank: Number(el.dataset.rank) || 0 };
       });
       // A label that would run past the far edge goes before the rest are thinned: whatever holds a view may clip there.
@@ -122,15 +125,17 @@ export const matrix: LayoutPainter = {
     for (const el of [yAxis, xAxis, ramp]) el.setAttribute('aria-hidden', 'true');
     const texts = (part: string) => scene.nodes.filter((n): n is TextNode => n.part === part && n.kind === 'text');
     keyed(yAxis, texts('y-axis'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-t', n.t); });
-    keyed(xAxis, texts('x-axis'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-x', n.x); });
+    keyed(xAxis, texts('x-axis'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-x', n.x); el.setAttribute('data-anchor', n.anchor); });
     keyed(ramp, scene.nodes.filter((n) => n.part === 'ramp'), (n) => (n.kind === 'text' ? 'span' : 'i'), (el, n) => { if (n.kind === 'text') text(el, n); });
 
     if (!grids.has(cells)) bind(cells);
-    const at = new Map(data.result.rows.map((r) => [r[xf!] + '\n' + r[yf!], r])), rows = new Map<string, Row>();
+    const at = new Map(data.result.rows.map((r) => [(xf ? r[xf] : '') + '\n' + (yf ? r[yf] : ''), r])), rows = new Map<string, Row>();
     grids.set(cells, { nx: xs.length, ny: ys.length, rows, fresh: false });
     prop(cells, '--uav-nx', xs.length); prop(cells, '--uav-ny', ys.length);
     attr(cells, 'role', 'grid'); attr(cells, 'tabindex', xs.length && ys.length ? 0 : null);
-    attr(cells, 'aria-label', dims[yf!]!.label + ' by ' + dims[xf!]!.label);
+    attr(cells, 'aria-label', [yf, xf].filter(Boolean).map((f) => dims[f!]!.label).join(' by '));
+    // One row is as tall as a cell and no taller: the stylesheet gives a strip its own height.
+    body.toggleAttribute('data-strip', !yf);
     const by = new Map<string, RectNode[]>();
     for (const n of scene.nodes) if (n.part === 'plot' && n.kind === 'rect' && n.pair) by.set(n.pair[1], (by.get(n.pair[1]) ?? []).concat(n));
     // A row of the grid has no node in the scene, so it is keyed here by its dimension value. It takes no box of its own.
@@ -155,7 +160,7 @@ export const matrix: LayoutPainter = {
   // ponytail: the cells' metric alone. A second metric or a comparison has no place in a pivot of one value yet.
   table(table, title, scene, { layers, result, catalog }) {
     const { x: xf, y: yf, color: m } = layers[0]!.encode as Record<string, string>, M = catalog.metrics[m!]!;
-    const at = new Map(result.rows.map((r) => [r[xf!] + '\n' + r[yf!], r[m!]]));
+    const at = new Map(result.rows.map((r) => [(xf ? r[xf] : '') + '\n' + (yf ? r[yf] : ''), r[m!]]));
     const value = (v: Row[string]) => formatValue(v as number | null, M, 'exact');
     const total = (f: string, k: string) => value(result.totalsBy?.[f]?.find((r) => r[f] === k)?.[m!]);
     const cell = (tr: HTMLTableRowElement, s: string, scope?: 'col' | 'row', num = !scope) => {
@@ -165,18 +170,26 @@ export const matrix: LayoutPainter = {
     table.replaceChildren();
     if (title) table.createCaption().textContent = title;
     const head = table.createTHead().insertRow(), body = table.createTBody(), xs = scene.rows ?? [];
-    cell(head, catalog.dimensions[yf!]!.label, 'col');
-    for (const x of xs) cell(head, formatDimension(x, catalog.dimensions[xf!]!), 'col', true);
+    const foot = table.createTFoot().insertRow();
+    cell(foot, 'Total', 'row');
+    // A strip is a list: its one dimension down the side, and the metric's own column, with no total beside it to repeat it.
+    if (!xf || !yf) {
+      const f = (yf || xf)!;
+      cell(head, catalog.dimensions[f]!.label, 'col'); cell(head, M.label, 'col', true);
+      for (const k of (yf ? scene.ys : xs) ?? []) { const tr = body.insertRow(); cell(tr, formatDimension(k, catalog.dimensions[f]!), 'row'); cell(tr, value(at.get(yf ? '\n' + k : k + '\n'))); }
+      cell(foot, value(result.totals[m!]));
+      return;
+    }
+    cell(head, catalog.dimensions[yf]!.label, 'col');
+    for (const x of xs) cell(head, formatDimension(x, catalog.dimensions[xf]!), 'col', true);
     cell(head, 'Total', 'col', true);
     for (const y of scene.ys ?? []) {
       const tr = body.insertRow();
-      cell(tr, formatDimension(y, catalog.dimensions[yf!]!), 'row');
+      cell(tr, formatDimension(y, catalog.dimensions[yf]!), 'row');
       for (const x of xs) cell(tr, value(at.get(x + '\n' + y)));
-      cell(tr, total(yf!, y));
+      cell(tr, total(yf, y));
     }
-    const foot = table.createTFoot().insertRow();
-    cell(foot, 'Total', 'row');
-    for (const x of xs) cell(foot, total(xf!, x));
+    for (const x of xs) cell(foot, total(xf, x));
     cell(foot, value(result.totals[m!]));
   },
 };

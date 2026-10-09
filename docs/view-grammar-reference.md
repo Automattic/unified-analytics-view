@@ -242,7 +242,7 @@ The JSON Schema for a spec is `packages/core/schema/view.schema.json`, and the c
 | `text` | y, text; in a plot x, y, text | A label per row, a column of values, or a label on a point | Proven in rows; in the plot built October 8 |
 | `dot` | x, y, size, color | A point. Its radius is the painter's, in pixels | Built October 8 |
 | `tick` | x, y | A short stroke across its band at a value | Built October 8 |
-| `cell` | x, y, color | Both positions discrete; colour quantized to the `seq` ramp | Built October 8 |
+| `cell` | x, y, color | Both positions discrete; colour quantized to the `seq` ramp. With no x it is one column and with no y one row, a strip. A binned dimension's row is labelled by its bin, and along the foot at its edges | Built October 8; the strip October 9 |
 | `arc` | angle, radius (a number), color | Its own mark. No general polar coordinate system | Built October 8 |
 
 "Built October 8" means built, tested and looked at in headless Chromium by the agent that built it. What each one found is in `docs/chart-coverage-plan.md`, section 8.
@@ -265,7 +265,7 @@ A custom mark registered in code and referenced by name is the escape hatch for 
 | `rows` | A dimension on y | The ranked bar list: a bar behind a label and a value per row |
 | `band` | A dimension on color only | One stacked, normalized bar with a legend |
 | `cartesian` | A metric on x and on y | Points: `dot`, `text`, rules on either axis |
-| `matrix` | A dimension on x and on y | A grid of `cell`s with a ramp |
+| `matrix` | A dimension on x and on y, or a `cell` with one on either alone | A grid of `cell`s with a ramp |
 | `radial` | Anything on `angle` | `arc`s about one centre |
 | a custom mark's name | A layer with that mark | Whatever the mark draws, alone |
 

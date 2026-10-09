@@ -71,6 +71,27 @@ describe('one answer of the Spacefast query API, as a view takes it', () => {
     expect(catalog.dimensions.scroll_depth_bucket!.type).toBe('number');
     expect(result.rows).toEqual([{ scroll_depth_bucket: 0, 'scroll_depth_bucket@end': 10, page_views: 40 }, { scroll_depth_bucket: 90, 'scroll_depth_bucket@end': 100, page_views: 12 }, { scroll_depth_bucket: null, 'scroll_depth_bucket@end': null, page_views: 3 }]);
   });
+  it('scroll buckets draw as a strip: a cell layer with no x is one column, a row for each bin', () => {
+    const bins: ApiResult = { ...answer('countries'), columns: [{ kind: 'dimension', id: 'scroll_depth_bucket', label: 'Deepest scroll', valueType: 'scroll_bucket' }, answer('countries').columns[1]!], rows: [{ scroll_depth_bucket: '0', page_views: 40 }, { scroll_depth_bucket: '90', page_views: 25 }, { scroll_depth_bucket: '10', page_views: 12 }] };
+    const { query, result, catalog } = adapt(bins);
+    const spec = { spec: 'view/0', query, layers: [{ mark: 'cell', encode: { y: 'scroll_depth_bucket', color: 'page_views' } }] } as Spec;
+    const plan = resolve(spec, result, makeContainer(346), catalog), scene = buildScene(plan, spec.query, result, catalog);
+    expect(plan.layout).toBe('matrix');
+    const cells = scene.nodes.filter((n) => n.part === 'plot') as { x: number; w: number; pair: string[] }[];
+    expect(cells.map((c) => [c.x, c.w, c.pair])).toEqual([[0, 1, ['', '0']], [0, 1, ['', '10']], [0, 1, ['', '90']]]);
+    expect(scene.nodes.filter((n) => n.part === 'y-axis').map((n) => (n as { text: string }).text)).toEqual(['0–10', '10–20', '90–100']);
+    expect(scene.nodes.some((n) => n.part === 'x-axis')).toBe(false);
+  });
+  it('a cell layer with no y is one row, and a binned row is labelled at its edges', () => {
+    const catalog = { metrics: { arrivals: { label: 'Arrivals', unit: 'count' as const, polarity: 'none' as const } }, dimensions: { ago: { label: 'Seconds from now', type: 'number' as const } } };
+    const query = { metrics: ['arrivals'], by: ['ago'] }, result = { rows: [{ ago: -30, 'ago@end': -20, arrivals: 0 }, { ago: -20, 'ago@end': -10, arrivals: 2 }, { ago: -10, 'ago@end': 0, arrivals: 1 }], totals: { arrivals: 3 }, meta: { range: 'now', compare: null, notes: [] } };
+    const spec = { spec: 'view/0', query, layers: [{ mark: 'cell', encode: { x: 'ago', color: 'arrivals' } }] } as Spec;
+    const plan = resolve(spec, result, makeContainer(346), catalog), scene = buildScene(plan, query, result, catalog);
+    expect(plan.layout).toBe('matrix');
+    expect((scene.nodes.filter((n) => n.part === 'plot') as { y: number; h: number; pair: string[] }[]).map((c) => [c.y, c.h, c.pair])).toEqual([[0, 1, ['-30', '']], [0, 1, ['-20', '']], [0, 1, ['-10', '']]]);
+    expect((scene.nodes.filter((n) => n.part === 'x-axis') as { text: string; x: number }[]).map((n) => [n.text, n.x])).toEqual([['-30', 0], ['-20', 1 / 3], ['-10', 2 / 3], ['0', 1]]);
+    expect(scene.nodes.some((n) => n.part === 'y-axis')).toBe(false);
+  });
   it('money is a metric for each currency, in the currency\'s own units, and nothing is added across them', () => {
     const { query, result, catalog } = adapt(answer('goals'));
     expect(query.metrics).toEqual(['event_occurrences', 'revenue.eur', 'revenue.gbp', 'revenue.usd']);

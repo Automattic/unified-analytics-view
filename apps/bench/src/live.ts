@@ -42,7 +42,7 @@ const CARDS: { title: string; of: string; make: Make }[] = [
   { title: 'Pages, then and now', of: 'pages', make: one('dumbbell') },
   { title: 'Engaged time by page', of: 'engaged', make: one('bar-list') },
   { title: 'Where readers come from', of: 'referrers', make: changes },
-  { title: 'How far people read', of: 'scroll', make: (q) => ({ query: q, layers: [{ mark: 'bar', encode: { x: 'scroll_depth_bucket', y: 'page_views' } }] }) },
+  { title: 'How far people read', of: 'scroll', make: (q) => ({ query: q, layers: [{ mark: 'cell', encode: { y: 'scroll_depth_bucket', color: 'page_views' } }] }) },
 ];
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {

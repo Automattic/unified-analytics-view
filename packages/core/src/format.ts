@@ -76,6 +76,10 @@ export function formatValue(v: number | null | undefined, metric: MetricDef, for
 }
 /** A dimension's value as its catalog entry sets it: a day as "Sep 8", an hour as "Sep 8, 3 PM", a country's code as its
  * name, a category as itself. A code the engine left empty is no value, and one that is not a code is said as it came. */
+/** A bin by both its ends: "10–20", and in words where an end is below zero, since a dash there reads as a sign. */
+export function formatBin(start: Row[string], end: Row[string]): string {
+  return end == null ? String(start) : start + (Number(start) < 0 || Number(end) < 0 ? ' to ' : '–') + end;
+}
 export function formatDimension(v: Row[string], dim: DimensionDef): string {
   if (v == null || (dim.values && v === '')) return '–';
   if (dim.values === 'country') return /^[A-Z]{2}$/.test(String(v)) ? RN.of(String(v)) ?? String(v) : String(v);

@@ -1,19 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import { buildScene, resolve, unboundedContainer } from '@universal-analytics/core';
 import { catalog, runQuery, samples } from '@universal-analytics/fixtures';
-import { CELL, DOTS_CSS, FONT, amount, dotted, rolls, unit } from '../packages/dom/src/dots.ts';
+import { CELL, DOTS_CSS, FACE, FAMILY, amount, dotted, rolls, unit } from '../packages/dom/src/dots.ts';
 import { NUMBER_FITS, SCREEN_LEAST, fitNumber } from '../packages/dom/src/measure.ts';
 import { cartesian } from '../packages/dom/src/layouts/cartesian.ts';
 import { once } from '../packages/dom/src/motion.ts';
 import { BASE_CSS } from '../packages/dom/src/view.ts';
 
-// The dot-matrix face is glyph data and a stylesheet made from it, so both are held here with no DOM. How a number
+// The dot-matrix face is a font a page loads and a stylesheet that sets it, so the stylesheet is held here with no DOM. How a number
 // looks in it is checked in a browser on the bench.
 describe('the dot-matrix face', () => {
-  it('has glyphs of five cells by seven, and the prototype\'s for the digits', () => {
-    for (const [ch, rows] of Object.entries(FONT)) { expect(rows, ch).toHaveLength(7); for (const row of rows) expect(row, ch).toMatch(/^[01]{5}$/); }
-    expect(FONT['0']).toEqual(['01110', '10001', '10011', '10101', '11001', '10001', '01110']);
-    expect(FONT['7']).toEqual(['11111', '00001', '00010', '00100', '01000', '01000', '01000']);
+  it('is a pixel face a page loads, set at eight cells to the em so one of its pixels is one cell', () => {
+    expect(FAMILY).toBe('Ans Mono Scroll');
+    expect(DOTS_CSS).toContain('font: normal 400 calc(var(--uav-u) * 8) / 1 "Ans Mono Scroll", "Ans Mono", monospace;');
+    // Its optical size is forced, to draw each pixel smaller than its cell: the size it is set at would fill it.
+    expect(DOTS_CSS).toContain('font-optical-sizing: none;');
+    expect(DOTS_CSS).toContain('font-variation-settings: "opsz" var(--ua-charts-font-optical-size-display, 72), "SCRL" 0;');
+    for (const ch of '0123456789.,-') expect(FACE, ch).toContain(ch);
   });
   it('sets a value whole, or not at all: one character it has no glyph for and the value stays in the plain face', () => {
     expect(dotted('10.5k')).toEqual(['1', '0', '.', '5', 'k']);
@@ -26,14 +29,12 @@ describe('the dot-matrix face', () => {
       for (const n of scene.nodes) if (n.kind === 'text' && n.font === 'display') for (const s of [n.text, n.short ?? n.text]) expect(dotted(s), name + ': ' + s).not.toBeNull();
     }
   });
-  it('lights a glyph\'s cells as shadows a whole number of cells apart, one rule a character', () => {
-    // The first column is a cell from where the shadows start, because a box hides a shadow under it.
-    expect(DOTS_CSS).toContain('.uav-glyph-run i[data-ch="-"]::before, .uav-glyph-run i[data-was="-"]::after { box-shadow: calc(var(--uav-u) * 1) calc(var(--uav-u) * 3), calc(var(--uav-u) * 2) calc(var(--uav-u) * 3), calc(var(--uav-u) * 3) calc(var(--uav-u) * 3), calc(var(--uav-u) * 4) calc(var(--uav-u) * 3), calc(var(--uav-u) * 5) calc(var(--uav-u) * 3); }');
-    // A point is set back a cell and advances by four.
-    expect(DOTS_CSS).toContain('.uav-glyph-run i[data-ch="."]::before, .uav-glyph-run i[data-was="."]::after { box-shadow: calc(var(--uav-u) * 1) calc(var(--uav-u) * 5), calc(var(--uav-u) * 2) calc(var(--uav-u) * 5), calc(var(--uav-u) * 1) calc(var(--uav-u) * 6), calc(var(--uav-u) * 2) calc(var(--uav-u) * 6); }');
+  it('sets a character in a slot six cells by seven, with no rule of its own: the slot says which it is', () => {
+    expect(DOTS_CSS).toContain('.uav-glyph-run i::before { content: attr(data-ch); }');
+    expect(DOTS_CSS).toContain('.uav-glyph-run i[data-roll]::after { content: attr(data-was); }');
+    expect(DOTS_CSS).not.toContain('box-shadow');
+    // A point advances by four cells, not six: the face sets it at the start of its own.
     expect(DOTS_CSS).toContain('.uav-glyph-run i[data-ch="."] { inline-size: calc(var(--uav-u) * 4); }');
-    for (const ch of Object.keys(FONT)) if (ch !== ' ') expect(DOTS_CSS, ch).toContain(`.uav-glyph-run i[data-ch="${ch}"]::before, .uav-glyph-run i[data-was="${ch}"]::after { box-shadow:`);
-    expect(DOTS_CSS).not.toContain('i[data-ch=" "]::before');
   });
   it('keeps a cell the same whole number of px everywhere, and is in the element\'s base sheet', () => {
     expect(DOTS_CSS).toContain('--uav-u: 4px;');
@@ -54,9 +55,7 @@ describe('the dot-matrix face', () => {
     expect(DOTS_CSS).not.toMatch(/color-screen|elevation-screen|radius-screen|padding(?!-block-end: var\(--uav-u\))/);
     expect(DOTS_CSS).not.toContain('tight');
   });
-  it('lights a cell as a shadow of the one box a character has, and sets a unit in type, in capitals', () => {
-    expect(DOTS_CSS).toContain('.uav-glyph-run i::before, .uav-glyph-run i[data-roll]::after { content: ""; position: absolute;');
-    expect(DOTS_CSS).toMatch(/\.uav-glyph-run i\[data-ch="7"\]::before, .* \{ box-shadow: /);
+  it('sets a unit in type, in capitals, beside the cells', () => {
     expect(['k', 'M', '%', 's', '$', '€'].every(unit)).toBe(true);
     expect(Array.from('1,234.5 -–').some(unit)).toBe(false);
     expect(DOTS_CSS).toMatch(/\.uav-glyph-run sup \{[^}]*font-size: var\(--uav-font-value\);[^}]*text-transform: uppercase;/);
@@ -98,13 +97,13 @@ describe('the dot-matrix face', () => {
     expect(amount('1.2M')).toBe(1200000); expect(amount('-4')).toBe(-4); expect(amount('–')).toBeNull();
     expect(amount('999')! < amount('1.2k')!).toBe(true);
   });
-  it('moves the old glyph out and the new one in a whole cell a step, each waiting its turn, and not at all with reduced motion', () => {
+  it('rolls on the face\'s own axis, a whole row a step, each character waiting its turn, and not at all with reduced motion', () => {
     expect(DOTS_CSS).toContain('animation: var(--ua-charts-motion-duration-roll, 384ms) steps(8) calc(var(--uav-wait, 0) * var(--ua-charts-motion-duration-roll, 384ms) / 8) both;');
-    expect(DOTS_CSS).toContain('@keyframes uav-roll-in-u { from { translate: 0 calc(var(--uav-u) * 8); } to { translate: 0 0; } }');
-    expect(DOTS_CSS).toContain('@keyframes uav-roll-out-d { from { translate: 0 0; } to { translate: 0 calc(var(--uav-u) * 8); } }');
-    // Outside the motion query the old glyph is not drawn, so the new one simply stands.
+    // The new character comes up from eight rows under, and the old one goes out over the top: down, the other way.
+    expect(DOTS_CSS).toContain('@keyframes uav-roll-in-u { from { font-variation-settings: "opsz" var(--ua-charts-font-optical-size-display, 72), "SCRL" -8; } to { font-variation-settings: "opsz" var(--ua-charts-font-optical-size-display, 72), "SCRL" 0; } }');
+    expect(DOTS_CSS).toContain('@keyframes uav-roll-out-d { from { font-variation-settings: "opsz" var(--ua-charts-font-optical-size-display, 72), "SCRL" 0; } to { font-variation-settings: "opsz" var(--ua-charts-font-optical-size-display, 72), "SCRL" -8; } }');
+    // Outside the motion query the old character is not drawn, so the new one simply stands.
     expect(DOTS_CSS).toMatch(/\.uav-glyph-run i\[data-roll\]::after \{ display: none; \}\n@media \(prefers-reduced-motion: no-preference\)/);
-    expect(DOTS_CSS).toContain('overflow: hidden; }');
   });
 
   // What plays once is taken off when it is over, so a part a resize brings back does not play again.

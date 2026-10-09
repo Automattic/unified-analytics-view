@@ -45,6 +45,8 @@ export const BASE_CSS = `@layer uav {
 /* Words set among the marks, a point's name or what a rule stands for, are read as words: in the page's own face,
  * whatever face the axis and the small numbers have. */
 .uav-plot :is(.uav-f-tick, .uav-f-value) { font-family: inherit; }
+/* Small type in a pixel face is set with every pixel whole: the optical size a browser would pick for it thins them unevenly. */
+.uav-f-tick, .uav-f-value { font-optical-sizing: none; }
 .uav-f-display { font-size: var(--uav-font-display); line-height: calc(34 / 37); font-weight: ${token('font-weight-display')}; font-variant-numeric: tabular-nums; letter-spacing: ${token('letter-spacing-display')}; }
 
 /* The number: a value, then a delta and a note, each on its own line. It is in every scene and shows when the

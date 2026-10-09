@@ -6,9 +6,12 @@
  * the screen's and do not move. A view's number shares its screen with the change and the note under it, which are
  * words set on the screen's rows; a donut's hole has a screen to itself.
  *
- * It is drawn by the stylesheet. A character is one element, and its lit cells are that element's shadows, each a
- * whole number of cells from the first. The unlit cells are one background. So a number is as many elements as it
- * has characters, nothing is drawn in script, and the strict content security policy holds.
+ * It is set in type: Ans Mono Scroll, the numerals of a pixel face of five cells by seven in an em of eight, at eight
+ * cells to the em, so one of its pixels is one cell. A character is one element in a slot of its own, and the unlit
+ * cells are one background. The face has two axes. Its optical size is forced up, which draws each pixel smaller in
+ * its cell, so the pitch of the screen shows; and its scroll sets a character some rows up or down, which is the roll.
+ * A page loads the face (packages/tokens/fonts/ans-mono-scroll.css). Where it has not, a number is set in the page's
+ * own face, as a value the face has no character for is, and is set in the face when it arrives.
  *
  * A cell is CELL px, everywhere: the face's size does not move it, so two screens side by side have the same dots.
  * The lit cells have a colour of their own, the screen's label, and the unlit ones are a tenth of it.
@@ -34,28 +37,15 @@ import { token } from './tokens.ts';
 /** A cell, in px: a dot of 3 and a gap of 1. */
 export const CELL = 4;
 
-/** Five columns by seven rows, a row a string, "1" where a cell is lit. */
-export const FONT: Record<string, string[]> = {
-  '0': ['01110', '10001', '10011', '10101', '11001', '10001', '01110'], '1': ['00100', '01100', '00100', '00100', '00100', '00100', '01110'],
-  '2': ['01110', '10001', '00001', '00010', '00100', '01000', '11111'], '3': ['11111', '00010', '00100', '00010', '00001', '10001', '01110'],
-  '4': ['00010', '00110', '01010', '10010', '11111', '00010', '00010'], '5': ['11111', '10000', '11110', '00001', '00001', '10001', '01110'],
-  '6': ['00110', '01000', '10000', '11110', '10001', '10001', '01110'], '7': ['11111', '00001', '00010', '00100', '01000', '01000', '01000'],
-  '8': ['01110', '10001', '10001', '01110', '10001', '10001', '01110'], '9': ['01110', '10001', '10001', '01111', '00001', '00010', '01100'],
-  '.': ['00000', '00000', '00000', '00000', '00000', '01100', '01100'], ',': ['00000', '00000', '00000', '00000', '01100', '00100', '01000'],
-  'k': ['10000', '10000', '10010', '10100', '11000', '10100', '10010'], 'M': ['10001', '11011', '10101', '10101', '10001', '10001', '10001'],
-  'B': ['11110', '10001', '10001', '11110', '10001', '10001', '11110'], '%': ['11000', '11001', '00010', '00100', '01000', '10011', '00011'],
-  '-': ['00000', '00000', '00000', '11111', '00000', '00000', '00000'], '–': ['00000', '00000', '00000', '11111', '00000', '00000', '00000'],
-  // Beyond the prototype's, for what a value is said in: money, a length of time, and bytes (core's format.ts).
-  '$': ['00100', '01111', '10100', '01110', '00101', '11110', '00100'], '€': ['00110', '01001', '11100', '01000', '11100', '01001', '00110'],
-  '£': ['00110', '01001', '01000', '11100', '01000', '01000', '11111'], '¥': ['10001', '01010', '00100', '11111', '00100', '11111', '00100'],
-  'm': ['00000', '00000', '11010', '10101', '10101', '10101', '10101'], 's': ['00000', '00000', '01111', '10000', '01110', '00001', '11110'],
-  'h': ['10000', '10000', '10110', '11001', '10001', '10001', '10001'], 'G': ['01110', '10001', '10000', '10111', '10001', '10001', '01111'],
-  'T': ['11111', '00100', '00100', '00100', '00100', '00100', '00100'], 'P': ['11110', '10001', '10001', '11110', '10000', '10000', '10000'],
-  ' ': ['00000', '00000', '00000', '00000', '00000', '00000', '00000'],
-};
+/** The characters a number is made of. The figures and the marks between them are the face's; the letters and signs
+ * are units, set in type beside the cells (below). */
+export const FACE = '0123456789.,-– kMB%$€£¥mshGTP';
+/** The face, by the name a page loads it under. */
+export const FAMILY = 'Ans Mono Scroll';
+
 /** A character that takes less than a glyph and its gap: how many cells it advances by, and how far its glyph is
  * set back to sit at the start of them. The rest advance by six. */
-const NARROW: Record<string, [advance: number, back: number]> = { '.': [4, 1], ',': [4, 1], ' ': [3, 0] };
+const NARROW: Record<string, [advance: number, back: number]> = { '.': [4, 0], ',': [4, 0], ' ': [3, 0] };
 /** What a value is counted in, and the letter that shortens it: `k`, `%`, `s`, `$`. These are words about the number
  * and not the number, so they are set in type beside the cells, in capitals at the top of them, and do not roll. The
  * face keeps their glyphs: a donut's hole and the ruler are the same string either way. */
@@ -83,13 +73,11 @@ export function rolls(from: string[], to: string[]): ({ was: string; wait: numbe
  * set whole in one face or the other and never in two. */
 export function dotted(s: string): string[] | null {
   const chars = Array.from(s);
-  return chars.length > 0 && chars.every((ch) => Object.hasOwn(FONT, ch)) ? chars : null;
+  return chars.length > 0 && chars.every((ch) => FACE.includes(ch)) ? chars : null;
 }
 
 const ROLL = token('motion-duration-roll');
-const U = 'var(--uav-u)', lit = (ch: string) => FONT[ch]!.flatMap((row, y) => Array.from(row, (bit, x) => (bit === '1' ? [x, y] as const : null)).filter((c) => c != null));
-/* The shadows start a cell before the glyph, so the first column is a shadow too: a box hides a shadow that is under it. */
-const shadows = (ch: string) => lit(ch).map(([x, y]) => `calc(${U} * ${x + 1 - (NARROW[ch]?.[1] ?? 0)}) ${y ? `calc(${U} * ${y})` : '0'}`).join(', ');
+const U = 'var(--uav-u)', OPSZ = token('font-optical-size-display'), at = (scroll: number) => `font-variation-settings: "opsz" ${OPSZ}, "SCRL" ${scroll};`;
 
 /** It joins the base sheet inside `@layer uav`. `--uav-u` is a cell, `--uav-d` the dot in it (a cell less a px, or
  * less two from eight px up, as the prototype's are) and `--uav-g` the gap. The run is at least as wide as the screen,
@@ -119,18 +107,24 @@ export const DOTS_CSS = `
 @keyframes uav-run { 0%, 15% { --uav-s: 0; } 85%, 100% { --uav-s: 1; } }
 .uav-glyphs:hover .uav-glyph-run { animation: uav-run 4s linear infinite alternate; }
 @media (prefers-reduced-motion: reduce) { .uav-glyphs:hover .uav-glyph-run { animation: none; --uav-s: 1; } }
-.uav-glyph-run i { position: relative; flex: none; inline-size: calc(${U} * 6); block-size: calc(${U} * 7); overflow: hidden; }
+/* A slot is six cells by seven, and its character is set from the slot's corner at eight cells to the em: seven rows
+ * of it are the slot's, and the eighth, where a comma's tail is, is the row under it. The face is as wide as a slot. */
+.uav-glyph-run i { position: relative; flex: none; inline-size: calc(${U} * 6); block-size: calc(${U} * 7);
+  font: normal 400 calc(${U} * 8) / 1 "${FAMILY}", "Ans Mono", monospace; letter-spacing: 0; font-optical-sizing: none; }
 .uav-glyph-run i:last-child { margin-inline-end: calc(${U} * -1); }
 /* A unit, in type: in capitals, in the face, size and weight of the change under the number, so the two read as one voice.
  * It is three cells wide a character so that what follows it is still on the grid, and four rows tall at the top of
  * the screen. */
 .uav-glyph-run sup { flex: none; align-self: flex-start; inline-size: calc(${U} * 3); font-family: ${token('font-family-value')}; font-size: var(--uav-font-value); line-height: calc(${U} * 4);
   font-weight: ${token('font-weight-value')}; font-variant-numeric: tabular-nums; letter-spacing: 0; text-transform: uppercase; vertical-align: baseline; white-space: nowrap; }
-.uav-glyph-run i::before, .uav-glyph-run i[data-roll]::after { content: ""; position: absolute; inset-block-start: 0; left: calc(${U} * -1); inline-size: var(--uav-d); block-size: var(--uav-d); }
-${Object.entries(NARROW).map(([ch, [advance]]) => `.uav-glyph-run i[data-ch="${ch}"] { inline-size: calc(${U} * ${advance}); }`).join('\n')}
-${Object.keys(FONT).filter((ch) => lit(ch).length).map((ch) => `.uav-glyph-run i[data-ch="${ch}"]::before, .uav-glyph-run i[data-was="${ch}"]::after { box-shadow: ${shadows(ch)}; }`).join('\n')}
-/* The roll. The new glyph is the slot's own and the old one is laid over it; each goes eight cells, a cell a step,
- * and waits its turn before it starts, holding where it starts from. The old one ends outside the slot, which cuts it. */
+.uav-glyph-run i::before, .uav-glyph-run i[data-roll]::after { position: absolute; inset-block-start: 0; left: 0; ${at(0)} }
+.uav-glyph-run i::before { content: attr(data-ch); }
+.uav-glyph-run i[data-roll]::after { content: attr(data-was); }
+${Object.entries(NARROW).map(([ch, [advance, back]]) => `.uav-glyph-run i[data-ch="${ch}"] { inline-size: calc(${U} * ${advance}); }${back ? `\n.uav-glyph-run i[data-ch="${ch}"]::before { left: calc(${U} * -${back}); }` : ''}`).join('\n')}
+/* The roll, which is the face's own: its SCRL axis sets a character a row up for each step of it, and cuts it at the
+ * slot's edge, so the new character comes in from eight rows off and the old one, laid over it, goes out the same way.
+ * A whole step at a time, which the face also holds to between steps. Each waits its turn before it starts,
+ * holding where it starts from. */
 .uav-glyph-run i[data-roll]::after { display: none; }
 @media (prefers-reduced-motion: no-preference) {
   .uav-glyph-run i[data-roll]::after { display: block; }
@@ -140,23 +134,32 @@ ${Object.keys(FONT).filter((ch) => lit(ch).length).map((ch) => `.uav-glyph-run i
   .uav-glyph-run i[data-roll="d"]::before { animation-name: uav-roll-in-d; }
   .uav-glyph-run i[data-roll="d"]::after { animation-name: uav-roll-out-d; }
 }
-@keyframes uav-roll-in-u { from { translate: 0 calc(${U} * 8); } to { translate: 0 0; } }
-@keyframes uav-roll-out-u { from { translate: 0 0; } to { translate: 0 calc(${U} * -8); } }
-@keyframes uav-roll-in-d { from { translate: 0 calc(${U} * -8); } to { translate: 0 0; } }
-@keyframes uav-roll-out-d { from { translate: 0 0; } to { translate: 0 calc(${U} * 8); } }
+@keyframes uav-roll-in-u { from { ${at(-8)} } to { ${at(0)} } }
+@keyframes uav-roll-out-u { from { ${at(0)} } to { ${at(8)} } }
+@keyframes uav-roll-in-d { from { ${at(8)} } to { ${at(0)} } }
+@keyframes uav-roll-out-d { from { ${at(0)} } to { ${at(-8)} } }
 .uav-glyphs-text { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media (forced-colors: active) {
   .uav-glyphs { display: none; }
   .uav-glyphs-text { position: static; inline-size: auto; block-size: auto; overflow: visible; clip-path: none; }
 }`;
 
+/* What is set in the page's face for want of this one, and what each says, until the face comes. */
+const waiting = new Map<Element, string>(), listening = new WeakSet<FontFaceSet>();
+
 /** Set an element's words in the face, or as they are where the face has not every character. The words are kept
  * beside the dots, out of sight. An element that says the same already is not touched. One that said another number
  * in the face rolls to this one: a character that stays keeps its element, and one that changes has a new one, which
  * is what starts its roll. */
 export function dots(el: Element, s: string): void {
-  const chars = dotted(s), had = el.getAttribute('data-dots');
-  if (!chars) { el.removeAttribute('data-dots'); el.textContent = s; return; }
+  const chars = dotted(s), had = el.getAttribute('data-dots'), fonts = el.ownerDocument.fonts as FontFaceSet | undefined;
+  // Without the face there is no screen: the words stand as they are, and are set again when the face has come.
+  if (chars && !fonts?.check(`32px "${FAMILY}"`)) {
+    waiting.set(el, s);
+    if (fonts && !listening.has(fonts)) { listening.add(fonts); fonts.addEventListener('loadingdone', () => { for (const [late, says] of waiting) if (fonts.check(`32px "${FAMILY}"`)) { waiting.delete(late); if (late.isConnected && late.textContent === says) dots(late, says); } }); }
+  }
+  if (!chars || waiting.has(el) && !fonts?.check(`32px "${FAMILY}"`)) { el.removeAttribute('data-dots'); el.textContent = s; return; }
+  waiting.delete(el);
   if (had === s && el.firstChild) return;
   // A slot, and with `was` one that rolls there from it. What the roll goes by comes off when it is over (motion.ts).
   const slot = (ch: string, roll?: { was: string; wait: number }, dir = 'u') => {

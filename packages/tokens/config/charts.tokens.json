@@ -179,16 +179,6 @@
         "$value": "{radius.sm}"
       }
     },
-    "size": {
-      "$type": "dimension",
-      "$description": "The square a mark is drawn in: a line's steps and a bar's edges. At 0 the marks are clean vector.",
-      "pixel": {
-        "$value": {
-          "value": 1,
-          "unit": "px"
-        }
-      }
-    },
     "stroke-width": {
       "$type": "dimension",
       "$description": "A line of the data where its layer gives no width, a rule or a grid line, and the outline of whatever has the reader's attention: the holder with focus, and the mark chosen in it.",
@@ -213,33 +203,46 @@
     },
     "font-family": {
       "$type": "fontFamily",
-      "$description": "The face of a view's axis labels and notes, and of its small numbers: Ans Mono, a pixel face, where the page has loaded it (fonts/ans-mono.css). The words a view is read by, a row's label and the prose, stay in the page's own face.",
+      "$description": "The face of a view's axis labels and notes, and of its small numbers: Ans Mono, a pixel face, where the page has loaded it (fonts/ans-mono.css), and its numerals' cut after it for the signs that one has and it has not. The words a view is read by, a row's label and the prose, stay in the page's own face.",
       "tick": {
-        "$value": "\"Ans Mono\", ui-monospace, monospace"
+        "$value": "\"Ans Mono\", \"Ans Mono Scroll\", ui-monospace, monospace"
       },
       "value": {
-        "$value": "\"Ans Mono\", ui-monospace, monospace"
+        "$value": "\"Ans Mono\", \"Ans Mono Scroll\", ui-monospace, monospace"
       }
     },
     "font-size": {
       "$type": "dimension",
-      "$description": "The four faces of a view's text, and the smaller one its number takes where the larger does not fit. Ticks and small numbers are in a pixel face of eight pixels to the em, set at a pixel and a half of the square a mark is drawn in, which is 12 px and whole device pixels on a screen of two to one. The rest are the fluid scale's steps, so a face follows the width of the view it is in.",
+      "$description": "The four faces of a view's text, and the smaller one its number takes where the larger does not fit. Ticks and small numbers are in a pixel face of eight pixels to the em, set at 12 px: a pixel and a half to each of its own, which is whole device pixels on a screen of two to one. The rest are the fluid scale's steps, so a face follows the width of the view it is in.",
       "tick": {
         "$type": "dimension",
-        "$value": "max(12px, {charts.size.pixel} * 12)"
+        "$value": {
+          "value": 12,
+          "unit": "px"
+        }
       },
       "label": {
         "$value": "{font.size.sm}"
       },
       "value": {
         "$type": "dimension",
-        "$value": "max(12px, {charts.size.pixel} * 12)"
+        "$value": {
+          "value": 12,
+          "unit": "px"
+        }
       },
       "display": {
         "$value": "{font.size.4xl}"
       },
       "display-small": {
         "$value": "{font.size.2xl}"
+      }
+    },
+    "font-optical-size": {
+      "$type": "number",
+      "$description": "How far apart the number's pixels are drawn: the optical size its face is set at, whatever its size. Ans Mono's runs from 8, where a pixel fills its cell, to 144.",
+      "display": {
+        "$value": 72
       }
     },
     "font-weight": {

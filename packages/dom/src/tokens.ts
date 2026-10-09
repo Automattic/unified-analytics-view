@@ -40,9 +40,6 @@ export const TOKENS: Record<string, string> = {
   // The readout stands above the view. Unthemed, a plain shadow straight down.
   'elevation-tooltip': '0 1px 3px color-mix(in srgb, CanvasText 25%, transparent)',
 
-  // The square a mark is drawn in: a line's steps and a bar's edges (pixels.ts). At 0 the marks are clean vector.
-  'size-pixel': '1px',
-
   'stroke-width-line': '2px',
   'stroke-width-rule': '1px',
   'stroke-width-focus': '2px',
@@ -60,6 +57,9 @@ export const TOKENS: Record<string, string> = {
   'font-weight-display': '600',
   'font-weight-heading': '600',
   'letter-spacing-display': '-0.01em',
+  // How far apart the number's pixels are drawn: the optical size its face is set at, whatever its size. The face's own
+  // runs from 8, where a pixel fills its cell, to 144.
+  'font-optical-size-display': '72',
 
   'motion-duration-entrance': '200ms',
   'motion-easing-entrance': 'cubic-bezier(0, 0, 0.2, 1)',

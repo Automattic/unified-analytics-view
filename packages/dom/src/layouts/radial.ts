@@ -1,6 +1,7 @@
 import { arcD, type ArcNode } from '@universal-analytics/core';
 import { ensure, keyed, paintVar, prop, text } from '../dom.ts';
 import type { LayoutPainter } from '../layout.ts';
+import { token } from '../tokens.ts';
 import { paintLegend } from './band.ts';
 
 /* Arcs about one centre, and under them the legend a band has. The part holds its shape: it is as wide as the view up
@@ -13,7 +14,11 @@ const css = `
 .uav[data-layout="radial"] .uav-body { display: flex; flex-direction: column; }
 .uav-radial { position: relative; flex: none; align-self: center; inline-size: min(100%, 160px); aspect-ratio: var(--uav-aspect, 1); container: uav-plot / inline-size; }
 .uav-radial svg { display: block; inline-size: 100%; block-size: 100%; overflow: visible; }
-.uav-radial path { fill: var(--uav-paint); }
+/* A segment is parted from the next by a line of one width from the rim to the middle: its own edge, drawn in the
+ * colour of what the view is on. Two edges lie one on the other, so the line is as wide as either. It is two rules
+ * wide: a hairline at a slant is smoothed to a different weight at every angle, and reads as uneven. The corners
+ * are round, because a mitred one at the middle is a spike into the segment across from it. */
+.uav-radial path { fill: var(--uav-paint); stroke: ${token('color-background')}; stroke-width: calc(${token('stroke-width-rule')} * 2); vector-effect: non-scaling-stroke; stroke-linejoin: round; }
 .uav-hole { position: absolute; inset: 0; display: none; place-items: center; overflow: hidden; pointer-events: none; color: var(--uav-paint); }
 /* The small face of the number, and smaller with the circle: there is no measuring the hole from a stylesheet. */
 .uav-hole.uav-f-display { font-size: clamp(14px, 18cqi, var(--uav-font-display-small)); line-height: 0.92; }

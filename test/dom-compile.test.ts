@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CONTAINER_RULES, FIT_RULES, type FitRule, type Spec } from '@unified-analytics/core';
 import { compileFitRules } from '@unified-analytics/dom';
-import { catalog, runQuery, samples } from '@unified-analytics/fixtures';
+import { catalog, moreSamples, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
 import { GEO_RULES } from '@unified-analytics/geo';
 import { geoPainter } from '@unified-analytics/geo/dom';
 import { LAYOUTS, painterOf } from '../packages/dom/src/layouts/index.ts';
@@ -99,6 +99,21 @@ describe('what <ua-view> checks before it paints', () => {
   it('takes only the catalog\'s own names for a metric or a dimension', () => {
     expect(() => check({ query: { metrics: ['constructor'] } }, result, catalog)).toThrow(/no metric "constructor"\. It has: visitors, pageviews, present/);
     expect(() => check({ ...trend, query: { ...trend.query, by: ['toString'] } }, result, catalog)).toThrow(/no dimension "toString"/);
+  });
+  it('takes a result that answers the query, and says which field one that does not is missing', () => {
+    const pages = samples.pages!.spec, all = { ...samples, ...moreSamples };
+    // Nothing the fixtures answer is turned away, in any data state: no rows, no prior period, a companion left out.
+    for (const s of scenarios) for (const [name, { spec }] of Object.entries(all)) expect(() => check(spec, runQuery(spec.query, s), catalog), name + ', ' + s).not.toThrow();
+    const none = { ...result, rows: [] };
+    const table: [Spec, typeof result, RegExp | null][] = [
+      [trend, result, null],
+      [trend, none, null],
+      [trend, runQuery(trend.query, 'no-prior'), null],
+      [pages, result, /does not carry the query's "page" field: its rows have date\.day, partial, visitors, visitors@previous\. Pass what this spec's query returned.*view\.inputs = \{ spec, result \}/],
+      [{ query: { ...trend.query, metrics: ['pageviews'] } }, result, /does not carry the query's "pageviews" field: its rows have/],
+      [{ query: { ...trend.query, metrics: ['pageviews'] } }, none, /does not carry the query's "pageviews" field: its totals have visitors/],
+    ];
+    for (const [spec, given, error] of table) { const run = expect(() => check(spec, given, catalog)); if (error) run.toThrow(error); else run.not.toThrow(); }
   });
   it('says how to register the painter a custom mark has none of, and asks none of the layouts with no body', () => {
     expect(() => painterOf('blob')).toThrow('No painter is registered for the "blob" layout. Call registerPainter({ layout: "blob", css, paint }) before the view paints.');

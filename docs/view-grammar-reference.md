@@ -534,9 +534,18 @@ Related visual directions not yet built: segmented display type for large numera
 | Stale or late data | — | To do. Freshness should be a visible state |
 | Filtered (bots, consent) | — | To do |
 | Metric unavailable here | — | To do |
-| Error | Message shown outside the view; the last valid view stays drawn | Proven in the bench only |
+| Error | Message shown outside the view; the last valid view stays drawn | Proven in the bench, and in `<ua-view>` for inputs it refuses: the last view stays drawn with the message under it. A view with nothing drawn yet, or one that failed while painting, shows the message alone |
+| Result of another query | Refused, as an error: a row or the totals lack a field the query names. Companions are not required | Proven |
 
 **Open:** whether a delta should exclude the partial day. Today the totals include it.
+
+`<ua-view>` takes its inputs as properties (`spec`, `result`, `catalog`, `rules`) or as JSON in child scripts. A spec and its result belong together, and a host that changes both sets them in one step:
+
+```js
+view.inputs = { spec, result };          // or { spec, result, catalog, rules }; an input left out keeps what it had
+```
+
+Set a task apart, the new spec meets the old result. The view checks the first row and the totals for the query's `by` fields and metrics, refuses a result that lacks one, and names it. A result with no rows is an answer, and is held to its totals alone.
 
 ---
 

@@ -111,7 +111,7 @@ Rows under a height limit: a column flex container with `flex-wrap: wrap` and `o
 
 ## 4. Elements and containers
 
-One custom element, `<ua-view>`, with an open shadow root. It takes `spec`, `result` and `catalog` as properties, or as JSON in child `<script type="application/json" data-for="spec">` elements, so a view can be written as markup alone by an agent or a server template. A property wins over the markup.
+One custom element, `<ua-view>`, with an open shadow root. It takes `spec`, `result` and `catalog` as properties, or as JSON in child `<script type="application/json" data-for="spec">` elements, so a view can be written as markup alone by an agent or a server template. A property wins over the markup. A host that changes more than one sets them at once, `view.inputs = { spec, result }`: an input left out keeps what it had. The paint is queued, so properties set in one task land together too; set a task apart, a spec is refused while the result is still the last one's (reference, section 13).
 
 ```html
 <ua-view>                                     <!-- :host is the `view` container -->

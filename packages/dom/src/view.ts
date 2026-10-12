@@ -152,6 +152,8 @@ const SHAPE: Record<Input, string> = {
   catalog: 'an object with "metrics" and "dimensions"', rules: 'an object like CONTAINER_RULES',
 };
 const how = (name: Input) => 'Set the ' + name + ' property, or put <script type="application/json" data-for="' + name + '"> inside the element.';
+/** What a view is handed. `rules` is the context's, and optional. */
+export interface Inputs { spec?: Spec; result?: Result; catalog?: Catalog; rules?: Partial<ContainerRules> }
 const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 
 /* The input is checked here because resolve() trusts its catalog and result, and its failures would not name a fix. */
@@ -165,6 +167,14 @@ export function check(spec: Spec, result: Result, catalog: Catalog): void {
   const q = spec.query;
   (q.metrics || []).forEach((m) => { if (!Object.hasOwn(catalog.metrics, m)) throw new Error('The catalog has no metric "' + m + '". It has: ' + (Object.keys(catalog.metrics).join(', ') || 'none') + '. Pass the catalog the query was run against.'); });
   (q.by || []).forEach((d) => { if (!Object.hasOwn(catalog.dimensions, d)) throw new Error('The catalog has no dimension "' + d + '". It has: ' + (Object.keys(catalog.dimensions).join(', ') || 'none') + '. Pass the catalog the query was run against.'); });
+  // A spec set a task before its result is painted against the last one, as rows of dashes. Every row answers the same
+  // query, so the first one tells. A result with no rows is a valid answer, and its totals still name the metrics.
+  // Companions are not asked for: `metric@previous` is rightly missing where there is no prior period.
+  const row = result.rows[0], lacks = (has: object, f: string, where: string) => {
+    if (!Object.hasOwn(has, f)) throw new Error('The result does not carry the query\'s "' + f + '" field: its ' + where + ' ' + (Object.keys(has).join(', ') || 'nothing') + '. Pass what this spec\'s query returned, and where both change set them at once: view.inputs = { spec, result }.');
+  };
+  if (isObject(row)) for (const f of [...(q.by || []), ...(q.metrics || [])]) lacks(row, f, 'rows have');
+  (q.metrics || []).forEach((m) => lacks(result.totals, m, 'totals have'));
 }
 
 /* A context's rule set over the defaults, one level down as well: one that gives only a row's height keeps the default gap. */
@@ -283,10 +293,15 @@ export class UaView extends Base {
   /** The rule set of the context this container is in. Missing fields fall back to CONTAINER_RULES. */
   get rules(): Partial<ContainerRules> | undefined { return this.#given.rules as Partial<ContainerRules> | undefined; }
   set rules(v: Partial<ContainerRules> | undefined) { this.#set('rules', v); }
+  /** The inputs, as many as are named, set at once: a spec and its result that reach the view in one step are never
+   * painted one without the other. An input left out keeps what it had. */
+  get inputs(): Inputs { return { ...this.#given } as Inputs; }
+  set inputs(v: Inputs) { for (const name of INPUTS) if (Object.hasOwn(v ?? {}, name)) this.#set(name, v[name]); }
 
   connectedCallback(): void {
     // A property set before the element was defined sits on the instance and hides the accessor.
     for (const name of INPUTS) if (Object.hasOwn(this, name)) { const v = this[name]; delete this[name]; this.#set(name, v); }
+    if (Object.hasOwn(this, 'inputs')) { const v = this.inputs; delete (this as Partial<UaView>).inputs; this.inputs = v; }
     this.#children.observe(this, { childList: true, characterData: true, subtree: true });
     for (const el of [this.#room, ...this.#ruler]) this.#sizes?.observe(el);
     this.#queue();
@@ -324,6 +339,7 @@ export class UaView extends Base {
   #render(): void {
     const changed = this.#changed;
     this.#changed = false;
+    let painting = false;
     try {
       const spec = this.#input('spec', true) as Spec, result = this.#input('result', true) as Result, catalog = this.#input('catalog', true) as Catalog;
       const rules = rulesOver(this.#input('rules', false) as Partial<ContainerRules> | undefined);
@@ -336,6 +352,7 @@ export class UaView extends Base {
       const plan = resolve(spec, result, { ...unboundedContainer(), rules }, catalog);
       const scene = buildScene(plan, spec.query, result, catalog), fig = this.#fig;
 
+      painting = true;
       this.#root.adoptedStyleSheets = [sheet(doc, BASE_CSS), sheet(doc, FALLBACK_CSS), ...more.map((p) => sheet(doc, '@layer uav {' + p.css + '}')), fit];
       fig.dataset.layout = scene.layout; fig.dataset.keep = (spec.keep || []).join(' '); fig.dataset.parts = scene.parts.join(' ');
       if (spec.title) fig.setAttribute('aria-label', spec.title); else fig.removeAttribute('aria-label');
@@ -366,10 +383,11 @@ export class UaView extends Base {
       const doc = this.ownerDocument;
       if (doc.readyState === 'loading') { doc.addEventListener('DOMContentLoaded', () => this.#queue(), { once: true }); return; }
       // Never out of a lifecycle callback: the view says what is wrong where it would have drawn.
-      this.#root.adoptedStyleSheets = [sheet(doc, BASE_CSS)];
-      this.#fallback?.remove(); this.#fallback = null;
+      // Inputs refused before anything was written leave the last view whole: it stays drawn, with what is wrong under it.
+      const kept = !painting && this.#layout != null && !this.#fig.hidden;
+      if (!kept) { this.#root.adoptedStyleSheets = [sheet(doc, BASE_CSS)]; this.#fallback?.remove(); this.#fallback = null; }
       this.#error.textContent = e instanceof Error ? e.message : String(e);
-      this.#fig.hidden = true; this.#error.hidden = false;
+      this.#fig.hidden = !kept; this.#error.hidden = false;
     }
   }
 

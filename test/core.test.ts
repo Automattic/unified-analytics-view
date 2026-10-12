@@ -9,6 +9,7 @@ import { CONTAINER_RULES, UNITS, buildScene, expand, formatDimension, formatValu
 import catalogSchema from '@unified-analytics/core/schema/catalog.schema.json';
 import viewSchema from '@unified-analytics/core/schema/view.schema.json';
 import { catalog, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
+import { delta } from '../packages/core/src/format.ts';
 
 // The prototype, loaded as the reference the port is held to.
 (globalThis as any).d3 = { ...d3array, ...d3scale, ...d3shape };
@@ -515,6 +516,41 @@ describe('the one-line legend\'s key: a deliberate departure from the prototype 
     const host0 = proto.makeHost(346, null, 'svg', 8), full = plain(proto.buildScene(proto.resolve(toProto(mix), named, host0), mix.query, named, host0));
     const host1 = proto.makeHost(150, null, 'svg', 8), line = plain(proto.buildScene(proto.resolve(toProto(mix), named, host1), mix.query, named, host1));
     expect([full, line].map((s) => s.nodes.filter((n: any) => n.key === 'legend:top').map((n: any) => n.text))).toEqual([['top'], ['top 41%']]);
+  });
+});
+
+describe('the delta at zero and below it: a deliberate departure from the prototype', () => {
+  // The prototype divides by the previous value as it stands, so a rise from below zero reads as a fall and is painted
+  // as one, and it says "New" of a zero that stayed zero. Ours measures the change against the size of the previous value,
+  // and nothing changed where the two are equal. No fixture has a total at zero or below, so the sweep does not meet it.
+  const total = samples.total!.spec, m = total.query.metrics[0]!;
+  const at = (cur: number, prev: number) => { const r = runQuery(total.query); return { ...r, totals: { ...r.totals, [m]: cur, [m + '@previous']: prev } }; };
+  it('says the direction the value went, and paints it by the metric\'s polarity', () => {
+    const cases: [prev: number, cur: number, text: string, where: 'up' | 'down' | 'none', pct?: number][] = [
+      [0, 0, 'No change', 'none'], [0, 5, 'New', 'none'], [5, 0, '▼ 100%', 'down', -1],
+      [-10, -5, '▲ 50%', 'up', 0.5], [-5, -10, '▼ 100%', 'down', -1], [-10, 10, '▲ 200%', 'up', 2], [10, -10, '▼ 200%', 'down', -2],
+      [7, 7, 'No change', 'none'], [-7, -7, 'No change', 'none'], [10, 15, '▲ 50%', 'up', 0.5], [10, 5, '▼ 50%', 'down', -0.5],
+    ];
+    for (const [prev, cur, text, where, pct] of cases) {
+      const say = prev + ' to ' + cur, paint = (good: 'up' | 'down') => (where === 'none' ? 'ink.muted' : where === good ? 'delta.good' : 'delta.bad');
+      expect(delta(cur, prev, 'up'), say).toMatchObject({ text, paint: paint('up') });
+      expect(delta(cur, prev, 'down'), say).toMatchObject({ text, paint: paint('down') });
+      expect(delta(cur, prev, 'none'), say).toMatchObject({ text, paint: 'ink.muted' });
+      expect(delta(cur, prev, 'up').pct, say).toBe(pct);
+    }
+    expect(delta(5, null, 'up')).toEqual({ state: 'none', text: 'No prior period', paint: 'ink.muted' });
+    expect([delta(0, 0, 'up').state, delta(5, 0, 'up').state, delta(-5, -10, 'up').state, delta(-10, -5, 'up').state]).toEqual(['flat', 'new', 'up', 'down']);
+  });
+  it('the scene and the prose say it too', () => {
+    const res = at(-5, -10), plan = resolve(total, res, makeContainer(346), catalog), node = buildScene(plan, total.query, res, catalog).nodes.find((n) => n.key === 'delta') as any;
+    expect([node.short, node.paint]).toEqual(['▲ 50%', 'delta.good']);
+    expect(plan.text).toContain(', up 50% on the previous period');
+    expect(resolve(total, at(0, 0), makeContainer(346), catalog).text).toContain(', level with the previous period');
+  });
+  it('the prototype says a rise from below zero is a fall', () => {
+    const res = at(-5, -10), host0 = proto.makeHost(346, null, 'svg', 8), plan0 = proto.resolve(toProto(total), res, host0);
+    expect(plain(proto.buildScene(plan0, total.query, res, host0)).nodes.find((n: any) => n.key === 'delta').paint).toBe('delta.bad');
+    expect(plan0.text).toContain(', down 50% on the previous period');
   });
 });
 

@@ -102,9 +102,9 @@ export interface Delta {
 }
 export function delta(cur: number, prev: number | null | undefined, polarity: Polarity): Delta {
   if (prev == null) return { state: 'none', text: 'No prior period', paint: 'ink.muted' };
-  if (prev === 0) return { state: 'new', text: 'New', paint: 'ink.muted' };
-  const p = (cur - prev) / prev;
-  if (Math.abs(p) < 0.005) return { state: 'flat', text: 'No change', paint: 'ink.muted' };
+  if (prev === 0 && cur !== 0) return { state: 'new', text: 'New', paint: 'ink.muted' };
+  const p = (cur - prev) / Math.abs(prev);                                // against the size of what was, so a rise from below zero is a rise
+  if (cur === prev || Math.abs(p) < 0.005) return { state: 'flat', text: 'No change', paint: 'ink.muted' };
   const up = p > 0, good = polarity === 'none' ? null : (polarity === 'up') === up;
   return { state: up ? 'up' : 'down', pct: p, text: (up ? '▲ ' : '▼ ') + fmtPct(Math.abs(p)), paint: good == null ? 'ink.muted' : good ? 'delta.good' : 'delta.bad' };
 }

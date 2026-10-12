@@ -72,6 +72,12 @@ export function attr(el: Element, name: string, v: string | number | null | unde
   if (el.getAttribute(name) === (v == null ? null : String(v))) return;
   if (v == null) el.removeAttribute(name); else el.setAttribute(name, String(v));
 }
+/** Hand a part the page's direction back, inside a body that is set from the left (cartesian.ts): a legend reads
+ * the way the page does, under a plot that does not turn. The figure the body is in has the page's.
+ * ponytail: read at each paint, so a page that turns with no new data keeps the old way until the next. */
+export function pageWay(el: Element, body: HTMLElement): void {
+  attr(el, 'dir', getComputedStyle(body.parentElement!).direction === 'rtl' ? 'rtl' : null);
+}
 /** Set or clear one style property. Positions go in as the prefixed ratios: --uav-x, --uav-w, --uav-v, --uav-t. */
 export function prop(el: HTMLElement | SVGElement, name: string, v: string | number | null | undefined): void {
   if (v == null) el.style.removeProperty(name); else el.style.setProperty(name, String(v));

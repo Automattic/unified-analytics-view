@@ -177,7 +177,7 @@ svg[data-hits] path[data-active="pointer"] { ${HOVER.stroke} }
 .uav-cross i { position: absolute; inset-inline: 0; inset-block-start: calc((1 - var(--uav-t)) * 100% - var(--uav-rule) / 2); block-size: var(--uav-rule); background: var(--uav-rule-paint); }
 .uav-cross span { position: absolute; box-sizing: border-box; padding: 1px 5px; border-radius: ${token('border-radius-tooltip')}; white-space: nowrap;
   font-family: ${token('font-family-tick')}; font-size: var(--uav-font-tick); font-optical-sizing: none; font-variant-numeric: tabular-nums; color: ${token('color-label-inverse')}; background: ${token('color-tooltip-surface')}; box-shadow: ${token('elevation-tooltip')}; }
-.uav-cross-x { inset-block-start: calc(100% + 3px); }
+.uav-cross-x { inset-block-start: calc(100% + 3px); unicode-bidi: plaintext; }
 .uav-cross-y { translate: 0 -50%; text-align: end; }
 .uav-cross-y[data-side="1"] { text-align: start; }
 .uav-cross-y[data-role="comparison"] { background: ${token('color-tooltip-surface-secondary')}; }
@@ -303,7 +303,7 @@ export class Keys {
       }
       const series = at >= 0 && box.dataset.hits === 'x' ? stepSeries(e.key, this.#order.indexOf(this.#series ?? ''), this.#order.length) : null;
       if (series != null) { e.preventDefault(); this.#show(this.#at, this.#order[series] ?? null, 'keys'); return; }
-      // A plot's points run from the left whatever the page (cartesian.ts), and a band's the way the page reads.
+      // A plot's points run from the left whatever the page, as its whole frame does (cartesian.ts), and a band's the way the page reads.
       const to = step(e.key, at, points.length, box.dataset.hits === 'y', box.dataset.hits === 'x' && getComputedStyle(box).direction === 'rtl');
       if (to == null) return;
       e.preventDefault();
@@ -388,9 +388,7 @@ export class Keys {
     if (!point || !marks.length) { if (this.#crossEl?.isConnected) this.#crossEl.replaceChildren(); this.#crossEl = null; return; }
     const plot = point.closest<HTMLElement>('.uav-plot')!, cross = this.#crossEl = ensure(plot, 'div', 'uav-cross');
     const add = <K extends 'i' | 'span'>(tag: K, cls: string) => { const el = cross.appendChild(document.createElement(tag)); if (cls) el.className = cls; return el; };
-    // The plot is set from the left, and its axes are where the page puts them: the crosshair's words follow the page.
-    const rtl = getComputedStyle(this.#body).direction === 'rtl';
-    attr(cross, 'data-active', how); attr(cross, 'dir', rtl ? 'rtl' : null); cross.setAttribute('aria-hidden', 'true'); cross.replaceChildren();
+    attr(cross, 'data-active', how); cross.setAttribute('aria-hidden', 'true'); cross.replaceChildren();
     for (const m of marks) prop(add('i', ''), '--uav-t', m.t);
     const p = plot.getBoundingClientRect(), b = this.#body.getBoundingClientRect(), r = point.getBoundingClientRect();
     // How far the body runs to either side of the plot: the gutters the axes are in.
@@ -403,7 +401,7 @@ export class Keys {
       prop(name, 'left', Math.max(-before, Math.min(x - w / 2, p.width + after - w)) + 'px');
     }
     for (const side of [0, 1] as const) {
-      const at = marks.filter((m) => m.side === side), gutter = side ? far : rtl ? after : before;
+      const at = marks.filter((m) => m.side === side), gutter = side ? far : before;
       const says = at.map((m) => { const el = add('span', 'uav-cross-y'); el.textContent = m.text; attr(el, 'data-role', m.role); attr(el, 'data-side', side); return el; });
       if (!says.length) continue;
       // Over its axis from the edge of the view, at least as wide as the gutter, and into the plot where it is wider.

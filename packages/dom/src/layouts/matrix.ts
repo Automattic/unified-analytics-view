@@ -1,5 +1,5 @@
 import { formatDimension, formatValue, type RectNode, type Row, type TextNode } from '@unified-analytics/core';
-import { attr, ensure, keyed, prop, text } from '../dom.ts';
+import { attr, ensure, keyed, pageWay, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { hideReadout, placeReadout, readout, readoutOf } from '../keys.ts';
 import type { LayoutPainter } from '../layout.ts';
@@ -17,7 +17,9 @@ import { thin } from '../measure.ts';
  * ponytail: version 4 has no model for two dimensions, so this one is a proposal (chart-coverage-plan, section 6). */
 const css = `
 .uav[data-layout="matrix"] { --uav-body-block: var(--uav-axes-height, 184px); }
-.uav[data-layout="matrix"] .uav-body { display: grid; grid-template: "y plot" minmax(0, 1fr) ". x" auto "ramp ramp" auto / auto minmax(0, 1fr); }
+/* The frame is set from the left whichever way the page reads, as a plot's is (cartesian.ts): the row labels stay on
+ * the left of the cells. The ramp is a legend, and follows the page. */
+.uav[data-layout="matrix"] .uav-body { display: grid; grid-template: "y plot" minmax(0, 1fr) ". x" auto "ramp ramp" auto / auto minmax(0, 1fr); direction: ltr; }
 .uav[data-layout="matrix"] [data-thin] { visibility: hidden; }
 .uav[data-layout="matrix"]:has(> .uav-body[data-strip]) { --uav-body-block: 52px; }
 .uav-body[data-strip] .uav-ramp { display: none; }
@@ -123,6 +125,7 @@ export const matrix: LayoutPainter = {
     const cells = ensure(plot, 'div', 'uav-cells'), dims = data.catalog.dimensions;
     // The labels and the ramp say again what each cell's name says whole.
     for (const el of [yAxis, xAxis, ramp]) el.setAttribute('aria-hidden', 'true');
+    pageWay(ramp, body);
     const texts = (part: string) => scene.nodes.filter((n): n is TextNode => n.part === part && n.kind === 'text');
     keyed(yAxis, texts('y-axis'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-t', n.t); });
     keyed(xAxis, texts('x-axis'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-x', n.x); el.setAttribute('data-anchor', n.anchor); });

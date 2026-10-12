@@ -1,5 +1,5 @@
 import { declutter, type CircleNode, type Scene, type SceneNode, type TextNode } from '@unified-analytics/core';
-import { attr, ensure, keyed, prop, text } from '../dom.ts';
+import { attr, ensure, keyed, pageWay, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
 
 /* What a plot gains with `dot`, with `text` on its points, and with a metric on x: dots, the labels on them, the key
@@ -105,7 +105,7 @@ export function paintPoints(body: HTMLElement, plot: HTMLElement, scene: Scene):
   });
 
   const key = ensure(body, 'div', 'uav-size');
-  key.setAttribute('aria-hidden', 'true');
+  key.setAttribute('aria-hidden', 'true'); pageWay(key, body);
   keyed(key, nodes.filter((n): n is CircleNode | TextNode => n.part === 'size' && (n.kind === 'circle' || n.kind === 'text')), (n) => (n.kind === 'circle' ? 'i' : 'span'), (el, n) => {
     if (n.kind === 'text') text(el, n); else prop(el, '--uav-size', n.size);
   });

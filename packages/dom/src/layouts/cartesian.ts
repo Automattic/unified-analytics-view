@@ -1,5 +1,5 @@
 import type { LineNode, PathNode, RectNode, SceneNode, TextNode } from '@unified-analytics/core';
-import { ensure, ensureSvg, keyed, paintVar, prop, text } from '../dom.ts';
+import { ensure, ensureSvg, keyed, pageWay, paintVar, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { hitNodes } from '../keys.ts';
 import { NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
@@ -50,11 +50,13 @@ const css = `
 .uav-x-axis [data-thin] { visibility: hidden; }
 .uav-plot { grid-area: plot; position: relative; container: uav-plot / size; }
 /* Time and x run from left to right whichever way the page reads, as the paths in the SVG do whatever it is told. So
- * the plot and its x axis are set that way, and every mark, hit target and label in them is placed from the left. The
- * y axes, the legend and all about the plot follow the page. A label's words still run their own way: an Arabic one
- * is set from the right, in a box placed from the left. */
-.uav-plot, .uav-x-axis { direction: ltr; }
-.uav-x-axis > span, :is(.uav-refs, .uav-point-labels) > span { unicode-bidi: plaintext; }
+ * the whole frame is set that way: the plot, the axes on every side of it and the labels at the line ends stand
+ * where they do on a page that reads from the left, and every mark, hit target and label is placed from the left.
+ * A plot is set so wherever it is, a map's among them. What says what the marks are follows the page: paint() hands
+ * the legend and the key to sizes the page's direction back (dom.ts), and the number and the prose are outside the
+ * body. A label's words still run their own way: an Arabic one is set from the right, in a box placed from the left. */
+.uav[data-layout="cartesian"] .uav-body, .uav-plot { direction: ltr; }
+:is(.uav-x-axis, .uav-y-axis, .uav-y-axis-2, .uav-labels, .uav-refs, .uav-point-labels) > span { unicode-bidi: plaintext; }
 .uav-grid, .uav-bars, .uav-refs { position: absolute; inset: 0; }
 .uav-line { position: absolute; inset-inline: 0; inset-block-start: calc((1 - var(--uav-t)) * 100%); block-size: var(--uav-stroke, ${token('stroke-width-rule')}); background: var(--uav-paint); }
 .uav-line[data-dash] { background: repeating-linear-gradient(90deg, var(--uav-paint) 0 var(--uav-dash), transparent 0 calc(var(--uav-dash) + var(--uav-gap))); }
@@ -144,6 +146,7 @@ export const cartesian: LayoutPainter = {
     const grid = ensure(plot, 'div', 'uav-grid'), bars = ensure(plot, 'div', 'uav-bars'), svg = ensureSvg(plot), refs = ensure(plot, 'div', 'uav-refs');
     if (loads) { svg.setAttribute('data-draw', ''); once(svg, ['data-draw']); }
     for (const el of [yAxis, yAxis2, xAxis, labels]) el.setAttribute('aria-hidden', 'true');
+    pageWay(legend, body);
     const nodes = scene.nodes, texts = (part: string) => nodes.filter((n): n is TextNode => n.part === part && n.kind === 'text');
     const line = (el: HTMLElement | SVGElement, n: LineNode) => {
       const [on, off] = (n.dash || '').split(' ');

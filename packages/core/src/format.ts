@@ -118,7 +118,10 @@ export interface Delta {
   paint: string;
   pct?: number;
 }
-export function delta(cur: number, prev: number | null | undefined, polarity: Polarity): Delta {
+/** The change from what was to what is. With no current figure there is nothing to compare and nothing to say of it:
+ * state `none` with no text, where no prior figure has "No prior period". A caller with an empty text adds no node and no clause. */
+export function delta(cur: number | null | undefined, prev: number | null | undefined, polarity: Polarity): Delta {
+  if (cur == null) return { state: 'none', text: '', paint: 'ink.muted' };
   if (prev == null) return { state: 'none', text: 'No prior period', paint: 'ink.muted' };
   if (prev === 0 && cur !== 0) return { state: 'new', text: 'New', paint: 'ink.muted' };
   const p = (cur - prev) / Math.abs(prev);                                // against the size of what was, so a rise from below zero is a rise

@@ -78,7 +78,7 @@ export function tldrProse(q: Query, result: Result, share: boolean, catalog: Cat
     if (q.compare === 'previous') {
       const d = delta(t[m] as number, t[m + '@previous'], M.polarity);
       s += d.pct != null ? ', ' + (d.pct > 0 ? 'up ' : 'down ') + fmtPct(Math.abs(d.pct)) + ' on the previous period'
-         : d.state === 'flat' ? ', level with the previous period' : ', with no prior period to compare';
+         : d.state === 'flat' ? ', level with the previous period' : d.text ? ', with no prior period to compare' : '';   // no figure, so no change is claimed
     }
     // Against its target, where the catalog gives it one: what a gauge shows.
     if (M.target && t[m] != null) s += ', ' + fmtPct(t[m]! / M.target) + ' of its target of ' + formatValue(M.target, M);

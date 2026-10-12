@@ -1,6 +1,6 @@
 import { CONTAINER_RULES, KEEP } from './container.ts';
 import { applies, fallbackRule, ruleFor, type FitRule } from './fit.ts';
-import { fmtTime } from './format.ts';
+import { fmtTime, rangeLabel } from './format.ts';
 import { customMarks } from './marks.ts';
 import { PRESETS, expand, usesPrevious } from './presets.ts';
 import { COLUMNS_BLOCK, place } from './place.ts';
@@ -91,6 +91,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   checkLayers(layers, q, catalog, result);
   // A time no view can read is refused here, once, before anything is built or painted. fmtTime's error names the forms.
   for (const d of q.by || []) if (catalog.dimensions[d]?.type === 'time') for (const r of result.rows) if (r[d] != null) fmtTime(String(r[d]));
+  if (result.meta.range) rangeLabel(result.meta.range);                   // and a range the prose cannot say, the same way
   if (layers.some(usesPrevious) && (q.compare !== 'previous' || result.totals[m + '@previous'] == null)) {
     const why = q.compare === 'previous' ? ' (no prior data)' : ' (the query has no "compare")';
     if (!result.meta.empty) [['previous', 'comparison series'], ['delta', 'the change on the previous period']].forEach(([series, what]) => { if (layers.some((l) => l.series === series)) dropped.push(what + why); });

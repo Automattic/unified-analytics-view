@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildScene, resolve, unboundedContainer, type Catalog, type Result, type Row, type Spec } from '@unified-analytics/core';
+import { buildScene, rangeLabel, resolve, unboundedContainer, type Catalog, type Result, type Row, type Spec } from '@unified-analytics/core';
 
 // query.range is optional in the schema, so an answer may name no range. A view then says nothing of one: no word is made up.
 const catalog: Catalog = {
@@ -37,5 +37,15 @@ describe('a view with no range names none', () => {
   it('and still names the one it has', () => {
     expect(said(cases[0]![1], result([], {}, '7d'))).toMatch(/^Revenue: nothing recorded in the last 7 days\./);
     expect(said(cases[3]![1], result(skus, {}, '7d'))).toMatch(/^Top skus by revenue, last 7 days: /);
+  });
+  it('one day is said as one, and an instant as now', () => {
+    expect(said(cases[2]![1], result([{ revenue: 300 }], {}, '1d'))).toMatch(/^Revenue: \$300 in the last day\./);
+    expect(said(cases[3]![1], result(skus, {}, '1d'))).toMatch(/^Top skus by revenue, last day: /);
+    expect(rangeLabel('now')).toBe('right now');
+  });
+  // Presets and custom ranges are Open in the reference. Until they are settled, a form the prose cannot read is refused
+  // rather than said as written: "Revenue: $300 in the 2026-09".
+  it.each(['2026-09', '24h', 'today', '0d', '2026-09-01/2026-09-30'])('a range of "%s" is refused by name, with the forms a view reads', (range) => {
+    expect(() => said(cases[2]![1], result([{ revenue: 300 }], {}, range))).toThrow('The result has meta.range: "' + range + '", and a view reads a range as a count of days, "28d", or as "now". Send one of those from the query layer, or leave meta.range out and the prose names no range.');
   });
 });

@@ -134,7 +134,7 @@ A query is written in catalog names:
 |---|---|
 | `metrics` | Required. The first is the primary metric |
 | `by` | Zero, one or two dimensions. With two, rows come back long, one per pair, and the result carries `totalsBy`: the engine's totals per value of each dimension |
-| `range` | `"28d"` style. Optional: where the answer's `meta.range` names none, the prose names none. Presets and custom ranges are Open, and a value in another form is said as written |
+| `range` | `"28d"` style. Optional: where the answer's `meta.range` names none, the prose names none. A count of days, or `"now"` for an instant. Presets and custom ranges are Open: until they are settled, a value in another form is refused by name |
 | `compare` | `"previous"` or absent. Other modes (year over year, baseline) are Open |
 | `limit` | Top-N for categorical dimensions |
 

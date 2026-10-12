@@ -103,8 +103,9 @@ export function formatDimension(v: Row[string], dim: DimensionDef): string {
   return dim.type === 'time' ? fmtTime(String(v)) : String(v);
 }
 export function rangeLabel(r: string | null | undefined): string {
-  const m = /^(\d+)d$/.exec(r || '');
-  return r === 'now' ? 'right now' : m ? 'last ' + m[1] + ' days' : String(r);
+  const m = /^([1-9]\d*)d$/.exec(r || '');
+  if (r !== 'now' && !m) throw new Error('The result has meta.range: ' + JSON.stringify(r) + ', and a view reads a range as a count of days, "28d", or as "now". Send one of those from the query layer, or leave meta.range out and the prose names no range.');
+  return m ? (m[1] === '1' ? 'last day' : 'last ' + m[1] + ' days') : 'right now';
 }
 export function clip(s: string, n: number): string {
   n = Math.max(3, n);

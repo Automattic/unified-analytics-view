@@ -14,7 +14,7 @@ export function emptyNote(metric: MetricDef, period = false): string {
   return nothing(metric, (period ? 'in this period ' : '') + 'yet');
 }
 /** The range an answer is over, after what it is said of: " in the last 28 days". Empty where the answer names none, as
- * a query may: the sentence reads without it, and no period is made up. A range it does not know is said as written. */
+ * a query may: the sentence reads without it, and no period is made up. A range it cannot say is refused in resolve(). */
 const over = (result: Result, lead = ' in the ') => (result.meta.range ? lead + rangeLabel(result.meta.range) : '');
 /** A value of a dimension as a row or a legend writes it: a country's name for its code, a dash for no value. */
 const say = (catalog: Catalog, d: string, r: Row) => formatDimension(r[d], catalog.dimensions[d]!);

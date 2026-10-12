@@ -38,6 +38,7 @@ const WRITTEN = new Set(Intl.supportedValuesOf('currency').map((c) => c.toLowerC
  *   still filling, and the first or last of a range that starts or ends inside one. A range is kept as it was asked.
  * - `previous` is laid beside each row as `<metric>@previous`: bucket for bucket in a series, and by the breakdown's value in
  *   a list, null where the value was not there before.
+ * - Buckets are cut in UTC, as `timezone` says, and go to the view as they came. Any other zone is refused, since the instant would then name another day.
  * - Time with a breakdown is refused: a view of two dimensions needs each one's totals over the other, which the API has not defined.
  * - A list's rows carry their place as `<metric>@rank`, since the API says rank is row order.
  * - A scroll bucket is a `number` dimension, ten points wide.
@@ -59,6 +60,8 @@ export function adapt(api: ApiResult, options: AdaptOptions = {}): Adapted {
   const typos = metrics.filter((c) => c.currency && !WRITTEN.has(c.currency));
   metrics = metrics.filter((c) => !typos.includes(c));
   const bare = all.filter((c) => c.type === 'money' && !metrics.some((m) => m.of === c.id) && !typos.some((m) => m.of === c.id));
+  // Buckets come as instants ("2026-09-08T00:00:00Z") and a view says a time as it is written, which is right only while they are cut in UTC.
+  if (time && api.timezone !== 'UTC') throw new Error('This answer\'s buckets are cut in "' + api.timezone + '", and this adapter knows them cut in UTC, where the instant it is sent and the day it names are written the same. Write each bucket as the time on the clock in that zone before it goes to the view, here in adapt() in packages/spacefast.');
   if (time && dim) throw new Error('This answer is bucketed by time and broken down by "' + dim.id + '", which is not adapted: a view needs each one\'s totals over the other, and the API does not send them. Ask for the series and the breakdown as two queries in the batch.');
   const strange = metrics.find((c) => !c.currency && !UNITS[c.unit]), odd = metrics.find((c) => !POLARITY[c.polarity]);
   if (odd) throw new Error('The metric "' + odd.id + '" has the polarity "' + odd.polarity + '", and this adapter knows ' + Object.keys(POLARITY).join(', ') + '. Add it to POLARITY in packages/spacefast, with whether a rise is good.');

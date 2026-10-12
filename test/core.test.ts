@@ -142,10 +142,10 @@ describe('what a painter says with: values and dimensions in catalog format', ()
     const V = catalog.metrics.visitors!, rows = runQuery(trend.query).rows, last = rows[rows.length - 1]!;
     expect([formatValue(1234, V), formatValue(10531, V), formatValue(1234, V, 'compact'), formatValue(10531, V, 'exact'), formatValue(null, V), formatValue(null, V, 'exact')]).toEqual(['1,234', '10.5k', '1.2k', '10,531', '–', '–']);
     expect(formatDimension('2026-09-08', catalog.dimensions['date.day']!)).toBe('Sep 8');
-    // A bucket arrives as a bare date or as a full ISO datetime, and is read in UTC either way. One on an hour of the day says the hour.
+    // A bucket arrives as a bare date or as a full ISO datetime, and is said as it is written either way. One on an hour of the day says the hour.
     const time = (v: string) => formatDimension(v, catalog.dimensions['date.day']!);
     expect(['2026-09-08T00:00:00.000Z', '2026-09-08T00:00:00Z', '2026-09-08T15:00:00.000Z', '2026-09-08T15:00:00', '2026-09-08T23:00:00.000Z'].map(time)).toEqual(['Sep 8', 'Sep 8', 'Sep 8, 3 PM', 'Sep 8, 3 PM', 'Sep 8, 11 PM']);
-    expect(time('yesterday')).toBe('Invalid Date');
+    expect(() => time('yesterday')).toThrow('The time "yesterday" is not in a form a view reads.');
     expect(formatDimension('/pricing', catalog.dimensions.page!)).toBe('/pricing');
     expect(formatDimension(null, catalog.dimensions.page!)).toBe('–');
     // A country arrives as its code and is said by name. An empty code is no value; what is not a code is said as it came.

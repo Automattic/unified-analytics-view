@@ -4,6 +4,9 @@ const NF = new Intl.NumberFormat('en-US');
 const CF = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
 const DF = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });                    // Sep 8
 const HF = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', timeZone: 'UTC' });   // Sep 8, 3 PM
+const MF = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });                    // Sep 2026
+// A time's fields, as fmtTime reads them. The offset is matched and left where it is.
+const TIME = /^(\d{4})-(\d\d)(?:-(\d\d)(?:[T ](\d\d):(\d\d)(?::(\d\d)(?:\.\d+)?)?(?:Z|[+-]\d\d(?::?\d\d)?)?)?)?$/, WEEK = /^(\d{4})-W(\d\d)$/;
 const RN = new Intl.DisplayNames('en-US', { type: 'region' });                                                        // US: United States
 export const CHAR_W = 6.6; // rough advance of the 13px label face, for clipping
 
@@ -14,13 +17,27 @@ export function fmt(v: number | null | undefined, compact?: boolean): string {
 export function fmtPct(p: number): string {
   return pct(p * 100);
 }
-/** A bucket of time, always in UTC: a bare date, "2026-09-08", or a full ISO datetime, "2026-09-08T15:00:00.000Z". A
- * datetime with no offset is read as UTC too, never as local time. One that starts on the hour of a day reads "Sep 8, 3 PM".
+/** A bucket of time, said as the engine wrote it: the date and the time of day are read from the string, and an offset
+ * ("Z", "+02:00") is not applied. An engine names a bucket by the clock where it cut it, so "2026-09-08T00:00:00+02:00" is
+ * Sep 8 on every machine, and the viewer's zone is never asked. The forms: a day, "2026-09-08"; a day and time, with a "T" or
+ * a space, seconds or not, a fraction or not, an offset or not; a month, "2026-09", which reads "Sep 2026"; an ISO week,
+ * "2026-W36", which reads as the Monday it starts on. One on an hour of a day reads "Sep 8, 3 PM". Anything else is refused.
  * ponytail: the grain is read from the value, since neither the catalog nor the result states it. So the midnight bucket
  * of an hourly result reads "Sep 8", as a day does. When the result says its grain, branch on that here. */
 export function fmtTime(iso: string): string {
-  const t = new Date(/T[\d:.]+$/.test(iso) ? iso + 'Z' : iso);
-  return isNaN(+t) ? String(t) : (+t % 86400000 ? HF : DF).format(t);     // "Invalid Date", as toLocaleDateString says it
+  const m = TIME.exec(iso), w = WEEK.exec(iso);
+  let t = NaN;
+  if (m) {
+    const at = m[1] + '-' + m[2] + '-' + (m[3] ?? '01') + 'T' + (m[4] ?? '00') + ':' + (m[5] ?? '00') + ':' + (m[6] ?? '00') + '.000Z';
+    t = Date.parse(at);
+    if (isNaN(t) || new Date(t).toISOString() !== at) t = NaN;            // February 30 and 24:00 are no time, and are not carried over
+  } else if (w) {
+    const jan4 = Date.UTC(+w[1]!, 0, 4);                                   // always in week 1, which starts on the Monday on or before it
+    t = jan4 - ((new Date(jan4).getUTCDay() + 6) % 7) * 86400000 + (+w[2]! - 1) * 7 * 86400000;
+    if (!+w[2]! || new Date(t + 3 * 86400000).getUTCFullYear() !== +w[1]!) t = NaN;   // a week is in the year its Thursday is in
+  }
+  if (isNaN(t)) throw new Error('The time ' + JSON.stringify(iso) + ' is not in a form a view reads. Send a day ("2026-09-08"), a day and time ("2026-09-08T15:00:00", "2026-09-08 15:00:00", with or without an offset such as "Z" or "+02:00"), a month ("2026-09") or an ISO week ("2026-W36"), or give the dimension the type "categorical" in the catalog for its values to be written as they come.');
+  return (m && !m[3] ? MF : t % 86400000 ? HF : DF).format(t);
 }
 // Percent points, as a rate is said: whole from ten, a decimal under it. Exact keeps two.
 const pct = (x: number, exact?: boolean) => (exact ? +x.toFixed(2) : x >= 10 ? Math.round(x) : Math.round(x * 10) / 10) + '%';

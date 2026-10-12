@@ -26,6 +26,12 @@ export function leader(result: Result, dim: string, m: string): Row | undefined 
   return by ? by.reduce<Row | undefined>((top, r) => (!top || (r[m] as number) > (top[m] as number) ? r : top), undefined) : result.rows[0];
 }
 
+/** A value as its share of the engine's total. With no total, or a total of zero, there is no share to say, so the
+ * value is said itself: a share is never worked out of the rows. */
+export const portion = (v: number, total: number | null | undefined, metric: MetricDef) => (total ? fmtPct(v / total) : formatValue(v, metric));
+/** The same after a name in a sentence: " at 68% of visitors", or the value in brackets where there is no share. */
+const at = (v: number, total: number | null | undefined, metric: MetricDef, of = '') => (total ? ' at ' + fmtPct(v / total) + of : ' (' + formatValue(v, metric) + ')');
+
 /** More than one of a dimension's values, by its label: "pages", "countries". */
 const plural = (label: string) => label.replace(/([^aeiou])y$/, '$1ie') + 's';
 
@@ -41,11 +47,11 @@ export function tldrProse(q: Query, result: Result, share: boolean, catalog: Cat
   if (dims.length === 2 && result.totalsBy && rows.length) {
     // Two dimensions: who leads each, as a share of the engine's total. Over time, also on how many of the days.
     const label = (d: string) => catalog.dimensions[d]!.label.toLowerCase(), time = dims.find((d) => catalog.dimensions[d]!.type === 'time');
-    const largest = (d: string) => { const top = leader(result, d, m)!; return say(catalog, d, top) + ' the largest ' + label(d) + ' at ' + fmtPct((top[m] as number) / (t[m] || 1)); };
-    if (!time) return largest(by!).replace(' the ', ' is the ') + ' of ' + name + ', and ' + largest(dims[1]!) + '.';
+    const largest = (d: string, of = '') => { const top = leader(result, d, m)!; return say(catalog, d, top) + ' the largest ' + label(d) + at(top[m] as number, t[m], M, of); };
+    if (!time) return largest(by!, ' of ' + name).replace(' the ', ' is the ') + ', and ' + largest(dims[1]!) + '.';
     const split = dims.find((d) => d !== time)!, top = leader(result, split, m)![split], days = [...new Set(rows.map((r) => r[time]))];
     const led = days.filter((d) => { const at = rows.filter((r) => r[time] === d), mine = at.find((r) => r[split] === top); return !!mine && at.every((r) => r === mine || (r[m] as number) < (mine[m] as number)); }).length;
-    return largest(split).replace(' the ', ' is the ') + ' of ' + name + range + ', and leads on ' + (led === days.length ? 'all ' + led : led + ' of ' + days.length) + ' ' + label(time) + 's.';
+    return largest(split, ' of ' + name).replace(' the ', ' is the ') + range + ', and leads on ' + (led === days.length ? 'all ' + led : led + ' of ' + days.length) + ' ' + label(time) + 's.';
   }
   if (points && by && q.metrics.length > 1 && rows.length) {
     // Two metrics set against each other, a point for each value of a dimension: how far each runs, and which point is
@@ -63,8 +69,8 @@ export function tldrProse(q: Query, result: Result, share: boolean, catalog: Cat
   }
   if (by && catalog.dimensions[by]!.type !== 'time' && rows.length) {
     const label = catalog.dimensions[by]!.label.toLowerCase();
-    if (share && rows.length > 1) {
-      const tot = t[m] || 1;
+    if (share && rows.length > 1 && t[m]) {                                  // with no total there is no share: the ranking is said, by value
+      const tot = t[m]!;
       return say(catalog, by, rows[0]!) + ' is the largest ' + label + ' at ' + fmtPct((rows[0]![m] as number) / tot) + ' of ' + name + ', followed by ' + say(catalog, by, rows[1]!) + ' at ' + fmtPct((rows[1]![m] as number) / tot) + '.';
     }
     // Several metrics by one dimension: the ranking is by the first, and the rest are said once, as the engine's totals. A metric it gives no total for is left out.
@@ -105,8 +111,8 @@ export function gridProse(q: Query, result: Result, catalog: Catalog): string | 
   const m = q.metrics[0]!, [a, b] = q.by || [], rows = result.rows.filter((r) => r[m] != null);
   if (result.meta.empty || !a || !b || !result.totalsBy || !rows.length) return null;
   const peak = rows.reduce((top, r) => ((r[m] as number) > (top[m] as number) ? r : top)), name = catalog.metrics[m]!.label.toLowerCase();
-  const busiest = (d: string, is: string) => { const top = leader(result, d, m)!; return say(catalog, d, top) + is + ' the busiest ' + catalog.dimensions[d]!.label.toLowerCase() + ' at ' + fmtPct((top[m] as number) / (result.totals[m] || 1)); };
-  return 'Most ' + name + ' at ' + say(catalog, a, peak) + ', ' + say(catalog, b, peak) + ' (' + formatValue(peak[m] as number, catalog.metrics[m]!) + ')' + over(result) + '. ' + busiest(a, ' is') + ' of ' + name + ', and ' + busiest(b, '') + '.';
+  const busiest = (d: string, is: string, of = '') => { const top = leader(result, d, m)!; return say(catalog, d, top) + is + ' the busiest ' + catalog.dimensions[d]!.label.toLowerCase() + at(top[m] as number, result.totals[m], catalog.metrics[m]!, of); };
+  return 'Most ' + name + ' at ' + say(catalog, a, peak) + ', ' + say(catalog, b, peak) + ' (' + formatValue(peak[m] as number, catalog.metrics[m]!) + ')' + over(result) + '. ' + busiest(a, ' is', ' of ' + name) + ', and ' + busiest(b, '') + '.';
 }
 
 /** What follows a value from the unfinished bucket, as in "Visitors 175 so far". Empty for a finished one, so it also answers whether the row is partial. */

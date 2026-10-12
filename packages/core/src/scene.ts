@@ -3,7 +3,7 @@ import { scaleBand, scaleLinear, scalePoint, scaleQuantize } from 'd3-scale';
 import { CHAR_W, delta, fmt, fmtPct, fmtTime, formatBin, formatDimension, formatUnit, formatValue } from './format.ts';
 import { arcD, pathD } from './path.ts';
 import { customMarks } from './marks.ts';
-import { NOW, emptyNote, leader } from './prose.ts';
+import { NOW, emptyNote, leader, portion } from './prose.ts';
 import type { ArcNode, Catalog, DimensionDef, Guides, Layer, Mark, MetricDef, Part, PathNode, PlanShape, Polarity, Query, Result, Role, Row, Scene, SceneNode, TextNode } from './types.ts';
 
 /* Node kinds: rect, path, line, circle, text. Every node has a stable key,
@@ -236,7 +236,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     const up: Record<string, number> = {}, down: Record<string, number> = {};
     series.forEach((s) => rows.forEach((r) => {
       if (r[split!] !== s || r[f] == null) return;
-      const n = num(r, f), run = n < 0 ? down : up, from = run[k(r)] || 0, all = share ? (whole.get(str(r, xField))![f] as number) || 1 : 1;
+      const n = num(r, f), run = n < 0 ? down : up, from = run[k(r)] || 0, all = share ? (whole.get(str(r, xField))![f] as number) || Infinity : 1;   // no total for this x: no share, so no height
       run[k(r)] = from + n;
       out.set(r, [from / all, (from + n) / all]);
     }));
@@ -472,28 +472,29 @@ function sceneRows(catalog: Catalog, layers: Layer[], rows: Row[], result: Resul
 }
 
 // No positional dimension: one band, stacked and normalized, split by colour. A share is of the engine's total, so
-// with a `limit` the band stops short of its end by what the rows past the limit hold.
+// with a `limit` the band stops short of its end by what the rows past the limit hold. With no total, or one of zero,
+// no segment has a share and none has a length: the legend says each value. The rows are never summed to make one.
 function sceneBand(catalog: Catalog, layer: Layer, rows: Row[], totals: Result['totals']): Body {
   const nodes: SceneNode[] = [], m = layer.encode!.x as string, dim = layer.encode!.color as string;
-  const total = totals[m] || 1, own = rowKeys(rows, dim), k = (r: Row) => own.get(r)!;
+  const total = totals[m] || Infinity, own = rowKeys(rows, dim), k = (r: Row) => own.get(r)!;
   rows.forEach((r, i) => {
     nodes.push({ key: 'seg:' + k(r), part: 'band', kind: 'rect', v: num(r, m) / total, row: k(r), paint: 'series.' + ((i % 6) + 1), layer: 'data', role: roleOf(layer) });
   });
-  return { nodes: nodes.concat(shareLegend(rows, k, dim, catalog.dimensions[dim]!, m, total, (i) => 'series.' + ((i % 6) + 1))), rows: rows.map(k) };
+  return { nodes: nodes.concat(shareLegend(rows, k, dim, catalog.dimensions[dim]!, m, catalog.metrics[m]!, totals[m], (i) => 'series.' + ((i % 6) + 1))), rows: rows.map(k) };
 }
 // The legends of a whole split by colour, for a band and for a circle of arcs: both of them, each in its own part.
 // The plan names one in `parts`; a fit rule swaps them.
 // A segment is named as the readout names it, so a day is "Sep 29". The prototype writes it raw: a deliberate departure.
-function shareLegend(rows: Row[], k: (r: Row) => string, f: string, dim: DimensionDef, m: string, total: number, paint: (i: number) => string): SceneNode[] {
+function shareLegend(rows: Row[], k: (r: Row) => string, f: string, dim: DimensionDef, m: string, M: MetricDef, total: number | null | undefined, paint: (i: number) => string): SceneNode[] {
   const nodes: SceneNode[] = [], name = (r: Row) => formatDimension(r[f], dim);
   rows.forEach((r, i) => {
     nodes.push({ key: 'swatch:' + k(r), part: 'legend', kind: 'rect', row: k(r), paint: paint(i), layer: 'data' });
     nodes.push({ key: 'legend:' + k(r), part: 'legend', kind: 'text', row: k(r), text: name(r), anchor: 'start', baseline: 'middle', font: 'label', paint: 'ink', layer: 'guide' });
-    nodes.push({ key: 'share:' + k(r), part: 'legend', kind: 'text', row: k(r), text: fmtPct(num(r, m) / total), anchor: 'end', baseline: 'middle', font: 'value', paint: 'ink', layer: 'guide' });
+    nodes.push({ key: 'share:' + k(r), part: 'legend', kind: 'text', row: k(r), text: portion(num(r, m), total, M), anchor: 'end', baseline: 'middle', font: 'value', paint: 'ink', layer: 'guide' });
   });
   // One line for the whole of it, so it names no row. Its key has no colon after `legend`, so no segment's entry can
   // share it, whatever the segment is called. The prototype's is `legend:top`: a deliberate departure.
-  if (rows.length) nodes.push({ key: 'legend-top', part: 'legend-top', kind: 'text', text: name(rows[0]!) + ' ' + fmtPct(num(rows[0]!, m) / total), anchor: 'start', font: 'label', paint: 'ink', layer: 'guide' });
+  if (rows.length) nodes.push({ key: 'legend-top', part: 'legend-top', kind: 'text', text: name(rows[0]!) + ' ' + portion(num(rows[0]!, m), total, M), anchor: 'start', font: 'label', paint: 'ink', layer: 'guide' });
   return nodes;
 }
 
@@ -520,7 +521,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
     if (l.mark !== 'arc') throw new Error('The "' + l.mark + '" mark has no rule about a centre yet. Use arc, or take "angle" off the other layers.');
     if (typeof r0 !== 'number' || !(r0 >= 0 && r0 < 1)) throw new Error(n + ' has ' + JSON.stringify(r0) + ' on radius. It takes a number from 0 up to 1: the inner radius, as a share of the outer. 0.6 makes a donut.');
     if (isDim(catalog, enc.color)) {
-      const m = angle as string, dim = enc.color, rows = result.rows, total = result.totals[m] || 1, own = rowKeys(rows, dim), k = (r: Row) => own.get(r)!;
+      const m = angle as string, dim = enc.color, rows = result.rows, total = result.totals[m] || Infinity, own = rowKeys(rows, dim), k = (r: Row) => own.get(r)!;
       if (!(m in catalog.metrics)) throw new Error(n + ' splits by "' + dim + '" with ' + JSON.stringify(angle) + ' on angle. Put a metric on angle: each segment is its share of that metric\'s total.');
       if (keys) throw new Error(n + ' is a second layer split by color, and a circle is divided once. Remove one of them.');
       if (rows.length > SERIES) throw new Error('Splitting by "' + dim + '" makes ' + rows.length + ' segments, and there are ' + SERIES + ' series colours. Add "limit": ' + SERIES + ' to the query, or less.');
@@ -530,7 +531,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
         const lo = run / total, hi = (run += num(r, m)) / total;
         arcs.push(arc(ids[i] + ':' + k(r), l, lo, Math.max(lo, hi - (rows.length > 1 ? GAP / span : 0)), r0, 'series.' + (j + 1), { row: k(r) }));
       });
-      legend.push(...shareLegend(rows, k, dim, catalog.dimensions[dim]!, m, total, (j) => 'series.' + (j + 1)));
+      legend.push(...shareLegend(rows, k, dim, catalog.dimensions[dim]!, m, catalog.metrics[m]!, result.totals[m], (j) => 'series.' + (j + 1)));
       keys = rows.map(k);
       return;
     }
@@ -630,7 +631,7 @@ function sceneNumber(catalog: Catalog, q: Query, result: Result, share: boolean)
   if (by && catalog.dimensions[by]!.type === 'categorical' && rows.length) {
     const top = leader(result, by, m)!;                                      // with two dimensions a row is a pair, so the leader is the engine's
     const name = formatDimension(top[by], catalog.dimensions[by]!);
-    note = share ? name + ' ' + fmtPct(num(top, m) / (t[m] || 1)) : 'Top: ' + name;
+    note = share && t[m] ? name + ' ' + fmtPct(num(top, m) / t[m]!) : 'Top: ' + name;   // with no total there is no share to say
   }
   const dl = q.compare === 'previous' ? delta(t[m] as number, t[m + '@previous'], M.polarity) : null;
   value(formatValue(t[m], M), formatValue(t[m], M, 'compact'));

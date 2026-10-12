@@ -15,6 +15,21 @@ const num = (r: Row, f: string) => r[f] as number;
 /* A row's dimension value as its key. A result may hold a number or a boolean there, and a key is compared with
  * what a painter wrote into an attribute, so it is a string from here on. */
 const str = (r: Row, f: string) => String(r[f]);
+/** The key of each row of a result: its value of `dim`, and for a row that says a value again, the value and which
+ * time it is (`Google#2`). So no two rows share a key, a mark or a place, whatever a result repeats: a host that
+ * hands over labels where it had ids repeats one. In a plot split by `split` the rows of one value are its series,
+ * and only a value said again within one series is a repeat.
+ * ponytail: which of two such rows is the second is the result's order, so when the ranking turns they change places. */
+export function rowKeys(rows: Row[], dim: string, split?: string | null): Map<Row, string> {
+  const keys = new Map<Row, string>(), taken = new Set<string>();
+  for (const r of rows) {
+    const of = split ? '\n' + r[split] : '';
+    let k = str(r, dim);
+    for (let n = 2; taken.has(k + of); n++) k = str(r, dim) + '#' + n;
+    taken.add(k + of); keys.set(r, k);
+  }
+  return keys;
+}
 /** The role a layer plays: the one it states, or the one its mark and series imply. */
 export function roleOf(l: Layer): Role {
   return l.role || (l.series === 'previous' ? 'comparison' : l.mark === 'rule' ? 'reference' : 'primary');
@@ -192,10 +207,13 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   const nodes: SceneNode[] = [], rows = result.rows;
   const xDim = xDimOf(catalog, layers), xField = (xDim || by)!;
   const xOn = !xDim ? (layers.map((l) => l.encode && l.encode.x).find((f) => typeof f === 'string') as string) : catalog.dimensions[xDim]!.type === 'number' ? xDim : null;
-  const k = (r: Row) => String(r[xField]), keys = [...new Set(rows.map(k))];
   // A view has two dimensions at most and one is on x, so there is one to split by. Its order is the engine's, not the rows':
   // paint follows it, so a value keeps its colour when the ranking moves.
   const split = layers.map((l) => splitOf(catalog, l, xField)).find(Boolean) || null;
+  // A row of the engine's totals is not one of the result's, and is keyed by its value as it is.
+  const own = rowKeys(rows, xField, split), k = (r: Row) => own.get(r) ?? str(r, xField), keys = [...new Set(rows.map(k))];
+  // What a key says on the axis: its row's value, which a repeat shares with the row it repeats.
+  const said = new Map(rows.map((r) => [k(r), str(r, xField)]));
   const series = split ? [...new Set(((result.totalsBy && result.totalsBy[split]) || rows).map((r) => r[split] as string))] : [];
   if (series.length > SERIES) throw new Error('Splitting by "' + split + '" makes ' + series.length + ' series, and there are ' + SERIES + ' series colours. Add "limit": ' + SERIES + ' to the query, or less.');
   const isTime = catalog.dimensions[xField]!.type === 'time';
@@ -218,7 +236,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     const up: Record<string, number> = {}, down: Record<string, number> = {};
     series.forEach((s) => rows.forEach((r) => {
       if (r[split!] !== s || r[f] == null) return;
-      const n = num(r, f), run = n < 0 ? down : up, from = run[k(r)] || 0, all = share ? (whole.get(k(r))![f] as number) || 1 : 1;
+      const n = num(r, f), run = n < 0 ? down : up, from = run[k(r)] || 0, all = share ? (whole.get(str(r, xField))![f] as number) || 1 : 1;
       run[k(r)] = from + n;
       out.set(r, [from / all, (from + n) / all]);
     }));
@@ -281,7 +299,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     const idx = isTime ? [...new Set([0, Math.floor(last / 2), last])] : keys.map((_, i) => i);
     idx.forEach((i, j) => {
       const mid = isTime && j > 0 && j < idx.length - 1;                  // given up on a narrow plot
-      nodes.push({ key: 'xtick:' + keys[i], part: 'x-axis', kind: 'text', x: unit.cx(keys[i]!), row: keys[i]!, text: isTime ? fmtTime(keys[i]!) : String(keys[i]),
+      nodes.push({ key: 'xtick:' + keys[i], part: 'x-axis', kind: 'text', x: unit.cx(keys[i]!), row: keys[i]!, text: isTime ? fmtTime(said.get(keys[i]!)!) : said.get(keys[i]!)!,
         anchor: !isTime ? 'middle' : j === 0 ? 'start' : j === idx.length - 1 ? 'end' : 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...(mid && { rank: 1 }) });
     });
   }
@@ -429,8 +447,9 @@ function sceneRows(catalog: Catalog, layers: Layer[], rows: Row[], result: Resul
   // A mark with a field on color is painted by it, row by row: rows that share a value share a series colour, in the
   // order the values first come. The row's own dimension there is a colour for each row.
   const shade = (l: Layer, r: Row) => { const c = l.encode!.color; return typeof c === 'string' ? 'series.' + ([...new Set(rows.map((x) => x[c]))].indexOf(r[c]) % SERIES + 1) : undefined; };
+  const own = rowKeys(rows, dim);
   rows.forEach((r) => {
-    const k = str(r, dim);
+    const k = own.get(r)!;
     // The row itself: what a painter keys, and what is chosen and named when the row is.
     nodes.push({ key: 'row:' + k, part: 'rows', kind: 'row', row: k, paint: 'ink', layer: 'data' });
     layers.forEach((l, li) => {
@@ -449,24 +468,24 @@ function sceneRows(catalog: Catalog, layers: Layer[], rows: Row[], result: Resul
       }
     });
   });
-  return { nodes, rows: rows.map((r) => str(r, dim)), ...(beside && { track: 'beside' as const }) };
+  return { nodes, rows: rows.map((r) => own.get(r)!), ...(beside && { track: 'beside' as const }) };
 }
 
 // No positional dimension: one band, stacked and normalized, split by colour. A share is of the engine's total, so
 // with a `limit` the band stops short of its end by what the rows past the limit hold.
 function sceneBand(catalog: Catalog, layer: Layer, rows: Row[], totals: Result['totals']): Body {
   const nodes: SceneNode[] = [], m = layer.encode!.x as string, dim = layer.encode!.color as string;
-  const total = totals[m] || 1, k = (r: Row) => str(r, dim);
+  const total = totals[m] || 1, own = rowKeys(rows, dim), k = (r: Row) => own.get(r)!;
   rows.forEach((r, i) => {
     nodes.push({ key: 'seg:' + k(r), part: 'band', kind: 'rect', v: num(r, m) / total, row: k(r), paint: 'series.' + ((i % 6) + 1), layer: 'data', role: roleOf(layer) });
   });
-  return { nodes: nodes.concat(shareLegend(rows, k, catalog.dimensions[dim]!, m, total, (i) => 'series.' + ((i % 6) + 1))), rows: rows.map(k) };
+  return { nodes: nodes.concat(shareLegend(rows, k, dim, catalog.dimensions[dim]!, m, total, (i) => 'series.' + ((i % 6) + 1))), rows: rows.map(k) };
 }
 // The legends of a whole split by colour, for a band and for a circle of arcs: both of them, each in its own part.
 // The plan names one in `parts`; a fit rule swaps them.
 // A segment is named as the readout names it, so a day is "Sep 29". The prototype writes it raw: a deliberate departure.
-function shareLegend(rows: Row[], k: (r: Row) => string, dim: DimensionDef, m: string, total: number, paint: (i: number) => string): SceneNode[] {
-  const nodes: SceneNode[] = [], name = (r: Row) => formatDimension(k(r), dim);
+function shareLegend(rows: Row[], k: (r: Row) => string, f: string, dim: DimensionDef, m: string, total: number, paint: (i: number) => string): SceneNode[] {
+  const nodes: SceneNode[] = [], name = (r: Row) => formatDimension(str(r, f), dim);
   rows.forEach((r, i) => {
     nodes.push({ key: 'swatch:' + k(r), part: 'legend', kind: 'rect', row: k(r), paint: paint(i), layer: 'data' });
     nodes.push({ key: 'legend:' + k(r), part: 'legend', kind: 'text', row: k(r), text: name(r), anchor: 'start', baseline: 'middle', font: 'label', paint: 'ink', layer: 'guide' });
@@ -501,7 +520,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
     if (l.mark !== 'arc') throw new Error('The "' + l.mark + '" mark has no rule about a centre yet. Use arc, or take "angle" off the other layers.');
     if (typeof r0 !== 'number' || !(r0 >= 0 && r0 < 1)) throw new Error(n + ' has ' + JSON.stringify(r0) + ' on radius. It takes a number from 0 up to 1: the inner radius, as a share of the outer. 0.6 makes a donut.');
     if (isDim(catalog, enc.color)) {
-      const m = angle as string, dim = enc.color, rows = result.rows, total = result.totals[m] || 1, k = (r: Row) => r[dim] as string;
+      const m = angle as string, dim = enc.color, rows = result.rows, total = result.totals[m] || 1, own = rowKeys(rows, dim), k = (r: Row) => own.get(r)!;
       if (!(m in catalog.metrics)) throw new Error(n + ' splits by "' + dim + '" with ' + JSON.stringify(angle) + ' on angle. Put a metric on angle: each segment is its share of that metric\'s total.');
       if (keys) throw new Error(n + ' is a second layer split by color, and a circle is divided once. Remove one of them.');
       if (rows.length > SERIES) throw new Error('Splitting by "' + dim + '" makes ' + rows.length + ' segments, and there are ' + SERIES + ' series colours. Add "limit": ' + SERIES + ' to the query, or less.');
@@ -511,7 +530,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
         const lo = run / total, hi = (run += num(r, m)) / total;
         arcs.push(arc(ids[i] + ':' + k(r), l, lo, Math.max(lo, hi - (rows.length > 1 ? GAP / span : 0)), r0, 'series.' + (j + 1), { row: k(r) }));
       });
-      legend.push(...shareLegend(rows, k, catalog.dimensions[dim]!, m, total, (j) => 'series.' + (j + 1)));
+      legend.push(...shareLegend(rows, k, dim, catalog.dimensions[dim]!, m, total, (j) => 'series.' + (j + 1)));
       keys = rows.map(k);
       return;
     }

@@ -1,4 +1,4 @@
-import { formatBin, formatDimension, formatValue, layerKeys, partialNote, unitsOf, type Catalog, type Layer, type Query, type RectNode, type Result, type Row, type Scene } from '@unified-analytics/core';
+import { formatBin, formatDimension, formatValue, layerKeys, partialNote, rowKeys, unitsOf, type Catalog, type Layer, type Query, type RectNode, type Result, type Row, type Scene } from '@unified-analytics/core';
 import { attr, ensure, paintVar, prop } from './dom.ts';
 import { apart } from './measure.ts';
 import { FOCUS, HOVER, token } from './tokens.ts';
@@ -60,14 +60,16 @@ export function readoutAt(rows: Row[], total: Row | undefined, q: Query, catalog
 }
 
 /** The rows of the result at each point of the scene. One each, in step, unless the plot is split into series:
- * then `x` and `split` name the two dimensions, and a point has a row per series, in the series' order. */
+ * then `x` and `split` name the two dimensions, and a point has a row per series, in the series' order. A point is
+ * found by the key core gave its rows (rowKeys), never by their value: two rows may say one value, and each has a
+ * point of its own. */
 export function rowsAt(scene: Scene, q: Query, result: Result): { rows: Row[][]; x?: string | undefined; split?: string } {
   const keys = scene.rows ?? [], by = q.by || [], order = scene.series ?? [];
   // ponytail: scene.rows and result.rows are taken to run in step, as every scene builder with no split makes them.
   if (!order.length || by.length !== 2) return { rows: keys.map((_, i) => (result.rows[i] ? [result.rows[i]!] : [])), x: by[0] };
   const x = by.find((d) => result.rows.length > 0 && keys.includes(String(result.rows[0]![d]))) ?? by[0]!, split = by.find((d) => d !== x)!;
-  const rank = (r: Row) => order.indexOf(String(r[split]));
-  return { rows: keys.map((k) => result.rows.filter((r) => String(r[x]) === k).sort((a, b) => rank(a) - rank(b))), x, split };
+  const rank = (r: Row) => order.indexOf(String(r[split])), own = rowKeys(result.rows, x, split);
+  return { rows: keys.map((k) => result.rows.filter((r) => own.get(r) === k).sort((a, b) => rank(a) - rank(b))), x, split };
 }
 
 /** A value a crosshair marks at one point of a plot: how far up the plot it is, what it says, which y axis it is read

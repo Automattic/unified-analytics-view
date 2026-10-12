@@ -480,7 +480,7 @@ A placed scene is `{ width, height, nodes, plot? }`. Nodes are flat and drawn in
 
 Every node also has:
 
-- `key`: stable across renders, for example `primary:line`, `primary:bar:2026-09-08`, `seg:Search`. A layer's key is its role and mark, with `#2` for a second layer of the same role and mark; it does not count layers, so it holds when one drops. The prototype's keys do count them (`L2:line`), and the parity test maps them. Keys are what make transitions and keyboard navigation possible. Duplicate keys are a bug; the prototype test checks for them.
+- `key`: stable across renders, for example `primary:line`, `primary:bar:2026-09-08`, `seg:Search`. A layer's key is its role and mark, with `#2` for a second layer of the same role and mark; it does not count layers, so it holds when one drops. The prototype's keys do count them (`L2:line`), and the parity test maps them. Keys are what make transitions and keyboard navigation possible. Duplicate keys are a bug; the prototype test checks for them. A result that says a dimension value twice still gets a key for each row: the repeat is `Google#2` (`rowKeys`), and the axis, legend and readout say its value as it is. Which of the two is the second is the result's order, so a host that has ids hands those over, not labels.
 - `paint`: a token, never a colour.
 - `layer`: `data` or `guide`.
 - Optional `opacity`, `tx`, `ty`, `note`.

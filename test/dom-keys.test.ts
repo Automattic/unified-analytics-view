@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { buildScene, resolve, unboundedContainer, type Catalog, type Spec } from '@unified-analytics/core';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { buildScene, makeContainer, place, resolve, rowKeys, unboundedContainer, type Catalog, type Spec } from '@unified-analytics/core';
 import { catalog, runQuery, samples, type Scenario } from '@unified-analytics/fixtures';
 import { Keys, crossMarks, hitNodes, readout, rowsAt, step, written } from '../packages/dom/src/keys.ts';
 
@@ -126,6 +126,56 @@ describe('row keys', () => {
       expect(scene.nodes.filter((n) => n.row != null).every((n) => typeof n.row === 'string'), scene.layout).toBe(true);
     }
     expect(hitNodes(buildScene(resolve(bars, result, unboundedContainer(), hours), query, result, hours)).map((h) => h.row)).toEqual(['9', '10', '11']);
+  });
+});
+
+// A host that hands over labels where it had ids sends two rows of one value. Each is still a row: it has a key, a
+// mark, a place and a point of its own, and what is written on it is the value, not the key.
+describe('two rows of one value', () => {
+  const sources: Catalog = { metrics: { v: { label: 'Visitors', unit: 'count', polarity: 'up' } }, dimensions: { src: { label: 'Source', type: 'categorical' }, dev: { label: 'Device', type: 'categorical' } } };
+  const meta = { range: '28d', compare: null, notes: [] }, query = { metrics: ['v'], by: ['src'] };
+  const result = { rows: [{ src: 'Google', v: 50 }, { src: 'Google', v: 30 }, { src: 'Bing', v: 20 }, { src: 'Duck', v: 10 }], totals: { v: 110 }, meta };
+  const specs: Record<string, Spec> = {
+    bars: { query, layers: [{ mark: 'bar', encode: { x: 'src', y: 'v' } }] }, line: { query, layers: [{ mark: 'line', encode: { x: 'src', y: 'v' } }] },
+    list: { query, use: 'bar-list' }, band: { query, use: 'share-bar' }, donut: { query, use: 'donut' },
+  };
+  const sceneOf = (spec: Spec, res: typeof result) => { const plan = resolve(spec, res, unboundedContainer(), sources); return { plan, scene: buildScene(plan, spec.query, res, sources) }; };
+
+  it('counts the second (`Google#2`), and leaves a value said once as it is', () => {
+    expect([...rowKeys(result.rows, 'src').values()]).toEqual(['Google', 'Google#2', 'Bing', 'Duck']);
+    // A value that is already another's key does not take it.
+    expect([...rowKeys([{ s: 'a' }, { s: 'a' }, { s: 'a#2' }, { s: 'a' }], 's').values()]).toEqual(['a', 'a#2', 'a#2#2', 'a#3']);
+  });
+  it.each(Object.keys(specs))('gives each row of %s a key, a point and a readout of its own', (name) => {
+    const spec = specs[name]!, { plan, scene } = sceneOf(spec, result), keys = scene.nodes.map((n) => n.key);
+    expect(scene.rows).toEqual(['Google', 'Google#2', 'Bing', 'Duck']);
+    expect(new Set(keys).size, 'duplicate keys').toBe(keys.length);
+    const placed = place(scene, makeContainer(400)).nodes.map((n) => n.key);
+    expect(new Set(placed).size, 'duplicate keys, placed').toBe(placed.length);
+    // The point of each row holds that row and no other, so its name, its readout and the event it sends are its own.
+    const at = rowsAt(scene, spec.query, result);
+    expect(at.rows).toEqual(result.rows.map((r) => [r]));
+    expect(at.rows.map((rs) => readout(rs[0]!, spec.query, sources, plan.layers))).toEqual(['Google: Visitors 50', 'Google: Visitors 30', 'Bing: Visitors 20', 'Duck: Visitors 10']);
+    // Each has its own mark, and nothing written says the key.
+    for (const row of scene.rows!) expect(scene.nodes.some((n) => n.row === row && n.kind !== 'text' && n.layer === 'data') || scene.nodes.some((n) => n.kind === 'path' && n.points.some((p) => p.row === row)), row).toBe(true);
+    expect(scene.nodes.filter((n) => n.kind === 'text' && n.text.includes('#'))).toEqual([]);
+    if (scene.layout === 'cartesian') expect(hitNodes(scene).map((h) => h.row)).toEqual(scene.rows);
+  });
+  it('tells the rows of a split plot apart by their series, and repeats only a pair said twice', () => {
+    const q = { metrics: ['v'], by: ['src', 'dev'] }, spec: Spec = { query: q, use: 'stacked-bar' };
+    const rows = [['A', 'Desktop', 5], ['A', 'Desktop', 7], ['A', 'Mobile', 3], ['B', 'Desktop', 8], ['B', 'Mobile', 2]].map(([src, dev, v]) => ({ src, dev, v })) as typeof result.rows;
+    const res = { rows, totals: { v: 25 }, totalsBy: { src: [{ src: 'A', v: 15 }, { src: 'B', v: 10 }], dev: [{ dev: 'Desktop', v: 20 }, { dev: 'Mobile', v: 5 }] }, meta };
+    const { scene } = sceneOf(spec, res), keys = scene.nodes.map((n) => n.key);
+    expect(scene.rows).toEqual(['A', 'A#2', 'B']);
+    expect(new Set(keys).size, 'duplicate keys').toBe(keys.length);
+    expect(rowsAt(scene, q, res).rows).toEqual([[rows[0], rows[2]], [rows[1]], [rows[3], rows[4]]]);
+    expect(scene.nodes.filter((n) => n.part === 'x-axis' && n.kind === 'text').map((n) => n.kind === 'text' && n.text)).toEqual(['A', 'A', 'B']);
+  });
+  it('changes nothing where no value is said twice', () => {
+    for (const { spec } of Object.values(samples)) {
+      const res = runQuery(spec.query), scene = buildScene(resolve(spec, res, unboundedContainer(), catalog), spec.query, res, catalog);
+      expect(scene.nodes.filter((n) => /#\d+$/.test(n.row ?? ''))).toEqual([]);
+    }
   });
 });
 

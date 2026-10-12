@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, FIT_RULES, type FitRule, type Spec } from '@universal-analytics/core';
-import { compileFitRules } from '@universal-analytics/dom';
-import { catalog, runQuery, samples } from '@universal-analytics/fixtures';
-import { GEO_RULES } from '@universal-analytics/geo';
-import { geoPainter } from '@universal-analytics/geo/dom';
+import { CONTAINER_RULES, FIT_RULES, type FitRule, type Spec } from '@unified-analytics/core';
+import { compileFitRules } from '@unified-analytics/dom';
+import { catalog, runQuery, samples } from '@unified-analytics/fixtures';
+import { GEO_RULES } from '@unified-analytics/geo';
+import { geoPainter } from '@unified-analytics/geo/dom';
 import { LAYOUTS } from '../packages/dom/src/layouts/index.ts';
 import { BASE_CSS, FALLBACK_CSS, check, rulesOver } from '../packages/dom/src/view.ts';
 

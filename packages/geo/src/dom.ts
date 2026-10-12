@@ -1,5 +1,5 @@
-import type { CircleNode, PathNode, TextNode } from '@universal-analytics/core';
-import { FOCUS, HOVER, attr, ensure, keyed, prop, text, token, type LayoutPainter } from '@universal-analytics/dom';
+import type { CircleNode, PathNode, TextNode } from '@unified-analytics/core';
+import { FOCUS, HOVER, attr, ensure, keyed, prop, text, token, type LayoutPainter } from '@unified-analytics/dom';
 import { GEO_RULES } from './index.ts';
 
 /* The `geo` mark's half for the DOM: the painter of its layout, for registerPainter().

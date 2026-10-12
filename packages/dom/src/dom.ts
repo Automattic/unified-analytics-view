@@ -1,4 +1,4 @@
-import type { SceneNode, TextNode } from '@universal-analytics/core';
+import type { SceneNode, TextNode } from '@unified-analytics/core';
 import { dots } from './dots.ts';
 import { leave } from './motion.ts';
 import { token } from './tokens.ts';

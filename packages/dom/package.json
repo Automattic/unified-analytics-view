@@ -1,10 +1,10 @@
 {
-  "name": "@universal-analytics/dom",
+  "name": "@unified-analytics/dom",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "exports": "./src/index.ts",
   "dependencies": {
-    "@universal-analytics/core": "workspace:*"
+    "@unified-analytics/core": "workspace:*"
   }
 }

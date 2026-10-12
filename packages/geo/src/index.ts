@@ -1,6 +1,6 @@
 import { geoEqualEarth, geoPath, type ExtendedFeatureCollection, type GeoProjection } from 'd3-geo';
-import { dotRadius, notShownNote, registerMark, roleOf, seqScale, sizeKey, sizeStep } from '@universal-analytics/core';
-import type { CircleNode, CustomMark, FitRule, Part, PathNode, PlacedNode, Row, SceneNode, TextNode } from '@universal-analytics/core';
+import { dotRadius, notShownNote, registerMark, roleOf, seqScale, sizeKey, sizeStep } from '@unified-analytics/core';
+import type { CircleNode, CustomMark, FitRule, Part, PathNode, PlacedNode, Row, SceneNode, TextNode } from '@unified-analytics/core';
 
 /* The `geo` mark: a map of regions, as a custom mark (core's marks.ts). This is its half for core: a scene in ratios
  * and its place in pixels, with no DOM. The painter is in dom.ts.

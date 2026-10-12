@@ -1,5 +1,5 @@
 {
-  "name": "@universal-analytics/bench",
+  "name": "@unified-analytics/bench",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -8,12 +8,12 @@
     "build": "vite build"
   },
   "dependencies": {
-    "@universal-analytics/core": "workspace:*",
-    "@universal-analytics/dom": "workspace:*",
-    "@universal-analytics/fixtures": "workspace:*",
-    "@universal-analytics/geo": "workspace:*",
-    "@universal-analytics/spacefast": "workspace:*",
-    "@universal-analytics/tokens": "workspace:*",
+    "@unified-analytics/core": "workspace:*",
+    "@unified-analytics/dom": "workspace:*",
+    "@unified-analytics/fixtures": "workspace:*",
+    "@unified-analytics/geo": "workspace:*",
+    "@unified-analytics/spacefast": "workspace:*",
+    "@unified-analytics/tokens": "workspace:*",
     "d3-scale": "^4.0.2",
     "d3-shape": "^3.2.0"
   },

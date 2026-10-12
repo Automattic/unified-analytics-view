@@ -1,4 +1,4 @@
-import type { Catalog, MetricDef, Polarity, Query, Result, Row, Unit } from '@universal-analytics/core';
+import type { Catalog, MetricDef, Polarity, Query, Result, Row, Unit } from '@unified-analytics/core';
 
 /* Spacefast's analytics query API, as its contract has it (spacefast/monorepo, packages/common/src/contracts/analytics-query.ts,
  * read at b1e28cc). One answer of `POST /v1/spaces/{spaceId}/analytics/query` becomes what a view takes: a query, a

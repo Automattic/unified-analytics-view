@@ -1,6 +1,6 @@
-import type { Layer, Spec } from '@universal-analytics/core';
-import { UaView, defineUaView, surfaceSheet } from '@universal-analytics/dom';
-import type { Scenario } from '@universal-analytics/fixtures';
+import type { Layer, Spec } from '@unified-analytics/core';
+import { UaView, defineUaView, surfaceSheet } from '@unified-analytics/dom';
+import type { Scenario } from '@unified-analytics/fixtures';
 import { catalog, runQuery, sections } from './sidebar-data.ts';
 
 /* The sidebar: a mock-up of the panel a browser opens beside a page, rebuilt from the grammar. The page here is

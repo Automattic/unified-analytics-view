@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, buildScene, expand, pathD, resolve, unboundedContainer, type PathNode, type RectNode } from '@universal-analytics/core';
-import { catalog, moreSamples, runQuery, type Scenario } from '@universal-analytics/fixtures';
+import { CONTAINER_RULES, buildScene, expand, pathD, resolve, unboundedContainer, type PathNode, type RectNode } from '@unified-analytics/core';
+import { catalog, moreSamples, runQuery, type Scenario } from '@unified-analytics/fixtures';
 import { compileFitRules } from '../packages/dom/src/compile.ts';
 import { band } from '../packages/dom/src/layouts/band.ts';
 import { cartesian } from '../packages/dom/src/layouts/cartesian.ts';

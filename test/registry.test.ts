@@ -1,9 +1,9 @@
 import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { buildScene, customMarks, makeContainer, place, registerMark, resolve, seqScale } from '@universal-analytics/core';
-import type { CustomMark, FitRule, Part, RectNode, Spec } from '@universal-analytics/core';
-import viewSchema from '@universal-analytics/core/schema/view.schema.json';
-import { catalog, runQuery, samples } from '@universal-analytics/fixtures';
+import { buildScene, customMarks, makeContainer, place, registerMark, resolve, seqScale } from '@unified-analytics/core';
+import type { CustomMark, FitRule, Part, RectNode, Spec } from '@unified-analytics/core';
+import viewSchema from '@unified-analytics/core/schema/view.schema.json';
+import { catalog, runQuery, samples } from '@unified-analytics/fixtures';
 
 // Step 8 of docs/chart-coverage-plan.md, part 1: the registry of custom marks. Held here with a mark made for the
 // test, so nothing in it depends on a map. The `geo` mark is in test/geo.test.ts, and `fallback` in test/fallback.test.ts.

@@ -1,4 +1,4 @@
-import type { LineNode, Scene } from '@universal-analytics/core';
+import type { LineNode, Scene } from '@unified-analytics/core';
 import { ensure, keyed, prop } from '../dom.ts';
 import { token } from '../tokens.ts';
 

@@ -1,9 +1,9 @@
 import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { buildScene, declutter, makeContainer, place, resolve, type Spec } from '@universal-analytics/core';
-import catalogSchema from '@universal-analytics/core/schema/catalog.schema.json';
-import viewSchema from '@universal-analytics/core/schema/view.schema.json';
-import { catalog, moreSamples, runQuery, scenarios } from '@universal-analytics/fixtures';
+import { buildScene, declutter, makeContainer, place, resolve, type Spec } from '@unified-analytics/core';
+import catalogSchema from '@unified-analytics/core/schema/catalog.schema.json';
+import viewSchema from '@unified-analytics/core/schema/view.schema.json';
+import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
 import { hitNodes } from '../packages/dom/src/keys.ts';
 import { nearest } from '../packages/dom/src/layouts/points.ts';
 

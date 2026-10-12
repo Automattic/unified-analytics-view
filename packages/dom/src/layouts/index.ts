@@ -1,4 +1,4 @@
-import type { TextNode } from '@universal-analytics/core';
+import type { TextNode } from '@unified-analytics/core';
 import { keyed, text } from '../dom.ts';
 import type { LayoutPainter } from '../layout.ts';
 import { band } from './band.ts';

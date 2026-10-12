@@ -1,8 +1,8 @@
 import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { buildScene, columnRooms, expand, formatValue, makeContainer, place, resolve, unboundedContainer, type Result, type Spec } from '@universal-analytics/core';
-import viewSchema from '@universal-analytics/core/schema/view.schema.json';
-import { catalog, moreSamples, runQuery, samples, scenarios } from '@universal-analytics/fixtures';
+import { buildScene, columnRooms, expand, formatValue, makeContainer, place, resolve, unboundedContainer, type Result, type Spec } from '@unified-analytics/core';
+import viewSchema from '@unified-analytics/core/schema/view.schema.json';
+import { catalog, moreSamples, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
 
 // Rows as tracks (docs/chart-coverage-plan.md, step 2): columns of values, a change per row, a signed track and the
 // funnel. The sweep and the golden scenes of these samples are in test/coverage.test.ts, with the rest of `moreSamples`.

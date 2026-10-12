@@ -1,4 +1,4 @@
-import type { Room } from '@universal-analytics/core';
+import type { Room } from '@unified-analytics/core';
 
 /* The measured pass: what a container query cannot ask, because the need is the size of the content itself.
  * It reads sizes and writes attributes, and the stylesheet does the hiding. It never rebuilds the scene.

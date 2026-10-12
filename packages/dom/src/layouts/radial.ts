@@ -1,4 +1,4 @@
-import { arcD, type ArcNode } from '@universal-analytics/core';
+import { arcD, type ArcNode } from '@unified-analytics/core';
 import { ensure, keyed, paintVar, prop, text } from '../dom.ts';
 import type { LayoutPainter } from '../layout.ts';
 import { token } from '../tokens.ts';

@@ -1,12 +1,12 @@
 import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, buildScene, customMarks, makeContainer, notShownNote, place, registerMark, resolve, type CircleNode, type PainterName, type PathNode, type Result, type Spec } from '@universal-analytics/core';
-import viewSchema from '@universal-analytics/core/schema/view.schema.json';
-import { compileFitRules } from '@universal-analytics/dom';
-import { catalog, countries, moreSamples, runQuery, scenarios } from '@universal-analytics/fixtures';
-import { GEO_RULES, geoMark, type Shapes } from '@universal-analytics/geo';
-import { geoPainter, zoomBox } from '@universal-analytics/geo/dom';
-import world from '@universal-analytics/geo/countries-110m.json';
+import { CONTAINER_RULES, buildScene, customMarks, makeContainer, notShownNote, place, registerMark, resolve, type CircleNode, type PainterName, type PathNode, type Result, type Spec } from '@unified-analytics/core';
+import viewSchema from '@unified-analytics/core/schema/view.schema.json';
+import { compileFitRules } from '@unified-analytics/dom';
+import { catalog, countries, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
+import { GEO_RULES, geoMark, type Shapes } from '@unified-analytics/geo';
+import { geoPainter, zoomBox } from '@unified-analytics/geo/dom';
+import world from '@unified-analytics/geo/countries-110m.json';
 
 // Step 8 of docs/chart-coverage-plan.md: the `geo` mark, which is a custom mark, registered by the fixtures with their
 // boundary shapes. No prototype knows it, so it is held to a sweep, facts and golden scenes of its own. The registry

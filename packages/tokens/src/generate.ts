@@ -8,7 +8,7 @@
  * base. Component: config/charts.tokens.json, the names <ua-view> reads, as aliases
  * into the other two.
  *
- * Run: pnpm --filter @universal-analytics/tokens generate */
+ * Run: pnpm --filter @unified-analytics/tokens generate */
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import StyleDictionary from 'style-dictionary';

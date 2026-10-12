@@ -1,4 +1,4 @@
-import { formatBin, formatDimension, formatValue, layerKeys, partialNote, unitsOf, type Catalog, type Layer, type Query, type RectNode, type Result, type Row, type Scene } from '@universal-analytics/core';
+import { formatBin, formatDimension, formatValue, layerKeys, partialNote, unitsOf, type Catalog, type Layer, type Query, type RectNode, type Result, type Row, type Scene } from '@unified-analytics/core';
 import { attr, ensure, paintVar, prop } from './dom.ts';
 import { apart } from './measure.ts';
 import { FOCUS, HOVER, token } from './tokens.ts';

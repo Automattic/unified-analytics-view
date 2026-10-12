@@ -26,22 +26,22 @@ importers:
       '@types/node':
         specifier: ^26.6.4
         version: 26.6.4
-      '@universal-analytics/core':
+      '@unified-analytics/core':
         specifier: workspace:*
         version: link:packages/core
-      '@universal-analytics/dom':
+      '@unified-analytics/dom':
         specifier: workspace:*
         version: link:packages/dom
-      '@universal-analytics/fixtures':
+      '@unified-analytics/fixtures':
         specifier: workspace:*
         version: link:packages/fixtures
-      '@universal-analytics/geo':
+      '@unified-analytics/geo':
         specifier: workspace:*
         version: link:packages/geo
-      '@universal-analytics/spacefast':
+      '@unified-analytics/spacefast':
         specifier: workspace:*
         version: link:packages/spacefast
-      '@universal-analytics/tokens':
+      '@unified-analytics/tokens':
         specifier: workspace:*
         version: link:packages/tokens
       ajv:
@@ -68,22 +68,22 @@ importers:
 
   apps/bench:
     dependencies:
-      '@universal-analytics/core':
+      '@unified-analytics/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@universal-analytics/dom':
+      '@unified-analytics/dom':
         specifier: workspace:*
         version: link:../../packages/dom
-      '@universal-analytics/fixtures':
+      '@unified-analytics/fixtures':
         specifier: workspace:*
         version: link:../../packages/fixtures
-      '@universal-analytics/geo':
+      '@unified-analytics/geo':
         specifier: workspace:*
         version: link:../../packages/geo
-      '@universal-analytics/spacefast':
+      '@unified-analytics/spacefast':
         specifier: workspace:*
         version: link:../../packages/spacefast
-      '@universal-analytics/tokens':
+      '@unified-analytics/tokens':
         specifier: workspace:*
         version: link:../../packages/tokens
       d3-scale:
@@ -111,25 +111,25 @@ importers:
 
   packages/dom:
     dependencies:
-      '@universal-analytics/core':
+      '@unified-analytics/core':
         specifier: workspace:*
         version: link:../core
 
   packages/fixtures:
     dependencies:
-      '@universal-analytics/core':
+      '@unified-analytics/core':
         specifier: workspace:*
         version: link:../core
-      '@universal-analytics/geo':
+      '@unified-analytics/geo':
         specifier: workspace:*
         version: link:../geo
 
   packages/geo:
     dependencies:
-      '@universal-analytics/core':
+      '@unified-analytics/core':
         specifier: workspace:*
         version: link:../core
-      '@universal-analytics/dom':
+      '@unified-analytics/dom':
         specifier: workspace:*
         version: link:../dom
       d3-geo:
@@ -138,7 +138,7 @@ importers:
 
   packages/spacefast:
     dependencies:
-      '@universal-analytics/core':
+      '@unified-analytics/core':
         specifier: workspace:*
         version: link:../core
 
@@ -180,7 +180,7 @@ packages:
     resolution: {integrity: sha512-T7jf+5zgsZHwNJ4lvQ7/aezbyk0nNX+zJVWpmHA7VYsEx7a7qr5Rg5IbtJFqkgze5Y2sruq1RUY8Q837Od7iFw==}
 
   '@jridgewell/trace-mapping@0.3.31':
-    resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==, tarball: https://registry.npmjs.org/@jridgewell/trace-mapping/-/trace-mapping-0.3.31.tgz}
+    resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
   '@jsonjoy.com/base64@1.1.2':
     resolution: {integrity: sha512-q6XAnWQDIMA3+FTiOYajoYqySkO+JSat0ytXGSuRdq9uXE7o92gzuQwQM14xaCRlBLGq3v5miDGC4vkVTn54xA==}

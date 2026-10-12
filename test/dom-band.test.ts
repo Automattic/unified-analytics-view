@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, FIT_RULES } from '@universal-analytics/core';
-import { compileFitRules } from '@universal-analytics/dom';
+import { CONTAINER_RULES, FIT_RULES } from '@unified-analytics/core';
+import { compileFitRules } from '@unified-analytics/dom';
 import { band } from '../packages/dom/src/layouts/band.ts';
 
 // String work only, as in dom-compile.test.ts. What the browser makes of it is checked on the bench.

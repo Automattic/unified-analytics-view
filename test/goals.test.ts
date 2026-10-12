@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildScene, resolve, unboundedContainer } from '@universal-analytics/core';
-import { scenarios } from '@universal-analytics/fixtures';   // registers the geo mark, as the page's import does
+import { buildScene, resolve, unboundedContainer } from '@unified-analytics/core';
+import { scenarios } from '@unified-analytics/fixtures';   // registers the geo mark, as the page's import does
 import { SITES, catalog, runQuery } from '../apps/bench/src/goals-data.ts';
 import { GOALS, METRICS } from '../apps/bench/src/goals-views.ts';
 

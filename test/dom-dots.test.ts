@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildScene, resolve, unboundedContainer } from '@universal-analytics/core';
-import { catalog, runQuery, samples } from '@universal-analytics/fixtures';
+import { buildScene, resolve, unboundedContainer } from '@unified-analytics/core';
+import { catalog, runQuery, samples } from '@unified-analytics/fixtures';
 import { CELL, DOTS_CSS, FACE, FAMILY, amount, dotted, rolls, unit } from '../packages/dom/src/dots.ts';
 import { NUMBER_FITS, SCREEN_LEAST, fitNumber } from '../packages/dom/src/measure.ts';
 import { cartesian } from '../packages/dom/src/layouts/cartesian.ts';

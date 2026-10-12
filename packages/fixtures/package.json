@@ -1,11 +1,11 @@
 {
-  "name": "@universal-analytics/fixtures",
+  "name": "@unified-analytics/fixtures",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "exports": "./src/index.ts",
   "dependencies": {
-    "@universal-analytics/core": "workspace:*",
-    "@universal-analytics/geo": "workspace:*"
+    "@unified-analytics/core": "workspace:*",
+    "@unified-analytics/geo": "workspace:*"
   }
 }

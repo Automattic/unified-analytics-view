@@ -1,4 +1,4 @@
-import { formatDimension, formatValue, type RectNode, type Row, type TextNode } from '@universal-analytics/core';
+import { formatDimension, formatValue, type RectNode, type Row, type TextNode } from '@unified-analytics/core';
 import { attr, ensure, keyed, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { hideReadout, placeReadout, readout, readoutOf } from '../keys.ts';

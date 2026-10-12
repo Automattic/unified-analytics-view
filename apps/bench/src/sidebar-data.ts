@@ -1,5 +1,5 @@
-import type { Catalog, Query, Result, Row } from '@universal-analytics/core';
-import { apportion, seeded, type Scenario } from '@universal-analytics/fixtures';
+import type { Catalog, Query, Result, Row } from '@unified-analytics/core';
+import { apportion, seeded, type Scenario } from '@unified-analytics/fixtures';
 
 /* The engine behind the sidebar test case: one page of a travel blog, as the mock-up has it. Its own catalog and
  * its own numbers, so the fixtures the tests sweep stay as they are. Every figure is stated for 30 days and the

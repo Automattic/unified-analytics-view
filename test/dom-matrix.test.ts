@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { FIT_RULES } from '@universal-analytics/core';
-import { compileFitRules } from '@universal-analytics/dom';
+import { FIT_RULES } from '@unified-analytics/core';
+import { compileFitRules } from '@unified-analytics/dom';
 import { matrix, stepCell } from '../packages/dom/src/layouts/matrix.ts';
 
 // String work and one plain function, with no DOM. Focus, hover, the readout and the table are checked in a browser on the bench.

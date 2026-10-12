@@ -1,4 +1,4 @@
-import type { Layer, Query, Spec } from '@universal-analytics/core';
+import type { Layer, Query, Spec } from '@unified-analytics/core';
 
 /* The goals page, as data: the seventeen goals a plan can have, the metrics each one's dashboard shows, and for every
  * metric the views that show it. A view here is a spec and nothing more. Whatever a spec could not say is written

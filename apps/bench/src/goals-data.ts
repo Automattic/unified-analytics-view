@@ -1,5 +1,5 @@
-import type { Catalog, MetricDef, Polarity, Query, Result, Row, Unit } from '@universal-analytics/core';
-import { apportion, seeded, type Scenario } from '@universal-analytics/fixtures';
+import type { Catalog, MetricDef, Polarity, Query, Result, Row, Unit } from '@unified-analytics/core';
+import { apportion, seeded, type Scenario } from '@unified-analytics/fixtures';
 
 /* The engine behind the goals page: seventeen sites, one for each goal a plan can have, on one catalog. Its own
  * numbers, so the fixtures the tests sweep stay as they are. A site has its own pages, events and steps, and its

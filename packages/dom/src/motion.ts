@@ -1,4 +1,4 @@
-import { pathD, type PathNode } from '@universal-analytics/core';
+import { pathD, type PathNode } from '@unified-analytics/core';
 import { FACES, token } from './tokens.ts';
 
 /* Motion: what a data change animates. A resize animates nothing, because nothing here runs on one and a ratio

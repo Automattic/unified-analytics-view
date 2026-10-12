@@ -1,7 +1,7 @@
-import { buildScene, resolve, unboundedContainer } from '@universal-analytics/core';
-import { UaView, defineUaView, registerPainter, surfaceSheet } from '@universal-analytics/dom';
-import { catalog, moreSamples, runQuery, samples as known, type Scenario } from '@universal-analytics/fixtures';
-import { geoPainter } from '@universal-analytics/geo/dom';
+import { buildScene, resolve, unboundedContainer } from '@unified-analytics/core';
+import { UaView, defineUaView, registerPainter, surfaceSheet } from '@unified-analytics/dom';
+import { catalog, moreSamples, runQuery, samples as known, type Scenario } from '@unified-analytics/fixtures';
+import { geoPainter } from '@unified-analytics/geo/dom';
 
 /* The bench: every sample, in frames that stand in for containers.
  * Controls live in the URL, so a reload or a shared link keeps them. */

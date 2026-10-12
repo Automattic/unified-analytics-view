@@ -5,10 +5,10 @@ import * as d3array from 'd3-array';
 import * as d3scale from 'd3-scale';
 import * as d3shape from 'd3-shape';
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, UNITS, buildScene, expand, formatDimension, formatValue, makeContainer, partialNote, pathD, place, resolve, unboundedContainer, type PainterName, type Spec, type Unit } from '@universal-analytics/core';
-import catalogSchema from '@universal-analytics/core/schema/catalog.schema.json';
-import viewSchema from '@universal-analytics/core/schema/view.schema.json';
-import { catalog, runQuery, samples, scenarios } from '@universal-analytics/fixtures';
+import { CONTAINER_RULES, UNITS, buildScene, expand, formatDimension, formatValue, makeContainer, partialNote, pathD, place, resolve, unboundedContainer, type PainterName, type Spec, type Unit } from '@unified-analytics/core';
+import catalogSchema from '@unified-analytics/core/schema/catalog.schema.json';
+import viewSchema from '@unified-analytics/core/schema/view.schema.json';
+import { catalog, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
 
 // The prototype, loaded as the reference the port is held to.
 (globalThis as any).d3 = { ...d3array, ...d3scale, ...d3shape };

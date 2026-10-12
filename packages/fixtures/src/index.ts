@@ -1,5 +1,5 @@
-import type { Catalog, Query, Result, Row, Spec } from '@universal-analytics/core';
-import { registerGeo, type Shapes } from '@universal-analytics/geo';
+import type { Catalog, Query, Result, Row, Spec } from '@unified-analytics/core';
+import { registerGeo, type Shapes } from '@unified-analytics/geo';
 import shapes from './countries.json';
 
 /** Boundary shapes for the `geo` mark: 123 countries. A shape's id is its ISO 3166-1 alpha-2 code in capitals, which is

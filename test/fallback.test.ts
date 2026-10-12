@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, FIT_RULES, buildScene, fallbackRule, makeContainer, place, resolve } from '@universal-analytics/core';
-import type { Container, FitRule, Spec } from '@universal-analytics/core';
-import { compileFitRules } from '@universal-analytics/dom';
-import { catalog, runQuery, samples } from '@universal-analytics/fixtures';
+import { CONTAINER_RULES, FIT_RULES, buildScene, fallbackRule, makeContainer, place, resolve } from '@unified-analytics/core';
+import type { Container, FitRule, Spec } from '@unified-analytics/core';
+import { compileFitRules } from '@unified-analytics/dom';
+import { catalog, runQuery, samples } from '@unified-analytics/fixtures';
 
 // Step 8 of docs/chart-coverage-plan.md, part 3: `fallback` on a fit rule, the preset a view becomes below the rule's
 // need. No default rule names one, so a context hands the samples a rule that does. A custom mark with a fallback of

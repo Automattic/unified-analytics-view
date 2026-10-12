@@ -1,4 +1,4 @@
-import type { CircleNode, LineNode } from '@universal-analytics/core';
+import type { CircleNode, LineNode } from '@unified-analytics/core';
 import { attr, prop } from '../dom.ts';
 import { token } from '../tokens.ts';
 

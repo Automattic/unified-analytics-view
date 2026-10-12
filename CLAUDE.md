@@ -12,7 +12,7 @@ pnpm test         # vitest: sweep, parity with the prototype, plan, schema, gold
 pnpm typecheck    # tsc --noEmit, strict
 pnpm test -u      # rewrite golden scenes; read the diff before committing it
 pnpm bench        # the bench at localhost:5173, on Vite
-pnpm --filter @universal-analytics/tokens generate   # rewrite packages/tokens/generated from its config
+pnpm --filter @unified-analytics/tokens generate   # rewrite packages/tokens/generated from its config
 ```
 
 Packages export their TypeScript source and nothing is built for release yet. Vite serves the bench.

@@ -1,8 +1,8 @@
 import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { buildScene, expand, makeContainer, place, resolve, unboundedContainer, type Catalog, type PainterName, type Result, type Spec } from '@universal-analytics/core';
-import viewSchema from '@universal-analytics/core/schema/view.schema.json';
-import { catalog, moreSamples, runQuery, scenarios } from '@universal-analytics/fixtures';
+import { buildScene, expand, makeContainer, place, resolve, unboundedContainer, type Catalog, type PainterName, type Result, type Spec } from '@unified-analytics/core';
+import viewSchema from '@unified-analytics/core/schema/view.schema.json';
+import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
 import { hitNodes } from '../packages/dom/src/keys.ts';
 
 // Ranges and `tick` (docs/chart-coverage-plan.md, step 3): companion fields, a second end on a bar, a rule and an

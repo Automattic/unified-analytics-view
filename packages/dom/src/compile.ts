@@ -1,4 +1,4 @@
-import type { FitRule } from '@universal-analytics/core';
+import type { FitRule } from '@unified-analytics/core';
 
 /* The fit-rule compiler: the same data resolve() evaluates, as container queries.
  * Pure string work, so it runs and is tested with no DOM. */

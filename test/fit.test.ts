@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, FIT_RULES, applies, buildScene, makeContainer, place, resolve, unboundedContainer, type FitRule, type PainterName, type Plan, type Spec } from '@universal-analytics/core';
-import { catalog, runQuery, samples, scenarios } from '@universal-analytics/fixtures';
+import { CONTAINER_RULES, FIT_RULES, applies, buildScene, makeContainer, place, resolve, unboundedContainer, type FitRule, type PainterName, type Plan, type Spec } from '@unified-analytics/core';
+import { catalog, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
 
 // The sweep of core.test.ts, run again to hold the fit rules to what resolve() does.
 const ALWAYS = { ...CONTAINER_RULES, tldrValue: { above: 'always' as const } };

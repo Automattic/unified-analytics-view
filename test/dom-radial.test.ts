@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { FIT_RULES } from '@universal-analytics/core';
-import { compileFitRules } from '@universal-analytics/dom';
+import { FIT_RULES } from '@unified-analytics/core';
+import { compileFitRules } from '@unified-analytics/dom';
 import { LAYOUTS } from '../packages/dom/src/layouts/index.ts';
 import { radial } from '../packages/dom/src/layouts/radial.ts';
 

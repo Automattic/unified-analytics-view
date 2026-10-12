@@ -1,8 +1,8 @@
 import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { buildScene, expand, makeContainer, place, resolve, type PainterName, type Spec } from '@universal-analytics/core';
-import viewSchema from '@universal-analytics/core/schema/view.schema.json';
-import { catalog, moreSamples, runQuery, samples, scenarios } from '@universal-analytics/fixtures';
+import { buildScene, expand, makeContainer, place, resolve, type PainterName, type Spec } from '@unified-analytics/core';
+import viewSchema from '@unified-analytics/core/schema/view.schema.json';
+import { catalog, moreSamples, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
 
 // What the grammar draws beyond the prototype's six samples (docs/chart-coverage-plan.md). Nothing here has a
 // prototype to match, so it is held to its own sweep, facts and golden scenes.

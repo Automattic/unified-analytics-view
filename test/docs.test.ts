@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { PRESETS } from '@universal-analytics/core';
-import viewSchema from '@universal-analytics/core/schema/view.schema.json';
+import { PRESETS } from '@unified-analytics/core';
+import viewSchema from '@unified-analytics/core/schema/view.schema.json';
 
 /* An agent writes specs from the reference and the schema alone, so a preset neither names is one it cannot find. */
 it('every preset is named in the reference and in the schema', () => {

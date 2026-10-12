@@ -1,4 +1,4 @@
-import type { LineNode, PathNode, RectNode, SceneNode, TextNode } from '@universal-analytics/core';
+import type { LineNode, PathNode, RectNode, SceneNode, TextNode } from '@unified-analytics/core';
 import { ensure, ensureSvg, keyed, paintVar, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { hitNodes } from '../keys.ts';

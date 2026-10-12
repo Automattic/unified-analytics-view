@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildScene, formatDimension, formatValue, place, resolve, tldrProse, makeContainer, type Spec } from '@universal-analytics/core';
-import { adapt, type ApiResult } from '@universal-analytics/spacefast';
+import { buildScene, formatDimension, formatValue, place, resolve, tldrProse, makeContainer, type Spec } from '@unified-analytics/core';
+import { adapt, type ApiResult } from '@unified-analytics/spacefast';
 import trends from './fixtures/spacefast/trends.response.json';
 import breakdowns from './fixtures/spacefast/breakdowns.response.json';
 

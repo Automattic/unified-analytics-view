@@ -1,8 +1,8 @@
 import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { buildScene, expand, makeContainer, place, resolve, type PainterName, type RectNode, type Spec } from '@universal-analytics/core';
-import viewSchema from '@universal-analytics/core/schema/view.schema.json';
-import { catalog, moreSamples, runQuery, scenarios } from '@universal-analytics/fixtures';
+import { buildScene, expand, makeContainer, place, resolve, type PainterName, type RectNode, type Spec } from '@unified-analytics/core';
+import viewSchema from '@unified-analytics/core/schema/view.schema.json';
+import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
 
 // The `cell` mark and the grid it is laid out in (docs/chart-coverage-plan.md, step 5). No prototype knows it, so it
 // is held to a sweep, facts and golden scenes of its own, as test/coverage.test.ts holds step 1.

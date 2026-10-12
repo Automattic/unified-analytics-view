@@ -1,4 +1,4 @@
-import type { Catalog, ContainerRules, FitRule, Layer, Layout, Query, Result, Room, Scene } from '@universal-analytics/core';
+import type { Catalog, ContainerRules, FitRule, Layer, Layout, Query, Result, Room, Scene } from '@unified-analytics/core';
 
 /* The seam between <ua-view> and a layout. A layout is one module in layouts/, exporting one LayoutPainter.
  *

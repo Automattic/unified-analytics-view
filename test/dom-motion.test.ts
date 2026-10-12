@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildScene, resolve, unboundedContainer, type PathNode } from '@universal-analytics/core';
-import { catalog, runQuery, samples } from '@universal-analytics/fixtures';
+import { buildScene, resolve, unboundedContainer, type PathNode } from '@unified-analytics/core';
+import { catalog, runQuery, samples } from '@unified-analytics/fixtures';
 import { mix, resample } from '../packages/dom/src/motion.ts';
 
 // A path's morph is points in and a string out, so it is held here with no DOM. That it runs, and what a

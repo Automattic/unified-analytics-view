@@ -1,4 +1,4 @@
-import type { RectNode, Scene, TextNode } from '@universal-analytics/core';
+import type { RectNode, Scene, TextNode } from '@unified-analytics/core';
 import { ensure, keyed, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { NUMBER_ALONE, type LayoutPainter } from '../layout.ts';

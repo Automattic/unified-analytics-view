@@ -1,6 +1,6 @@
-import { resolve, unboundedContainer, type Spec } from '@universal-analytics/core';
-import { UaView, defineUaView, surfaceSheet } from '@universal-analytics/dom';
-import { catalog, runQuery, samples, type Scenario } from '@universal-analytics/fixtures';
+import { resolve, unboundedContainer, type Spec } from '@unified-analytics/core';
+import { UaView, defineUaView, surfaceSheet } from '@unified-analytics/dom';
+import { catalog, runQuery, samples, type Scenario } from '@unified-analytics/fixtures';
 
 /* The demo: one walk through what is built. Every view on the page is a <ua-view> handed a spec, a result and
  * the catalog. The page is the surface: it owns the range, the data state and the layout, and hands each view

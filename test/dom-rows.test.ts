@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, FIT_RULES } from '@universal-analytics/core';
-import { compileFitRules } from '@universal-analytics/dom';
+import { CONTAINER_RULES, FIT_RULES } from '@unified-analytics/core';
+import { compileFitRules } from '@unified-analytics/dom';
 import { rows } from '../packages/dom/src/layouts/rows.ts';
 
 // String work only: there is no DOM here. What the browser makes of the rows is checked on the bench.

@@ -1,7 +1,7 @@
-import type { Catalog, Spec } from '@universal-analytics/core';
-import { UaView, defineUaView, registerPainter, surfaceSheet } from '@universal-analytics/dom';
-import { catalog, moreSamples, runQuery, samples, type Scenario } from '@universal-analytics/fixtures';
-import { geoPainter } from '@universal-analytics/geo/dom';
+import type { Catalog, Spec } from '@unified-analytics/core';
+import { UaView, defineUaView, registerPainter, surfaceSheet } from '@unified-analytics/dom';
+import { catalog, moreSamples, runQuery, samples, type Scenario } from '@unified-analytics/fixtures';
+import { geoPainter } from '@unified-analytics/geo/dom';
 
 /* The marks: each one on its own, at a size where nothing has been given up, for tuning how it looks. A mark is
  * shown in each of the six series colours, on each of the three surfaces, and in the states it has. Every specimen

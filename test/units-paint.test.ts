@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { nodePaint } from '@universal-analytics/dom';
-import { buildScene, makeContainer, resolve, type Catalog, type Layer, type Result, type Spec } from '@universal-analytics/core';
+import { nodePaint } from '@unified-analytics/dom';
+import { buildScene, makeContainer, resolve, type Catalog, type Layer, type Result, type Spec } from '@unified-analytics/core';
 
 /* What the sidebar test case asked of the grammar: a metric's unit in every place its value is said, a mark painted
  * by which way its metric went, and rows painted by a field. On a catalog and results of its own. */

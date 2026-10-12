@@ -1,4 +1,4 @@
-import { runQuery } from '@universal-analytics/fixtures';
+import { runQuery } from '@unified-analytics/fixtures';
 import { defineSpikeView, shapes, yScale, type SpikeView, type TrendData } from './spike-view.ts';
 
 /* THROWAWAY. The proofs for docs/dom-painter-plan.md section 7. The view is in spike-view.ts;

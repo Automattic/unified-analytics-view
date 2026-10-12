@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { FIT_RULES, buildScene, resolve, unboundedContainer } from '@universal-analytics/core';
-import { compileFitRules } from '@universal-analytics/dom';
-import { catalog, moreSamples, runQuery } from '@universal-analytics/fixtures';
+import { FIT_RULES, buildScene, resolve, unboundedContainer } from '@unified-analytics/core';
+import { compileFitRules } from '@unified-analytics/dom';
+import { catalog, moreSamples, runQuery } from '@unified-analytics/fixtures';
 import { companions, hitNodes, readout } from '../packages/dom/src/keys.ts';
 import { cartesian } from '../packages/dom/src/layouts/cartesian.ts';
 import { rows } from '../packages/dom/src/layouts/rows.ts';

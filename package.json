@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "test": "vitest run --dir test",
-    "bench": "pnpm --filter @universal-analytics/bench dev",
+    "bench": "pnpm --filter @unified-analytics/bench dev",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
@@ -14,12 +14,12 @@
     "@types/d3-scale": "^4.0.9",
     "@types/d3-shape": "^3.2.0",
     "@types/node": "^26.6.4",
-    "@universal-analytics/core": "workspace:*",
-    "@universal-analytics/dom": "workspace:*",
-    "@universal-analytics/fixtures": "workspace:*",
-    "@universal-analytics/geo": "workspace:*",
-    "@universal-analytics/spacefast": "workspace:*",
-    "@universal-analytics/tokens": "workspace:*",
+    "@unified-analytics/core": "workspace:*",
+    "@unified-analytics/dom": "workspace:*",
+    "@unified-analytics/fixtures": "workspace:*",
+    "@unified-analytics/geo": "workspace:*",
+    "@unified-analytics/spacefast": "workspace:*",
+    "@unified-analytics/tokens": "workspace:*",
     "ajv": "^8.20.0",
     "d3-array": "^3.2.4",
     "d3-scale": "^4.0.2",

@@ -1,6 +1,6 @@
-@import '@universal-analytics/tokens/generated/tokens.css';
-@import '@universal-analytics/tokens/fonts/ans-mono.css';
-@import '@universal-analytics/tokens/fonts/ans-mono-scroll.css';
+@import '@unified-analytics/tokens/generated/tokens.css';
+@import '@unified-analytics/tokens/fonts/ans-mono.css';
+@import '@unified-analytics/tokens/fonts/ans-mono-scroll.css';
 
 /* What a view paints with is the token package's charts tier (config/charts.tokens.json). */
 :root { color-scheme: light dark; }

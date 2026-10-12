@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildScene, resolve, unboundedContainer, type Catalog, type Spec } from '@universal-analytics/core';
-import { catalog, runQuery, samples, type Scenario } from '@universal-analytics/fixtures';
+import { buildScene, resolve, unboundedContainer, type Catalog, type Spec } from '@unified-analytics/core';
+import { catalog, runQuery, samples, type Scenario } from '@unified-analytics/fixtures';
 import { Keys, crossMarks, hitNodes, readout, rowsAt, step, written } from '../packages/dom/src/keys.ts';
 
 // Which point a key moves to, what the readout says and where a plot's hit targets lie are plain functions, held

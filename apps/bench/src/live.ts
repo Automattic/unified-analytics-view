@@ -1,6 +1,6 @@
-import type { Layer, Query, Spec } from '@universal-analytics/core';
-import { UaView, defineUaView, surfaceSheet } from '@universal-analytics/dom';
-import { adapt, type ApiResult } from '@universal-analytics/spacefast';
+import type { Layer, Query, Spec } from '@unified-analytics/core';
+import { UaView, defineUaView, surfaceSheet } from '@unified-analytics/dom';
+import { adapt, type ApiResult } from '@unified-analytics/spacefast';
 
 /* The analytics sidebar, on Spacefast's analytics query API: the prototype of the panel the tracking snippet opens on a
  * site. One batch of queries a range, each answer through `adapt` into a query, a result and a catalog, and every

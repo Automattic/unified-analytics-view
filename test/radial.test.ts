@@ -1,9 +1,9 @@
 import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { FIT_RULES, applies, arcD, buildScene, expand, makeContainer, place, resolve, type ArcNode, type PainterName, type Spec } from '@universal-analytics/core';
-import catalogSchema from '@universal-analytics/core/schema/catalog.schema.json';
-import viewSchema from '@universal-analytics/core/schema/view.schema.json';
-import { catalog, moreSamples, runQuery, samples, scenarios } from '@universal-analytics/fixtures';
+import { FIT_RULES, applies, arcD, buildScene, expand, makeContainer, place, resolve, type ArcNode, type PainterName, type Spec } from '@unified-analytics/core';
+import catalogSchema from '@unified-analytics/core/schema/catalog.schema.json';
+import viewSchema from '@unified-analytics/core/schema/view.schema.json';
+import { catalog, moreSamples, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
 
 // Step 6 of docs/chart-coverage-plan.md: the `arc` mark and the `radial` layout. It has no prototype to match, so it
 // is held to its own sweep, facts and golden scenes, as test/coverage.test.ts holds the plots.

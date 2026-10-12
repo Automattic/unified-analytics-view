@@ -1,8 +1,8 @@
-import type { Spec } from '@universal-analytics/core';
-import { UaView, defineUaView, registerPainter, surfaceSheet } from '@universal-analytics/dom';
-import type { Scenario } from '@universal-analytics/fixtures';
-import '@universal-analytics/fixtures';   // loading the fixtures hands the geo mark its boundary shapes
-import { geoPainter } from '@universal-analytics/geo/dom';
+import type { Spec } from '@unified-analytics/core';
+import { UaView, defineUaView, registerPainter, surfaceSheet } from '@unified-analytics/dom';
+import type { Scenario } from '@unified-analytics/fixtures';
+import '@unified-analytics/fixtures';   // loading the fixtures hands the geo mark its boundary shapes
+import { geoPainter } from '@unified-analytics/geo/dom';
 import { SITES, catalog, runQuery } from './goals-data.ts';
 import { GOALS, METRICS, type Card } from './goals-views.ts';
 

@@ -1,5 +1,5 @@
 {
-  "name": "@universal-analytics/geo",
+  "name": "@unified-analytics/geo",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -9,8 +9,8 @@
     "./countries-110m.json": "./shapes/countries-110m.json"
   },
   "dependencies": {
-    "@universal-analytics/core": "workspace:*",
-    "@universal-analytics/dom": "workspace:*",
+    "@unified-analytics/core": "workspace:*",
+    "@unified-analytics/dom": "workspace:*",
     "d3-geo": "^3.1.1"
   }
 }

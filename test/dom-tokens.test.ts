@@ -1,10 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, FIT_RULES } from '@universal-analytics/core';
-import { compileFitRules, paintVar, token } from '@universal-analytics/dom';
-import { GEO_RULES } from '@universal-analytics/geo';
-import { geoPainter } from '@universal-analytics/geo/dom';
+import { CONTAINER_RULES, FIT_RULES } from '@unified-analytics/core';
+import { compileFitRules, paintVar, token } from '@unified-analytics/dom';
+import { GEO_RULES } from '@unified-analytics/geo';
+import { geoPainter } from '@unified-analytics/geo/dom';
 import { KEYS_CSS } from '../packages/dom/src/keys.ts';
 import { LAYOUTS } from '../packages/dom/src/layouts/index.ts';
 import { MOTION_CSS } from '../packages/dom/src/motion.ts';

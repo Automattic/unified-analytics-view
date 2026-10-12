@@ -4,7 +4,7 @@ import { compileFitRules, type FitExtras } from './compile.ts';
 import { attr, ensure, keyed, paintVar, text } from './dom.ts';
 import { DOTS_CSS } from './dots.ts';
 import { PIXELS_CSS, pixels } from './pixels.ts';
-import { KEYS_CSS, Keys, companions } from './keys.ts';
+import { KEYS_CSS, Keys, companions, hideReadout, readoutOf } from './keys.ts';
 import { LAYOUTS } from './layouts/index.ts';
 import { NUMBER_FITS, fitNumber, readNumber } from './measure.ts';
 import { MOTION_CSS, begin, register, settle } from './motion.ts';
@@ -294,6 +294,8 @@ export class UaView extends Base {
   disconnectedCallback(): void {
     this.#children.disconnect(); this.#sizes?.disconnect();
     if (this.#frame) { cancelAnimationFrame(this.#frame); this.#frame = 0; }
+    // A readout left showing listens for a scroll on the window, and would hold the view there until one came.
+    hideReadout(readoutOf(this.#fig));
   }
   // No input changed, so nothing moves. The paint builds or drops the table, and the measured pass that follows it reads what now shows.
   attributeChangedCallback(): void { this.#queue(); }

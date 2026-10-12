@@ -111,9 +111,11 @@ export function stepSeries(key: string, at: number, count: number): number | nul
 }
 
 /** Where a key moves to among `count` points, from `at` (-1 when none is chosen). Null when the key is not a step.
- * Up and down step only where the points run down the page. */
-export function step(key: string, at: number, count: number, vertical = false): number | null {
-  const d = key === 'ArrowRight' || (vertical && key === 'ArrowDown') ? 1 : key === 'ArrowLeft' || (vertical && key === 'ArrowUp') ? -1 : 0;
+ * Up and down step only where the points run down the page. Where they run across it from the right, `rtl`, left is
+ * the way on and right the way back: an arrow moves the way it points. */
+export function step(key: string, at: number, count: number, vertical = false, rtl = false): number | null {
+  const on = rtl ? 'ArrowLeft' : 'ArrowRight', back = rtl ? 'ArrowRight' : 'ArrowLeft';
+  const d = key === on || (vertical && key === 'ArrowDown') ? 1 : key === back || (vertical && key === 'ArrowUp') ? -1 : 0;
   return d && count ? Math.min(Math.max(at + d, 0), count - 1) : null;
 }
 
@@ -301,7 +303,8 @@ export class Keys {
       }
       const series = at >= 0 && box.dataset.hits === 'x' ? stepSeries(e.key, this.#order.indexOf(this.#series ?? ''), this.#order.length) : null;
       if (series != null) { e.preventDefault(); this.#show(this.#at, this.#order[series] ?? null, 'keys'); return; }
-      const to = step(e.key, at, points.length, box.dataset.hits === 'y');
+      // A plot's points run from the left whatever the page (cartesian.ts), and a band's the way the page reads.
+      const to = step(e.key, at, points.length, box.dataset.hits === 'y', box.dataset.hits === 'x' && getComputedStyle(box).direction === 'rtl');
       if (to == null) return;
       e.preventDefault();
       this.#show(points[to]!.getAttribute('data-row'), this.#series, 'keys');
@@ -385,7 +388,9 @@ export class Keys {
     if (!point || !marks.length) { if (this.#crossEl?.isConnected) this.#crossEl.replaceChildren(); this.#crossEl = null; return; }
     const plot = point.closest<HTMLElement>('.uav-plot')!, cross = this.#crossEl = ensure(plot, 'div', 'uav-cross');
     const add = <K extends 'i' | 'span'>(tag: K, cls: string) => { const el = cross.appendChild(document.createElement(tag)); if (cls) el.className = cls; return el; };
-    attr(cross, 'data-active', how); cross.setAttribute('aria-hidden', 'true'); cross.replaceChildren();
+    // The plot is set from the left, and its axes are where the page puts them: the crosshair's words follow the page.
+    const rtl = getComputedStyle(this.#body).direction === 'rtl';
+    attr(cross, 'data-active', how); attr(cross, 'dir', rtl ? 'rtl' : null); cross.setAttribute('aria-hidden', 'true'); cross.replaceChildren();
     for (const m of marks) prop(add('i', ''), '--uav-t', m.t);
     const p = plot.getBoundingClientRect(), b = this.#body.getBoundingClientRect(), r = point.getBoundingClientRect();
     // How far the body runs to either side of the plot: the gutters the axes are in.
@@ -398,7 +403,7 @@ export class Keys {
       prop(name, 'left', Math.max(-before, Math.min(x - w / 2, p.width + after - w)) + 'px');
     }
     for (const side of [0, 1] as const) {
-      const at = marks.filter((m) => m.side === side), gutter = side ? far : before;
+      const at = marks.filter((m) => m.side === side), gutter = side ? far : rtl ? after : before;
       const says = at.map((m) => { const el = add('span', 'uav-cross-y'); el.textContent = m.text; attr(el, 'data-role', m.role); attr(el, 'data-side', side); return el; });
       if (!says.length) continue;
       // Over its axis from the edge of the view, at least as wide as the gutter, and into the plot where it is wider.

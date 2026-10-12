@@ -21,7 +21,6 @@ export const RANGES_CSS = `
 .uav-ranges i { position: absolute; background: var(--uav-paint);
   inset-inline-start: calc(min(var(--uav-x), var(--uav-x2)) * 100%); inline-size: max(${STROKE}, ${span('--uav-x2', '--uav-x')});
   inset-block-end: calc(min(var(--uav-t), var(--uav-t2)) * 100%); block-size: max(${STROKE}, ${span('--uav-t2', '--uav-t')}); }
-/* ponytail: physical translate, as the x axis has, so not right for right-to-left. */
 .uav-ranges i[data-upright] { translate: -50%; }
 .uav-ranges i:not([data-upright]) { translate: 0 50%; }
 /* One the scene sets before the bars lies under them, as it does where the scene is painted in order: a whisker

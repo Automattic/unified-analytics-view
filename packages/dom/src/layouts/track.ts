@@ -8,7 +8,9 @@ import { token } from '../tokens.ts';
  * Such a track is read by where its marks are, so the scene says it stands beside the label (`track: "beside"`) and
  * the body carries `data-track`. The label then has a column of its own, no wider than two fifths of the view, the
  * track is the column that takes what is left, and no mark lies under any text. A mark keeps a row gap's width
- * inside each end of the track, so a dot at either end is whole. A dot is 6 px across, as a dot in a plot is.
+ * inside each end of the track, so a dot at either end is whole. A dot is 6 px across, as a dot in a plot is. A tick
+ * and a dot are set back by half their width from where they stand, and not moved there, so a track reads from the
+ * right where the page does.
  *
  * Under the `track` rule the body goes whole and the number stands alone, as it does under `marks`. Both ask for
  * `data-track`, so a list of bars behind their labels is not touched. */
@@ -18,10 +20,9 @@ export const TRACK_CSS = `
 .uav-body[data-track] .uav-row > .uav-f-label { max-inline-size: 40cqi; }
 .uav-body[data-track] .uav-row > i { inset-block: 8px; inset-inline-start: ${at('var(--uav-x, 0)')}; inline-size: max(3px, calc(var(--uav-v) * ${along})); }
 .uav-body[data-track] .uav-row > i[data-mark] { border-radius: 0; inset-inline-start: ${at('min(var(--uav-x), var(--uav-x2))')}; }
-/* ponytail: physical translate, as a plot's dots have, so not right for right-to-left. */
 .uav-body[data-track] .uav-row > i[data-mark="rule"] { inset-block: calc(50% - 0.5px); inline-size: max(1px, calc(max(var(--uav-x2) - var(--uav-x), var(--uav-x) - var(--uav-x2)) * ${along})); }
-.uav-body[data-track] .uav-row > i[data-mark="tick"] { inset-block: 0; inline-size: var(--uav-stroke, ${token('stroke-width-rule')}); translate: -50%; }
-.uav-body[data-track] .uav-row > i[data-mark="dot"] { inset-block: calc(50% - 3px); inline-size: 6px; border-radius: 50%; translate: -50%; }`;
+.uav-body[data-track] .uav-row > i[data-mark="tick"] { inset-block: 0; inline-size: var(--uav-stroke, ${token('stroke-width-rule')}); inset-inline-start: calc(${at('var(--uav-x)')} - var(--uav-stroke, ${token('stroke-width-rule')}) / 2); }
+.uav-body[data-track] .uav-row > i[data-mark="dot"] { inset-block: calc(50% - 3px); inline-size: 6px; border-radius: 50%; inset-inline-start: calc(${at('var(--uav-x)')} - 3px); }`;
 
 export const TRACK_FIT: Record<string, Record<string, string>> = {
   track: { '.uav-body[data-track]': 'display: none;', '.uav-number:has(~ .uav-body[data-track])': 'display: block; margin: 0;' },

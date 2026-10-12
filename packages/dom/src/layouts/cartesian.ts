@@ -43,13 +43,18 @@ const css = `
 .uav[data-layout="cartesian"] .uav-legend span { line-height: var(--uav-legend-line); }
 .uav[data-layout="cartesian"] .uav-legend span::before { content: ""; display: inline-block; inline-size: 12px; block-size: 12px; margin-inline-end: 6px; border-radius: ${token('border-radius-swatch')}; vertical-align: -1px; background: var(--uav-swatch); }
 .uav-x-axis { grid-area: x; box-sizing: border-box; block-size: var(--uav-x-axis-block); padding-block-start: 5px; }
-/* ponytail: physical translate, so not right for right-to-left. Logical anchors when a surface needs it. */
 .uav-x-axis span { grid-area: 1 / 1; justify-self: start; position: relative; inset-inline-start: calc(var(--uav-x) * 100%); translate: -50%; color: ${token('color-label-axis')}; }
 .uav-x-axis [data-anchor="start"] { translate: 0; }
 .uav-x-axis [data-anchor="end"] { translate: -100%; }
 /* A label the measured pass gave up keeps its box, so the next measurement reads the same. */
 .uav-x-axis [data-thin] { visibility: hidden; }
 .uav-plot { grid-area: plot; position: relative; container: uav-plot / size; }
+/* Time and x run from left to right whichever way the page reads, as the paths in the SVG do whatever it is told. So
+ * the plot and its x axis are set that way, and every mark, hit target and label in them is placed from the left. The
+ * y axes, the legend and all about the plot follow the page. A label's words still run their own way: an Arabic one
+ * is set from the right, in a box placed from the left. */
+.uav-plot, .uav-x-axis { direction: ltr; }
+.uav-x-axis > span, :is(.uav-refs, .uav-point-labels) > span { unicode-bidi: plaintext; }
 .uav-grid, .uav-bars, .uav-refs { position: absolute; inset: 0; }
 .uav-line { position: absolute; inset-inline: 0; inset-block-start: calc((1 - var(--uav-t)) * 100%); block-size: var(--uav-stroke, ${token('stroke-width-rule')}); background: var(--uav-paint); }
 .uav-line[data-dash] { background: repeating-linear-gradient(90deg, var(--uav-paint) 0 var(--uav-dash), transparent 0 calc(var(--uav-dash) + var(--uav-gap))); }
@@ -70,8 +75,7 @@ const css = `
 .uav-plot path[data-fill] { fill: var(--uav-paint); stroke: none; }
 /* When a plot first shows, its lines and the fills under them draw in from the start of x to its end, as the readout
  * sketch's curve does. Only then: paint() marks the SVG it has just made, and the mark comes off when the drawing is
- * done (motion.ts). A change of data moves the line that is there, and does not draw it again.
- * ponytail: from the left, so not right for right-to-left, as the x axis is not. */
+ * done (motion.ts). A change of data moves the line that is there, and does not draw it again. */
 @media (prefers-reduced-motion: no-preference) { .uav-plot svg[data-draw] { animation: uav-draw ${token('motion-duration-draw')} linear both; } }
 @keyframes uav-draw { from { clip-path: inset(-8px 100% -8px -8px); } to { clip-path: inset(-8px); } }
 /* ponytail: a label in the plot is set above its line at the inline end, the one anchor a scene asks for today. */

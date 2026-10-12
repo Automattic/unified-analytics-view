@@ -39,6 +39,12 @@ describe('step', () => {
     expect(step('ArrowDown', 1, 5, true)).toBe(2);
     expect(step('ArrowUp', 1, 5, true)).toBe(0);
   });
+  it('goes on with left where the points run from the right, and back with right', () => {
+    expect(step('ArrowLeft', 2, 5, false, true)).toBe(3);
+    expect(step('ArrowRight', 2, 5, false, true)).toBe(1);
+    expect(step('ArrowRight', 0, 5, false, true)).toBe(0);
+    expect(step('ArrowDown', 1, 5, true, true)).toBe(2);
+  });
   it('leaves every other key, and a view with no points, alone', () => {
     for (const k of ['Tab', 'Home', 'End', 'a']) expect(step(k, 1, 5, true)).toBeNull();
     expect(step('ArrowRight', -1, 0)).toBeNull();
@@ -190,7 +196,11 @@ describe('the mouse leaving', () => {
       style: { setProperty() {}, getPropertyValue: () => '' }, offsetWidth: 10, offsetHeight: 10, hidden: false, textContent: '',
     }, extra);
   };
+  // The way the holder of the points reads, which is what its stylesheet set: a plot's from the left, whatever the page.
+  let direction = 'ltr';
+  afterEach(() => { direction = 'ltr'; vi.unstubAllGlobals(); });
   const view = (focused: boolean, hovered = false) => {
+    vi.stubGlobal('getComputedStyle', () => ({ direction }));
     const tip = el(), fig = el({ querySelector: () => tip }), host = el();
     // The body stands in for the holder of the points as well, so an event sent to it is one on the holder.
     const points: ReturnType<typeof el>[] = [], body = el({ dataset: { hits: 'x' }, children: points, matches: (sel: string) => (sel === ':hover' ? hovered : focused), querySelector: () => body, querySelectorAll: () => points, closest: () => points[1] });
@@ -224,6 +234,17 @@ describe('the mouse leaving', () => {
     const gone = view(false, false);
     gone.send('pointerover', { pointerType: 'mouse' }); gone.paint();
     expect(gone.chosen()).toEqual([]);
+  });
+  it('steps the way the arrow points where the holder reads from the right, as a band does on such a page', () => {
+    const v = view(true);
+    direction = 'rtl';
+    v.send('keydown', { key: 'ArrowLeft' }); v.send('keydown', { key: 'ArrowLeft' });
+    expect(v.chosen()).toEqual(['b']);
+    v.send('keydown', { key: 'ArrowRight' });
+    expect(v.chosen()).toEqual(['a']);
+    direction = 'ltr';
+    v.send('keydown', { key: 'ArrowRight' });
+    expect(v.chosen()).toEqual(['b']);
   });
   it('leaves a point chosen by touch alone', () => {
     const v = view(false);

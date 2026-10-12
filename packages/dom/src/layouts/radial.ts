@@ -13,7 +13,8 @@ import { paintLegend } from './band.ts';
 const css = `
 .uav[data-layout="radial"] .uav-body { display: flex; flex-direction: column; }
 .uav-radial { position: relative; flex: none; align-self: center; inline-size: min(100%, 160px); aspect-ratio: var(--uav-aspect, 1); container: uav-plot / inline-size; }
-.uav-radial svg { display: block; inline-size: 100%; block-size: 100%; overflow: visible; }
+/* The arcs run clockwise whichever way the page reads, and the keys step the way they run (keys.ts). */
+.uav-radial svg { display: block; inline-size: 100%; block-size: 100%; overflow: visible; direction: ltr; }
 /* A segment is parted from the next by a line of one width from the rim to the middle: its own edge, drawn in the
  * colour of what the view is on. Two edges lie one on the other, so the line is as wide as either. It is two rules
  * wide: a hairline at a slant is smoothed to a different weight at every angle, and reads as uneven. The corners

@@ -86,12 +86,15 @@ const U = 'var(--uav-u)', OPSZ = token('font-optical-size-display'), at = (scrol
  * from the right it stands, in the screen's (both registered in motion.ts, which is what lets them move). It leaves
  * whole, comes in at the far edge and stops where it began, a whole cell at a time. With reduced motion the pointer
  * shows the end of the number at once.
+ * A number's characters run from left to right whichever way the page reads, so its screen is set that way.
+ * ponytail: and so it stands at the left of its screen on a page that reads from the right. Set it from the right
+ * there when a surface needs it.
  * The words stay in the document for a screen reader and for a copy, and are what shows where a shadow is not
  * drawn: under forced colours. */
 export const DOTS_CSS = `
 .uav-glyphs, .uav-number { --uav-u: ${CELL}px; --uav-d: calc(var(--uav-u) - max(1px, round(down, var(--uav-u) / 4, 1px))); --uav-g: calc(var(--uav-u) - var(--uav-d));
   --uav-cells: conic-gradient(at var(--uav-d) var(--uav-d), transparent 75%, color-mix(in srgb, ${token('color-label-screen')} 9%, transparent) 0) 0 0 / var(--uav-u) var(--uav-u); }
-.uav-glyphs { display: flex; box-sizing: border-box; overflow: hidden; vertical-align: middle; color: ${token('color-label-screen')};
+.uav-glyphs { display: flex; direction: ltr; box-sizing: border-box; overflow: hidden; vertical-align: middle; color: ${token('color-label-screen')};
   inline-size: round(down, 100%, var(--uav-u)); background: var(--uav-cells); }
 .uav-hole .uav-glyphs { display: inline-flex; inline-size: auto; }
 /* A view's number is on one screen with what is said under it: the unlit cells run under the value, its change and

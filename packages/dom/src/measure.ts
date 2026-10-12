@@ -65,16 +65,16 @@ export function apart(ys: number[], line: number, room: number): (number | null)
   return at;
 }
 
-/** Read the ruler: one painted number per entry of NUMBER_FITS.
- * ponytail: the value's extent is taken from the left, so not right for right-to-left, as the x axis is not. */
+/** Read the ruler: one painted number per entry of NUMBER_FITS. The value's extent is taken from where its line
+ * starts: the left, or the right where the page reads from there. */
 export function readNumber(ruler: HTMLElement[]): NumberSizes {
   const child = (el: Element, cls: string) => el.querySelector<HTMLElement>(':scope > .' + cls);
   const size = (el: HTMLElement) => { const r = el.getBoundingClientRect(); return { inline: r.width, block: r.height }; };
-  const first = ruler[0]!, delta = child(first, 'uav-f-value'), note = child(first, 'uav-f-tick');
+  const first = ruler[0]!, delta = child(first, 'uav-f-value'), note = child(first, 'uav-f-tick'), rtl = getComputedStyle(first).direction === 'rtl';
   return {
     forms: ruler.flatMap((el) => {
-      const value = child(el, 'uav-f-display'), sub = child(el, 'uav-f-tick'), box = el.getBoundingClientRect();
-      return value ? [{ fit: el.dataset.fit || '', inline: value.getBoundingClientRect().right - box.left + (value.getBoundingClientRect().left - box.left), block: box.height - (sub ? size(sub).block : 0) }] : [];
+      const value = child(el, 'uav-f-display'), sub = child(el, 'uav-f-tick'), box = el.getBoundingClientRect(), v = value?.getBoundingClientRect();
+      return v ? [{ fit: el.dataset.fit || '', inline: v.width + 2 * (rtl ? box.right - v.right : v.left - box.left), block: box.height - (sub ? size(sub).block : 0) }] : [];
     }),
     delta: delta && child(delta, 'uav-short') ? size(delta).inline : null,
     screen: !!first.querySelector('.uav-glyphs'),

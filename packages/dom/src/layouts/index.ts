@@ -28,3 +28,11 @@ export const LAYOUTS: Record<string, LayoutPainter> = { cartesian, rows, band, r
 export function registerPainter(painter: LayoutPainter): void {
   LAYOUTS[painter.layout] = painter;
 }
+
+/** The painter of a layout, or none for the two that have no body. Any other with none is a custom mark whose DOM
+ * half was never registered: it would paint nothing and say nothing, so it is an error. */
+export function painterOf(layout: string): LayoutPainter | undefined {
+  const painter = LAYOUTS[layout];
+  if (!painter && layout !== 'none' && layout !== 'prose') throw new Error('No painter is registered for the "' + layout + '" layout. Call registerPainter({ layout: "' + layout + '", css, paint }) before the view paints.');
+  return painter;
+}

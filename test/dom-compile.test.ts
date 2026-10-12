@@ -4,7 +4,7 @@ import { compileFitRules } from '@unified-analytics/dom';
 import { catalog, runQuery, samples } from '@unified-analytics/fixtures';
 import { GEO_RULES } from '@unified-analytics/geo';
 import { geoPainter } from '@unified-analytics/geo/dom';
-import { LAYOUTS } from '../packages/dom/src/layouts/index.ts';
+import { LAYOUTS, painterOf } from '../packages/dom/src/layouts/index.ts';
 import { BASE_CSS, FALLBACK_CSS, check, rulesOver } from '../packages/dom/src/view.ts';
 
 // The compiler is string work, so it is held here with no DOM. What the browser makes of the CSS is checked on the bench.
@@ -99,6 +99,11 @@ describe('what <ua-view> checks before it paints', () => {
   it('takes only the catalog\'s own names for a metric or a dimension', () => {
     expect(() => check({ query: { metrics: ['constructor'] } }, result, catalog)).toThrow(/no metric "constructor"\. It has: visitors, pageviews, present/);
     expect(() => check({ ...trend, query: { ...trend.query, by: ['toString'] } }, result, catalog)).toThrow(/no dimension "toString"/);
+  });
+  it('says how to register the painter a custom mark has none of, and asks none of the layouts with no body', () => {
+    expect(() => painterOf('blob')).toThrow('No painter is registered for the "blob" layout. Call registerPainter({ layout: "blob", css, paint }) before the view paints.');
+    expect(painterOf('cartesian')).toBe(LAYOUTS.cartesian);
+    for (const layout of ['none', 'prose']) expect(painterOf(layout), layout).toBeUndefined();
   });
   it('lays a context\'s rules over the defaults one level down, so a size it leaves out is still the default', () => {
     expect(rulesOver({ rows: { rowHeight: 20 } } as never).rows).toEqual({ rowHeight: 20, gap: CONTAINER_RULES.rows.gap });

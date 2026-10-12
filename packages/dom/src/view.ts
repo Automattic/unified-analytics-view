@@ -5,7 +5,7 @@ import { attr, ensure, keyed, paintVar, text } from './dom.ts';
 import { DOTS_CSS } from './dots.ts';
 import { PIXELS_CSS, pixels } from './pixels.ts';
 import { KEYS_CSS, Keys, companions, hideReadout, readoutOf } from './keys.ts';
-import { LAYOUTS } from './layouts/index.ts';
+import { LAYOUTS, painterOf } from './layouts/index.ts';
 import { NUMBER_FITS, fitNumber, readNumber } from './measure.ts';
 import { MOTION_CSS, begin, register, settle } from './motion.ts';
 import { FACES, token } from './tokens.ts';
@@ -345,7 +345,7 @@ export class UaView extends Base {
       this.#prose.textContent = plan.text;
       for (const el of [this.#number, ...this.#ruler]) paintNumber(el, scene.nodes.filter((n) => n.part === 'number'));
       if (this.#layout !== scene.layout) { this.#body.replaceChildren(); this.#body.removeAttribute('data-scale'); this.#layout = scene.layout; }
-      const painter = LAYOUTS[scene.layout], data = { layers: plan.layers, query: expand(spec).query, result, catalog };
+      const painter = painterOf(scene.layout), data = { layers: plan.layers, query: expand(spec).query, result, catalog };
       painter?.paint(this.#body, scene, rules, data);
       pixels(fig);
       // Only while it shows: nothing reads a hidden table, and it is a row per row of the result.

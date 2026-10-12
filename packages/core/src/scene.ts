@@ -639,8 +639,20 @@ function sceneNumber(catalog: Catalog, q: Query, result: Result, share: boolean)
   return nodes;
 }
 
+/* A metric's value, and a companion's, is a finite number or null, in a row and in the totals. Anything else is refused
+ * here, once, before any scene is built: NaN would reach a path's `d`, a bar's ratios, the scale and the number as itself. */
+function checkValues(result: Result, catalog: Catalog): void {
+  const check = (has: Row, where: string) => {
+    for (const f in has) { const v = has[f]; if (v !== null && !Number.isFinite(v) && Object.hasOwn(catalog.metrics, f.split('@')[0]!)) throw new Error('The result has "' + f + '": ' + (typeof v === 'string' ? JSON.stringify(v) : String(v)) + ' in ' + where + ', and a metric\'s value is a finite number or null. Send null from the query layer where there is no figure: it is drawn as a gap and written as a dash.'); }
+  };
+  result.rows.forEach((r, i) => check(r, 'row ' + (i + 1)));
+  check(result.totals, 'its totals');
+  for (const d in result.totalsBy) result.totalsBy[d]!.forEach((r, i) => check(r, 'row ' + (i + 1) + ' of totalsBy["' + d + '"]'));
+}
+
 /** The scene for a plan, in ratios. It takes no size: plan for a container with no limits and this is everything the spec asks for. */
 export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Catalog): Scene {
+  checkValues(result, catalog);
   if (p.layout === 'prose') return { layout: 'prose', parts: [], nodes: [], text: p.text };
   const number = sceneNumber(catalog, q, result, p.share);
   const parts: Part[] = p.tldrValue || p.layout === 'none' ? ['number'] : [];

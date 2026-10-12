@@ -155,6 +155,7 @@ A result is:
 - Statistics arrive the same way, as companions the engine returns: `metric@p25`, `metric@lower`, `metric@running`, `metric@rank`, and `dimension@end` for a bin. Core computes none of them. A query cannot yet ask for one by name; that is Open.
 - A spec drawn against an answer that already exists names metrics that answer has, in any order and not necessarily all of them: the first named is the primary metric. Its `by`, `range` and `compare` are the answer's. Leaving `limit` out keeps every row the answer has.
 - A total may be null, where the engine has no figure for the range. It is written as a dash.
+- A metric's value, or a companion's, is a finite number or null, in a row and in the totals. `NaN`, an infinity, a string or `undefined` is refused, as an error that names the field and the row.
 - `partial: true` marks an incomplete bucket (today).
 - `meta.empty: true` marks a period with no data at all.
 

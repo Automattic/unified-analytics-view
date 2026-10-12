@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildScene, makeContainer, resolve } from '@unified-analytics/core';
 import type { Result, Row } from '@unified-analytics/core';
-import { catalog, runQuery, samples } from '@unified-analytics/fixtures';
+import { catalog, moreSamples, runQuery, samples } from '@unified-analytics/fixtures';
 
 // A metric's value is a finite number or null. Anything else used to reach a line's `d`, a bar's ratios and the tldr
 // value as "NaN"; it is refused once, in buildScene (checkValues in packages/core/src/scene.ts), which resolve() goes through.
@@ -34,6 +34,22 @@ describe('a value that is not a finite number', () => {
     expect(numbers(s.nodes).every(Number.isFinite)).toBe(true);
     expect(JSON.stringify(s.nodes) + plan.text).not.toMatch(/NaN|Infinity/);
     expect(s.nodes.find((n) => n.key === 'value')).toMatchObject({ text: '–' });
+  });
+  // A number dimension is a bin on a linear x, with its `@end` beside it: the same rule, since the scale is made of them.
+  it.each([[NaN, 'NaN'], [Infinity, 'Infinity'], ['abc', '"abc"'], [undefined, 'undefined']])('%s in a number dimension, or in its end, is refused by field and row', (v, said) => {
+    const h = moreSamples.histogram!.spec, tail = ', and a number dimension\'s value is a finite number or null. Send the bin\'s start and end as numbers from the query layer, or give the dimension "type": "categorical" in the catalog where its values are names.';
+    for (const f of ['load_time', 'load_time@end']) {
+      const result = structuredClone(runQuery(h.query, 'typical'));
+      result.rows[1]![f] = v as number;
+      expect(err(() => resolve(h, result, c, catalog))).toBe('The result has "' + f + '": ' + said + ' in row 2' + tail);
+    }
+  });
+  it('null in a number dimension is still no value, as it was: no NaN in the scene', () => {
+    const h = moreSamples.histogram!.spec, result = structuredClone(runQuery(h.query, 'typical'));
+    result.rows[1]!.load_time = null;
+    result.rows[2]!['load_time@end'] = null;
+    const plan = resolve(h, result, c, catalog), s = buildScene(plan, h.query, result, catalog);
+    expect(numbers(s.nodes).every(Number.isFinite)).toBe(true);
   });
   it('a dimension\'s value is not a metric\'s, and is written as it comes', () => {
     const result = runQuery(samples.pages!.spec.query, 'typical');

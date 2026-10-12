@@ -643,7 +643,13 @@ function sceneNumber(catalog: Catalog, q: Query, result: Result, share: boolean)
  * here, once, before any scene is built: NaN would reach a path's `d`, a bar's ratios, the scale and the number as itself. */
 function checkValues(result: Result, catalog: Catalog): void {
   const check = (has: Row, where: string) => {
-    for (const f in has) { const v = has[f]; if (v !== null && !Number.isFinite(v) && Object.hasOwn(catalog.metrics, f.split('@')[0]!)) throw new Error('The result has "' + f + '": ' + (typeof v === 'string' ? JSON.stringify(v) : String(v)) + ' in ' + where + ', and a metric\'s value is a finite number or null. Send null from the query layer where there is no figure: it is drawn as a gap and written as a dash.'); }
+    for (const f in has) {
+      const v = has[f], of = f.split('@')[0]!;
+      if (v === null || Number.isFinite(v)) continue;
+      // A number dimension is a bin on a linear x, and `@end` its other edge: the scale is made of both.
+      if ((f === of || f === of + '@end') && Object.hasOwn(catalog.dimensions, of) && catalog.dimensions[of]!.type === 'number') throw new Error('The result has "' + f + '": ' + (typeof v === 'string' ? JSON.stringify(v) : String(v)) + ' in ' + where + ', and a number dimension\'s value is a finite number or null. Send the bin\'s start and end as numbers from the query layer, or give the dimension "type": "categorical" in the catalog where its values are names.');
+      if (Object.hasOwn(catalog.metrics, of)) throw new Error('The result has "' + f + '": ' + (typeof v === 'string' ? JSON.stringify(v) : String(v)) + ' in ' + where + ', and a metric\'s value is a finite number or null. Send null from the query layer where there is no figure: it is drawn as a gap and written as a dash.');
+    }
   };
   result.rows.forEach((r, i) => check(r, 'row ' + (i + 1)));
   check(result.totals, 'its totals');

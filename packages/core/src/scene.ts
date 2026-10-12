@@ -3,7 +3,7 @@ import { scaleBand, scaleLinear, scalePoint, scaleQuantize } from 'd3-scale';
 import { CHAR_W, delta, fmt, fmtPct, fmtTime, formatBin, formatDimension, formatUnit, formatValue } from './format.ts';
 import { arcD, pathD } from './path.ts';
 import { customMarks } from './marks.ts';
-import { leader } from './prose.ts';
+import { NOW, emptyNote, leader } from './prose.ts';
 import type { ArcNode, Catalog, DimensionDef, Guides, Layer, Mark, MetricDef, Part, PathNode, PlanShape, Polarity, Query, Result, Role, Row, Scene, SceneNode, TextNode } from './types.ts';
 
 /* Node kinds: rect, path, line, circle, text. Every node has a stable key,
@@ -485,7 +485,7 @@ function sceneBand(catalog: Catalog, layer: Layer, rows: Row[], totals: Result['
 // The plan names one in `parts`; a fit rule swaps them.
 // A segment is named as the readout names it, so a day is "Sep 29". The prototype writes it raw: a deliberate departure.
 function shareLegend(rows: Row[], k: (r: Row) => string, f: string, dim: DimensionDef, m: string, total: number, paint: (i: number) => string): SceneNode[] {
-  const nodes: SceneNode[] = [], name = (r: Row) => formatDimension(str(r, f), dim);
+  const nodes: SceneNode[] = [], name = (r: Row) => formatDimension(r[f], dim);
   rows.forEach((r, i) => {
     nodes.push({ key: 'swatch:' + k(r), part: 'legend', kind: 'rect', row: k(r), paint: paint(i), layer: 'data' });
     nodes.push({ key: 'legend:' + k(r), part: 'legend', kind: 'text', row: k(r), text: name(r), anchor: 'start', baseline: 'middle', font: 'label', paint: 'ink', layer: 'guide' });
@@ -608,9 +608,8 @@ function sceneMatrix(catalog: Catalog, layers: Layer[], result: Result): Body {
 
 /** The value shown as the number, formatted. */
 export function tldrValueText(catalog: Catalog, q: Query, result: Result, compact?: boolean): string {
-  const m = q.metrics[0]!;
-  if (catalog.metrics[m]!.instant) return String(result.totals[m] || 0);
-  return formatValue(result.meta.empty ? 0 : result.totals[m], catalog.metrics[m]!, compact ? 'compact' : undefined);
+  const m = q.metrics[0]!, M = catalog.metrics[m]!;
+  return formatValue(M.instant ? result.totals[m] || 0 : result.meta.empty ? 0 : result.totals[m], M, compact ? 'compact' : undefined);
 }
 
 /* The tldr value: a total from the engine, a delta if the query compares, and a derived note.
@@ -623,10 +622,10 @@ function sceneNumber(catalog: Catalog, q: Query, result: Result, share: boolean)
   if (M.instant) {
     const n = t[m] || 0;
     nodes.push({ key: 'pulse', part: 'number', kind: 'circle', paint: n > 0 ? 'live' : 'ink.muted', pulse: n > 0, layer: 'data' });
-    value(String(n)); sub(n ? 'on the site right now' : 'Nobody is here right now');
+    value(formatValue(n, M)); sub(NOW);
     return nodes;
   }
-  if (result.meta.empty) { value(formatValue(0, M)); sub('No visits yet'); return nodes; }
+  if (result.meta.empty) { value(formatValue(0, M)); sub(emptyNote(M)); return nodes; }
   let note: string | null = M.rangeTotal === 'sum of daily' ? 'Sum of daily counts' : M.target != null ? 'Target ' + formatValue(M.target, M) : null;
   if (by && catalog.dimensions[by]!.type === 'categorical' && rows.length) {
     const top = leader(result, by, m)!;                                      // with two dimensions a row is a pair, so the leader is the engine's
@@ -648,7 +647,7 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
   let body: Body = { nodes: [] }, side = false;
   if (p.layout === 'notice') {
     parts.push('notice');
-    body.nodes.push({ key: 'notice', part: 'notice', kind: 'text', text: 'No visits in this period yet', anchor: 'middle', baseline: 'middle', font: 'label', paint: 'ink.muted', layer: 'guide' });
+    body.nodes.push({ key: 'notice', part: 'notice', kind: 'text', text: emptyNote(catalog.metrics[q.metrics[0]!]!, true), anchor: 'middle', baseline: 'middle', font: 'label', paint: 'ink.muted', layer: 'guide' });
   } else if (p.layout === 'cartesian') {
     side = p.side;                                                          // a bare plot, set beside the number
     if (side && !parts.length) parts.push('number');

@@ -366,12 +366,12 @@ describe('tldr prose for two dimensions and for two metrics', () => {
     expect(text('stacked')).toBe(text('series'));
     expect(text('area')).toBe('Search is the largest channel at 42% of page views in the last 28 days, and leads on all 28 days.');
     expect(text('grouped')).toBe('Search is the largest channel at 41% of visitors, and Desktop the largest device at 50%.');
-    expect(text('grouped', 'empty')).toBe('No visitors recorded in the last 28 days.');
+    expect(text('grouped', 'empty')).toBe('Visitors: nothing recorded in the last 28 days.');
   });
   it('says each metric of two, the first with the range', () => {
-    expect(text('dual')).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not unique people. Revenue: $63.5k.');
+    expect(text('dual')).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. Revenue: $63.5k.');
     expect(run({ ...specs.dual!, query: { ...specs.dual!.query, compare: 'previous' } }, 346).plan.text)
-      .toBe('Visitors: 10.5k in the last 28 days, up 12% on the previous period. This is a sum of daily counts, not unique people. Revenue: $63.5k, up 8.1% on the previous period.');
+      .toBe('Visitors: 10.5k in the last 28 days, up 12% on the previous period. This is a sum of daily counts, not a unique count. Revenue: $63.5k, up 8.1% on the previous period.');
     expect(text('diverging')).toBe('Net subscribers: 180 in the last 28 days.');
   });
   it('the note under the number names the leader the engine names, not the first pair', () => {

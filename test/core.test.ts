@@ -9,7 +9,7 @@ import { CONTAINER_RULES, UNITS, buildScene, expand, formatDimension, formatValu
 import catalogSchema from '@unified-analytics/core/schema/catalog.schema.json';
 import viewSchema from '@unified-analytics/core/schema/view.schema.json';
 import { catalog, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
-import { delta } from '../packages/core/src/format.ts';
+import { CHAR_W, clip, delta } from '../packages/core/src/format.ts';
 
 // The prototype, loaded as the reference the port is held to.
 (globalThis as any).d3 = { ...d3array, ...d3scale, ...d3shape };
@@ -24,8 +24,33 @@ const toProto = (s: Spec, rules = CONTAINER_RULES): object => ({
   ...s, ...(s.use === 'line' && { use: 'trend' }),
   ...((rules.tldrValue.above === 'always' || catalog.metrics[s.query.metrics[0]!]!.instant) && { headline: true }),
 });
+// The words: a deliberate departure from the prototype (review of October 12). The prototype says "visits", "people",
+// "the site" and "page" whatever the metric is, and reads `rows[0].page` whatever the query is by: an empty revenue view
+// says "No visits yet", and a count by another dimension says its busiest page is undefined. Core knows no name, so ours
+// are made of the catalog's label and the query's dimension. The label leads an empty range and is not made a noun of:
+// the prototype's "No visitors recorded" would be "No came back recorded" of a label that is a phrase. This maps the prototype's words to ours, here and nowhere
+// else: its prose where it says them, and its two notes, each cut to the room the prototype cut its own to. Nothing but
+// `text` is touched. Ours are asserted for themselves in the describe below, and for another catalog in words.test.ts.
+const PROSE: [string, string][] = [
+  [' not unique people.', ' not a unique count.'],
+  ['7 people are on the site right now; the busiest page is / (3).', 'Present now: 7 right now; the top page is / (3).'],
+  ['Nobody is on the site right now.', 'Present now: 0 right now.'],
+];
+const ourProse = (s: string) => PROSE.reduce((t, [theirs, ours]) => t.replace(theirs, ours), s)
+  .replace(/^No (.+) recorded in the /, (_, name: string) => Object.values(catalog.metrics).find((M) => M.label.toLowerCase() === name)!.label + ': nothing recorded in the ');
+const ourNotes = (scene0: any, q: Spec['query']) => {
+  const label = catalog.metrics[q.metrics[0]!]!.label;
+  const notes: Record<string, [number, [string, string][]]> = {
+    sub: [CHAR_W - 0.8, [['on the site right now', 'right now'], ['Nobody is here right now', 'right now'], ['No visits yet', label + ': nothing yet']]],
+    notice: [CHAR_W, [['No visits in this period yet', label + ': nothing in this period yet']]],
+  };
+  return scene0.nodes.map((n: any) => {
+    const [advance, words] = notes[n.key] ?? [0, []], room = Math.floor(scene0.width / advance), mine = words.find(([theirs]) => n.text === clip(theirs, room));
+    return mine ? { ...n, text: clip(mine[1], room) } : n;
+  });
+};
 const fromProto = ({ headline, ...p }: any) => ({
-  ...p, tldrValue: headline, layout: p.layout === 'sentence' ? 'prose' : p.layout,
+  ...p, text: ourProse(p.text), tldrValue: headline, layout: p.layout === 'sentence' ? 'prose' : p.layout,
   reductions: p.reductions.map((r: any) => (r.id === 'sentence' ? { ...r, id: 'prose' } : r)),
 });
 // Layer keys: a deliberate departure from the prototype (feedback, decision 1 of October 7; transitions finding 1).
@@ -42,7 +67,10 @@ const ourKeys = (scene0: any, layers: { role: string; mark: string }[]) => {
   return { ...scene0, nodes: scene0.nodes.map((n: any) => ({ ...n, key: n.key === 'legend:top' ? 'legend-top' : n.key.replace(/^L(\d+):[a-z]+/, (_: string, i: string) => names[+i]) })) };
 };
 /** The prototype's scene as plain data, its layer keys mapped to ours. */
-const protoScene = (plan0: any, q: Spec['query'], res0: unknown, host0: unknown) => ourKeys(plain(proto.buildScene(plan0, q, res0, host0)), plan0.layers);
+const protoScene = (plan0: any, q: Spec['query'], res0: unknown, host0: unknown) => {
+  const scene0 = ourKeys(plain(proto.buildScene(plan0, q, res0, host0)), plan0.layers);
+  return { ...scene0, ...(scene0.text != null && { text: ourProse(scene0.text) }), nodes: ourNotes(scene0, q) };
+};
 
 // The row node: a deliberate addition (chart-coverage-plan, step 2, part 6; feedback, rows, finding 5). A `rows` scene
 // holds a node per row, of kind `row`, for a painter to key. place() leaves it out, so no placed scene has one and the
@@ -128,12 +156,12 @@ describe('fixture facts', () => {
 describe('tldr prose', () => {
   const text = (name: string, sc?: (typeof scenarios)[number]) => run(specs[name]!, 346, null, sc).plan.text;
   it('is derived from the query', () => {
-    expect(text('trend')).toBe('Visitors: 10.5k in the last 28 days, up 12% on the previous period. This is a sum of daily counts, not unique people.');
+    expect(text('trend')).toBe('Visitors: 10.5k in the last 28 days, up 12% on the previous period. This is a sum of daily counts, not a unique count.');
     expect(text('pages')).toBe('Top pages by page views, last 28 days: / (4,820), /pricing (2,960), /blog/launch-notes (2,105).');
     expect(text('mix')).toBe('Search is the largest channel at 41% of visitors, followed by Direct at 28%.');
     expect(text('total')).toBe('Page views: 25.1k in the last 28 days, up 14% on the previous period.');
-    expect(text('live')).toBe('7 people are on the site right now; the busiest page is / (3).');
-    expect(text('trend', 'empty')).toBe('No visitors recorded in the last 28 days.');
+    expect(text('live')).toBe('Present now: 7 right now; the top page is / (3).');
+    expect(text('trend', 'empty')).toBe('Visitors: nothing recorded in the last 28 days.');
   });
 });
 
@@ -516,6 +544,31 @@ describe('the one-line legend\'s key: a deliberate departure from the prototype 
     const host0 = proto.makeHost(346, null, 'svg', 8), full = plain(proto.buildScene(proto.resolve(toProto(mix), named, host0), mix.query, named, host0));
     const host1 = proto.makeHost(150, null, 'svg', 8), line = plain(proto.buildScene(proto.resolve(toProto(mix), named, host1), mix.query, named, host1));
     expect([full, line].map((s) => s.nodes.filter((n: any) => n.key === 'legend:top').map((n: any) => n.text))).toEqual([['top'], ['top 41%']]);
+  });
+});
+
+describe('the words: a deliberate departure from the prototype (review of October 12)', () => {
+  // The prototype's words are literals: visits, people, the site, and `rows[0].page`. Ours are the catalog's label and the
+  // query's dimension, so a view of page views that is empty says so of page views. The sweep maps one to the other.
+  const texts = (name: string, sc: (typeof scenarios)[number], w = 346) => { const { plan, scene } = run(specs[name]!, w, null, sc); return [plan.text, ...scene.nodes.flatMap((n) => (n.key === 'sub' || n.key === 'notice' ? [(n as { text: string }).text] : []))]; };
+  const texts0 = (name: string, sc: string) => { const host0 = proto.makeHost(346, null, 'svg', 8), res0 = proto.runQuery(specs[name]!.query, sc), plan0 = proto.resolve(toProto(specs[name]!), res0, host0); return [plan0.text, ...proto.buildScene(plan0, specs[name]!.query, res0, host0).nodes.filter((n: any) => n.key === 'sub' || n.key === 'notice').map((n: any) => n.text)]; };
+  it('an empty range is said of its metric, the label first; the prototype calls page views visits', () => {
+    expect(texts0('total', 'empty')).toEqual(['No page views recorded in the last 28 days.', 'No visits yet']);
+    expect(texts('total', 'empty')).toEqual(['Page views: nothing recorded in the last 28 days.', 'Page views: nothing yet']);
+    expect(texts0('pages', 'empty')[1]).toBe('No visits in this period yet');
+    expect(texts('pages', 'empty')[1]).toBe('Page views: nothing in this period yet');
+    expect(texts('trend', 'empty')[1]).toBe('Visitors: nothing in this period yet');
+    expect(texts('trend', 'empty', 150)[1]).toBe('Visitors: nothing in …');      // cut to its room, as the prototype's is: the label stays and the end goes
+  });
+  it('an instant metric is said by its label and the query\'s dimension; the prototype says people, the site and a page', () => {
+    expect(texts0('live', 'typical')).toEqual(['7 people are on the site right now; the busiest page is / (3).', 'on the site right now']);
+    expect(texts('live', 'typical')).toEqual(['Present now: 7 right now; the top page is / (3).', 'right now']);
+    expect(texts0('live', 'empty')).toEqual(['Nobody is on the site right now.', 'Nobody is here right now']);
+    expect(texts('live', 'empty')).toEqual(['Present now: 0 right now.', 'right now']);
+  });
+  it('a sum of daily counts is not called a count of people', () => {
+    expect(texts0('trend', 'typical')[0]).toMatch(/ This is a sum of daily counts, not unique people\.$/);
+    expect(texts('trend', 'typical')[0]).toMatch(/ This is a sum of daily counts, not a unique count\.$/);
   });
 });
 

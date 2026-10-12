@@ -246,7 +246,7 @@ describe('tldr prose', () => {
   it('for two metrics set against each other: the range of each, and the point furthest out on each by name', () => {
     expect(text(scatter!)).toBe('Across 8 pages in the last 28 days, the range of visitors is 244 to 2,610 and of conversion rate is 0.9% to 5.8%. / is highest on visitors and /pricing on conversion rate.');
     expect(text(bubble!)).toBe(text(scatter!));
-    expect(text(scatter!, 'empty')).toBe('No visitors recorded in the last 28 days.');
+    expect(text(scatter!, 'empty')).toBe('Visitors: nothing recorded in the last 28 days.');
     const flipped: Spec = { ...scatter!, query: { ...scatter!.query, metrics: ['visitors', 'pageviews'] }, layers: [{ mark: 'dot', encode: { x: 'visitors', y: 'pageviews' } }] };
     expect(text(flipped)).toBe('Across 8 pages in the last 28 days, the range of visitors is 244 to 2,610 and of page views is 290 to 4,820. / is highest on both.');
   });

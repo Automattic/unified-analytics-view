@@ -108,6 +108,7 @@ Rules the front end relies on:
 - **A dimension whose values are codes says so,** with `values`. `country` is the one kind: an ISO 3166-1 alpha-2 code in capitals, written as the country's name wherever a value is written. An empty code reads as no value, and what is not a code is written as it came.
 - **Polarity drives delta colour.** `up` means an increase is good, `down` the reverse, `none` means no judgement.
 - **`instant`** marks a metric with no range and no prior period, such as people present now.
+- **The label is the only name a view has for a metric or a dimension,** and every word it says of one is made of it: "Revenue: nothing yet", "Open carts: 3 right now; the top sku is A-100 (2)". Core holds no noun of its own, so it cannot say "7 people" or "on the site". Nor does it make a noun of a label: the label leads and a colon follows, so one that is a phrase reads too, "Came back: nothing in this period yet" and not "No came back yet". A catalog that wants those words needs a property for them, and that is Open (section 19, Open 11).
 - **How each unit reads.** `count` is a number, shortened where room is short ("13.4k"). `ratio` and `percent` are both written as a percentage ("5.8%"). `ms` and `s` are a length of time ("27.6s", "3m 48s"). `bytes` is a size. A currency is written with its symbol ("$4,333"). A value that is null is written as a dash, and never as zero.
 - **A metric may say what it is read against,** with `domain` (least, then most), `target` and `bands`. The `gauge` preset needs `domain`; a gauge and the `bullet` preset mark `target`. A dimension of type `number` is one the engine has cut into bins: each row holds where its bin starts, and where it ends as `<dimension>@end`. These are built here and are in the schema. They are still proposals to the API's owners (section 19, Open 11).
 - **A name is an opaque string.** `date.day`, `bucket`, `revenue.usd` and `page_views` are all names; a dot means nothing to the grammar. Only `@` is read: `<name>@<suffix>` is a companion of `<name>`.
@@ -298,7 +299,7 @@ A custom mark registered in code and referenced by name is the escape hatch for 
   - time dimension: the range-total caveat, such as "Sum of daily counts"
   - categorical dimension: "Top: /pricing"
   - categorical with `stack: "normalize"`: "Search 41%"
-  - instant metric: "on the site right now"
+  - instant metric: "right now"
 
 Where the tldr value appears is the container's decision, never the spec's:
 
@@ -527,10 +528,10 @@ Related visual directions not yet built: segmented display type for large numera
 
 | State | Prototype behaviour | Status |
 |---|---|---|
-| Empty period | A notice in place of the marks; "0" and "No visits yet" when collapsed | Proven |
+| Empty period | A notice in place of the marks, "Page views: nothing in this period yet"; a zero in the metric's unit and "Page views: nothing yet" when collapsed. Both lead with the metric's label, so where one is cut to its room the label is what stays. The prototype says "No visits" of every metric | Proven |
 | No prior period | Comparison layer dropped and reported; delta reads "No prior period" | Proven |
 | Partial bucket (today) | Dashed tail on a line, faded bar, excluded from the area | Proven |
-| Zero people present | "0" with "Nobody is here right now" | Proven |
+| Instant metric at zero | "0" with "right now", and no pulse. The prototype says "Nobody is here right now" | Proven |
 | Loading | — | To do |
 | Stale or late data | — | To do. Freshness should be a visible state |
 | Filtered (bots, consent) | — | To do |
@@ -583,11 +584,13 @@ Derived from the query and transforms. No chart type is consulted.
 
 | Query shape | Tldr prose |
 |---|---|
-| Instant metric | "7 people are on the site right now; the busiest page is / (3)." |
-| Time dimension, or none | "Visitors: 10.5k in the last 28 days, up 12% on the previous period. This is a sum of daily counts, not unique people." |
+| Instant metric | "Present now: 7 right now; the top page is / (3)." With no dimension, or at zero: "Present now: 0 right now." |
+| Time dimension, or none | "Visitors: 10.5k in the last 28 days, up 12% on the previous period. This is a sum of daily counts, not a unique count." |
 | Categorical dimension | "Top pages by page views, last 28 days: / (4,820), /pricing (2,960), /blog/launch-notes (2,105)." |
 | Categorical with `stack: "normalize"` | "Search is the largest channel at 41% of visitors, followed by Direct at 28%." |
-| Empty | "No visitors recorded in the last 28 days." |
+| Empty | "Visitors: nothing recorded in the last 28 days." |
+
+Every word is the catalog's or the query's: a metric is said by its label, a dimension by its label, and a value of one as a row says it, so a country's code is its name and no value is a dash. The words that are not, such as "right now" and "nothing … yet", are set in `packages/core/src/prose.ts` and nowhere else.
 
 The tldr prose is the last rung of every view, the accessible description, and what an agent gets when it cannot render anything.
 
@@ -689,16 +692,16 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 8. Whether deltas exclude the partial day.
 9. Params and selections. Not started. The design intent: a selection is a filter predicate, not pixels or row IDs; three kinds (interval, point, set); several views combine by union, intersection or cross-filter; dragging is transient and local, releasing commits to the context.
 10. Settled October 7: see Decided 24. Built October 8.
-11. Catalog properties beyond the stub, and where polarity and thresholds are declared. What this repo will propose to the API's owners is listed in `docs/chart-coverage-plan.md`, section 3.5: a `number` dimension type; `domain`, `target` and `bands` on a metric; a colour role per dimension value; and totals per split on the result. All but the colour role are built here and are in the schema, so a catalog may use them; what is open is whether the API will send them.
+11. Catalog properties beyond the stub, and where polarity and thresholds are declared. Among them, what a metric counts, one and many ("person", "people"): without it an instant metric reads "Present now: 7 right now" and not "7 people are here right now". What this repo will propose to the API's owners is listed in `docs/chart-coverage-plan.md`, section 3.5: a `number` dimension type; `domain`, `target` and `bands` on a metric; a colour role per dimension value; and totals per split on the result. All but the colour role are built here and are in the schema, so a catalog may use them; what is open is whether the API will send them.
 12. How a board composes views that share params. A facet is a small board (Decided 26), so a facet waits for this.
 13. The name.
 14. Which survives at the smallest size, the marks or the tldr value. Today the tldr value does; a sparkline in a table cell wants the line alone. To settle in testing.
 15. Whether the tldr prose rung can be anything but measured. The plan proposes a measured pass, because the threshold is the width of the number itself. It is the one place the fit is not intrinsic.
 16. What building the chart coverage plan left to decide. Listed in `docs/chart-coverage-plan.md`, section 9.
+17. Time zone, grain and locale on the time axis. A time is said as its string writes it (section 4), which needs no zone while an engine names buckets by its own clock: the fixtures send bare dates, and Spacefast's API cuts in UTC and says so. Its contract says site time zones come later. When they do, either the adapter rewrites each instant as the site's clock time, or a zone reaches the formatter as a new input on the result. The first is recommended, since it adds nothing to the grammar. A stated grain would let the midnight bucket of an hourly result say its hour and a week say that it is one. Dates are written in `en-US` throughout.
 
 ---
 
-17. Time zone, grain and locale on the time axis. A time is said as its string writes it (section 4), which needs no zone while an engine names buckets by its own clock: the fixtures send bare dates, and Spacefast's API cuts in UTC and says so. Its contract says site time zones come later. When they do, either the adapter rewrites each instant as the site's clock time, or a zone reaches the formatter as a new input on the result. The first is recommended, since it adds nothing to the grammar. A stated grain would let the midnight bucket of an hourly result say its hour and a week say that it is one. Dates are written in `en-US` throughout.
 ## 20. Out of scope for now
 
 - **Query coordinator.** The layer that collects each view's request, merges duplicates, caches and routes to an engine.

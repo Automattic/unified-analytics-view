@@ -209,7 +209,7 @@ describe('tldr prose for several metrics by one dimension', () => {
     expect(text(conversions)).toBe('Top events by conversions, last 28 days: Add to cart (1,310), Newsletter signup (842), Checkout started (655). Overall, conversion rate 21% and value $134.7k.');
     expect(text(funnel)).toBe('Top steps by visitors, last 28 days: Visited the site (10.5k), Viewed pricing (1,705), Started checkout (655). Overall, conversion rate 3.9%.');
     expect(text(league)).toBe('Top pages by page views, last 28 days: / (4,820), /pricing (2,960), /blog/launch-notes (2,105).');
-    expect(text(conversions, 'empty')).toBe('No conversions recorded in the last 28 days.');
+    expect(text(conversions, 'empty')).toBe('Conversions: nothing recorded in the last 28 days.');
   });
 });
 

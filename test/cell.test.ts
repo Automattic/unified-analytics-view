@@ -151,7 +151,7 @@ describe('the ramp, and the labels', () => {
 describe('prose, the preset and errors', () => {
   it('says the peak cell, and the busiest value of each dimension as a share of the engine\'s total', () => {
     expect(run(heatmap, 346).plan.text).toBe('Most visitors at Wed, 11am (158) in the last 28 days. Tue is the busiest weekday at 17% of visitors, and 11am the busiest hour at 8.1%.');
-    expect(run(heatmap, 346, null, 'empty').plan.text).toBe('No visitors recorded in the last 28 days.');
+    expect(run(heatmap, 346, null, 'empty').plan.text).toBe('Visitors: nothing recorded in the last 28 days.');
     expect((run(heatmap, 120).ratio.nodes.find((n) => n.key === 'sub') as { text: string }).text).toBe('Top: Tue');
   });
   it('the heatmap preset reads as a pivot table: the first dimension down the side, the second across', () => {

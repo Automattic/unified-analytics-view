@@ -387,7 +387,7 @@ describe('tldr prose for a metric with a range', () => {
   it('is the range of a context layer: a waterfall has none, a dumbbell\'s is its comparison, and an empty result has no rows', () => {
     expect(text(waterfall!)).toBe('Net subscribers: 180 in the last 28 days.');
     expect(text(dumbbell!)).toBe('Top pages by page views, last 28 days: / (4,820), /pricing (2,960), /blog/launch-notes (2,105).');
-    expect(text(box!, 'empty')).toBe('No response time recorded in the last 28 days.');
+    expect(text(box!, 'empty')).toBe('Response time: nothing recorded in the last 28 days.');
     expect(run(box!, 10).plan).toMatchObject({ layout: 'prose', text: text(box!) });
   });
 });

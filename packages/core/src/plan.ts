@@ -82,6 +82,9 @@ function checkLayers(layers: Layer[], q: Query, catalog: Catalog, result: Result
 export function resolve(spec0: Spec, result: Result, container: Container, catalog: Catalog, presets: PresetLibrary = PRESETS, via: Layout[] = []): Plan {
   const spec = expand(spec0, presets), q = spec.query || ({} as Query);
   if (!q.metrics || !q.metrics.length) throw new Error('A view needs query.metrics, for example ["visitors"].');
+  // A name the catalog does not carry is refused here, once, before anything reads its definition.
+  for (const [kind, where, has] of [['metric', 'metrics', catalog.metrics], ['dimension', 'by', catalog.dimensions]] as const) for (const f of q[where] || [])
+    if (!Object.hasOwn(has, f)) throw new Error('The catalog has no ' + kind + ' "' + f + '". It has: ' + (Object.keys(has).join(', ') || 'none') + '. Add it to the catalog passed in, or correct the name in query.' + where + '.');
   const m = q.metrics[0]!, M = catalog.metrics[m]!, by = (q.by || [])[0], rules = container.rules || CONTAINER_RULES, keep = spec.keep || [], dropped: string[] = [];
   let layers = (spec.layers || []).slice();
   if (!layers.length && by) throw new Error('This spec has a dimension but no layers, so there is nothing to draw it with. Add "layers", or "use" one of: ' + Object.keys(presets).join(', ') + '.');

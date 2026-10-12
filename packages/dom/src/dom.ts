@@ -106,8 +106,10 @@ export function text(el: Element, n: TextNode): void {
     if (to.textContent === said && to.firstElementChild?.getAttribute('data-dir') === dir) return;
     const box = document.createElement('i'), arrow = box.appendChild(document.createElement('b'));
     box.className = 'uav-trend'; box.setAttribute('data-dir', dir); box.style.setProperty('--uav-beat', (-9 * Math.random()).toFixed(1) + 's');
-    arrow.textContent = said[0]!;
-    to.replaceChildren(box, said.slice(1));
+    // The space written after the arrow goes in the box with it: the stylesheet parts the two, by the same in any face.
+    const head = said[1] === ' ' ? 2 : 1;
+    arrow.textContent = said.slice(0, head);
+    to.replaceChildren(box, said.slice(head));
   };
   if (n.short == null) { set(el, n.text); return; }
   if (!el.querySelector(':scope > .uav-full')) { el.removeAttribute('data-dots'); el.textContent = ''; }

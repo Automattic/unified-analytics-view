@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildScene, resolve, unboundedContainer, type PathNode } from '@unified-analytics/core';
 import { catalog, runQuery, samples } from '@unified-analytics/fixtures';
-import { mix, resample } from '../packages/dom/src/motion.ts';
+import { MOTION_CSS, mix, resample } from '../packages/dom/src/motion.ts';
 
 // A path's morph is points in and a string out, so it is held here with no DOM. That it runs, and what a
 // stylesheet moves, is checked in a browser on the bench.
@@ -36,5 +36,13 @@ describe('resample and mix', () => {
 
   it('is half way at a half', () => {
     expect(mix([{ x: 0, v: 0.2 }], [{ x: 0.5, v: 0.6 }], 0.5)).toEqual([{ x: 0.5, v: 0.4 }]);
+  });
+});
+
+describe('a change\'s arrow', () => {
+  it('is parted from its number by a margin of its own, and leaves the spaces between the words of its line alone', () => {
+    // Tightening the line's word spacing by what suits a fixed-width face ran the words of any other face together.
+    expect(MOTION_CSS).not.toContain('word-spacing');
+    expect(MOTION_CSS).toMatch(/\.uav-trend \{[^}]*margin-inline-end: 0\.5ch;/);
   });
 });

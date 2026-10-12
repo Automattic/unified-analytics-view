@@ -55,9 +55,10 @@ export const MOTION_CSS = `
   .uav-trend > b { animation: uav-beat-up 9s steps(6) var(--uav-beat, 0s) infinite; }
   .uav-trend[data-dir="down"] > b { animation-name: uav-beat-down; }
 }
-/* Half a space parts the arrow from its number: a whole one of a fixed-width face is a gap. */
-:has(> .uav-trend) { word-spacing: -0.375em; }
-.uav-trend { display: inline-block; overflow: hidden; block-size: 1lh; vertical-align: bottom; font-style: normal; }
+/* Half a space parts the arrow from its number: a whole one of a fixed-width face is a gap. It is half a figure's
+ * width, which in such a face is half a space and in any other about a whole one, and the space that is written
+ * after the arrow is in the box with it (dom.ts), at the end of its line, where it takes no room. */
+.uav-trend { display: inline-block; overflow: hidden; block-size: 1lh; vertical-align: bottom; font-style: normal; margin-inline-end: 0.5ch; }
 .uav-trend > b { display: block; font-weight: inherit; }
 @keyframes uav-beat-up { 0%, 88% { translate: 0 0; } 94% { translate: 0 -100%; } 94.001% { translate: 0 100%; } 100% { translate: 0 0; } }
 @keyframes uav-beat-down { 0%, 88% { translate: 0 0; } 94% { translate: 0 100%; } 94.001% { translate: 0 -100%; } 100% { translate: 0 0; } }`;

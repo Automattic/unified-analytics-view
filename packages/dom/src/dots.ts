@@ -148,8 +148,13 @@ ${Object.entries(NARROW).map(([ch, [advance, back]]) => `.uav-glyph-run i[data-c
   .uav-glyphs-text { position: static; inline-size: auto; block-size: auto; overflow: visible; clip-path: none; }
 }`;
 
-/* What is set in the page's face for want of this one, and what each says, until the face comes. */
-const waiting = new Map<Element, string>(), listening = new WeakSet<FontFaceSet>();
+/** Whether a page has declared the face, among the faces of its document: one declared inside a shadow root is not
+ * there. `check()` cannot say: of a family no one has declared it answers yes, there being nothing left to load. A
+ * browser may hand a family back in its quotes. */
+export function declared(faces: Iterable<{ family: string }>): boolean {
+  for (const f of faces) if (f.family.replace(/^(["'])(.*)\1$/, '$2') === FAMILY) return true;
+  return false;
+}
 
 /** Set an element's words in the face, or as they are where the face has not every character. The words are kept
  * beside the dots, out of sight. An element that says the same already is not touched. One that said another number
@@ -157,14 +162,16 @@ const waiting = new Map<Element, string>(), listening = new WeakSet<FontFaceSet>
  * is what starts its roll. */
 export function dots(el: Element, s: string): void {
   const chars = dotted(s), had = el.getAttribute('data-dots'), fonts = el.ownerDocument.fonts as FontFaceSet | undefined;
-  // Without the face there is no screen: the words stand as they are, and are set again when the face has come.
-  if (chars && !fonts?.check(`32px "${FAMILY}"`)) {
-    waiting.set(el, s);
+  const face = `32px "${FAMILY}"`, here = () => !!fonts && declared(fonts) && fonts.check(face);
+  if (!chars || !here()) {
+    // Without the face there is no screen: the words stand as they are, and are set again when the face has come.
+    el.removeAttribute('data-dots'); el.textContent = s;
     // Nothing on the page is set in the face until a number is, so it is asked for: a declared face loads only when used.
-    if (fonts && !listening.has(fonts)) { listening.add(fonts); void fonts.load(`32px "${FAMILY}"`).catch(() => {}); fonts.addEventListener('loadingdone', () => { for (const [late, says] of waiting) if (fonts.check(`32px "${FAMILY}"`)) { waiting.delete(late); if (late.isConnected && late.textContent === says) dots(late, says); } }); }
+    // The asking holds the element until it is answered and no longer, and where no face is declared that is at once.
+    // ponytail: a face declared after that is taken up at the number's next paint, not as it arrives.
+    if (chars) void fonts?.load(face).then(() => { if (here() && el.isConnected && el.textContent === s) dots(el, s); }, () => {});
+    return;
   }
-  if (!chars || waiting.has(el) && !fonts?.check(`32px "${FAMILY}"`)) { el.removeAttribute('data-dots'); el.textContent = s; return; }
-  waiting.delete(el);
   if (had === s && el.firstChild) return;
   // A slot, and with `was` one that rolls there from it. What the roll goes by comes off when it is over (motion.ts).
   const slot = (ch: string, roll?: { was: string; wait: number }, dir = 'u') => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildScene, resolve, unboundedContainer } from '@unified-analytics/core';
 import { catalog, runQuery, samples } from '@unified-analytics/fixtures';
-import { CELL, DOTS_CSS, FACE, FAMILY, amount, dotted, rolls, unit } from '../packages/dom/src/dots.ts';
+import { CELL, DOTS_CSS, FACE, FAMILY, amount, declared, dotted, rolls, unit } from '../packages/dom/src/dots.ts';
 import { NUMBER_FITS, SCREEN_LEAST, fitNumber } from '../packages/dom/src/measure.ts';
 import { cartesian } from '../packages/dom/src/layouts/cartesian.ts';
 import { once } from '../packages/dom/src/motion.ts';
@@ -22,6 +22,12 @@ describe('the dot-matrix face', () => {
     expect(dotted('10.5k')).toEqual(['1', '0', '.', '5', 'k']);
     for (const s of ['$48.2k', '6.9%', '2m 05s', '340ms', '1.2 MB', '–', '1,234']) expect(dotted(s), s).not.toBeNull();
     for (const s of ['CA$5', 'New', '']) expect(dotted(s), s).toBeNull();
+  });
+  it('asks whether the page has declared the face before trusting it is there, whatever quotes its name comes back in', () => {
+    // A browser's check() says yes of a family no one has declared, and the number would be set in dots of no face.
+    expect(declared([])).toBe(false);
+    expect(declared([{ family: 'Ans Mono' }, { family: 'Inter' }])).toBe(false);
+    for (const family of ['Ans Mono Scroll', '"Ans Mono Scroll"', "'Ans Mono Scroll'"]) expect(declared([{ family: 'Inter' }, { family }]), family).toBe(true);
   });
   it('has every character of the number in each sample the bench shows', () => {
     for (const [name, { spec }] of Object.entries(samples)) for (const scenario of ['typical', 'no-prior', 'empty'] as const) {

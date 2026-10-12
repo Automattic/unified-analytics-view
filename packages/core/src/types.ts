@@ -53,7 +53,7 @@ export interface Result {
   /** With two dimensions in `by`: for each one, a row per value holding the metrics' totals over the other, in the
    * dimension's own order. A total covers the rows past `limit`. Proposed to the API's owners (chart-coverage-plan, section 3.5). */
   totalsBy?: Record<string, Row[]>;
-  meta: { range: string; compare: string | null; notes: string[]; empty?: boolean };
+  meta: { range?: string; compare: string | null; notes: string[]; empty?: boolean };
 }
 
 /* The view spec. */

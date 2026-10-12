@@ -13,6 +13,9 @@ const nothing = (metric: MetricDef, rest: string) => metric.label + ': nothing '
 export function emptyNote(metric: MetricDef, period = false): string {
   return nothing(metric, (period ? 'in this period ' : '') + 'yet');
 }
+/** The range an answer is over, after what it is said of: " in the last 28 days". Empty where the answer names none, as
+ * a query may: the sentence reads without it, and no period is made up. A range it does not know is said as written. */
+const over = (result: Result, lead = ' in the ') => (result.meta.range ? lead + rangeLabel(result.meta.range) : '');
 /** A value of a dimension as a row or a legend writes it: a country's name for its code, a dash for no value. */
 const say = (catalog: Catalog, d: string, r: Row) => formatDimension(r[d], catalog.dimensions[d]!);
 
@@ -29,12 +32,12 @@ const plural = (label: string) => label.replace(/([^aeiou])y$/, '$1ie') + 's';
 /** The tldr prose: the text sibling of a view, derived from the query and the transforms, not from a named chart type. */
 export function tldrProse(q: Query, result: Result, share: boolean, catalog: Catalog, points = false): string {
   const m = q.metrics[0]!, M = catalog.metrics[m]!, t = result.totals, rows = result.rows, dims = q.by || [], by = dims[0];
-  const range = rangeLabel(result.meta.range), name = M.label.toLowerCase();
+  const range = over(result), name = M.label.toLowerCase();
   if (M.instant) {
     // The count now, and the value of the query's dimension that holds the most of it: the first row, which the engine ranks.
     return M.label + ': ' + formatValue(t[m] || 0, M) + ' ' + NOW + (by && rows[0] ? '; the top ' + catalog.dimensions[by]!.label.toLowerCase() + ' is ' + say(catalog, by, rows[0]) + ' (' + formatValue(rows[0][m] as number, M) + ').' : '.');
   }
-  if (result.meta.empty) return nothing(M, 'recorded in the ' + range + '.');
+  if (result.meta.empty) return nothing(M, 'recorded' + range + '.');
   if (dims.length === 2 && result.totalsBy && rows.length) {
     // Two dimensions: who leads each, as a share of the engine's total. Over time, also on how many of the days.
     const label = (d: string) => catalog.dimensions[d]!.label.toLowerCase(), time = dims.find((d) => catalog.dimensions[d]!.type === 'time');
@@ -42,7 +45,7 @@ export function tldrProse(q: Query, result: Result, share: boolean, catalog: Cat
     if (!time) return largest(by!).replace(' the ', ' is the ') + ' of ' + name + ', and ' + largest(dims[1]!) + '.';
     const split = dims.find((d) => d !== time)!, top = leader(result, split, m)![split], days = [...new Set(rows.map((r) => r[time]))];
     const led = days.filter((d) => { const at = rows.filter((r) => r[time] === d), mine = at.find((r) => r[split] === top); return !!mine && at.every((r) => r === mine || (r[m] as number) < (mine[m] as number)); }).length;
-    return largest(split).replace(' the ', ' is the ') + ' of ' + name + ' in the ' + range + ', and leads on ' + (led === days.length ? 'all ' + led : led + ' of ' + days.length) + ' ' + label(time) + 's.';
+    return largest(split).replace(' the ', ' is the ') + ' of ' + name + range + ', and leads on ' + (led === days.length ? 'all ' + led : led + ' of ' + days.length) + ' ' + label(time) + 's.';
   }
   if (points && by && q.metrics.length > 1 && rows.length) {
     // Two metrics set against each other, a point for each value of a dimension: how far each runs, and which point is
@@ -50,13 +53,13 @@ export function tldrProse(q: Query, result: Result, share: boolean, catalog: Cat
     // out a point is would be a statistic, and those are the engine's.
     const two = q.metrics.slice(0, 2), label = (f: string) => catalog.metrics[f]!.label.toLowerCase(), of = (f: string) => rows.map((r) => r[f] as number);
     const top = two.map((f) => say(catalog, by, rows.reduce((a, r) => ((r[f] as number) > (a[f] as number) ? r : a))));
-    return 'Across ' + rows.length + ' ' + plural(catalog.dimensions[by]!.label.toLowerCase()) + ' in the ' + range + ', ' + 'the range of ' + two.map((f) => label(f) + ' is ' + formatValue(Math.min(...of(f)), catalog.metrics[f]!) + ' to ' + formatValue(Math.max(...of(f)), catalog.metrics[f]!)).join(' and of ') + '. '
+    return 'Across ' + rows.length + ' ' + plural(catalog.dimensions[by]!.label.toLowerCase()) + range + ', ' + 'the range of ' + two.map((f) => label(f) + ' is ' + formatValue(Math.min(...of(f)), catalog.metrics[f]!) + ' to ' + formatValue(Math.max(...of(f)), catalog.metrics[f]!)).join(' and of ') + '. '
       + (top[0] === top[1] ? top[0] + ' is highest on both.' : top[0] + ' is highest on ' + label(two[0]!) + ' and ' + top[1] + ' on ' + label(two[1]!) + '.');
   }
   if (by && catalog.dimensions[by]!.type === 'number' && rows.length) {
     // A numeric dimension: the total, and the bin that holds the most of it.
     const top = rows.reduce((a, r) => ((r[m] as number) > (a[m] as number) ? r : a)), end = top[by + '@end'];
-    return M.label + ': ' + formatValue(t[m], M) + ' in the ' + range + '. The most, ' + formatValue(top[m] as number, M) + ', at a ' + catalog.dimensions[by]!.label.toLowerCase() + ' of ' + top[by] + (end == null ? '' : ' to ' + end) + '.';
+    return M.label + ': ' + formatValue(t[m], M) + range + '. The most, ' + formatValue(top[m] as number, M) + ', at a ' + catalog.dimensions[by]!.label.toLowerCase() + ' of ' + top[by] + (end == null ? '' : ' to ' + end) + '.';
   }
   if (by && catalog.dimensions[by]!.type !== 'time' && rows.length) {
     const label = catalog.dimensions[by]!.label.toLowerCase();
@@ -66,12 +69,12 @@ export function tldrProse(q: Query, result: Result, share: boolean, catalog: Cat
     }
     // Several metrics by one dimension: the ranking is by the first, and the rest are said once, as the engine's totals. A metric it gives no total for is left out.
     const rest = q.metrics.slice(1).filter((x) => t[x] != null).map((x) => catalog.metrics[x]!.label.toLowerCase() + ' ' + formatValue(t[x], catalog.metrics[x]!));
-    return 'Top ' + plural(label) + ' by ' + name + ', ' + range + ': ' + rows.slice(0, 3).map((r) => say(catalog, by, r) + ' (' + formatValue(r[m] as number, M) + ')').join(', ') + '.' + (rest.length ? ' Overall, ' + rest.join(' and ') + '.' : '');
+    return 'Top ' + plural(label) + ' by ' + name + over(result, ', ') + ': ' + rows.slice(0, 3).map((r) => say(catalog, by, r) + ' (' + formatValue(r[m] as number, M) + ')').join(', ') + '.' + (rest.length ? ' Overall, ' + rest.join(' and ') + '.' : '');
   }
   // Each metric the query asks for, the first with the range.
   return q.metrics.map((m, i) => {
     const M = catalog.metrics[m]!;
-    let s = M.label + ': ' + formatValue(t[m], M) + (i ? '' : ' in the ' + range);
+    let s = M.label + ': ' + formatValue(t[m], M) + (i ? '' : range);
     if (q.compare === 'previous') {
       const d = delta(t[m] as number, t[m + '@previous'], M.polarity);
       s += d.pct != null ? ', ' + (d.pct > 0 ? 'up ' : 'down ') + fmtPct(Math.abs(d.pct)) + ' on the previous period'
@@ -103,7 +106,7 @@ export function gridProse(q: Query, result: Result, catalog: Catalog): string | 
   if (result.meta.empty || !a || !b || !result.totalsBy || !rows.length) return null;
   const peak = rows.reduce((top, r) => ((r[m] as number) > (top[m] as number) ? r : top)), name = catalog.metrics[m]!.label.toLowerCase();
   const busiest = (d: string, is: string) => { const top = leader(result, d, m)!; return say(catalog, d, top) + is + ' the busiest ' + catalog.dimensions[d]!.label.toLowerCase() + ' at ' + fmtPct((top[m] as number) / (result.totals[m] || 1)); };
-  return 'Most ' + name + ' at ' + say(catalog, a, peak) + ', ' + say(catalog, b, peak) + ' (' + formatValue(peak[m] as number, catalog.metrics[m]!) + ') in the ' + rangeLabel(result.meta.range) + '. ' + busiest(a, ' is') + ' of ' + name + ', and ' + busiest(b, '') + '.';
+  return 'Most ' + name + ' at ' + say(catalog, a, peak) + ', ' + say(catalog, b, peak) + ' (' + formatValue(peak[m] as number, catalog.metrics[m]!) + ')' + over(result) + '. ' + busiest(a, ' is') + ' of ' + name + ', and ' + busiest(b, '') + '.';
 }
 
 /** What follows a value from the unfinished bucket, as in "Visitors 175 so far". Empty for a finished one, so it also answers whether the row is partial. */

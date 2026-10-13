@@ -572,20 +572,26 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
 }
 
 const SEQ = 10;     // paint tokens run from seq.1 to seq.10, and seq.none is a cell with no value
-/** The sequential colour scale, which outputs tokens: a value is quantized to a step of the ramp, between the least and
- * the most of `vals`, or the ends of the domain the catalog states for `metric`, whose unit the two ends are written in. No value is `seq.none` and not the
- * lowest step: nothing is not a little. `ramp` is its legend, set in order: the low value, a swatch for each step, the
- * high value, and with `none` the swatch for no value. */
+const DIV = 9;      // and from div.1 to div.9 where the values cross zero: four steps below it, div.5 at it, four above
+/** The colour scale, which outputs tokens: a value is quantized to a step of a ramp, between the least and the most
+ * of `vals`, or the ends of the domain the catalog states for `metric`, whose unit the ends are written in. Which
+ * ramp is read from those ends and is no one's to state. Where they cross zero the scale is diverging about it:
+ * zero is in the neutral middle step, and both arms are measured by the end farther from zero, so two values as far
+ * from zero as each other are as many steps from the middle. Anything else is sequential. No value is `seq.none`
+ * on either ramp, and not a step of it: nothing is not a little, and it is not zero. `ramp` is the legend, set in
+ * order: the low end, a swatch for each step, the high end, and with `none` the swatch for no value. A diverging
+ * one says zero after its middle swatch, and its ends are the scale's, which are as far from zero as each other. */
 export function seqScale(vals: number[], metric?: MetricDef): { paint(v: number | null | undefined): string; ramp(none: boolean): SceneNode[] } {
   const [lo, hi] = (metric && metric.domain) || [min(vals) ?? 0, max(vals) ?? 0], say = (n: number) => (metric ? formatValue(n, metric, 'compact') : fmt(n, true));
+  const far = Math.max(-lo, hi), div = lo < 0 && hi > 0, name = div ? 'div.' : 'seq.', n = div ? DIV : SEQ;
   // Values that are all one have no least and most. They are measured from zero.
-  const ends = lo < hi ? [lo, hi] : [Math.min(lo, 0), Math.max(hi, lo ? 0 : 1)];
-  const step = scaleQuantize<number>().domain(ends).range(Array.from({ length: SEQ }, (_, i) => i + 1));
+  const ends = div ? [-far, far] : lo < hi ? [lo, hi] : [Math.min(lo, 0), Math.max(hi, lo ? 0 : 1)];
+  const step = scaleQuantize<number>().domain(ends).range(Array.from({ length: n }, (_, i) => i + 1));
   const end = (key: string, v: string): SceneNode => ({ key: 'ramp:' + key, part: 'ramp', kind: 'text', text: v, anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' });
-  const swatch = (key: string | number): SceneNode => ({ key: 'ramp:' + key, part: 'ramp', kind: 'rect', paint: 'seq.' + key, layer: 'data' });
+  const swatch = (key: string | number, paint = name + key): SceneNode => ({ key: 'ramp:' + key, part: 'ramp', kind: 'rect', paint, layer: 'data' });
   return {
-    paint: (v) => (v == null ? 'seq.none' : 'seq.' + step(v)),
-    ramp: (none) => [end('low', say(ends[0]!)), ...Array.from({ length: SEQ }, (_, i) => swatch(i + 1)), end('high', say(ends[1]!)), ...(none ? [swatch('none'), end('none:label', 'No data')] : [])],
+    paint: (v) => (v == null ? 'seq.none' : name + step(v)),
+    ramp: (none) => [end('low', say(ends[0]!)), ...Array.from({ length: n }, (_, i) => (div && i === (DIV - 1) / 2 ? [swatch(i + 1), end('zero', say(0))] : [swatch(i + 1)])).flat(), end('high', say(ends[1]!)), ...(none ? [swatch('none', 'seq.none'), end('none:label', 'No data')] : [])],
   };
 }
 

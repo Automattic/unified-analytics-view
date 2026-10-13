@@ -31,7 +31,9 @@ const css = `
 .uav-ramp i { flex: none; inline-size: 14px; block-size: 10px; border-radius: ${token('border-radius-cell')}; background: var(--uav-paint); }
 .uav-ramp span { color: var(--uav-paint); margin-inline: 5px; }
 .uav-ramp span:first-child { margin-inline-start: 0; }
-.uav-ramp [data-key="ramp:none"] { margin-inline-start: 5px; }`;
+.uav-ramp [data-key="ramp:none"] { margin-inline-start: 5px; }
+/* Zero is said beside its own swatch, the neutral one, which stands a little clear of the arm before it. */
+.uav-ramp i:has(+ [data-key="ramp:zero"]) { margin-inline-start: 4px; }`;
 
 /** Where a key moves to in a grid `nx` cells across and `ny` down, from `at` (null when none is chosen): left and
  * right along x, up and down along y, stopping at the edges. From nothing, any arrow is the first cell. Null when

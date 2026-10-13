@@ -454,7 +454,7 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
   cumulative: { label: 'Cumulative flow: sign-ups so far, by day and channel', spec: { spec: 'view/0', title: 'Sign-ups so far', query: { metrics: ['signups'], by: ['date.day', 'channel'], range: '28d' },
             layers: [{ mark: 'area', encode: { x: 'date.day', y: 'signups@running', color: 'channel' }, stack: 'zero' }] } },
   calendar: { label: 'Calendar heatmap: visitors by weekday and week', spec: { spec: 'view/0', title: 'Visitors, day by day', use: 'heatmap', query: { metrics: ['visitors'], by: ['weekday', 'date.week'], range: '28d' } } },
-  stripes: { label: 'Stripes: net subscribers by day, one cell each. On the sequential ramp, so nothing is not neutral yet', spec: { spec: 'view/0', title: 'Net subscribers', query: { metrics: ['net_subscribers'], by: ['date.day'], range: '28d' },
+  stripes: { label: 'Stripes: net subscribers by day, one cell each, on the diverging ramp: a day near no change is neutral', spec: { spec: 'view/0', title: 'Net subscribers', query: { metrics: ['net_subscribers'], by: ['date.day'], range: '28d' },
             layers: [{ mark: 'cell', encode: { x: 'date.day', color: 'net_subscribers' } }] } },
   adjacency: { label: 'Adjacency matrix: page views by page and the page gone to next', spec: { spec: 'view/0', title: 'From page to page', use: 'heatmap', query: { metrics: ['pageviews'], by: ['page', 'next_page'], range: '28d' } } },
   embedding: { label: 'Embedding scatter: search terms, set out in two components', spec: { spec: 'view/0', title: 'Search terms', query: { metrics: ['embed_x', 'embed_y'], by: ['term'], range: '28d' },

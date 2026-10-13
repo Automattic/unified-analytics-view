@@ -161,9 +161,9 @@ function placeMatrix(scene: Scene, W: number, H: number): PlacedNode[] {
 function placeRamp(scene: Scene, W: number): Block {
   const nodes: PlacedNode[] = [];
   let x = 0;
-  scene.nodes.forEach((n) => {
-    if (n.part !== 'ramp') return;
-    const w = n.kind === 'text' ? n.text.length * CHAR_W + 6 : 15, lead = n.key === 'ramp:none' ? 10 : n.kind === 'text' && x ? 5 : 0;
+  // The swatch that zero is said beside stands a little clear of the arm before it, so the two read as a pair, as no value's do.
+  scene.nodes.filter((n) => n.part === 'ramp').forEach((n, i, ramp) => {
+    const w = n.kind === 'text' ? n.text.length * CHAR_W + 6 : 15, lead = n.key === 'ramp:none' ? 10 : (n.kind === 'text' && x) || ramp[i + 1]?.key === 'ramp:zero' ? 5 : 0;
     if (x + lead + w > W) return;
     if (n.kind === 'rect') nodes.push(rect(n, x + lead, 8, 14, 10, 1)); else if (n.kind === 'text') nodes.push(text(n, x + lead, 13));
     x += lead + w;

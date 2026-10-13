@@ -89,15 +89,35 @@ describe('the grids of the Uncommon types', () => {
     expect(cells(ratio).every((n) => n.paint !== 'seq.none')).toBe(true);
     expect(plan.text).toMatch(/^Most visitors at \w+, Sep \d+ \(\d+\) in the last 28 days\. \w+ is the busiest weekday at \d+% of visitors, and Sep \d+ the busiest week at \d+%\.$/);
   });
-  it('a strip of days is one row of cells, and its ramp runs from the least to the most: zero is not its middle', () => {
+  it('a strip of signed days is one row of cells on the diverging ramp: zero is its neutral middle, and a loss is as many steps below it as a gain as large is above', () => {
     const { ratio, result } = run(grids.stripes!, 700), days = cells(ratio);
     expect([ratio.ys, days.length, new Set(days.map((n) => n.h)).size, days[0]!.h]).toEqual([[''], 28, 1, 1]);
     const signed = result.rows.map((r) => r.net_subscribers as number), least = Math.min(...signed), most = Math.max(...signed);
-    expect(least < 0 && most > 0 && -least !== most).toBe(true);
-    // A day of no change is painted a step of the ramp like any other, and a loss the palest: for the diverging ramp of step 5.
-    expect(texts(ratio, 'ramp:')).toEqual([String(least), String(most)]);
-    expect(days[signed.indexOf(least)]!.paint).toBe('seq.1');
-    expect([-2, 1].map((n) => days[signed.indexOf(n)]!.paint)).toEqual(['seq.5', 'seq.6']);
+    expect([least, most]).toEqual([-18, 20]);
+    // Both arms are measured by the end farther from zero, which the ramp says at both ends, with zero between them.
+    expect(texts(ratio, 'ramp:')).toEqual(['-20', '0', '20']);
+    expect(ratio.nodes.filter((n) => n.part === 'ramp').map((n) => n.key)).toEqual(['ramp:low', 'ramp:1', 'ramp:2', 'ramp:3', 'ramp:4', 'ramp:5', 'ramp:zero', 'ramp:6', 'ramp:7', 'ramp:8', 'ramp:9', 'ramp:high']);
+    expect(ratio.nodes.filter((n) => n.part === 'ramp' && n.kind === 'rect').map((n) => n.paint)).toEqual(Array.from({ length: 9 }, (_, i) => 'div.' + (i + 1)));
+    expect([least, most].map((n) => days[signed.indexOf(n)]!.paint)).toEqual(['div.1', 'div.9']);
+    // The middle step is a ninth of the scale, so days within 2.2 of no change are neutral, whichever way they went.
+    expect([-2, 1].map((n) => days[signed.indexOf(n)]!.paint)).toEqual(['div.5', 'div.5']);
+    days.forEach((n, i) => expect(n.paint, n.key).toBe('div.' + Math.min(9, 1 + Math.floor(((signed[i]! + 20) / 40) * 9))));
+    for (const n of [3, 7, 12, 16]) if (signed.includes(n) && signed.includes(-n)) expect(Number(days[signed.indexOf(n)]!.paint.slice(4)) - 5, String(n)).toBe(5 - Number(days[signed.indexOf(-n)]!.paint.slice(4)));
+  });
+  it('a colour scale is diverging only where its values, or the domain the catalog states, cross zero', () => {
+    const { result } = run(grids.stripes!, 700), with_ = (f: (v: number) => number, cat = catalog) => { const r = { ...result, rows: result.rows.map((row) => ({ ...row, net_subscribers: f(row.net_subscribers as number) })) }; return buildScene(resolve(grids.stripes!, r, makeContainer(700), cat), grids.stripes!.query, r, cat); };
+    // All at or above zero, and all at or below it, are sequential, as they were.
+    expect(cells(with_((v) => Math.abs(v))).every((n) => n.paint.startsWith('seq.'))).toBe(true);
+    expect(cells(with_((v) => -Math.abs(v))).every((n) => n.paint.startsWith('seq.'))).toBe(true);
+    expect(texts(with_((v) => -Math.abs(v)), 'ramp:')).toEqual(['-20', '-1']);
+    // A stated domain that crosses zero is diverging whatever the values, and its farther end measures both arms.
+    const stated = { ...catalog, metrics: { ...catalog.metrics, net_subscribers: { ...catalog.metrics.net_subscribers!, domain: [-10, 40] as [number, number] } } };
+    expect(texts(with_((v) => Math.abs(v), stated), 'ramp:')).toEqual(['-40', '0', '40']);
+    expect(new Set(cells(with_((v) => Math.abs(v), stated)).map((n) => n.paint))).toEqual(new Set(['div.5', 'div.6', 'div.7']));
+    // No value is the same token on either ramp: it is not zero.
+    const holed = { ...result, rows: result.rows.map((r, i) => (i ? r : { ...r, net_subscribers: null })) }, scene = buildScene(resolve(grids.stripes!, holed, makeContainer(700), catalog), grids.stripes!.query, holed, catalog);
+    expect(cells(scene)[0]!.paint).toBe('seq.none');
+    expect(scene.nodes.filter((n) => n.part === 'ramp').slice(-2).map((n) => [n.key, n.paint])).toEqual([['ramp:none', 'seq.none'], ['ramp:none:label', 'ink.muted']]);
   });
   it('a square of pages has the same values down the side as across', () => {
     const { ratio } = run(grids.adjacency!, 700);

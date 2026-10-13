@@ -113,7 +113,7 @@ describe('geo, filled by a metric', () => {
     expect([plan.layout, ratio.layout, plan.preset]).toEqual(['geo', 'geo', 'choropleth']);
   });
   it('its presets are registered with it, since core cannot name it: a view that uses one is the layers written out, to the node', () => {
-    expect([...customPresets().keys()]).toEqual(['choropleth', 'symbol-map']);
+    expect([...customPresets().keys()].slice(0, 2)).toEqual(['choropleth', 'symbol-map']);    // the fixtures register another mark's after these
     expect(PRESETS).not.toHaveProperty('choropleth');
     expect(map.layers ?? symbols.layers).toBeUndefined();
     expect(expand(map).layers).toEqual([{ mark: 'geo', encode: { x: 'country', color: 'visitors' } }]);

@@ -1,4 +1,5 @@
 import type { Catalog, Query, Result, Row, Spec } from '@unified-analytics/core';
+import { registerLink } from '@unified-analytics/flow';
 import { registerGeo, type Shapes } from '@unified-analytics/geo';
 import shapes from './countries.json';
 
@@ -10,6 +11,8 @@ import shapes from './countries.json';
 export const countries: Shapes = shapes;
 // Handed to the mark here, as a product would at startup, so every sample resolves wherever the fixtures are loaded.
 registerGeo(countries);
+// The `link` mark is handed nothing. It is registered here for the same reason.
+registerLink();
 
 /* Stands in for the query layer and the engines. Totals come from the
  * "engine", never from summing the rows a view happens to receive. */
@@ -39,6 +42,7 @@ export const catalog: Catalog = {
     step:       { label: 'Step',    type: 'categorical' },
     country:    { label: 'Country', type: 'categorical', values: 'country' },
     visitor_country: { label: 'Country', type: 'categorical', values: 'country' },
+    section:    { label: 'Section', type: 'categorical' },
   },
 };
 
@@ -101,6 +105,8 @@ MIX.country = [['US', 0.31, 0.33], ['IN', 0.12, 0.1], ['GB', 0.09, 0.1], ['DE', 
 // Every country the tracker saw, as real data has them: small ones the fixture's shapes leave out (Singapore, Malta and
 // Bahrain), and one it could not place, which arrives as an empty string.
 MIX.visitor_country = [...MIX.country, ['SG', 0.012, 0.01], ['MT', 0.006, 0.006], ['BH', 0.004, 0.004], ['', 0.008, 0.008]];
+// The part of the site a visit lands in. With `channel` it is a flow: where visitors come from, and where they arrive.
+MIX.section = [['Home', 0.3, 0.31], ['Blog', 0.26, 0.22], ['Docs', 0.2, 0.22], ['Pricing', 0.16, 0.17], ['Changelog', 0.08, 0.08]];
 // What a page has and a day does not: the share of its visitors who convert, in percent. A rate is the engine's to work out, and does not add up.
 const RATES: Record<string, number> = { '/': 2.1, '/pricing': 5.8, '/blog/launch-notes': 1.2, '/docs/getting-started': 3.4, '/changelog': 0.9, '/about': 1.6, '/blog/analytics-without-cookies': 2.7, '/contact': 4.4 };
 const RATE = 2.6;
@@ -342,4 +348,6 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
   symbols: { label: 'Symbols on a map: page views by country', spec: { spec: 'view/0', title: 'Page views by country', use: 'symbol-map', query: { metrics: ['pageviews'], by: ['country'], range: '28d' } } },
   unmapped: { label: 'A map with rows it has no shape for: visitors by every country seen', spec: { spec: 'view/0', title: 'Visitors by country, all of them', query: { metrics: ['visitors'], by: ['visitor_country'], range: '28d' },
             layers: [{ mark: 'geo', encode: { x: 'visitor_country', color: 'visitors' } }] } },
+  // The `link` mark (step 8 of docs/uncommon-coverage-plan.md). Swept, with its golden scenes, in test/flow.test.ts.
+  sankey:  { label: 'Sankey: visitors from channel to the section they land in', spec: { spec: 'view/0', title: 'Where visitors land', use: 'sankey', query: { metrics: ['visitors'], by: ['channel', 'section'], range: '28d' } } },
 };

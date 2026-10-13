@@ -251,7 +251,7 @@ The JSON Schema for a spec is `packages/core/schema/view.schema.json`, and the c
 
 A mark carries only its shape and those constraints. Relationships between marks (stacked, overlaid, normalized) are transforms or layering, never part of the mark.
 
-A custom mark registered in code and referenced by name is the escape hatch for anything the grammar cannot express (maps, Sankeys). Keep the spec small; do not let it grow an expression language. The registry is `registerMark` in `packages/core/src/marks.ts`, and the first custom mark is `geo`, in `packages/geo`.
+A custom mark registered in code and referenced by name is the escape hatch for anything the grammar cannot express (maps, Sankeys). Keep the spec small; do not let it grow an expression language. The registry is `registerMark` in `packages/core/src/marks.ts`. There are two: `geo`, in `packages/geo`, and `link`, in `packages/flow`.
 
 ### Transforms
 
@@ -282,11 +282,19 @@ A custom mark registered in code and referenced by name is the escape hatch for 
 ]
 ```
 
-**The `geo` mark** draws a map, and is the one custom mark so far. It takes one layer, alone in the view. `x` is the dimension whose values are region keys (a `country` dimension holds ISO 3166-1 alpha-2 codes). `color` is a metric to fill each region by, on the sequential ramp; `size` is a metric for a symbol on each region. Either or both. The boundary shapes and the projection are handed over in code, not in the spec.
+**The `geo` mark** draws a map, and was the first custom mark. It takes one layer, alone in the view. `x` is the dimension whose values are region keys (a `country` dimension holds ISO 3166-1 alpha-2 codes). `color` is a metric to fill each region by, on the sequential ramp; `size` is a metric for a symbol on each region. Either or both. The boundary shapes and the projection are handed over in code, not in the spec.
 
 ```json
 { "query": { "metrics": ["visitors"], "by": ["country"] }, "layers": [{ "mark": "geo", "encode": { "x": "country", "color": "visitors" } }] }
 ```
+
+**The `link` mark** draws a Sankey of one step, and is the second custom mark (built October 12, in `packages/flow`, with no dependency but core). It takes one layer, alone in the view, of a query by two dimensions. `x` is the source dimension, `y` the target and `size` the metric. Two columns of nodes, the sources on the left: a node for each value, in the engine's order, as tall as the engine's total for it, so a result with no `totalsBy` is an error. A ribbon for each row, as wide at each end as the row's share of the node it meets; a row whose value is null or zero has none. A source takes a series colour, so more than six is an error that names `limit`; its ribbons are that colour as a tint, and a target is neutral. Short of room it gives up its labels, and then becomes the `heatmap` of the same query, with the sources down the side.
+
+```json
+{ "query": { "metrics": ["visitors"], "by": ["channel", "section"] }, "layers": [{ "mark": "link", "encode": { "x": "channel", "y": "section", "size": "visitors" } }] }
+```
+
+The target is on `y` because a custom mark cannot add a channel, and `x2` is kept for a bar, a rule or an area. A view of it says the sentence any query by two dimensions says, who leads each dimension, and not its largest flow: a custom mark has no way to give the prose (`docs/uncommon-coverage-plan.md`, section 7).
 
 `rows` is a track per row: a label, a track with a linear scale that bars, dots, rules and ticks draw in, and columns of values. Facets are not built (section 19, Decided 26). The plan and what building it found are in `docs/chart-coverage-plan.md`.
 
@@ -369,7 +377,13 @@ A companion is something the engine returns with a metric. A query cannot yet as
 | `choropleth` | One dimension whose values are region keys | A map, each region filled by the metric on the sequential ramp |
 | `symbol-map` | The same | A map with a symbol on each region, sized by the metric |
 
-Both are working names, to check against `@automattic/charts`. A name must be letters, digits, `_` and `-`, and cannot be one the library has. A name already registered is replaced. `customPresets()` lists what is registered. The registry is a map and two functions, as the one for marks is, and a name in it is unknown until its package has been loaded: the error for an unknown preset lists the library and the registry, and names `registerPreset`.
+`registerLink`, in `packages/flow`, registers one (built October 12):
+
+| Preset | The query needs | Draws |
+|---|---|---|
+| `sankey` | Two dimensions, the source and then the target, and `totalsBy` in the result | A Sankey of one step: a node for each value, and a ribbon for each pair |
+
+All three are working names, to check against `@automattic/charts`. A name must be letters, digits, `_` and `-`, and cannot be one the library has. A name already registered is replaced. `customPresets()` lists what is registered. The registry is a map and two functions, as the one for marks is, and a name in it is unknown until its package has been loaded: the error for an unknown preset lists the library and the registry, and names `registerPreset`.
 
 - The library ships the basics. Users and agents add their own presets to it.
 - A preset is named after the `@automattic/charts` component it replaces, where one exists: `line` for `LineChart`, `bar-list` for `BarListChart`. The prototype calls `line` by its earlier name, `trend`.

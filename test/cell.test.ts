@@ -97,7 +97,7 @@ describe('the grids of the Uncommon types', () => {
     // A day of no change is painted a step of the ramp like any other, and a loss the palest: for the diverging ramp of step 5.
     expect(texts(ratio, 'ramp:')).toEqual([String(least), String(most)]);
     expect(days[signed.indexOf(least)]!.paint).toBe('seq.1');
-    expect(days.find((_, i) => signed[i] === 0)?.paint ?? 'seq.5').toMatch(/^seq\.[4-6]$/);
+    expect([-2, 1].map((n) => days[signed.indexOf(n)]!.paint)).toEqual(['seq.5', 'seq.6']);
   });
   it('a square of pages has the same values down the side as across', () => {
     const { ratio } = run(grids.adjacency!, 700);

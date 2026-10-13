@@ -346,6 +346,56 @@ Merged. 816 tests pass, nine of them new, and the typecheck is clean. Every gold
 - `CLAUDE.md`'s line for `packages/core` names the registry for marks and not this one. It was left for its owner.
 - Section 1's table still gives `link` and `partition` as steps 7 and 8. They are 8 and 9.
 
+### Step 9, partition (built October 12)
+
+Built on a branch of its own, not merged. 882 tests pass (836 before) and the typecheck is clean. Every golden scene that existed is the same to the byte: the snapshot files are untouched, and `test/__snapshots__/partition.test.ts.snap` is new, with eight scenes. The parity tests are untouched. Checked in headless Chromium on the bench: both samples at 346, 250, 170, 120 and 80 px, in a box 160 px tall, light and dark, `typical`, `no-prior` and `empty`, a frame resized in place from 250 to 700 px and back, real key events, the pointer, a click, the table, and on the marks page the six surfaces, the ramp and a `limit`. Not checked: WebKit, Firefox, a screen reader, touch, reduced motion, a page that reads from the right, the dot-grid painter, and a data change while a box is chosen.
+
+**What was added**
+
+- **`packages/partition`,** set up as `packages/geo` is. Its dependencies are core and, for the painter, `packages/dom`. `registerPartition()` registers the mark and two presets. The fixtures call it on import.
+- **`squarify(values, w, h, total)`,** written there: about twenty lines, with a test of its own (areas, shapes, the whole box, the same answer twice, the room left for a rest).
+- **The mark,** `partition`: `x` the parent, `detail` the child, `size` the metric, and a metric on `color` for the ramp. One level with no `detail`.
+- **Presets** `treemap` and `pair-list`. Working names.
+- **The painter,** `partitionPainter`, with a keyboard, a readout and a table of its own, and `measure` for the names.
+- **Fixtures:** a dimension `section`, which divides the whole as `channel` does, and the pages each section holds. A query by `section` and then `page` answers with a row a page, `totalsBy` for both, and all three scenarios. Samples `treemap` (two levels, by `use`) and `tiles` (one level, as layers).
+- **The bench:** both samples in the frames of the first page, and `partition` on the marks page with one level, the ramp and a `limit` as states.
+
+**Changes outside the package, exactly**
+
+1. **Core: a layout may name a fallback for each shape of query.** `fallbackRule()` in `fit.ts` takes a fifth argument, `can(preset)`, and passes over a rule whose preset it refuses. `fills(use, query, presets)` is new in `presets.ts` and exported: whether the query has a field for every slot the preset's layers name. `resolve()` and `<ua-view>` both hand `fallbackRule` that. With nothing handed in it answers as before, and `geo`'s one rule is found as before. Why: a rule names one preset, a custom mark's rules are fixed when it is registered, and no one preset draws both a query by one dimension and a query by two. `bar-list` leaves the second dimension undrawn, which core refuses, and anything with `$split` is refused with one. Without this the mark could have a fallback for one level or for two, and not both, and the element builds the fallback's view whatever the size. **To confirm.** It is a change to fit rules, not to `CustomMark`, which is as it was.
+2. **DOM: `hideReadout`, `placeReadout` and `readoutOf` are exported from `packages/dom`.** A layout that stands in for the element's keyboard needs the view's one readout, as the grid does, and a custom mark's painter is outside the package.
+3. **`geo`'s test** of the registry now reads the first two registered names, since another package registers after it.
+4. **The invalid sample `unknown preset`** uses `no-such-preset`.
+
+**Choices where the plan was silent, and departures**
+
+1. **The part holds its shape,** 1.6 wide to 1 tall, up to 480 px across, as a map does. Squares are made for one shape of box, and a scene has no size. In a box the height leads and the width follows.
+2. **Order is the engine's and squarify does not sort.** A ranked dimension arrives largest first, which is what the method wants. One in an order of its own keeps it and has longer boxes.
+3. **A child's box is set in its parent's box, not in the part.** Its `x`, `y`, `w` and `h` run 0 to 1 within the parent, under the parent's name. This departs from "coordinates run 0 to 1 within the part". The reason is the name: it takes a line of pixels at the top of the parent, and a ratio of the part could not leave room for it.
+4. **A parent's name has a line of its own at the top of its box,** 16 px, or three tenths of a short box. That is how a parent is readable where its children are named. Where the name does not fit that line, it is hidden, and its children's names with it: a child is never named without its parent. So the children of one parent are a little smaller against another parent's than their values say. Within a parent they are exact.
+5. **With a `limit` the boxes stop short and the rest is unpainted,** as a band stops short of its end. Parents past the limit leave the end of the whole box empty. Children past it leave the end of their parent's box in the parent's tint. No "rest" box, name or node.
+6. **Two dimensions with no `totalsBy` is an error that names the fix,** as a normalized stack's is. So is a row whose parent has no total. A parent is never sized by a sum of its rows.
+7. **A value that is null, zero or below zero has no box.** A metric that can fall below zero has no treemap. With no total, or a total of zero, there are no boxes at all, as a band has no segments.
+8. **Where the rows hold more than the engine's total, the boxes are fitted to what they hold,** so none leaves the part. The fixture's rows are a few over by rounding. This is the one place a sum of rows is taken, and it is geometry: no value said anywhere is made of it. **To confirm.**
+9. **The limit of six counts the boxes drawn in a series colour,** and a metric on `color` lifts it.
+10. **Names on a series colour are painted `background`,** a paint token that maps to `color-background` by name. Every series colour is made to stand out from the ground, in both themes. On the ramp a step may be near either end, so names there are `ink` with a halo. The halo is heavy, and on frosted glass the ground's colour is faint. **To look at again**, with a token for text on a mark if one is wanted.
+11. **No node has a `row`.** The element's keyboard takes any `data-row` as a row of the result, and a box is not one for one. So the painter has its own, as the grid has. A child carries `pair`.
+12. **Labels are ranked by area in the scene, and nothing reads the rank.** A name is inside its own box, so two cannot collide. What decides is fit: the measured pass reads each name against its box, and `place()` works a width out from the name's length at 6 px a character.
+13. **The keyboard is a proposal.** Left and right among parents, down into a parent, left and right among its children, up and out. Steps follow the engine's order, not where a box lies. To assistive technology it is a tree of two levels. Version 4 has no model for this.
+14. **The table is long,** a row a page under a row for its section's total, in place of the pivot. A pivot of a hierarchy is a column a page and nearly all of it empty.
+15. **The readout says the value and not the share.** A parent's is the engine's total for it.
+16. **`treemap` is two levels.** A preset's slots are filled or refused whole, so one level is the layer written out. A second preset for it was not added.
+17. **The fallback with two dimensions is `pair-list`,** a new preset: a row for each pair, with both names. `bar-list` throws (the second dimension is undrawn), `stacked-bar` throws at more than six children, and `heatmap` draws a grid that is nearly all empty for a hierarchy. With one dimension it is `bar-list`, as planned.
+18. **Prose needed nothing.** With two dimensions it is the sentence core already has: "Marketing is the largest section at 42% of page views, and / the largest page at 21%." With one it is the ranked sentence, and not a share: core says the share sentence only for a normalized stack or an `arc`, and a custom mark has no way to ask for it. Recorded, not widened.
+19. **`resolve()` reports nothing for a name that is not set.** A custom mark cannot add to `dropped`.
+
+**Not done**
+
+- No sample of the ramp in `moreSamples`: it is a state on the marks page and a spec in the tests.
+- `unmapped` and the goals page are as they were.
+- `CLAUDE.md`'s line for the fixtures still names only `geo`.
+- Nothing from the plan's other steps.
+
 ## 8. What to count as it is built
 
 - **Custom marks.** There is one, `geo`. The plan adds two. Each is a hole in the grammar.

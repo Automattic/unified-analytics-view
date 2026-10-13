@@ -367,6 +367,11 @@ The library ships these (`packages/core/src/presets.ts`). The three above are wr
 | `fan` | Companions `@lower`, `@upper` | A line inside the band it is known to |
 | `dumbbell` | One categorical dimension, and `compare` | Rows with a dot for now and one for before, joined. Without `compare`, a dot each |
 | `bullet` | One categorical dimension, and a metric with a catalog `target` | Rows with a bar and a tick at the target |
+| `bump` | Two dimensions: the axis, then the split. The companion `@rank`, with a catalog entry that gives it the unit `rank` | A line for each value of the split by its place, first at the top |
+| `spaghetti` | Two dimensions: the axis, then the split | A line for each value of the split, all in one paint, with no legend |
+| `difference` | One dimension, time or ordered, and `compare` | The metric and the period before as two lines, and the area between them painted as a gain where the metric is ahead and a loss where it is behind. Without `compare`, the line alone |
+| `connected-scatter` | Two metrics, x then y, by one dimension in the engine's order | A point for each value at the two metrics, joined in that order: by a time dimension, the path the two took together |
+| `ecdf` | One `number` dimension, and the companion `@cumulative`, with a catalog entry that gives it the unit `ratio` | The share of the whole held up to each value, as a line that steps over the bins |
 
 A companion is something the engine returns with a metric. A query cannot yet ask for one by name (section 5), so a preset that needs companions works only against a result that has them.
 

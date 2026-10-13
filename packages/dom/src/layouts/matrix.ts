@@ -188,7 +188,8 @@ export const matrix: LayoutPainter = {
     cell(head, catalog.dimensions[yf]!.label, 'col');
     for (const x of xs) cell(head, formatDimension(x, catalog.dimensions[xf]!), 'col', true);
     cell(head, 'Total', 'col', true);
-    for (const y of scene.ys ?? []) {
+    // A quantity down the side is drawn from the foot, as a plot is, and listed from its least, as a table is.
+    for (const y of catalog.dimensions[yf]!.type === 'number' ? (scene.ys ?? []).slice().reverse() : scene.ys ?? []) {
       const tr = body.insertRow();
       cell(tr, formatDimension(y, catalog.dimensions[yf]!), 'row');
       for (const x of xs) cell(tr, value(at.get(x + '\n' + y)));

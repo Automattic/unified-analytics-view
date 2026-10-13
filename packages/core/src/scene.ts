@@ -3,7 +3,7 @@ import { scaleBand, scaleLinear, scalePoint, scaleQuantize } from 'd3-scale';
 import { CHAR_W, delta, fmt, fmtPct, fmtTime, formatBin, formatDimension, formatUnit, formatValue } from './format.ts';
 import { arcD, pathD } from './path.ts';
 import { customMarks } from './marks.ts';
-import { NOW, emptyNote, leader, portion } from './prose.ts';
+import { NOW, crossesZero, emptyNote, endsOf, leader, portion } from './prose.ts';
 import type { ArcNode, Catalog, DimensionDef, Guides, Layer, Mark, MetricDef, Part, PathNode, PlanShape, Polarity, Query, Result, Role, Row, Scene, SceneNode, TextNode } from './types.ts';
 
 /* Node kinds: rect, path, line, circle, text. Every node has a stable key,
@@ -582,8 +582,8 @@ const DIV = 9;      // and from div.1 to div.9 where the values cross zero: four
  * order: the low end, a swatch for each step, the high end, and with `none` the swatch for no value. A diverging
  * one says zero after its middle swatch, and its ends are the scale's, which are as far from zero as each other. */
 export function seqScale(vals: number[], metric?: MetricDef): { paint(v: number | null | undefined): string; ramp(none: boolean): SceneNode[] } {
-  const [lo, hi] = (metric && metric.domain) || [min(vals) ?? 0, max(vals) ?? 0], say = (n: number) => (metric ? formatValue(n, metric, 'compact') : fmt(n, true));
-  const far = Math.max(-lo, hi), div = lo < 0 && hi > 0, name = div ? 'div.' : 'seq.', n = div ? DIV : SEQ;
+  const [lo, hi] = endsOf(vals, metric), say = (n: number) => (metric ? formatValue(n, metric, 'compact') : fmt(n, true));
+  const far = Math.max(-lo, hi), div = crossesZero([lo, hi]), name = div ? 'div.' : 'seq.', n = div ? DIV : SEQ;
   // Values that are all one have no least and most. They are measured from zero.
   const ends = div ? [-far, far] : lo < hi ? [lo, hi] : [Math.min(lo, 0), Math.max(hi, lo ? 0 : 1)];
   const step = scaleQuantize<number>().domain(ends).range(Array.from({ length: n }, (_, i) => i + 1));
@@ -609,7 +609,9 @@ function sceneMatrix(catalog: Catalog, layers: Layer[], result: Result): Body {
   // A binned quantity has an order of its own, least first, whatever the engine ranked its rows by.
   const binned = (f: string | undefined) => (f == null ? [''] : catalog.dimensions[f]!.type === 'number' ? domain(f).sort((a, b) => Number(a) - Number(b)) : domain(f));
   const of = (r: Row, f: string | undefined) => (f == null ? '' : String(r[f]));
-  const xs = binned(xf), ys = binned(yf), at = new Map(result.rows.map((r) => [of(r, xf) + '\n' + of(r, yf), r[m] as number | null | undefined]));
+  // Down the side a category is read from the top, as a table is. A quantity beside another dimension is read from the
+  // foot, as a plot's y axis is: its least bin is the bottom row. Alone it is one column, a list, and reads down.
+  const xs = binned(xf), ys = xf != null && yf != null && catalog.dimensions[yf]!.type === 'number' ? binned(yf).reverse() : binned(yf), at = new Map(result.rows.map((r) => [of(r, xf) + '\n' + of(r, yf), r[m] as number | null | undefined]));
   // The colour scale runs from the least to the most of the cells drawn. That is geometry, as the top of a y scale is,
   // and not a total, so it is read from the rows. A domain the catalog states for the metric comes before it.
   const vals = [...at.values()].filter((v): v is number => v != null), seq = seqScale(vals, catalog.metrics[m]!);
@@ -657,7 +659,8 @@ function sceneNumber(catalog: Catalog, q: Query, result: Result, share: boolean)
   if (by && catalog.dimensions[by]!.type === 'categorical' && rows.length) {
     const top = leader(result, by, m)!;                                      // with two dimensions a row is a pair, so the leader is the engine's
     const name = formatDimension(top[by], catalog.dimensions[by]!);
-    note = share && t[m] ? name + ' ' + fmtPct(num(top, m) / t[m]!) : 'Top: ' + name;   // with no total there is no share to say
+    // With no total there is no share to say, and where the engine has no figure for any value there is no top one either.
+    note = share && t[m] ? name + ' ' + fmtPct(num(top, m) / t[m]!) : top[m] == null ? note : 'Top: ' + name;
   }
   const dl = q.compare === 'previous' ? delta(t[m] as number, t[m + '@previous'], M.polarity) : null;
   value(formatValue(t[m], M), formatValue(t[m], M, 'compact'));

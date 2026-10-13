@@ -1,4 +1,4 @@
-import { delta, fmtPct, formatDimension, formatValue, rangeLabel } from './format.ts';
+import { delta, fmtPct, formatBin, formatDimension, formatValue, rangeLabel } from './format.ts';
 import type { Catalog, MetricDef, Query, Result, Row } from './types.ts';
 
 /* What a view says of a metric with nothing to show, and of one that is read now. Each is made of the catalog's label
@@ -18,6 +18,13 @@ export function emptyNote(metric: MetricDef, period = false): string {
 const over = (result: Result, lead = ' in the ') => (result.meta.range ? lead + rangeLabel(result.meta.range) : '');
 /** A value of a dimension as a row or a legend writes it: a country's name for its code, a dash for no value. */
 const say = (catalog: Catalog, d: string, r: Row) => formatDimension(r[d], catalog.dimensions[d]!);
+
+/** The ends a colour scale is measured between: the domain the catalog states for the metric, or the least and the
+ * most of the values. Where they cross zero the values are signed: read as below and above it, and never as shares. */
+export function endsOf(vals: number[], metric?: MetricDef): [lo: number, hi: number] {
+  return (metric && metric.domain) || [vals.length ? Math.min(...vals) : 0, vals.length ? Math.max(...vals) : 0];
+}
+export const crossesZero = ([lo, hi]: [number, number]) => lo < 0 && hi > 0;
 
 /** The row for the value of a dimension that has the most of a metric: from the engine's totals by dimension where the
  * result has them, and otherwise the first row, which the engine ranks. A comparison of the engine's numbers, never a sum. */
@@ -111,8 +118,18 @@ export function gridProse(q: Query, result: Result, catalog: Catalog): string | 
   const m = q.metrics[0]!, [a, b] = q.by || [], rows = result.rows.filter((r) => r[m] != null);
   if (result.meta.empty || !a || !b || !result.totalsBy || !rows.length) return null;
   const peak = rows.reduce((top, r) => ((r[m] as number) > (top[m] as number) ? r : top)), name = catalog.metrics[m]!.label.toLowerCase();
+  // A bin is said by both its ends, as its row label is, and in a pair by its dimension too: two bare ranges do not say which is which.
+  const say = (_: Catalog, d: string, r: Row, pair = false) => (r[d + '@end'] == null ? formatDimension(r[d], catalog.dimensions[d]!) : (pair ? catalog.dimensions[d]!.label.toLowerCase() + ' ' : '') + formatBin(r[d], r[d + '@end']));
+  // Signed values have no busiest and no share: what is said is how far they run each way, and where. A value set
+  // against itself is passed over where there is any other pair, since what it holds is no finding.
+  const M = catalog.metrics[m]!;
+  if (crossesZero(endsOf(rows.map((r) => r[m] as number), M))) {
+    const apart = rows.filter((r) => r[a] !== r[b]), of = apart.length ? apart : rows, end = (way: 1 | -1) => of.reduce((top, r) => (way * (r[m] as number) > way * (top[m] as number) ? r : top));
+    const said = (r: Row) => formatValue(r[m] as number, M) + ' (' + say(catalog, a, r, true) + ' and ' + say(catalog, b, r, true) + ')';
+    return M.label + ' runs from ' + said(end(-1)) + ' to ' + said(end(1)) + over(result) + '.';
+  }
   const busiest = (d: string, is: string, of = '') => { const top = leader(result, d, m)!; return say(catalog, d, top) + is + ' the busiest ' + catalog.dimensions[d]!.label.toLowerCase() + at(top[m] as number, result.totals[m], catalog.metrics[m]!, of); };
-  return 'Most ' + name + ' at ' + say(catalog, a, peak) + ', ' + say(catalog, b, peak) + ' (' + formatValue(peak[m] as number, catalog.metrics[m]!) + ')' + over(result) + '. ' + busiest(a, ' is', ' of ' + name) + ', and ' + busiest(b, '') + '.';
+  return 'Most ' + name + ' at ' + say(catalog, a, peak, true) + ', ' + say(catalog, b, peak, true) + ' (' + formatValue(peak[m] as number, catalog.metrics[m]!) + ')' + over(result) + '. ' + busiest(a, ' is', ' of ' + name) + ', and ' + busiest(b, '') + '.';
 }
 
 /** What follows a value from the unfinished bucket, as in "Visitors 175 so far". Empty for a finished one, so it also answers whether the row is partial. */

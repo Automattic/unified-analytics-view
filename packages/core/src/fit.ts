@@ -22,6 +22,10 @@ export interface FitRule {
    * whole view, so `hide` and `show` have nothing left to act on. `resolve()` plans again with it. A browser container
    * paints both, and the compiled rule shows one. */
   fallback?: string;
+  /** On a rule with a `fallback`: the mark the layout's layers must hold for the view to give way. A built-in mark
+   * shares its layout with others, so a rule for one of its forms names it: a band of glyphs gives way to the share
+   * bar, and the share bar, in the same layout, gives way to nothing. A custom mark's layout is its own, and needs none. */
+  mark?: string;
 }
 
 /** The room a container has. A view that takes its natural height has no `block`. */
@@ -89,10 +93,17 @@ export function applies(rule: FitRule, room: { view: Room; plot?: Room | null })
   return !!c && (short(rule.needs.inline, c.inline) || short(rule.needs.block, c.block));
 }
 
+/** What a view gives up under a rule's `fallback`, as `via` holds it: the rule's layout, and with it the mark where the rule is for one. */
+export const gaveWay = (rule: FitRule): string => (rule.mark ? rule.layout + ' (' + rule.mark + ')' : rule.layout);
+
 /** The rule under which a layout gives way to a preset: the first of its rules that names a `fallback` and that the
- * spec's `keep` leaves on. `via` holds the layouts the view has already given up on its way here. A fallback that leads
- * back to one of them would never settle, so that throws. */
-export function fallbackRule(rules: FitRule[], layout: Layout, keep: KeepPart[] = [], via: Layout[] = []): FitRule | undefined {
-  if (via.includes(layout)) throw new Error('A fit rule\'s "fallback" leads back to the "' + layout + '" layout (' + via.concat(layout).join(', then ') + '), so the view would never settle. Name a preset that is laid out another way, or remove "fallback" from the rule.');
-  return rules.find((r) => r.layout === layout && r.fallback && !(r.keep && keep.includes(r.keep)));
+ * spec's `keep` leaves on. `view` says what the view holds, where the caller knows: its layers' marks, for a rule that
+ * is for one mark, and whether its query has what a preset's slots ask for. A rule whose preset the query cannot fill
+ * is passed over, so one layout may offer a preset that takes a dimension and, after it, one that takes none.
+ * `via` holds what the view has already given up on its way here (`gaveWay`). A fallback that leads back to one of
+ * them would never settle, so that throws. */
+export function fallbackRule(rules: FitRule[], layout: Layout, keep: KeepPart[] = [], via: string[] = [], view?: { marks: string[]; fills(preset: string): boolean }): FitRule | undefined {
+  const rule = rules.find((r) => r.layout === layout && r.fallback && !(r.keep && keep.includes(r.keep)) && (!view || ((!r.mark || view.marks.includes(r.mark)) && view.fills(r.fallback))));
+  if (rule && via.includes(gaveWay(rule))) throw new Error('A fit rule\'s "fallback" leads back to the "' + gaveWay(rule) + '" layout (' + via.concat(gaveWay(rule)).join(', then ') + '), so the view would never settle. Name a preset that is laid out another way, or remove "fallback" from the rule.');
+  return rule;
 }

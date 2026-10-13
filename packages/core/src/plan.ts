@@ -1,8 +1,8 @@
 import { CONTAINER_RULES, KEEP } from './container.ts';
-import { applies, fallbackRule, ruleFor, type FitRule } from './fit.ts';
+import { applies, fallbackRule, gaveWay, ruleFor, type FitRule } from './fit.ts';
 import { fmtTime, rangeLabel } from './format.ts';
 import { customMarks } from './marks.ts';
-import { PRESETS, expand, presetNames, usesPrevious } from './presets.ts';
+import { PRESETS, expand, fills, presetNames, usesPrevious } from './presets.ts';
 import { COLUMNS_BLOCK, place } from './place.ts';
 import { BUILT_IN_MARKS, DETAIL_LAYOUTS, buildScene, columnLabel, columnsOf, tldrValueText, isDim, roleOf, seriesOf, trackBeside, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
 import { gridProse, rangeProse, tldrProse } from './prose.ts';
@@ -85,8 +85,8 @@ function checkLayers(layers: Layer[], q: Query, catalog: Catalog, result: Result
 }
 
 /** Fit a spec to a container. Throws, with a message that names the fix, when the spec is invalid.
- * `via` is resolve()'s own: the layouts this view has given up for a rule's `fallback` on its way here. */
-export function resolve(spec0: Spec, result: Result, container: Container, catalog: Catalog, presets: PresetLibrary = PRESETS, via: Layout[] = []): Plan {
+ * `via` is resolve()'s own: what this view has given up for a rule's `fallback` on its way here. */
+export function resolve(spec0: Spec, result: Result, container: Container, catalog: Catalog, presets: PresetLibrary = PRESETS, via: string[] = []): Plan {
   const spec = expand(spec0, presets), q = spec.query || ({} as Query);
   if (!q.metrics || !q.metrics.length) throw new Error('A view needs query.metrics, for example ["visitors"].');
   // A name the catalog does not carry is refused here, once, before anything reads its definition.
@@ -124,7 +124,8 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   if (custom) p.guides = { ramp: true, size: true };
   // A layout with a rule that names a `fallback` gives way to that preset, whole, where the rule applies: the same query,
   // planned again. Asked before the reductions, which have nothing to give up for a view that is not this one.
-  const swap = layers.length ? fallbackRule(fit, p.layout, keep, via) : undefined;
+  // A rule for one mark is for a view that holds it, and a preset the query cannot fill is no fallback of this view's.
+  const swap = layers.length ? fallbackRule(fit, p.layout, keep, via, { marks: layers.map((l) => l.mark), fills: (use) => fills(q, use, presets) }) : undefined;
   // A split plot starts with its legend. Its rules step that down to a label at the end of each line, where there
   // are lines, and then to nothing. They are asked once, of the view: unlike the reductions, they change no one else's room.
   const series = p.layout === 'cartesian' ? seriesOf(catalog, layers) : null;
@@ -144,7 +145,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
     if (M.instant || !layers.length) { p.layout = 'none'; p.layers = []; p.tldrValue = true; p.guides = {}; }
     else { p.layout = 'notice'; p.layers = []; p.guides = {}; p.tldrValue = false; }
   } else if (swap && applies(swap, { view: { inline: container.width, block: container.height } })) {
-    const { layers: _layers, ...rest } = spec0, plan = resolve({ ...rest, use: swap.fallback }, result, container, catalog, presets, via.concat(p.layout));
+    const { layers: _layers, ...rest } = spec0, plan = resolve({ ...rest, use: swap.fallback }, result, container, catalog, presets, via.concat(gaveWay(swap)));
     return { ...plan, dropped: ['the ' + p.layout + ' marks (drawn as "' + swap.fallback + '")'].concat(plan.dropped) };
   }
 

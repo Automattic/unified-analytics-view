@@ -1,4 +1,4 @@
-import { CONTAINER_RULES, buildScene, expand, fallbackRule, formatDimension, formatValue, resolve, unboundedContainer } from '@unified-analytics/core';
+import { CONTAINER_RULES, buildScene, expand, fallbackRule, fills, formatDimension, formatValue, gaveWay, resolve, unboundedContainer } from '@unified-analytics/core';
 import type { Catalog, ContainerRules, Layer, Layout, Query, Result, Row, SceneNode, Spec } from '@unified-analytics/core';
 import { compileFitRules, type FitExtras } from './compile.ts';
 import { attr, ensure, keyed, paintVar, text } from './dom.ts';
@@ -253,8 +253,8 @@ export class UaView extends Base {
   #keys: Keys;
   #fallback: UaView | null = null;
   #frame = 0;
-  /** The layouts this view is the fallback of, set by the view that holds it. A fallback that leads back to one of them is an error. */
-  via: Layout[] = [];
+  /** What the views this one is the fallback of gave up, set by the view that holds it. A fallback that leads back to one of them is an error. */
+  via: string[] = [];
   // The one observer of the measured pass. It watches the room and the ruler, whose sizes nothing it writes can change.
   // It only asks for a frame. A write in its callback can resize something the page observes, and the browser then
   // reports a "ResizeObserver loop" error to the page's window. So a view that crosses a threshold paints one frame
@@ -369,9 +369,13 @@ export class UaView extends Base {
       if (!this.hasAttribute('table')) this.#table.replaceChildren();
       else if (painter?.table) painter.table(this.#table, spec.title, scene, data); else paintTable(this.#table, spec.title, data.query, result, catalog, plan.layers);
       this.#keys.paint(scene, expand(spec).query, result, catalog, plan.layers);
-      const swap = fallbackRule(fits, scene.layout, spec.keep, this.via), { layers: _layers, ...rest } = spec;
-      if (swap) Object.assign(this.#fallback ??= this.#root.appendChild(Object.assign(document.createElement(this.localName) as UaView, { className: 'uav-fallback' })),
-        { via: this.via.concat(scene.layout), spec: { ...rest, use: swap.fallback }, result, catalog, rules });
+      // The rule this view gives way under, if one is for what it holds and its query can fill the rule's preset: as resolve() asks.
+      const swap = fallbackRule(fits, scene.layout, spec.keep, this.via, { marks: plan.layers.map((l) => l.mark), fills: (use) => fills(data.query, use) }), { layers: _layers, ...rest } = spec;
+      if (swap) {
+        const beside = this.#fallback ??= this.#root.appendChild(Object.assign(document.createElement(this.localName) as UaView, { className: 'uav-fallback' }));
+        beside.setAttribute('data-rule', swap.id);                            // the compiled rule shows the one that is its own
+        Object.assign(beside, { via: this.via.concat(gaveWay(swap)), spec: { ...rest, use: swap.fallback }, result, catalog, rules });
+      }
       else { this.#fallback?.remove(); this.#fallback = null; }
       fig.hidden = false; this.#error.hidden = true;
       settle(fig);

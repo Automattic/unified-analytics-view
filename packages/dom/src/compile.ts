@@ -22,6 +22,8 @@ function target(t: string, rule: FitRule, what: string): string {
   name(t, rule, what);
   return t.startsWith('role:') ? '[data-role="' + t.slice(5) + '"]' : Object.hasOwn(RANKED, t) ? RANKED[t]! : '.uav-' + t.replace(/[.:]/g, '-');
 }
+/** The view painted beside the figure for a rule's `fallback`. */
+const beside = (r: FitRule) => '.uav-fallback[data-rule="' + r.id + '"]';
 const anyOf = (sel: string[]) => (sel.length > 1 ? ':is(' + sel.join(', ') + ')' : sel[0]!);
 
 /** CSS for a set of fit rules. A rule names its container "view" or "plot"; in CSS they are `uav-view` and `uav-plot`, so a page's
@@ -42,9 +44,10 @@ export function compileFitRules(rules: FitRule[], extras: FitExtras = {}): strin
     const body = [
       r.hide?.length ? fig + ' ' + anyOf(r.hide.map((t) => target(t, r, 'the hide target'))) + ' { display: none; }' : '',
       r.show?.length ? fig + ' ' + anyOf(r.show.map((t) => target(t, r, 'the show target'))) + ' { display: block; }' : '',
-      // The view gives way, whole, to the one painted beside it for the rule's preset (view.ts).
-      r.fallback ? fig + ' { display: none; }' : '',
-      r.fallback ? fig + ' ~ .uav-fallback { display: block; }' : '',
+      // The view gives way, whole, to the one painted beside it for the rule's preset (view.ts), and only where that
+      // one is there and is this rule's: a layout may hold a mark the rule is not for, or have two such rules.
+      r.fallback ? fig + ':has(~ ' + beside(r) + ') { display: none; }' : '',
+      r.fallback ? fig + ' ~ ' + beside(r) + ' { display: block; }' : '',
       own ? fig + ' { ' + own + ' }' : '',
       ...Object.entries(more).filter(([sel]) => sel).map(([sel, decl]) => fig + ' ' + sel + ' { ' + decl + ' }'),
     ].filter(Boolean).map((line) => '  ' + line).join('\n');

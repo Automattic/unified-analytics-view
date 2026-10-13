@@ -1,4 +1,4 @@
-import type { Channel, Layer, PresetLibrary, Spec } from './types.ts';
+import type { Channel, Layer, PresetLibrary, Query, Spec } from './types.ts';
 
 /* A preset is a saved fragment of a spec, with slots filled from the query: `$metric`, `$by`, for a second
  * dimension `$split`, and for a second metric `$metric2`. A slot may be followed by a suffix, `$metric@p50`, for a
@@ -101,15 +101,29 @@ export function customPresets(): ReadonlyMap<string, PresetLibrary[string]> {
 /** Every name a spec may `use`: the library's, then the registered ones it does not have. */
 export const presetNames = (presets: PresetLibrary = PRESETS): string[] => Object.keys(presets).concat([...REGISTERED.keys()].filter((n) => !Object.hasOwn(presets, n)));
 
+/* What a query is short of for a preset's slots, as the error says it, or null where it has them all. */
+function lacks(q: Partial<Query>, use: string, p: PresetLibrary[string]): string | null {
+  const [by, split] = q.by || [], m2 = (q.metrics || [])[1], asks = (slot: string) => p.layers.some((l) => Object.values(l.encode || {}).indexOf(slot) >= 0);
+  if (!by && asks('$by')) return 'The "' + use + '" preset needs a dimension in query.by.';
+  if (!split && asks('$split')) return 'The "' + use + '" preset needs two dimensions in query.by: the one on the axis, then the one to split by.';
+  if (!m2 && asks('$metric2')) return 'The "' + use + '" preset needs two metrics in query.metrics: the count, then the rate the engine returns for it.';
+  return null;
+}
+// The library handed in first, by its own keys, so "constructor" is no preset. Then the registry.
+const find = (use: string, presets: PresetLibrary) => (Object.hasOwn(presets, use) ? presets[use] : REGISTERED.get(use));
+/** Whether a query has what a preset's slots ask of it: a dimension, a second one, a second metric. A fit rule's
+ * `fallback` is passed over where it has not (fit.ts). A name that is no preset's is not answered here: expand() refuses it. */
+export function fills(q: Query, use: string, presets: PresetLibrary = PRESETS): boolean {
+  const p = find(use, presets);
+  return !p || !lacks(q, use, p);
+}
+
 export function expand(spec: Spec, presets: PresetLibrary = PRESETS): Spec {
   if (!spec.use) return spec;
-  // The library handed in first, by its own keys, so "constructor" is no preset. Then the registry.
-  const p = Object.hasOwn(presets, spec.use) ? presets[spec.use] : REGISTERED.get(spec.use);
+  const p = find(spec.use, presets);
   if (!p) throw new Error('Unknown preset "' + spec.use + '". The library has: ' + (Object.keys(presets).join(', ') || 'none') + '. Registered: ' + ([...REGISTERED.keys()].join(', ') || 'none') + '. Use one of those, or register it with registerPreset(' + JSON.stringify(spec.use) + ', …) before the view is resolved.');
-  const q = spec.query || {}, [by, split] = q.by || [], [m, m2] = q.metrics || [];
-  if (!by && p.layers.some((l) => Object.values(l.encode || {}).indexOf('$by') >= 0)) throw new Error('The "' + spec.use + '" preset needs a dimension in query.by.');
-  if (!split && p.layers.some((l) => Object.values(l.encode || {}).indexOf('$split') >= 0)) throw new Error('The "' + spec.use + '" preset needs two dimensions in query.by: the one on the axis, then the one to split by.');
-  if (!m2 && p.layers.some((l) => Object.values(l.encode || {}).indexOf('$metric2') >= 0)) throw new Error('The "' + spec.use + '" preset needs two metrics in query.metrics: the count, then the rate the engine returns for it.');
+  const q = spec.query || {}, [by, split] = q.by || [], [m, m2] = q.metrics || [], short = lacks(q, spec.use, p);
+  if (short) throw new Error(short);
   const { use: _use, ...out } = spec;
   if (spec.layers) return out;                               // layers written in the spec win over the preset
   const slots: Record<string, string | undefined> = { $by: by, $split: split, $metric: m, $metric2: m2 };

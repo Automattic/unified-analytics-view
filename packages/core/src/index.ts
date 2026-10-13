@@ -1,7 +1,7 @@
 export * from './types.ts';
 export { CONTAINER_RULES, makeContainer, unboundedContainer } from './container.ts';
 export { FIT_RULES, applies, type FitRule, type Room } from './fit.ts';
-export { PRESETS, customPresets, expand, registerPreset } from './presets.ts';
+export { PRESETS, customPresets, expand, fills, registerPreset } from './presets.ts';
 export { resolve } from './plan.ts';
 export { buildScene, detailOf, layerKeys, roleOf, rowKeys, unitsOf } from './scene.ts';
 export { COLUMNS_BLOCK, columnRooms, declutter, place, type LabelBox } from './place.ts';
@@ -10,5 +10,5 @@ export { gridProse, notShownNote, partialNote, plural, tldrProse } from './prose
 export { UNITS, formatBin, formatDimension, formatUnit, formatValue, rangeLabel } from './format.ts';
 export { SIZES, seqScale, sizeKey, sizeStep } from './scene.ts';
 export { radius as dotRadius } from './place.ts';
-export { fallbackRule } from './fit.ts';
+export { fallbackRule, gaveWay } from './fit.ts';
 export { customMarks, registerMark, type CustomMark, type MarkView } from './marks.ts';

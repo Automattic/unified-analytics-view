@@ -298,7 +298,7 @@ describe('the painter\'s half, as strings', () => {
     const css = compileFitRules(GEO_RULES, { geo: geoPainter.fit ?? {} }), fig = (keep: string) => '.uav[data-layout="geo"]:not([data-keep~="' + keep + '"])';
     expect(css).toContain('@container uav-view (inline-size < 319.5px) {\n  ' + fig('guides') + ' :is(.uav-ramp, .uav-size, .uav-note) { display: none; }\n}');
     expect(css).toContain('@container uav-view (block-size < 169.5px) {\n  ' + fig('guides') + ' :is(.uav-ramp, .uav-size, .uav-note) { display: none; }\n}');
-    const swap = '  ' + fig('marks') + ' { display: none; }\n  ' + fig('marks') + ' ~ .uav-fallback { display: block; }\n}';
+    const swap = '  ' + fig('marks') + ':has(~ .uav-fallback[data-rule="marks"]) { display: none; }\n  ' + fig('marks') + ' ~ .uav-fallback[data-rule="marks"] { display: block; }\n}';
     expect(css).toContain('@container uav-view (inline-size < 279.5px) {\n' + swap);
     expect(css).toContain('@container uav-view (block-size < 119.5px) {\n' + swap);
   });

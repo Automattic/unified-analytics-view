@@ -7,6 +7,7 @@ import { apart, thin } from '../measure.ts';
 import { morph, once } from '../motion.ts';
 import { POINTS_CSS, POINTS_FIT, measurePoints, paintPoints } from './points.ts';
 import { RANGES_CSS, paintRanges } from './ranges.ts';
+import { paintUnitKey } from './unit.ts';
 
 /* A dimension on x, a metric on y. The y axis is a column sized by its labels, the x axis a row under the plot,
  * and the plot a size container, so rules about roles can ask how much room the marks have.
@@ -189,5 +190,6 @@ export const cartesian: LayoutPainter = {
     keyed(hits, hitNodes(scene), () => 'i', (el, n) => { prop(el, '--uav-x', n.x); prop(el, '--uav-w', n.w); prop(el, '--uav-c', n.c); });
     paintPoints(body, plot, scene);
     paintRanges(plot, scene);
+    paintUnitKey(body, scene);
   },
 };

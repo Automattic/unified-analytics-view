@@ -6,6 +6,7 @@ import { DOTS_CSS } from './dots.ts';
 import { PIXELS_CSS, pixels } from './pixels.ts';
 import { KEYS_CSS, Keys, companions, hideReadout, readoutOf } from './keys.ts';
 import { LAYOUTS, painterOf } from './layouts/index.ts';
+import { UNIT_CSS } from './layouts/unit.ts';
 import { NUMBER_FITS, fitNumber, readNumber } from './measure.ts';
 import { MOTION_CSS, begin, register, settle } from './motion.ts';
 import { FACES, token } from './tokens.ts';
@@ -88,6 +89,7 @@ export const BASE_CSS = `@layer uav {
 .uav-ruler > .uav-number > span { inline-size: max-content; }
 
 ${painters.map((p) => p.css).join('\n')}
+${UNIT_CSS}
 ${MOTION_CSS}
 ${KEYS_CSS}
 ${DOTS_CSS}

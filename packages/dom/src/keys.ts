@@ -333,9 +333,13 @@ export class Keys {
     if (box) {
       attr(box, 'role', 'listbox'); attr(box, 'tabindex', this.#keys.length ? 0 : null);
       attr(box, 'aria-label', catalog.dimensions[x!]?.label); attr(box, 'aria-orientation', box.dataset.hits === 'y' ? 'vertical' : 'horizontal');
+      // A point is an option. Where a group of glyphs share a row, a unit's cells or its seats, the first of them is
+      // the group's option and the rest are its picture, as are the glyphs that are no row's: the rest past a limit.
+      const named = new Set<string>();
       for (const el of Array.from(box.children)) {
-        const i = this.#keys.indexOf(el.getAttribute('data-row') ?? '');
-        attr(el, 'role', 'option'); attr(el, 'id', 'hit-' + i); attr(el, 'aria-label', this.#says[i]);
+        const row = el.getAttribute('data-row'), i = this.#keys.indexOf(row ?? ''), first = row != null && !named.has(row);
+        if (row != null) named.add(row);
+        attr(el, 'role', first ? 'option' : 'presentation'); attr(el, 'id', first ? 'hit-' + i : null); attr(el, 'aria-label', first ? this.#says[i] : null);
       }
     }
     // Held by the keyboard, or by a mouse still over the view: no pointerover follows for an element that was kept, so a
@@ -347,7 +351,9 @@ export class Keys {
   #box(): HTMLElement | null { return this.#body.querySelector<HTMLElement>('[data-hits]'); }
   /** The points on show, in the order of the result. One a fit rule or a height limit has taken away is passed over. */
   #points(box: HTMLElement): HTMLElement[] {
-    const c = box.getBoundingClientRect(), by = new Map(Array.from(box.children, (el) => [el.getAttribute('data-row'), el as HTMLElement]));
+    // One to a row: the first of a group of glyphs that share one.
+    const c = box.getBoundingClientRect(), by = new Map<string | null, HTMLElement>();
+    for (const el of Array.from(box.children) as HTMLElement[]) if (!by.has(el.getAttribute('data-row'))) by.set(el.getAttribute('data-row'), el);
     return this.#keys.flatMap((k) => by.get(k) ?? []).filter((el) => { const r = el.getBoundingClientRect(); return el.getClientRects().length > 0 && r.left < c.right && r.top < c.bottom; });
   }
 
@@ -361,7 +367,7 @@ export class Keys {
       const row = el.getAttribute('data-row'), of = el.getAttribute('data-series'), on = key != null && row === key;
       if (row != null) attr(el, 'data-active', on ? how : null);
       if (of != null) el.toggleAttribute('data-chosen', of === series && (row == null || on));
-      if (on && el.parentElement === box) point = el;
+      if (on && el.parentElement === box) point ??= el;                       // the first of a group of glyphs is its point
     });
     if (box) attr(box, 'aria-activedescendant', (point as Element | null)?.id);
     const marks = point ? this.#crossAt(key!, series) : [];

@@ -414,6 +414,50 @@ Merged. 816 tests pass, nine of them new, and the typecheck is clean. Every gold
 - `CLAUDE.md`'s line for `packages/core` names the registry for marks and not this one. It was left for its owner.
 - Section 1's table still gives `link` and `partition` as steps 7 and 8. They are 8 and 9.
 
+### Step 10, tile maps (built October 12)
+
+Merged. 840 tests pass, 24 of them new, and the typecheck is clean. Every golden scene there was is the same to the byte: no snapshot file but the new one changed. The parity tests are untouched. Core's code is untouched; two descriptions in its schema changed. Looked at on the bench in headless Chromium.
+
+**Did the claim hold?** In the scene, yes. The `geo` mark draws a file of squares or hexagons with no change to how it builds a scene or places one: 122 paths, filled on the ramp, the same ramp under them, the same readout, list, table and fallback. Around the scene, no. Three things in `packages/geo` had to change before a page could have tiles beside a map, and none of them is about tiles: a planar set of shapes needed a way to say so, the mark's fit rules had `geo` written into them, and so did the painter's stylesheet.
+
+**What was added**
+
+- **`planar` on a shapes file,** in `packages/geo`. It says the coordinates are x and y on a flat sheet, y downward. The mark then fits them with d3-geo's identity in place of Equal Earth, and keeps path corners to a hundredth of the box where a map keeps a tenth.
+- **A name for the mark.** `geoMark(shapes, { name, projection })` and `registerGeo(shapes, { name, projection, presets })`. `geoRules(name)` makes the fit rules for a layout of that name, and `GEO_RULES` is `geoRules('geo')`. `presets` names the preset that fills on `color` and the one that stands symbols on `size`; under `geo` they are `choropleth` and `symbol-map` as before, and under another name only what is given.
+- **`geoPainterAs(name)`,** in `packages/geo/src/dom.ts`: the same painter as the layout of that name, with its stylesheet written for that name.
+- **Two shapes files** in `packages/fixtures/src`, `tiles-square.json` (17.5 kB) and `tiles-hex.json` (23 kB), and `scripts/tiles.mjs`, which writes both. Exported as `tiles.square` and `tiles.hex`.
+- **Two marks and two presets,** registered by the fixtures: `geo-tiles` with `tile-grid-map`, and `geo-hexes` with `hex-tile-map`. Working names, all four.
+- **Two samples** in `moreSamples`, `tiles` and `hexes`: visitors by country, written with `use`.
+- **`test/tiles.test.ts`:** a sweep, the fallback's thresholds, five golden scenes, the files, the shapes of the tiles, registration under a name, the painter, and symbols on tiles.
+- **The bench:** `main.ts` and `marks.ts` register a painter for each of the two names. The main page has a row of frames for each sample, as it has for every sample, and the marks page has both as states of `geo`.
+- **The reference** (sections 7 and 9) and the schema's descriptions of `use` and of a custom mark's name.
+
+**Choices, departures and findings**
+
+1. **Two more mark names, and no field.** The registry holds one mark to a name, and a layer or spec field that chose the shapes would be a presentation switch. So the same code is registered three times by the fixtures. **What it costs:** each name is a custom mark to the health check, so the fixtures now register three custom marks and four presets that need one, of 23. That overstates it: it is one mark's code and three inputs. **To decide** whether the count is of names or of code. Counted by names, every further set of shapes a page wants (a country's regions, another tile grid) is another custom mark.
+2. **A custom mark's name is its layout's, and that reaches further than the registry.** The fit rules name the layout, the painter is registered by it, and the stylesheet selects on it. Before this step `geoMark()` always returned rules for `geo`, so a mark registered under any other name had no fit rules of its own and never fell back to the list. `test/geo.test.ts` registers two such marks (`south`, `world`) and only draws them wide, so it never showed. They are still made with no name. Not changed: it is that test's to say.
+3. **The projection is chosen by the file, and the caller can still hand one over.** `d3-geo` is allowed in `packages/geo` only, so the fixtures cannot make an identity projection to hand in. A flag on the shapes says what is true of the data, as `keys` does, and needs no import. `projection` is still an option for a page that has d3-geo.
+4. **A departure: `geoMark` and `registerGeo` take an options object second,** where they took a projection. Nothing in the repo passed one.
+5. **d3-geo's types leave `fitWidth` off its identity transform,** which has it. One cast in `geoMark`, with a comment.
+6. **The regions are all 122 countries of the fixture that have a code.** Somaliland has no code there, so no row could be its, and it has no tile. A tile's id and name are copied from the country file, so a row with a shape has a tile. The grid is 22 tiles across and 13 down for squares, and 22.5 by 14 rows for hexagons.
+7. **Nobody drew the grids, and it shows.** The script puts each country at the middle of its largest piece, 13 degrees to a tile, takes nearest free places, and then swaps for as long as the total distance falls. It keeps a country near its place and knows nothing of borders. Europe spills east and south, Africa is a block, and the Americas are a thin column. At the root of the mean square a square tile is one tile from home, and a hexagon 0.8. **A grid drawn by hand reads better.** The published ones were not used: their licences were not checked.
+8. **A tile map with no labels cannot be read, and the mark has no way to label a region.** This is the finding that matters. On a map a country is known by its shape and place. A tile has neither, so a reader cannot tell which tile is France without hovering. The readout, the list and the table all name it, so nothing is hidden, but the picture alone says only "somewhere about there". **Labels were not built.** They are more than a few lines: text nodes in the scene, a part to hide them by, a painter for them, and three things with no answer yet. One, the ink on a filled tile: the ramp runs from a light step to a dark one in each theme and there is no paint token for text on a step. Two, room: a tile is 15.7 px at a dashboard's 346 px and 21.8 px at the mark's full 480 px, and a two-letter code in the tick face is about 14 px wide, so it fits only near full width and needs a fit rule of its own. Three, what a label says: a key such as `US`, which the shapes hold, and a name does not fit. **Recommended:** build labels as a part of `geo` that planar shapes turn on, before either preset ships.
+9. **Symbols by `size` on tiles work and do not fit.** With the layers written out, a symbol stands at the middle of each tile and the key to sizes is under the grid. The largest symbol is 24 px across on a tile of 15.7 px, so it covers its neighbours, and the one for the United States, in the first column, is cut by the edge of the box. On a map of countries the same symbol sits inside a large country. A size step that follows the tile would need the mark to know a tile's size. No preset was registered for it.
+10. **Tiles hold their shape.** In the browser every square measured 15.71 to 15.74 px each way at 346 px, and every hexagon 15.36 to 15.40 across by 17.75 to 17.79 tall, which is regular. At 700 px the grid stops at 480 px, in the middle.
+11. **The fallback is the same list from the same spec.** Under 280 px wide or 120 px tall a tile map is the `bar-list` of its query, to the node, and that list is the one the map of countries becomes.
+12. **A click on a tile brings the map in to it,** as on a map of countries. On tiles it shows a few large squares and tells the reader nothing new. Left as it is: switching it off would be a difference between the two for the painter to know.
+13. **The stylesheet is written out again for each name.** About 3.5 kB each. Marked in the code.
+14. **The keyboard is the map's:** the regions are one list in the result's order, and every arrow steps along it. `Home` and `End` do nothing, here and on the map of countries. Not new.
+
+**Not done**
+
+- Labels (finding 8).
+- A grid drawn by hand (finding 7).
+- Presets for symbols on tiles (finding 9).
+- No tile sample has a row with no tile. `unmapped` covers that for the mark, and the note is the same code.
+- `CLAUDE.md` says the fixtures register the `geo` mark with a file of country shapes. They now register it three times. Left for its owner.
+- In the browser: Chromium only, at the bench's widths. Not checked: a page that reads from the right, the `dots` painter on screen, reduced motion, a touch pointer, and a screen reader.
+
 ## 8. What to count as it is built
 
 - **Custom marks.** There is one, `geo`. The plan adds two. Each is a hole in the grammar.

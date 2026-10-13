@@ -1,6 +1,8 @@
 import type { Catalog, Query, Result, Row, Spec } from '@unified-analytics/core';
 import { registerGeo, type Shapes } from '@unified-analytics/geo';
 import shapes from './countries.json';
+import hexes from './tiles-hex.json';
+import squares from './tiles-square.json';
 
 /** Boundary shapes for the `geo` mark: 123 countries. A shape's id is its ISO 3166-1 alpha-2 code in capitals, which is
  * the value the `country` dimension has for it, and its name is beside it in `properties.name`. Somaliland has no code
@@ -10,6 +12,15 @@ import shapes from './countries.json';
 export const countries: Shapes = shapes;
 // Handed to the mark here, as a product would at startup, so every sample resolves wherever the fixtures are loaded.
 registerGeo(countries);
+
+/** The same countries as equal tiles, squares and hexagons, each roughly where its country is: one for every country
+ * above that has a code, under the same id and name, on a flat sheet (`planar`) and so drawn with no map projection.
+ * scripts/tiles.mjs works out where each goes and writes both files. Nobody drew these grids, and one drawn by hand reads better. */
+export const tiles: { square: Shapes; hex: Shapes } = { square: squares, hex: hexes };
+// The same mark again, under a name for each set of shapes, since the registry holds one mark to a name and a spec may
+// not say which shapes to draw. Each is a custom mark to the grammar's count. The preset names are working names.
+registerGeo(tiles.square, { name: 'geo-tiles', presets: { color: 'tile-grid-map' } });
+registerGeo(tiles.hex, { name: 'geo-hexes', presets: { color: 'hex-tile-map' } });
 
 /* Stands in for the query layer and the engines. Totals come from the
  * "engine", never from summing the rows a view happens to receive. */
@@ -417,6 +428,8 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
   // A split that spends no colour (docs/uncommon-coverage-plan.md, step 1): a line for each country, all in one paint.
   spaghetti: { label: 'Spaghetti: visitors by day, a line for each of fifteen countries', spec: { spec: 'view/0', title: 'Visitors by country, day by day', query: { metrics: ['visitors'], by: ['date.day', 'country'], range: '28d' },
             layers: [{ mark: 'line', encode: { x: 'date.day', y: 'visitors', detail: 'country' } }] } },
+  tiles:   { label: 'A tile grid map: visitors by country, each an equal square', spec: { spec: 'view/0', title: 'Visitors by country', use: 'tile-grid-map', query: { metrics: ['visitors'], by: ['country'], range: '28d' } } },
+  hexes:   { label: 'A hex tile map: visitors by country, each an equal hexagon', spec: { spec: 'view/0', title: 'Visitors by country', use: 'hex-tile-map', query: { metrics: ['visitors'], by: ['country'], range: '28d' } } },
   unmapped: { label: 'A map with rows it has no shape for: visitors by every country seen', spec: { spec: 'view/0', title: 'Visitors by country, all of them', query: { metrics: ['visitors'], by: ['visitor_country'], range: '28d' },
             layers: [{ mark: 'geo', encode: { x: 'visitor_country', color: 'visitors' } }] } },
   // The Uncommon types that today's marks already say (docs/uncommon-coverage-plan.md, step 0, and what it found in section 7).

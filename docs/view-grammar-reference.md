@@ -288,6 +288,14 @@ A custom mark registered in code and referenced by name is the escape hatch for 
 { "query": { "metrics": ["visitors"], "by": ["country"] }, "layers": [{ "mark": "geo", "encode": { "x": "country", "color": "visitors" } }] }
 ```
 
+**A tile map is the same mark with other shapes** (built October 12). A tile grid map draws each region as an equal square roughly where the region is, and a hex tile map as an equal hexagon. Neither is a new mark. The shapes file holds a square or a hexagon for each region, under the region's key, and says `"planar": true`: its coordinates are x and y on a flat sheet, and the mark fits them to its box as they are, with no map projection. The registry holds one mark to a name, and a spec may not say which shapes to draw, since that would be a presentation switch. So a page that wants a map and tiles registers the mark once for each set of shapes, under a name each: `registerGeo(shapes, { name: "geo-tiles", presets: { color: "tile-grid-map" } })`, and a painter for that name, `registerPainter(geoPainterAs("geo-tiles"))`. The name is what a spec writes in `mark`, and the layer takes the same encodings.
+
+```json
+{ "query": { "metrics": ["visitors"], "by": ["country"] }, "layers": [{ "mark": "geo-tiles", "encode": { "x": "country", "color": "visitors" } }] }
+```
+
+Each name is a custom mark to the health check of section 9. Below the room a map needs, a tile map is the same ranked list. A tile carries no label yet: the mark names a region in its readout and the table, and nowhere on the tile.
+
 `rows` is a track per row: a label, a track with a linear scale that bars, dots, rules and ticks draw in, and columns of values. Facets are not built (section 19, Decided 26). The plan and what building it found are in `docs/chart-coverage-plan.md`.
 
 ---
@@ -369,7 +377,14 @@ A companion is something the engine returns with a metric. A query cannot yet as
 | `choropleth` | One dimension whose values are region keys | A map, each region filled by the metric on the sequential ramp |
 | `symbol-map` | The same | A map with a symbol on each region, sized by the metric |
 
-Both are working names, to check against `@automattic/charts`. A name must be letters, digits, `_` and `-`, and cannot be one the library has. A name already registered is replaced. `customPresets()` lists what is registered. The registry is a map and two functions, as the one for marks is, and a name in it is unknown until its package has been loaded: the error for an unknown preset lists the library and the registry, and names `registerPreset`.
+A page that registers the mark again for a set of tiles (section 7) names the presets that draw it. The fixtures register two, for the marks `geo-tiles` and `geo-hexes` (built October 12):
+
+| Preset | The query needs | Draws |
+|---|---|---|
+| `tile-grid-map` | One dimension whose values are region keys | A tile grid map: an equal square for each region, filled by the metric on the sequential ramp |
+| `hex-tile-map` | The same | A hex tile map: an equal hexagon for each region, filled the same way |
+
+All four are working names, to check against `@automattic/charts`. A name must be letters, digits, `_` and `-`, and cannot be one the library has. A name already registered is replaced. `customPresets()` lists what is registered. The registry is a map and two functions, as the one for marks is, and a name in it is unknown until its package has been loaded: the error for an unknown preset lists the library and the registry, and names `registerPreset`.
 
 - The library ships the basics. Users and agents add their own presets to it.
 - A preset is named after the `@automattic/charts` component it replaces, where one exists: `line` for `LineChart`, `bar-list` for `BarListChart`. The prototype calls `line` by its earlier name, `trend`.

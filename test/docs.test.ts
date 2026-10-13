@@ -8,7 +8,7 @@ import '@unified-analytics/fixtures';       // registers the `geo` mark, and wit
  * That holds for one a custom mark's package registers as it does for the library's. */
 it('every preset is named in the reference and in the schema', () => {
   const reference = readFileSync(new URL('../docs/view-grammar-reference.md', import.meta.url), 'utf8'), use = viewSchema.properties.use.description;
-  expect([...customPresets().keys()]).toEqual(['choropleth', 'symbol-map']);
+  expect([...customPresets().keys()]).toEqual(['choropleth', 'symbol-map', 'tile-grid-map', 'hex-tile-map']);
   for (const name of [...Object.keys(PRESETS), ...customPresets().keys()]) {
     expect(reference, 'docs/view-grammar-reference.md, section 9, has no row for "' + name + '"').toContain('| `' + name + '` |');
     expect(use.split(/[ ,.:]+/), 'view.schema.json: the description of "use" does not list "' + name + '"').toContain(name);

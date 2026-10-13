@@ -458,6 +458,85 @@ Merged. 840 tests pass, 24 of them new, and the typecheck is clean. Every golden
 - `CLAUDE.md` says the fixtures register the `geo` mark with a file of country shapes. They now register it three times. Left for its owner.
 - In the browser: Chromium only, at the bench's widths. Not checked: a page that reads from the right, the `dots` painter on screen, reduced motion, a touch pointer, and a screen reader.
 
+### Step 5, cell and the diverging ramp (built October 12)
+
+All four parts of the step are built, the `dot` in a grid among them. 988 tests pass and the typecheck is clean. Every golden scene that existed is byte-identical but the three of `stripes`, which were recorded wrong on purpose; nine are new. Looked at in headless Chromium on the bench, light and dark: the tokens page, the four samples at the bench's five widths, the marks page, the keyboard, the pointer, the table and the three data states.
+
+Samples added to `moreSamples`: `correlogram`, `circles`, `bins2d`. `stripes` was there and is now diverging. No preset was added. All are swept in `test/cell.test.ts`.
+
+**The ramp**
+
+1. **Nine steps: four below zero, a neutral, four above.** Paint tokens `div.1` (farthest below) to `div.9` (farthest above), with `div.5` the middle. Nine and not eleven: four steps a side are 1.46 apart, and a reader can name four.
+2. **Made by Leonardo, as the first sequential ramp was,** each arm at its own ratios against the page: 3.2, 4.7, 6.85 and 10. The middle is `neutral.600`, at 2.2, which was in the system. The sequential ramp has since been remade by hand (`config/sequential.json`); this one was not.
+3. **No new hue.** Below is steel: the `steel` constant and the steel ramp's light key. Above is orange: the `orange` constant alone. Each has fewer keys than the qualitative ramp of its hue. Steel's indigo key made the deepest step a brighter blue than the three before it. Orange's other two keys turn it crimson as it deepens, and a red arm reads as bad.
+4. **Below and above, not bad and good.** Blue and orange, never red and green. Polarity paints deltas, and no step of this ramp is a delta's colour.
+5. **Names.** Base `color.div-below.100` to `400` and `color.div-above.100` to `400`, where 100 is the step nearest the middle. Common `color.div-1` to `div-9`. Charts `color.div-1` to `div-9`, so `--ua-charts-color-div-1` to `-9`, through `paintVar` with no table entry. `NAMED` in `packages/dom/src/tokens.ts` has `div-\d+`.
+6. **Measured, by the measure the sequential entry used** (WCAG contrast between neighbours):
+
+   | | Light | Dark |
+   |---|---|---|
+   | `div.1` to `div.9` | `#293e58 #36567d #4470a4 #568bce #aba79c #e46114 #b54f15 #894018 #5f3017` | `#8ebcfb #649be3 #4d7ebb #3d6491 #4d4941 #a04817 #cf5814 #fb6d1b #ffa464` |
+   | Neighbours | 1.45 to 1.47 | 1.44 to 1.47 |
+   | Zero against no value | 1.89 | 1.62 |
+   | A step against its opposite | 1.00 to 1.01 | 1.00 to 1.01 |
+
+   `test/tokens-generate.test.ts` holds the first row to more than 1.4, the second to more than 1.6 and the third to under 1.02.
+7. **No value is `seq.none`, reused.** It is the quietest neutral on both ramps, nearer the page than zero is. There is no `div.none`.
+8. **`div.*` and `seq.*` are not an author's to name.** They are the scale's. The reference says so in section 6.
+
+**The scale**
+
+9. **One place, `seqScale`.** Where the least and the most of the values, or the catalog's `domain`, cross zero, it is diverging. A grid and `geo` both get it, the tile maps with `geo`. No spec field, no layer field.
+10. **The ramp guide says the scale's ends, not the data's.** A diverging scale runs as far below zero as above, so `stripes`, from -18 to 20, reads "-20", "0", "20". The least value is not said. A departure from "the low, zero and high values" if that meant the data's.
+11. **Zero is said beside its own swatch,** the neutral one, which stands 5 px clear of the arm before it: the idiom of "No data". The diverging ramp is 8 px wider than the sequential one at the same labels, and fits where that did.
+12. **The middle step is a ninth of the scale.** In `stripes` a day within 2.2 of no change is neutral, whichever way it went. A scale with an even number of steps would have no neutral.
+13. **Values all below zero are sequential,** as before: the scale runs from the least to the most, and the most is the one nearest zero. Not looked at.
+
+**Never colour alone**
+
+14. **A cell says its sign.** The readout and the accessible name are the catalog's format: "Conversion rate, Traffic: Correlation -0.42". A value above zero has no plus.
+15. **The two arms do not survive greyscale.** A step and its opposite are the same lightness, to 1.01, by construction. How far from zero survives; which side does not. The sequential ramp survives whole. No hatch or outline was built. The table and the readout are what a reader without colour has. **To decide:** a pattern on one arm, in the painter.
+
+**Two number dimensions**
+
+16. **`matrix` drew it, upside down.** Bins were in number order on both axes, with the least at the top, as a table reads. A binned dimension on y beside another on x now reads from the foot. One alone, a column, still reads down: it is a list, and Spacefast's scroll buckets are one.
+17. **Two bins are said by name.** "Page weight 1.5–2, Load time 0.5–1: Page views 189" in the readout, and so in the prose. Two bare ranges did not say which was which.
+18. **The grid's table could not find a bin's total,** and named a bin by its start. It compared a number with a string. Fixed: it names a bin by both ends, and lists a quantity from its least.
+19. **A pair nothing fell in is a count of none,** a step of the ramp. In light the lowest step is the chartreuse end, so an empty corner of the grid is the loudest thing in it. That is the sequential ramp's, and it was recorded that nobody had looked at it. **To look at.**
+20. **Ticks along a binned foot thin unevenly:** 0, 1, 1.5, 2 at 346 px. The measured pass drops what would meet, by rank, and knows nothing of even steps.
+
+**`dot` in a grid**
+
+21. **One `cell` layer, one `dot` layer, or both** on the same x and y. The dot needs a metric on `size`. Alone it may have a metric on `color`, on the grid's one colour scale. Over a cell it may not: one scale to a grid.
+22. **Size is by how far the value is from zero.** `sizeStep` of the magnitude, against the farther end of the domain. A plot's dot clamps a negative to the least step, and was left alone.
+23. **A dot is a plot's dot, and no wider than its cell.** Where cells are smaller than 24 px each step is its share of one. The key to sizes is then larger than the dots it explains.
+24. **A pair with no value has the least dot, in `seq.none`,** so the pair can still be reached and read.
+25. **A dot over a cell takes `series.1`, or the paint the layer states.** `ink` on the deep end of the sequential ramp cannot be seen in light. No paint is right on every step.
+26. **The key to sizes rounded a count's steps,** so a correlation's read 0, 0, 1, 1. Where the most is under 16 they are said as they are: 0.1, 0.3, 0.6, 1. The second is 0.25, written to one decimal. There is still no unit for a plain number (step 0, finding 6).
+27. **The two keys go together,** by the ramp's rule, and are 52 px. In a box 160 px tall they leave the grid 85. A rule of its own for the key to sizes was not built.
+28. **In `<ua-view>` a pair is one element** whichever marks it has, so the keyboard and the pointer are unchanged.
+
+**Prose**
+
+29. **Signed cells:** "Correlation runs from -0.56 (Conversion rate and Churn) to 0.81 (Traffic and Ad spend) in the last 28 days." No busiest, no share. A value set against itself is passed over where there is any other pair.
+30. **A note under the number said "Top: Conversion rate"** where the engine had no figure for any factor. It now says nothing.
+31. **A strip's sentence is the query's own:** "Net subscribers: 180 in the last 28 days." It does not say the days were signed.
+
+**Found on the way**
+
+- **One row of cells had no ramp in `<ua-view>`,** and was 52 px tall, where the pixel painter drew it 184 tall with one. Both now stand it 34 px tall with its labels and its ramp under it. Step 0 opened no browser.
+- **The step's test of `stripes` is in `test/cell.test.ts`,** not `test/uncommon.test.ts`.
+- **A correlation's table has a row and a column of totals, all dashes.**
+- **The number of a correlogram is a dash** (step 0, finding 5).
+
+**Not done**
+
+- A preset `correlogram`. The circles are written as layers.
+- A clustermap. Its grid is `heatmap` in the engine's order, and nothing more is needed of the grammar; the ordering by cluster is the engine's, and its trees are a mark this plan does not have.
+- A signed sample on a map. The scale is held by a test with made values; no fixture has a signed metric by country.
+- `dot` in a strip, one row or one column.
+- In the browser: Chromium only. Not checked: a page that reads from the right, the `dots` painter on screen, a touch pointer, a screen reader, forced colours, and dots over cells in dark.
+
 ## 8. What to count as it is built
 
 - **Custom marks.** There is one, `geo`. The plan adds two. Each is a hole in the grammar.

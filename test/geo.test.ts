@@ -163,6 +163,18 @@ describe('geo, filled by a metric', () => {
     // The scene holds it whether or not the plan shows it.
     expect(run(map, 300).ratio.nodes.filter((n) => n.part === 'ramp').length).toBe(14);
   });
+  // The colour scale is the grid's, in one place (seqScale), so a map of signed values is diverging about zero as a grid is.
+  it('fills regions whose values cross zero on the diverging ramp, with zero the neutral step, and a region with no row still seq.none', () => {
+    const typical = runQuery(map.query), mid = typical.rows[7]!.visitors as number;
+    const signed = { ...typical, rows: typical.rows.map((r) => ({ ...r, visitors: (r.visitors as number) - mid })) };
+    const scene = run(map, 346, null, 'typical', 'svg', signed).ratio, far = Math.max(...signed.rows.map((r) => Math.abs(r.visitors)));
+    const fill = (id: string) => shapes(scene).find((n) => n.key === 'primary:geo:' + id)!.paint;
+    for (const r of signed.rows) expect(fill(r.country as string), r.country as string).toBe('div.' + Math.min(9, 1 + Math.floor(((r.visitors + far) / (2 * far)) * 9)));
+    expect([fill(typical.rows[0]!.country as string), fill(typical.rows[7]!.country as string)]).toEqual(['div.9', 'div.5']);
+    expect(shapes(scene).filter((n) => n.row == null).every((n) => n.paint === 'seq.none')).toBe(true);
+    expect(scene.nodes.filter((n) => n.part === 'ramp').map((n) => n.key)).toEqual(['ramp:low', 'ramp:1', 'ramp:2', 'ramp:3', 'ramp:4', 'ramp:5', 'ramp:zero', 'ramp:6', 'ramp:7', 'ramp:8', 'ramp:9', 'ramp:high', 'ramp:none', 'ramp:none:label']);
+    expect((scene.nodes.filter((n) => n.part === 'ramp' && n.kind === 'text') as { text: string }[]).map((n) => n.text)).toEqual(['-2.8k', '0', '2.8k', 'No data']);
+  });
   it('place() fits a box of the shapes\' aspect inside the room, in the middle, and sets the ramp under it', () => {
     const wide = run(map, 346).scene, boxed = run(map, 346, 160).scene, most = run(map, 700).scene;
     expect([wide.plot!.w, wide.height]).toEqual([346, Math.ceil(346 / ASPECT + 24)]);

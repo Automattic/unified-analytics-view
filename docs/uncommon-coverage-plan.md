@@ -918,6 +918,51 @@ Merged. Built on a branch from `e09de06`. 1,045 tests pass (969 before) and the 
 
 **The counts section 8 asks for:** layer fields that are neither data nor role, still one. Presets that need `detail`: one of the five, `strip`. Presets that need a custom mark: none of the five.
 
+**At the merge:**
+
+Merged after steps 2, 3, 5, 6, 8 and 9, none of which this step had seen. 1,323 tests pass in 50 files and the typecheck is clean. The step's worktree held nothing its branch did not: no work was lost with its author's session.
+
+*What the merge changed*
+
+- **The two decisions are 37 and 38** in section 19 of the reference. They were written as 32 and 33, which steps 6 and 5 hold.
+- **`tldrProse` takes the points' dimension and, apart from it, whether a line joins them.** This step made its fifth argument the dimension's name, and step 3 made it `"path"`. It is the name, and `path` is a sixth.
+- **A centred stack has no value axis** (step 3). This step's test of `"center"` held its ticks from -4k to 4k. It now holds that the stack is about the middle of the plot and has no ticks.
+- **Four golden scenes of this step changed, and no other.** `rug` at 234 px and at 346 by 100, and `qq` at 234 px and at 346 by 100: the line under the number was "Top: pricing" and "Top: 5%", the first row, and is "Top: getting started" and "Top: 95%", the row with the most, because step 2 made that line compare the rows. Neither says anything worth reading: a component and a quantile have no top. It is finding 6 again.
+- **The fixture has two lists of dimensions in their own order.** `OWN_ORDER` (step 2: weekday, hour) holds alone; `ORDERED` (this step: age, sex, question, answer) holds alone and as the outer one of a pair. They were not made one, so that no pair a test held was reordered.
+- **A unit in a list reads its glyphs from the list's rows,** which this step made the engine's totals where a layer divides them. A divided bar and a unit in one list draw. No test holds it.
+- **`divided` in `resolve()` was two things,** a unit's grid (step 6) and a divided list (this step). The second is `dividedRows`.
+- No sample or fixture name collided. The band paints stand after the diverging ramp's in both token files, and `generated/` was written by the generator.
+
+*What the merge added*
+
+- **A `bar` may start at a number, as a `rule` may** (choice 22 above, and step 3's finding 18). `x: 0, x2: "metric@high"` is the same bar as the one written the other way, and by `paint: "direction"` it runs from the number to the value, so a bar from zero to a gain is a gain. It is one clause in `checkLayers` and the polarity read from whichever end is a field. A bar between two numbers is still refused, and so is an `area` from a number.
+- **The `tornado` sample is written that way,** with `paint: "direction"` on both bars and no paint token stated. The loss is to the left in `delta.bad` and the gain to the right in `delta.good`, as before, and each bar's `v0` is now zero's place. Its two facts in `test/uncommon.test.ts` are up to date: the sample asks for direction from zero, and the same bars written from the field to zero are still painted the other way round, since the way a bar is written is the way it goes.
+- **A rule or a bar from a number measures in what its second end does** (finding 8 above). `unitOf` read `y` alone, so such a mark was drawn on the first scale whatever its metric's unit.
+- **Pages by section is a strip plot from the preset** (choice 32 above). The fixture has sections now, with their pages inside them, and the preset draws a dot for each section's own pages. A test holds it. The `strip` sample is still channel by country, so its golden scenes did not move.
+
+*What the entry says that the code does not*
+
+- `rowSplitOf` and `listRows` are exported from `scene.ts`, not from core's `index.ts`. Nothing outside core reads them, so they were left.
+- Part 7 is called partial for the gauge's bands. The step's brief asked for a row's alone, so by the brief it is whole.
+
+*In the browser, at the merge*
+
+Headless Chromium on the bench, for `pyramid`, `likert`, `strip`, `marimekko`, `rug`, `ohlc`, `qq`, `lollipop`, `bullet` and `tornado`: at 346, 250, 170, 120 and 80 px, light and dark, typical, no prior and empty, under height limits of 100 and 60 px, resized in place from 346 out to 700, down to 90 and back, with key events, the pointer and the table. No console or page error. A view resized in place is the same to the pixel as one painted at that width, at 250, 170 and 120 px, and the same again back at 346. All 78 samples of the main page paint at 346 and 250 px in both themes, and the marks and tokens pages load.
+
+- The pyramid, the Likert chart, the strip plot, the lollipop, the bullet and the tornado read at 346, 250 and 170 px, and are the number below that.
+- **The Marimekko, the OHLC chart, the rug and the Q-Q plot are charts at 346 px alone.** At 250 and 170 px the first two are the number beside a plot too small to read, and the last two a dash over "Top: getting started" and "Top: 95%".
+- A Likert chart's five colours say five things and not a scale from one end to the other (choice 10). Nothing marks zero in a pyramid or a Likert row (finding 4).
+- Under a height limit of 100 px a pyramid is two rows, a gap of a row, and "Female 53%" (finding 5).
+- At 700 px the Marimekko's last label runs past the plot's edge (finding 2).
+- In a divided list, up and down step the rows, and right and left the series of the chosen row and back to the whole of it; the chosen part is whole, the rest of its row stand back, and its name is underlined in the legend. The readout says the row with its parts, and then the one part. A strip plot's row says "15 countries, the most United States 889".
+- The tornado's table and readout say `low` and `high` with a number on the bar's first end.
+
+Not checked: WebKit, Firefox, a screen reader, touch, reduced motion, a page that reads from the right, the `dots` painter, a data change in place, the marks page beyond that it paints with no error, and whether the marks and tokens pages take a theme from the URL.
+
+*Still not done*
+
+The gauge's bands. A rug along y. A label on a line across a plot. An area from a number. A zero line in a diverging row. A diverging ramp for ordered series. Bands that follow the metric's polarity. Rows of text cut short (step 0, finding 10). A `likert` preset, or another name for `pyramid` (choice 9). `CLAUDE.md`, which names neither this step's layers nor `test/uncommon-rows.test.ts`.
+
 ## 8. What to count as it is built
 
 - **Custom marks.** There is one, `geo`. The plan adds two. Each is a hole in the grammar.

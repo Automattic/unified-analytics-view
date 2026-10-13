@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { buildScene, formatUnit, makeContainer, metricOf, resolve, unitsOf, type Catalog, type PathNode, type Result, type Spec } from '@unified-analytics/core';
-import { readout } from '../packages/dom/src/keys.ts';
+import { catalog as fixtures, runQuery } from '@unified-analytics/fixtures';
+import { crossMarks, hitNodes, readout, rowsAt, step } from '../packages/dom/src/keys.ts';
+import { pathTargets } from '../packages/dom/src/layouts/points.ts';
+import { mix, pairUp } from '../packages/dom/src/motion.ts';
 
 // Step 3 of docs/uncommon-coverage-plan.md: what a line and an area take that they refused. Here, on a catalog and
 // results of its own, is what a companion's unit is and how a scale of ranks runs. The samples that use them, and what
@@ -90,5 +93,55 @@ describe('the unit rank', () => {
     const s = scene({ query: { metrics: ['place'], by: ['source'] }, layers: [{ mark: 'bar', encode: { x: 'source', y: 'place' } }] }, result, cat);
     expect(s.scene.nodes.filter((n) => n.kind === 'rect').map((n) => [(n as { v: number }).v, (n as { v0?: number }).v0])).toEqual([[1, undefined], [0.5, undefined], [0, undefined]]);
     expect(readout(result.rows[1]!, { metrics: ['place'], by: ['source'] }, cat, [])).toBe('Direct: Place 2nd');
+  });
+});
+
+describe('a line in a plot of points', () => {
+  const q = { metrics: ['visitors', 'signups'], by: ['date.day'], range: '28d' }, at = { x: 'visitors', y: 'signups' };
+  const joined: Spec = { spec: 'view/0', query: q, layers: [{ mark: 'line', encode: at }, { mark: 'dot', encode: at }] };
+  const of = (spec: Spec, w = 500) => { const result = runQuery(spec.query), container = makeContainer(w), plan = resolve(spec, result, container, fixtures); return { plan, result, scene: buildScene(plan, spec.query, result, fixtures), container }; };
+  it('joins the rows in the engine\'s order, straight from each to the next, in the points\' own part', () => {
+    const { scene, result } = of(joined), [line, tail] = scene.nodes.filter((n): n is PathNode => n.kind === 'path'), dots = scene.nodes.filter((n) => n.kind === 'circle' && n.part === 'points') as any[];
+    expect(scene.parts).toEqual(['y-axis', 'plot', 'points', 'x-axis']);
+    expect([line!.key, line!.part, line!.curve, tail!.key, tail!.part, tail!.dash]).toEqual(['primary:line', 'points', undefined, 'primary:line:partial', 'points', '2 4']);
+    // A point for each whole day, in the days' order, each where its dot is. The order is time's and not x's: the line turns back on itself.
+    expect(line!.points.map((p) => p.row)).toEqual(result.rows.slice(0, -1).map((r) => r['date.day']));
+    expect(line!.points.map((p) => [p.x, p.v])).toEqual(dots.slice(0, -1).map((n) => [n.x, n.t]));
+    expect(line!.points.some((p, i, all) => i > 0 && p.x < all[i - 1]!.x)).toBe(true);
+    expect(line!.d).toMatch(/^M[\d.]+,[\d.]+(L[\d.]+,[\d.]+){26}$/);
+    // The unfinished day is joined on by a dashed stroke, as on any line.
+    expect(tail!.points.map((p) => p.row)).toEqual(result.rows.slice(-2).map((r) => r['date.day']));
+  });
+  it('is a plot of points to the fit rules: no bare form, and the number alone below the room its axes need', () => {
+    expect([500, 346, 250, 120, 10].map((w) => of(joined, w).plan.layout)).toEqual(['cartesian', 'cartesian', 'none', 'none', 'prose']);
+    expect(of(joined, 250).plan.dropped).toEqual(['all marks (kept the number)']);
+    const alone = of({ ...joined, layers: [joined.layers![0]!] }, 250);
+    expect([alone.plan.layout, alone.plan.dropped]).toEqual(['none', ['all marks (kept the number)']]);
+  });
+  it('has no target along x and no crosshair: its points are the targets, in the line\'s order, with or without a dot on each', () => {
+    const { scene, result, plan } = of(joined), rows = rowsAt(scene, q, result);
+    expect(hitNodes(scene)).toEqual([]);
+    expect(crossMarks(scene, plan.layers, rows.rows, fixtures).size).toBe(0);
+    expect(scene.rows).toEqual(result.rows.map((r) => r['date.day']));
+    // With no dot layer the line's own points stand in, one for each row it passes, the unfinished day's among them.
+    const bare = of({ ...joined, layers: [joined.layers![0]!] }).scene, targets = pathTargets(bare.nodes.filter((n): n is PathNode => n.kind === 'path'));
+    expect(bare.parts).toEqual(['y-axis', 'plot', 'points', 'x-axis']);
+    expect(targets.map((n) => n.row)).toEqual(bare.rows);
+    expect(targets[3]).toMatchObject({ key: 'at:2026-09-11', part: 'points', kind: 'circle' });
+    // Left and right step back and on along the line and stop at its ends. Up and down are no step.
+    expect([step('ArrowRight', -1, 28), step('ArrowRight', 5, 28), step('ArrowLeft', 5, 28), step('ArrowRight', 27, 28), step('ArrowUp', 5, 28), step('ArrowDown', 5, 28)]).toEqual([0, 6, 4, 27, null, null]);
+    expect(readout(result.rows[0]!, q, fixtures, plan.layers)).toBe('Sep 8: Visitors 416; Sign-ups ' + result.rows[0]!.signups);
+  });
+  it('morphs point for point, across as well as up: a point is at a value on x too', () => {
+    const from = [{ x: 0.2, v: 0.2 }, { x: 0.8, v: 0.4 }], to = [{ x: 0.6, v: 0.6 }, { x: 0.4, v: 0.8 }, { x: 0.1, v: 0.1 }];
+    expect(pairUp(from, to)).toEqual([from[0], from[1], from[1]]);
+    expect(pairUp([], to)).toEqual(to);
+    expect(mix(pairUp(from, to), to, 0.5, true).map((p) => [+p.x.toFixed(3), +p.v.toFixed(3)])).toEqual([[0.4, 0.4], [0.6, 0.6], [0.45, 0.25]]);
+    // At its end a morph draws the scene's own path (motion.ts), so nothing rests on this sum.
+    expect(mix(pairUp(from, to), to, 1, true).map((p) => [+p.x.toFixed(9), +p.v.toFixed(9)])).toEqual(to.map((p) => [p.x, p.v]));
+  });
+  it('an area there is refused: there is no one way along x to fill under', () => {
+    expect((() => { try { of({ ...joined, layers: [{ mark: 'area', encode: at }] }); } catch (e) { return (e as Error).message; } })())
+      .toBe('Layer 1 is an area with the metric "visitors" on x, and an area fills under a line that runs one way along x, which the points of two metrics do not. Use "line" to join the points in the order of their rows, or put a dimension on x.');
   });
 });

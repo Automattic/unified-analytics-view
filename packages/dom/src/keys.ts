@@ -13,6 +13,10 @@ import { nearest } from './layouts/points.ts';
  * and Tab moves on. To assistive technology the holder is a listbox and each point an option named by its readout,
  * so the words on screen and the words announced are one string.
  *
+ * Points at two metrics have no order along either axis. Loose, an arrow goes to the nearest point that way
+ * (layouts/points.ts). Joined by a line they have the line's order, which is the rows': left and right step back and
+ * on along it, as along any line, wherever on the plot that takes the reader, and up and down do nothing.
+ *
  * A plot split into series has several values at each point. The point's readout says them all, and up and down
  * step through the series there: up from the whole point to the first series, which is the foot of a stack, and
  * down again to the whole. Left and right keep the series. Version 4 was not read for this; it is ours until it is.

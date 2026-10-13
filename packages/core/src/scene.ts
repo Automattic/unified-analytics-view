@@ -380,6 +380,8 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     if (!draw) throw new Error('The "' + l.mark + '" mark has no rule for a time or category axis yet. Use line, area, bar, rule, dot, text or tick.');
     // A bar stands on a row's share of x, and a tick lies across it. A metric there gives it none, and neither does a number dimension that came with no bins.
     if ((l.mark === 'bar' || l.mark === 'tick') && xOn && !xDim) throw new Error('Layer ' + (i + 1) + ' is a ' + l.mark + ' with the metric "' + xOn + '" on x, and a ' + l.mark + ' needs a dimension there to stand on. Use "dot" for a point at two metrics, or put a dimension on x.');
+    // An area fills down from a line that runs one way along x. The points of two metrics run in no order there.
+    if (l.mark === 'area' && xOn && !xDim) throw new Error('Layer ' + (i + 1) + ' is an area with the metric "' + xOn + '" on x, and an area fills under a line that runs one way along x, which the points of two metrics do not. Use "line" to join the points in the order of their rows, or put a dimension on x.');
     if (l.mark === 'bar' && xOn && rows.length && rows[0]![xOn + '@end'] == null) throw new Error('Bars on the number dimension "' + xOn + '" need its bins, and this result has no "' + xOn + '@end". Return where each bin ends from the query layer, or use line or dot.');
     const v = scaleOf(l).v;
     const d: Draw = { say, id: ids[i]!, role: roleOf(l), paint: paintOf(l, catalog, result) || (prev ? 'compare' : 'series.1'), prev, rows: rows.filter((r) => span.has(r)), k, unit, v, xv, size, points: !!xOn && !xDim,

@@ -319,10 +319,14 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
       const ticks = Array.from({ length: last }, (_, i) => i + 1).filter((n) => n === 1 || n === last || (n % every === 0 && last - n >= every / 2));
       return { v: (n: number) => (n < 1 ? 0 : last === 1 ? 1 : (last - n) / (last - 1)), ticks, coarse: [1, last], text: (t: number) => formatUnit(t, u, 'compact') };
     }
+    // A stack set about the middle is read by how thick each band is, and a scale that counts away from the middle says
+    // nothing true of that. So it has no ticks and no grid, and is not rounded: the bands take the height of the plot.
+    const centred = layers.some((l, i) => l.stack === 'center' && spans[i]!.size > 0 && Math.max(0, units.indexOf(unitOf(catalog, l, xField)!)) === ui);
     const share = u === 'share', lo = Math.min(0, min(vals) ?? 0), hi = share ? 1 : Math.max(0, max(vals) ?? 0) || (lo ? 0 : 1);
     const y = scaleLinear().domain([lo, hi]);
-    if (guides.y) y.nice(4);
+    if (guides.y && !centred) y.nice(4);
     const [bottom, top] = y.domain() as [number, number];
+    if (centred) return { v: (n: number) => (n - bottom) / (top - bottom), ticks: [], coarse: [], text: String };
     // A short plot keeps the ticks a count of 2 would give on this scale. Where the two counts share only zero (a top of 8, 80, 800: steps of 5 and of 2), every other tick stays instead.
     const fine = y.ticks(4), two = y.ticks(2).filter((t) => fine.includes(t));
     return { v: (n: number) => (n - bottom) / (top - bottom), ticks: fine, coarse: two.length > 1 ? two : fine.filter((_, i) => i % 2 === 0), text: (t: number) => (share ? fmtPct(t) : formatUnit(t, u || lone, 'compact')) };
@@ -739,7 +743,7 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
     if (side && !parts.length) parts.push('number');
     body = sceneCartesian(catalog, p.layers, p.guides, result, (q.by || [])[0]);
     const key = body.series ? p.guides.legend : undefined;                 // layers that were split may have been given up
-    if (p.guides.y) parts.push('y-axis');
+    if (p.guides.y && body.nodes.some((n) => n.part === 'y-axis')) parts.push('y-axis');   // a stack about the middle has no value axis
     parts.push('plot');
     if (body.nodes.some((n) => n.part === 'points')) parts.push('points');
     if (p.guides.pointLabels && body.nodes.some((n) => n.part === 'point-labels')) parts.push('point-labels');

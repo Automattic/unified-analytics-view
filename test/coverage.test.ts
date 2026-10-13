@@ -312,14 +312,17 @@ describe('stacking, and bars side by side', () => {
     // The same holds with no guides to round the scale: shares run to the whole.
     expect(rects(plot({ ...shares, query: { ...shares.query, limit: 2 } }, 250).ratio, '2026-09-08').pop()!.v).toBeLessThan(0.95);
   });
-  it('stack: "center" sets each stack half on either side of zero', () => {
-    const { ratio } = plot(as('center')), zero = (ratio.nodes.find((n) => n.key === 'ytick:0') as { t: number }).t;
+  it('stack: "center" sets each stack half on either side of the middle of the plot, and has no value axis', () => {
+    const { ratio } = plot(as('center')), zero = 0.5;
     expect(view(as('center')), JSON.stringify(view.errors)).toBe(true);
-    expect(zero).toBe(0.5);
+    // A scale that counts away from the middle says nothing of how thick a band is: no tick, no grid, no gutter for them.
+    expect(ratio.nodes.filter((n) => n.part === 'y-axis' || n.key.startsWith('grid:'))).toEqual([]);
+    expect(ratio.parts).toEqual(['plot', 'x-axis', 'legend']);
     for (const row of ratio.rows!) {
       const [desktop, mobile, tablet] = rects(ratio, row);
-      expect((desktop!.v0! + tablet!.v) / 2, row).toBeCloseTo(zero, 12);
-      expect(desktop!.v0! < zero && tablet!.v > zero, row).toBe(true);
+      // The tallest stack runs from the foot of the plot to its top: with no axis the scale is not rounded.
+      expect(((desktop!.v0 ?? 0) + tablet!.v) / 2, row).toBeCloseTo(zero, 12);
+      expect((desktop!.v0 ?? 0) < zero && tablet!.v > zero, row).toBe(true);
       expect([mobile!.v0, tablet!.v0], row).toEqual([desktop!.v, mobile!.v]);
     }
   });

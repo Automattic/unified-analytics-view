@@ -172,13 +172,17 @@ describe('lines and areas: Pareto, sparkline, fan, streamgraph, slopegraph, cumu
     expect(plan.text).toBe('Response time: 436ms in the last 28 days. Between 199ms and 631ms across 28 days.');
     expect(run(S('fans'), 234).plan.dropped).toEqual(['axes and grid (added the number to make up for them)', 'context fill']);
   });
-  it('a streamgraph is areas stacked about the middle, and its axis counts away from there in both directions', () => {
+  it('a streamgraph is areas stacked about the middle, read by how thick each is: it has no value axis and no grid', () => {
     const { ratio } = run(S('streamgraph'), 346), areas = paths(ratio.nodes), first = areas[0]!, last = areas[areas.length - 1]!;
     expect(areas.map((n) => n.series)).toEqual(['Search', 'Direct', 'Social', 'AI assistants', 'Email', 'Other']);
-    first.points.forEach((p, i) => expect((p.v0! + last.points[i]!.v) / 2).toBeCloseTo(0.5, 12));
+    first.points.forEach((p, i) => expect(((p.v0 ?? 0) + last.points[i]!.v) / 2).toBeCloseTo(0.5, 12));
     areas.slice(1).forEach((a, j) => expect(a.points.map((p) => p.v0)).toEqual(areas[j]!.points.map((p) => p.v)));
     expect(areas.every((n) => n.opacity == null)).toBe(true);
-    expect(of<{ text: string }>(ratio.nodes, 'ytick:').map((n) => n.text)).toEqual(['-1k', '-500', '0', '500', '1k']);
+    expect(ratio.nodes.filter((n) => n.key.startsWith('ytick:') || n.key.startsWith('grid:'))).toEqual([]);
+    expect(ratio.parts).toEqual(['plot', 'x-axis', 'legend']);
+    // With no scale to round, the thickest day takes the whole height of the plot.
+    expect(Math.min(...first.points.map((p) => p.v0 ?? 0))).toBe(0);
+    expect(Math.max(...last.points.map((p) => p.v))).toBe(1);
   });
   it('a slopegraph is a line for each series between two whole weeks, with a name at each line\'s end', () => {
     const { ratio, plan } = run(S('slopegraph'), 300), lines = paths(ratio.nodes);

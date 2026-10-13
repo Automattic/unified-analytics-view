@@ -3,7 +3,7 @@ export { CONTAINER_RULES, makeContainer, unboundedContainer } from './container.
 export { FIT_RULES, applies, type FitRule, type Room } from './fit.ts';
 export { PRESETS, expand } from './presets.ts';
 export { resolve } from './plan.ts';
-export { buildScene, layerKeys, roleOf, rowKeys, unitsOf } from './scene.ts';
+export { buildScene, detailOf, layerKeys, roleOf, rowKeys, unitsOf } from './scene.ts';
 export { COLUMNS_BLOCK, columnRooms, declutter, place, type LabelBox } from './place.ts';
 export { arcD, pathD, type PathBox } from './path.ts';
 export { gridProse, notShownNote, partialNote, tldrProse } from './prose.ts';

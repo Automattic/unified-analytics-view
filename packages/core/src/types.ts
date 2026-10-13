@@ -179,7 +179,7 @@ interface NodeBase {
   role?: Role;
   /** The dimension value the node came from. */
   row?: string;
-  /** The value of the colour dimension it came from, where a layer is split into series. */
+  /** The value it came from of the dimension on `color` or on `detail`, where a layer is split into series. */
   series?: string;
   /** Absent stays. Ranked nodes are given up when room is short. */
   rank?: number;
@@ -251,6 +251,9 @@ export interface Scene {
   rows?: string[];
   /** The colour dimension's values in its own order, where a plot is split into series. A series' paint is its place here. */
   series?: string[];
+  /** The values of the dimension on `detail`, in its own order, where a plot is split into series that are not painted
+   * apart: each is the `series` of its nodes, all in one paint, and there is no legend. Absent where `series` is given. */
+  detail?: string[];
   /** In a grid, the y dimension's values in order, from the top. `rows` are then its columns. */
   ys?: string[];
   /** How x is shared among the rows of a plot. With `point`, marks sit 2 px inside each edge; that inset is the painter's.

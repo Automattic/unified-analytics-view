@@ -9,7 +9,7 @@ import type { ArcNode, Catalog, DimensionDef, Guides, Layer, Mark, MetricDef, Pa
 /* Node kinds: rect, path, line, circle, text. Every node has a stable key,
  * a part, a paint token (never a colour) and a layer: "data" or "guide".
  * Nothing here is in pixels: positions are ratios of the part's box. */
-type Body = Pick<Scene, 'nodes' | 'rows' | 'series' | 'ys' | 'scale' | 'track'>;
+type Body = Pick<Scene, 'nodes' | 'rows' | 'series' | 'detail' | 'ys' | 'scale' | 'track'>;
 
 const num = (r: Row, f: string) => r[f] as number;
 /* A row's dimension value as its key. A result may hold a number or a boolean there, and a key is compared with
@@ -187,16 +187,29 @@ export function unitsOf(catalog: Catalog, layers: Layer[]): string[] {
   if (units.length > 2) throw new Error('These layers measure in ' + units.length + ' units (' + units.join(', ') + '), and a plot has a y axis on each side at most. Remove a layer, or draw them as separate views.');
   return units;
 }
-/** Whether a plot's layers are split into series, and whether one of those is a line or an area, which has an end to label. */
+/** Whether a plot's layers are split into series that are painted apart, and so have a legend, and whether one of those
+ * is a line or an area, which has an end to label. A split by `detail` paints none apart, and is not one of these. */
 export function seriesOf(catalog: Catalog, layers: Layer[]): { lines: boolean } | null {
-  const x = xDimOf(catalog, layers), split = layers.filter((l) => splitOf(catalog, l, x));
+  const x = xDimOf(catalog, layers), split = layers.filter((l) => paintedOf(catalog, l, x));
   return split.length ? { lines: split.some((l) => l.mark === 'line' || l.mark === 'area') } : null;
 }
-/** The dimension a layer in a plot is split into series by: the one on `color`, unless it is the one on x. */
-export function splitOf(catalog: Catalog, l: Layer, xField?: string): string | null {
+/** The dimension a layer is split into series by and painted apart by: the one on `color`, unless it is the one on x. */
+function paintedOf(catalog: Catalog, l: Layer, xField?: string): string | null {
   const c = l.encode && l.encode.color;
   return isDim(catalog, c) && c !== xField ? c : null;
 }
+/** The dimension a layer is split into series by with nothing painted apart: the one on `detail`, unless it is the one
+ * on x. Every series is then in the layer's own paint, with no legend, and there may be more than there are colours. */
+export function detailOf(catalog: Catalog, l: Layer, xField?: string): string | null {
+  const d = l.encode && l.encode.detail;
+  return isDim(catalog, d) && d !== xField ? d : null;
+}
+/** The dimension a layer in a plot is split into series by, whichever way: by `color`, or else by `detail`. */
+export function splitOf(catalog: Catalog, l: Layer, xField?: string): string | null {
+  return paintedOf(catalog, l, xField) || detailOf(catalog, l, xField);
+}
+/** The layouts that split a layer by `detail`. In another, a layer with it is refused (plan.ts). A step that reads it adds its layout. */
+export const DETAIL_LAYOUTS: string[] = ['cartesian'];
 
 // A dimension on x, a metric on y, and with a second dimension on color a series for each of its values.
 // The scales are derived here, once: x from its dimension, and a y for each unit the layers measure in.
@@ -215,7 +228,9 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   // What a key says on the axis: its row's value, which a repeat shares with the row it repeats.
   const said = new Map(rows.map((r) => [k(r), str(r, xField)]));
   const series = split ? [...new Set(((result.totalsBy && result.totalsBy[split]) || rows).map((r) => r[split] as string))] : [];
-  if (series.length > SERIES) throw new Error('Splitting by "' + split + '" makes ' + series.length + ' series, and there are ' + SERIES + ' series colours. Add "limit": ' + SERIES + ' to the query, or less.');
+  // Whether any layer paints its series apart. Only that spends the series colours, so only that is held to their count, and has a legend.
+  const painted = layers.some((l) => paintedOf(catalog, l, xField));
+  if (painted && series.length > SERIES) throw new Error('Splitting by "' + split + '" makes ' + series.length + ' series, and there are ' + SERIES + ' series colours. Add "limit": ' + SERIES + ' to the query, or less.');
   const isTime = catalog.dimensions[xField]!.type === 'time';
   const shared = layers.some((l) => l.mark === 'bar' || l.mark === 'tick') ? 'band' : 'point', scale = xOn ? 'linear' : shared;
   const yField = (l: Layer) => (l.series === 'previous' ? l.encode!.y + '@previous' : (l.encode!.y as string));
@@ -319,16 +334,18 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
       ends: (r) => { const [lo, hi] = span.get(r)!; return [v(lo), v(hi)]; },
       ...(l.mark === 'bar' && !l.paint && (l.encode!.y2 != null || diverges(l)) && { polarity: metricOf(catalog, l.encode!.y)?.polarity }) };
     if (!splitOf(catalog, l, xField)) return nodes.push(...draw(l, d));
+    // Split by detail, every series is in the layer's own paint, and none has a label at its end: a label is in its series' colour.
+    const plain = !paintedOf(catalog, l, xField);
     series.forEach((s, j) => {
       // Bars of one x that are not stacked sit side by side: overlapping bars are never what was meant. Lines and areas overlay.
-      const drawn = draw(l, { ...d, series: s, paint: prev ? d.paint : 'series.' + (j + 1), rows: d.rows.filter((r) => r[split!] === s), ...(l.mark === 'bar' && !l.stack && { slot: [j, series.length] }) });
+      const drawn = draw(l, { ...d, series: s, paint: prev || plain ? d.paint : 'series.' + (j + 1), rows: d.rows.filter((r) => r[split!] === s), ...(l.mark === 'bar' && !l.stack && { slot: [j, series.length] }) });
       nodes.push(...drawn);
       // Where the series' line ends, for its label: half way up its band where areas are stacked.
       const last = drawn.filter((n): n is PathNode => n.kind === 'path').map((n) => n.points[n.points.length - 1]!).pop();
-      if (last) ends.set(s, l.mark === 'area' && l.stack ? ((last.v0 || 0) + last.v) / 2 : last.v);
+      if (last && !plain) ends.set(s, l.mark === 'area' && l.stack ? ((last.v0 || 0) + last.v) / 2 : last.v);
     });
   });
-  if (split) {
+  if (painted) {
     // Both keys to the series, each in its own part, as a band has. The plan names one in `parts`; a fit rule swaps them.
     // A label sits beside the plot at the height its line ends. Two lines that end close have labels that collide:
     // that is the painter's to see to, as place() does, since only it knows how tall a label is (reference, Open 5).
@@ -341,7 +358,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     });
   }
   if (size) nodes.push(...sizeKey(metricOf(catalog, size.field)!, size.top));
-  return { nodes, rows: keys, ...(split && { series }), scale };
+  return { nodes, rows: keys, ...(split && (painted ? { series } : { detail: series })), scale };
 }
 /** The key to sizes: the metric's name, then each step with the most it stands for, in the metric's unit. */
 export function sizeKey(metric: MetricDef, top: number): SceneNode[] {

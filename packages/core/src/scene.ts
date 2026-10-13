@@ -510,10 +510,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     series.forEach((s, j) => {
       if (ends.has(s)) nodes.push({ key: 'label:' + s, part: 'labels', kind: 'text', series: s, t: ends.get(s)!, text: s, anchor: 'start', baseline: 'middle', font: 'tick', paint: 'series.' + (j + 1), layer: 'guide' });
     });
-    series.forEach((s, j) => {
-      nodes.push({ key: 'swatch:' + s, part: 'legend', kind: 'rect', series: s, paint: 'series.' + (j + 1), layer: 'data' });
-      nodes.push({ key: 'legend:' + s, part: 'legend', kind: 'text', series: s, text: s, anchor: 'start', baseline: 'middle', font: 'label', paint: 'ink', layer: 'guide' });
-    });
+    nodes.push(...seriesLegend(series));
   }
   if (size) nodes.push(...sizeKey(metricOf(catalog, size.field)!, size.top));
   layers.forEach((l, i) => { if (worths[i] != null) nodes.push(...unitKey(ids[i]!, worths[i]!, metricOf(catalog, l.encode!.y))); });
@@ -732,10 +729,7 @@ function sceneRows(catalog: Catalog, layers: Layer[], result: Result, limit: num
     // Both keys to the series, each in its own part, as a band has: a swatch and a name for each, and one line that
     // names the series with the most, in its colour, by the engine's totals. The plan names one in `parts`.
     const name = (s: unknown) => formatDimension(s as string, catalog.dimensions[split!]!), f = layers.find((l) => spans.has(l))!.encode!.x as string, by = result.totalsBy && result.totalsBy[split!];
-    series.forEach((s, j) => {
-      nodes.push({ key: 'swatch:' + s, part: 'legend', kind: 'rect', series: s, paint: 'series.' + (j + 1), layer: 'data' });
-      nodes.push({ key: 'legend:' + s, part: 'legend', kind: 'text', series: s, text: name(s), anchor: 'start', baseline: 'middle', font: 'label', paint: 'ink', layer: 'guide' });
-    });
+    nodes.push(...seriesLegend(series, name));
     const top = by && leader(result, split!, f);
     if (top) nodes.push({ key: 'legend-top', part: 'legend-top', kind: 'text', series: top[split!] as string, text: name(top[split!]) + ' ' + portion(num(top, f), result.totals[f], metricOf(catalog, f)!), anchor: 'start', font: 'label', paint: 'series.' + (series.indexOf(top[split!] as string) + 1), layer: 'guide' });
   }
@@ -778,6 +772,14 @@ function sceneGrid(catalog: Catalog, layer: Layer, id: string, result: Result): 
   for (let n = 1; nodes.length < UNIT_CELLS; n++) cell(id + '#rest:' + n, { paint: 'seq.none' });
   return { nodes: nodes.concat(shareLegend(rows, k, dim, catalog.dimensions[dim]!, m, M, total, paint)), rows: rows.map(k), aspect: 1 };
 }
+// A legend's entry, whichever legend it is in: a swatch in the paint of what it stands for, a row or a series, and its name.
+const legendEntry = (k: string, of: { row: string } | { series: string }, text: string, paint: string): SceneNode[] => [
+  { key: 'swatch:' + k, part: 'legend', kind: 'rect', ...of, paint, layer: 'data' },
+  { key: 'legend:' + k, part: 'legend', kind: 'text', ...of, text, anchor: 'start', baseline: 'middle', font: 'label', paint: 'ink', layer: 'guide' },
+];
+// The legend of a plot or of rows split into series that are painted apart: an entry for each, in the series' own
+// order, which is the order of their paints. An entry has no value: a series is read against the axis.
+const seriesLegend = (series: string[], name: (s: string) => string = (s) => s): SceneNode[] => series.flatMap((s, j) => legendEntry(s, { series: s }, name(s), 'series.' + (j + 1)));
 // The legends of a whole split by colour, for a band and for a circle of arcs: both of them, each in its own part.
 // The plan names one in `parts`; a fit rule swaps them.
 // A segment is named as the readout names it, so a day is "Sep 29". The prototype writes it raw: a deliberate departure.
@@ -785,8 +787,7 @@ function sceneGrid(catalog: Catalog, layer: Layer, id: string, result: Result): 
 function shareLegend(rows: Row[], k: (r: Row) => string, f: string, dim: DimensionDef, m: string, M: MetricDef, total: number | null | undefined, paint: (i: number) => string, said = (r: Row) => portion(num(r, m), total, M)): SceneNode[] {
   const nodes: SceneNode[] = [], name = (r: Row) => formatDimension(r[f], dim);
   rows.forEach((r, i) => {
-    nodes.push({ key: 'swatch:' + k(r), part: 'legend', kind: 'rect', row: k(r), paint: paint(i), layer: 'data' });
-    nodes.push({ key: 'legend:' + k(r), part: 'legend', kind: 'text', row: k(r), text: name(r), anchor: 'start', baseline: 'middle', font: 'label', paint: 'ink', layer: 'guide' });
+    nodes.push(...legendEntry(k(r), { row: k(r) }, name(r), paint(i)));
     nodes.push({ key: 'share:' + k(r), part: 'legend', kind: 'text', row: k(r), text: said(r), anchor: 'end', baseline: 'middle', font: 'value', paint: 'ink', layer: 'guide' });
   });
   // One line for the whole of it, so it names no row. Its key has no colon after `legend`, so no segment's entry can

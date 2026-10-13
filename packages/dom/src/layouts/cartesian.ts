@@ -44,9 +44,9 @@ const css = `
 /* Time and x run from left to right whichever way the page reads, as the paths in the SVG do whatever it is told. So
  * the whole frame is set that way: the plot, the axes on every side of it and the labels at the line ends stand
  * where they do on a page that reads from the left, and every mark, hit target and label is placed from the left.
- * A plot is set so wherever it is, a map's among them. What says what the marks are follows the page: paint() hands
- * the legend and the key to sizes the page's direction back (dom.ts, in chrome/), and the number and the prose are outside the
- * body. A label's words still run their own way: an Arabic one is set from the right, in a box placed from the left
+ * A plot is set so wherever it is, a map's among them. What says what the marks are follows the page: the chrome's
+ * painters hand the legend and the keys the page's direction back (pageWay in dom.ts), and the number and the prose are
+ * outside the body. A label's words still run their own way: an Arabic one is set from the right, in a box placed from the left
  * (an axis's labels say the same in chrome/axes.ts). */
 .uav[data-layout="cartesian"] .uav-body, .uav-plot { direction: ltr; }
 :is(.uav-labels, .uav-refs, .uav-point-labels) > span { unicode-bidi: plaintext; }

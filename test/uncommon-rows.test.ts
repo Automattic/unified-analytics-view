@@ -136,3 +136,72 @@ describe('stack: "diverge"', () => {
       .toBe('Layer 1 has "stack" and no dimension on color, so there is nothing to stack. Encode the query\'s second dimension on color, or remove "stack".');
   });
 });
+
+describe('several marks to a row, by detail', () => {
+  const q = { metrics: ['visitors'], by: ['channel', 'country'], range: '28d' };
+  const strip = (mark = 'dot', more: Record<string, string> = {}): Spec => ({ query: q, layers: [{ mark, encode: { y: 'channel', x: 'visitors', detail: 'country', ...more } }, label('channel')] });
+
+  it('a dot for each pair of a row and a detail value, on the row\'s track, all in one paint at half strength: the strip plot', () => {
+    const { ratio, result } = run(strip()), dots = of<{ key: string; x: number; t: number; paint: string; opacity: number; series: string; row: string }>(ratio.nodes, 'primary:dot:');
+    expect(dots.length).toBe(6 * 15);
+    expect(ratio.rows).toEqual(['Search', 'Direct', 'Social', 'AI assistants', 'Email', 'Other']);
+    expect([ratio.series, ratio.detail!.length, ratio.parts, ratio.track]).toEqual([undefined, 15, ['rows'], 'beside']);
+    expect(new Set(dots.map((n) => [n.paint, n.opacity, n.t].join())).size).toBe(1);
+    expect(dots[0]).toMatchObject({ key: 'primary:dot:Search:US', row: 'Search', series: 'US', paint: 'series.1', opacity: 0.5, t: 0.5, x: 1 });
+    // Each stands at its own pair's value: the track runs to the most any pair has, and no pair is added to another.
+    const most = Math.max(...result.rows.map((r) => r.visitors as number));
+    for (const r of result.rows.slice(0, 30)) expect(dots.find((n) => n.row === r.channel && n.series === r.country)!.x).toBeCloseTo((r.visitors as number) / most, 12);
+    expect(new Set(dots.map((n) => n.key)).size).toBe(dots.length);
+  });
+  it('a tick the same way, and a colour for each row where the row\'s own dimension is on color', () => {
+    const ticks = of<{ x: number; x2: number; t: number; t2: number; opacity: number }>(run(strip('tick')).ratio.nodes, 'primary:tick:Email:');
+    expect(ticks.length).toBe(15);
+    expect(ticks.every((n) => n.x === n.x2 && n.t === 0 && n.t2 === 1 && n.opacity === 0.5)).toBe(true);
+    const { ratio } = run(strip('dot', { color: 'channel' }));
+    expect(['Search', 'Direct', 'Other'].map((c) => [...new Set(of<{ paint: string }>(ratio.nodes, 'primary:dot:' + c + ':').map((n) => n.paint))])).toEqual([['series.1'], ['series.2'], ['series.6']]);
+    expect(ratio.series).toBe(undefined);
+  });
+  it('has no limit of six, no legend, and a row\'s value is still the engine\'s total', () => {
+    const { ratio, plan, result } = run({ ...strip(), layers: [...strip().layers!, { mark: 'text', encode: { y: 'channel', text: 'visitors' }, align: 'end' }] });
+    expect(plan.guides).toEqual({});
+    expect(of<{ text: string }>(ratio.nodes, 'primary:text#2:').map((n) => n.text)).toEqual(result.totalsBy!.channel!.map((r) => (r.visitors as number).toLocaleString('en-US')));
+  });
+  it('says who leads each dimension, from the engine\'s totals, and sums no row', () => {
+    expect(run(strip()).plan.text).toBe('Search is the largest channel at 41% of visitors, and United States the largest country at 33%.');
+  });
+  it('gives up rows under a height limit, and the list for the number where a track has no room', () => {
+    expect(run(strip(), 346, 100).plan).toMatchObject({ layout: 'rows', rowLimit: 3, dropped: ['rows 4 to 6'] });
+    expect(run(strip(), 150).plan.layout).toBe('none');
+  });
+  it('refuses a bar or a rule there, which would lie one over another, and names the fix', () => {
+    expect(err(strip('rule'))).toBe('Layer 1 is a "rule" in rows with "country" on detail, which would lay one over another in each row, all in one paint. Use "dot" or "tick" for a mark at each value, or remove "detail".');
+    expect(err(strip('bar'))).toBe('Layer 1 is a "bar" in rows with "country" on detail, which would lay one over another in each row, all in one paint. Use "dot" or "tick" for a mark at each value, or encode "country" on color and give the bar "stack", or remove "detail".');
+  });
+});
+
+describe('points coloured by a second dimension', () => {
+  const q = { metrics: ['embed_x', 'embed_y'], by: ['term', 'intent'], range: '28d' };
+  const dot: Layer = { mark: 'dot', encode: { x: 'embed_x', y: 'embed_y', color: 'intent', detail: 'term' } };
+
+  it('a dot with one dimension on color and the other on detail is a point for each value of detail\'s, painted by color\'s', () => {
+    const { ratio, plan } = run({ query: q, layers: [dot] });
+    expect(ratio.rows!.length).toBe(24);
+    expect(ratio.series).toEqual(['Pricing', 'How to', 'Privacy']);
+    expect(ratio.detail).toBe(undefined);
+    expect([1, 2, 3].map((j) => ratio.nodes.filter((n) => n.part === 'points' && n.paint === 'series.' + j).length)).toEqual([8, 8, 8]);
+    expect(ratio.nodes.find((n) => n.part === 'points')).toMatchObject({ key: 'primary:dot:pricing:Pricing', row: 'pricing', series: 'Pricing' });
+    expect(ratio.nodes.filter((n) => n.part === 'points').every((n) => n.opacity == null)).toBe(true);
+    expect(ratio.parts).toEqual(['y-axis', 'plot', 'points', 'x-axis', 'legend']);
+    // The sentence is the one for points, and not the one for two dimensions, which has no total here to lead with.
+    expect(plan.text).toBe('Across 24 search terms in the last 28 days, the range of first component is -0.7 to 0.73 and of second component is -0.64 to 0.65. getting started is highest on first component and sso setup on second component.');
+  });
+  it('whichever way the query names the two', () => {
+    const turned = { ...q, by: ['intent', 'term'] }, { ratio, plan } = run({ query: turned, layers: [dot] }, 346, null, runQuery(q));
+    expect([ratio.rows!.length, ratio.series]).toEqual([24, ['Pricing', 'How to', 'Privacy']]);
+    expect(plan.text).toMatch(/^Across 24 search terms in the last 28 days/);
+  });
+  it('steps down as any plot of points: the legend, and then the number alone', () => {
+    expect(run({ query: q, layers: [dot] }, 300).plan).toMatchObject({ layout: 'cartesian', guides: { x: true }, dropped: ['the legend'] });
+    expect(run({ query: q, layers: [dot] }, 234).plan.layout).toBe('none');
+  });
+});

@@ -210,9 +210,13 @@ describe('points and text: embedding scatter, stem-and-leaf', () => {
     // A place has no total, so what is left where the plot has no room is a dash, over a note that calls the first row the top one.
     expect(run(S('embedding'), 234).scene.nodes.map((n) => [n.key, (n as { text?: string }).text])).toEqual([['value', '–'], ['sub', 'Top: pricing']]);
   });
-  it('for step 1: its points cannot be coloured by a second dimension unless a text layer names each one', () => {
+  it('its points are coloured by a second dimension with that one on color and the points\' own on detail; with neither a text layer nor detail to name them, they are refused', () => {
     const q = { ...S('embedding').query, by: ['term', 'intent'] }, dot = { mark: 'dot' as const, encode: { x: 'embed_x', y: 'embed_y', color: 'intent' } };
     expect(err({ query: q, layers: [dot] })).toBe('The query is by "term", and no layer encodes it, so its rows would be drawn over each other. Encode it on color, for a colour and a legend entry each, or on detail, for a series each in one paint, or remove it from query.by.');
+    // Step 4 ran what step 1 allowed: detail says the rows' own dimension, and nothing else changes (test/uncommon-rows.test.ts).
+    const named = run({ query: q, layers: [{ ...dot, encode: { ...dot.encode, detail: 'term' } }] }, 346);
+    expect([named.ratio.series, named.ratio.rows!.length, named.ratio.parts]).toEqual([['Pricing', 'How to', 'Privacy'], 24, ['y-axis', 'plot', 'points', 'x-axis', 'legend']]);
+    expect(named.plan.text).toBe(run(S('embedding'), 346).plan.text);
     const { ratio } = run({ query: q, layers: [dot, { mark: 'text', encode: { x: 'embed_x', y: 'embed_y', text: 'term' } }] }, 346);
     expect(ratio.series).toEqual(['Pricing', 'How to', 'Privacy']);
     expect([1, 2, 3].map((j) => ratio.nodes.filter((n) => n.part === 'points' && n.paint === 'series.' + j).length)).toEqual([8, 8, 8]);

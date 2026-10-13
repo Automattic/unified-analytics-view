@@ -96,7 +96,7 @@ const metricOf = (catalog: Catalog, f: unknown) => (typeof f === 'string' ? cata
  * polarity. One whose metric has no better way keeps its own paint. Positions are compared as they are drawn. */
 const toned = (polarity: Polarity | undefined, from: number, to: number, paint: string) => (!polarity || polarity === 'none' ? paint : (to < from) === (polarity === 'down') ? 'delta.good' : 'delta.bad');
 
-const MASS = 0.5;    // how much of its paint a line of a mass is drawn in
+const MASS = 0.5;    // how much of its paint a line of a mass is drawn in, and a dot or a tick of one on a row's track
 const path: MarkFn = (l, { id: layer, series, mass, role: role0, paint, prev, rows: pts, k, unit, ends }) => {
   const id = series == null ? layer : layer + ':' + series, role = series == null ? { role: role0 } : { role: role0, series };
   const whole = pts.filter((r) => prev || !r.partial);
@@ -211,8 +211,14 @@ export function detailOf(catalog: Catalog, l: Layer, xField?: string): string | 
 export function splitOf(catalog: Catalog, l: Layer, xField?: string): string | null {
   return paintedOf(catalog, l, xField) || detailOf(catalog, l, xField);
 }
+/** The dimension a plot of points has a point for each value of: the query's first, or, where a layer paints its dots
+ * by one dimension and names the other on `detail`, that other. The first is then what the points are coloured by. */
+export function pointDimOf(catalog: Catalog, layers: Layer[], by?: string): string | undefined {
+  const own = layers.map((l) => l.encode || {}).find((e) => isDim(catalog, e.color) && isDim(catalog, e.detail) && e.color !== e.detail);
+  return (own && (own.detail as string)) || by;
+}
 /** The layouts that split a layer by `detail`. In another, a layer with it is refused (plan.ts). A step that reads it adds its layout. */
-export const DETAIL_LAYOUTS: string[] = ['cartesian'];
+export const DETAIL_LAYOUTS: string[] = ['cartesian', 'rows'];
 
 /** Where each row of a layer that is split into a stack starts and ends, in its metric's own terms, by row. A stack
  * runs in the series' order, the first at its foot, and a value below zero stacks downward. `all` is what a row is a
@@ -243,7 +249,7 @@ function stacked(rows: Row[], series: string[], split: string, k: (r: Row) => st
 // rows are keyed by either way, and `xOn` the field x is measured along where that is a linear scale.
 function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, result: Result, by?: string): Body {
   const nodes: SceneNode[] = [], rows = result.rows;
-  const xDim = xDimOf(catalog, layers), xField = (xDim || by)!;
+  const xDim = xDimOf(catalog, layers), xField = (xDim || pointDimOf(catalog, layers, by))!;
   const xOn = !xDim ? (layers.map((l) => l.encode && l.encode.x).find((f) => typeof f === 'string') as string) : catalog.dimensions[xDim]!.type === 'number' ? xDim : null;
   // A view has two dimensions at most and one is on x, so there is one to split by. Its order is the engine's, not the rows':
   // paint follows it, so a value keeps its colour when the ranking moves.
@@ -433,6 +439,8 @@ interface Track {
   polarity?: Polarity | undefined;
   /** The series this is, where the layer is split into them: the row then has a mark for each. */
   series?: string;
+  /** The series are in one paint, by `detail`, and lie over each other on the track: each lets the ones under it show, as a line of a mass does. */
+  mass?: boolean;
 }
 /* A mark's key and what it came from: its row, and its series where the row has one of it for each. */
 const inRow = ({ id, k, series }: Track) => ({ key: id + ':' + k + (series == null ? '' : ':' + series), row: k, ...(series != null && { series }) });
@@ -447,8 +455,9 @@ const trackBar: TrackFn = (_l, d) => {
 // A rule lies along the track from one of the row's values to another, or from zero where it has one end.
 const trackRule: TrackFn = (l, { id, role, k, at, to, v }) => [{ key: id + ':' + k, part: 'rows', kind: 'line', x: v(at), x2: v(to ?? 0), t: 0.5, row: k, paint: l.paint || 'ink', layer: 'data', role }];
 // A tick stands across the row at its value.
-const trackTick: TrackFn = (l, { id, role, k, at, v }) => [{ key: id + ':' + k, part: 'rows', kind: 'line', x: v(at), x2: v(at), t: 0, t2: 1, row: k, paint: l.paint || 'ink', width: 2, layer: 'data', role }];
-const trackDot: TrackFn = (_l, { id, role, paint, k, at, v }) => [{ key: id + ':' + k, part: 'rows', kind: 'circle', pulse: false, x: v(at), t: 0.5, row: k, paint, layer: 'data', role }];
+const trackTick: TrackFn = (l, d) => [{ ...inRow(d), part: 'rows', kind: 'line', x: d.v(d.at), x2: d.v(d.at), t: 0, t2: 1, paint: l.paint || 'ink', width: 2, ...(d.mass && { opacity: MASS }), layer: 'data', role: d.role }];
+// A dot stands on the track at its value, half way up the row. With a dimension on detail the row has one for each of its pairs.
+const trackDot: TrackFn = (_l, d) => [{ ...inRow(d), part: 'rows', kind: 'circle', pulse: false, x: d.v(d.at), t: 0.5, paint: d.paint, ...(d.mass && { opacity: MASS }), layer: 'data', role: d.role }];
 /* The marks a row's track draws, by name. A new mark is a function here. Text is not among them: it is set in the row, not on the scale. */
 const TRACK_MARKS: Partial<Record<Mark, TrackFn>> = { bar: trackBar, rule: trackRule, tick: trackTick, dot: trackDot };
 /** Whether a row's track is read by where its marks are, and so stands beside the label and not behind it: any mark but a bar from zero, and a bar that is divided into a stack. */
@@ -488,6 +497,7 @@ export function listRows(catalog: Catalog, layers: Layer[], result: Result): Row
 // either side of it, and it is not rounded: a row's track has no axis to read against.
 // With the query's second dimension on the color of a stacked bar, each row's bar is divided into a series for each of
 // its values, in that dimension's own order, which is the engine's: paint follows it, and there is a legend.
+// With it on the detail of a dot or a tick, a row has one for each of its pairs, all in one paint and with no legend.
 function sceneRows(catalog: Catalog, layers: Layer[], result: Result, limit: number | null): Body {
   const nodes: SceneNode[] = [];
   const { dim, split, own, items: all } = listOf(catalog, layers, result), items = all.slice(0, limit || all.length), rows = items.map((i) => i.row), shown = items.flatMap((i) => i.pairs);
@@ -505,6 +515,9 @@ function sceneRows(catalog: Catalog, layers: Layer[], result: Result, limit: num
   const series = split ? [...new Set(((result.totalsBy && result.totalsBy[split]) || result.rows).map((r) => r[split] as string))] : [];
   const divides = (l: Layer) => !!split && splitOf(catalog, l, dim) === split, painted = layers.some((l) => paintedOf(catalog, l, dim));
   if (painted && series.length > SERIES) throw new Error('Splitting by "' + split + '" makes ' + series.length + ' series, and there are ' + SERIES + ' series colours. Add "limit": ' + SERIES + ' to the query, or less.');
+  // By detail a row has a mark for each pair where the marks can lie over each other and still be read: a dot or a tick.
+  const lost = layers.findIndex((l) => divides(l) && !l.stack && l.mark !== 'dot' && l.mark !== 'tick');
+  if (lost >= 0) throw new Error('Layer ' + (lost + 1) + ' is a "' + layers[lost]!.mark + '" in rows with "' + split + '" on detail, which would lay one over another in each row, all in one paint. Use "dot" or "tick" for a mark at each value' + (layers[lost]!.mark === 'bar' ? ', or encode "' + split + '" on color and give the bar "stack"' : '') + ', or remove "detail".');
   const whole = new Map(items.flatMap((i) => i.pairs.map((r) => [r, i.row] as const)));
   const spans = new Map(tracked.filter((l) => divides(l) && l.stack).map((l) => { const f = l.encode!.x as string; return [l, stacked(shown, series, split!, (r) => own.get(r)!, f, l.stack, l.stack === 'normalize' ? (r) => (whole.get(r)![f] as number) || Infinity : () => 1)] as const; }));
   const vals = tracked.flatMap((l) => (spans.has(l) ? [...spans.get(l)!.values()].flat() : divides(l) ? shown.flatMap((r) => on(l, r) as number[]) : rows.flatMap((r) => on(l, r) as number[]))), beside = trackBeside(layers);
@@ -527,10 +540,12 @@ function sceneRows(catalog: Catalog, layers: Layer[], result: Result, limit: num
       const draw = TRACK_MARKS[l.mark], span = spans.get(l);
       if (draw && divides(l)) {
         // A mark for each of the row's pairs, in the series' order: a stacked bar's share, from where the one before it ends.
+        // By detail it is a mark at each pair's own value, all in the layer's paint.
         series.forEach((s, j) => pairs.forEach((p) => {
-          const ends = span && span.get(p);
-          if (p[split!] !== s || !ends) return;
-          nodes.push(...draw(l, { id: ids[li]!, role: roleOf(l), paint: 'series.' + (j + 1), k, series: s, at: ends[0], to: ends[1], v, beside }));
+          if (p[split!] !== s) return;
+          const ends = span ? span.get(p) : on(l, p), d = { id: ids[li]!, role: roleOf(l), k, series: s, v, beside };
+          if (!ends || ends[0] == null) return;
+          nodes.push(...draw(l, span ? { ...d, paint: 'series.' + (j + 1), at: ends[0], to: ends[1]! } : { ...d, paint: paintOf(l, catalog, result) || shade(l, r) || 'series.1', at: ends[0], mass: true }));
         }));
       } else if (draw) {
         const [at, to] = on(l, r), ranged = l.encode!.x2 != null;

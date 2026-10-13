@@ -240,7 +240,10 @@ describe('detail splits a plot into series and paints none apart', () => {
     expect(err(by('line', {}, { color: 'country', detail: 'date.day' }))).toBe('Layer 1 encodes "country" on color and "date.day" on detail, ' + twice);
     expect(err(by('area', { stack: 'zero' }))).toBe('Layer 1 has "stack" and is split by detail, which paints every series alike, so a stack of them could not be read. Encode "country" on color in place of detail, or remove "stack".');
     const rows: Spec = { query: { metrics: ['visitors'], by: ['channel', 'device'] }, layers: [{ mark: 'bar', encode: { y: 'channel', x: 'visitors', detail: 'device' } }] };
-    expect(err(rows)).toBe('Layer 1 encodes "device" on detail, and these layers are laid out as "rows", which does not split a layer by detail. It is read in: cartesian. Put a dimension on x and a metric on y, or remove "detail".');
+    // Rows read detail for a dot or a tick (test/uncommon-rows.test.ts). A bar there would lie one over another.
+    expect(err(rows)).toBe('Layer 1 is a "bar" in rows with "device" on detail, which would lay one over another in each row, all in one paint. Use "dot" or "tick" for a mark at each value, or encode "device" on color and give the bar "stack", or remove "detail".');
+    const grid: Spec = { query: { metrics: ['visitors'], by: ['weekday', 'hour'] }, layers: [{ mark: 'cell', encode: { x: 'hour', y: 'weekday', color: 'visitors', detail: 'hour' } }] };
+    expect(err(grid)).toBe('Layer 1 encodes "hour" on detail, and these layers are laid out as "matrix", which does not split a layer by detail. It is read in: cartesian, rows. Put a dimension on x and a metric on y, or remove "detail".');
   });
 });
 

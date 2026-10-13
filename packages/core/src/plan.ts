@@ -4,7 +4,7 @@ import { fmtTime, rangeLabel } from './format.ts';
 import { customMarks } from './marks.ts';
 import { PRESETS, expand, presetNames, usesPrevious } from './presets.ts';
 import { COLUMNS_BLOCK, legendBlock, place } from './place.ts';
-import { BUILT_IN_MARKS, DETAIL_LAYOUTS, buildScene, columnLabel, columnsOf, tldrValueText, isDim, listRows, roleOf, seriesOf, trackBeside, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
+import { BUILT_IN_MARKS, DETAIL_LAYOUTS, buildScene, columnLabel, columnsOf, tldrValueText, isDim, listRows, pointDimOf, roleOf, seriesOf, trackBeside, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
 import { gridProse, rangeProse, tldrProse } from './prose.ts';
 import type { Catalog, Container, Layer, Layout, Plan, PlanShape, PresetLibrary, Query, Reduction, ReductionId, Result, Role, PlacedScene, Spec } from './types.ts';
 
@@ -115,7 +115,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   // below the room its axes need it is the number alone. Its `points` rule says so, where the others' is `axes`.
   const points = !!layers.length && isPoints(catalog, layers);
   const p: PlanShape = { layout: laid, layers, guides: {}, tldrValue: rules.tldrValue.above === 'always' || !!M.instant || !layers.length, side: false, rowLimit: null,
-                         share, text: tldrProse(q, result, share, catalog, points) };
+                         share, text: tldrProse(q, result, share, catalog, points && pointDimOf(catalog, layers, by)) };
   if (p.layout === 'cartesian') p.guides = { x: true, y: true, grid: true };
   if (p.layout === 'matrix') { p.guides = { x: true, y: true, ramp: true }; p.text = gridProse(q, result, catalog) ?? p.text; }
   // A range that supports the central mark is said after the view's own sentence: its least and its most. One that

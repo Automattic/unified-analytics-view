@@ -2,7 +2,7 @@
 
 The charting and UI layer for the analytics MVP. A view is described once, as JSON, in marks, encodings and roles; the container it lands in decides how to present it. Tracking, storage and retrieval are built elsewhere, and this repo starts at the query result.
 
-Read `docs/view-grammar-reference.md` before changing the grammar, and `docs/milestones.md` for the course. `docs/chart-coverage-plan.md` is the plan that added the marks and layouts beyond the prototype's, and section 8 of it records what building each step found. Sections of the reference are labelled Proven, Proposed or Open.
+Read `docs/view-grammar-reference.md` before changing the grammar, and `docs/milestones.md` for the course. `docs/chart-coverage-plan.md` is the plan that added the marks and layouts beyond the prototype's, and section 8 of it records what building each step found. `docs/uncommon-coverage-plan.md` is the plan that followed it, for the Uncommon chart types, and its section 7 is the same record. Sections of the reference are labelled Proven, Proposed or Open.
 
 ## Commands
 
@@ -19,8 +19,8 @@ Packages export their TypeScript source and nothing is built for release yet. Vi
 
 ## Layout
 
-- `packages/core`: types, presets and `expand`, the plan (`resolve`), scene builders (ratios) and `place` (pixels), the tldr prose, the registry for custom marks (`marks.ts`), and JSON Schemas in `schema/`.
-- `packages/fixtures`: the catalog, the seeded fixture query engine (`typical`, `no-prior`, `empty`), the six sample specs the prototype knows (`samples`) and the ones it does not (`moreSamples`). It registers the `geo` mark on import, with a small file of country shapes, and the `link` mark.
+- `packages/core`: types, presets and `expand`, the plan (`resolve`), scene builders (ratios) and `place` (pixels), the tldr prose, the registry for custom marks (`marks.ts`) and the one for the presets their packages register (`registerPreset` in `presets.ts`), and JSON Schemas in `schema/`.
+- `packages/fixtures`: the catalog, the seeded fixture query engine (`typical`, `no-prior`, `empty`), the six sample specs the prototype knows (`samples`) and the ones it does not (`moreSamples`). It registers the custom marks on import: `geo` with a small file of country shapes, `geo-tiles` and `geo-hexes` (the same mark with two files of tiles), `link` and `partition`.
 - `packages/tokens`: build-time token generation, ported from the storybook repo. Base tier: Leonardo makes the colour ramps, the two arms of the diverging ramp among them (the sequential ramp is chosen by hand, in `config/sequential.json`), and Utopia the type, space and control-size scales; `config/base.tokens.json` holds the rest. Common tier: `config/common.tokens.json` (and `common.dark`) names the Spacefast library's variables as aliases into base. Charts tier: `config/charts.tokens.json` declares every `--ua-charts-*` token `<ua-view>` reads, as aliases into the other two. Style Dictionary compiles all three to `generated/tokens.css`. The bench loads it; `packages/dom` never imports it, and meets it only in those names (`test/dom-tokens.test.ts`).
 - `test/`: one suite across the packages. There is no DOM in the run, so `packages/dom` is tested where it is strings and plain functions: the compiled rules, each layout's own rules, the measured pass's decisions, key stepping and the readout, and the path morph. The element is checked in a browser on the bench. Golden scenes are in `test/__snapshots__`.
 - `prototype/`: read-only reference. The tests load `prototype-bench.js` and hold the port to it.

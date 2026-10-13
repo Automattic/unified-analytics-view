@@ -1,6 +1,6 @@
 # Uncommon chart coverage: plan
 
-As of October 12, 2026. **Status: a plan, with its open questions settled on October 12 (section 4). Nothing here is built.** It follows `docs/chart-coverage-plan.md`, which took the grammar to the 40 Common types, and it keeps that note's rules, its step format and its section 3.7 (what every new arrangement owes).
+As of October 12, 2026. **Status: steps 0 to 10 were built on October 12 and 13 and are merged on the branch `claude/uncommon-marks`. Step 11 (a facet down the rows) is not started; it waits for the board. Sections 1 to 6 are the plan as it was written, with its questions settled on October 12 (section 4). Section 7 is what building each step found.** It follows `docs/chart-coverage-plan.md`, which took the grammar to the 40 Common types, and it keeps that note's rules, its step format and its section 3.7 (what every new arrangement owes).
 
 The catalog's 84 Uncommon types were read against the grammar as it stands on `master`: the two docs, the marks each layout accepts (`PLOT_MARKS`, `TRACK_MARKS`, `sceneRadial`, `sceneMatrix`) and the refusals in `plan.ts` and `scene.ts`. **No spec was run.** Step 0 exists to replace that reading with samples.
 
@@ -18,8 +18,8 @@ How common a type is, is the catalog's judgement. Which step a chart falls under
 | Sayable today, to be shown by a sample (step 0) | Cleveland dot plot, lollipop, dumbbell, bullet graph, ordered dot plot, tornado, Pareto, sparkline, fan chart, streamgraph, slopegraph, cumulative flow, calendar heatmap, climate stripes, adjacency matrix, embedding scatter, stem-and-leaf | 17 |
 | Existing marks, extended (steps 2 to 5, 10, 11) | See each step | 26 |
 | `unit` (step 6) | Waffle, unit chart, parliament, Wilkinson dot plot, isotype, icon array | 6 |
-| `link` (step 7) | Sankey, alluvial | 2 |
-| `partition` (step 8) | Treemap | 1 |
+| `link` (step 8) | Sankey, alluvial | 2 |
+| `partition` (step 9) | Treemap | 1 |
 | Deferred | Beeswarm, bar chart race, scatterplot matrix, UpSet plot, chord diagram, arc diagram, flow map, circle packing, bubble comparison, icicle, bivariate choropleth, Dorling cartogram, dot density map | 13 |
 | Out | Section 6 | 19 |
 

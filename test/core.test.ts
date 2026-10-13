@@ -195,7 +195,7 @@ describe('what a painter says with: values and dimensions in catalog format', ()
     expect(UNITS.map((u) => formatValue(null, { label: '', unit: u, polarity: 'none' }))).toEqual(UNITS.map(() => '–'));
   });
   it('a unit with no format is an error that names the units there are', () => {
-    expect(() => formatValue(1, { label: '', unit: 'sec' as Unit, polarity: 'none' })).toThrow(/The unit "sec" has no format\. Give the metric one of count, ratio, percent, ms, s, bytes in the catalog, or a currency's ISO 4217 code in lower case/);
+    expect(() => formatValue(1, { label: '', unit: 'sec' as Unit, polarity: 'none' })).toThrow(/The unit "sec" has no format\. Give the metric one of count, ratio, percent, ms, s, bytes, rank in the catalog, or a currency's ISO 4217 code in lower case/);
   });
 });
 
@@ -272,8 +272,8 @@ describe('fitting the container (reference section 10.1)', () => {
 describe('validation', () => {
   it('names the fix', () => {
     const err = (s: Spec) => { try { resolve(s, runQuery(s.query), makeContainer(346), catalog); } catch (e) { return (e as Error).message; } };
-    expect(err(invalid['unknown preset']!)).toBe('Unknown preset "no-such-preset". The library has: line, bar-list, share-bar, bar, grouped-bar, stacked-bar, stacked-area, pie, donut, pie-semi-circle, gauge, rose, radial-bar, sunburst, heatmap, funnel, box-plot, error-bars, waterfall, candlestick, fan, dumbbell, bullet, waffle, unit-chart, isotype, parliament, icon-array. Registered: choropleth, symbol-map, sankey, tile-grid-map, hex-tile-map, treemap, pair-list. Use one of those, or register it with registerPreset("no-such-preset", …) before the view is resolved.');
-    expect(err(invalid['dimension, no layers']!)).toBe('This spec has a dimension but no layers, so there is nothing to draw it with. Add "layers", or "use" one of: line, bar-list, share-bar, bar, grouped-bar, stacked-bar, stacked-area, pie, donut, pie-semi-circle, gauge, rose, radial-bar, sunburst, heatmap, funnel, box-plot, error-bars, waterfall, candlestick, fan, dumbbell, bullet, waffle, unit-chart, isotype, parliament, icon-array, choropleth, symbol-map, sankey, tile-grid-map, hex-tile-map, treemap, pair-list.');
+    expect(err(invalid['unknown preset']!)).toBe('Unknown preset "no-such-preset". The library has: line, bar-list, share-bar, bar, grouped-bar, stacked-bar, stacked-area, pie, donut, pie-semi-circle, gauge, rose, radial-bar, sunburst, heatmap, funnel, box-plot, error-bars, waterfall, candlestick, fan, dumbbell, bullet, waffle, unit-chart, isotype, parliament, icon-array, bump, spaghetti, difference, connected-scatter, ecdf. Registered: choropleth, symbol-map, sankey, tile-grid-map, hex-tile-map, treemap, pair-list. Use one of those, or register it with registerPreset("no-such-preset", …) before the view is resolved.');
+    expect(err(invalid['dimension, no layers']!)).toBe('This spec has a dimension but no layers, so there is nothing to draw it with. Add "layers", or "use" one of: line, bar-list, share-bar, bar, grouped-bar, stacked-bar, stacked-area, pie, donut, pie-semi-circle, gauge, rose, radial-bar, sunburst, heatmap, funnel, box-plot, error-bars, waterfall, candlestick, fan, dumbbell, bullet, waffle, unit-chart, isotype, parliament, icon-array, bump, spaghetti, difference, connected-scatter, ecdf, choropleth, symbol-map, sankey, tile-grid-map, hex-tile-map, treemap, pair-list.');
     expect(err(invalid['preset, no dimension']!)).toBe('The "line" preset needs a dimension in query.by.');
     expect(err({ query: { metrics: ['pageviews'], by: ['page'] }, layers: [{ mark: 'bar', encode: { y: 'page', x: 'visitors' } }] }))
       .toBe('Layer 1 encodes "visitors" on x, which the query does not return. It returns: page, pageviews.');

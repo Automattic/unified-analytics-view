@@ -174,7 +174,8 @@ export const cartesian: LayoutPainter = {
       const here = places.get(n.row ?? '')!.size, all = counts.get(n.row ?? '')!;
       el.toggleAttribute('data-beside', here > 1); el.toggleAttribute('data-stacked', all > here);
     });
-    keyed(svg, nodes.filter((n): n is PathNode => inPlot(n) && n.kind === 'path'), () => 'path', (el, n) => {
+    // A path that joins the points of two metrics is in their part, `points`, and is drawn in the same SVG, under the dots.
+    keyed(svg, nodes.filter((n): n is PathNode => (inPlot(n) || n.part === 'points') && n.kind === 'path'), () => 'path', (el, n) => {
       morph(el as SVGElement, n); el.toggleAttribute('data-fill', !!n.fill);
       // A scene's width is a weight, against the 2 it gives a line of the data: the line token is that line's width here,
       // and a comparison's or a rule's is the same share of it.

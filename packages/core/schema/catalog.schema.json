@@ -9,13 +9,14 @@
   "properties": {
     "metrics": {
       "type": "object",
+      "description": "By name. A companion the engine returns with a metric, \"<metric>@<suffix>\", is in its metric's unit and needs no entry. One that is not, a rank or a share of a count, has an entry here under its whole name (\"pageviews@rank\"), which gives its unit, label and polarity.",
       "additionalProperties": {
         "type": "object",
         "required": ["label", "unit", "polarity"],
         "additionalProperties": false,
         "properties": {
           "label": { "type": "string" },
-          "unit": { "anyOf": [{ "enum": ["count", "ratio", "percent", "ms", "s", "bytes"] }, { "type": "string", "pattern": "^[a-z]{3}$" }], "description": "What the metric is measured in, which is how its values are written. \"ratio\" is a rate from 0 to 1 and \"percent\" one from 0 to 100; \"ms\" and \"s\" are lengths of time. Money's unit is its currency's ISO 4217 code in lower case, \"usd\", and its values are in that currency's own units: dollars, not cents." },
+          "unit": { "anyOf": [{ "enum": ["count", "ratio", "percent", "ms", "s", "bytes", "rank"] }, { "type": "string", "pattern": "^[a-z]{3}$" }], "description": "What the metric is measured in, which is how its values are written. \"ratio\" is a rate from 0 to 1 and \"percent\" one from 0 to 100; \"ms\" and \"s\" are lengths of time. \"rank\" is a place in an order, 1 the first: its scale runs from 1 at the top, and it is written \"1st\". Money's unit is its currency's ISO 4217 code in lower case, \"usd\", and its values are in that currency's own units: dollars, not cents." },
           "definition": { "type": "string", "description": "What the number counts, caveats included, in a sentence or two. Carried with the tldr value, and shown when the number is pointed at." },
           "polarity": { "enum": ["up", "down", "none"], "description": "Whether an increase is good. Drives delta colour." },
           "rangeTotal": { "enum": ["sum", "sum of daily"], "description": "How the engine forms a total over a range." },

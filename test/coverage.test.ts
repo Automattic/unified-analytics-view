@@ -44,7 +44,7 @@ describe('the sweep, for what the prototype does not know', () => {
     it(name + ': resolves in every data state, and steps down to the number and then the prose', () => {
       expect(view(spec), JSON.stringify(view.errors)).toBe(true);
       // A plot of points has no bare form: under the room its axes need it is the number alone (test/points.test.ts).
-      const points = ['scatter', 'bubble', 'quadrant', 'embedding'].includes(name);
+      const points = ['scatter', 'bubble', 'quadrant', 'embedding', 'connected'].includes(name);
       // Rows of text with no column of values ask for their label's 90 px and nothing measured, so they are still rows at 120.
       const plain = name === 'stem';
       for (const sc of scenarios) {
@@ -52,7 +52,8 @@ describe('the sweep, for what the prototype does not know', () => {
         const layouts = [346, 250, 120, 10].map((w) => run(spec, w, null, sc).plan.layout), marks = run(spec, 700).plan.layout;
         expect(layouts, sc).toEqual(sc === 'empty' ? ['notice', 'notice', 'none', 'prose'] : [marks, points ? 'none' : marks, plain ? marks : 'none', 'prose']);
         // What rows give up first is their own, and is held in test/coverage-rows.test.ts.
-        if (marks === 'cartesian' && !points) expect(run(spec, 250, null, sc).plan.dropped[0], sc).toBe(sc === 'empty' ? undefined : 'axes and grid (added the number to make up for them)');
+        // A plot that compares says first what it has no prior period for, where it has none: the difference sample is the one such plot here.
+        if (marks === 'cartesian' && !points) expect(run(spec, 250, null, sc).plan.dropped.filter((d) => !d.includes('(no prior data)'))[0], sc).toBe(sc === 'empty' ? undefined : 'axes and grid (added the number to make up for them)');
         // With room for everything, all that is missing is what there is no prior period to say.
         expect(run(spec, 700, null, sc).plan.dropped, sc).toEqual(sc === 'no-prior' && spec.query.compare ? [expect.stringContaining('(no prior data)')] : []);
       }
@@ -313,14 +314,17 @@ describe('stacking, and bars side by side', () => {
     // The same holds with no guides to round the scale: shares run to the whole.
     expect(rects(plot({ ...shares, query: { ...shares.query, limit: 2 } }, 250).ratio, '2026-09-08').pop()!.v).toBeLessThan(0.95);
   });
-  it('stack: "center" sets each stack half on either side of zero', () => {
-    const { ratio } = plot(as('center')), zero = (ratio.nodes.find((n) => n.key === 'ytick:0') as { t: number }).t;
+  it('stack: "center" sets each stack half on either side of the middle of the plot, and has no value axis', () => {
+    const { ratio } = plot(as('center')), zero = 0.5;
     expect(view(as('center')), JSON.stringify(view.errors)).toBe(true);
-    expect(zero).toBe(0.5);
+    // A scale that counts away from the middle says nothing of how thick a band is: no tick, no grid, no gutter for them.
+    expect(ratio.nodes.filter((n) => n.part === 'y-axis' || n.key.startsWith('grid:'))).toEqual([]);
+    expect(ratio.parts).toEqual(['plot', 'x-axis', 'legend']);
     for (const row of ratio.rows!) {
       const [desktop, mobile, tablet] = rects(ratio, row);
-      expect((desktop!.v0! + tablet!.v) / 2, row).toBeCloseTo(zero, 12);
-      expect(desktop!.v0! < zero && tablet!.v > zero, row).toBe(true);
+      // The tallest stack runs from the foot of the plot to its top: with no axis the scale is not rounded.
+      expect(((desktop!.v0 ?? 0) + tablet!.v) / 2, row).toBeCloseTo(zero, 12);
+      expect((desktop!.v0 ?? 0) < zero && tablet!.v > zero, row).toBe(true);
       expect([mobile!.v0, tablet!.v0], row).toEqual([desktop!.v, mobile!.v]);
     }
   });

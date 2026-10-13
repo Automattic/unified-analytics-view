@@ -61,6 +61,8 @@ function duration(ms: number): string {
   if (s < 59.95) return sign + +s.toFixed(1) + 's';
   return sign + (t < 3600 ? Math.floor(t / 60) + 'm ' + two(t % 60) + 's' : Math.floor(t / 3600) + 'h ' + two(Math.floor((t % 3600) / 60)) + 'm');
 }
+// A place in an order: "1st", "2nd", "3rd", "11th".
+const ordinal = (n: number) => { const th = ['th', 'st', 'nd', 'rd'], v = Math.abs(n) % 100; return n + (th[(v - 20) % 10] || th[v] || th[0]!); };
 const BYTES = ['B', 'kB', 'MB', 'GB', 'TB', 'PB'];
 // Bytes in steps of a thousand, as the SI prefixes mean: "1.2 MB".
 function bytes(v: number): string {
@@ -69,7 +71,7 @@ function bytes(v: number): string {
   return (v < 0 ? '-' : '') + +a.toFixed(i ? 1 : 0) + ' ' + BYTES[i];
 }
 /** The units a catalog may give a metric, beside a currency's code. The `Unit` type, the catalog schema's enum and `formatUnit` are kept in step: a new unit is added to all three. */
-export const UNITS: Unit[] = ['count', 'ratio', 'percent', 'ms', 's', 'bytes'];
+export const UNITS: Unit[] = ['count', 'ratio', 'percent', 'ms', 's', 'bytes', 'rank'];
 /** A value in a unit, where there is a unit and no one metric to hand: a tick on a scale that several metrics share. */
 export function formatUnit(v: number | null | undefined, unit: string, form?: 'compact' | 'exact'): string {
   if (v == null) return '–';
@@ -81,6 +83,7 @@ export function formatUnit(v: number | null | undefined, unit: string, form?: 'c
     case 'ms': return exact ? NF.format(v) + ' ms' : duration(v);
     case 's': return exact ? NF.format(v) + ' s' : duration(v * 1000);
     case 'bytes': return exact ? NF.format(v) + ' B' : bytes(v);
+    case 'rank': return form === 'compact' || !Number.isInteger(v) ? String(v) : ordinal(v);   // a tick on a scale of ranks is the bare number
   }
   if (CURRENCIES.has(unit)) return money(v, unit, form);
   throw new Error('The unit "' + unit + '" has no format. Give the metric one of ' + UNITS.join(', ') + ' in the catalog, or a currency\'s ISO 4217 code in lower case ("usd"), or add a branch for it to formatUnit in packages/core/src/format.ts.');

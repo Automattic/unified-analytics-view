@@ -87,32 +87,68 @@ interface Draw {
   ends: (r: Row) => [number, number];
   /** A bar's place among those beside it at one x: which, of how many. */
   slot?: [number, number];
-  /** For a bar with two ends, and for bars that go both ways from nothing: its metric's polarity, which turns the paint of the way it goes. */
+  /** For a bar or an area with two ends that is painted by direction, and for bars that go both ways from nothing: its metric's polarity, which turns the paint of the way it goes. */
   polarity?: Polarity | undefined;
   /** For a `unit`: what one of its glyphs is worth, in its metric's own terms. */
   worth?: number | undefined;
+  /** x is a number dimension the engine cut into bins: a line or an area is flat across each, and steps at its edges, as a bar there has no gap. */
+  step?: boolean;
 }
 type MarkFn = (l: Layer, d: Draw) => SceneNode[];
-/** A field's metric: the one a companion came with, or itself. */
-const metricOf = (catalog: Catalog, f: unknown) => (typeof f === 'string' ? catalog.metrics[f.split('@')[0]!] : undefined);
-/** The paint of a bar that runs from one value to another: good or bad by which way it goes, turned by its metric's
+/** A field's definition: its own, where the catalog has one under its whole name, and for a companion with none the
+ * one of the metric it came with. So a companion is in its metric's unit unless the catalog says otherwise
+ * (`"pageviews@rank": { "unit": "rank" }`), and core reads no suffix to know it. */
+export const metricOf = (catalog: Catalog, f: unknown): MetricDef | undefined => (typeof f !== 'string' ? undefined : Object.hasOwn(catalog.metrics, f) ? catalog.metrics[f] : catalog.metrics[f.split('@')[0]!]);
+/** The paint of a mark that runs from one value to another: good or bad by which way it goes, turned by its metric's
  * polarity. One whose metric has no better way keeps its own paint. Positions are compared as they are drawn. */
 const toned = (polarity: Polarity | undefined, from: number, to: number, paint: string) => (!polarity || polarity === 'none' ? paint : (to < from) === (polarity === 'down') ? 'delta.good' : 'delta.bad');
 
+type Pt = PathNode['points'][number];
+/** An area between two ends, cut where they cross: each piece lies wholly to one side, `up` where the second end is the
+ * higher. A point where the two are level belongs to the piece before it.
+ * ponytail: a crossing is found on the straight line between two rows, and the pieces are then drawn with the curve of
+ * the lines beside them. So a piece's tip is a hair from where those curves cross. Solve the curves if it ever shows. */
+function cut(pts: Pt[]): { up: boolean; pts: Pt[] }[] {
+  const out: { up: boolean; pts: Pt[] }[] = [], gap = (p: Pt) => p.v - (p.v0 || 0);
+  let cur: Pt[] = [], way = 0;
+  pts.forEach((p, i) => {
+    const d = Math.sign(gap(p));
+    if (d && way && d !== way) {
+      const a = pts[i - 1]!, da = gap(a), f = da / (da - gap(p)), v = a.v + (p.v - a.v) * f;
+      // Where the ends meet between two rows, which is no row's: the piece before ends there and the next begins. Level at a row, that row is where.
+      const at: Pt = da ? { x: a.x + (p.x - a.x) * f, v, ...(v && { v0: v }) } : a;
+      if (da) cur.push(at);
+      out.push({ up: way > 0, pts: cur }); cur = [at];
+    }
+    if (d) way = d;
+    cur.push(p);
+  });
+  if (cur.length) out.push({ up: way >= 0, pts: cur });
+  return out;
+}
 const MASS = 0.5;    // how much of its paint a line of a mass is drawn in
-const path: MarkFn = (l, { id: layer, series, mass, role: role0, paint, prev, rows: pts, k, unit, ends }) => {
+const path: MarkFn = (l, { id: layer, series, mass, role: role0, paint, prev, rows: pts, k, unit, ends, polarity, step, points: joined }) => {
   const id = series == null ? layer : layer + ':' + series, role = series == null ? { role: role0 } : { role: role0, series };
   const whole = pts.filter((r) => prev || !r.partial);
   if (!whole.length) return [];
+  // Between rows a line is smoothed, with a curve that never leaves the values it joins. Not where it joins the points of
+  // two metrics, which run in no order along x: straight from each to the next, since a curve there would say a path nobody
+  // took. And not over bins, where a value holds across its bin and changes at its edge.
+  const curve = joined ? undefined : step ? 'step' as const : 'monotone' as const, part: Part = joined ? 'points' : 'plot', bent = curve && { curve };
   // An area's points say where it starts only when that is not the bottom of the plot.
-  const points = (rs: Row[]): PathNode['points'] => rs.map((r) => { const [v0, v] = ends(r); return { row: k(r), x: unit.cx(k(r)), v, ...(l.mark === 'area' && v0 && { v0 }) }; });
-  // An area under a line is a tint. Stacked, each is the mark itself.
-  if (l.mark === 'area') return [{ key: id, part: 'plot', kind: 'path', d: pathD(points(whole), 'monotone', true), points: points(whole), curve: 'monotone', fill: true, paint, ...(!(l.stack && series != null) && { opacity: 0.14, tone: 'soft' as const }), layer: 'data', ...role }];
-  const nodes: SceneNode[] = [{ key: id, part: 'plot', kind: 'path', d: pathD(points(whole), 'monotone'), points: points(whole), curve: 'monotone', paint, width: prev ? 1.5 : 2, dash: prev ? '3 3' : null, ...(mass && { opacity: MASS }), layer: 'data', ...role }];
+  const points = (rs: Row[]): Pt[] => rs.map((r) => { const [v0, v] = ends(r); return { row: k(r), x: unit.cx(k(r)), v, ...(l.mark === 'area' && v0 && { v0 }), ...(step && { w: unit.span!(k(r)) }) }; });
+  if (l.mark === 'area') {
+    // An area under a line is a tint. Stacked, each is the mark itself.
+    const area = (key: string, ps: Pt[], paint: string): SceneNode => ({ key, part, kind: 'path', d: pathD(ps, curve, true), points: ps, ...bent, fill: true, paint, ...(!(l.stack && series != null) && { opacity: 0.14, tone: 'soft' as const }), layer: 'data', ...role });
+    // Painted by direction, it is cut where its two ends cross, and each piece is a gain or a loss. A piece is keyed by the row it starts at.
+    if (polarity && polarity !== 'none') return cut(points(whole)).map((piece) => area(id + ':' + piece.pts.find((p) => p.row != null)!.row, piece.pts, toned(polarity, 0, piece.up ? 1 : -1, paint)));
+    return [area(id, points(whole), paint)];
+  }
+  const nodes: SceneNode[] = [{ key: id, part, kind: 'path', d: pathD(points(whole), curve), points: points(whole), ...bent, paint, width: prev ? 1.5 : 2, dash: prev ? '3 3' : null, ...(mass && { opacity: MASS }), layer: 'data', ...role }];
   // A range that starts or ends inside a bucket leaves that one incomplete: dashed in from the first, and out to the last.
   const from = pts.indexOf(whole[0]!), lead = pts.slice(0, from).concat(whole[0]!), tail = [whole[whole.length - 1]!].concat(pts.slice(from).filter((r) => r.partial));
   for (const [key, rs] of [[':partial:lead', lead], [':partial', tail]] as const)
-    if (!prev && rs.length > 1) nodes.push({ key: id + key, part: 'plot', kind: 'path', d: pathD(points(rs)), points: points(rs), paint, width: 2, dash: '2 4', opacity: mass ? MASS : 0.75, layer: 'data', ...role, note: 'incomplete bucket' });
+    if (!prev && rs.length > 1) nodes.push({ key: id + key, part, kind: 'path', d: pathD(points(rs)), points: points(rs), paint, width: 2, dash: '2 4', opacity: mass ? MASS : 0.75, layer: 'data', ...role, note: 'incomplete bucket' });
   return nodes;
 };
 const bar: MarkFn = (_l, { id, series, role, paint, prev, rows, k, unit, ends, polarity, slot: [j, n] = [0, 1] }) => rows.map((r) => {
@@ -193,6 +229,7 @@ function unitKey(id: string, worth: number, metric: MetricDef | undefined): Scen
 /** A layer's own paint, where it states one. `delta` is the paint of its metric's change over the range, as the tldr
  * value's delta has it: good or bad by the metric's polarity. With no change to judge, the layer has stated none. */
 function paintOf(l: Layer, catalog: Catalog, result: Result): string | undefined {
+  if (l.paint === 'direction') return undefined;                          // not a paint: each mark is painted by the way it goes, over the layer's own
   if (l.paint !== 'delta') return l.paint;
   const f = l.encode && (isDim(catalog, l.encode.y) ? l.encode.x : l.encode.y), M = metricOf(catalog, f);
   const d = M && delta(result.totals[f as string] as number, result.totals[f + '@previous'], M.polarity);
@@ -208,11 +245,12 @@ export function xDimOf(catalog: Catalog, layers: Layer[]): string | undefined {
   return layers.map((l) => l.encode && l.encode.x).find((f) => isDim(catalog, f)) as string | undefined;
 }
 /** The units a plot's layers measure in, in layer order: a y scale each. Metrics of one catalog `unit` share a scale, and
- * shares of a whole are a unit of their own. A layer with a constant on y has none, and is drawn on the first. */
+ * shares of a whole are a unit of their own. A companion is in its metric's unit, or in its own where the catalog has
+ * an entry for it (metricOf). A layer with a constant on y has none, and is drawn on the first. */
 function unitOf(catalog: Catalog, l: Layer, xField?: string): string | null {
-  const y = l.encode && l.encode.y;
-  if (typeof y !== 'string' || !(y in catalog.metrics)) return null;
-  return l.stack === 'normalize' && splitOf(catalog, l, xField) ? 'share' : catalog.metrics[y]!.unit;
+  const M = metricOf(catalog, l.encode && l.encode.y);
+  if (!M) return null;
+  return l.stack === 'normalize' && splitOf(catalog, l, xField) ? 'share' : M.unit;
 }
 export function unitsOf(catalog: Catalog, layers: Layer[]): string[] {
   const x = xDimOf(catalog, layers), units = [...new Set(layers.map((l) => unitOf(catalog, l, x)).filter((u): u is string => u != null))];
@@ -306,10 +344,21 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
       const y = l.encode && l.encode.y;
       if (typeof y === 'number') { if (!ui) vals.push(y); } else if (Math.max(0, units.indexOf(unitOf(catalog, l, xField)!)) === ui) spans[i]!.forEach((ends) => vals.push(...ends));
     });
+    // Ranks run from 1 at the top down to the last of them, with a tick for each, and for every few of them past ten.
+    // The first and the last stay on a short plot. What is no rank (the zero a bar or an area starts from) is at the foot.
+    if (u === 'rank') {
+      const last = Math.max(1, Math.ceil(max(vals) ?? 1)), every = Math.ceil(last / 10);
+      const ticks = Array.from({ length: last }, (_, i) => i + 1).filter((n) => n === 1 || n === last || (n % every === 0 && last - n >= every / 2));
+      return { v: (n: number) => (n < 1 ? 0 : last === 1 ? 1 : (last - n) / (last - 1)), ticks, coarse: [1, last], text: (t: number) => formatUnit(t, u, 'compact') };
+    }
+    // A stack set about the middle is read by how thick each band is, and a scale that counts away from the middle says
+    // nothing true of that. So it has no ticks and no grid, and is not rounded: the bands take the height of the plot.
+    const centred = layers.some((l, i) => l.stack === 'center' && spans[i]!.size > 0 && Math.max(0, units.indexOf(unitOf(catalog, l, xField)!)) === ui);
     const share = u === 'share', lo = Math.min(0, min(vals) ?? 0), hi = share ? 1 : Math.max(0, max(vals) ?? 0) || (lo ? 0 : 1);
     const y = scaleLinear().domain([lo, hi]);
-    if (guides.y) y.nice(4);
+    if (guides.y && !centred) y.nice(4);
     const [bottom, top] = y.domain() as [number, number];
+    if (centred) return { v: (n: number) => (n - bottom) / (top - bottom), ticks: [], coarse: [], text: String };
     // A short plot keeps the ticks a count of 2 would give on this scale. Where the two counts share only zero (a top of 8, 80, 800: steps of 5 and of 2), every other tick stays instead.
     const fine = y.ticks(4), two = y.ticks(2).filter((t) => fine.includes(t));
     return { v: (n: number) => (n - bottom) / (top - bottom), ticks: fine, coarse: two.length > 1 ? two : fine.filter((_, i) => i % 2 === 0), text: (t: number) => (share ? fmtPct(t) : formatUnit(t, u || lone, 'compact')) };
@@ -363,11 +412,15 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     if (!draw) throw new Error('The "' + l.mark + '" mark has no rule for a time or category axis yet. Use line, area, bar, rule, dot, text, tick or unit.');
     // A bar stands on a row's share of x, a tick lies across it, and a unit's glyphs are as wide as it. A metric there gives it none, and neither does a number dimension that came with no bins.
     if ((l.mark === 'bar' || l.mark === 'tick' || l.mark === 'unit') && xOn && !xDim) throw new Error('Layer ' + (i + 1) + ' is a ' + l.mark + ' with the metric "' + xOn + '" on x, and a ' + l.mark + ' needs a dimension there to stand on. Use "dot" for a point at two metrics, or put a dimension on x.');
+    // An area fills down from a line that runs one way along x. The points of two metrics run in no order there.
+    if (l.mark === 'area' && xOn && !xDim) throw new Error('Layer ' + (i + 1) + ' is an area with the metric "' + xOn + '" on x, and an area fills under a line that runs one way along x, which the points of two metrics do not. Use "line" to join the points in the order of their rows, or put a dimension on x.');
     if ((l.mark === 'bar' || l.mark === 'unit') && xOn && rows.length && rows[0]![xOn + '@end'] == null) throw new Error((l.mark === 'bar' ? 'Bars' : 'The glyphs of a unit') + ' on the number dimension "' + xOn + '" need its bins, and this result has no "' + xOn + '@end". Return where each bin ends from the query layer, or use line or dot.');
     const v = scaleOf(l).v;
     const d: Draw = { say, id: ids[i]!, role: roleOf(l), paint: paintOf(l, catalog, result) || (prev ? 'compare' : 'series.1'), prev, rows: rows.filter((r) => span.has(r)), k, unit, v, xv, size, points: !!xOn && !xDim, worth: worths[i],
       ends: (r) => { const [lo, hi] = span.get(r)!; return [v(lo), v(hi)]; },
-      ...(l.mark === 'bar' && !l.paint && (l.encode!.y2 != null || diverges(l)) && { polarity: metricOf(catalog, l.encode!.y)?.polarity }) };
+      step: !!xDim && !!xOn && rows.length > 0 && rows[0]![xOn + '@end'] != null,
+      // A mark with two ends is painted by which way it goes only where its layer says so: `paint: "direction"`.
+      ...((l.paint === 'direction' ? l.encode!.y2 != null : l.mark === 'bar' && !l.paint && l.encode!.y2 == null && diverges(l)) && { polarity: metricOf(catalog, l.encode!.y)?.polarity }) };
     if (!splitOf(catalog, l, xField)) return nodes.push(...draw(l, d));
     // Split by detail, every series is in the layer's own paint, and none has a label at its end: a label is in its series' colour.
     const plain = !paintedOf(catalog, l, xField);
@@ -456,7 +509,7 @@ interface Track {
 type TrackFn = (l: Layer, d: Track) => SceneNode[];
 
 // A bar runs from zero to its value, so one below zero lies to the left of where the others start. With a second end
-// it runs from its value to that, and is painted by which way it goes. Behind a label it is a tint.
+// it runs from its value to that, and where its layer says `paint: "direction"` it is painted by which way it goes. Behind a label it is a tint.
 const trackBar: TrackFn = (_l, { id, role, paint, k, at, to, v, beside, polarity }) => {
   const v0 = v(to == null ? 0 : at), v1 = v(to ?? at);
   return [{ key: id + ':' + k, part: 'rows', kind: 'rect', v: v1, ...(v0 && { v0 }), row: k, paint: toned(polarity, v0, v1, paint), ...(!beside && { opacity: 0.2, tone: 'soft' as const }), layer: 'data', role }];
@@ -528,7 +581,7 @@ function sceneRows(catalog: Catalog, layers: Layer[], rows: Row[], result: Resul
         const [at, to] = on(l, r), ranged = l.encode!.x2 != null;
         if (at == null || (ranged && to == null)) return;                  // a row with nothing to mark has no mark
         nodes.push(...draw(l, { id: ids[li]!, role: roleOf(l), paint: paintOf(l, catalog, result) || shade(l, r) || (l.series === 'previous' ? 'compare' : 'series.1'), k, at, ...(ranged && { to: to! }), v, beside, worth: worths.get(l),
-          ...(l.mark === 'bar' && ranged && !l.paint && { polarity: metricOf(catalog, l.encode!.x)?.polarity }) }));
+          ...(l.mark === 'bar' && ranged && l.paint === 'direction' && { polarity: metricOf(catalog, l.encode!.x)?.polarity }) }));
       } else if (l.mark === 'text') {
         const cell = cellOf(catalog, l, r);
         nodes.push({ key: ids[li] + ':' + k, part: 'rows', kind: 'text', row: k, text: cell.text,
@@ -890,7 +943,7 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
     if (side && !parts.length) parts.push('number');
     body = sceneCartesian(catalog, p.layers, p.guides, result, (q.by || [])[0]);
     const key = body.series ? p.guides.legend : undefined;                 // layers that were split may have been given up
-    if (p.guides.y) parts.push('y-axis');
+    if (p.guides.y && body.nodes.some((n) => n.part === 'y-axis')) parts.push('y-axis');   // a stack about the middle has no value axis
     parts.push('plot');
     if (body.nodes.some((n) => n.part === 'points')) parts.push('points');
     if (p.guides.pointLabels && body.nodes.some((n) => n.part === 'point-labels')) parts.push('point-labels');

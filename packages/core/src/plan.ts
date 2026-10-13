@@ -4,8 +4,8 @@ import { fmtTime, rangeLabel } from './format.ts';
 import { customMarks } from './marks.ts';
 import { PRESETS, expand, fills, presetNames, usesPrevious } from './presets.ts';
 import { COLUMNS_BLOCK, UNIT_KEY_BLOCK, place } from './place.ts';
-import { BUILT_IN_MARKS, DETAIL_LAYOUTS, buildScene, columnLabel, columnsOf, tldrValueText, isDim, roleOf, seriesOf, trackBeside, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
-import { gridProse, rangeProse, tldrProse } from './prose.ts';
+import { BUILT_IN_MARKS, DETAIL_LAYOUTS, buildScene, columnLabel, columnsOf, tldrValueText, isDim, metricOf, roleOf, seriesOf, trackBeside, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
+import { differenceProse, gridProse, rangeProse, rankProse, tldrProse } from './prose.ts';
 import type { Catalog, Container, Layer, Layout, Plan, PlanShape, PresetLibrary, Query, Reduction, ReductionId, Result, Role, PlacedScene, Spec } from './types.ts';
 
 /* Start from everything the spec asks for, then apply the container's reductions
@@ -64,6 +64,12 @@ function checkLayers(layers: Layer[], q: Query, catalog: Catalog, result: Result
       if (l.series) throw new Error(n + ' with series: "' + l.series + '", and a unit draws this period\'s value alone: glyphs of two periods would lie over each other. Remove "series", or use "bar" or "line" for the comparison.');
       if (l.stack && !(l.stack === 'normalize' && grid)) throw new Error(n + ' with stack: "' + l.stack + '", and a unit\'s glyphs are counted from nothing, each group on its own. ' + (grid ? 'A grid divided by color is shares of the whole already: remove "stack", or write "normalize".' : 'Remove "stack", or use "bar" to stack a second dimension.'));
       if ((isDim(catalog, e.x) || isDim(catalog, e.y)) && [e.color, e.detail].some((f) => isDim(catalog, f) && f !== e.x && f !== e.y)) throw new Error(n + ' split by "' + [e.color, e.detail].find((f) => isDim(catalog, f) && f !== e.x && f !== e.y) + '", and a unit on an axis counts one value for each row: glyphs of several series would lie over each other. Use "bar" with "stack" for a second dimension, or remove it from the layer and from query.by.');
+    }
+    // Painted by direction, a mark is a gain or a loss by which of its two ends is the higher. So it has two, and no colours of a split to give up for it.
+    if (l.paint === 'direction') {
+      const end = (['x2', 'y2'] as const).find((e) => l.encode?.[e] != null);
+      if (!end || (l.mark !== 'bar' && l.mark !== 'area')) throw new Error('Layer ' + (i + 1) + ' is a "' + l.mark + '" with paint: "direction"' + (end ? '' : ' and one end') + ', and that paints a bar or an area by which way it runs from one value to another. Give a bar or an area its second end on x2 or y2, or name a paint token: series.1 to series.6, delta.good, delta.bad.');
+      if (l.encode!.color != null) throw new Error('Layer ' + (i + 1) + ' has paint: "direction" and encodes "' + l.encode!.color + '" on color, and a mark has one paint: its series\' colour, or a gain\'s or a loss\'s. Remove one of the two.');
     }
     if (l.series === 'delta' && !(l.mark === 'text' && isDim(catalog, l.encode && l.encode.y) && typeof (l.encode && l.encode.text) === 'string' && (l.encode!.text as string) in catalog.metrics))
       throw new Error('Layer ' + (i + 1) + ' has series: "delta", which is a row\'s change in a metric. Make it a text layer with the dimension on y and the metric on text.');
@@ -129,13 +135,19 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   const points = !!layers.length && isPoints(catalog, layers);
   // Glyphs with no dimension say how far along its range a metric is, and not what it is: the number stands above them.
   const p: PlanShape = { layout: laid, layers, guides: {}, tldrValue: rules.tldrValue.above === 'always' || !!M.instant || !layers.length || (unit && !by), side: false, rowLimit: null,
-                         share, text: tldrProse(q, result, share, catalog, points) };
+                         share, text: tldrProse(q, result, share, catalog, points && (layers.some((l) => l.mark === 'line') ? 'path' : true)) };
   if (p.layout === 'cartesian') p.guides = { x: true, y: true, grid: true };
+  // A plot whose y is a place in an order says who is first and who moved, where it has a dimension to split by. A rank is known by its unit.
+  const ranked = p.layout === 'cartesian' && xDimOf(catalog, layers) ? layers.map((l) => (l.encode || {}).y).find((f): f is string => metricOf(catalog, f)?.unit === 'rank') : undefined;
+  if (ranked) p.text = rankProse(q, result, catalog, ranked, xDimOf(catalog, layers)!) ?? p.text;
   if (p.layout === 'matrix') { p.guides = { x: true, y: true, ramp: true, ...(layers.some((l) => l.mark === 'dot') && { size: true }) }; p.text = gridProse(q, result, catalog) ?? p.text; }
   // A range that supports the central mark is said after the view's own sentence: its least and its most. One that
   // runs from the period before is the comparison, which is not a range.
   const range = layers.filter((l) => roleOf(l) === 'context' && !usesPrevious(l)).map((l) => l.encode || {}).map((e) => (e.y2 != null ? [e.y, e.y2] : [e.x, e.x2])).find((ends): ends is [string, string] => ends.every((f) => typeof f === 'string'));
   if (range) p.text += rangeProse(q, result, catalog, range);
+  // An area painted by direction is a surplus and a deficit: on how many rows its second end is above its first is said after the view's own sentence.
+  const gap = p.layout === 'cartesian' ? layers.find((l) => l.mark === 'area' && l.paint === 'direction') : undefined;
+  if (gap && !result.meta.empty) p.text += differenceProse(q, result, catalog, [gap.encode!.y as string, gap.encode!.y2!]);
   if (custom) p.guides = { ramp: true, size: true };
   // A layout with a rule that names a `fallback` gives way to that preset, whole, where the rule applies: the same query,
   // planned again. Asked before the reductions, which have nothing to give up for a view that is not this one.

@@ -744,6 +744,94 @@ Samples added to `moreSamples`: `correlogram`, `circles`, `bins2d`. `stripes` wa
 - `dot` in a strip, one row or one column.
 - In the browser: Chromium only. Not checked: a page that reads from the right, the `dots` painter on screen, a touch pointer, a screen reader, forced colours, and dots over cells in dark.
 
+### Step 3, lines and areas (built October 12)
+
+Built on a branch of its own, from `e09de06`. Merged. 1,021 tests pass (969 before) and the typecheck is clean. `prototype/`, the parity tests and the six samples' golden scenes are untouched. Four golden scenes that existed changed, on purpose, and twelve are new; they are listed below. Looked at on the bench in headless Chromium.
+
+**What was added**
+
+- **A `line` in a plot of points.** With a metric on x and on y a line joins the rows in the engine's order, straight from each to the next, with the unfinished bucket joined on by a dashed stroke as on any line. Its path is in the points' part, `points`, with no `curve`.
+- **Steps over bins.** `PathNode.curve` is `'monotone' | 'step'`, and a point of a stepped path has `w`, the width of its bin. `pathD` draws each point as a flat run `w` wide about its `x`, so `place()`, the DOM and the morph draw steps with no code of their own. A line or an area is stepped where x is a `number` dimension and the first row has `<dimension>@end`: the test a bar there already made.
+- **The unit `rank`,** in `Unit`, `UNITS`, `formatUnit` and the catalog schema. Its y scale runs from 1 at the top to the largest rank, with a tick and a grid line for each. It is written "1st" in a readout, a table and the prose, and as the bare number on its axis.
+- **A companion's unit.** `metricOf(catalog, field)`, exported from core: a field's own catalog entry where there is one under its whole name, and for a companion with none its metric's. `unitOf`, the scales, the readout, the crosshair and the table read through it.
+- **`paint: "direction"`,** on a `bar` or an `area` with two ends, in a plot and in a row's track. `cut()` in `scene.ts` divides an area where its ends cross.
+- **Five presets** in core's `PRESETS`: `bump`, `spaghetti`, `difference`, `connected-scatter`, `ecdf`. Working names, all five.
+- **Four samples** in `moreSamples`: `connected`, `ecdf`, `bump`, `difference`. `spaghetti` is now written with its preset. All are swept in `test/coverage.test.ts` with golden scenes at three sizes, and what each is is held in `test/uncommon.test.ts`. `test/lines.test.ts` is new: a companion's unit, the rank scale and the joined line, on a catalog of its own.
+- **The fixture:** `visitors@rank` on each pair of a query by week (a value's place among its week's, counted before any limit), `pageviews@cumulative` on each bin of load time, and `errors@share` on each cause. The catalog has an entry for each of the three.
+- **Prose** for a plot of ranks, for an area painted by direction, and for two metrics joined through time (`rankProse`, `differenceProse`, and a branch of `tldrProse`).
+- **The DOM:** `layouts/cartesian.ts` paints a path of `points` in the plot's SVG, under the dots. `layouts/points.ts` makes its points the targets, `data-hits="path"`. `motion.ts` carries a step's width through a morph, and morphs a joined line point for point (`pairUp`, and `mix` with `free`). The table writes a companion in its own unit, under its own label.
+- **The bench:** every sample has its row of frames on the main page, as all do. The marks page has new states under `line`, `area` and `bar`.
+
+**Golden scenes that changed, and why**
+
+| Scene | Why |
+|---|---|
+| `density` at 346 by any, 234 by any and 346 by 100 | Part 2. Its line and its area are on a `number` dimension with `@end`, so both are steps now. **Not the reason the step's brief allowed** (it allowed part 4 alone): the decision of section 4, item 5 applies to this sample as written, and there was no way to keep it smooth without a field |
+| `streamgraph` at 346 by any | Part 5. No y ticks, no grid and no gutter for them, and the bands take the height of the plot. Also outside what the brief allowed, and asked for by it |
+
+No preset's scene changed: `waterfall`, `candlestick` and `box` are the same to the byte. No golden scene relied on the automatic rule. Twelve scenes are new, three for each new sample.
+
+**Assertions that changed, and why**
+
+- `test/ranges.test.ts`: the box plot's expansion has no `paint`. "A bar takes a second end … and is painted by which way it goes" now asks for it with `paint: "direction"`, and holds that without it the bars are `series.1`. "Is no spec field" became three tests: that the presets state it, the three refusals, and what a stated token does.
+- `test/uncommon.test.ts`: the tornado's "for step 3 and 4" fact is now two. With no paint both bars are `series.1`. With `paint: "direction"` a bar from a gain to zero is still a loss, which is step 4's. The streamgraph's fact says it has no axis. The fact that a companion has no unit is replaced by the Pareto drawn from a companion.
+- `test/coverage.test.ts`: `stack: "center"` has no `ytick:0` to find its middle by, so the middle is 0.5 and the test holds that there is no axis. The sweep's "what a plot gives up first at 250 px" passes over what a comparing plot says of a missing prior period, since `difference` is the first plot of the sweep that compares. `connected` joins the names of the plots of points.
+- `test/points.test.ts`: the density's first point has a width, and its paths are steps. An error that lists the companions of page views lists one more.
+- `test/core.test.ts`: the units an error names include `rank`, and the two strings that list presets have five more.
+- `test/coverage-rows.test.ts`, `test/registry.test.ts`: the error for a preset short of a second metric.
+
+**Choices where the plan was silent, and departures**
+
+1. **A companion's unit is known from the catalog, by the companion's whole name.** A companion with no entry is in its metric's unit, which is what was true by accident of quantiles and intervals. One that is not has an entry in `metrics`, `"visitors@rank": { "label": "Rank", "unit": "rank", "polarity": "down" }`. Core learns no suffix. The alternatives were a suffix table in core, which the rule forbids, and a `unit` on the result's `meta`, which would put a presentation fact in the answer. **What it costs:** `catalog.metrics` now holds names that are not metrics a query can ask for, and an error that lists the catalog's metrics lists them. A `text` layer in rows on a companion that has an entry becomes a column with a header, so the fixture gives `pageviews@rank` none and the league table is unchanged.
+2. **The Pareto's companion form works, and the sample was left as it is.** With `errors@share` and its entry, the line has the far axis in `ratio`, and the scene is the metric form's node for node (held by a test). The sample keeps the metric form so that its golden scenes stand. The two differ in one thing: a companion is no metric of the query, so the prose has no "Overall, cumulative share 100%".
+3. **A rank is written "1st" where a value is said, and "1" on its own axis.** The plan said only "written as ranks".
+4. **What is no rank is at the foot of a rank scale.** A bar or an area starts from zero, which is no rank, so the scale puts anything under 1 at the bottom. A bar of ranks is then tallest for the first and has no height for the last. Not refused, and not a chart anyone wants.
+5. **Ticks past ten ranks are every few,** with the first and the last always there. The plan said a tick per rank, thinned by the usual rule; the usual rule only knows a short plot, and thirty labels do not fit a tall one.
+6. **A line in a plot of points has straight segments, and so no curve to invent a path.** A stepped line has none either. Every other line keeps the monotone curve it had.
+7. **An area steps over bins too.** The plan names the line. An area under a stepped line that stayed smooth would not meet it, and the density sample is that pair.
+8. **An `area` in a plot of points is refused,** with the fix. There is no one way along x to fill under. A new refusal.
+9. **A line of points with no dot layer still has a target at each point.** The painter makes them from the path, with nothing painted, so the keyboard and the pointer work and the `points` fit rule finds its part. Core emits no node for them.
+10. **Keyboard along a connected scatter:** left and right step back and on along the line, which is the rows' order, and stop at its ends. Up and down do nothing. Enter activates, Escape lets go. Loose points keep the nearest-neighbour model.
+11. **A joined line has no crosshair.** Its x axis is a metric, and a crosshair's label under the plot is the row's name, which would stand among the wrong numbers. The readout says both values.
+12. **An area painted by direction is a tint,** at the 0.14 a fan's band has, in `delta.good` and `delta.bad`. Looked at in both themes: pale, and enough between two lines.
+13. **A crossing is found on the straight line between two rows,** and the pieces are then drawn with the curve the lines beside them have. So a piece's tip is a hair from where those curves cross. Not visible at any size looked at. Marked in the code.
+14. **A piece of a cut area is keyed by the row it starts at:** `context:area:2026-09-17`. A point where the ends cross has no `row`, so `PathNode.points[].row` is optional now. `hitNodes` and `crossMarks` pass over such a point.
+15. **`paint: "direction"` is refused in three cases,** each with the fix: on a mark with one end, on a mark that is no bar or area, and beside a field on `color`.
+16. **Where polarity is `none` a mark painted by direction is in its layer's own paint,** and an area is not cut. That is what the automatic rule did.
+17. **Bars that go both ways from zero are still painted as gains and losses with nothing said** (the `diverging` sample). That rule is older than Decided 28's and is not the one that was replaced. **To decide** whether it should be asked for too.
+18. **The tornado still states `delta.bad` and `delta.good`.** `paint: "direction"` does not mend it: a bar's first end must be a field, so a bar from zero to a gain is written from the gain to zero and runs down. Step 4, part 7 mends the cause.
+19. **A stack about the middle has no value axis.** Chosen over an axis of thickness, which would need its own ticks on a scale no band sits on. No ticks, no grid, no gutter, and the scale is not rounded, so the thickest day takes the whole height. `plan.guides.y` is still true; the scene's `parts` leave `y-axis` out. Thickness is in the readout and the table.
+20. **A slopegraph over two days is the query's business, and nothing was changed.** The range ends on the unfinished day, and a slope to an unfinished day is rightly dashed: it is the rule every line has. What is missing is a range that ends on the last whole bucket, which a query cannot say. For the API's owners.
+21. **Step 0's finding 7 was not fixed.** A plan with two dates on x says it gave up a middle date label that was never there. Mended, it broke a parity test: the prototype says the same of a plot with one row, and the test holds the port's plan to it. Left, and recorded.
+22. **The bump sample is pages by week, six of them.** Channels by week never change place in the fixture. Pages do, twice, and each ends where it began, so the prose has a sentence for that: "Places changed along the way, and each page ended where it began." A net rise and a net fall are held on a result of the test's own.
+23. **The `bump` preset is the line alone,** with no dot at each place. With dots the pointer's readout would say visitors and not ranks.
+24. **The difference sample is revenue,** which crosses the period before fourteen times. Visitors never does.
+25. **`difference` has no form against a catalog `target`.** The plan offered one. A second end may be a number, and a target is in the catalog, so it would need a slot or the lean on role the gauge has. Not built.
+26. **`ecdf` is a preset:** a line of `$metric@cumulative`. The suffix is the fixture's name for the share held so far.
+27. **`connected-scatter` is a line and a dot,** with no label on each point: twenty-eight dates is clutter, and the readout names each.
+28. **The error for a preset short of a second metric was the funnel's own words.** It names both presets that use the slot now.
+
+**Findings**
+
+1. **A rank at a whole point is not said.** The readout of a point of a split plot lists each series' value of the query's metric, so on a bump chart it says visitors. Up and down choose a series, and then the crosshair and the readout say its rank. The pivoted table has no companions at all, so it has no ranks. **To decide** with the keyboard model.
+2. **A scale still holds zero,** so a connected scatter sits in a corner of its plot when neither metric comes near nothing. Step 0's finding 8, again.
+3. **Up and down on a joined line scroll the page,** as they do on any plot with no series: the keys are not taken where they are no step. The readout goes with the scroll. Not new.
+4. **The ECDF's prose is the binned sentence,** "The most, 4,758, at a load time of 1.5 to 2", which is true of the count and says nothing of the share. A sentence for it ("half within 2.5 seconds") would read a quantile off the engine's rows. Not written.
+5. **A cut area's pieces change keys when a crossing moves to another row,** so on a data change a piece may leave and another enter where one would do better to move. Seen as a fade, not a fault.
+6. **Section 8's counts.** Layer fields that are neither data nor role: still one. Presets that need `detail`: one of the five, `spaghetti`.
+
+**Not done**
+
+- A sentence for an ECDF, and a rank in the whole-point readout and the pivoted table (findings 1 and 4).
+- `difference` against a target (choice 25).
+- In the browser: Chromium only. Not checked: WebKit, Firefox, a screen reader, touch, reduced motion, a page that reads from the right, the dots painter on screen, and a boxed height for the new samples beyond what the sweep holds.
+
+**For the API's owners**
+
+- A catalog entry for a companion that is not in its metric's unit, or a unit beside each companion in the answer.
+- `metric@rank` and `metric@cumulative` by name, without `compare`.
+- A range that ends on the last whole bucket.
+
 ## 8. What to count as it is built
 
 - **Custom marks.** There is one, `geo`. The plan adds two. Each is a hole in the grammar.

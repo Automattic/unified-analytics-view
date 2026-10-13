@@ -1,4 +1,4 @@
-import { declutter, type CircleNode, type Scene, type SceneNode, type TextNode } from '@unified-analytics/core';
+import { declutter, type CircleNode, type PathNode, type Scene, type SceneNode, type TextNode } from '@unified-analytics/core';
 import { attr, ensure, keyed, pageWay, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { unitDot } from './unit.ts';
@@ -12,7 +12,8 @@ import { unitDot } from './unit.ts';
  *
  *   .uav-plot
  *     .uav-dots              dots on a time or category axis. The plot's own hit targets step through them
- *     .uav-points            dots at two metrics. They are their own targets, in two dimensions: data-hits="xy"
+ *     .uav-points            dots at two metrics. They are their own targets, in two dimensions: data-hits="xy".
+ *                            Where a line joins them they are stepped through in its order: data-hits="path"
  *     .uav-point-labels      a label on each point. The measured pass hides the ones that collide
  *   .uav-size                the key to sizes, under the plot */
 export const DOT = 'calc(4px + var(--uav-size, 0.4) * 5px)';
@@ -22,6 +23,8 @@ export const POINTS_CSS = `
 /* The holder of points lies over the plot's own hit targets, so only its dots take the pointer. */
 .uav-dots, .uav-points, .uav-point-labels { pointer-events: none; }
 .uav-points i { pointer-events: auto; }
+/* A point of a line that has no dot drawn on it: there to be pointed at and stepped to, and it wears only the outline. */
+.uav-points i[data-bare] { background: none; }
 :is(.uav-dots, .uav-points) i { position: absolute; inset-inline-start: calc(var(--uav-x) * 100%); inset-block-start: calc((1 - var(--uav-t)) * 100%); translate: -50% -50%;
   inline-size: ${DOT}; block-size: ${DOT}; border-radius: 50%; background: var(--uav-paint); }
 /* A label sits above its point, clear of the dot. --uav-nudge is the measured pass's: what keeps it inside the plot. */
@@ -87,16 +90,28 @@ export function measurePoints(body: HTMLElement): void {
   labels.forEach((el, i) => el.toggleAttribute('data-thin', gone[i]));
 }
 
+/** A target for each row a joining line passes through, once, where it has a row: what stands in for dots that no layer drew. */
+export function pathTargets(paths: PathNode[]): CircleNode[] {
+  const at = new Map<string, CircleNode>();
+  for (const n of paths) for (const p of n.points) if (p.row != null && !at.has(p.row)) at.set(p.row, { key: 'at:' + p.row, part: 'points', kind: 'circle', pulse: false, x: p.x, t: p.v, row: p.row, ...(n.series != null && { series: n.series }), paint: n.paint, layer: 'guide' });
+  return [...at.values()];
+}
+
 /** Paint them, after the plot's own parts. `plot` is the cartesian layout's `.uav-plot`. */
 export function paintPoints(body: HTMLElement, plot: HTMLElement, scene: Scene): void {
   const nodes = scene.nodes, dots = (part: string) => nodes.filter((n): n is CircleNode => n.part === part && n.kind === 'circle');
   const dot = (el: HTMLElement | SVGElement, n: CircleNode) => { prop(el, '--uav-x', n.x); prop(el, '--uav-t', n.t); prop(el, '--uav-size', n.size); unitDot(el, n); };
-  const points = dots('points'), sizes = new Map(points.concat(dots('plot')).map((n) => [n.row, n.size]));
+  const drawn = dots('points'), sizes = new Map(drawn.concat(dots('plot')).map((n) => [n.row, n.size]));
   keyed(ensure(plot, 'div', 'uav-dots'), dots('plot'), () => 'i', dot);
+  // A line that joins the points of two metrics (core puts its path in their part). Where no layer draws a dot on them,
+  // each point of the line is a target all the same, with nothing painted: there is still a point to step to and read.
+  const joined = nodes.filter((n): n is PathNode => n.part === 'points' && n.kind === 'path'), bare = drawn.length ? [] : pathTargets(joined);
+  const points = drawn.concat(bare);
   // Points at two metrics are their own hit targets. The plot's layer of them, which tiles it along x, stands down.
+  // Joined by a line they are stepped through in the line's order, which is the rows'. Loose, by which is nearest (keys.ts).
   const holder = ensure(plot, 'div', 'uav-points');
-  keyed(holder, points, () => 'i', dot);
-  attr(holder, 'data-hits', points.length ? 'xy' : null);
+  keyed(holder, points, () => 'i', (el, n) => { dot(el, n); el.toggleAttribute('data-bare', bare.includes(n)); });
+  attr(holder, 'data-hits', points.length ? (joined.length ? 'path' : 'xy') : null);
   if (points.length) plot.querySelector(':scope > .uav-hits')?.removeAttribute('data-hits');
 
   const labels = ensure(plot, 'div', 'uav-point-labels');

@@ -198,7 +198,7 @@ describe('the funnel preset', () => {
     expect((ratio.nodes.filter((n) => n.kind === 'rect') as { v: number }[]).map((n) => +n.v.toFixed(3))).toEqual([1, 0.162, 0.062, 0.039]);
   });
   it('needs a second metric, and says so', () => {
-    expect(err({ use: 'funnel', query: { metrics: ['visitors'], by: ['step'] } })).toBe('The "funnel" preset needs two metrics in query.metrics: the count, then the rate the engine returns for it.');
+    expect(err({ use: 'funnel', query: { metrics: ['visitors'], by: ['step'] } })).toBe('The "funnel" preset needs two metrics in query.metrics, and this query has one. Add the second: a funnel\'s is the rate the engine returns for its count, and a connected scatter\'s is the metric on y.');
     expect(view(funnel), JSON.stringify(view.errors)).toBe(true);
   });
 });

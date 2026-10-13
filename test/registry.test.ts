@@ -139,7 +139,7 @@ describe('the registry of presets', () => {
     expect(expand({ use: 'toy-slots', query: q, layers: tiles.layers }).layers).toBe(tiles.layers);
     expect(err(() => expand({ use: 'toy-slots', query: { metrics: ['m', 'n'] } }))).toBe('The "toy-slots" preset needs a dimension in query.by.');
     expect(err(() => expand({ use: 'toy-slots', query: { metrics: ['m', 'n'], by: ['d'] } }))).toBe('The "toy-slots" preset needs two dimensions in query.by: the one on the axis, then the one to split by.');
-    expect(err(() => expand({ use: 'toy-slots', query: { metrics: ['m'], by: ['d', 'e'] } }))).toBe('The "toy-slots" preset needs two metrics in query.metrics: the count, then the rate the engine returns for it.');
+    expect(err(() => expand({ use: 'toy-slots', query: { metrics: ['m'], by: ['d', 'e'] } }))).toBe('The "toy-slots" preset needs two metrics in query.metrics, and this query has one. Add the second: a funnel\'s is the rate the engine returns for its count, and a connected scatter\'s is the metric on y.');
   });
   it('the library handed in comes first, and the registry is asked for what it does not have', () => {
     registerPreset('toy-strip', strip);

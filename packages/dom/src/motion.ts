@@ -63,8 +63,8 @@ export const MOTION_CSS = `
 @keyframes uav-beat-up { 0%, 88% { translate: 0 0; } 94% { translate: 0 -100%; } 94.001% { translate: 0 100%; } 100% { translate: 0 0; } }
 @keyframes uav-beat-down { 0%, 88% { translate: 0 0; } 94% { translate: 0 100%; } 94.001% { translate: 0 -100%; } 100% { translate: 0 0; } }`;
 
-/** A point of a path: where it is, and for an area where it starts when that is not the bottom. */
-export interface XV { x: number; v: number; v0?: number }
+/** A point of a path: where it is, for an area where it starts when that is not the bottom, and over bins how wide its step is. */
+export interface XV { x: number; v: number; v0?: number; w?: number }
 
 /** `from`, read at each x of `to`. A morph moves values and never x, so the two sets need not share their rows:
  * when they do, this is `from` itself. */
@@ -76,13 +76,21 @@ export function resample(from: XV[], to: XV[]): XV[] {
     return { x, v: at((p) => p.v), ...(based && { v0: at((p) => p.v0 || 0) }) };
   });
 }
-/** The points `p` of the way from one set to the other, x taken from `to`. Where either has a start, that moves too:
- * a stacked area's floor is the series under it, which is on its way as well. */
-export function mix(from: XV[], to: XV[], p: number): XV[] {
+/** The points `p` of the way from one set to the other, x taken from `to`, and with it how wide a step is: a morph
+ * moves values, and a bin stays where the new shape has it. Where either has a start, that moves too:
+ * a stacked area's floor is the series under it, which is on its way as well.
+ * `free` is for a line that joins the points of two metrics: a point there has a value on x as well, so it moves across too. */
+export function mix(from: XV[], to: XV[], p: number, free = false): XV[] {
   return to.map((t, i) => {
     const f = from[i]!, f0 = f.v0 || 0, t0 = t.v0 || 0;
-    return { x: t.x, v: f.v + (t.v - f.v) * p, ...((f0 || t0) && { v0: f0 + (t0 - f0) * p }) };
+    return { x: free ? f.x + (t.x - f.x) * p : t.x, v: f.v + (t.v - f.v) * p, ...((f0 || t0) && { v0: f0 + (t0 - f0) * p }), ...(t.w != null && { w: t.w }) };
   });
+}
+/** `from` for a line that joins the points of two metrics: point for point in the order of the rows, which is the
+ * line's own. It runs in no order along x, so there is no reading it at an x. A row the old line had none for starts
+ * where the old line ended. */
+export function pairUp(from: XV[], to: XV[]): XV[] {
+  return to.map((t, i) => from[i] ?? from[from.length - 1] ?? t);
 }
 
 let turn = 0;
@@ -137,6 +145,8 @@ export function once(el: Element, attrs: string[]): void {
 }
 
 interface Morph { now: XV[]; from: XV[]; to: PathNode; frame: number; clock?: Animation | null | undefined }
+/** Whether a path joins the points of two metrics, and so moves across as well as up and down. */
+const free = (n: PathNode) => n.part === 'points';
 const morphs = new WeakMap<Element, Morph>();
 
 /** Set a path's shape. A new path, or one in a view that is not moving, takes it at once. A kept one goes there
@@ -152,7 +162,7 @@ export function morph(el: SVGElement, n: PathNode): void {
     return;
   }
   if (!m.frame && n.d === m.to.d) { m.to = n; return; }                  // at rest on this shape already: the same data again
-  m.from = resample(m.now, n.points); m.to = n; m.clock = undefined;
+  m.from = free(n) ? pairUp(m.now, n.points) : resample(m.now, n.points); m.to = n; m.clock = undefined;
   el.style.setProperty('--uav-p', String(++turn));
   m.frame ||= requestAnimationFrame(() => step(el, m));
 }
@@ -160,7 +170,7 @@ function step(el: SVGElement, m: Morph): void {
   // The clock is found once for a morph. Asking each frame flushes style after the path before has been redrawn.
   if (m.clock === undefined) m.clock = transitions(el).find((t) => (t as CSSTransition).transitionProperty === '--uav-p') ?? null;
   const p = m.clock?.effect?.getComputedTiming().progress ?? 1;
-  m.now = mix(m.from, m.to.points, p);
+  m.now = mix(m.from, m.to.points, p, free(m.to));
   el.setAttribute('d', (p < 1 ? pathD(m.now, m.to.curve, m.to.fill) : m.to.d) ?? '');
   m.frame = p < 1 ? requestAnimationFrame(() => step(el, m)) : 0;
 }

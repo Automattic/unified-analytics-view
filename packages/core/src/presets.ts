@@ -61,19 +61,20 @@ export const PRESETS: PresetLibrary = {
     { mark: 'text', encode: { y: '$by', text: '$metric2' }, align: 'end' } ] },
   // Ranges, from the companions the engine returns with a metric. What supports the central mark is `context`, so it
   // goes first and the central mark stays. Working names, as those above are.
-  // The box states its paint: a bar with two ends is painted by which way it goes, and a box goes no way.
+  // A bar with two ends is in its layer's own paint, as a box is, unless the layer says `paint: "direction"`: then it is
+  // a gain or a loss by which way it runs, as a waterfall's step and a candle's body are.
   'box-plot': { layers: [
     { mark: 'rule', encode: { x: '$by', y: '$metric@min', y2: '$metric@max' }, role: 'context' },
-    { mark: 'bar',  encode: { x: '$by', y: '$metric@p25', y2: '$metric@p75' }, role: 'context', paint: 'series.1' },
+    { mark: 'bar',  encode: { x: '$by', y: '$metric@p25', y2: '$metric@p75' }, role: 'context' },
     { mark: 'tick', encode: { x: '$by', y: '$metric@p50' } } ] },
   'error-bars': { layers: [
     { mark: 'bar',  encode: { x: '$by', y: '$metric' } },
     { mark: 'rule', encode: { x: '$by', y: '$metric@lower', y2: '$metric@upper' }, role: 'context' } ] },
   'waterfall': { layers: [
-    { mark: 'bar',  encode: { x: '$by', y: '$metric@before', y2: '$metric@running' } } ] },
+    { mark: 'bar',  encode: { x: '$by', y: '$metric@before', y2: '$metric@running' }, paint: 'direction' } ] },
   'candlestick': { layers: [
     { mark: 'rule', encode: { x: '$by', y: '$metric@min', y2: '$metric@max' }, role: 'context' },
-    { mark: 'bar',  encode: { x: '$by', y: '$metric@open', y2: '$metric@close' } } ] },
+    { mark: 'bar',  encode: { x: '$by', y: '$metric@open', y2: '$metric@close' }, paint: 'direction' } ] },
   'fan': { layers: [
     { mark: 'area', encode: { x: '$by', y: '$metric@lower', y2: '$metric@upper' }, role: 'context' },
     { mark: 'line', encode: { x: '$by', y: '$metric' } } ] },
@@ -107,6 +108,30 @@ export const PRESETS: PresetLibrary = {
     { mark: 'unit', encode: { angle: '$metric', color: '$by' }, sweep: 'half' } ] },
   'icon-array': { layers: [
     { mark: 'unit', encode: { x: '$metric' } } ] },
+  // Lines and areas beyond the trend (docs/uncommon-coverage-plan.md, step 3). Working names, all five: check each
+  // against @automattic/charts before it ships.
+  // A bump chart: each value of the split by its place, first at the top. The engine returns the place, as `$metric@rank`,
+  // and the catalog says that companion's unit is `rank`.
+  'bump': { layers: [
+    { mark: 'line', encode: { x: '$by', y: '$metric@rank', color: '$split' } } ] },
+  // A line for each value of the split, all in one paint, with no legend: many lines read as a mass.
+  'spaghetti': { layers: [
+    { mark: 'line', encode: { x: '$by', y: '$metric', detail: '$split' } } ] },
+  // The surplus and the deficit: the area between the metric and the period before, a gain where it is ahead and a loss
+  // where it is behind. With no `compare` in the query it is the line alone.
+  'difference': { layers: [
+    { mark: 'area', encode: { x: '$by', y: '$metric@previous', y2: '$metric' }, paint: 'direction', role: 'context' },
+    { mark: 'line', encode: { x: '$by', y: '$metric' }, series: 'previous', role: 'comparison' },
+    { mark: 'line', encode: { x: '$by', y: '$metric' } } ] },
+  // One metric against another, a point for each value of the dimension, joined in the engine's order: by a time
+  // dimension, the path the two took together.
+  'connected-scatter': { layers: [
+    { mark: 'line', encode: { x: '$metric', y: '$metric2' } },
+    { mark: 'dot',  encode: { x: '$metric', y: '$metric2' } } ] },
+  // The share of the whole held up to each value of a number dimension, which the engine returns as `$metric@cumulative`.
+  // Over bins the line is steps.
+  'ecdf': { layers: [
+    { mark: 'line', encode: { x: '$by', y: '$metric@cumulative' } } ] },
 };
 
 /** Whether a layer draws from the period before: the previous series, a row's change on it, or a field of it by name. Such a layer goes where there is no such period. */
@@ -135,10 +160,10 @@ export const presetNames = (presets: PresetLibrary = PRESETS): string[] => Objec
 
 /* What a query is short of for a preset's slots, as the error says it, or null where it has them all. */
 function lacks(q: Partial<Query>, use: string, p: PresetLibrary[string]): string | null {
-  const [by, split] = q.by || [], m2 = (q.metrics || [])[1], asks = (slot: string) => p.layers.some((l) => Object.values(l.encode || {}).indexOf(slot) >= 0);
+  const [by, split] = q.by || [], [m, m2] = q.metrics || [], asks = (slot: string) => p.layers.some((l) => Object.values(l.encode || {}).indexOf(slot) >= 0);
   if (!by && asks('$by')) return 'The "' + use + '" preset needs a dimension in query.by.';
   if (!split && asks('$split')) return 'The "' + use + '" preset needs two dimensions in query.by: the one on the axis, then the one to split by.';
-  if (!m2 && asks('$metric2')) return 'The "' + use + '" preset needs two metrics in query.metrics: the count, then the rate the engine returns for it.';
+  if (!m2 && asks('$metric2')) return 'The "' + use + '" preset needs two metrics in query.metrics, and this query has ' + (m ? 'one' : 'none') + '. Add the second: a funnel\'s is the rate the engine returns for its count, and a connected scatter\'s is the metric on y.';
   return null;
 }
 // The library handed in first, by its own keys, so "constructor" is no preset. Then the registry.

@@ -3,11 +3,12 @@ import type { FitRule } from './fit.ts';
 /* Catalog: the slice of the semantic model the front end needs. */
 export type Polarity = 'up' | 'down' | 'none';
 /** A currency is its ISO 4217 code in lower case, `usd` or `eur`: each is a unit of its own, so two currencies never share an axis. */
-export type Unit = 'count' | 'ratio' | 'percent' | 'ms' | 's' | 'bytes' | (string & {});
+export type Unit = 'count' | 'ratio' | 'percent' | 'ms' | 's' | 'bytes' | 'rank' | (string & {});
 export interface MetricDef {
   label: string;
   /** What the metric is measured in, which is how its values are written (format.ts). `ratio` is a rate from 0 to 1 and
-   * `percent` one from 0 to 100; money is in its currency's own units, dollars and not cents; `ms` and `s` are lengths of time. */
+   * `percent` one from 0 to 100; money is in its currency's own units, dollars and not cents; `ms` and `s` are lengths of time.
+   * `rank` is a place in an order, 1 the first: its scale runs from 1 at the top, and it is written "1st". */
   unit: Unit;
   polarity: Polarity;
   /** What the number counts, caveats included, in a sentence or two. Carried on the tldr value as its `note`, so the
@@ -33,6 +34,9 @@ export interface DimensionDef {
   values?: 'country';
 }
 export interface Catalog {
+  /** By name. A companion the engine returns with a metric (`pageviews@rank`) may have an entry of its own, under its
+   * whole name, where it is not in its metric's unit: its unit, label and polarity are then read from there. One with
+   * no entry is in its metric's. */
   metrics: Record<string, MetricDef>;
   dimensions: Record<string, DimensionDef>;
 }
@@ -90,7 +94,9 @@ export interface Layer {
   label?: string;
   align?: 'end';
   /** A paint token in place of the layer's own. `delta` is the paint of its metric's change over the range: good or bad by
-   * the metric's polarity, and the layer's own where there is no change to judge. */
+   * the metric's polarity, and the layer's own where there is no change to judge. `direction`, on a `bar` or an `area`
+   * with two ends, paints each mark by which way it runs from the first end to the second: `delta.good` or `delta.bad`
+   * by the metric's polarity, and the layer's own where the polarity is `none`. An area is cut where its ends cross. */
   paint?: string;
 }
 export interface Guides {
@@ -218,12 +224,14 @@ export interface RectNode extends NodeBase {
   /** The two dimension values a cell came from: the one on x, then the one on y. A cell has no `row`. */
   pair?: [x: string, y: string];
 }
-/** `d` is drawn in a 100 by 100 box, for the painter to stretch. `points` are what it was drawn from. An area's point has `v0` where it starts above the bottom of the plot. */
+/** `d` is drawn in a 100 by 100 box, for the painter to stretch. `points` are what it was drawn from. An area's point has `v0` where it starts above the bottom of the plot.
+ * A point with no `row` is where the two ends of an area cross, between two rows. With `curve: "step"` a point is a flat run `w` wide about its `x`: its bin.
+ * A path in `points` joins the points of two metrics in the order of their rows, straight from each to the next, and has no `curve`. */
 export interface PathNode extends NodeBase {
   kind: 'path';
   d: string | null;
-  points: { row: string; x: number; v: number; v0?: number }[];
-  curve?: 'monotone';
+  points: { row?: string; x: number; v: number; v0?: number; w?: number }[];
+  curve?: 'monotone' | 'step';
   fill?: boolean;
   width?: number;
   dash?: string | null;

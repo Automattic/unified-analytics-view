@@ -1,4 +1,4 @@
-import { formatBin, formatDimension, formatValue, layerKeys, partialNote, plural, rowKeys, unitsOf, type Catalog, type Layer, type Query, type RectNode, type Result, type Row, type Scene } from '@unified-analytics/core';
+import { formatBin, formatDimension, formatValue, layerKeys, metricOf, partialNote, plural, rowKeys, unitsOf, type Catalog, type Layer, type Query, type RectNode, type Result, type Row, type Scene } from '@unified-analytics/core';
 import { attr, ensure, paintVar, prop } from './dom.ts';
 import { apart } from './measure.ts';
 import { FOCUS, HOVER, token } from './tokens.ts';
@@ -12,6 +12,10 @@ import { nearest } from './layouts/points.ts';
  * focus, left and right step and stop at the ends, Enter or Space activates the chosen point, Escape lets go of it
  * and Tab moves on. To assistive technology the holder is a listbox and each point an option named by its readout,
  * so the words on screen and the words announced are one string.
+ *
+ * Points at two metrics have no order along either axis. Loose, an arrow goes to the nearest point that way
+ * (layouts/points.ts). Joined by a line they have the line's order, which is the rows': left and right step back and
+ * on along it, as along any line, wherever on the plot that takes the reader, and up and down do nothing.
  *
  * A plot split into series has several values at each point. The point's readout says them all, and up and down
  * step through the series there: up from the whole point to the first series, which is the foot of a stack, and
@@ -30,6 +34,12 @@ export function companions(m: string, row: Row | undefined, layers: Layer[]): st
   return Object.keys(row ?? {}).filter((f) => f.startsWith(m + '@') && f !== m + '@previous' && layers.some((l) => Object.values(l.encode || {}).includes(f)));
 }
 
+/** What a companion is called beside its metric's value: its own label where the catalog has an entry for it ("rank"),
+ * and its suffix where it has none ("p25"). Its value is written in its own unit either way (core's metricOf). */
+export function companionLabel(f: string, catalog: Catalog): string {
+  return Object.hasOwn(catalog.metrics, f) ? catalog.metrics[f]!.label.toLowerCase() : f.slice(f.indexOf('@') + 1);
+}
+
 /** What the readout says for one row of the result, in the catalog's formats: the dimension value, each metric
  * (marked when its bucket is unfinished), its comparison if the row has one, and each companion of it that a layer
  * encodes, under its suffix: what a range or a tick is drawn from is said as well as shown. */
@@ -40,7 +50,7 @@ export function readout(row: Row, q: Query, catalog: Catalog, layers: Layer[]): 
   const dims = (q.by || []).map((d) => (row[d + '@end'] == null ? formatDimension(row[d], catalog.dimensions[d]!) : (both ? catalog.dimensions[d]!.label + ' ' : '') + formatBin(row[d], row[d + '@end']))).join(', '), partial = partialNote(row);
   const values = q.metrics.map((m) => {
     const def = catalog.metrics[m]!, prev = q.compare === 'previous' ? row[m + '@previous'] : null;
-    const more = companions(m, row, layers).filter((f) => row[f] != null).map((f) => ', ' + f.slice(m.length + 1) + ' ' + formatValue(row[f] as number, def)).join('');
+    const more = companions(m, row, layers).filter((f) => row[f] != null).map((f) => ', ' + companionLabel(f, catalog) + ' ' + formatValue(row[f] as number, metricOf(catalog, f)!)).join('');
     return def.label + ' ' + formatValue(row[m] as number | null, def) + (partial && ' ' + partial) + (prev == null ? '' : ', previous period ' + formatValue(prev as number, def)) + more;
   }).join('; ');
   return dims ? dims + ': ' + values : values;
@@ -52,7 +62,7 @@ export function readout(row: Row, q: Query, catalog: Catalog, layers: Layer[]): 
 export function written(shown: string, row: Row, q: Query, catalog: Catalog, layers: Layer[]): boolean {
   return q.metrics.every((m) => {
     const def = catalog.metrics[m]!, also = q.compare === 'previous' && row[m + '@previous'] != null ? [m + '@previous'] : [];
-    return [m, ...also, ...companions(m, row, layers).filter((f) => row[f] != null)].every((f) => shown.includes(formatValue(row[f] as number | null, def)));
+    return [m, ...also, ...companions(m, row, layers).filter((f) => row[f] != null)].every((f) => shown.includes(formatValue(row[f] as number | null, metricOf(catalog, f) ?? def)));
   });
 }
 
@@ -97,13 +107,14 @@ export function crossMarks(scene: Scene, layers: Layer[], rows: Row[][], catalog
   if (scene.layout !== 'cartesian') return out;
   const ids = layerKeys(layers), units = unitsOf(catalog, layers), seen = new Set<string>();
   layers.forEach((l, li) => {
-    const y = l.encode?.y, def = typeof y === 'string' ? catalog.metrics[y.split('@')[0]!] : undefined;
+    const y = l.encode?.y, def = metricOf(catalog, y);
     if (l.mark !== 'line' || typeof y !== 'string' || !def) return;
     const prev = l.series === 'previous', field = prev ? y + '@previous' : y, side = units.indexOf(unitsOf(catalog, [l])[0]!) > 0 ? 1 : 0;
     for (const n of scene.nodes) {
       // A line's unfinished tail, and an unfinished lead, are paths of their own, and the row where two meet is in both.
       if (n.kind !== 'path' || n.fill || n.part !== 'plot' || n.key.replace(/:partial(:lead)?$/, '') !== (n.series == null ? ids[li] : ids[li] + ':' + n.series)) continue;
       for (const p of n.points) {
+        if (p.row == null) continue;                                       // where an area's ends cross, which is no row's
         const at = rows[keys.indexOf(p.row)] ?? [], row = n.series == null ? at[0] : at.find((r) => String(r[split!]) === n.series), id = li + ':' + (n.series ?? '') + ':' + p.row;
         if (row?.[field] == null || seen.has(id)) continue;
         seen.add(id);
@@ -139,7 +150,7 @@ export function hitNodes(scene: Scene): (RectNode & { c: number })[] {
   for (const n of scene.nodes) {
     if (n.part !== 'plot') continue;
     if (n.kind === 'rect' && n.row != null && n.x != null) { const b = bars.get(n.row); bars.set(n.row, [Math.min(b?.[0] ?? n.x, n.x), Math.max(b?.[1] ?? n.x, n.x + (n.w || 0))]); }
-    else if (n.kind === 'path') for (const p of n.points) cx.set(p.row, p.x);
+    else if (n.kind === 'path') { for (const p of n.points) if (p.row != null) cx.set(p.row, p.x); }
     else if (n.kind === 'circle' && n.row != null && n.x != null) cx.set(n.row, n.x);       // a dot on a time or category axis
     else if (n.kind === 'line' && n.row != null && n.x != null) cx.set(n.row, (n.x + (n.x2 ?? n.x)) / 2);   // a row's rule, or its tick
   }

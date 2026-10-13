@@ -54,6 +54,12 @@ export const catalog: Catalog = {
     // How far two assumptions move together, from -1 to 1 (docs/uncommon-coverage-plan.md, step 5). It has no total, and
     // no unit: a plain number is written as a count is. Its domain crosses zero, so it is painted on the diverging ramp.
     correlation:      { label: 'Correlation',       unit: 'count', polarity: 'none', domain: [-1, 1] },
+    // Companions that are not in their metric's unit (docs/uncommon-coverage-plan.md, step 3). The engine returns each
+    // with its metric, and a query cannot ask for one by name. An entry under a companion's whole name says its unit:
+    // a place among the values of the other dimension, and the share of the total held up to the end of a bin or a row.
+    'visitors@rank':        { label: 'Rank',             unit: 'rank',  polarity: 'down' },
+    'pageviews@cumulative': { label: 'Cumulative share', unit: 'ratio', polarity: 'none' },
+    'errors@share':         { label: 'Cumulative share', unit: 'ratio', polarity: 'none' },
   },
   dimensions: {
     'date.day': { label: 'Day',     type: 'time' },
@@ -208,7 +214,8 @@ const TABLES: Record<string, { fields: string[]; ranked: boolean; rows: [string,
     ['Purchased',         [412, 371],    [0.039, 0.039]],
   ], totals: { conversion_rate: [0.039, 0.039] } },
   // Errors from the most to the fewest, and the share of them all that the rows down to each one hold. The engine adds it up.
-  cause: { fields: ['errors', 'errors_share'], ranked: false, rows: [
+  // The same share comes as a companion of the errors too, `errors@share`: the two ways an engine may send it.
+  cause: { fields: ['errors', 'errors_share'], ranked: false, also: Object.fromEntries([['Timeout', 0.38], ['Not found', 0.627], ['Server error', 0.785], ['Bad gateway', 0.875], ['Forbidden', 0.932], ['Rate limited', 0.969], ['Other', 1]].map(([cause, share]) => [cause, { 'errors@share': share }])), rows: [
     ['Timeout',      [412, 380], [0.38, null]],
     ['Not found',    [268, 301], [0.627, null]],
     ['Server error', [171, 164], [0.785, null]],
@@ -371,12 +378,18 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
     });
     // Bins are the engine's: each row says where its bin starts and ends, and the bins divide the whole of the total.
     // Density comes with them as a companion: the share of the total in each unit of the dimension.
+    // So does the share of the total that the bins up to the end of each one hold, which rises to the whole: an ECDF's steps.
+    // ponytail: of page views alone, since the catalog has a unit for that companion alone. When a query can ask for a companion, this is asked for.
     if (dim === 'load_time') {
       const weights = LOAD.weights.map((w) => w * vary()), parts = metrics.map((m) => apportion(totals[m]!, weights));
       const before = metrics.map((m) => (hasPrev ? apportion(totals[m + '@previous']!, LOAD.weights) : null));
+      const held = metrics.map(() => 0);
       return weights.map((_, i) => {
         const r: Row = { load_time: i * LOAD.width, 'load_time@end': (i + 1) * LOAD.width };
-        metrics.forEach((m, j) => { r[m] = parts[j]![i]!; r[m + '@density'] = Math.round(parts[j]![i]! / (totals[m] || 1) / LOAD.width * 1e4) / 1e4; if (wantPrev) r[m + '@previous'] = before[j] ? before[j]![i]! : null; });
+        metrics.forEach((m, j) => {
+          r[m] = parts[j]![i]!; r[m + '@density'] = Math.round(parts[j]![i]! / (totals[m] || 1) / LOAD.width * 1e4) / 1e4; if (wantPrev) r[m + '@previous'] = before[j] ? before[j]![i]! : null;
+          if (m === 'pageviews') r[m + '@cumulative'] = Math.round((held[j]! += parts[j]![i]!) / (totals[m] || 1) * 1e4) / 1e4;
+        });
         return r;
       });
     }
@@ -423,6 +436,9 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
   // Through time a pair has a running total too: what its value of the inner dimension has held since the range began.
   // ponytail: of sign-ups alone, as a page's rank comes only with one query. When a query can ask for a companion, this is asked for.
   if (isTime(outer) && metrics.indexOf('signups') >= 0) { const run: Record<string, number> = {}; pairs.forEach((p) => { const k = p[inner] as string; p['signups@running'] = run[k] = (run[k] || 0) + (p.signups as number); }); }
+  // By week a pair has its place among its week's values too, by visitors: 1 for the most, counted before any limit.
+  // ponytail: by week alone, so that no query a test already holds to the row comes back with more. Asked for, when a query can ask.
+  if (outer === 'date.week' && metrics.indexOf('visitors') >= 0) pairs.forEach((p) => { p['visitors@rank'] = 1 + pairs.filter((o) => o[outer] === p[outer] && (o.visitors as number) > (p.visitors as number)).length; });
   const innerRows = all.map(([name]) => {
     const r: Row = { [inner]: name }, mine = pairs.filter((p) => p[inner] === name);
     fields.forEach((f) => { r[f] = mine.some((p) => p[f] != null) ? mine.reduce((s, p) => s + ((p[f] as number) || 0), 0) : null; });
@@ -491,8 +507,7 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
   map:     { label: 'A map: visitors by country', spec: { spec: 'view/0', title: 'Visitors by country', use: 'choropleth', query: { metrics: ['visitors'], by: ['country'], range: '28d' } } },
   symbols: { label: 'Symbols on a map: page views by country', spec: { spec: 'view/0', title: 'Page views by country', use: 'symbol-map', query: { metrics: ['pageviews'], by: ['country'], range: '28d' } } },
   // A split that spends no colour (docs/uncommon-coverage-plan.md, step 1): a line for each country, all in one paint.
-  spaghetti: { label: 'Spaghetti: visitors by day, a line for each of fifteen countries', spec: { spec: 'view/0', title: 'Visitors by country, day by day', query: { metrics: ['visitors'], by: ['date.day', 'country'], range: '28d' },
-            layers: [{ mark: 'line', encode: { x: 'date.day', y: 'visitors', detail: 'country' } }] } },
+  spaghetti: { label: 'Spaghetti: visitors by day, a line for each of fifteen countries', spec: { spec: 'view/0', title: 'Visitors by country, day by day', use: 'spaghetti', query: { metrics: ['visitors'], by: ['date.day', 'country'], range: '28d' } } },
   tiles:   { label: 'A tile grid map: visitors by country, each an equal square', spec: { spec: 'view/0', title: 'Visitors by country', use: 'tile-grid-map', query: { metrics: ['visitors'], by: ['country'], range: '28d' } } },
   hexes:   { label: 'A hex tile map: visitors by country, each an equal hexagon', spec: { spec: 'view/0', title: 'Visitors by country', use: 'hex-tile-map', query: { metrics: ['visitors'], by: ['country'], range: '28d' } } },
   // An arc that reads data on angle and radius (docs/uncommon-coverage-plan.md, step 2). Swept, with golden scenes, in test/arc-data.test.ts.
@@ -552,4 +567,10 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
             layers: [{ mark: 'text', encode: { y: 'load_stem', text: 'load_stem' } }, { mark: 'text', encode: { y: 'load_stem', text: 'load_stem@leaves' } }] } },
   // The `link` mark (step 8 of docs/uncommon-coverage-plan.md). Swept, with its golden scenes, in test/flow.test.ts.
   sankey:  { label: 'Sankey: visitors from channel to the section they land in', spec: { spec: 'view/0', title: 'Where visitors land', use: 'sankey', query: { metrics: ['visitors'], by: ['channel', 'landing'], range: '28d' } } },
+  // What a line and an area take beyond the trend (docs/uncommon-coverage-plan.md, step 3). Each is swept, and has its
+  // golden scenes, in test/coverage.test.ts, and what each one is is in test/uncommon.test.ts.
+  connected: { label: 'Connected scatterplot: visitors against sign-ups, joined day by day', spec: { spec: 'view/0', title: 'Visitors and sign-ups, day by day', use: 'connected-scatter', query: { metrics: ['visitors', 'signups'], by: ['date.day'], range: '28d' } } },
+  ecdf:    { label: 'ECDF: the share of page views that loaded within each time, as steps over the bins', spec: { spec: 'view/0', title: 'Loaded within', use: 'ecdf', query: { metrics: ['pageviews'], by: ['load_time'], range: '28d' } } },
+  bump:    { label: 'Bump chart: six pages by their place in each week, first at the top', spec: { spec: 'view/0', title: 'Pages by rank, week by week', use: 'bump', query: { metrics: ['visitors'], by: ['date.week', 'page'], range: '28d', limit: 6 } } },
+  difference: { label: 'Difference: revenue by day against the period before, a gain where it is ahead and a loss where it is behind', spec: { spec: 'view/0', title: 'Revenue against the period before', use: 'difference', query: { metrics: ['revenue'], by: ['date.day'], range: '28d', compare: 'previous' } } },
 };

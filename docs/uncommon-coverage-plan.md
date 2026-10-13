@@ -277,7 +277,73 @@ Beyond the list in the coverage plan, section 9:
 
 ## 7. Findings as it is built
 
-Empty. Step 0 writes here first.
+### Step 0, samples (built October 12)
+
+Every one of the 17 was written as a spec and run. 916 tests pass and the typecheck is clean. Nothing in `packages/core/src`, `packages/dom` or `prototype/` changed. Every golden scene that existed is byte-identical; 42 are new. **Nothing was opened in a browser:** each sample is checked as a scene, in ratios and in pixels, and no painter has been looked at.
+
+**15 of the 17 are drawn today. Two are not:** the bullet graph has no bands, and climate stripes have no neutral zero. Four of the 15 are drawn in one form only (lollipop, tornado, slopegraph, embedding scatter).
+
+Samples added to `moreSamples`: `cleveland`, `lollipop`, `tornado`, `pareto`, `sparkline`, `fans`, `streamgraph`, `slopegraph`, `cumulative`, `calendar`, `stripes`, `adjacency`, `embedding`, `stem`. `dumbbell`, `bullet` and `fan` were there. Each is swept with the samples of its layout (`test/coverage.test.ts`, `test/ranges.test.ts`, `test/cell.test.ts`), and what each one is, and each hole below, is held as a fact in `test/uncommon.test.ts`.
+
+**The 17**
+
+| Type | Sample | Result | Owner of what is left |
+|---|---|---|---|
+| Cleveland dot plot | `cleveland` | Golden scene. `dumbbell` with no `compare`: a dot, the label and the value for each row | |
+| Ordered dot plot | `cleveland` | The same sample. The engine ranks a categorical dimension, so a Cleveland dot plot of one is already ordered. A second sample would differ in nothing | |
+| Lollipop | `lollipop` | Golden scene, from zero: a `rule` with one end and a `dot`, in rows. The same pair stands on an axis. A stem to a number is sayable as the second end (`x: "visitors", x2: 1000`). Written from the number it is refused: `Layer 1 has "x2" and no value on x to run from.` | Step 4 |
+| Dumbbell | `dumbbell` | Was there, with its golden scene. It is that chart | |
+| Bullet graph | `bullet` | **Not a bullet graph.** A bar and a tick at the target. The catalog's `bands` are read nowhere in core or in `<ua-view>`, the gauge's included | Step 4 |
+| Tornado | `tornado` | Golden scene, with the paint stated: two ranged bars a row that meet at zero. Without a stated paint the gain is painted as a loss (finding 1) | Step 3, part 4 |
+| Pareto | `pareto` | Golden scene. Bars and a line, an axis each, because the running share is a metric of its own in unit `ratio`. As a companion it is drawn on the count scale, flat along the foot (finding 2) | Step 3 |
+| Sparkline | `sparkline` | Golden scene at 234 px: parts `number` and `plot`, 46 px tall. One `line` layer. No spec asks for it | |
+| Fan chart | `fan`, `fans` | `fan` was there, with one band. `fans` has two, one inside the other, and a golden scene | |
+| Streamgraph | `streamgraph` | Golden scene. `area` with `stack: "center"`. Its y axis counts away from the middle: -1k, -500, 0, 500, 1k | Step 3, to look at |
+| Slopegraph | `slopegraph` | Golden scene, by week. By day it is not one: a range of two days ends on the unfinished day, so each line is one point and a dashed stroke. Names stand at the line ends, not values, and only at the far end | Step 3, to look at |
+| Cumulative flow | `cumulative` | Golden scene. A stacked `area` on `signups@running`. It stops at the last whole day, as every stacked area does | |
+| Calendar heatmap | `calendar` | Golden scene. `heatmap` by `weekday` and `date.week`: seven rows, a column a week, each named by its Monday | |
+| Climate stripes | `stripes` | **Not climate stripes.** A golden scene of what is drawn: a `cell` with only `x`, one cell a day, on the sequential ramp. The ramp runs from -18 to 20, so the worst loss is the palest step and a day near no change is a middle one | Step 5 |
+| Adjacency matrix | `adjacency` | Golden scene. `heatmap` of `page` by `next_page`, which share their values | |
+| Embedding scatter | `embedding` | Golden scene, uncoloured. Coloured by a second dimension it throws: `The query is by "term", and no layer encodes it, so its rows would be drawn over each other. Encode it on color, or remove it from query.by.` (finding 3) | Step 1 |
+| Stem-and-leaf | `stem` | Golden scene. Two `text` layers a row: the dimension, and its companion `load_stem@leaves` | |
+
+**Findings**
+
+1. **Paint by direction reads a bar to zero backwards.** A ranged bar needs a field on `x` and takes a number only on `x2`, so a bar from zero to a gain is written `x: "revenue_effect@high", x2: 0`. That runs from the gain down to zero, and the rule of Decided 28 paints it `delta.bad`; the loss is painted `delta.good`. The `tornado` sample states `delta.bad` and `delta.good` to get it right. An explicit `paint: "direction"` (step 3, part 4) removes the surprise. A number as the first end (step 4, part 7) removes the cause.
+2. **A companion has no unit.** `unitOf` reads the catalog, and a companion is not in it, so `pageviews@rank` beside `pageviews` is drawn on the count scale: eight points between 0.0002 and 0.0016 of the plot's height. The Pareto works only because the fixture sends the share as a metric. Step 3 gives `metric@rank` a unit; the same answer is wanted for any companion that is not in its metric's unit.
+3. **A coloured scatter needs every point named.** With `term` and `intent` in the query and `intent` on `color`, no layer encodes `term`, and `checkLayers` refuses. Add a `text` layer with `term` on `text` and it draws: three series of eight, a legend, labels. `detail` is the honest way to say the rows' own dimension. With two dimensions the prose is then the sentence for two dimensions, which is wrong for points: "getting started is the largest search term (0.73), and Pricing the largest intent (–)." Step 1 should make the points sentence win.
+4. **The sentence and the note call the first rows the top ones,** whatever order the engine sent. For a dimension in its own order that is false: "Top whole seconds by requests, last 28 days: 0 (5), 1 (9), 2 (12)", where 2 leads. Under the number of the embedding it is "Top: pricing". Every categorical dimension the fixture had was ranked, or happened to fall, so this did not show. **No step owns it.** Step 2 meets it first, with the hour and the weekday. Recommended: the catalog says a dimension is ordered, or the result says its rows are ranked.
+5. **A view of something with no total falls back to a dash.** An effect and a place in an embedding have no total, so the fixture sends null, and below the plot's room the view is "–". Correct by the rules, and of no use. **To decide:** whether such a view has a fallback at all.
+6. **There is no unit for a plain number.** The embedding's components are `count` for want of one. `ratio` would write them as percentages.
+7. **A plan says it gave up a middle date label that was never there.** A time axis of two points has a first and a last tick. `plan.dropped` still lists "the middle date label". Small, and core's. Step 3 has the slopegraph.
+8. **A line's scale holds zero,** so a slopegraph's slopes are shallow, on a scale from 0 to 1.5k. The same was found for the candlestick and the fan (coverage plan, section 8, step 3, finding 9).
+9. **A streamgraph's axis is signed.** `stack: "center"` puts zero in the middle and the ticks say so. A streamgraph is read by thickness, so the axis says nothing true. To look at when step 3 or step 11 next touches `center`.
+10. **Rows of text hold at any width down to 90 px, and the last label is clipped to its room.** At 120 px the third row of `stem` ends in an ellipsis. A cut leaf is a request not shown. Rows with a value column would have collapsed to the number by then; these have none to measure. Step 4, with the rows.
+11. **A stem-and-leaf display has no rule between stem and leaves,** and its leaves are set in the label face. If that face is proportional, the length of a row is not its count. Not checked: it is the painter's, and no browser was opened.
+
+**Where the notes for this step were wrong**
+
+- *A lollipop's rule cannot start at a number.* Half right. It cannot start at one; it can end at one, which draws the same stem.
+- *A tornado works as two ranged bars meeting at zero.* The geometry does. The paint does not, until it is stated (finding 1).
+- *Two start-anchored texts in a row may overlap.* They do not. `placeRows` sets each in a column as wide as its longest text, as the league table's rank is.
+- *A fan of several bands is untested.* It works. But the fixture's interval of the mean was not inside the day's least and most on every day, so two bands of them crossed. A day now has quartiles too.
+- *`test/dom-series.test.ts` re-queries every sample at other ranges.* What it caught was its own exception by name: a stacked area has no hit target on the unfinished day, and the test knew that of `area` only.
+
+**The fixture**
+
+- **Dimensions:** `date.week` (time, as ISO weeks: `2026-W37`), `next_page`, `cause`, `factor`, `term`, `intent`, `load_stem`.
+- **Metrics:** `errors` and `errors_share` (by `cause`), `revenue_effect` (by `factor`, in `usd`), `embed_x` and `embed_y` (by `term`), `requests` (by `load_stem`).
+- **Companions:** `revenue_effect@low` and `@high`, signed. `load_stem@leaves`, a string, of the dimension. `signups@running`, on each pair of a query through time. `response_time@p25` and `@p75`, by day.
+- **By week the range is its whole weeks,** the last of them the one before today's, so nothing is ragged or unfinished: `28d` is four weeks and `14d` two. `compare` is refused there, because the fixture's days run out one short.
+- **A table may carry companions for a row** (`also`), **a second dimension** each row falls under (`split`: `term` by `intent`), and **a null total.**
+- **What does not add up over a range no longer follows it:** a table's value is scaled to the range only where the catalog gives its metric a `rangeTotal`. That was true of a `ratio` alone, and it rounded the embedding to whole numbers.
+- **The calendar's cells are a week divided among its weekdays,** as any pair is, not the days the fixture holds. They add up to the week.
+
+**For the API's owners**
+
+- A dimension's order: ranked, or its own (finding 4).
+- A unit for a companion, or the rule that it shares its metric's (finding 2).
+- A plain number as a unit (finding 6).
 
 ## 8. What to count as it is built
 

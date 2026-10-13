@@ -277,7 +277,40 @@ Beyond the list in the coverage plan, section 9:
 
 ## 7. Findings as it is built
 
-Empty. Step 0 writes here first.
+### Step 1, detail (built October 12)
+
+Not merged: on its own branch. 827 tests pass (807 before) and the typecheck is clean. `prototype/`, the six samples' golden scenes and every golden scene that existed are unchanged: the snapshot file gained three scenes and lost no line. One new sample, `spaghetti` (visitors by day, a line for each of fifteen countries), swept and with golden scenes in `test/coverage.test.ts`. Step 0 was not built first, so this is the first entry here. Checked in headless Chromium on the bench: the sample at 346, 250, 170, 120 and 80 px and widened to 700 px, light and dark, real key events, and the pointer. Not checked: WebKit, Firefox, a screen reader, touch, reduced motion, a data change, the pivoted table, and a detail split of bars or areas in a browser (those are tested as scenes only).
+
+**What was added, for the steps that follow**
+
+- `Channel` gains `'detail'`, and the schema's `encode` gains `detail`, a string. It is a dimension's name, so the schema takes no number there.
+- **`detailOf(catalog, layer, xField?)`** in `scene.ts`, exported from core: the dimension a layer is split by with nothing painted apart, or null. **A step that reads `detail` calls this.** `splitOf` now answers for either way of splitting (`color`, or else `detail`), and `seriesOf` only for the painted way, since it is what makes a legend.
+- `Scene.detail?: string[]`: the detail dimension's values in the engine's order, where a plot is split and nothing is painted apart. `Scene.series` is absent then, which is what keeps the legend, the labels and `placeLegend` away. A node's `series` holds its value either way.
+- **`DETAIL_LAYOUTS`** in `scene.ts`, now `['cartesian']`. `resolve()` refuses `detail` in any other built-in layout, by name. **A step that makes a layout read `detail` adds the layout's name here** (steps 2 and 4), or the refusal stands. A custom mark is not asked: it reads its own channels (step 9).
+- Keys are the colour split's: `primary:line:<detail>`, `primary:line:<detail>:partial`, `primary:area:<detail>`, `primary:bar:<x>:<detail>`.
+- `plural` is exported from core's prose, for the readout.
+- The DOM marks a plot split by detail with `data-mass` on `.uav-body`.
+
+**Choices where the plan was silent, and departures**
+
+1. **`Scene.detail` is a new scene field.** The plan said a detail split makes "no entry in `Scene.series`", and that holds. But the keyboard and the readout find the rows at a point by the split's order, which they read from `Scene.series`. So the order is carried under another name, and what reads `series` for paint or a legend is untouched.
+2. **A layer in a plot is split once.** With a dimension on x there is one more to split by, so a dimension on `color` and one on `detail` in one layer are refused, whichever two they are: the same one twice is a contradiction, and of two different ones one is x's own. Away from a plot only the same dimension on both is refused, so a sunburst (step 2) and a treemap (step 9) may put the parent on `color` and the child on `detail`.
+3. **`stack` with `detail` is refused,** with the fix (put the dimension on `color`). A stack is read by its colours.
+4. **A `bar` split by `detail` sits beside its neighbours,** as one split by `color` with no stack does: fifteen thin bars to a day in one paint. It is what the grammar says, and it is not a chart anyone wants. Not refused.
+5. **Bars split by `detail` that fall below zero are not painted as gains and losses.** A split layer never was, since its paint was its series'. Here the paint is free, so they could be. Left as it was. **To decide** when a step needs it.
+6. **A detail-split `line` is drawn at half strength** (`opacity: 0.5`, its unfinished tail too), so where lines run together the plot reads darker, and the bare plot beside the number is a texture and not a block. Looked at both ways in both themes: at full strength fifteen lines below 50 are one solid band. Not `tone: 'soft'`, which is for a fill that tints. An area split by `detail` is already a tint (0.14), and bars do not overlap, so neither changed.
+7. **Two layers may split the same dimension two ways:** one by `detail` and one by `color`. The colours, the legend and the limit of six then apply, because a colour is spent. Tested as a scene; not looked at.
+8. **The other marks of a plot (`dot`, `tick`, `rule`, `text`) split by `detail` as they do by `color`,** because they share the code. Not tested and not looked at.
+9. **`detail` naming the dimension that is on x does nothing,** as `color` naming it does nothing today. Not refused.
+10. **The readout of a whole point says the mass, not every series:** "Sep 8: Visitors 416 (15 countries, the most United States 137)". Listing forty values is no readout. It is so for any detail split, three series or forty. "The most" is a comparison of the engine's rows at that x, as the prose's leader is.
+11. **Up and down step through the series one at a time,** as they do through colours, in the engine's order. The chosen line is drawn whole and the rest stand back, with the crosshair on it: the one way to read a single line of many. It costs a press a series, so the last of forty is forty presses away. Left as it is, on purpose. **To decide** with the keyboard model of the coverage plan's step 1, part 11, item 1.
+12. **The pointer cannot choose one line.** It could not choose one colour either.
+13. **The prose needed no change.** For this query it is the two-dimension sentence: "United States is the largest country at 32% of visitors in the last 28 days, and leads on all 28 days." It names no colour and no legend, and it is held by a test.
+14. **`place()` needed no change.** Only `placeLegend` reads `Scene.series`, and it runs where the plan shows a legend.
+15. **The fixture engine needed nothing.** It already answers a day by any dimension held as a mix.
+16. **A legend's and a label's text is the raw value** (`US`), where the readout says the name. That is the colour split's too, and it does not show here, since a detail split has neither.
+17. **The dot-grid painter turns low opacity into a sparse pattern** (reference, section 12). What it makes of a line at half strength was not looked at.
+18. **No preset.** `spaghetti` as a preset is step 3's.
 
 ## 8. What to count as it is built
 

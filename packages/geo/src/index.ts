@@ -1,5 +1,5 @@
 import { geoEqualEarth, geoPath, type ExtendedFeatureCollection, type GeoProjection } from 'd3-geo';
-import { dotRadius, notShownNote, registerMark, roleOf, seqScale, sizeKey, sizeStep } from '@unified-analytics/core';
+import { dotRadius, notShownNote, registerMark, registerPreset, roleOf, seqScale, sizeKey, sizeStep } from '@unified-analytics/core';
 import type { CircleNode, CustomMark, FitRule, Part, PathNode, PlacedNode, Row, SceneNode, TextNode } from '@unified-analytics/core';
 
 /* The `geo` mark: a map of regions, as a custom mark (core's marks.ts). This is its half for core: a scene in ratios
@@ -111,7 +111,11 @@ export function geoMark(shapes: Shapes, projection: GeoProjection = geoEqualEart
   };
 }
 
-/** Register the `geo` mark with its boundary shapes. A spec then names it in `mark`. */
+/** Register the `geo` mark with its boundary shapes, and the presets that draw it. A spec then names the mark in
+ * `mark`, or a preset in `use`. */
 export function registerGeo(shapes: Shapes, projection?: GeoProjection): void {
   registerMark('geo', geoMark(shapes, projection));
+  // Core cannot name this mark, so its presets are registered here. Working names: check each against @automattic/charts before it ships.
+  registerPreset('choropleth', { layers: [{ mark: 'geo', encode: { x: '$by', color: '$metric' } }] });
+  registerPreset('symbol-map', { layers: [{ mark: 'geo', encode: { x: '$by', size: '$metric' } }] });
 }

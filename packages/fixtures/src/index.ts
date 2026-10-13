@@ -338,10 +338,8 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
   fan:     { label: 'Fan: response time by day, in the interval it is known to', spec: { spec: 'view/0', title: 'Response time', use: 'fan', query: { metrics: ['response_time'], by: ['date.day'], range: '28d' } } },
   dumbbell: { label: 'Dumbbell: page views by page, this period against the one before', spec: { spec: 'view/0', title: 'Page views, then and now', use: 'dumbbell', query: { metrics: ['pageviews'], by: ['page'], range: '28d', compare: 'previous', limit: 8 } } },
   bullet:  { label: 'Bullet: sign-ups by device, against the target', spec: { spec: 'view/0', title: 'Sign-ups against target', use: 'bullet', query: { metrics: ['signups'], by: ['device'], range: '28d' } } },
-  map:     { label: 'A map: visitors by country', spec: { spec: 'view/0', title: 'Visitors by country', query: { metrics: ['visitors'], by: ['country'], range: '28d' },
-            layers: [{ mark: 'geo', encode: { x: 'country', color: 'visitors' } }] } },
-  symbols: { label: 'Symbols on a map: page views by country', spec: { spec: 'view/0', title: 'Page views by country', query: { metrics: ['pageviews'], by: ['country'], range: '28d' },
-            layers: [{ mark: 'geo', encode: { x: 'country', size: 'pageviews' } }] } },
+  map:     { label: 'A map: visitors by country', spec: { spec: 'view/0', title: 'Visitors by country', use: 'choropleth', query: { metrics: ['visitors'], by: ['country'], range: '28d' } } },
+  symbols: { label: 'Symbols on a map: page views by country', spec: { spec: 'view/0', title: 'Page views by country', use: 'symbol-map', query: { metrics: ['pageviews'], by: ['country'], range: '28d' } } },
   unmapped: { label: 'A map with rows it has no shape for: visitors by every country seen', spec: { spec: 'view/0', title: 'Visitors by country, all of them', query: { metrics: ['visitors'], by: ['visitor_country'], range: '28d' },
             layers: [{ mark: 'geo', encode: { x: 'visitor_country', color: 'visitors' } }] } },
 };

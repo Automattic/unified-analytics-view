@@ -1,6 +1,6 @@
 import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, buildScene, customMarks, makeContainer, notShownNote, place, registerMark, resolve, type CircleNode, type PainterName, type PathNode, type Result, type Spec } from '@unified-analytics/core';
+import { CONTAINER_RULES, PRESETS, buildScene, customMarks, customPresets, expand, makeContainer, notShownNote, place, registerMark, resolve, type CircleNode, type PainterName, type PathNode, type Result, type Spec } from '@unified-analytics/core';
 import viewSchema from '@unified-analytics/core/schema/view.schema.json';
 import { compileFitRules } from '@unified-analytics/dom';
 import { catalog, countries, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
@@ -73,8 +73,8 @@ describe('the sweep', () => {
     }
     // `keep` switches the rule off, so there is no list. What resolve() does then is what it does for any layout whose
     // kept marks are short of room: it tries the steps that are left, and ends at the prose (dom-painter-plan, section 2, to settle).
-    expect(run({ ...map, keep: ['marks'] }, 250).plan).toMatchObject({ layout: 'prose', preset: null });
-    expect(run({ ...map, keep: ['marks'] }, 346).plan).toMatchObject({ layout: 'geo', preset: null, dropped: [] });
+    expect(run({ ...map, keep: ['marks'] }, 250).plan).toMatchObject({ layout: 'prose', preset: 'choropleth' });
+    expect(run({ ...map, keep: ['marks'] }, 346).plan).toMatchObject({ layout: 'geo', preset: 'choropleth', dropped: [] });
   });
 });
 
@@ -110,7 +110,22 @@ describe('geo, filled by a metric', () => {
   const { ratio, result, plan } = run(map, 346);
   it('is a custom mark, laid out under its own name, and core knows it only through the registry', () => {
     expect(customMarks().has('geo')).toBe(true);
-    expect([plan.layout, ratio.layout, plan.preset]).toEqual(['geo', 'geo', null]);
+    expect([plan.layout, ratio.layout, plan.preset]).toEqual(['geo', 'geo', 'choropleth']);
+  });
+  it('its presets are registered with it, since core cannot name it: a view that uses one is the layers written out, to the node', () => {
+    expect([...customPresets().keys()]).toEqual(['choropleth', 'symbol-map']);
+    expect(PRESETS).not.toHaveProperty('choropleth');
+    expect(map.layers ?? symbols.layers).toBeUndefined();
+    expect(expand(map).layers).toEqual([{ mark: 'geo', encode: { x: 'country', color: 'visitors' } }]);
+    expect(expand(symbols).layers).toEqual([{ mark: 'geo', encode: { x: 'country', size: 'pageviews' } }]);
+    for (const spec of [map, symbols]) {
+      const { use: _use, ...rest } = spec, written: Spec = { ...rest, layers: expand(spec).layers };
+      for (const [w, h] of [[346, null], [300, null], [250, null], [346, 100], [120, null]] as [number, number | null][]) expect(run(spec, w, h).scene, spec.use + ' ' + w + ' ' + h).toEqual(run(written, w, h).scene);
+      expect(run(written, 346).plan.preset).toBeNull();
+      expect(view(spec), JSON.stringify(view.errors)).toBe(true);
+    }
+    expect(run(symbols, 346).plan).toMatchObject({ layout: 'geo', preset: 'symbol-map' });
+    expect(err(() => expand({ ...map, query: { metrics: ['visitors'] } }))).toBe('The "choropleth" preset needs a dimension in query.by.');
   });
   it('draws every shape handed in, in the shapes\' order whatever the ranking, each a path in a box 100 wide', () => {
     expect(shapes(ratio).map((n) => n.key)).toEqual(countries.features.map((f) => 'primary:geo:' + (f.id ?? f.properties!.name)));
@@ -251,13 +266,13 @@ describe('prose, the number and errors', () => {
     expect((run(map, 120).ratio.nodes.find((n) => n.key === 'sub') as { text: string }).text).toBe('Top: United States');
   });
   it('errors name the fix: no dimension on x, no metric to draw by, more than one layer, and values that join to no shape', () => {
-    const q = map.query, of = (layers: Spec['layers'], query = q) => err(() => run({ spec: 'view/0', query, layers }, 346));
+    const q = map.query, drawn = expand(map).layers!, of = (layers: Spec['layers'], query = q) => err(() => run({ spec: 'view/0', query, layers }, 346));
     expect(of([{ mark: 'geo', encode: { color: 'visitors' } }])).toBe('A "geo" layer needs the dimension whose values are region keys on x, and this one has undefined there. Encode one of the query\'s dimensions on x: country.');
     expect(of([{ mark: 'geo', encode: { x: 'country' } }])).toBe('A "geo" layer needs a metric on color, to fill each region by, or on size, for a symbol on each, and this one has undefined on color and undefined on size. Encode one of the query\'s metrics: visitors.');
     expect(of([{ mark: 'geo', encode: { x: 'country', color: 'country' } }])).toMatch(/^A "geo" layer needs a metric on color/);
     expect(of([{ mark: 'geo', encode: { x: 'country', size: 'country' } }])).toMatch(/^Layer 1 encodes "country" on size, and a size is a quantity\./);
-    expect(of([...map.layers!, ...map.layers!])).toBe('A map draws one "geo" layer, and this view has 2. Put the metric to fill by on color and the metric for symbols on size, in one layer.');
-    expect(of([...map.layers!, { mark: 'bar', encode: { x: 'country', y: 'visitors' } }])).toBe('The "geo" mark is laid out by its own code, and layer 2 is a "bar". Keep the "geo" layers alone, and draw the others as a view of their own.');
+    expect(of([...drawn, ...drawn])).toBe('A map draws one "geo" layer, and this view has 2. Put the metric to fill by on color and the metric for symbols on size, in one layer.');
+    expect(of([...drawn, { mark: 'bar', encode: { x: 'country', y: 'visitors' } }])).toBe('The "geo" mark is laid out by its own code, and layer 2 is a "bar". Keep the "geo" layers alone, and draw the others as a view of their own.');
     expect(of([{ mark: 'geo', encode: { x: 'page', color: 'pageviews' } }], { metrics: ['pageviews'], by: ['page'] }))
       .toBe('None of the 8 values of "page" is the id of a boundary shape. The first is "/", and the shapes are keyed on ISO 3166-1 alpha-2 codes, in capitals: "TZ", "EH" and 120 more. Have the engine send those ids for "page", or hand geoMark() shapes whose ids are its values.');
   });

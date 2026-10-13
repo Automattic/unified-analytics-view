@@ -1,13 +1,14 @@
 import type { Catalog, Spec } from '@unified-analytics/core';
 import { UaView, defineUaView, registerPainter, surfaceSheet } from '@unified-analytics/dom';
 import { catalog, moreSamples, runQuery, samples, type Scenario } from '@unified-analytics/fixtures';
-import { geoPainter } from '@unified-analytics/geo/dom';
+import { geoPainter, geoPainterAs } from '@unified-analytics/geo/dom';
 
 /* The marks: each one on its own, at a size where nothing has been given up, for tuning how it looks. A mark is
  * shown in each of the six series colours, on each of the three surfaces, and in the states it has. Every specimen
  * is a <ua-view> on the fixtures, so what is here is the real painter. Theme "both" sets the page beside itself. */
 defineUaView();
 registerPainter(geoPainter);
+for (const name of ['geo-tiles', 'geo-hexes']) registerPainter(geoPainterAs(name));
 document.adoptedStyleSheets.push(surfaceSheet());
 
 const params = new URLSearchParams(location.search), theme = params.get('theme') ?? '';
@@ -50,7 +51,7 @@ const MARKS: Mark[] = [
   { name: 'arc', note: 'A colour for each value.', spec: S('donut'), states: [{ label: 'a pie', spec: S('pie') }, { label: 'a half', spec: S('half') }, { label: 'against a target', spec: S('gauge') }] },
   { name: 'band', note: 'One bar divided, a colour for each value.', spec: S('mix') },
   { name: 'cell', note: 'Filled by the sequential ramp.', spec: S('heatmap') },
-  { name: 'geo', note: 'Filled by the sequential ramp, or a symbol on each region.', spec: S('map'), states: [{ label: 'symbols', spec: S('symbols') }] },
+  { name: 'geo', note: 'Filled by the sequential ramp, or a symbol on each region.', spec: S('map'), states: [{ label: 'symbols', spec: S('symbols') }, { label: 'square tiles', spec: S('tiles') }, { label: 'hex tiles', spec: S('hexes') }] },
 ];
 
 /** A view on a surface, with what it is under it. `series` paints it with that series colour in place of the first. */

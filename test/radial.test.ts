@@ -163,7 +163,9 @@ describe('validation', () => {
     expect(view(arc({ angle: 'visitors', color: 'channel', radius: 0.6 }, { sweep: 'half' })), JSON.stringify(view.errors)).toBe(true);
     expect(view(arc({ angle: 'visitors', color: 'channel' }, { sweep: 'quarter' }))).toBe(false);
     expect(view(arc({ angle: 'visitors', color: 'channel', radius: 1 }))).toBe(false);
-    expect(view({ ...gauge!, use: 'line' })).toBe(false);                     // every other preset still needs a dimension
+    // Which presets take no dimension is resolve()'s to say: the schema cannot know a library's, or the registry's.
+    expect(view({ ...gauge!, use: 'line' })).toBe(true);
+    expect(err({ ...gauge!, use: 'line' })).toBe('The "line" preset needs a dimension in query.by.');
     expect(cat(catalog), JSON.stringify(cat.errors)).toBe(true);
     expect(catalog.metrics.signups).toMatchObject({ domain: [0, 500], target: 400, bands: [200, 400] });
     expect(cat({ ...catalog, metrics: { signups: { ...catalog.metrics.signups, domain: [0] } } })).toBe(false);

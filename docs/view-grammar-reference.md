@@ -360,6 +360,11 @@ The library ships these (`packages/core/src/presets.ts`). The three above are wr
 | `fan` | Companions `@lower`, `@upper` | A line inside the band it is known to |
 | `dumbbell` | One categorical dimension, and `compare` | Rows with a dot for now and one for before, joined. Without `compare`, a dot each |
 | `bullet` | One categorical dimension, and a metric with a catalog `target` | Rows with a bar and a tick at the target |
+| `waffle` | One categorical dimension | A grid of a hundred cells divided by share, with a legend. Under 280 px it is the `share-bar` |
+| `unit-chart` | One dimension. On a binned number dimension it is the Wilkinson dot plot | Glyphs stacked up from the axis, one for so many. Under 280 px it is the `bar` |
+| `isotype` | One categorical dimension | Rows with a run of glyphs, the label and the value. Under 280 px it is the `bar-list` |
+| `parliament` | One categorical dimension of six values or fewer (`limit`) | Seats round a half circle, a colour for each value. Under 280 px it is the `pie-semi-circle` |
+| `icon-array` | No dimension, and a metric with a catalog `domain` | A grid of a hundred, filled to the metric's place in its range, under the number. Under 280 px it is the `gauge` |
 
 A companion is something the engine returns with a metric. A query cannot yet ask for one by name (section 5), so a preset that needs companions works only against a result that has them.
 

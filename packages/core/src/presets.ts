@@ -78,6 +78,23 @@ export const PRESETS: PresetLibrary = {
     { mark: 'tick', encode: { y: '$by', x: '$metric' }, role: 'reference' },
     { mark: 'text', encode: { y: '$by', text: '$by' } },
     { mark: 'text', encode: { y: '$by', text: '$metric' }, align: 'end' } ] },
+  // The `unit` mark: a value drawn as counted glyphs, in each of its forms. Working names, as those above are: check
+  // each against @automattic/charts before it ships. A waffle divides a grid of a hundred by share; a unit chart stacks
+  // glyphs up from the axis, and on a binned number dimension is the Wilkinson dot plot; an isotype runs them along a
+  // row; a parliament seats them round a half circle; an icon array has no dimension, and fills the grid to the
+  // metric's place in its catalog domain, as the gauge sweeps to it.
+  'waffle': { layers: [
+    { mark: 'unit', encode: { x: '$metric', color: '$by' } } ] },
+  'unit-chart': { layers: [
+    { mark: 'unit', encode: { x: '$by', y: '$metric' } } ] },
+  'isotype': { layers: [
+    { mark: 'unit', encode: { y: '$by', x: '$metric' } },
+    { mark: 'text', encode: { y: '$by', text: '$by' } },
+    { mark: 'text', encode: { y: '$by', text: '$metric' }, align: 'end' } ] },
+  'parliament': { layers: [
+    { mark: 'unit', encode: { angle: '$metric', color: '$by' }, sweep: 'half' } ] },
+  'icon-array': { layers: [
+    { mark: 'unit', encode: { x: '$metric' } } ] },
 };
 
 /** Whether a layer draws from the period before: the previous series, a row's change on it, or a field of it by name. Such a layer goes where there is no such period. */

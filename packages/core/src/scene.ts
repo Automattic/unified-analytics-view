@@ -272,7 +272,8 @@ export function xDimOf(catalog: Catalog, layers: Layer[]): string | undefined {
  * shares of a whole are a unit of their own. A companion is in its metric's unit, or in its own where the catalog has
  * an entry for it (metricOf). A layer with a constant on y has none, and is drawn on the first. */
 function unitOf(catalog: Catalog, l: Layer, xField?: string): string | null {
-  const M = metricOf(catalog, l.encode && l.encode.y);
+  // A mark that starts at a number measures in what its second end does. Not a rule across a plot, whose ends are places on the plot's own scales.
+  const y = l.encode && l.encode.y, M = metricOf(catalog, typeof y === 'number' && !across(l) ? l.encode!.y2 : y);
   if (!M) return null;
   return l.stack === 'normalize' && splitOf(catalog, l, xField) ? 'share' : M.unit;
 }

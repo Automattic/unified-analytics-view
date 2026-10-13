@@ -1,6 +1,6 @@
 import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { buildScene, makeContainer, place, resolve, type Layer, type PainterName, type Result, type Spec } from '@unified-analytics/core';
+import { buildScene, makeContainer, place, resolve, unitsOf, type Layer, type PainterName, type Result, type Spec } from '@unified-analytics/core';
 import viewSchema from '@unified-analytics/core/schema/view.schema.json';
 import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
 
@@ -331,6 +331,10 @@ describe('a rule from a number, and a rule across a plot', () => {
     // Response time is better lower: up from zero is a loss, and down to zero a gain.
     expect([...new Set(bars({ y: 0, y2: 'response_time@max' }, 'direction').map((n) => n.paint))]).toEqual(['delta.bad']);
     expect([...new Set(bars({ y: 'response_time@max', y2: 0 }, 'direction').map((n) => n.paint))]).toEqual(['delta.good']);
+    // It measures in what its second end does, and not on whichever scale comes first (step 4, finding 8).
+    const two = (encode: Record<string, string | number>) => unitsOf(catalog, [{ mark: 'line', encode: { x: 'page', y: 'visitors' } }, { mark: 'bar', encode: { x: 'page', ...encode } }]);
+    expect(two({ y: 0, y2: 'response_time@max' })).toEqual(two({ y: 'response_time@max', y2: 0 }));
+    expect(two({ y: 0, y2: 'response_time@max' }).length).toBe(2);
   });
   it('with numbers at both ends on both axes is one line across a plot of points, drawn as a reference is', () => {
     const { ratio, scene, plan } = run({ query: scatter, layers: [{ mark: 'rule', encode: { x: 0, y: 0, x2: 2000, y2: 4 } }, dot] }), line = ratio.nodes.find((n) => n.key === 'reference:rule') as any;
@@ -451,6 +455,15 @@ describe('the samples of step 4', () => {
   it('a strip plot and a Marimekko, each from its preset', () => {
     expect([run(S('strip')).plan.preset, run(S('strip')).ratio.nodes.filter((n) => n.kind === 'circle' && n.part === 'rows').length]).toEqual(['strip', 90]);
     expect([run(S('marimekko')).plan.preset, run(S('marimekko')).ratio.scale]).toEqual(['marimekko', 'linear']);
+  });
+  it('pages by section is a strip plot from the preset too, which is what the plan\'s step was done by: a section a row, and a dot for each of its own pages', () => {
+    // At the merge: the fixture had no section when the sample was written, and has one now, with its pages inside it.
+    const spec: Spec = { use: 'strip', query: { metrics: ['pageviews'], by: ['section', 'page'], range: '28d' } }, { plan, ratio, result } = run(spec), dots = of<{ row: string; series: string; opacity: number }>(ratio.nodes, 'primary:dot:');
+    expect([plan.preset, plan.layout, ratio.track]).toEqual(['strip', 'rows', 'beside']);
+    expect(dots.length).toBe(result.rows.length);
+    expect(dots.map((n) => [n.row, n.series])).toEqual(result.rows.map((r) => [r.section, r.page]));
+    expect(ratio.series).toBe(undefined);
+    expect(dots.every((n) => n.opacity === 0.5)).toBe(true);
   });
   it('an OHLC chart: a stroke from the day\'s least to its most, the opening to the start of its band and the close to the end', () => {
     const { ratio, plan, result } = run(S('ohlc')), day = result.rows[5]!, k = day['date.day'] as string, node = (key: string) => ratio.nodes.find((n) => n.key === key + ':' + k) as any;

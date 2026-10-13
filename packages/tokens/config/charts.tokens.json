@@ -130,6 +130,15 @@
       "div-9": {
         "$value": "{color.div-9}"
       },
+      "band-1": {
+        "$value": "{color.band-1}"
+      },
+      "band-2": {
+        "$value": "{color.band-2}"
+      },
+      "band-3": {
+        "$value": "{color.band-3}"
+      },
       "annotation": {
         "$value": "{color.muted-foreground}"
       },

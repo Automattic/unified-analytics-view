@@ -21,6 +21,11 @@ import { nearest } from './layouts/points.ts';
  * step through the series there: up from the whole point to the first series, which is the foot of a stack, and
  * down again to the whole. Left and right keep the series. Version 4 was not read for this; it is ours until it is.
  *
+ * A list whose rows are divided into series has them along each row, so there left and right step through the series
+ * of the chosen row, in their order: on from the whole row to its first series, and back again to the whole. Up and
+ * down step from row to row and keep the series. Only the series the row has are stepped through: by `detail` a row
+ * may hold a few of many.
+ *
  * A plot split by `detail` has series in one paint and no legend, and may have any number of them. Its point says how
  * many there are and which has the most, and not every one. Up and down step through them as they do through
  * colours, one at a time in the engine's order: a chosen one stands out of the mass, which is the one way to read a
@@ -127,9 +132,12 @@ export function crossMarks(scene: Scene, layers: Layer[], rows: Row[][], catalog
 }
 
 /** Where up and down move to among the series at one point, from `at` (-1 when the whole point is chosen). Null
- * when the key is not such a step. It stops at the last series, and at the whole point on the way back. */
-export function stepSeries(key: string, at: number, count: number): number | null {
-  const d = key === 'ArrowUp' ? 1 : key === 'ArrowDown' ? -1 : 0;
+ * when the key is not such a step. It stops at the last series, and at the whole point on the way back.
+ * `along` is a list's: its series lie along the row, so the keys are right and left, or left and right where the page reads from the right. */
+export function stepSeries(key: string, at: number, count: number, along = false, rtl = false): number | null {
+  // Along a row the series run the way the page reads, and an arrow moves the way it points.
+  const on = along ? (rtl ? 'ArrowLeft' : 'ArrowRight') : 'ArrowUp', back = along ? (rtl ? 'ArrowRight' : 'ArrowLeft') : 'ArrowDown';
+  const d = key === on ? 1 : key === back ? -1 : 0;
   return d && count ? Math.min(Math.max(at + d, -1), count - 1) : null;
 }
 
@@ -152,12 +160,15 @@ export function hitNodes(scene: Scene): (RectNode & { c: number })[] {
     if (n.kind === 'rect' && n.row != null && n.x != null) { const b = bars.get(n.row); bars.set(n.row, [Math.min(b?.[0] ?? n.x, n.x), Math.max(b?.[1] ?? n.x, n.x + (n.w || 0))]); }
     else if (n.kind === 'path') { for (const p of n.points) if (p.row != null) cx.set(p.row, p.x); }
     else if (n.kind === 'circle' && n.row != null && n.x != null) cx.set(n.row, n.x);       // a dot on a time or category axis
-    else if (n.kind === 'line' && n.row != null && n.x != null) cx.set(n.row, (n.x + (n.x2 ?? n.x)) / 2);   // a row's rule, or its tick
+    // A row's rule, or its tick. Half a tick is to one side of its band's middle, so it gives way to a mark that stands at the middle.
+    else if (n.kind === 'line' && n.row != null && n.x != null && (!cx.has(n.row) || n.x === n.x2)) cx.set(n.row, (n.x + (n.x2 ?? n.x)) / 2);
   }
   bars.forEach(([lo, hi], row) => cx.set(row, lo + (hi - lo) / 2));
   const at = (scene.rows ?? []).filter((r) => cx.has(r)).map((r) => [r, cx.get(r)!] as const);
+  // Columns of widths of their own meet where one's bars end and the next one's begin, which is not half way between their middles.
+  const own = scene.scale === 'linear' && at.every(([r]) => bars.has(r)), edge = (a: string, b: string) => (bars.get(a)![1] + bars.get(b)![0]) / 2;
   return at.map(([row, x], i) => {
-    const lo = i ? (at[i - 1]![1] + x) / 2 : 0, hi = i < at.length - 1 ? (x + at[i + 1]![1]) / 2 : 1;
+    const lo = i ? (own ? edge(at[i - 1]![0], row) : (at[i - 1]![1] + x) / 2) : 0, hi = i < at.length - 1 ? (own ? edge(row, at[i + 1]![0]) : (x + at[i + 1]![1]) / 2) : 1;
     return { key: 'hit:' + row, part: 'plot', kind: 'rect', row, x: lo, w: hi - lo, c: hi > lo ? (x - lo) / (hi - lo) : 0.5, paint: 'rule', layer: 'guide' };
   });
 }
@@ -228,6 +239,10 @@ svg[data-hits] path[data-active="pointer"] { ${HOVER.stroke} }
 .uav-plot:has([data-chosen]) :is(.uav-bars i, path):not([data-chosen]) { opacity: 0.3 !important; }
 /* In a plot split by detail every line is drawn light, so that many together read darker. The one chosen is drawn whole. */
 .uav-body[data-mass] .uav-plot path[data-chosen] { opacity: 1 !important; }
+/* A series chosen in a row of a list: the rest of that row's stand back, and a dot of many is drawn whole. */
+.uav-row:has(> [data-chosen]) > i[data-series]:not([data-chosen]) { opacity: 0.3 !important; }
+.uav-row > i[data-chosen] { opacity: 1 !important; }
+:is(.uav-legend, .uav-legend-top) span[data-chosen] { text-decoration: underline; }
 :is(.uav-legend, .uav-labels) span[data-chosen] { text-decoration: underline; }`;
 
 /** A view's readout: one element, the figure's own, which every layout that says what is under the pointer sets.
@@ -328,8 +343,10 @@ export class Keys {
         if (near != null) { e.preventDefault(); this.#show(points[near]!.getAttribute('data-row'), null, 'keys'); }
         return;
       }
-      const series = at >= 0 && box.dataset.hits === 'x' ? stepSeries(e.key, this.#order.indexOf(this.#series ?? ''), this.#order.length) : null;
-      if (series != null) { e.preventDefault(); this.#show(this.#at, this.#order[series] ?? null, 'keys'); return; }
+      // In a list the series lie along the chosen row, and are the ones that row has.
+      const list = box.dataset.hits === 'y' && this.#order.length > 0, here = list ? (this.#rows[this.#keys.indexOf(this.#at ?? '')] ?? []).map((r) => String(r[this.#split!])) : this.#order;
+      const series = at >= 0 && (list || box.dataset.hits === 'x') ? stepSeries(e.key, here.indexOf(this.#series ?? ''), here.length, list, getComputedStyle(box).direction === 'rtl') : null;
+      if (series != null) { e.preventDefault(); this.#show(this.#at, here[series] ?? null, 'keys'); return; }
       // A plot's points run from the left whatever the page, as its whole frame does (cartesian.ts), and a band's the way the page reads.
       const to = step(e.key, at, points.length, box.dataset.hits === 'y', box.dataset.hits === 'x' && getComputedStyle(box).direction === 'rtl');
       if (to == null) return;
@@ -340,7 +357,8 @@ export class Keys {
 
   /** After each paint: name the points the layout made, and keep the chosen one if it is still there. */
   paint(scene: Scene, q: Query, result: Result, catalog: Catalog, layers: Layer[]): void {
-    const { rows, x, split } = rowsAt(scene, q, result), totals = (x != null && split != null && result.totalsBy?.[x]) || [];
+    // A point of a plot of points is one row whatever colours it, so it is read as a row, and has no series to step through.
+    const found = rowsAt(scene, q, result), { rows, x } = found, split = scene.parts?.includes('points') ? undefined : found.split, totals = (x != null && split != null && result.totalsBy?.[x]) || [];
     this.#keys = scene.rows ?? []; this.#rows = rows; this.#order = split == null ? [] : scene.series ?? scene.detail ?? []; this.#split = split; this.#q = q; this.#catalog = catalog; this.#layers = layers;
     this.#x = x; this.#cross = crossMarks(scene, layers, rows, catalog, split);
     this.#says = this.#keys.map((k, i) => (split == null ? readout(rows[i]![0] ?? {}, q, catalog, layers) : readoutAt(rows[i]!, totals.find((t) => String(t[x!]) === k), q, catalog, x!, split, !scene.series)));

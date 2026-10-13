@@ -617,7 +617,7 @@ Merged. 836 tests pass, twenty of them new, and the typecheck is clean. Every go
 
 ### Step 9, partition (built October 12)
 
-Built on a branch of its own, not merged. 882 tests pass (836 before) and the typecheck is clean. Every golden scene that existed is the same to the byte: the snapshot files are untouched, and `test/__snapshots__/partition.test.ts.snap` is new, with eight scenes. The parity tests are untouched. Checked in headless Chromium on the bench: both samples at 346, 250, 170, 120 and 80 px, in a box 160 px tall, light and dark, `typical`, `no-prior` and `empty`, a frame resized in place from 250 to 700 px and back, real key events, the pointer, a click, the table, and on the marks page the six surfaces, the ramp and a `limit`. Not checked: WebKit, Firefox, a screen reader, touch, reduced motion, a page that reads from the right, the dot-grid painter, and a data change while a box is chosen.
+Merged. Built on a branch of its own. 882 tests pass (836 before) and the typecheck is clean. Every golden scene that existed is the same to the byte: the snapshot files are untouched, and `test/__snapshots__/partition.test.ts.snap` is new, with eight scenes. The parity tests are untouched. Checked in headless Chromium on the bench: both samples at 346, 250, 170, 120 and 80 px, in a box 160 px tall, light and dark, `typical`, `no-prior` and `empty`, a frame resized in place from 250 to 700 px and back, real key events, the pointer, a click, the table, and on the marks page the six surfaces, the ramp and a `limit`. Not checked: WebKit, Firefox, a screen reader, touch, reduced motion, a page that reads from the right, the dot-grid painter, and a data change while a box is chosen.
 
 **What was added**
 
@@ -831,6 +831,92 @@ No preset's scene changed: `waterfall`, `candlestick` and `box` are the same to 
 - A catalog entry for a companion that is not in its metric's unit, or a unit beside each companion in the answer.
 - `metric@rank` and `metric@cumulative` by name, without `compare`.
 - A range that ends on the last whole bucket.
+
+### Step 4, rows, bars, ticks and rules (built October 12)
+
+Merged. Built on a branch from `e09de06`. 1,045 tests pass (969 before) and the typecheck is clean. `prototype/` and the parity tests are untouched. **Every golden scene that existed is the same to the byte but three, on purpose:** the `bullet` sample's, which now has its bands (part 7). 21 golden scenes are new, in a snapshot file of their own. Looked at on the bench in headless Chromium: the seven new samples and `bullet` at 346, 250, 170, 120 and 80 px, light and dark, resized in place from 700 px down to 90 and back, under height limits of 100 and 60 px, empty, as a table, with real key events and the pointer. Not checked: WebKit, Firefox, a screen reader, touch, reduced motion, a page that reads from the right, the `dots` painter on screen, a data change in place, the no-prior state in a browser (no new sample compares), and the marks page beyond that it paints with no error.
+
+**Whole:** parts 1 to 6, 8, 9, 10 and 12. **Partial:** part 7 (the bullet's bands are drawn, the gauge's are not, as asked) and part 11 (Chromium only).
+
+**What was added**
+
+- **A row divided by a second dimension** (part 1). A `bar` with `stack` in rows takes the query's other dimension on `color`. `rowSplitOf` and `listRows` in `scene.ts`, exported from core: the dimension a list is divided by, and the rows it has. `Scene.series` in rows, a `series` on each part of a bar, keys `primary:bar:<row>:<series>`. Parts `legend` and `legend-top` in rows, and `Guides.legend` there. Two fit rules, `rows/legend` and `rows/legend-top`. `legendBlock` in `place.ts`.
+- **`stack: "diverge"`** (part 2), in the type, the schema, a row's track and a plot. The stacking code is one function, `stacked`, which both layouts call.
+- **`detail` in rows** (part 3): `'rows'` joins `DETAIL_LAYOUTS`. A `dot` or a `tick` has a mark to each pair, keys `primary:dot:<row>:<detail>`, `Scene.detail` in rows. `pointDimOf` in `scene.ts`: the dimension a plot of points has a point for.
+- **`size` on a `bar`** (part 4): the column's width. The plot's `scale` is then `linear`.
+- **The rug and `align`** (part 5): `align` is `'start' | 'end'`.
+- **`rule`** (part 6): a number as the start of a ranged rule, on either axis, and all four channels for a line across a plot of points.
+- **The range behind a row's marks** (part 7): a `bar` in rows with nothing on `x`. Paints `band.1` to `band.3`, tokens `--ua-charts-color-band-1` to `-3`, aliases of three neutral steps (600, 500, 400) that need no dark values, since that ramp flips with the theme.
+- **Presets** (part 8): `lollipop`, `pyramid`, `strip`, `marimekko`, `ohlc`. Working names, all five. `bullet` gained a layer.
+- **The fixture** (part 9). Dimensions `age`, `sex`, `question`, `answer`, `quantile`. Metrics `responses`, `load_normal`, `load_quantile`. A day holds its `responses`, about one visitor in eight, drawn from no seed, so no figure there was moved. `ORDERED` names the dimensions that keep an order of their own, alone and as the outer one of a pair. `TILT` gives one dimension's mix under each value of another: sex by age, answer by statement. A table `quantile`, with no totals.
+- **Samples:** `pyramid`, `likert`, `strip`, `marimekko`, `rug`, `ohlc`, `qq`. `lollipop` is written with its preset. They are swept, and have their golden scenes, in `test/uncommon-rows.test.ts`; `test/dom-uncommon-rows.test.ts` holds what the element does that is strings and plain functions.
+- **The bench:** the main page has a row of frames for each sample, as for every sample. The marks page has them as states of `bar`, `bar in rows`, `rule`, `dot` and `tick`.
+
+**Choices where the plan was silent, and departures**
+
+1. **A divided row's track stands beside its label,** as a ranged bar's does, and its parts are drawn whole. Behind a label a bar is a tint at a fifth of its paint, and three tints in a row cannot be told apart.
+2. **The rows of a divided list are in the order the result first has them, and the series in the order of `totalsBy`.** A plot does the same. So a list of channels by device is ranked, and an age pyramid is in age order only because the engine sends ages in order. The fixture does (`ORDERED`). This is finding 4 of step 0 again.
+3. **A divided list needs `totalsBy` for its rows' dimension, and says so.** A row's value column, and the whole a share is of, are read from it. With none the error names the fix. It could have drawn the bars and left the values out; it does not.
+4. **The legend steps down by two rules, both of the view.** Under 170 px wide or 150 px tall it is the one line; under 84 px tall it is nothing. The one line names the series with the most, by the engine's totals, and is painted in that series' colour, since a line of text has no swatch. With two series that keys both. With five it keys one.
+5. **The one line of the legend is a fact about the totals, not about the rows on show.** Under a height limit the rows are trimmed and it still says "Agree 33%", which is of all five statements.
+6. **The axis of a diverging stack says magnitudes:** `3k, 2k, 1k, 0, 1k, 2k`. The tick keys keep the sign (`ytick:-2000`), so they stay unique. A row's track has no axis, so there the question does not arise, and no line is drawn at zero: the two colours meet there.
+7. **A value below zero in a diverging stack is refused,** with the fix. Which side a series is on is its place among them.
+8. **`"center"` was not touched.** Its signed axis (step 0, finding 9) is still there.
+9. **No `likert` preset.** It would be `pyramid`'s two layers under another name. The `likert` sample uses `pyramid`. **To decide:** whether the name `pyramid` is right for a preset that is also the Likert chart; `diverging-bar` says what it is.
+10. **A Likert chart is painted in five series colours.** They are categorical, and the answers are an ordered scale from one end to the other: a diverging ramp is the honest paint. Step 5 makes one for cells. Nothing here uses it.
+11. **A dot by `detail` is drawn at 0.5, as step 1 chose for lines.** A tick by `detail` too, and a stroke of a rug. Looked at in both themes: fifteen dots to a row read as a cluster with its outliers plain.
+12. **By `detail` in rows only a `dot` and a `tick` are drawn.** A `bar` or a `rule` there would lie one over another in one paint, and is refused with the fix. Step 1 let a plot's bars sit side by side by `detail`; a row has no side by side.
+13. **In a plot of points, a `dot` with one dimension on `color` and the other on `detail` worked as step 1 left it,** where the query names the points' own dimension first. Named the other way round the rows were keyed by the colour's dimension. `pointDimOf` settles it: the dimension on `detail` is the points' own, whichever way the query names the two.
+14. **The points sentence now wins over the two-dimension sentence,** as step 0's finding 3 asked. This also changes the prose of a coloured scatter that names each point with a `text` layer: it was the two-dimension sentence and is now the points one. `tldrProse` takes the points' dimension where it took `true`.
+15. **A coloured point is read out as a row:** its name, what it is coloured by, and its two values. It was going to be read as a point of a split plot, with its one series in brackets.
+16. **A Marimekko's x is `linear` in the scene,** because every column has a place and a width of its own, which is what `linear` means to a painter. No band scale could say it.
+17. **Its labels are ranked by their column's width,** the widest unranked. `place()` leaves out the ones that would meet a wider column's, by character width. The `mid-tick` rule, which gives up a middle date under 380 px, is not theirs: in the DOM such a label carries its rank as `data-order`, not `data-rank`, so that rule's selector passes it by, and the measured pass thins it as it thins any label.
+18. **`size` on a `bar` is refused anywhere but a plot of shares** (a dimension on x, the other on `color`, `stack: "normalize"`), and where the engine gives no total of the metric. The width is the x's total over the engine's total, so with a `limit` the columns stop short of the plot's end, as a band does.
+19. **A rug's tick must be at the plot's own x metric,** or it is refused. Its strokes are a twentieth of the plot's height. A rug along y was not asked for and is not built: a `tick` with a metric on y is still refused there.
+20. **`align` on a tick in a row's track** is the upper or the lower half of the row: the start is the top, where a page begins.
+21. **In `ohlc` every layer is `primary`,** the stroke included, where `candlestick`'s wick is `context`. An OHLC chart with its strokes given up is two ticks a day.
+22. **A rule between two numbers on one axis is still refused** (`y: 0, y2: 500` with a dimension on x): every row's would be the one stroke. **A `bar` still starts at a field.** Step 0's finding 1 wanted a bar from a number; paint by direction is step 3's, and a bar from zero to a gain cannot be painted right until that lands.
+23. **The line across a plot is a `path` of two points, not a `line` node.** A painter's line is level or upright, in `place()` and in the DOM, and a path is drawn by both already. So no painter changed for it.
+24. **With a field at any end, a rule across a plot is a line for each row,** in the layer's paint and solid: an arrow from then to now. With four numbers it is one line, dashed, in the `rule` paint, as a reference at one number is. A field is a row's value everywhere else in the grammar, and there is no other reading that keeps that.
+25. **A line across a plot takes no `label`,** and says so. There is no anchor for one that both painters can set.
+26. **The bands are a layer, not a rule.** A `bar` in rows with nothing on `x` is the metric's range, as an `arc` with nothing on `angle` is a gauge's. Nothing draws bands unasked. The metric is the one the row's other marks put on the track.
+27. **The bands are `guide` nodes with `role: "context"`.** They are read against, as a grid is, and a painter tells them from a bar by that: as tall as the row, no least width, no rounded corner.
+28. **A metric with no `domain` has no range drawn, and no error,** as one with no `target` has no tick. More than two `bands` is an error: there are three paints.
+29. **`band.1` is the least part of the range, whatever the metric's polarity.** A bullet graph's darkest band is by convention the worst, which for a metric where less is better is the far end. Not built.
+30. **A departure: `bullet`'s golden scenes changed.** The preset gained the range layer, so the three scenes hold nine more rectangles each, and the track now runs to the top of the domain (500) where it ran to the target (400), so every bar and tick moved. Leaving `bullet` as it was would have left it not a bullet graph.
+31. **The keyboard in a divided list:** up and down from row to row, right and left through the series of the chosen row, on from the whole row and back to it, the other way on a page that reads from the right. Up and down keep the series. Only the series a row has are stepped through. The chosen part is drawn whole and the rest of its row stand back, and its name is underlined in the legend.
+32. **The strip plot's query is channel by country,** not pages by section as the plan's "done when" has it. The fixture has no section, and its two-dimension engine crosses every value of one with every value of the other.
+
+**Findings**
+
+1. **A registered ratio is nothing when unset, not its fallback.** The ratios a painter writes (`--uav-t`, `--uav-x`) are registered so that they can move. `var(--uav-t2, 1)` on an element that never set it gave 0, and the bullet's tick was no height at all. Seen in the browser and nowhere else. A tick's two ends are now always stated.
+2. **A label under a narrow last column runs past the plot's edge.** A Marimekko's `Other`, at 700 px. It meets no other label, so nothing thins it. Not fixed.
+3. **A divided row's value column is its total, and a pyramid has no room to say its two sides.** The readout says both. The preset has no value column.
+4. **A row's track has no axis, so a pyramid is read by length alone,** and one of shares cannot be said (`stack` holds one value). On an axis the same layers draw a butterfly with a true axis.
+5. **Under a height limit a legend sits at the foot of the box,** and what the whole rows leave over is between it and them: up to a row's height of nothing.
+6. **Views of things with no total fall to a dash** (step 0, finding 5): the rug and the Q-Q plot, below 280 px.
+7. **The unit `s` writes 0.76 as "760ms" and 4.04 as "4s",** so the Q-Q sentence says a range of "760ms to 4s". The formatter's, and not touched.
+8. **A rule from a number to a plain metric is drawn on the first y scale,** whatever the metric's unit, because `unitOf` reads `y` alone. Not changed: how a field gets a unit is step 3's.
+9. **`hitNodes` took the middle of a row's marks as its place.** Half a tick is to one side, so an OHLC day's target stood off its stroke; it now gives way to a mark at the middle. And columns of unequal width now meet at their edges, not half way between their middles.
+10. **Rows of text, cut short** (step 0, finding 10, which this step was to look at): not looked at.
+
+**Existing assertions changed, each on purpose**
+
+- `test/uncommon.test.ts`: three of step 0's "for step N" facts are brought up to date (a stem written from a number; the coloured scatter; the bullet's bands), and the lollipop's layers are read from its expansion.
+- `test/coverage.test.ts`: a `bar` in rows with `detail` is refused by a new message, and the old message is held by a grid. The samples of this step are left to their own sweep.
+- `test/ranges.test.ts`: the bullet's preset has five layers; its tick and bar are measured against the domain; its bands are drawn. Three golden scenes.
+- `test/core.test.ts`: the two strings that list the presets.
+- `test/fit.test.ts`: `gaveUp` knows the rule `legend-top`.
+
+**Not done**
+
+- The gauge's bands (step 2 has the radial layout).
+- A rug along y. A label on a line across a plot. A bar from a number.
+- A zero line in a diverging row. A diverging ramp for ordered series.
+- Bands that follow the metric's polarity.
+- `CLAUDE.md` was left for its owner.
+
+**The counts section 8 asks for:** layer fields that are neither data nor role, still one. Presets that need `detail`: one of the five, `strip`. Presets that need a custom mark: none of the five.
 
 ## 8. What to count as it is built
 

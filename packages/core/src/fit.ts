@@ -58,6 +58,10 @@ export const FIT_RULES: FitRule[] = [
     hide: ['columns'], keep: 'guides' },
   { id: 'marks',     layout: 'rows',      container: 'view', needs: { inline: 90 },                   // the label; the value's room is measured, and each ranked column's
     hide: ['rows'], show: ['number'], keep: 'marks' },
+  { id: 'legend',     layout: 'rows',     container: 'view', needs: { inline: 170, block: 150 },      // a divided row's legend becomes one line, as the band's does, and where the rows have under three of their own
+    hide: ['legend'], show: ['legend-top'], keep: 'guides' },
+  { id: 'legend-top', layout: 'rows',     container: 'view', needs: { block: 84 },                    // and that line goes where it would leave no two rows
+    hide: ['legend', 'legend-top'], keep: 'guides' },
   { id: 'legend',    layout: 'band',      container: 'view', needs: { inline: 170 },                  // the full legend becomes the largest segment's label
     hide: [], set: { legend: 'top' }, keep: 'guides' },
   { id: 'marks',     layout: 'band',      container: 'view', needs: { inline: 110 },

@@ -1,7 +1,7 @@
 {
   "color": {
     "$type": "color",
-    "$description": "Spacefast's colour variables, by their names, as aliases into our ramps. Values here are the light theme; common.dark.tokens.json holds only the tokens that sit on a different step in dark. Translucent tokens are a color-mix() of another token, a deliberate deviation from the DTCG colour type so the alpha survives aliasing. The seq-* names are ours, not Spacefast's: the sequential ramp by step number, lowest value first, and seq-none for a cell with no data, which is not a step.",
+    "$description": "Spacefast's colour variables, by their names, as aliases into our ramps. Values here are the light theme; common.dark.tokens.json holds only the tokens that sit on a different step in dark. Translucent tokens are a color-mix() of another token, a deliberate deviation from the DTCG colour type so the alpha survives aliasing. The seq-* names are ours, not Spacefast's: the sequential ramp by step number, lowest value first, and seq-none for a cell with no data, which is not a step. So are the band-* names: three neutral steps for the parts a metric's range is divided into behind a mark, the strongest first. The neutral ramp flips with the theme, so they need no dark values.",
     "background": {
       "$value": "{color.surface.page}"
     },
@@ -163,6 +163,15 @@
     },
     "div-9": {
       "$value": "{color.div-above.400}"
+    },
+    "band-1": {
+      "$value": "{color.neutral.600}"
+    },
+    "band-2": {
+      "$value": "{color.neutral.500}"
+    },
+    "band-3": {
+      "$value": "{color.neutral.400}"
     },
     "switch-thumb-on": {
       "$value": "{color.neutral.200}"

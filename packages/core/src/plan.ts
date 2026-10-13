@@ -3,8 +3,8 @@ import { applies, fallbackRule, gaveWay, ruleFor, type FitRule } from './fit.ts'
 import { fmtTime, rangeLabel } from './format.ts';
 import { customMarks } from './marks.ts';
 import { PRESETS, expand, fills, presetNames, usesPrevious } from './presets.ts';
-import { COLUMNS_BLOCK, UNIT_KEY_BLOCK, place } from './place.ts';
-import { BUILT_IN_MARKS, DETAIL_LAYOUTS, buildScene, columnLabel, columnsOf, tldrValueText, isDim, metricOf, roleOf, seriesOf, trackBeside, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
+import { COLUMNS_BLOCK, UNIT_KEY_BLOCK, legendBlock, place } from './place.ts';
+import { BUILT_IN_MARKS, DETAIL_LAYOUTS, buildScene, columnLabel, columnsOf, tldrValueText, isDim, listRows, metricOf, pointDimOf, roleOf, seriesOf, trackBeside, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
 import { differenceProse, gridProse, rangeProse, rankProse, tldrProse } from './prose.ts';
 import type { Catalog, Container, Layer, Layout, Plan, PlanShape, PresetLibrary, Query, Reduction, ReductionId, Result, Role, PlacedScene, Spec } from './types.ts';
 
@@ -54,6 +54,10 @@ function checkLayers(layers: Layer[], q: Query, catalog: Catalog, result: Result
     for (const [end, start] of [['x2', 'x'], ['y2', 'y']] as const) {
       if (l.encode?.[end] == null) continue;
       if (['bar', 'rule', 'area'].indexOf(l.mark) < 0) throw new Error('Layer ' + (i + 1) + ' is a "' + l.mark + '" with "' + end + '", and only a bar, a rule or an area runs from one value to another. Use one of those, or remove "' + end + '".');
+      // A rule may start at a number: to one of the row's values, which is the stroke from that value to the number, or to a place across the plot.
+      const from = l.encode[start], to = l.encode[end], across = l.encode.x2 != null && l.encode.y2 != null;
+      if (l.mark === 'rule' && typeof from === 'number' && (across || (typeof to === 'string' && !isDim(catalog, to)))) continue;
+      if (l.mark === 'rule' && typeof from === 'number') throw new Error('Layer ' + (i + 1) + ' is a rule from ' + from + ' to ' + JSON.stringify(to) + ' on ' + start + ', so every row\'s would be the one stroke. Encode a metric, or a companion the result returns with one, at either end, or keep one number for a line at it.');
       if (typeof l.encode[start] !== 'string' || isDim(catalog, l.encode[start])) throw new Error('Layer ' + (i + 1) + ' has "' + end + '" and no value on ' + start + ' to run from. Encode where it starts on ' + start + ': a metric, or a companion the result returns with one.');
     }
     // A unit counts one value in glyphs, in its own paint or a colour for each group. What would lay glyphs over glyphs, or run them from a second value, is refused here by name.
@@ -82,8 +86,11 @@ function checkLayers(layers: Layer[], q: Query, catalog: Catalog, result: Result
     if (l.stack && ld != null) throw new Error('Layer ' + (i + 1) + ' has "stack" and is split by detail, which paints every series alike, so a stack of them could not be read. Encode "' + ld + '" on color in place of detail, or remove "stack".');
     if (l.stack && !isDim(catalog, l.encode && l.encode.color)) throw new Error('Layer ' + (i + 1) + ' has "stack" and no dimension on color, so there is nothing to stack. Encode the query\'s second dimension on color, or remove "stack".');
     // In rows a colour says which rows go together, so it is the rows' own dimension or something the engine says of it.
-    const { x: lx, y: ly, color: lc } = l.encode || {};
-    if (l.mark !== 'cell' && isDim(catalog, ly) && !isDim(catalog, lx) && typeof lc === 'string' && lc.split('@')[0] !== ly) throw new Error('Layer ' + (i + 1) + ' is in rows by "' + ly + '" and encodes "' + lc + '" on color. A row is painted by its own dimension, for a colour each, or by a companion the result returns with it, for rows that go together. Encode "' + ly + '" on color, or remove it.');
+    // A stacked bar is the one mark that is divided there: by the query's other dimension, into a series for each of its values.
+    const { x: lx, y: ly, color: lc } = l.encode || {}, divided = l.mark === 'bar' && !!l.stack && by.indexOf(lc as string) >= 0;
+    if (l.mark !== 'cell' && !divided && isDim(catalog, ly) && !isDim(catalog, lx) && typeof lc === 'string' && lc.split('@')[0] !== ly) throw new Error('Layer ' + (i + 1) + ' is in rows by "' + ly + '" and encodes "' + lc + '" on color. A row is painted by its own dimension, for a colour each, or by a companion the result returns with it, for rows that go together. Encode "' + ly + '" on color, or remove it.' + (l.mark === 'bar' && by.indexOf(lc) >= 0 ? ' To divide each row\'s bar by "' + lc + '", give the layer "stack".' : ''));
+    // A size on a bar is its column's width, which is a share of a whole: so the plot is one of shares, column by column.
+    if (l.mark === 'bar' && l.encode?.size != null && !(isDim(catalog, lx) && isDim(catalog, lc) && lc !== lx && l.stack === 'normalize')) throw new Error('Layer ' + (i + 1) + ' is a bar with ' + JSON.stringify(l.encode.size) + ' on size, which makes each column as wide as its share of the engine\'s total. That is read in a plot of shares: a dimension on x, the query\'s other dimension on color, and stack: "normalize". Add what is missing, or remove "size".');
     Object.entries(l.encode || {}).forEach(([ch, f]) => {
       if (typeof f === 'number') return;
       if (ch === 'size' && !(f.split('@')[0]! in catalog.metrics)) throw new Error('Layer ' + (i + 1) + ' encodes "' + f + '" on size, and a size is a quantity. Encode one of the query\'s metrics: ' + q.metrics.join(', ') + '.');
@@ -135,7 +142,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   const points = !!layers.length && isPoints(catalog, layers);
   // Glyphs with no dimension say how far along its range a metric is, and not what it is: the number stands above them.
   const p: PlanShape = { layout: laid, layers, guides: {}, tldrValue: rules.tldrValue.above === 'always' || !!M.instant || !layers.length || (unit && !by), side: false, rowLimit: null,
-                         share, text: tldrProse(q, result, share, catalog, points && (layers.some((l) => l.mark === 'line') ? 'path' : true)) };
+                         share, text: tldrProse(q, result, share, catalog, points && pointDimOf(catalog, layers, by), layers.some((l) => l.mark === 'line')) };
   if (p.layout === 'cartesian') p.guides = { x: true, y: true, grid: true };
   // A plot whose y is a place in an order says who is first and who moved, where it has a dimension to split by. A rank is known by its unit.
   const ranked = p.layout === 'cartesian' && xDimOf(catalog, layers) ? layers.map((l) => (l.encode || {}).y).find((f): f is string => metricOf(catalog, f)?.unit === 'rank') : undefined;
@@ -162,7 +169,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   const twoUnits = p.layout === 'cartesian' && unitsOf(catalog, layers).length > 1;
   if (twoUnits && !short('axis-2')) p.guides.y2 = true;
   // Labels on the points go first, then the key to sizes. Both are asked once, as the legend is.
-  const labelled = p.layout === 'cartesian' && layers.some((l) => l.mark === 'text'), sized = p.layout === 'cartesian' && layers.some((l) => l.encode && l.encode.size != null);
+  const labelled = p.layout === 'cartesian' && layers.some((l) => l.mark === 'text'), sized = p.layout === 'cartesian' && layers.some((l) => l.mark !== 'bar' && l.encode && l.encode.size != null);
   if (labelled && !short('point-labels')) p.guides.pointLabels = true;
   if (sized && !short('size')) p.guides.size = true;
   // A band divided by a dimension has a legend. A grid that reads a metric against its range has none.
@@ -189,9 +196,13 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   // is more than one column, and are a guide the view gives up when it is short. Both are asked once, as the legend is.
   // A track that stands beside its label asks for room of its own, by its own rule, as a plot of points does.
   const beside = () => (p.layout === 'rows' && trackBeside(p.layers) && rule('track')) || undefined;
+  // A row divided into series starts with its legend, as a band does, and steps it down the same way: to one line that
+  // names the series with the most, and then to nothing. Asked once, as a plot's is.
+  const dividedRows = p.layout === 'rows' && layers.some((l) => l.stack);
+  if (dividedRows) p.guides.legend = short('legend-top', 'rows') ? undefined : short('legend', 'rows') ? 'top' : 'full';
   if (p.layout === 'rows') {
     const label = (beside() || rule('marks'))?.needs.inline ?? 0;
-    for (let cols = columnsOf(catalog, p.layers); cols.length > 1 && container.width < label + valueRoomOf(catalog, p.layers, result.rows); cols = columnsOf(catalog, p.layers)) {
+    for (let cols = columnsOf(catalog, p.layers); cols.length > 1 && container.width < label + valueRoomOf(catalog, p.layers, listRows(catalog, p.layers, result)); cols = columnsOf(catalog, p.layers)) {
       const last = cols[cols.length - 1]!;
       p.layers = p.layers.filter((l) => l !== last);
       dropped.push('the "' + columnLabel(catalog, last) + '" column');
@@ -202,7 +213,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   // a number wider than the bare plot's rule allows it, or a row's widest value.
   function guard(): { rule?: FitRule | undefined; measured: number } {
     if (p.layout === 'cartesian') return p.side ? { rule: rule('marks'), measured: Math.max(0, container.displayWidth(valueLen) - rules.bare.numberWidth) } : { rule: (points && rule('points')) || rule('axes'), measured: 0 };
-    if (p.layout === 'rows') return { rule: beside() || rule('marks'), measured: valueRoomOf(catalog, p.layers, result.rows) };
+    if (p.layout === 'rows') return { rule: beside() || rule('marks'), measured: valueRoomOf(catalog, p.layers, listRows(catalog, p.layers, result)) };
     if (p.layout === 'band') return { rule: rule(p.guides.legend === 'full' ? 'legend' : 'marks'), measured: 0 };
     if (p.layout === 'radial') return { rule: rule(p.guides.legend === 'full' ? 'legend' : p.guides.rim ? 'rim' : 'marks'), measured: 0 };
     if (p.layout === 'matrix') return { rule: rule((p.guides.ramp || p.guides.size) && keep.indexOf('guides') < 0 ? 'ramp' : 'marks'), measured: 0 };   // a ramp the spec keeps asks for no room of its own, nor a key to sizes
@@ -271,9 +282,11 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
     },
     'trim-rows': () => {
       if (p.layout !== 'rows' || container.height == null) return null;
-      const n = result.rows.length, cur = p.rowLimit || n, rh = rules.rows.rowHeight + rules.rows.gap;
+      const n = listRows(catalog, p.layers, result).length, cur = p.rowLimit || n, rh = rules.rows.rowHeight + rules.rows.gap;
       const above = p.tldrValue ? alone({ ...p, layout: 'none', layers: [] }) + 16 : 0;
-      const k = Math.max(1, Math.floor((container.height - above - (p.guides.columns ? COLUMNS_BLOCK : 0) - (unitKeyed() ? UNIT_KEY_BLOCK : 0) + rules.rows.gap) / rh));
+      // The key to a divided row's series stands under the rows, and its lines come out of their room.
+      const under = p.guides.legend ? legendBlock(buildScene(p, q, result, catalog), container.width) : 0;
+      const k = Math.max(1, Math.floor((container.height - above - (p.guides.columns ? COLUMNS_BLOCK : 0) - (unitKeyed() ? UNIT_KEY_BLOCK : 0) - under + rules.rows.gap) / rh));
       if (k >= cur) return null;
       p.rowLimit = k;
       return k + 1 === n ? 'row ' + n : 'rows ' + (k + 1) + ' to ' + n;
@@ -305,6 +318,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   if (p.layout === 'rows' && columnsOf(catalog, p.layers).length > 1 && !p.guides.columns) dropped.push('the column headers');
   // The key a rule took before any reduction ran. One that went with the axes, or in `drop-guides`, is said there.
   if (noKey && (p.layout !== 'cartesian' || p.guides.x) && buildScene({ ...p, guides: { ...p.guides, unitKey: true } }, q, result, catalog).parts.includes('unit-key')) dropped.push('the key to what a glyph is worth');
+  if (p.layout === 'rows' && dividedRows && p.guides.legend !== 'full') dropped.push(p.guides.legend === 'top' ? 'the legend, except the series with the most' : 'the legend');
   const midTick = rule('mid-tick');
   if (p.layout === 'cartesian' && p.guides.x && midTick && applies(midTick, { view: { inline: container.width } }) && catalog.dimensions[xDimOf(catalog, p.layers)!]?.type === 'time') dropped.push('the middle date label');
 

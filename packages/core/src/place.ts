@@ -105,12 +105,15 @@ function placePlot(scene: Scene, W: number, H: number, narrow: boolean): PlacedN
   const labelY = new Map<string, number>(), down = labels.slice().sort((a, b) => b.t! - a.t!);
   down.reduce((least, n) => { const at = Math.max(y(n.t!), least); labelY.set(n.key, at); return at + LABEL_LINE; }, -Infinity);
   down.reverse().reduce((most, n) => { const at = Math.min(labelY.get(n.key)!, most); labelY.set(n.key, at); return at - LABEL_LINE; }, y(0));
+  // Labels under columns of widths of their own, each a row on a linear x: one that would meet a label of a wider column is left out.
+  const under = gx && lin ? scene.nodes.filter((n): n is TextNode => n.part === 'x-axis' && n.kind === 'text' && n.row != null) : [];
+  const met = declutter(under.map((n) => ({ x: px(n.x!) - n.text.length * TICK_W / 2, y: 0, w: n.text.length * TICK_W, h: LABEL_LINE, rank: n.rank })), 6), thin = new Set(under.filter((_, i) => met[i]).map((n) => n.key));
   const out: PlacedNode[] = [];
   scene.nodes.forEach((n) => {
     if (n.part === 'number' || n.part === 'legend' || (n.part === 'labels' && !lw) || (n.part === 'y-axis-2' && !g2)) return;
     if (n.part === 'size' || n.part === 'unit-key') return;
     if (n.part === 'point-labels') { const a = tag.get(n.key); if (a) out.push(text(a.n, a.x, a.y, a.s)); return; }
-    if (n.rank && (n.part === 'x-axis' ? narrow : H < SHORT_PLOT)) return;
+    if (under.includes(n as TextNode) ? thin.has(n.key) : n.rank && (n.part === 'x-axis' ? narrow : H < SHORT_PLOT)) return;
     if (n.kind === 'line') {
       const { part, role, row, series, rank, t, x, x2, t2, ...rest } = n;
       out.push({ ...rest, x1: x == null ? ml : px(x), x2: x2 == null ? W - mr : px(x2), y1: y(t), y2: y(t2 ?? t) });
@@ -145,6 +148,15 @@ function placeLegend(scene: Scene, W: number): Block {
   });
   return { nodes, height: yy + 10 };
 }
+// The key to the series of a divided row, under the rows: whichever of the two the plan shows. All of it is a plot's
+// legend. The one line names the series with the most, in its colour.
+function placeRowsLegend(scene: Scene, W: number): Block {
+  if (scene.parts.includes('legend')) return placeLegend(scene, W);
+  const top = scene.parts.includes('legend-top') && scene.nodes.find((n): n is TextNode => n.part === 'legend-top' && n.kind === 'text');
+  return top ? { nodes: [text(top, 0, 18, fit(top.text, W))], height: 24 } : { nodes: [], height: 0 };
+}
+/** The height the key to a list's series takes under its rows, at a width. Nothing where the scene shows none. */
+export const legendBlock = (scene: Scene, W: number): number => placeRowsLegend(scene, W).height;
 
 // A grid of cells, with a label for each of its rows in a gutter as wide as the longest, and for each column under it.
 // Cells are a hairline apart. Labels thin by rank: the highest rank goes first, until those left along an axis are clear
@@ -244,7 +256,8 @@ function placeRows(scene: Scene, W: number, { rowHeight: rowH, gap }: Container[
     if (n.part !== 'rows' || n.kind === 'row') return;
     const top = head + rows.indexOf(n.row!) * (rowH + gap);
     // A bar lies from where its track has zero to its value, and is never thinner than 3 px. Beside the label it is a band through the middle of the row.
-    if (n.kind === 'rect') { const from = x(n.v0 ?? 0), to = x(n.v!), thin = beside ? 8 : 0; nodes.push(rect(n, Math.min(from, to), top + thin, Math.max(3, Math.abs(to - from)), rowH - 2 * thin, 3)); }
+    // One of a stack is as long as its share and no longer, or it would lie over the next. So is a part of the range behind the marks, which is as tall as the row.
+    if (n.kind === 'rect') { const from = x(n.v0 ?? 0), to = x(n.v!), band = n.layer === 'guide', thin = beside && !band ? 8 : 0, own = n.series == null && !band; nodes.push(rect(n, Math.min(from, to), top + thin, Math.max(own ? 3 : 0, Math.abs(to - from)), rowH - 2 * thin, own ? 3 : 0)); }
     else if (n.kind === 'text') nodes.push(n.anchor === 'end' ? text(n, edge(n.rank || 0), top + rowH / 2) : text(n, left(col.get(n.key)!), top + rowH / 2, col.get(n.key)! < last ? n.text : fit(n.text, own)));
     else if (n.kind === 'line') { const { part, role, row, series, rank, t, x: x1, x2, t2, ...rest } = n; nodes.push({ ...rest, x1: x(x1!), x2: x(x2!), y1: top + (1 - t) * rowH, y2: top + (1 - (t2 ?? t)) * rowH }); }
     // A unit's glyph has its share of the track, and the row's height less 4 px above and below.
@@ -387,7 +400,8 @@ export function place(scene: Scene, container: Container): PlacedScene {
       const ph = H ? Math.max(least, Math.min(rules.axes.height, H - above - ramp.height)) : strip ? STRIP : rules.axes.height;
       body = { nodes: placeMatrix(scene, W, ph).concat(shift(ramp.nodes, 0, ph)), height: ph + ramp.height };
     } else if (scene.layout === 'rows') {
-      body = placeRows(scene, W, rules.rows);
+      const list = placeRows(scene, W, rules.rows), key = placeRowsLegend(scene, W);
+      body = { nodes: list.nodes.concat(shift(key.nodes, 0, list.height)), height: list.height + key.height };
     } else if (scene.layout === 'radial') {
       const radial = placeRadial(scene, W, H ? H - above : null, container);
       body = radial; plot = radial.plot;

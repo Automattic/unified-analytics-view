@@ -23,6 +23,8 @@ export const RANGES_CSS = `
   inset-block-end: calc(min(var(--uav-t), var(--uav-t2)) * 100%); block-size: max(${STROKE}, ${span('--uav-t2', '--uav-t')}); }
 .uav-ranges i[data-upright] { translate: -50%; }
 .uav-ranges i:not([data-upright]) { translate: 0 50%; }
+/* A stroke of a rug is drawn light, so that many together read darker. The one whose point is chosen is drawn whole. */
+.uav-ranges i[data-active] { opacity: 1 !important; }
 /* One the scene sets before the bars lies under them, as it does where the scene is painted in order: a whisker
  * behind its box. The plot is a container, so this is under its bars and no further. */
 .uav-ranges i[data-under] { z-index: -1; }`;

@@ -60,6 +60,10 @@ export const catalog: Catalog = {
     'visitors@rank':        { label: 'Rank',             unit: 'rank',  polarity: 'down' },
     'pageviews@cumulative': { label: 'Cumulative share', unit: 'ratio', polarity: 'none' },
     'errors@share':         { label: 'Cumulative share', unit: 'ratio', polarity: 'none' },
+    // For step 4 of the same plan: answers to a survey, and a quantile of load time beside the one a normal curve would have. A quantile has no total.
+    responses:        { label: 'Responses',         unit: 'count', polarity: 'none', rangeTotal: 'sum' },
+    load_normal:      { label: 'Normal quantile',   unit: 's',     polarity: 'none' },
+    load_quantile:    { label: 'Load time quantile', unit: 's',    polarity: 'none' },
   },
   dimensions: {
     'date.day': { label: 'Day',     type: 'time' },
@@ -84,6 +88,11 @@ export const catalog: Catalog = {
     section:    { label: 'Section', type: 'categorical' },
     other_factor: { label: 'Other factor', type: 'categorical' },
     page_weight: { label: 'Page weight', type: 'number' },
+    age:         { label: 'Age band',    type: 'categorical' },
+    sex:         { label: 'Sex',         type: 'categorical' },
+    question:    { label: 'Statement',   type: 'categorical' },
+    answer:      { label: 'Answer',      type: 'categorical' },
+    quantile:    { label: 'Quantile',    type: 'categorical' },
   },
 };
 
@@ -97,7 +106,7 @@ export function seeded(seed: number) {
 }
 type Counts = { visitors: number; pageviews: number };
 /** What a day has and a page does not: sign-ups less cancellations, which falls below zero, and takings, in another unit. */
-type Daily = Counts & { net_subscribers: number; revenue: number; signups: number; response_time: number };
+type Daily = Counts & { net_subscribers: number; revenue: number; signups: number; response_time: number; responses: number };
 const DAY = 86400000, TODAY = Date.UTC(2026, 9, 5);
 const DAILY = (function () {
   // The first is the prototype's, drawn from in its order. What the prototype does not know draws from the second.
@@ -121,7 +130,8 @@ const DAILY = (function () {
       'response_time@max': Math.max(open, close) + Math.round(40 + slow() * 160), 'response_time@lower': response_time - wide, 'response_time@upper': response_time + wide };
     // Its quartiles lie half way from the mean to each end, so a band of them is always inside the band of the least and the most.
     const quartiles = { 'response_time@p25': response_time - Math.round((response_time - times['response_time@min']) / 2), 'response_time@p75': response_time + Math.round((times['response_time@max'] - response_time) / 2) };
-    return { iso: new Date(t).toISOString().slice(0, 10), visitors, pageviews, net_subscribers, revenue, signups, response_time, times: { ...times, ...quartiles }, partial };
+    // About one visitor in eight answers the survey. It draws on no seed, so every other figure is as it was.
+    return { iso: new Date(t).toISOString().slice(0, 10), visitors, pageviews, net_subscribers, revenue, signups, response_time, responses: Math.round(visitors * 0.12), times: { ...times, ...quartiles }, partial };
   });
 })();
 const PAGES: (Counts & { page: string; prev: Counts | null })[] = [
@@ -151,6 +161,20 @@ MIX.country = [['US', 0.31, 0.33], ['IN', 0.12, 0.1], ['GB', 0.09, 0.1], ['DE', 
 // Every country the tracker saw, as real data has them: small ones the fixture's shapes leave out (Singapore, Malta and
 // Bahrain), and one it could not place, which arrives as an empty string.
 MIX.visitor_country = [...MIX.country, ['SG', 0.012, 0.01], ['MT', 0.006, 0.006], ['BH', 0.004, 0.004], ['', 0.008, 0.008]];
+// Who visits, by age and by sex, and a survey: five statements, each answered on five steps from one end to the other.
+// All four are in an order of their own, which is the answer's order however the counts fall.
+MIX.age = shares(['18–24', '25–34', '35–44', '45–54', '55–64', '65+'], [14, 27, 24, 17, 11, 7]);
+MIX.sex = [['Female', 0.51, 0.5], ['Male', 0.49, 0.5]];
+MIX.question = shares(['Easy to set up', 'Clear reports', 'Fast enough', 'Good value', 'Would recommend'], [1, 1, 1, 1, 1]);
+MIX.answer = shares(['Strongly disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly agree'], [8, 14, 20, 36, 22]);
+// These four keep their order as the outer one of a pair too, which `OWN_ORDER`'s two do not: as the outer one those are answered as they were before.
+const ORDERED = ['age', 'sex', 'question', 'answer'];
+// Where one dimension's mix is not the same under every value of another: the weights of the inner one's values, by the
+// outer one's value. Older visitors are more often women here, and each statement is agreed with to its own degree.
+const TILT: Record<string, Record<string, number[]>> = {
+  sex: { '18–24': [0.45, 0.55], '25–34': [0.47, 0.53], '35–44': [0.5, 0.5], '45–54': [0.52, 0.48], '55–64': [0.56, 0.44], '65+': [0.61, 0.39] },
+  answer: { 'Easy to set up': [4, 9, 15, 40, 32], 'Clear reports': [6, 12, 22, 38, 22], 'Fast enough': [10, 18, 24, 32, 16], 'Good value': [14, 22, 26, 26, 12], 'Would recommend': [5, 8, 17, 34, 36] },
+};
 // Where a visitor goes from a page: the same pages again, so the pairs make a square.
 MIX.next_page = shares(PAGES.map((p) => p.page), PAGES.map((p) => p.visitors));
 // The part of the site a visit lands in. With `channel` it is a flow: where visitors come from, and where they arrive.
@@ -235,6 +259,12 @@ const TABLES: Record<string, { fields: string[]; ranked: boolean; rows: [string,
   } },
   term: { fields: ['embed_x', 'embed_y'], ranked: false, rows: TERMS.map((t) => [t.term, [t.x, null], [t.y, null]]), totals: { embed_x: [null, null], embed_y: [null, null] },
     split: ['intent', Object.fromEntries(TERMS.map((t) => [t.term, t.intent]))] },
+  // Every twentieth of the load times, beside the same twentieth of a normal curve with their mean and spread: the two
+  // columns of a Q-Q plot, worked out by the engine. The times have a long tail, so the last of them run away from the curve.
+  quantile: { fields: ['load_normal', 'load_quantile'], ranked: false, rows: [
+    [0.76, 1.1], [1.12, 1.25], [1.36, 1.4], [1.56, 1.52], [1.73, 1.65], [1.88, 1.78], [2.02, 1.9], [2.15, 2.02], [2.27, 2.15], [2.4, 2.28],
+    [2.53, 2.42], [2.65, 2.58], [2.78, 2.75], [2.92, 2.95], [3.07, 3.2], [3.24, 3.5], [3.44, 3.9], [3.68, 4.5], [4.04, 5.6],
+  ].map(([normal, own], i) => [(i + 1) * 5 + '%', [normal!, null], [own!, null]]), totals: { load_normal: [null, null], load_quantile: [null, null] } },
   // Load times to a tenth of a second, as a stem-and-leaf display has them: the whole seconds are the dimension, and the
   // tenths of each request under it are a companion of the dimension, a string the engine wrote.
   // ponytail: the leaves are the 28 days' and do not follow the range, as the counts do.
@@ -414,7 +444,8 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
     // Asked by its second dimension too, a row is still one value of the first: each falls under one value of the second, which has no total of these.
     return split ? { rows: kept, totals, totalsBy: { [by!]: kept, [split]: [...new Set(kept.map((r) => r[split]))].map((v) => ({ [split]: v, ...Object.fromEntries(metrics.map((m) => [m, null])) })) }, meta } : { rows: kept, totals, meta };
   }
-  if (dims.length < 2) return { rows: !by ? rows : catalog.dimensions[by]!.type !== 'categorical' ? rowsBy(by) : OWN_ORDER.indexOf(by) >= 0 ? rowsBy(by).slice(0, q.limit || undefined) : ranked(top(rowsBy(by))), totals, meta };
+  // A dimension in an order of its own keeps it, as days and bins do.
+  if (dims.length < 2) return { rows: !by ? rows : catalog.dimensions[by]!.type !== 'categorical' ? rowsBy(by) : OWN_ORDER.indexOf(by) >= 0 || ORDERED.indexOf(by) >= 0 ? rowsBy(by).slice(0, q.limit || undefined) : ranked(top(rowsBy(by))), totals, meta };
 
   // Two dimensions: one row per pair. Each value of the outer one is divided among the inner one's, unevenly from one
   // to the next, so every pair adds up to the outer row it came from. Time, when it is there, is the outer one.
@@ -427,7 +458,7 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
   const uneven = seeded(days + 97), outerRows = rowsBy(outer);
   const pairs = outerRows.flatMap((o) => {
     const values = nested ? SECTION_PAGES[o.section as string]! : all;
-    const weights = values.map(([, w]) => w * (0.8 + 0.4 * uneven()));
+    const tilt = TILT[inner]?.[o[outer] as string], weights = values.map(([, w], j) => (tilt ? tilt[j]! : w) * (0.8 + 0.4 * uneven()));
     const parts = fields.map((f) => (o[f] == null ? null : apportion(o[f] as number, weights)));
     return values.map(([name], j): Row => ({ ...o, [inner]: name, ...Object.fromEntries(fields.map((f, i) => [f, parts[i] ? parts[i]![j]! : null])) }));
   });
@@ -447,7 +478,7 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
   // `limit` keeps the first values of each categorical dimension. A total still covers what the limit left out of the other.
   const kept = (rs: Row[], dim: string) => { const names = isTime(dim) ? null : top(rs).map((r) => r[dim]); return names ? rs.filter((r) => names.indexOf(r[dim]) >= 0) : rs; };
   const totalsBy = { [outer]: kept(outerRows, outer), [inner]: kept(innerRows, inner) };
-  const order = isTime(outer) ? outerRows : top(outerRows), within = totalsBy[inner]!.map((r) => r[inner]);
+  const order = isTime(outer) || ORDERED.indexOf(outer) >= 0 ? outerRows : top(outerRows), within = totalsBy[inner]!.map((r) => r[inner]);
   rows = order.flatMap((o) => pairs.filter((p) => p[outer] === o[outer] && within.indexOf(p[inner]) >= 0));
   return { rows, totals, totalsBy, meta };
 }
@@ -532,8 +563,7 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
   // The Uncommon types that today's marks already say (docs/uncommon-coverage-plan.md, step 0, and what it found in section 7).
   // `dumbbell`, `bullet` and `fan` above are three of them. Each is swept, and has its golden scenes, with the samples of its layout, and what each one is is in test/uncommon.test.ts.
   cleveland: { label: 'Cleveland dot plot: page views by page, ranked, so an ordered dot plot too', spec: { spec: 'view/0', title: 'Page views by page', use: 'dumbbell', query: { metrics: ['pageviews'], by: ['page'], range: '28d', limit: 8 } } },
-  lollipop: { label: 'Lollipop: visitors by channel, a stem from zero to each dot', spec: { spec: 'view/0', title: 'Visitors by channel', query: { metrics: ['visitors'], by: ['channel'], range: '28d' },
-            layers: [{ mark: 'rule', encode: { y: 'channel', x: 'visitors' }, role: 'context' }, { mark: 'dot', encode: { y: 'channel', x: 'visitors' } }, { mark: 'text', encode: { y: 'channel', text: 'channel' } }, { mark: 'text', encode: { y: 'channel', text: 'visitors' }, align: 'end' }] } },
+  lollipop: { label: 'Lollipop: visitors by channel, a stem from zero to each dot', spec: { spec: 'view/0', title: 'Visitors by channel', use: 'lollipop', query: { metrics: ['visitors'], by: ['channel'], range: '28d' } } },
   // Each bar states its paint: one with two ends is painted by which way it goes, and both of these go to zero.
   tornado: { label: 'Tornado: what each assumption could lose or gain of revenue, widest first', spec: { spec: 'view/0', title: 'What moves revenue', query: { metrics: ['revenue_effect'], by: ['factor'], range: '28d' },
             layers: [{ mark: 'bar', encode: { y: 'factor', x: 'revenue_effect@low', x2: 0 }, paint: 'delta.bad' }, { mark: 'bar', encode: { y: 'factor', x: 'revenue_effect@high', x2: 0 }, paint: 'delta.good' }, { mark: 'text', encode: { y: 'factor', text: 'factor' } }] } },
@@ -573,4 +603,14 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
   ecdf:    { label: 'ECDF: the share of page views that loaded within each time, as steps over the bins', spec: { spec: 'view/0', title: 'Loaded within', use: 'ecdf', query: { metrics: ['pageviews'], by: ['load_time'], range: '28d' } } },
   bump:    { label: 'Bump chart: six pages by their place in each week, first at the top', spec: { spec: 'view/0', title: 'Pages by rank, week by week', use: 'bump', query: { metrics: ['visitors'], by: ['date.week', 'page'], range: '28d', limit: 6 } } },
   difference: { label: 'Difference: revenue by day against the period before, a gain where it is ahead and a loss where it is behind', spec: { spec: 'view/0', title: 'Revenue against the period before', use: 'difference', query: { metrics: ['revenue'], by: ['date.day'], range: '28d', compare: 'previous' } } },
+  // What rows, bars, ticks and rules took in step 4 of the same plan. They are swept, and have their golden scenes, in test/uncommon-rows.test.ts.
+  pyramid: { label: 'Population pyramid: visitors by age band, women to one side and men to the other', spec: { spec: 'view/0', title: 'Visitors by age and sex', use: 'pyramid', query: { metrics: ['visitors'], by: ['age', 'sex'], range: '28d' } } },
+  likert:  { label: 'Likert chart: answers to five statements, disagreement to one side and agreement to the other', spec: { spec: 'view/0', title: 'What visitors say', use: 'pyramid', query: { metrics: ['responses'], by: ['question', 'answer'], range: '28d' } } },
+  strip:   { label: 'Strip plot: visitors by channel, a dot for each of fifteen countries', spec: { spec: 'view/0', title: 'Visitors by channel, country by country', use: 'strip', query: { metrics: ['visitors'], by: ['channel', 'country'], range: '28d' } } },
+  marimekko: { label: 'Marimekko: visitors by channel and device, a column as wide as its channel\'s share', spec: { spec: 'view/0', title: 'Channels by device', use: 'marimekko', query: { metrics: ['visitors'], by: ['channel', 'device'], range: '28d' } } },
+  rug:     { label: 'Rug: search terms in two components, with a stroke along the foot for each', spec: { spec: 'view/0', title: 'Search terms, and where they fall', query: { metrics: ['embed_x', 'embed_y'], by: ['term'], range: '28d' },
+            layers: [{ mark: 'dot', encode: { x: 'embed_x', y: 'embed_y' } }, { mark: 'tick', encode: { x: 'embed_x' } }] } },
+  ohlc:    { label: 'OHLC: response time by day, from its least to its most, opening to the start and closing to the end', spec: { spec: 'view/0', title: 'Response time by day', use: 'ohlc', query: { metrics: ['response_time'], by: ['date.day'], range: '28d' } } },
+  qq:      { label: 'Q-Q plot: load time quantiles against a normal curve\'s, and the line they would lie on', spec: { spec: 'view/0', title: 'Load time against a normal curve', query: { metrics: ['load_normal', 'load_quantile'], by: ['quantile'], range: '28d' },
+            layers: [{ mark: 'rule', encode: { x: 0, y: 0, x2: 6, y2: 6 } }, { mark: 'dot', encode: { x: 'load_normal', y: 'load_quantile' } }] } },
 };

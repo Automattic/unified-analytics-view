@@ -19,7 +19,8 @@ const view = new Ajv().compile(viewSchema);
 // The plots and the rows among them. Another layout has a suite of its own: test/radial.test.ts, test/cell.test.ts.
 // Ranges and ticks have one too: test/ranges.test.ts.
 // So has the unit mark: test/unit.test.ts.
-const ranges = ['box', 'errors', 'waterfall', 'candlestick', 'fan', 'dumbbell', 'bullet', 'cleveland', 'lollipop', 'tornado', 'fans'], units = ['units', 'wilkinson', 'isotype'];
+// And so have the samples of step 4 of the Uncommon plan: test/uncommon-rows.test.ts.
+const ranges = ['box', 'errors', 'waterfall', 'candlestick', 'fan', 'dumbbell', 'bullet', 'cleveland', 'lollipop', 'tornado', 'fans', 'pyramid', 'likert', 'strip', 'marimekko', 'rug', 'ohlc', 'qq'], units = ['units', 'wilkinson', 'isotype'];
 const specs = Object.fromEntries(Object.entries(moreSamples).map(([k, s]) => [k, s.spec] as const).filter(([k, s]) => !ranges.includes(k) && !units.includes(k) && ['cartesian', 'rows'].includes(run(s, 700).plan.layout)));
 const painters: PainterName[] = ['svg', 'dots'];
 const heights = [null, 300, 160, 100, 60, 40];
@@ -242,7 +243,10 @@ describe('detail splits a plot into series and paints none apart', () => {
     expect(err(by('line', {}, { color: 'country', detail: 'date.day' }))).toBe('Layer 1 encodes "country" on color and "date.day" on detail, ' + twice);
     expect(err(by('area', { stack: 'zero' }))).toBe('Layer 1 has "stack" and is split by detail, which paints every series alike, so a stack of them could not be read. Encode "country" on color in place of detail, or remove "stack".');
     const rows: Spec = { query: { metrics: ['visitors'], by: ['channel', 'device'] }, layers: [{ mark: 'bar', encode: { y: 'channel', x: 'visitors', detail: 'device' } }] };
-    expect(err(rows)).toBe('Layer 1 encodes "device" on detail, and these layers are laid out as "rows", which does not split a layer by detail. It is read in: cartesian, radial. Put a dimension on x and a metric on y, or remove "detail".');
+    // Rows read detail for a dot or a tick (test/uncommon-rows.test.ts). A bar there would lie one over another.
+    expect(err(rows)).toBe('Layer 1 is a "bar" in rows with "device" on detail, which would lay one over another in each row, all in one paint. Use "dot" or "tick" for a mark at each value, or encode "device" on color and give the bar "stack", or remove "detail".');
+    const grid: Spec = { query: { metrics: ['visitors'], by: ['weekday', 'hour'] }, layers: [{ mark: 'cell', encode: { x: 'hour', y: 'weekday', color: 'visitors', detail: 'hour' } }] };
+    expect(err(grid)).toBe('Layer 1 encodes "hour" on detail, and these layers are laid out as "matrix", which does not split a layer by detail. It is read in: cartesian, radial, rows. Put a dimension on x and a metric on y, or remove "detail".');
   });
 });
 

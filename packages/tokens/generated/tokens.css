@@ -248,6 +248,9 @@
   --ua-color-div-7: var(--ua-color-div-above-200);
   --ua-color-div-8: var(--ua-color-div-above-300);
   --ua-color-div-9: var(--ua-color-div-above-400);
+  --ua-color-band-1: var(--ua-color-neutral-600);
+  --ua-color-band-2: var(--ua-color-neutral-500);
+  --ua-color-band-3: var(--ua-color-neutral-400);
   --ua-color-switch-thumb-on: var(--ua-color-neutral-200);
   --ua-color-switch-thumb-off: var(--ua-color-neutral-200);
   --ua-color-sidebar-foreground: var(--ua-color-neutral-1000);
@@ -347,6 +350,9 @@
   --ua-charts-color-div-7: var(--ua-color-div-7);
   --ua-charts-color-div-8: var(--ua-color-div-8);
   --ua-charts-color-div-9: var(--ua-color-div-9);
+  --ua-charts-color-band-1: var(--ua-color-band-1);
+  --ua-charts-color-band-2: var(--ua-color-band-2);
+  --ua-charts-color-band-3: var(--ua-color-band-3);
   --ua-charts-color-annotation: var(--ua-color-muted-foreground);
   --ua-charts-color-comparison: var(--ua-color-muted-foreground);
   --ua-charts-color-delta-good: var(--ua-color-success-text);
@@ -545,6 +551,9 @@
   --ua-color-div-7: var(--ua-color-div-above-200);
   --ua-color-div-8: var(--ua-color-div-above-300);
   --ua-color-div-9: var(--ua-color-div-above-400);
+  --ua-color-band-1: var(--ua-color-neutral-600);
+  --ua-color-band-2: var(--ua-color-neutral-500);
+  --ua-color-band-3: var(--ua-color-neutral-400);
   --ua-color-switch-thumb-on: var(--ua-color-neutral-200);
   --ua-color-switch-thumb-off: var(--ua-color-neutral-1000);
   --ua-color-sidebar-foreground: var(--ua-color-neutral-1000);
@@ -622,6 +631,9 @@
   --ua-charts-color-div-7: var(--ua-color-div-7);
   --ua-charts-color-div-8: var(--ua-color-div-8);
   --ua-charts-color-div-9: var(--ua-color-div-9);
+  --ua-charts-color-band-1: var(--ua-color-band-1);
+  --ua-charts-color-band-2: var(--ua-color-band-2);
+  --ua-charts-color-band-3: var(--ua-color-band-3);
   --ua-charts-color-annotation: var(--ua-color-muted-foreground);
   --ua-charts-color-comparison: var(--ua-color-muted-foreground);
   --ua-charts-color-delta-good: var(--ua-color-success-text);
@@ -821,6 +833,9 @@
   --ua-color-div-7: var(--ua-color-div-above-200);
   --ua-color-div-8: var(--ua-color-div-above-300);
   --ua-color-div-9: var(--ua-color-div-above-400);
+  --ua-color-band-1: var(--ua-color-neutral-600);
+  --ua-color-band-2: var(--ua-color-neutral-500);
+  --ua-color-band-3: var(--ua-color-neutral-400);
   --ua-color-switch-thumb-on: var(--ua-color-neutral-200);
   --ua-color-switch-thumb-off: var(--ua-color-neutral-1000);
   --ua-color-sidebar-foreground: var(--ua-color-neutral-1000);
@@ -898,6 +913,9 @@
   --ua-charts-color-div-7: var(--ua-color-div-7);
   --ua-charts-color-div-8: var(--ua-color-div-8);
   --ua-charts-color-div-9: var(--ua-color-div-9);
+  --ua-charts-color-band-1: var(--ua-color-band-1);
+  --ua-charts-color-band-2: var(--ua-color-band-2);
+  --ua-charts-color-band-3: var(--ua-color-band-3);
   --ua-charts-color-annotation: var(--ua-color-muted-foreground);
   --ua-charts-color-comparison: var(--ua-color-muted-foreground);
   --ua-charts-color-delta-good: var(--ua-color-success-text);

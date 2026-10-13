@@ -45,8 +45,9 @@ const at = (v: number, total: number | null | undefined, metric: MetricDef, of =
 export const plural = (label: string) => label.replace(/([^aeiou])y$/, '$1ie') + 's';
 
 /** The tldr prose: the text sibling of a view, derived from the query and the transforms, not from a named chart type.
- * `points` says the layers set one metric against another, and `"path"` that a line joins those points in the rows' order. */
-export function tldrProse(q: Query, result: Result, share: boolean, catalog: Catalog, points: boolean | 'path' = false): string {
+ * `points` says the view sets one metric against another, a point for each value of a dimension: that dimension's name,
+ * or `true` for the query's first. `path` says a line joins those points in the rows' order. */
+export function tldrProse(q: Query, result: Result, share: boolean, catalog: Catalog, points: boolean | string | undefined = false, path = false): string {
   const m = q.metrics[0]!, M = catalog.metrics[m]!, t = result.totals, rows = result.rows, dims = q.by || [], by = dims[0];
   const range = over(result), name = M.label.toLowerCase();
   if (M.instant) {
@@ -54,6 +55,22 @@ export function tldrProse(q: Query, result: Result, share: boolean, catalog: Cat
     return M.label + ': ' + formatValue(t[m] || 0, M) + ' ' + NOW + (by && rows[0] ? '; the top ' + catalog.dimensions[by]!.label.toLowerCase() + ' is ' + say(catalog, by, rows[0]) + ' (' + formatValue(rows[0][m] as number, M) + ').' : '.');
   }
   if (result.meta.empty) return nothing(M, 'recorded' + range + '.');
+  // Points come before two dimensions: a second one there only colours the points, and has no total to lead with.
+  if (points && by && q.metrics.length > 1 && rows.length) {
+    // Two metrics set against each other, a point for each value of a dimension: how far each runs, and which point is
+    // furthest out on each. ponytail: "outliers" here are the two extremes, found by comparing rows. A test of how far
+    // out a point is would be a statistic, and those are the engine's.
+    const of = typeof points === 'string' ? points : by, two = q.metrics.slice(0, 2), label = (f: string) => catalog.metrics[f]!.label.toLowerCase(), vals = (f: string) => rows.map((r) => r[f] as number);
+    const top = two.map((f) => say(catalog, of, rows.reduce((a, r) => ((r[f] as number) > (a[f] as number) ? r : a))));
+    // Joined through time, the points are a path: where it set out and where it has got to, by the first and the last
+    // finished bucket, since the unfinished one is not yet anywhere.
+    const whole = rows.filter((r) => !r.partial), [a, b] = [whole[0], whole[whole.length - 1]];
+    if (path && catalog.dimensions[of]!.type === 'time' && a && b && a !== b)
+      return 'From ' + say(catalog, of, a) + ' to ' + say(catalog, of, b) + ', ' + two.map((f, i) => label(f) + (i ? ' from ' : ' went from ') + formatValue(a[f] as number, catalog.metrics[f]!) + ' to ' + formatValue(b[f] as number, catalog.metrics[f]!)).join(' and ') + '. '
+        + (top[0] === top[1] ? top[0] + ' is highest on both.' : top[0] + ' is highest on ' + label(two[0]!) + ' and ' + top[1] + ' on ' + label(two[1]!) + '.');
+    return 'Across ' + rows.length + ' ' + plural(catalog.dimensions[of]!.label.toLowerCase()) + range + ', ' + 'the range of ' + two.map((f) => label(f) + ' is ' + formatValue(Math.min(...vals(f)), catalog.metrics[f]!) + ' to ' + formatValue(Math.max(...vals(f)), catalog.metrics[f]!)).join(' and of ') + '. '
+      + (top[0] === top[1] ? top[0] + ' is highest on both.' : top[0] + ' is highest on ' + label(two[0]!) + ' and ' + top[1] + ' on ' + label(two[1]!) + '.');
+  }
   if (dims.length === 2 && result.totalsBy && rows.length) {
     // Two dimensions: who leads each, as a share of the engine's total. Over time, also on how many of the days.
     const label = (d: string) => catalog.dimensions[d]!.label.toLowerCase(), time = dims.find((d) => catalog.dimensions[d]!.type === 'time');
@@ -62,21 +79,6 @@ export function tldrProse(q: Query, result: Result, share: boolean, catalog: Cat
     const split = dims.find((d) => d !== time)!, top = leader(result, split, m)![split], days = [...new Set(rows.map((r) => r[time]))];
     const led = days.filter((d) => { const at = rows.filter((r) => r[time] === d), mine = at.find((r) => r[split] === top); return !!mine && at.every((r) => r === mine || (r[m] as number) < (mine[m] as number)); }).length;
     return largest(split, ' of ' + name).replace(' the ', ' is the ') + range + ', and leads on ' + (led === days.length ? 'all ' + led : led + ' of ' + days.length) + ' ' + label(time) + 's.';
-  }
-  if (points && by && q.metrics.length > 1 && rows.length) {
-    // Two metrics set against each other, a point for each value of a dimension: how far each runs, and which point is
-    // furthest out on each. ponytail: "outliers" here are the two extremes, found by comparing rows. A test of how far
-    // out a point is would be a statistic, and those are the engine's.
-    const two = q.metrics.slice(0, 2), label = (f: string) => catalog.metrics[f]!.label.toLowerCase(), of = (f: string) => rows.map((r) => r[f] as number);
-    const top = two.map((f) => say(catalog, by, rows.reduce((a, r) => ((r[f] as number) > (a[f] as number) ? r : a))));
-    // Joined through time, the points are a path: where it set out and where it has got to, by the first and the last
-    // finished bucket, since the unfinished one is not yet anywhere.
-    const whole = rows.filter((r) => !r.partial), [a, b] = [whole[0], whole[whole.length - 1]];
-    if (points === 'path' && catalog.dimensions[by]!.type === 'time' && a && b && a !== b)
-      return 'From ' + say(catalog, by, a) + ' to ' + say(catalog, by, b) + ', ' + two.map((f, i) => label(f) + (i ? ' from ' : ' went from ') + formatValue(a[f] as number, catalog.metrics[f]!) + ' to ' + formatValue(b[f] as number, catalog.metrics[f]!)).join(' and ') + '. '
-        + (top[0] === top[1] ? top[0] + ' is highest on both.' : top[0] + ' is highest on ' + label(two[0]!) + ' and ' + top[1] + ' on ' + label(two[1]!) + '.');
-    return 'Across ' + rows.length + ' ' + plural(catalog.dimensions[by]!.label.toLowerCase()) + range + ', ' + 'the range of ' + two.map((f) => label(f) + ' is ' + formatValue(Math.min(...of(f)), catalog.metrics[f]!) + ' to ' + formatValue(Math.max(...of(f)), catalog.metrics[f]!)).join(' and of ') + '. '
-      + (top[0] === top[1] ? top[0] + ' is highest on both.' : top[0] + ' is highest on ' + label(two[0]!) + ' and ' + top[1] + ' on ' + label(two[1]!) + '.');
   }
   if (by && catalog.dimensions[by]!.type === 'number' && rows.length) {
     // A numeric dimension: the total, and the bin that holds the most of it.

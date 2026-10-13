@@ -21,7 +21,8 @@ export interface MetricDef {
   domain?: [number, number];
   /** The value to reach. */
   target?: number;
-  /** Where the domain is divided, in ascending order: each is where one band ends and the next begins. */
+  /** Where the domain is divided, in ascending order: each is where one band ends and the next begins. Drawn behind a
+   * row's marks by a `bar` with nothing on x, in the paints `band.1` to `band.3`, the least first. */
   bands?: number[];
 }
 export interface DimensionDef {
@@ -69,6 +70,7 @@ export interface Result {
  * with a dimension on `color` and `sweep: "half"` seats round a half circle. What a glyph is worth comes from the data (unit.ts). */
 export type Mark = 'line' | 'area' | 'bar' | 'rule' | 'text' | 'arc' | 'cell' | 'dot' | 'tick' | 'unit' | (string & {});
 /** `x2` and `y2` are the second end of a `bar`, a `rule` or an `area`: it runs from the value on `x` or `y` to the one there.
+ * A `rule` may start at a number, and with all four it is a line across a plot of points, from (`x`, `y`) to (`x2`, `y2`).
  * `detail` is a dimension that splits a layer into series as one on `color` does, and paints none of them apart:
  * every series is in the layer's own paint, with no legend, and as many as the result holds.
  * On an `arc`, `angle` and `radius` take data between them, and which holds what is the form (scene.ts, sceneRadial):
@@ -85,14 +87,17 @@ export interface Layer {
   series?: 'previous' | 'delta';
   role?: Role;
   /** On a layer split by `color`, and not by `detail`: each series starts where the one under it ends. `normalize` makes each a share of the whole,
-   * and `center` sets each stack half on either side of zero. */
-  stack?: 'zero' | 'normalize' | 'center';
+   * and `center` sets each stack half on either side of zero. `diverge` sets the first half of the series below zero and the second
+   * half above it, in their order, and with an odd count the middle one half on each side. In rows it is what lets a bar's `color` be the query's second
+   * dimension: each row's bar is divided into a series for each of its values. */
+  stack?: 'zero' | 'normalize' | 'center' | 'diverge';
   /** On an `arc`: the arcs run over the top half of the circle, from left to right, and not all the way round. On a
    * `unit` about a centre: its seats sit round that half, which is the one way they are drawn.
    * The one layer field that is neither data nor role. */
   sweep?: 'half';
   label?: string;
-  align?: 'end';
+  /** On a `text` layer in rows, `end` sets it as a column of values. On a `tick`, the half of it to that side of its band's middle. */
+  align?: 'start' | 'end';
   /** A paint token in place of the layer's own. `delta` is the paint of its metric's change over the range: good or bad by
    * the metric's polarity, and the layer's own where there is no change to judge. `direction`, on a `bar` or an `area`
    * with two ends, paints each mark by which way it runs from the first end to the second: `delta.good` or `delta.bad`
@@ -105,7 +110,8 @@ export interface Guides {
   /** The second y axis, on the far side, where the layers measure in two units. */
   y2?: boolean;
   grid?: boolean;
-  /** On a band, `top` is the largest segment's label. On a split plot, `labels` is a label at the end of each line. */
+  /** On a band, `top` is the largest segment's label. On a split plot, `labels` is a label at the end of each line.
+   * On rows divided into series, `top` is one line that names the series with the most. */
   legend?: 'full' | 'top' | 'labels';
   /** Under a grid of cells: the steps of the colour scale, with its low and its high value. */
   ramp?: boolean;
@@ -215,6 +221,7 @@ interface NodeBase {
 }
 /** A bar in the plot (`x` and `w` across, and up the plot from `v0` to `v`), a row's bar (across its track from `v0` to `v`), a band segment (`v` is its share), a legend swatch,
  * or in `band` a cell of a `unit`'s grid, with `x`, `w`, `y` and `h` as a cell of a grid of cells has them.
+ * In `rows`, one whose `layer` is `guide` is a part of the range behind the row's marks, as tall as the row.
  * `v0` is absent where a bar starts at the bottom of the plot, or at the start of the track. A bar that hangs below its start has `v` under `v0`.
  * A bar with a second end runs from the first, `v0`, to it, `v`, and is painted by which way it goes. */
 export interface RectNode extends NodeBase {

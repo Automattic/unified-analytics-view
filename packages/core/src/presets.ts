@@ -34,6 +34,18 @@ export const PRESETS: PresetLibrary = {
     { mark: 'arc', encode: { radius: 0.7 }, sweep: 'half', role: 'context' },
     { mark: 'arc', encode: { angle: '$metric', radius: 0.7 }, sweep: 'half' },
     { mark: 'arc', encode: { angle: '$metric', radius: 0.7 }, sweep: 'half', role: 'reference' } ] },
+  // An arc that reads data on angle and radius (docs/uncommon-coverage-plan.md, step 2). Working names, all three:
+  // check each against @automattic/charts before it ships.
+  // A slice for each value, equal in width and reaching out to its value: a Nightingale rose, and with hours a clock.
+  'rose': { layers: [
+    { mark: 'arc', encode: { angle: '$by', radius: '$metric' } } ] },
+  // A ring for each value, in a colour of its own: the whole ring, faint, and the arc swept to its value on it.
+  'radial-bar': { layers: [
+    { mark: 'arc', encode: { radius: '$by', color: '$by' }, role: 'context' },
+    { mark: 'arc', encode: { angle: '$metric', radius: '$by', color: '$by' } } ] },
+  // With a second dimension in the query: a segment for each value of the first, and round it a ring divided by the second.
+  'sunburst': { layers: [
+    { mark: 'arc', encode: { angle: '$metric', color: '$by', detail: '$split' } } ] },
   // As a pivot table reads: the first dimension down the side, the second across.
   'heatmap': { layers: [
     { mark: 'cell', encode: { y: '$by', x: '$split', color: '$metric' } } ] },

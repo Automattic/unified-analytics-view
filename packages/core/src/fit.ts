@@ -62,6 +62,8 @@ export const FIT_RULES: FitRule[] = [
     hide: [], set: { legend: 'top' }, keep: 'guides' },
   { id: 'legend-top', layout: 'radial', container: 'view', needs: { block: 88 },                      // the least circle, and one line under it
     hide: ['legend', 'legend-top'], keep: 'guides' },
+  { id: 'rim',        layout: 'radial', container: 'view', needs: { inline: 230, block: 120 },        // labels round the rim: the circle, and a label's width to either side of it
+    hide: ['rim'], keep: 'guides' },
   { id: 'hole',       layout: 'radial', container: 'plot', needs: { inline: 120 },                    // the number sits in a donut's hole while the circle is this wide
     hide: ['hole'] },
   { id: 'marks',      layout: 'radial', container: 'view', needs: { inline: 72, block: 64 },          // the least circle

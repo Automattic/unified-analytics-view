@@ -212,7 +212,7 @@ export function splitOf(catalog: Catalog, l: Layer, xField?: string): string | n
   return paintedOf(catalog, l, xField) || detailOf(catalog, l, xField);
 }
 /** The layouts that split a layer by `detail`. In another, a layer with it is refused (plan.ts). A step that reads it adds its layout. */
-export const DETAIL_LAYOUTS: string[] = ['cartesian'];
+export const DETAIL_LAYOUTS: string[] = ['cartesian', 'radial'];
 
 // A dimension on x, a metric on y, and with a second dimension on color a series for each of its values.
 // The scales are derived here, once: x from its dimension, and a y for each unit the layers measure in.
@@ -505,16 +505,17 @@ function sceneBand(catalog: Catalog, layer: Layer, rows: Row[], totals: Result['
 // The legends of a whole split by colour, for a band and for a circle of arcs: both of them, each in its own part.
 // The plan names one in `parts`; a fit rule swaps them.
 // A segment is named as the readout names it, so a day is "Sep 29". The prototype writes it raw: a deliberate departure.
-function shareLegend(rows: Row[], k: (r: Row) => string, f: string, dim: DimensionDef, m: string, M: MetricDef, total: number | null | undefined, paint: (i: number) => string): SceneNode[] {
+// `said` is what an entry says of its row in place of its share: rings that are read against a range say the value.
+function shareLegend(rows: Row[], k: (r: Row) => string, f: string, dim: DimensionDef, m: string, M: MetricDef, total: number | null | undefined, paint: (i: number) => string, said = (r: Row) => portion(num(r, m), total, M)): SceneNode[] {
   const nodes: SceneNode[] = [], name = (r: Row) => formatDimension(r[f], dim);
   rows.forEach((r, i) => {
     nodes.push({ key: 'swatch:' + k(r), part: 'legend', kind: 'rect', row: k(r), paint: paint(i), layer: 'data' });
     nodes.push({ key: 'legend:' + k(r), part: 'legend', kind: 'text', row: k(r), text: name(r), anchor: 'start', baseline: 'middle', font: 'label', paint: 'ink', layer: 'guide' });
-    nodes.push({ key: 'share:' + k(r), part: 'legend', kind: 'text', row: k(r), text: portion(num(r, m), total, M), anchor: 'end', baseline: 'middle', font: 'value', paint: 'ink', layer: 'guide' });
+    nodes.push({ key: 'share:' + k(r), part: 'legend', kind: 'text', row: k(r), text: said(r), anchor: 'end', baseline: 'middle', font: 'value', paint: 'ink', layer: 'guide' });
   });
   // One line for the whole of it, so it names no row. Its key has no colon after `legend`, so no segment's entry can
   // share it, whatever the segment is called. The prototype's is `legend:top`: a deliberate departure.
-  if (rows.length) nodes.push({ key: 'legend-top', part: 'legend-top', kind: 'text', text: name(rows[0]!) + ' ' + portion(num(rows[0]!, m), total, M), anchor: 'start', font: 'label', paint: 'ink', layer: 'guide' });
+  if (rows.length) nodes.push({ key: 'legend-top', part: 'legend-top', kind: 'text', text: name(rows[0]!) + ' ' + said(rows[0]!), anchor: 'start', font: 'label', paint: 'ink', layer: 'guide' });
   return nodes;
 }
 
@@ -523,39 +524,112 @@ const MARK = 0.004;   // turns to either side of a value that is marked on the c
 /** The inner radius from which a circle of arcs has a hole the number sits in. */
 export const HOLE = 0.5;
 
-// A metric on angle: arcs about one centre. No positional dimension and no general polar coordinates.
-// With a dimension on color a layer is a segment per row, each its share of the engine's total, so with a `limit` the
-// circle stops short of closing, as a band stops short of its end. With none it reads the metric against its catalog
-// `domain`: its total swept from the start, or, as a `reference`, its `target` marked. A constant on angle is marked the
-// same way. A layer with nothing on angle is the whole sweep: the range behind the value.
+const INNER = 0.3;   // the inner radius of the innermost ring, where a dimension on radius gives each value one
+const RING = 0.82;   // how much of its share of the radius a ring fills. The rest parts it from the next
+const SPLIT = 0.6;   // how far from the inner radius to the rim the first ring ends and the second starts
+const CHILD = 0.6;   // how much of its segment's paint an arc of the second ring is drawn in
+const RINGS = 6;     // the most rings a circle is divided into: under that each is too thin to follow round
+
+// Arcs about one centre. No positional dimension and no general polar coordinates: `angle` and `radius` take a
+// metric and a dimension between them, and which holds what is the form.
+// A metric on angle and a dimension on color: a segment per row, each its share of the engine's total, so with a `limit`
+// the circle stops short of closing, as a band stops short of its end. With a second dimension on detail there is a
+// ring outside it, each segment's span divided among that dimension's values: the query is by the two, and a
+// segment's span is the engine's total for it (`totalsBy`), never the sum of its rows.
+// A dimension on angle and a metric on radius: an equal slice per row, in the engine's order, each reaching out to its
+// value on a square-root scale, so its area carries the value. It starts at the centre: radius holds the metric.
+// A dimension on radius and a metric on angle: a ring per row, the first outermost, each swept against the catalog
+// `domain`, or the largest row where the metric has none. With nothing on angle it is the whole ring, behind the value.
+// With no dimension it reads the metric against its catalog `domain`: its total swept from the start, or, as a
+// `reference`, its `target` marked. A constant on angle is marked the same way. A layer with nothing on angle is the
+// whole sweep: the range behind the value.
 function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result): Body & Pick<Scene, 'aspect'> {
   const half = layers.some((l) => l.sweep === 'half'), from = half ? -0.25 : 0, span = half ? 0.5 : 1;
-  const ids = layerKeys(layers), arcs: ArcNode[] = [], legend: SceneNode[] = [];
-  let keys: string[] | undefined;
-  const arc = (key: string, l: Layer, lo: number, hi: number, r0: number, paint: string, more?: Partial<ArcNode>): ArcNode => {
-    const a = { a0: from + lo * span, a1: from + hi * span, r0, r1: 1 };
+  const ids = layerKeys(layers), arcs: ArcNode[] = [], legend: SceneNode[] = [], rim: SceneNode[] = [];
+  let keys: string[] | undefined, rings: string | undefined, detail: string[] | undefined;
+  const arc = (key: string, l: Layer, lo: number, hi: number, r0: number, paint: string, more?: Partial<ArcNode>, r1 = 1): ArcNode => {
+    const a = { a0: from + lo * span, a1: from + hi * span, r0, r1 };
     return { key, part: 'radial', kind: 'arc', ...a, d: arcD(a), paint, layer: 'data', role: roleOf(l), ...more };
   };
   layers.forEach((l, i) => {
-    const enc = l.encode || {}, angle = enc.angle, r0 = enc.radius ?? 0, n = 'Layer ' + (i + 1);
+    const enc = l.encode || {}, angle = enc.angle, r0 = enc.radius ?? 0, n = 'Layer ' + (i + 1), split = detailOf(catalog, l);
     if (l.mark !== 'arc') throw new Error('The "' + l.mark + '" mark has no rule about a centre yet. Use arc, or take "angle" off the other layers.');
-    if (typeof r0 !== 'number' || !(r0 >= 0 && r0 < 1)) throw new Error(n + ' has ' + JSON.stringify(r0) + ' on radius. It takes a number from 0 up to 1: the inner radius, as a share of the outer. 0.6 makes a donut.');
+    if (typeof r0 === 'number' && !(r0 >= 0 && r0 < 1)) throw new Error(n + ' has ' + JSON.stringify(r0) + ' on radius. It takes a number from 0 up to 1, the inner radius as a share of the outer (0.6 makes a donut); a metric, with a dimension on angle, for how far each slice reaches; or a dimension, with a metric on angle, for a ring each.');
+    // A slice or a ring for each row: one dimension, on angle or on radius, and the metric on the other.
+    const one = isDim(catalog, angle) ? angle : isDim(catalog, r0) ? r0 : null;
+    if (typeof r0 === 'string') {
+      if (!one) throw new Error(n + ' has the metric "' + r0 + '" on radius and no dimension on angle, so there is no slice for it to set the reach of. Put a dimension on angle, for a slice each, or a number from 0 up to 1 on radius for the inner radius.');
+      if (one === angle && isDim(catalog, r0)) throw new Error(n + ' has a dimension on both angle ("' + angle + '") and radius ("' + r0 + '"), and an arc is laid out by one. Keep the dimension on angle and put a metric on radius, for a slice each, or keep it on radius and put a metric on angle, for a ring each.');
+    }
+    if (one != null) {
+      const slices = one === angle, what = slices ? 'slice' : 'ring', dim = catalog.dimensions[one]!, rows = result.rows, own = rowKeys(rows, one), k = (r: Row) => own.get(r)!;
+      if (l.sweep) throw new Error(n + ' has sweep: "half" and a ' + what + ' for each "' + one + '", which goes all the way round. Remove "sweep": it is for a circle divided by color, and for a gauge.');
+      if (split) throw new Error(n + ' encodes "' + split + '" on detail and has a ' + what + ' for each "' + one + '". A second ring divides the segments of a circle that color has divided: put the metric on angle, "' + one + '" on color and "' + split + '" on detail, or remove "detail".');
+      const m = slices ? r0 : angle, M = metricOf(catalog, m), top = M ? Math.max(0, max(rows, (r) => num(r, m as string)) ?? 0) || 1 : 1;
+      if (slices && !M) throw new Error(n + ' has a slice for each "' + one + '" and ' + (enc.radius == null ? 'nothing' : JSON.stringify(enc.radius)) + ' on radius. Every slice is as wide as the next, so a metric on radius says how far each reaches: put one there. For a share each, put the metric on angle and "' + one + '" on color.');
+      // ponytail: slices in one paint. A second dimension on color would stack each slice, and that is not built.
+      if (slices && enc.color != null) throw new Error(n + ' encodes ' + JSON.stringify(enc.color) + ' on color and has a slice for each "' + one + '", and the slices are drawn in one paint. Remove "color", or set the layer\'s "paint".');
+      if (enc.color != null && enc.color !== one) throw new Error(n + ' has a ring for each "' + one + '" and encodes ' + JSON.stringify(enc.color) + ' on color. A ring is painted by its own dimension, for a colour and a legend entry each: encode "' + one + '" on color, or remove it.');
+      // A circle is divided once. Rings of one dimension may be drawn by several layers: the whole ring, and the value on it.
+      if (keys && rings !== one) throw new Error(n + ' divides the circle again, by "' + one + '", and a circle is divided once. Remove one of the layers that divide it.');
+      if (!slices && rows.length > RINGS) throw new Error('A ring for each "' + one + '" makes ' + rows.length + ' rings, and a circle has room for ' + RINGS + '. Add "limit": ' + RINGS + ' to the query, or less.');
+      if (slices) {
+        // Where to thin the labels from: about four stay, then those half way between them, then the rest.
+        const every = Math.ceil(rows.length / 4), rank = (j: number) => (j % every ? { rank: every % 2 || j % (every / 2) ? 2 : 1 } : {});
+        rows.forEach((r, j) => {
+          const reach = r[m as string] == null ? 0 : Math.sqrt(Math.max(0, num(r, m as string)) / top), lo = j / rows.length, hi = (j + 1) / rows.length, mid = (lo + hi) * Math.PI;
+          // A row with no value, or none above zero, has no slice. It keeps its place and its label.
+          if (reach > 0) arcs.push(arc(ids[i] + ':' + k(r), l, lo, hi - (rows.length > 1 ? GAP : 0), 0, l.paint || 'series.1', { row: k(r) }, reach));
+          rim.push({ key: 'rim:' + k(r), part: 'rim', kind: 'text', x: 0.5 + Math.sin(mid) / 2, t: 0.5 + Math.cos(mid) / 2, row: k(r), text: formatDimension(r[one], dim),
+            anchor: Math.sin(mid) > 0.2 ? 'start' : Math.sin(mid) < -0.2 ? 'end' : 'middle', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...rank(j) });
+        });
+      } else {
+        if (angle != null && (!M || isDim(catalog, angle))) throw new Error(n + ' has a ring for each "' + one + '" and ' + JSON.stringify(angle) + ' on angle. Put a metric on angle, which each ring\'s arc sweeps to, or leave angle out for the whole ring.');
+        const [least, most] = (M && M.domain) || [0, top], pitch = (1 - INNER) / (rows.length || 1), shade = (j: number) => l.paint || (enc.color != null ? 'series.' + (j + 1) : 'series.1');
+        rows.forEach((r, j) => {
+          const r1 = 1 - j * pitch, inner = r1 - pitch * RING;
+          if (angle == null) return arcs.push(arc(ids[i] + ':' + k(r), l, 0, 1, inner, shade(j), { row: k(r), opacity: 0.14, tone: 'soft' }, r1));
+          if (r[m as string] != null) arcs.push(arc(ids[i] + ':' + k(r), l, 0, Math.min(1, Math.max(0, (num(r, m as string) - least) / (most - least || 1))), inner, shade(j), { row: k(r) }, r1));
+        });
+        // A ring in a colour of its own has an entry in the legend, which says its value: a ring is no share of a whole.
+        if (angle != null && enc.color != null && !legend.length) legend.push(...shareLegend(rows, k, one, dim, m as string, M!, null, shade, (r) => formatValue(r[m as string] as number | null, M!)));
+      }
+      keys = rows.map(k); rings = slices ? '' : one;
+      return;
+    }
     if (isDim(catalog, enc.color)) {
-      const m = angle as string, dim = enc.color, rows = result.rows, total = result.totals[m] || Infinity, own = rowKeys(rows, dim), k = (r: Row) => own.get(r)!;
+      const m = angle as string, dim = enc.color, total = result.totals[m] || Infinity, inner = r0 as number;
       if (!(m in catalog.metrics)) throw new Error(n + ' splits by "' + dim + '" with ' + JSON.stringify(angle) + ' on angle. Put a metric on angle: each segment is its share of that metric\'s total.');
       if (keys) throw new Error(n + ' is a second layer split by color, and a circle is divided once. Remove one of them.');
+      // With a second ring a row is a pair, so the segments are the engine's own rows for the first dimension.
+      const whole = split ? result.totalsBy && result.totalsBy[dim] : result.rows;
+      if (!whole) throw new Error(n + ' divides each "' + dim + '" by "' + split + '", and a segment\'s span is the engine\'s total for it: this result has no totalsBy. Return it from the query layer, or remove "detail".');
+      const rows = whole, own = rowKeys(rows, dim), k = (r: Row) => own.get(r)!, edge = split ? inner + (1 - inner) * SPLIT : 1;
       if (rows.length > SERIES) throw new Error('Splitting by "' + dim + '" makes ' + rows.length + ' segments, and there are ' + SERIES + ' series colours. Add "limit": ' + SERIES + ' to the query, or less.');
+      // The second ring's values in the engine's order, which each segment's arcs run in.
+      const kids = split ? [...new Set(((result.totalsBy && result.totalsBy[split]) || result.rows).map((r) => str(r, split)))] : [];
       // Each segment starts where the one before it ends, a hair apart.
       let run = 0;
       rows.forEach((r, j) => {
         const lo = run / total, hi = (run += num(r, m)) / total;
-        arcs.push(arc(ids[i] + ':' + k(r), l, lo, Math.max(lo, hi - (rows.length > 1 ? GAP / span : 0)), r0, 'series.' + (j + 1), { row: k(r) }));
+        arcs.push(arc(ids[i] + ':' + k(r), l, lo, Math.max(lo, hi - (rows.length > 1 ? GAP / span : 0)), inner, 'series.' + (j + 1), { row: k(r) }, edge));
+        // Its part of the second ring starts where it does, and each arc there is a share of the same total: lighter, in
+        // its segment's paint, and with no entry in the legend. Rows past a `limit` leave it short of its segment's end.
+        // ponytail: a pair the result says twice would share a key. A result is one row per pair.
+        let at = lo * total;
+        const mine = result.rows.filter((p) => split && p[dim] === r[dim] && p[m] != null).sort((a, b) => kids.indexOf(str(a, split!)) - kids.indexOf(str(b, split!)));
+        mine.forEach((p) => {
+          const start = at / total, end = (at += num(p, m)) / total;
+          arcs.push(arc(ids[i] + ':' + k(r) + ':' + str(p, split!), l, start, Math.max(start, end - GAP / span), edge, 'series.' + (j + 1), { row: k(r), series: str(p, split!), opacity: CHILD }));
+        });
       });
       legend.push(...shareLegend(rows, k, dim, catalog.dimensions[dim]!, m, catalog.metrics[m]!, result.totals[m], (j) => 'series.' + (j + 1)));
       keys = rows.map(k);
+      if (split) detail = kids;
       return;
     }
-    if (angle == null) return arcs.push(arc(ids[i]!, l, 0, 1, r0, l.paint || 'series.1', { opacity: 0.14, tone: 'soft' }));
+    if (split) throw new Error(n + ' encodes "' + split + '" on detail and no dimension on color. A second ring divides the segments of a circle that color has divided: encode the query\'s other dimension on color, or remove "detail".');
+    if (angle == null) return arcs.push(arc(ids[i]!, l, 0, 1, r0 as number, l.paint || 'series.1', { opacity: 0.14, tone: 'soft' }));
     const marked = typeof angle === 'number' || roleOf(l) === 'reference', m = typeof angle === 'number' ? q.metrics[0]! : angle, M = catalog.metrics[m];
     if (!M) throw new Error(n + ' has "' + m + '" on angle, which is not a metric. Put a metric on angle, and a dimension on color.');
     if (!M.domain) throw new Error(n + ' reads "' + m + '" against a range, and the catalog gives that metric no "domain". Add "domain": [least, most] to it in the catalog, or encode a dimension on color to divide the circle by it.');
@@ -563,12 +637,12 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
     if (v == null) return;                                                   // no target to mark, or no total to sweep to
     const at = Math.min(1, Math.max(0, (v - least) / (most - least || 1)));
     // ponytail: a mark is a thin arc, since there is no `tick` mark to draw it with yet (chart-coverage-plan, step 3).
-    arcs.push(marked ? arc(ids[i]!, l, Math.max(0, at - MARK / span), Math.min(1, at + MARK / span), r0, l.paint || 'rule') : arc(ids[i]!, l, 0, at, r0, l.paint || 'series.1'));
+    arcs.push(marked ? arc(ids[i]!, l, Math.max(0, at - MARK / span), Math.min(1, at + MARK / span), r0 as number, l.paint || 'rule') : arc(ids[i]!, l, 0, at, r0 as number, l.paint || 'series.1'));
   });
   // The number sits in the hole of a donut: the short form, which is what fits. Whether it shows is a fit rule's to say.
   const inner = arcs.filter((a) => a.role === 'primary').map((a) => a.r0), nodes: SceneNode[] = arcs;
   if (inner.length && Math.min(...inner) >= HOLE) nodes.push({ key: 'hole', part: 'hole', kind: 'text', text: tldrValueText(catalog, q, result, true), anchor: 'middle', font: 'display', paint: 'ink', layer: 'data' });
-  return { nodes: nodes.concat(legend), ...(keys && { rows: keys }), aspect: half ? 2 : 1 };
+  return { nodes: nodes.concat(rim, legend), ...(keys && { rows: keys }), ...(detail && { detail }), aspect: half ? 2 : 1 };
 }
 
 const SEQ = 10;     // paint tokens run from seq.1 to seq.10, and seq.none is a cell with no value
@@ -720,6 +794,7 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
     parts.push('radial');
     // A number above the circle is not said again inside it.
     if (!parts.includes('number') && body.nodes.some((n) => n.part === 'hole')) parts.push('hole');
+    if (p.guides.rim && body.nodes.some((n) => n.part === 'rim')) parts.push('rim');
     if (p.guides.legend) parts.push(p.guides.legend === 'top' ? 'legend-top' : 'legend');
   } else if (customMarks().has(p.layout)) {
     // A custom mark builds its own scene, and says which of its parts the plan shows.

@@ -17,6 +17,7 @@ const SHORT_PLOT = 120;   // px of plot height under which ranked y ticks go
 const LABEL = 14;         // characters a label at a line's end is given before it is clipped
 const LABEL_LINE = 12;    // px from one such label to the next
 const RADIAL = 160;       // px across a circle of arcs that has room to spare
+const RIM = 14;           // px a circle gives up all round to the labels at its rim: a line of them
 /** A dot's radius in px: by its size step, or the one size of a dot that has none. */
 export const radius = (size?: number) => (size ? 2 + 2.5 * size : 3);
 
@@ -267,18 +268,29 @@ function placeBand(scene: Scene, W: number): Block {
 // Arcs about one centre, and the legend under them. The part holds its shape: a box of the scene's `aspect`, as wide as
 // the view up to RADIAL and no taller than `room` leaves once the legend is set, though never under `least` across.
 // It sits in the middle of the width. `plot` is that box, which the `hole` rule asks about.
+// Labels round the rim, where the plan shows them, stand outside the circle, which gives up RIM all round to them. Those
+// to either side run out of the box into the view's width, which the `rim` rule holds wide enough. Where two would
+// collide the one of higher rank is left out.
 function placeRadial(scene: Scene, W: number, room: number | null, container: Container): Block & { plot: { w: number; h: number } } {
   const rules = container.rules.fit, aspect = scene.aspect || 1, least = ruleFor(rules, 'radial', 'marks')?.needs.block ?? 0;
   const under = placeShares(scene, W, 0).height;
   const D = Math.min(W, RADIAL, room == null ? Infinity : Math.max(least, (room - under) * aspect)), h = D / aspect, plot = { w: D, h };
-  const nodes: PlacedNode[] = [];
+  const nodes: PlacedNode[] = [], R = D / 2 - (scene.parts.includes('rim') ? RIM : 0);
   let r0 = 1;
+  const tags = (scene.parts.includes('rim') ? scene.nodes.filter((n): n is TextNode => n.part === 'rim' && n.kind === 'text') : []).map((n) => {
+    const w = n.text.length * TICK_W, x = W / 2 + (R + 4) * (2 * n.x! - 1);
+    return { n, x, y: D / 2 - (R + 8) * (2 * n.t! - 1), box: { x: n.anchor === 'start' ? x : n.anchor === 'end' ? x - w : x - w / 2, w } };
+  });
+  const lost = declutter(tags.map((a) => ({ ...a.box, y: a.y - LABEL_LINE / 2, h: LABEL_LINE, rank: a.n.rank })));
   scene.nodes.forEach((n) => {
     if (n.kind === 'arc') {
       // An arc is drawn about the origin, and moved to the centre: the middle of a circle, and of the foot of a half.
       const { part, role, row, series, rank, a0, a1, r0: inner, r1, kind, ...rest } = n;
       if (role === 'primary') r0 = Math.min(r0, inner);
-      nodes.push({ ...rest, kind: 'path', d: arcD(n, D / 2), fill: true, tx: W / 2, ty: D / 2 });
+      nodes.push({ ...rest, kind: 'path', d: arcD(n, R), fill: true, tx: W / 2, ty: D / 2 });
+    } else if (n.part === 'rim' && n.kind === 'text') {
+      const i = tags.findIndex((a) => a.n === n);
+      if (i >= 0 && !lost[i]) nodes.push(text(n, tags[i]!.x, tags[i]!.y));
     } else if (n.part === 'hole' && n.kind === 'text' && scene.parts.includes('hole')) {
       // The number in the hole is the small face, whose width displayWidth() gives, and it shows only where its corners are inside the hole.
       const hole = ruleFor(rules, 'radial', 'hole'), face = container.display(n.text.length, r0 * D, true);

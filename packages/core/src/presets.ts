@@ -15,6 +15,9 @@ export const PRESETS: PresetLibrary = {
     { mark: 'text', encode: { y: '$by', text: '$metric' }, align: 'end' } ] },
   'share-bar': { layers: [
     { mark: 'bar', encode: { x: '$metric', color: '$by' }, stack: 'normalize' } ] },
+  // A bar for each value, up from the axis: BarChart. It is what a stack of glyphs becomes where there is no room to count them.
+  'bar': { layers: [
+    { mark: 'bar', encode: { x: '$by', y: '$metric' } } ] },
   // With a second dimension in the query, `$split`. Working names: check each against @automattic/charts before it ships.
   'grouped-bar': { layers: [
     { mark: 'bar', encode: { x: '$by', y: '$metric', color: '$split' } } ] },

@@ -39,6 +39,9 @@ function gaveUp(r: FitRule, plan: Plan, unbounded: Plan): boolean | null {
   if (r.id === 'secondary') return here && unbounded.layers.some((l) => l.role !== 'primary') ? plan.layers.every((l) => l.role === 'primary') : null;
   // And a track that stands beside its label only where a row's marks are read by where they are.
   if (r.id === 'track') return unbounded.layers.some((l) => ['rule', 'tick', 'dot'].includes(l.mark) || l.encode?.x2 != null) ? !here : null;
+  // The key to a unit's glyphs, and the preset a unit's form gives way to: only where a view holds the mark.
+  if (r.id === 'unit-key') return unbounded.guides.unitKey ? !(here && !!plan.guides.unitKey) : null;
+  if (r.mark) return unbounded.layers.some((l) => l.mark === r.mark) ? plan.preset !== unbounded.preset : null;
   return !here;
 }
 

@@ -343,6 +343,7 @@ The library ships these (`packages/core/src/presets.ts`). The three above are wr
 | `line` | One dimension, time or ordered | A line over its filled area, and the period before as a second line when the query compares |
 | `bar-list` | One categorical dimension | Ranked rows: a bar, the label and the value |
 | `share-bar` | One categorical dimension | One bar divided by share, with a legend |
+| `bar` | One dimension | A bar for each value, up from the axis |
 | `grouped-bar` | Two dimensions: the axis, then the split | Bars side by side, a colour for each value of the split |
 | `stacked-bar` | Two dimensions: the axis, then the split | Bars stacked |
 | `stacked-area` | Two dimensions: the axis, then the split | Areas stacked |

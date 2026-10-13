@@ -78,6 +78,26 @@ export const FIT_RULES: FitRule[] = [
     hide: ['notice'], show: ['number'], keep: 'marks' },
   { id: 'track',     layout: 'rows',      container: 'view', needs: { inline: 160 },                  // a track beside its label: the label's 90 px and 70 to read a mark's place in. The value's room is measured
     hide: ['track'], keep: 'marks' },
+  /* The `unit` mark, in each layout it draws in. What a glyph is worth is said in a line under the glyphs, a guide, and
+   * goes first: by height alone, since a line of a few words is never short of width where its glyphs are drawn.
+   * Glyphs are counted, so under the room that takes they are not drawn smaller: the view becomes the
+   * preset of the same query that needs less, whole, and that one steps down to the number by its own rules. A rule
+   * names the mark, so the layout's other views are not asked. A grid with no dimension has no share bar to become,
+   * so the rule after it gives it the gauge, which reads the same metric against the same range. */
+  { id: 'unit-key',   layout: 'cartesian', container: 'view', needs: { block: 160 }, hide: ['unit-key'], keep: 'guides' },                // as the key to sizes
+  { id: 'unit-key',   layout: 'rows',      container: 'view', needs: { block: 120 }, hide: ['unit-key'], keep: 'guides' },                // three rows and the line
+  { id: 'unit-key',   layout: 'band',      container: 'view', needs: { block: 220 }, hide: ['unit-key'], keep: 'guides' },
+  { id: 'unit-key',   layout: 'radial',    container: 'view', needs: { block: 200 }, hide: ['unit-key'], keep: 'guides' },
+  { id: 'unit',       layout: 'cartesian', mark: 'unit', container: 'view', needs: { inline: 280, block: 120 },                           // a stack, where a plot has its axes
+    hide: [], fallback: 'bar', keep: 'marks' },
+  { id: 'unit',       layout: 'rows',      mark: 'unit', container: 'view', needs: { inline: 280 },                                       // a run of ten beside its label and its value
+    hide: [], fallback: 'bar-list', keep: 'marks' },
+  { id: 'unit',       layout: 'band',      mark: 'unit', container: 'view', needs: { inline: 280, block: 180 },                           // a hundred cells, and a legend under them
+    hide: [], fallback: 'share-bar', keep: 'marks' },
+  { id: 'unit-alone', layout: 'band',      mark: 'unit', container: 'view', needs: { inline: 280, block: 180 },
+    hide: [], fallback: 'gauge', keep: 'marks' },
+  { id: 'unit',       layout: 'radial',    mark: 'unit', container: 'view', needs: { inline: 280, block: 160 },                           // up to a hundred seats
+    hide: [], fallback: 'pie-semi-circle', keep: 'marks' },
 ];
 
 /** The rule a layout has under an id. A part with no rule needs no room. */
@@ -99,11 +119,12 @@ export const gaveWay = (rule: FitRule): string => (rule.mark ? rule.layout + ' (
 /** The rule under which a layout gives way to a preset: the first of its rules that names a `fallback` and that the
  * spec's `keep` leaves on. `view` says what the view holds, where the caller knows: its layers' marks, for a rule that
  * is for one mark, and whether its query has what a preset's slots ask for. A rule whose preset the query cannot fill
- * is passed over, so one layout may offer a preset that takes a dimension and, after it, one that takes none.
+ * is passed over, so one layout may offer a preset that takes a dimension and, after it, one that takes none. With no
+ * `view` a rule for a mark is passed over too: nothing says the view holds it.
  * `via` holds what the view has already given up on its way here (`gaveWay`). A fallback that leads back to one of
  * them would never settle, so that throws. */
 export function fallbackRule(rules: FitRule[], layout: Layout, keep: KeepPart[] = [], via: string[] = [], view?: { marks: string[]; fills(preset: string): boolean }): FitRule | undefined {
-  const rule = rules.find((r) => r.layout === layout && r.fallback && !(r.keep && keep.includes(r.keep)) && (!view || ((!r.mark || view.marks.includes(r.mark)) && view.fills(r.fallback))));
+  const rule = rules.find((r) => r.layout === layout && r.fallback && !(r.keep && keep.includes(r.keep)) && (!r.mark || !!view?.marks.includes(r.mark)) && (!view || view.fills(r.fallback)));
   if (rule && via.includes(gaveWay(rule))) throw new Error('A fit rule\'s "fallback" leads back to the "' + gaveWay(rule) + '" layout (' + via.concat(gaveWay(rule)).join(', then ') + '), so the view would never settle. Name a preset that is laid out another way, or remove "fallback" from the rule.');
   return rule;
 }

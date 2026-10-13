@@ -312,6 +312,68 @@ Merged. 827 tests pass (807 before) and the typecheck is clean. `prototype/`, th
 17. **The dot-grid painter turns low opacity into a sparse pattern** (reference, section 12). What it makes of a line at half strength was not looked at.
 18. **No preset.** `spaghetti` as a preset is step 3's.
 
+### Step 2, arc reads data (built October 12)
+
+Not merged yet. 873 tests pass (836 before) and the typecheck is clean. `prototype/` and the parity tests are untouched, and every golden scene that existed is the same to the byte: the snapshot files of pie, donut, half and gauge among them have no changed line, and a new file holds the new ones (three samples at three sizes, and each one's ratio scene). Three samples in `moreSamples`: `rose` (visitors by hour), `rings` (visitors by channel, the `radial-bar` preset) and `sunburst` (visitors by device, then by channel). Swept and held in `test/arc-data.test.ts`. Checked in headless Chromium on the bench: each sample at 346, 250, 170, 120 and 80 px; the widest frame drawn in to 240, 225, 180, 150, 100, 70 and 40 px and out again; boxes 160, 100 and 60 px tall; light and dark; the three data states; a change of range and of data state in place; real key events; the pointer; the table. The four radial samples that existed were looked at again and are as they were. Not checked: WebKit, Firefox, a screen reader, touch, reduced motion, a page that reads from the right, the dot-grid painter, `place()` in any pixel painter (it is tested as numbers only), and the arcs' motion on a data change beyond that it ends in the right place.
+
+**What was added**
+
+- **Four forms of one mark,** chosen in `sceneRadial` by what is on `angle` and `radius`. No layer field was added: `sweep` is still the only one that is neither data nor role.
+  - A metric on `angle`, a dimension on `color`: as it was. With a dimension on `detail`, a second ring (the sunburst).
+  - A dimension on `angle`, a metric on `radius`: a slice for each row (the rose).
+  - A dimension on `radius`, a metric on `angle`: a ring for each row (the radial bar). With nothing on `angle`, the whole ring, faint.
+  - A metric on `angle` alone: as it was (the gauge).
+- **Presets** `rose`, `radial-bar` and `sunburst`. Working names, to check against `@automattic/charts`.
+- **`radius` takes a field.** In the schema it is a number from 0 up to 1, or a string. `DETAIL_LAYOUTS` has `radial`.
+- **A part, `rim`,** a guide `Guides.rim`, and a fit rule `rim` for `radial` (230 px across, 120 px tall, kept by `keep: ["guides"]`). The reducer's `drop-guides` gives it up and says "the labels round the rim".
+- **Scene.** A second ring's arc has its segment's `row` and its own value as `series`, with key `primary:arc:<parent>:<child>`. `Scene.detail` holds the second ring's values in the engine's order, as step 1 made it for a plot. `Scene.rows` are the segments, slices or rings.
+- **The fixture engine answers `hour` and `weekday` in their own order** when either is asked for alone. No catalog entry was added.
+- **In the DOM,** `layouts/radial.ts` paints the three forms, the rim's labels and a measured pass that thins them. A second SVG, `.uav-under`, holds the arcs that are no point of their own. `keys.ts` gained two lines: the pointer over an arc of a second ring chooses it, and the readout stands over it.
+
+**Choices where the plan was silent, and departures**
+
+1. **A rose is in one paint,** `series.1`, or the layer's `paint`. A colour each would be held to six, and a day has twenty-four hours. A dimension on `color` beside one on `angle` is refused, with the fix: a stacked rose is a later question.
+2. **A rose has no hole** (Decided October 12, item 6). A number on `radius` beside a dimension on `angle` is refused, since every slice would then be the same.
+3. **`sweep: "half"` is refused with a dimension on `angle` or on `radius`,** by name, with the fix. A half sunburst is allowed: it is the circle divided by colour that `sweep` already served, and it cost nothing. It was not tested and not looked at.
+4. **The faint ring behind a radial bar is a layer of the preset, not something the mark adds.** `{ "mark": "arc", "encode": { "radius": "$by" }, "role": "context" }`: a layer with nothing on `angle` is the whole sweep, which is what the gauge's range already was. So an author may leave it out, and the reducer gives it up with the other `context` layers. Decided yes, it stands there: without it a short arc is not seen as part of a ring, and the full turn it is read against is not on the page.
+5. **A ring takes a colour only where its dimension is on `color` too,** as a row does in `rows`. The preset writes it, so each ring has a series colour and an entry in the legend. Without it every ring is `series.1` and there is no legend. Any other dimension on `color` is refused.
+6. **A radial bar's legend says each ring's value, not a share:** a ring is read against the largest, or a range, and is no part of a whole. It is the band's legend otherwise, node for node, and steps down by the same two rules.
+7. **Six rings is its own limit** (`RINGS` in `scene.ts`), not the count of series colours, though the two are equal. It holds for rings in one paint as well: under that each is too thin to follow round.
+8. **Rings run from the outside in, in the engine's order,** the first outermost. They share the radius from 0.3 of it out, and each fills 82% of its share. Constants in `scene.ts`.
+9. **A ring sweeps against the largest row, which makes the largest a closed circle.** That is the step as written. Charts of this kind often stop at three quarters of a turn, to leave room for labels at the start. Not done: the legend is the label. **To decide** if a full turn reads badly.
+10. **The second ring is in its segment's colour at 60% of it** (`opacity: 0.6`, no `tone`). Lighter and not the same: at full strength the two rings are one mass, and only a hairline says where one level ends. The hue still ties each arc to its segment. `tone: "soft"` is for a fill that tints behind a mark, and would take the token's palest step, which is too faint for a mark that carries a value.
+11. **The first ring ends at 0.6 of the way from the inner radius to the rim** (`SPLIT`). The `sunburst` preset has no hole. A number on `radius` gives it one, and from 0.5 the number sits in it as in a donut. Tested as a scene; not looked at.
+12. **An arc of the second ring is its share of the engine's total,** set from where its segment starts. With whole data that divides the segment's span exactly, and with a `limit` the ring stops short of its segment's end, as a circle with a `limit` stops short of closing. The span itself is `totalsBy` for the first dimension. Without `totalsBy` the layer is refused, by name.
+13. **The legend of a sunburst is its segments' only.** The second ring's values have no entry. They are named by the readout, the keys and the table.
+14. **Labels round the rim are the smallest readable form.** One for each slice, at the middle of it, set outside the circle and upright. The circle gives up 14 px all round to them, and those to either side run out of the part into the view's width, which is why the rule asks for 230 px. They are ranked so that about four stay, then those half way between, then the rest; `place()` and the DOM's measured pass both thin them with `declutter`, which was there. **What is missing:** a label does not turn with its slice or follow the arc; the thinning is by collision, so at 160 px a clock keeps eighteen of its twenty-four labels and loses the ones beside 12 and 6, which is uneven; where the count is not a multiple of four the ones that stay are not evenly spaced (seven weekdays keep Monday, Wednesday, Friday and Sunday); and a long label to either side is not clipped.
+15. **A radial bar in one paint has no labels at all.** Labels beside the rings were not built. The preset is not that form.
+16. **A rose shows no number.** Like a pie, it has none above it by default and no hole to put one in. Each slice's value is in the readout, the option's name and the table, and the three largest are in the prose.
+17. **The prose now ranks rows by comparing them.** `tldrProse` took the first rows as the largest, and `leader` the first row, which is false of rows in clock order ("Top hours: 12am, 1am, 2am"). Both now compare the engine's rows, as the grid's peak and the scatter's extremes already did. Nothing is summed. For rows an engine ranked the words are the same, so no test of the six samples moved. The share sentence of a pie is fixed by the same line.
+18. **`share` is false for a rose and a radial bar,** so they take the ranked sentence and the note "Top: 11am". A sunburst takes the two-dimension share sentence that was there: "Desktop is the largest device at 52% of visitors, and Search the largest channel at 42%."
+19. **Keys.** Left and right step through the slices, the rings (from the outside in) or the segments, and stop at the ends, as version 4 does. In a sunburst, up steps out to the segment's first arc of the second ring and on through them, and down comes back and then in to the segment. That is the split plot's stepping, unchanged. The order is the second dimension's own, so it is the same in every segment.
+20. **The pointer chooses an arc of the second ring,** which it cannot do for a line of a split plot. An arc there is its own target, and its neighbour is another value. Over the faint ring of a radial bar it chooses that ring's row.
+21. **A segment chosen with the keys says its second ring as a mass:** "Mobile: Visitors 4,318 (6 channels, the most Search 1,763)". Step 1's readout for a split with no colours, unchanged.
+22. **The table needed nothing.** One dimension is a row each, and two is the pivot.
+23. **Two errors changed on purpose.** "It takes a number from 0 up to 1" now names all three things `radius` takes. A dimension on both `angle` and `color` with nothing on `radius` used to say "Put a metric on angle"; it now says what a slice needs, and names that fix as the other way out.
+24. **`detail` naming the dimension that is on `color` is still refused by `resolve()`,** as step 1 left it.
+
+**Findings**
+
+- **The plan's "equal slice, in the engine's order" needs the engine to have an order.** The fixture ranked every categorical dimension. Section 5 already asks the API's owners for it, and core cannot tell which it was handed: hence item 17.
+- **An SVG that is focused draws its outline as a square,** and the rim's labels at the four diagonals lie across it. Seen, and left.
+- **Arcs are parted by a stroke in the background colour, two rules wide.** On a rose it eats the thin end of every slice, so the centre is a small empty disc. It is not the scene's gap, and it was left as the pie has it.
+- **An arc narrower than the gap has no width** (Tablet's last channel, at 0.2% of the circle). It keeps its key, and the keys and the table still reach its value. The pointer cannot.
+- **A slice with no value, or none above zero, is not drawn** and keeps its place and label. Its row is in `Scene.rows`, and the keys pass over it.
+- **The count section 8 asks for:** one of the three new presets needs `detail`.
+
+**Not done**
+
+- A stacked rose, a rose or a radial bar of the previous period, a half rose and a half radial bar.
+- A hierarchy deeper than two levels (Decided 24).
+- Labels beside the rings, and labels that follow the circle.
+- A scale on a rose: nothing says what radius is what value.
+- `CLAUDE.md` was left for its owner.
+
 ### Step 7, a registry for presets (built October 12)
 
 Merged. 816 tests pass, nine of them new, and the typecheck is clean. Every golden scene is the same to the byte, the six of `map`, `symbols` and `unmapped` among them: the snapshot files are untouched. The parity tests are untouched. Not looked at on the bench or in a browser: nothing a painter reads changed.

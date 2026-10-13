@@ -4,7 +4,7 @@ import { catalog, moreSamples, runQuery, type Scenario } from '@unified-analytic
 import { compileFitRules } from '../packages/dom/src/compile.ts';
 import { band } from '../packages/dom/src/layouts/band.ts';
 import { cartesian } from '../packages/dom/src/layouts/cartesian.ts';
-import { hitNodes, readout, readoutAt, rowsAt, stepSeries } from '../packages/dom/src/keys.ts';
+import { KEYS_CSS, hitNodes, readout, readoutAt, rowsAt, stepSeries } from '../packages/dom/src/keys.ts';
 import { apart } from '../packages/dom/src/measure.ts';
 import { mix, resample } from '../packages/dom/src/motion.ts';
 import { pivot } from '../packages/dom/src/view.ts';
@@ -146,6 +146,25 @@ describe('the readout of a split plot', () => {
     expect(readoutAt(rows[0]!, total, q, catalog, x!, split!)).toBe('Sep 8: Visitors 416 (Desktop 217, Mobile 173, Tablet 26)');
     expect(readoutAt(rows[27]!, result.totalsBy![x!]![27], q, catalog, x!, split!)).toMatch(/^Oct 5: Visitors \d+ so far \(Desktop \d+, Mobile \d+, Tablet \d+\)$/);
     expect(readoutAt(rows[0]!, undefined, q, catalog, x!, split!)).toBe('Sep 8: Visitors (Desktop 217, Mobile 173, Tablet 26)');
+  });
+  it('finds the rows of a plot split by detail the same way, in the order of scene.detail', () => {
+    const { rows, x, split, scene } = at('spaghetti');
+    expect([x, split, scene.series]).toEqual(['date.day', 'country', undefined]);
+    expect(rows).toHaveLength(28);
+    rows.forEach((r, i) => { expect(r.map((p) => p.country)).toEqual(scene.detail); expect(r.every((p) => p['date.day'] === scene.rows![i])).toBe(true); });
+    expect(hitNodes(scene).map((h) => h.row)).toEqual(scene.rows);
+  });
+  it('says how many series a mass has and which has the most, and not every one', () => {
+    const { rows, x, split, q, result } = at('spaghetti'), total = result.totalsBy![x!]![0];
+    expect(readoutAt(rows[0]!, total, q, catalog, x!, split!, true)).toBe('Sep 8: Visitors 416 (15 countries, the most United States 137)');
+    expect(readoutAt(rows[0]!, undefined, q, catalog, x!, split!, true)).toBe('Sep 8: Visitors (15 countries, the most United States 137)');
+    expect(readoutAt(rows[0]!.slice(1, 2), undefined, q, catalog, x!, split!, true)).toMatch(/^Sep 8: Visitors \(1 country, the most India \d+\)$/);
+    expect(readoutAt(rows[0]!.map((r) => ({ ...r, visitors: null })), undefined, q, catalog, x!, split!, true)).toBe('Sep 8: Visitors (15 countries)');
+    // One of them, chosen, is said as any pair is.
+    expect(readout(rows[0]![1]!, q, catalog, [])).toMatch(/^Sep 8, India: Visitors \d+$/);
+  });
+  it('draws the chosen line of a mass whole', () => {
+    expect(KEYS_CSS).toContain('.uav-body[data-mass] .uav-plot path[data-chosen] { opacity: 1 !important; }');
   });
   it('says one pair as any row is said', () => {
     const { rows, q } = at('grouped');

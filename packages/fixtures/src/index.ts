@@ -342,6 +342,9 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
             layers: [{ mark: 'geo', encode: { x: 'country', color: 'visitors' } }] } },
   symbols: { label: 'Symbols on a map: page views by country', spec: { spec: 'view/0', title: 'Page views by country', query: { metrics: ['pageviews'], by: ['country'], range: '28d' },
             layers: [{ mark: 'geo', encode: { x: 'country', size: 'pageviews' } }] } },
+  // A split that spends no colour (docs/uncommon-coverage-plan.md, step 1): a line for each country, all in one paint.
+  spaghetti: { label: 'Spaghetti: visitors by day, a line for each of fifteen countries', spec: { spec: 'view/0', title: 'Visitors by country, day by day', query: { metrics: ['visitors'], by: ['date.day', 'country'], range: '28d' },
+            layers: [{ mark: 'line', encode: { x: 'date.day', y: 'visitors', detail: 'country' } }] } },
   unmapped: { label: 'A map with rows it has no shape for: visitors by every country seen', spec: { spec: 'view/0', title: 'Visitors by country, all of them', query: { metrics: ['visitors'], by: ['visitor_country'], range: '28d' },
             layers: [{ mark: 'geo', encode: { x: 'visitor_country', color: 'visitors' } }] } },
 };

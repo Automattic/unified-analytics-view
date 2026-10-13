@@ -136,8 +136,14 @@ function placePlot(scene: Scene, W: number, H: number, narrow: boolean): PlacedN
   return out;
 }
 
-// A split plot's legend: a swatch and a name per series, set in a row that wraps.
+// The key to the series of a split plot, or of a divided row under its rows: whichever of the two the scene's parts
+// name, and nothing where they name neither. The legend is a swatch and a name per series, set in a row that wraps.
+// The one line, which only a divided row has, names the series with the most, in its colour.
 function placeLegend(scene: Scene, W: number): Block {
+  if (!scene.parts.includes('legend')) {
+    const top = scene.parts.includes('legend-top') && scene.nodes.find((n): n is TextNode => n.part === 'legend-top' && n.kind === 'text');
+    return top ? { nodes: [text(top, 0, 18, fit(top.text, W))], height: 24 } : { nodes: [], height: 0 };
+  }
   const nodes: PlacedNode[] = [], of = (kind: string, s: string) => scene.nodes.find((n) => n.part === 'legend' && n.kind === kind && n.series === s);
   let x = 0, yy = 16;
   scene.series!.forEach((s) => {
@@ -148,15 +154,8 @@ function placeLegend(scene: Scene, W: number): Block {
   });
   return { nodes, height: yy + 10 };
 }
-// The key to the series of a divided row, under the rows: whichever of the two the plan shows. All of it is a plot's
-// legend. The one line names the series with the most, in its colour.
-function placeRowsLegend(scene: Scene, W: number): Block {
-  if (scene.parts.includes('legend')) return placeLegend(scene, W);
-  const top = scene.parts.includes('legend-top') && scene.nodes.find((n): n is TextNode => n.part === 'legend-top' && n.kind === 'text');
-  return top ? { nodes: [text(top, 0, 18, fit(top.text, W))], height: 24 } : { nodes: [], height: 0 };
-}
 /** The height the key to a list's series takes under its rows, at a width. Nothing where the scene shows none. */
-export const legendBlock = (scene: Scene, W: number): number => placeRowsLegend(scene, W).height;
+export const legendBlock = (scene: Scene, W: number): number => placeLegend(scene, W).height;
 
 // A grid of cells, with a label for each of its rows in a gutter as wide as the longest, and for each column under it.
 // Cells are a hairline apart. Labels thin by rank: the highest rank goes first, until those left along an axis are clear
@@ -383,7 +382,7 @@ export function place(scene: Scene, container: Container): PlacedScene {
       const guided = scene.parts.includes('x-axis') || scene.parts.includes('y-axis');
       // The least a plot with axes is built to is the `axes` rule's block need, so the two cannot be set apart.
       const least = ruleFor(rules.fit, 'cartesian', 'axes')?.needs.block ?? 0;
-      const legend = scene.parts.includes('legend') ? placeLegend(scene, W) : { nodes: [], height: 0 };
+      const legend = placeLegend(scene, W);
       // The key to sizes goes under the legend, and both come out of the plot's height.
       if (scene.parts.includes('size')) { const sizes = placeSize(scene); legend.nodes.push(...shift(sizes.nodes, 0, legend.height)); legend.height += sizes.height; }
       const key = placeUnitKey(scene);
@@ -400,7 +399,7 @@ export function place(scene: Scene, container: Container): PlacedScene {
       const ph = H ? Math.max(least, Math.min(rules.axes.height, H - above - ramp.height)) : strip ? STRIP : rules.axes.height;
       body = { nodes: placeMatrix(scene, W, ph).concat(shift(ramp.nodes, 0, ph)), height: ph + ramp.height };
     } else if (scene.layout === 'rows') {
-      const list = placeRows(scene, W, rules.rows), key = placeRowsLegend(scene, W);
+      const list = placeRows(scene, W, rules.rows), key = placeLegend(scene, W);
       body = { nodes: list.nodes.concat(shift(key.nodes, 0, list.height)), height: list.height + key.height };
     } else if (scene.layout === 'radial') {
       const radial = placeRadial(scene, W, H ? H - above : null, container);

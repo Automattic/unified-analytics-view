@@ -2,12 +2,14 @@ import type { Catalog, Spec } from '@unified-analytics/core';
 import { UaView, defineUaView, registerPainter, surfaceSheet } from '@unified-analytics/dom';
 import { catalog, moreSamples, runQuery, samples, type Scenario } from '@unified-analytics/fixtures';
 import { geoPainter } from '@unified-analytics/geo/dom';
+import { partitionPainter } from '@unified-analytics/partition/dom';
 
 /* The marks: each one on its own, at a size where nothing has been given up, for tuning how it looks. A mark is
  * shown in each of the six series colours, on each of the three surfaces, and in the states it has. Every specimen
  * is a <ua-view> on the fixtures, so what is here is the real painter. Theme "both" sets the page beside itself. */
 defineUaView();
 registerPainter(geoPainter);
+registerPainter(partitionPainter);
 document.adoptedStyleSheets.push(surfaceSheet());
 
 const params = new URLSearchParams(location.search), theme = params.get('theme') ?? '';
@@ -51,6 +53,10 @@ const MARKS: Mark[] = [
   { name: 'band', note: 'One bar divided, a colour for each value.', spec: S('mix') },
   { name: 'cell', note: 'Filled by the sequential ramp.', spec: S('heatmap') },
   { name: 'geo', note: 'Filled by the sequential ramp, or a symbol on each region.', spec: S('map'), states: [{ label: 'symbols', spec: S('symbols') }] },
+  { name: 'partition', note: 'A box divided by area, and each part divided again. A colour for each parent.', spec: S('treemap'), states: [
+    { label: 'one level', spec: S('tiles') },
+    { label: 'painted by a second metric', spec: { query: { metrics: ['pageviews', 'visitors'], by: ['section', 'page'], range: '28d' }, layers: [{ mark: 'partition', encode: { x: 'section', detail: 'page', size: 'pageviews', color: 'visitors' } }] } },
+    { label: 'short of the whole, by a limit', spec: { ...S('treemap'), query: { ...S('treemap').query, limit: 3 } } }] },
 ];
 
 /** A view on a surface, with what it is under it. `series` paints it with that series colour in place of the first. */

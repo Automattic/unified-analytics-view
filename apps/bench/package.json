@@ -12,6 +12,7 @@
     "@unified-analytics/dom": "workspace:*",
     "@unified-analytics/fixtures": "workspace:*",
     "@unified-analytics/geo": "workspace:*",
+    "@unified-analytics/partition": "workspace:*",
     "@unified-analytics/spacefast": "workspace:*",
     "@unified-analytics/tokens": "workspace:*",
     "d3-scale": "^4.0.2",

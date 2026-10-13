@@ -2,6 +2,7 @@ import { buildScene, resolve, unboundedContainer } from '@unified-analytics/core
 import { UaView, defineUaView, registerPainter, surfaceSheet } from '@unified-analytics/dom';
 import { catalog, moreSamples, runQuery, samples as known, type Scenario } from '@unified-analytics/fixtures';
 import { geoPainter } from '@unified-analytics/geo/dom';
+import { partitionPainter } from '@unified-analytics/partition/dom';
 
 /* The bench: every sample, in frames that stand in for containers.
  * Controls live in the URL, so a reload or a shared link keeps them. */
@@ -18,6 +19,7 @@ const state = () => Object.fromEntries(new FormData(controls)) as { scenario: Sc
 defineUaView();
 // The `geo` mark is registered in code, in two halves. The fixtures hand core's half its boundary shapes; this is the DOM's.
 registerPainter(geoPainter);
+registerPainter(partitionPainter);
 document.adoptedStyleSheets.push(surfaceSheet());
 
 function paint(frame: HTMLElement) {

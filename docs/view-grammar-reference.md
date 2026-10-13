@@ -191,12 +191,12 @@ A layer:
 
 | Field | Meaning |
 |---|---|
-| `mark` | `line`, `area`, `bar`, `rule`, `text`, `dot`, `tick`, `cell`, `arc`, or the name of a custom mark registered in code |
+| `mark` | `line`, `area`, `bar`, `rule`, `text`, `dot`, `tick`, `cell`, `arc`, `unit`, or the name of a custom mark registered in code |
 | `encode` | Channel to field: `x`, `y`, `x2`, `y2`, `color`, `detail`, `size`, `text`, `angle`, `radius`. A field is a dimension name, a metric name, a companion the result returns (`metric@p25`), or a number (for a rule, or an arc's inner radius). In rows, `color` paints each row: the rows' own dimension is a colour for each, and a companion of it (`source@kind`) paints rows that share a value alike. Built October 8, for the sidebar test case. `detail` is one of the query's dimensions: it splits the layer into a series for each value, as a dimension on `color` does, and paints none apart. Every series is in the layer's own paint, there is no legend and no label at a line's end, and the limit of six series does not apply, since no series colour is spent. A layer in a plot is split once, by `color` or by `detail`, and a layer split by `detail` takes no `stack`. Read in a plot with a dimension on x; built October 12 |
 | `series` | `"previous"` draws the comparison companion of the metric. Comparison is a property of a layer, not a second metric. `"delta"`, on a `text` layer in rows, is the row's change, painted by polarity |
 | `role` | `primary`, `comparison`, `reference`, `context`. Defaults: a `previous` series is `comparison`, a `rule` is `reference`, everything else is `primary` |
 | `stack` | `"zero"`, `"normalize"` for share of whole, or `"center"`, on a layer split by `color`, and not by `detail`. A `bar` split by `color` or by `detail` with no `stack` sits beside its neighbours |
-| `sweep` | `"half"` for an `arc`. The one layer field that is neither data nor role |
+| `sweep` | `"half"` for an `arc`, and for a `unit` with a metric on `angle`, whose seats sit round a half circle and no other way. The one layer field that is neither data nor role |
 | `label` | Text for a rule |
 | `align` | `"end"` for right-aligned text |
 | `paint` | Override the paint token. `"delta"` is the paint of the metric's change over the range: good or bad by its polarity, and the layer's own where there is no change to judge. Built October 8, for the sidebar test case |
@@ -246,8 +246,21 @@ The JSON Schema for a spec is `packages/core/schema/view.schema.json`, and the c
 | `tick` | x, y | A short stroke across its band at a value | Built October 8 |
 | `cell` | x, y, color | Both positions discrete; colour quantized to the `seq` ramp. With no x it is one column and with no y one row, a strip. A binned dimension's row is labelled by its bin, and along the foot at its edges | Built October 8; the strip October 9 |
 | `arc` | angle, radius (a number), color | Its own mark. No general polar coordinate system | Built October 8 |
+| `unit` | x, y, color, angle | A value drawn as counted glyphs, one for so many, where a `bar` or an `arc` would draw a length. What a glyph is worth comes from the data. It takes no second end, no `stack`, no `series` and no value below zero | Built October 12 |
 
 "Built October 8" means built, tested and looked at in headless Chromium by the agent that built it. What each one found is in `docs/chart-coverage-plan.md`, section 8.
+
+**The `unit` mark has five forms, and its channels choose between them.** No field names one.
+
+| On its channels | Layout | Draws | A glyph is worth |
+|---|---|---|---|
+| A dimension on x, a metric on y | `cartesian` | A stack of dots up from the axis for each value. On a binned number dimension it is the Wilkinson dot plot | The least of 1, 2 and 5 times a power of ten at which the largest value is ten glyphs or fewer |
+| A dimension on y, a metric on x | `rows` | A run of dots along each row's track, beside its label | The same |
+| A metric on x, a dimension on `color` | `band` | A grid of a hundred cells, a run of them and a series colour for each value, with the band's legend | A hundredth of the engine's total. The cells are shared out by largest remainder, so values that make up the total fill the grid exactly; under a `limit` the cells left over are the rest, painted as no value |
+| A metric on x, and no dimension in the query | `band` | The same grid, lit up to the metric's place in its catalog `domain`, under the number | A hundredth of the domain |
+| A metric on `angle`, a dimension on `color`, `sweep: "half"` | `radial` | Seats round a half circle, a wedge and a series colour for each value | One of the metric while the engine's total is a hundred or fewer, and beyond that the round number at which it is a hundred seats or fewer |
+
+A value is rounded to whole glyphs, and a value above nothing has one at least. A glyph is a dot or a square (decided October 12): icons wait for a glyph per metric in the catalog. Glyphs hold their shape: a grid's part states an `aspect`, and a dot states the room it has, `w` and `h`, of which the painter takes the lesser in pixels. A stack is on the plot's own y scale, so an axis or a `rule` reads true against it. Each form gives way, under 280 px across or under its own height, to the preset of the same query that needs less room (section 9): glyphs are counted, so they are never drawn smaller than can be told apart.
 
 A mark carries only its shape and those constraints. Relationships between marks (stacked, overlaid, normalized) are transforms or layering, never part of the mark.
 
@@ -263,12 +276,12 @@ A custom mark registered in code and referenced by name is the escape hatch for 
 
 | Layout | Trigger | Draws |
 |---|---|---|
-| `cartesian` | A dimension on x | line, area, bar, rule over a category or time axis |
-| `rows` | A dimension on y | The ranked bar list: a bar behind a label and a value per row |
-| `band` | A dimension on color only | One stacked, normalized bar with a legend |
+| `cartesian` | A dimension on x | line, area, bar, rule over a category or time axis, and a `unit`'s stacks |
+| `rows` | A dimension on y | The ranked bar list: a bar behind a label and a value per row. A `unit` is a run of glyphs in the track |
+| `band` | A dimension on color only, or a `unit` with a metric on x and no dimension at all | One stacked, normalized bar with a legend, or a `unit`'s grid of a hundred |
 | `cartesian` | A metric on x and on y | Points: `dot`, `text`, rules on either axis |
 | `matrix` | A dimension on x and on y, or a `cell` with one on either alone | A grid of `cell`s with a ramp |
-| `radial` | Anything on `angle` | `arc`s about one centre |
+| `radial` | Anything on `angle` | `arc`s about one centre, and a `unit`'s seats |
 | a custom mark's name | A layer with that mark | Whatever the mark draws, alone |
 
 **A table is rows of `text` layers.** In `rows`, each `text` layer with a metric on `text` is a column of values, set at the end with `align: "end"`; one with the dimension on `text` is the row's label. With more than one column the columns get headers, from the metrics' labels. A bar is optional: rows with no bar, dot or tick are a plain table. Each column takes the unit of its own metric, so columns of different units, or of several currencies, are fine. A header cannot be authored, and a column that is not a metric is written raw.
@@ -296,6 +309,7 @@ A custom mark registered in code and referenced by name is the escape hatch for 
 
 - **Roles** let a container reason about a view without knowing what chart it is. `primary` is the thing itself. `comparison` is the same metric for another period. `reference` is a target or threshold. `context` is supporting ink, such as the area under a line.
 - **Guides** are derived from scales. Axes, grid, tick labels and legends are never authored, and a spec cannot switch them on or off. They start on (both axes and the grid on a cartesian layout, the full legend on a band), and the container's rules decide when they go.
+- **A `unit`'s key** is a guide too: a line under the glyphs that says what one is worth, "Each is 500", in the metric's own format. It is the part `unit-key`. There is none where a glyph is worth one, or a hundredth of a whole. It goes with the guides, by a rule of its own on the view's height, and before the glyphs do.
 - **The tldr value** is the primary metric's total from the engine, a delta if the query compares, and a derived note:
   - time dimension: the range-total caveat, such as "Sum of daily counts"
   - categorical dimension: "Top: /pricing"
@@ -307,6 +321,7 @@ Where the tldr value appears is the container's decision, never the spec's:
 - It is the whole view when there are no layers, and what remains at collapse.
 - It is added beside the plot when the axes drop.
 - It sits above the marks, when there is room for both, according to the rule `tldrValue.above`. The default is `instant`: only for an instant metric. A context can pass `always`.
+- It sits above a `unit`'s grid that has no dimension, always: the grid says how far along its range the metric is, and not what it is. A departure from the line above, built October 12 and still to confirm.
 
 Delta states: up or down with a percentage, "No change" (under 0.5%), "New" (prior was zero), "No prior period" (prior is null). Colour follows the metric's polarity.
 
@@ -374,6 +389,8 @@ A companion is something the engine returns with a metric. A query cannot yet as
 |---|---|---|
 | `choropleth` | One dimension whose values are region keys | A map, each region filled by the metric on the sequential ramp |
 | `symbol-map` | The same | A map with a symbol on each region, sized by the metric |
+
+`waffle`, `unit-chart`, `isotype`, `parliament` and `icon-array` are working names as well, and `bar` follows `BarChart`. `gauge` and `icon-array` are the two presets that take no dimension. The schema does not say which presets take one (it cannot know a library's or the registry's): `resolve()` does, by name.
 
 Both are working names, to check against `@automattic/charts`. A name must be letters, digits, `_` and `-`, and cannot be one the library has. A name already registered is replaced. `customPresets()` lists what is registered. The registry is a map and two functions, as the one for marks is, and a name in it is unknown until its package has been loaded: the error for an unknown preset lists the library and the registry, and names `registerPreset`.
 
@@ -696,6 +713,7 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 29. A fit rule may name a `fallback` preset that the view becomes below the rule's need. (October 7)
 30. `d3-geo` is allowed in a `packages/geo` of its own. Core keeps its three dependencies. (October 7)
 31. `detail` splits a layer into series without painting them apart. It is a channel that takes a dimension: one series per value, all in the layer's own paint, with no legend and no limit of six. The query's second dimension may go to `color`, to `detail`, to `facet` or to the other axis. (October 12)
+32. `unit` draws a value as counted glyphs; what a glyph is worth comes from the data. It is one built-in mark whose form is what is on its channels: a stack, a run, a grid of a hundred, seats. A glyph is a dot or a square. A scene has no size, so nothing about a glyph's worth or count is a size: the largest value is ten glyphs or fewer, a grid is a hundred cells shared by largest remainder against the engine's total, and seats are one each up to a hundred. Under the room its glyphs need a form becomes another preset of the same query, by a fit rule's `fallback`, which for that may now name the mark it is for. (October 12)
 
 ### Open
 

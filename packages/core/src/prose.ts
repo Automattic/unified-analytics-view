@@ -33,7 +33,7 @@ export const portion = (v: number, total: number | null | undefined, metric: Met
 const at = (v: number, total: number | null | undefined, metric: MetricDef, of = '') => (total ? ' at ' + fmtPct(v / total) + of : ' (' + formatValue(v, metric) + ')');
 
 /** More than one of a dimension's values, by its label: "pages", "countries". */
-const plural = (label: string) => label.replace(/([^aeiou])y$/, '$1ie') + 's';
+export const plural = (label: string) => label.replace(/([^aeiou])y$/, '$1ie') + 's';
 
 /** The tldr prose: the text sibling of a view, derived from the query and the transforms, not from a named chart type. */
 export function tldrProse(q: Query, result: Result, share: boolean, catalog: Catalog, points = false): string {

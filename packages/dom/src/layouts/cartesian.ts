@@ -138,6 +138,8 @@ export const cartesian: LayoutPainter = {
 
   paint(body, scene) {
     body.dataset.scale = scene.scale;
+    // Series in one paint, by detail: the stylesheet draws the chosen one whole, out of the mass (keys.ts).
+    body.toggleAttribute('data-mass', !!scene.detail);
     const yAxis = ensure(body, 'div', 'uav-y-axis'), plot = ensure(body, 'div', 'uav-plot'), xAxis = ensure(body, 'div', 'uav-x-axis');
     const yAxis2 = ensure(body, 'div', 'uav-y-axis-2'), labels = ensure(body, 'div', 'uav-labels'), legend = ensure(body, 'div', 'uav-legend');
     // ponytail: paint order is fixed at grid, bars, paths, then rules and labels, whatever the layer order.

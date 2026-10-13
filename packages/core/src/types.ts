@@ -215,7 +215,11 @@ export interface PathNode extends NodeBase {
  * track: `x` and `x2` run along the track and `t` up the row, so a rule lies at 0.5 and a tick stands from 0 to 1. */
 export interface LineNode extends NodeBase { kind: 'line'; t: number; x?: number; x2?: number; t2?: number; width?: number; dash?: string }
 /** The pulse beside the number, or a dot at `x` and `t`: in `plot` on a time or category axis, in `points` where x is a metric too, and in `rows` along a row's track, half way up it. `size` is a step from 1 up, not a radius: how big a step is, in pixels, is the painter's. */
-export interface CircleNode extends NodeBase { kind: 'circle'; pulse: boolean; x?: number; t?: number; size?: number }
+export interface CircleNode extends NodeBase {
+  kind: 'circle'; pulse: boolean; x?: number; t?: number; size?: number;
+  /** A dot of a grid: the two dimension values it stands at, as a cell's. It has no `row`. */
+  pair?: [x: string, y: string];
+}
 /** One row of the `rows` part: the thing a painter keys and a reader chooses. It draws nothing itself, and place() leaves it out. */
 export interface RowNode extends NodeBase { kind: 'row'; row: string }
 /** Text in the number, rows, legend and notice parts is set in order and carries no position. In `labels` it sits beside the plot at height `t`.

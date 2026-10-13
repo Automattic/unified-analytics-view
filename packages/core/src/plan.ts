@@ -116,7 +116,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   const p: PlanShape = { layout: laid, layers, guides: {}, tldrValue: rules.tldrValue.above === 'always' || !!M.instant || !layers.length, side: false, rowLimit: null,
                          share, text: tldrProse(q, result, share, catalog, points) };
   if (p.layout === 'cartesian') p.guides = { x: true, y: true, grid: true };
-  if (p.layout === 'matrix') { p.guides = { x: true, y: true, ramp: true }; p.text = gridProse(q, result, catalog) ?? p.text; }
+  if (p.layout === 'matrix') { p.guides = { x: true, y: true, ramp: true, ...(layers.some((l) => l.mark === 'dot') && { size: true }) }; p.text = gridProse(q, result, catalog) ?? p.text; }
   // A range that supports the central mark is said after the view's own sentence: its least and its most. One that
   // runs from the period before is the comparison, which is not a range.
   const range = layers.filter((l) => roleOf(l) === 'context' && !usesPrevious(l)).map((l) => l.encode || {}).map((e) => (e.y2 != null ? [e.y, e.y2] : [e.x, e.x2])).find((ends): ends is [string, string] => ends.every((f) => typeof f === 'string'));
@@ -171,7 +171,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
     if (p.layout === 'rows') return { rule: beside() || rule('marks'), measured: valueRoomOf(catalog, p.layers, result.rows) };
     if (p.layout === 'band') return { rule: rule(p.guides.legend === 'full' ? 'legend' : 'marks'), measured: 0 };
     if (p.layout === 'radial') return { rule: rule(p.guides.legend === 'full' ? 'legend' : 'marks'), measured: 0 };
-    if (p.layout === 'matrix') return { rule: rule(p.guides.ramp && keep.indexOf('guides') < 0 ? 'ramp' : 'marks'), measured: 0 };   // a ramp the spec keeps asks for no room of its own
+    if (p.layout === 'matrix') return { rule: rule((p.guides.ramp || p.guides.size) && keep.indexOf('guides') < 0 ? 'ramp' : 'marks'), measured: 0 };   // a ramp the spec keeps asks for no room of its own, nor a key to sizes
     if (customMarks().has(p.layout)) return { rule: rule(keyed() && keep.indexOf('guides') < 0 ? 'guides' : 'marks'), measured: 0 };
     return { rule: rule('notice'), measured: 0 };
   }
@@ -208,7 +208,12 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
         p.guides = {};
         return 'the legend';
       }
-      if (p.layout === 'matrix' && p.guides.ramp) { p.guides = { ...p.guides, ramp: false }; return 'the colour ramp'; }
+      // A grid's two keys go together: the ramp, and the key to sizes where it has dots.
+      if (p.layout === 'matrix' && (p.guides.ramp || p.guides.size)) {
+        const shown = buildScene(p, q, result, catalog).parts, said = (['ramp', 'size'] as const).filter((g) => shown.includes(g)).map((g) => (g === 'ramp' ? 'the colour ramp' : 'the key to sizes')).join(' and ');
+        p.guides = { ...p.guides, ramp: false, ...(p.guides.size != null && { size: false }) };
+        return said || null;
+      }
       if (customMarks().has(p.layout)) { const key = keyed(); p.guides = {}; return key ? (key === 'ramp' ? 'the colour ramp' : 'the key to sizes') : null; }
       return null;
     },

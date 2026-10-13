@@ -32,8 +32,9 @@ describe('the matrix layout', () => {
     expect(matrix.css).toContain('.uav-cells i { grid-area: var(--uav-cy) / var(--uav-cx);');
   });
   it('gives up the ramp, then the body for the number, by width and by height', () => {
-    expect(css).toContain('@container uav-view (inline-size < 239.5px) {\n  ' + fig('guides') + ' .uav-ramp { display: none; }\n}');
-    expect(css).toContain('@container uav-view (block-size < 149.5px) {\n  ' + fig('guides') + ' .uav-ramp { display: none; }\n}');
+    // The key to sizes, which a grid of dots has, goes with the ramp.
+    expect(css).toContain('@container uav-view (inline-size < 239.5px) {\n  ' + fig('guides') + ' :is(.uav-ramp, .uav-size) { display: none; }\n}');
+    expect(css).toContain('@container uav-view (block-size < 149.5px) {\n  ' + fig('guides') + ' :is(.uav-ramp, .uav-size) { display: none; }\n}');
     const alone = ['  ' + fig('marks') + ' :is(.uav-plot, .uav-ramp) { display: none; }', '  ' + fig('marks') + ' .uav-number { display: block; }',
       '  ' + fig('marks') + ' { grid-template: "number" auto / minmax(0, 1fr); }', '  ' + fig('marks') + ' .uav-body { display: none; }', '  ' + fig('marks') + ' .uav-number { align-self: start; margin: 0; }', '}'].join('\n');
     expect(css).toContain('@container uav-view (inline-size < 149.5px) {\n' + alone);

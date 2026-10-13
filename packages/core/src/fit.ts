@@ -67,7 +67,7 @@ export const FIT_RULES: FitRule[] = [
   { id: 'marks',      layout: 'radial', container: 'view', needs: { inline: 72, block: 64 },          // the least circle
     hide: ['radial', 'legend', 'legend-top'], show: ['number'], keep: 'marks' },
   { id: 'ramp',      layout: 'matrix',    container: 'view', needs: { inline: 240, block: 150 },      // a grid has no bare form: its ramp goes, and then the grid
-    hide: ['ramp'], keep: 'guides' },
+    hide: ['ramp', 'size'], keep: 'guides' },
   { id: 'marks',     layout: 'matrix',    container: 'view', needs: { inline: 150, block: 90 },       // its labels thin by rank where they would meet, which is measured
     hide: ['plot', 'ramp'], show: ['number'], keep: 'marks' },
   { id: 'notice',    layout: 'notice',    container: 'view', needs: { inline: 150, block: 40 },

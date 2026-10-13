@@ -1,14 +1,19 @@
-import { formatDimension, formatValue, type RectNode, type Row, type TextNode } from '@unified-analytics/core';
-import { attr, ensure, keyed, pageWay, prop, text } from '../dom.ts';
+import { formatDimension, formatValue, type CircleNode, type RectNode, type Row, type TextNode } from '@unified-analytics/core';
+import { attr, ensure, keyed, nodePaint, pageWay, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { hideReadout, placeReadout, readout, readoutOf } from '../keys.ts';
 import type { LayoutPainter } from '../layout.ts';
 import { thin } from '../measure.ts';
+import { DOT } from './points.ts';
 
 /* A dimension on x, another on y, a metric on colour: a grid of cells. The cells are a CSS grid, each set in its
  * track by two custom properties, so nothing here runs on resize. The axes are the plot's own: the row labels are a
  * column sized by the widest, the column labels a row under the grid, and both are placed by the stylesheet
  * cartesian.ts wrote for `.uav-y-axis`, `.uav-x-axis` and `.uav-plot`. Below them, the ramp.
+ *
+ * A `dot` layer is drawn in the cell's own element, so a pair is one hit target whichever marks it has: alone, the
+ * element has no fill and the dot is all there is; over a cell, it is the cell with the dot on it. Under the ramp,
+ * the key to sizes a plot of points has (points.ts), in the same steps.
  *
  * A cell is its own hit target, and no cell carries `data-row`, so the element's keyboard (keys.ts) leaves this
  * layout alone and the one here stands in for it. It is version 4's model, taken to two dimensions: one tab stop,
@@ -19,14 +24,21 @@ const css = `
 .uav[data-layout="matrix"] { --uav-body-block: var(--uav-axes-height, 184px); }
 /* The frame is set from the left whichever way the page reads, as a plot's is (cartesian.ts): the row labels stay on
  * the left of the cells. The ramp is a legend, and follows the page. */
-.uav[data-layout="matrix"] .uav-body { display: grid; grid-template: "y plot" minmax(0, 1fr) ". x" auto "ramp ramp" auto / auto minmax(0, 1fr); direction: ltr; }
+.uav[data-layout="matrix"] .uav-body { display: grid; grid-template: "y plot" minmax(0, 1fr) ". x" auto "ramp ramp" auto "size size" auto / auto minmax(0, 1fr); direction: ltr; }
+.uav[data-layout="matrix"][data-parts~="size"] { --uav-body-block: calc(var(--uav-axes-height, 184px) + 28px); }
+.uav[data-layout="matrix"] .uav-size { grid-area: size; }
 .uav[data-layout="matrix"] [data-thin] { visibility: hidden; }
 /* One row of cells is 34 px tall and no taller, with its labels and its ramp under it. Handed a box, it fills it. */
 .uav[data-layout="matrix"]:has(> .uav-body[data-strip]) { --uav-body-block: auto; }
-.uav[data-layout="matrix"] .uav-body[data-strip] { grid-template-rows: minmax(34px, 1fr) auto auto; }
-.uav-cells { position: absolute; inset: 0; display: grid; gap: 1px; grid-template: repeat(var(--uav-ny), minmax(0, 1fr)) / repeat(var(--uav-nx), minmax(0, 1fr)); }
+.uav[data-layout="matrix"] .uav-body[data-strip] { grid-template-rows: minmax(34px, 1fr) auto auto auto; }
+.uav-cells { position: absolute; inset: 0; container-type: size; display: grid; gap: 1px; grid-template: repeat(var(--uav-ny), minmax(0, 1fr)) / repeat(var(--uav-nx), minmax(0, 1fr)); }
 .uav-cells > div { display: contents; }
 .uav-cells i { grid-area: var(--uav-cy) / var(--uav-cx); background: var(--uav-paint); border-radius: ${token('border-radius-cell')}; }
+/* A dot is a plot's dot, in a plot's steps, and no wider than its cell: where the cells are small each step is its share of one. */
+.uav-cells i[data-dot] { display: grid; place-items: center; }
+.uav-cells i[data-dot="alone"] { background: none; --uav-dot: var(--uav-paint); }
+.uav-cells i[data-dot]::before { content: ""; border-radius: 50%; background: var(--uav-dot);
+  inline-size: min(${DOT}, (min(100cqw / var(--uav-nx), 100cqh / var(--uav-ny)) - 1px) * var(--uav-size, 0.4) / 4); aspect-ratio: 1; }
 .uav-cells [data-active] { z-index: 1; }
 .uav-ramp { grid-area: ramp; display: flex; align-items: center; gap: 1px; block-size: 24px; overflow: hidden; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .uav-ramp i { flex: none; inline-size: 14px; block-size: 10px; border-radius: ${token('border-radius-cell')}; background: var(--uav-paint); }
@@ -123,16 +135,17 @@ export const matrix: LayoutPainter = {
   },
 
   paint(body, scene, _rules, data) {
-    const xs = scene.rows ?? [], ys = scene.ys ?? [], { x: xf, y: yf, color: m } = data.layers[0]!.encode as Record<string, string>;
-    const yAxis = ensure(body, 'div', 'uav-y-axis'), plot = ensure(body, 'div', 'uav-plot'), xAxis = ensure(body, 'div', 'uav-x-axis'), ramp = ensure(body, 'div', 'uav-ramp');
+    const xs = scene.rows ?? [], ys = scene.ys ?? [], { x: xf, y: yf } = data.layers[0]!.encode as Record<string, string>;
+    const yAxis = ensure(body, 'div', 'uav-y-axis'), plot = ensure(body, 'div', 'uav-plot'), xAxis = ensure(body, 'div', 'uav-x-axis'), ramp = ensure(body, 'div', 'uav-ramp'), sizes = ensure(body, 'div', 'uav-size');
     const cells = ensure(plot, 'div', 'uav-cells'), dims = data.catalog.dimensions;
     // The labels and the ramp say again what each cell's name says whole.
-    for (const el of [yAxis, xAxis, ramp]) el.setAttribute('aria-hidden', 'true');
-    pageWay(ramp, body);
+    for (const el of [yAxis, xAxis, ramp, sizes]) el.setAttribute('aria-hidden', 'true');
+    pageWay(ramp, body); pageWay(sizes, body);
     const texts = (part: string) => scene.nodes.filter((n): n is TextNode => n.part === part && n.kind === 'text');
     keyed(yAxis, texts('y-axis'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-t', n.t); });
     keyed(xAxis, texts('x-axis'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-x', n.x); el.setAttribute('data-anchor', n.anchor); });
     keyed(ramp, scene.nodes.filter((n) => n.part === 'ramp'), (n) => (n.kind === 'text' ? 'span' : 'i'), (el, n) => { if (n.kind === 'text') text(el, n); });
+    keyed(sizes, scene.nodes.filter((n): n is CircleNode | TextNode => n.part === 'size' && (n.kind === 'circle' || n.kind === 'text')), (n) => (n.kind === 'circle' ? 'i' : 'span'), (el, n) => { if (n.kind === 'text') text(el, n); else prop(el, '--uav-size', n.size); });
 
     if (!grids.has(cells)) bind(cells);
     const at = new Map(data.result.rows.map((r) => [(xf ? r[xf] : '') + '\n' + (yf ? r[yf] : ''), r])), rows = new Map<string, Row>();
@@ -142,18 +155,22 @@ export const matrix: LayoutPainter = {
     attr(cells, 'aria-label', [yf, xf].filter(Boolean).map((f) => dims[f!]!.label).join(' by '));
     // One row is as tall as a cell and no taller: the stylesheet gives a strip its own height.
     body.toggleAttribute('data-strip', !yf);
-    const by = new Map<string, RectNode[]>();
-    for (const n of scene.nodes) if (n.part === 'plot' && n.kind === 'rect' && n.pair) by.set(n.pair[1], (by.get(n.pair[1]) ?? []).concat(n));
+    // A pair is one element: its cell, with its dot on it where it has one, or its dot alone where no cell is drawn.
+    const marks = scene.nodes.filter((n): n is RectNode | CircleNode => n.part === 'plot' && (n.kind === 'rect' || n.kind === 'circle') && !!n.pair);
+    const dots = new Map(marks.filter((n) => n.kind === 'circle').map((n) => [n.pair!.join('\n'), n as CircleNode])), filled = marks.some((n) => n.kind === 'rect');
+    const by = new Map<string, (RectNode | CircleNode)[]>();
+    for (const n of marks) if ((n.kind === 'rect') === filled) by.set(n.pair![1], (by.get(n.pair![1]) ?? []).concat(n));
     // A row of the grid has no node in the scene, so it is keyed here by its dimension value. It takes no box of its own.
     const line = (y: string): RectNode => ({ key: 'row:' + y, part: 'plot', kind: 'rect', paint: 'ink', layer: 'data' });
     keyed(cells, ys.map(line), () => 'div', (el, r) => {
       attr(el, 'role', 'row');
       keyed(el, by.get(r.key.slice(4)) ?? [], () => 'i', (c, n) => {
-        const [x, y] = n.pair!, cx = xs.indexOf(x), cy = ys.indexOf(y), row = at.get(x + '\n' + y);
+        const [x, y] = n.pair!, cx = xs.indexOf(x), cy = ys.indexOf(y), row = at.get(x + '\n' + y), dot = dots.get(x + '\n' + y);
         prop(c, '--uav-cx', cx + 1); prop(c, '--uav-cy', cy + 1);
+        attr(c, 'data-dot', dot ? (dot === n ? 'alone' : 'over') : null); prop(c, '--uav-size', dot?.size); prop(c, '--uav-dot', dot && dot !== n ? nodePaint(dot) : null);
         attr(c, 'role', 'gridcell'); attr(c, 'id', id(cx, cy));
         // Never colour alone: the value is in the cell's name, which is also its readout. No value says so in words.
-        attr(c, 'aria-label', row && row[m!] != null ? readout(row, data.query, data.catalog, data.layers)
+        attr(c, 'aria-label', row && data.query.metrics.some((f) => row[f] != null) ? readout(row, data.query, data.catalog, data.layers)
           : (data.query.by || []).map((d) => formatDimension(d === xf ? x : y, dims[d]!)).join(', ') + ': No data');
         if (row) rows.set(c.id, row);
       });
@@ -165,7 +182,8 @@ export const matrix: LayoutPainter = {
   // The same query pivoted: a row for each value on y, a column for each on x, and the engine's totals at the edges.
   // ponytail: the cells' metric alone. A second metric or a comparison has no place in a pivot of one value yet.
   table(table, title, scene, { layers, result, catalog }) {
-    const { x: xf, y: yf, color: m } = layers[0]!.encode as Record<string, string>, M = catalog.metrics[m!]!;
+    // ponytail: the first layer's metric, on color or else on size. Dots over cells of another metric are in the readout and not in the pivot.
+    const { x: xf, y: yf, color, size } = layers[0]!.encode as Record<string, string>, m = color ?? size, M = catalog.metrics[m!]!;
     const at = new Map(result.rows.map((r) => [(xf ? r[xf] : '') + '\n' + (yf ? r[yf] : ''), r[m!]]));
     const value = (v: Row[string]) => formatValue(v as number | null, M, 'exact');
     const total = (f: string, k: string) => value(result.totalsBy?.[f]?.find((r) => r[f] === k)?.[m!]);

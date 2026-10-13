@@ -346,6 +346,57 @@ Merged. 816 tests pass, nine of them new, and the typecheck is clean. Every gold
 - `CLAUDE.md`'s line for `packages/core` names the registry for marks and not this one. It was left for its owner.
 - Section 1's table still gives `link` and `partition` as steps 7 and 8. They are 8 and 9.
 
+### Step 6, unit (built October 12)
+
+Built on a branch of its own, not merged. 937 tests pass (836 before) and the typecheck is clean. `prototype/` and every golden scene that existed are unchanged: no line of an existing snapshot file moved, and `test/__snapshots__/unit.test.ts.snap` is new. All five forms are whole: each has its types and schema, a scene and `place()`, fit rules down to the number and the prose, a sentence, a layout module with keys and the table, a sample with golden scenes and a place in a sweep, and frames on the bench. Checked in headless Chromium on the bench: the six samples at 346, 250, 170, 120 and 80 px, widened to 600 px and resized in place across 280 px both ways, in a box 160 px tall, light and dark, the three data states, 28 and 7 days, real key events, the pointer, the table, and the marks page. Every glyph was measured where it was laid out and is as wide as it is tall. Not checked: WebKit, Firefox, a screen reader, touch, reduced motion, right to left, print, forced colours, the dot-grid painter, a data change that moves glyphs, and a spec that keeps its marks at a narrow width.
+
+**What was added, for the steps that follow**
+
+- **The mark,** `unit`, in `Mark`, the schema's enum, `PLOT_MARKS`, `TRACK_MARKS` and so `BUILT_IN_MARKS`, with a grid in `band` (`sceneGrid`) and seats in `sceneRadial`. Four error strings list marks and each has it: no mark at all (`plan.ts`), no rule for an axis and none for rows (`scene.ts`), and none about a centre.
+- **`packages/core/src/unit.ts`** holds the arithmetic, exported from core and tested in `test/unit-rules.test.ts`: `unitWorth(most, cap, whole)`, `unitCount(value, worth, what)`, `unitShares(values, total, cells)` and `unitSeats(count)`. **A step that needs a largest-remainder share calls `unitShares`.**
+- **`CircleNode` gains `w` and `h`,** the room a glyph has. `Part` gains `unit-key`, `Guides` gains `unitKey`, and `Scene.aspect` is stated by a grid in `band`.
+- **`FitRule` gains `mark`,** and `fallbackRule` a fifth argument. See finding 1.
+- **A preset, `bar`,** and five for the mark: `waffle`, `unit-chart`, `isotype`, `parliament`, `icon-array`. Working names.
+- **Nine default fit rules:** `unit-key` in each of the four layouts, and a fallback in each, two in `band`.
+- **Six samples** in `moreSamples`: `waffle`, `units`, `wilkinson`, `isotype`, `parliament`, `icons`. The fixture catalog and engine needed nothing.
+- **`packages/dom/src/layouts/unit.ts`:** the shared styles, the key, and `unitDot`. The four layout modules call it.
+
+**Findings**
+
+1. **A fallback did not work from a built-in layout, and three things were widened for it.** `fallbackRule` chose by layout alone. A waffle and the share bar it becomes are both `band`, so the rule applied to its own result and threw as a loop, and in the DOM the compiled rule hid every band under its need, a share bar among them. What it took: (a) a rule may name the `mark` its layout must hold; (b) a rule whose preset the query cannot fill is passed over (`fills`, in `presets.ts`), so `band` offers the share bar and then, for a grid with no dimension, the gauge; (c) the compiled swap hides the figure only where the view beside it is that rule's own, `:has(~ .uav-fallback[data-rule="<id>"])`, where it was any band's. `via` now holds what was given up, `band (unit)` for such a rule, so a context's own rule for the layout may still follow it. A rule with a `mark` is passed over where the caller does not say what the view holds. The compiled string changed for every fallback, `geo`'s too: two assertions changed on purpose.
+2. **The schema's clause "a preset needs a dimension" is dropped,** as step 7 recommended, and not added to. Two assertions that the schema refuses `use: "line"` with no dimension now say it accepts it and `resolve()` refuses it by name (`test/core.test.ts`, `test/radial.test.ts`).
+3. **`test/fallback.test.ts` said no default rule names a fallback.** Now those of one mark do, and it says that.
+
+**Choices where the plan was silent, and departures**
+
+1. **How a glyph holds its shape.** A dot states its room, `w` and `h`, as a cell states `y` and `h`, with `x` and `t` at the middle. The two are ratios of different lengths, so a scene cannot say "round": the painter takes the lesser in pixels, less a hairline. `place()` does it in `glyphRadius`, and the stylesheet with `min(var(--uav-w) * 100cqi, var(--uav-h) * 100cqb)` and `aspect-ratio: 1`, which works because the plot is a size container already. Two fields on one node kind, and no new kind.
+2. **A stack is on the plot's own scale, and is not packed.** A glyph's height is its worth on the y scale, so the axis, the grid and a `rule` read true against it and it can stand beside other marks. The cost: where a band is narrower than a glyph's share of the height, dots stand apart up the stack. A packed stack (the plan's "as wide as its band", always) would need positions in pixels and an axis that lies. At the sizes looked at the dots touch.
+3. **A stack keeps its y axis and grid.** Guides are derived from scales and a unit has one. The key says the same in other words.
+4. **The share grid needs no `stack`.** A unit divided by `color` with no dimension on an axis is shares already, and its prose and note are the share bar's. `stack: "normalize"` is accepted there and changes nothing; every other `stack` on a unit is refused.
+5. **The icon array is a metric on x and nothing else,** and is laid out as `band`: the same grid as the waffle. `detectLayout` gained one line for it. A query with a dimension is refused there, by name.
+6. **The number stands above an icon array, always.** Its grid says how far along its range the metric is, and not what it is, and it has no hole to put the number in. This goes round `tldrValue.above`. **To decide.**
+7. **A grid has no key for a hundredth.** A waffle's cell is 1% and its legend says the shares. An icon array's cell is a hundredth of the domain and does have one: "Each is 5".
+8. **No least of one cell in a share grid.** Largest remainder sums to a hundred; a value too small for a cell has none, and is in the legend. A stack, a run and seats do give any value above nothing one glyph.
+9. **Seats: the cap is a hundred.** A seat is one of the metric while the engine's total is a hundred or fewer. Each row's seats are its own value rounded, so they need not sum to the total's. With a `limit` the rest's seats are there in no value's paint, and they are worked out only then (`q.limit`), or rounding alone would leave a grey seat. With no total a seat's worth is the largest row's, as a stack's is.
+10. **Seats stand in as few rings as hold them,** between 0.4 of the radius and the rim, so a seat is as large as the count allows, and are handed out by angle so a value is a wedge. Their part is up to 240 px across, where arcs have 160.
+11. **A seat's and a cell's paint cycle as their layout's does:** a seventh value of seats is an error, as a seventh arc is, and a seventh value of a grid takes the first colour again, as a seventh segment does.
+12. **The rest is `seq.none`,** the paint of a cell with no value. An icon array's unlit cells are the layer's own paint as a tint, as a gauge's range is.
+13. **Keys.** `primary:unit:<row>:<n>`, from 1. The rest: `primary:unit#rest:<n>`. An icon array's cell has no row, so it is `primary:unit:<n>` by its place, and one that stays lit keeps its key. The key's own: `unit-key:<layer key>`.
+14. **The key's rule asks for height alone:** 160, 120, 220 and 200 px by layout. A line of three words is never short of width where its glyphs are drawn. It is the first thing `drop-guides` gives up.
+15. **Every fallback is at 280 px across,** the room a plot with axes needs, so on the bench a form shows at 346 and its fallback at 250. By height: 120 for a stack, 180 for a grid, 160 for seats, none for a run, whose rows are trimmed.
+16. **`bar` is a new preset,** for the stack to fall back to. The step did not list it. It follows `BarChart`.
+17. **Refused, each by an error that names the fix:** `x2` or `y2` (the error that was there), `stack`, `series`, a split by `color` or `detail` on an axis, a value below zero in any form, seats with no `sweep`, with no dimension or of more than six values, no metric to count from, a metric where a dimension must stand, bins with no `@end`, and a grid with no dimension in a query that has one.
+18. **In the DOM a group of glyphs is one option.** In the band and round the half circle every glyph carries its row; the first of a group is the listbox's option and the rest are `presentation`. `Keys` took the first of a row where it took the last. In a plot and in a list nothing changed: the hit targets were a row's already.
+
+**Not done, and what is uncertain**
+
+- **A unit beside a bar in `band` draws the grid and ignores the bar,** as `sceneBand` ignores every layer after its first. Not refused.
+- **In a box, the stylesheet keeps a run's key where `resolve()` gives it up for one more row.** A height that depends on the data, which a rule cannot hold.
+- **A chosen group wears an outline on every glyph.** It reads, and it is heavy on a hundred cells. Not tuned.
+- **Glyphs that move on a data change were not looked at.** A cell that changes group changes key, so it fades out and in.
+- **`CLAUDE.md`'s line for `packages/dom` does not name `unit.ts`.** Nothing there became false, so it was left.
+- **The count section 8 asks for:** `sweep` is still the only layer field that is neither data nor role, and a unit's seats now read it. No preset here needs `detail` or a custom mark.
+
 ## 8. What to count as it is built
 
 - **Custom marks.** There is one, `geo`. The plan adds two. Each is a hole in the grammar.

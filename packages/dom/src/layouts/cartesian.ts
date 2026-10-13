@@ -1,11 +1,12 @@
 import type { LineNode, PathNode, RectNode, SceneNode, TextNode } from '@unified-analytics/core';
-import { attr, ensure, ensureSvg, keyed, prop, text } from '../dom.ts';
+import { ensure, ensureSvg, keyed, prop, text } from '../dom.ts';
+import { paintAxes, thinAxis } from '../chrome/axes.ts';
 import { paintLegend } from '../chrome/legend.ts';
 import { paintSize } from '../chrome/size.ts';
 import { token } from '../tokens.ts';
 import { hitNodes } from '../keys.ts';
 import { NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
-import { apart, thin } from '../measure.ts';
+import { apart } from '../measure.ts';
 import { morph, once } from '../motion.ts';
 import { POINTS_CSS, POINTS_FIT, measurePoints, paintPoints } from './points.ts';
 import { RANGES_CSS, paintRanges } from './ranges.ts';
@@ -26,35 +27,29 @@ const css = `
   grid-template: "y plot y2 labels" var(--uav-plot-block) ". x . ." auto "legend legend legend legend" auto / auto minmax(0, 1fr) auto auto; }
 /* On the body, where it outranks whatever a fit rule sets on the figure. */
 @container uav-view (block-size >= 0px) { .uav[data-layout="cartesian"] .uav-body { --uav-plot-block: minmax(0, 1fr); } }
-.uav-y-axis, .uav-y-axis-2, .uav-x-axis, .uav-labels { display: grid; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.uav-y-axis { grid-area: y; }
-.uav-y-axis-2 { grid-area: y2; }
-/* Labels share one cell and are moved by a percentage inset, so the column is still sized by the widest. */
-:is(.uav-y-axis, .uav-y-axis-2) span { grid-area: 1 / 1; align-self: start; justify-self: end; position: relative; inset-block-start: calc((1 - var(--uav-t)) * 100%); translate: 0 -50%; padding-inline-end: 6px; color: ${token('color-label-axis')}; }
-.uav-y-axis-2 span { justify-self: start; padding-inline: 6px 0; }
-/* The label at a line's end, in its series' colour. The plan names the legend, so these wait for the rule that swaps them in.
+/* The axes are the chrome's (chrome/axes.ts). Where each stands about the plot is said here. */
+.uav[data-layout="cartesian"] .uav-y-axis { grid-area: y; }
+.uav[data-layout="cartesian"] .uav-y-axis-2 { grid-area: y2; }
+.uav[data-layout="cartesian"] .uav-x-axis { grid-area: x; }
+/* The label at a line's end, in its series' colour, set as an axis's labels are. The plan names the legend, so these wait for the rule that swaps them in.
  * --uav-dy is the measured pass's: how far a label is moved to stand a line from the next. One with no room keeps its box. */
+.uav-labels { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .uav-labels { grid-area: labels; display: none; }
 .uav-labels span { grid-area: 1 / 1; align-self: start; justify-self: start; position: relative; inset-block-start: calc((1 - var(--uav-t)) * 100%); translate: 0 calc(var(--uav-dy, 0px) - 50%);
   box-sizing: border-box; max-inline-size: 14ch; padding-inline-start: 6px; overflow: hidden; text-overflow: ellipsis; color: var(--uav-paint); }
 .uav-labels [data-thin] { visibility: hidden; }
 /* The legend of a split plot is a swatch and a name per series, in a row that wraps (chrome/legend.ts). */
 .uav[data-layout="cartesian"] .uav-legend { grid-area: legend; }
-.uav-x-axis { grid-area: x; box-sizing: border-box; block-size: var(--uav-x-axis-block); padding-block-start: 5px; }
-.uav-x-axis span { grid-area: 1 / 1; justify-self: start; position: relative; inset-inline-start: calc(var(--uav-x) * 100%); translate: -50%; color: ${token('color-label-axis')}; }
-.uav-x-axis [data-anchor="start"] { translate: 0; }
-.uav-x-axis [data-anchor="end"] { translate: -100%; }
-/* A label the measured pass gave up keeps its box, so the next measurement reads the same. */
-.uav-x-axis [data-thin] { visibility: hidden; }
 .uav-plot { grid-area: plot; position: relative; container: uav-plot / size; }
 /* Time and x run from left to right whichever way the page reads, as the paths in the SVG do whatever it is told. So
  * the whole frame is set that way: the plot, the axes on every side of it and the labels at the line ends stand
  * where they do on a page that reads from the left, and every mark, hit target and label is placed from the left.
  * A plot is set so wherever it is, a map's among them. What says what the marks are follows the page: paint() hands
  * the legend and the key to sizes the page's direction back (dom.ts, in chrome/), and the number and the prose are outside the
- * body. A label's words still run their own way: an Arabic one is set from the right, in a box placed from the left. */
+ * body. A label's words still run their own way: an Arabic one is set from the right, in a box placed from the left
+ * (an axis's labels say the same in chrome/axes.ts). */
 .uav[data-layout="cartesian"] .uav-body, .uav-plot { direction: ltr; }
-:is(.uav-x-axis, .uav-y-axis, .uav-y-axis-2, .uav-labels, .uav-refs, .uav-point-labels) > span { unicode-bidi: plaintext; }
+:is(.uav-labels, .uav-refs, .uav-point-labels) > span { unicode-bidi: plaintext; }
 .uav-grid, .uav-bars, .uav-refs { position: absolute; inset: 0; }
 .uav-line { position: absolute; inset-inline: 0; inset-block-start: calc((1 - var(--uav-t)) * 100%); block-size: var(--uav-stroke, ${token('stroke-width-rule')}); background: var(--uav-paint); }
 .uav-line[data-dash] { background: repeating-linear-gradient(90deg, var(--uav-paint) 0 var(--uav-dash), transparent 0 calc(var(--uav-dash) + var(--uav-gap))); }
@@ -112,17 +107,10 @@ export const cartesian: LayoutPainter = {
   // is above the plot. A `plot` rule in core, and the y axis inside that container, would say it properly.
   rules: () => [{ id: 'y-ticks', layout: 'cartesian', container: 'view', needs: { block: 152 }, hide: ['y-tick.ranked'] }],
 
-  // X labels that would collide, by their real widths. One a fit rule has hidden has no box and is passed over, and
-  // so is one that is leaving. Each is placed from its ratio, not read where it stands: a label may be on its way.
+  // X labels that would collide, by their real widths (chrome/axes.ts).
   // ponytail: a label at a line's end is set from where it is going, at once, while its line morphs there.
   measure(body) {
-    const labels = Array.from(body.querySelectorAll<HTMLElement>('.uav-x-axis > span:not([data-exit])')).filter((el) => el.getClientRects().length);
-    const room = body.querySelector('.uav-x-axis')!.getBoundingClientRect().width;
-    const gone = thin(labels.map((el) => {
-      const w = el.getBoundingClientRect().width, lo = Number(el.style.getPropertyValue('--uav-x')) * room - (el.dataset.anchor === 'start' ? 0 : el.dataset.anchor === 'end' ? w : w / 2);
-      return { lo, hi: lo + w, rank: Number(el.dataset.rank ?? el.dataset.order) || 0 };
-    }));
-    labels.forEach((el, i) => el.toggleAttribute('data-thin', gone[i]));
+    thinAxis(body, 'x');
     measurePoints(body);
     // Labels at the line ends, set a line apart. They are moved by a translate, which changes no size that is read.
     const ends = Array.from(body.querySelectorAll<HTMLElement>('.uav-labels > span')).filter((el) => el.getClientRects().length);
@@ -138,15 +126,14 @@ export const cartesian: LayoutPainter = {
     body.dataset.scale = scene.scale;
     // Series in one paint, by detail: the stylesheet draws the chosen one whole, out of the mass (keys.ts).
     body.toggleAttribute('data-mass', !!scene.detail);
-    const yAxis = ensure(body, 'div', 'uav-y-axis'), plot = ensure(body, 'div', 'uav-plot'), xAxis = ensure(body, 'div', 'uav-x-axis');
-    const yAxis2 = ensure(body, 'div', 'uav-y-axis-2'), labels = ensure(body, 'div', 'uav-labels');
+    const plot = paintAxes(body, scene, true), labels = ensure(body, 'div', 'uav-labels');
     paintLegend(body, scene);
     // ponytail: paint order is fixed at grid, bars, paths, then rules and labels, whatever the layer order.
     // One SVG per run of paths if a spec ever draws an area over bars.
     const loads = !plot.querySelector(':scope > svg');
     const grid = ensure(plot, 'div', 'uav-grid'), bars = ensure(plot, 'div', 'uav-bars'), svg = ensureSvg(plot), refs = ensure(plot, 'div', 'uav-refs');
     if (loads) { svg.setAttribute('data-draw', ''); once(svg, ['data-draw']); }
-    for (const el of [yAxis, yAxis2, xAxis, labels]) el.setAttribute('aria-hidden', 'true');
+    labels.setAttribute('aria-hidden', 'true');
     const nodes = scene.nodes, texts = (part: string) => nodes.filter((n): n is TextNode => n.part === part && n.kind === 'text');
     const line = (el: HTMLElement | SVGElement, n: LineNode) => {
       const [on, off] = (n.dash || '').split(' ');
@@ -154,17 +141,7 @@ export const cartesian: LayoutPainter = {
       prop(el, '--uav-t', n.t); prop(el, '--uav-stroke', n.width && n.width + 'px'); prop(el, '--uav-dash', on && on + 'px'); prop(el, '--uav-gap', on && (off || on) + 'px');
     };
 
-    const tick = (el: HTMLElement | SVGElement, n: TextNode) => { text(el, n); prop(el, '--uav-t', n.t); };
-    keyed(yAxis, texts('y-axis'), () => 'span', tick);
-    keyed(yAxis2, texts('y-axis-2'), () => 'span', tick);
-    keyed(labels, texts('labels'), () => 'span', tick);
-    // A label under a column of a width of its own (a row's, on a linear x) is ranked by that width, for the measured pass
-    // alone: the rule that gives up a middle date is not its, so it carries its rank under another name.
-    keyed(xAxis, texts('x-axis'), () => 'span', (el, n) => {
-      text(el, n); prop(el, '--uav-x', n.x); el.setAttribute('data-anchor', n.anchor);
-      const own = scene.scale === 'linear' && n.row != null;
-      attr(el, 'data-order', own ? n.rank ?? 0 : null); if (own) el.removeAttribute('data-rank');
-    });
+    keyed(labels, texts('labels'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-t', n.t); });
     keyed(grid, nodes.filter((n): n is LineNode => inPlot(n) && n.kind === 'line' && n.layer === 'guide'), () => 'i', line);
     // Which rows hold bars side by side, and which hold a stack: more than one bar, at different places along x or at one.
     const rects = nodes.filter((n): n is RectNode => inPlot(n) && n.kind === 'rect'), places = new Map<string, Set<number>>(), counts = new Map<string, number>();

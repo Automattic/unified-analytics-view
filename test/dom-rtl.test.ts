@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DOTS_CSS } from '../packages/dom/src/dots.ts';
 import { KEYS_CSS } from '../packages/dom/src/keys.ts';
+import { AXES_CSS } from '../packages/dom/src/chrome/axes.ts';
 import { matrix } from '../packages/dom/src/layouts/matrix.ts';
 import { cartesian } from '../packages/dom/src/layouts/cartesian.ts';
 import { radial } from '../packages/dom/src/layouts/radial.ts';
@@ -18,10 +19,11 @@ describe('right to left', () => {
     expect(matrix.css).toMatch(/\.uav\[data-layout="matrix"\] \.uav-body \{[^}]*direction: ltr; \}/);
     // So what is placed in them may be moved by a physical translate, and is placed from the start, which is the left.
     expect(cartesian.css).toContain('.uav-bars i { position: absolute; inset-inline-start: calc(var(--uav-x) * 100%);');
-    expect(cartesian.css).toContain('.uav-x-axis [data-anchor="end"] { translate: -100%; }');
+    expect(AXES_CSS).toContain('.uav-x-axis [data-anchor="end"] { translate: -100%; }');
   });
   it('lets a label in the frame run the way its own words do: on either axis, at a line\'s end, in the plot and under the crosshair', () => {
-    expect(cartesian.css).toContain(':is(.uav-x-axis, .uav-y-axis, .uav-y-axis-2, .uav-labels, .uav-refs, .uav-point-labels) > span { unicode-bidi: plaintext; }');
+    expect(AXES_CSS).toContain(':is(.uav-x-axis, .uav-y-axis, .uav-y-axis-2) > span { unicode-bidi: plaintext; }');
+    expect(cartesian.css).toContain(':is(.uav-labels, .uav-refs, .uav-point-labels) > span { unicode-bidi: plaintext; }');
     expect(KEYS_CSS).toContain('.uav-cross-x { inset-block-start: calc(100% + 3px); unicode-bidi: plaintext; }');
   });
   it('leaves the rows to the page, and states a direction nowhere else', () => {

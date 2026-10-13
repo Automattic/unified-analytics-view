@@ -1,17 +1,17 @@
-import { formatBin, formatDimension, formatValue, type CircleNode, type RectNode, type Row, type TextNode } from '@unified-analytics/core';
-import { attr, ensure, keyed, nodePaint, prop, text } from '../dom.ts';
+import { formatBin, formatDimension, formatValue, type CircleNode, type RectNode, type Row } from '@unified-analytics/core';
+import { attr, ensure, keyed, nodePaint, prop } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { hideReadout, placeReadout, readout, readoutOf } from '../keys.ts';
 import type { LayoutPainter } from '../layout.ts';
-import { thin } from '../measure.ts';
+import { paintAxes, thinAxis } from '../chrome/axes.ts';
 import { paintRamp } from '../chrome/ramp.ts';
 import { paintSize } from '../chrome/size.ts';
 import { DOT } from './points.ts';
 
 /* A dimension on x, another on y, a metric on colour: a grid of cells. The cells are a CSS grid, each set in its
- * track by two custom properties, so nothing here runs on resize. The axes are the plot's own: the row labels are a
- * column sized by the widest, the column labels a row under the grid, and both are placed by the stylesheet
- * cartesian.ts wrote for `.uav-y-axis`, `.uav-x-axis` and `.uav-plot`. Below them, the ramp (chrome/ramp.ts).
+ * track by two custom properties, so nothing here runs on resize. The axes are a plot's (chrome/axes.ts): the row labels are a
+ * column sized by the widest, the column labels a row under the grid. The part that holds the cells is placed by the
+ * stylesheet cartesian.ts wrote for `.uav-plot`. Below them, the ramp (chrome/ramp.ts).
  *
  * A `dot` layer is drawn in the cell's own element, so a pair is one hit target whichever marks it has: alone, the
  * element has no fill and the dot is all there is; over a cell, it is the cell with the dot on it. Under the ramp,
@@ -28,8 +28,9 @@ const css = `
  * the left of the cells. The ramp is a legend, and follows the page. */
 .uav[data-layout="matrix"] .uav-body { display: grid; grid-template: "y plot" minmax(0, 1fr) ". x" auto "ramp ramp" auto "size size" auto / auto minmax(0, 1fr); direction: ltr; }
 .uav[data-layout="matrix"][data-parts~="size"] { --uav-body-block: calc(var(--uav-axes-height, 184px) + 28px); }
+.uav[data-layout="matrix"] .uav-y-axis { grid-area: y; }
+.uav[data-layout="matrix"] .uav-x-axis { grid-area: x; }
 .uav[data-layout="matrix"] .uav-size { grid-area: size; }
-.uav[data-layout="matrix"] [data-thin] { visibility: hidden; }
 /* One row of cells is 34 px tall and no taller, with its labels and its ramp under it. Handed a box, it fills it. */
 .uav[data-layout="matrix"]:has(> .uav-body[data-strip]) { --uav-body-block: auto; }
 .uav[data-layout="matrix"] .uav-body[data-strip] { grid-template-rows: minmax(34px, 1fr) auto auto auto; }
@@ -110,36 +111,18 @@ export const matrix: LayoutPainter = {
   css,
   fit: { marks: alone },
 
-  // Labels that would meet, by their real sizes, along each axis: the ranked go first, in thin()'s order. One a fit rule has hidden has
-  // no box and is passed over. Each is placed from its ratio, not read where it stands: a label may be on its way.
+  // Labels that would meet, by their real sizes, along each axis (chrome/axes.ts). A grid's are not anchored to stay inside
+  // it, so one that would run past the far edge goes first, and down the side they may stand line on line.
   measure(body) {
-    const along = (axis: string, at: string, size: 'width' | 'height', gap: number) => {
-      const box = body.querySelector<HTMLElement>(axis);
-      if (!box) return;
-      const all = Array.from(box.querySelectorAll<HTMLElement>(':scope > span:not([data-exit])')).filter((el) => el.getClientRects().length), room = box.getBoundingClientRect()[size];
-      const spans = all.map((el) => {
-        // A label stands about its ratio, or from it or up to it where it is anchored at an end.
-        const s = el.getBoundingClientRect()[size], lo = Number(el.style.getPropertyValue(at)) * room - s * ({ start: 0, end: 1 }[el.dataset.anchor ?? ''] ?? 0.5);
-        return { lo, hi: lo + s, rank: Number(el.dataset.rank) || 0 };
-      });
-      // A label that would run past the far edge goes before the rest are thinned: whatever holds a view may clip there.
-      const fits = spans.map((s) => s.hi <= room + 1), gone = thin(spans.filter((_, i) => fits[i]), gap);
-      all.forEach((el, i) => el.toggleAttribute('data-thin', !fits[i] || gone[fits.slice(0, i).filter(Boolean).length]));
-    };
-    along('.uav-x-axis', '--uav-x', 'width', 6);
-    along('.uav-y-axis', '--uav-t', 'height', 0);
+    thinAxis(body, 'x', { inside: true });
+    thinAxis(body, 'y', { gap: 0, inside: true });
   },
 
   paint(body, scene, _rules, data) {
     const xs = scene.rows ?? [], ys = scene.ys ?? [], { x: xf, y: yf } = data.layers[0]!.encode as Record<string, string>;
-    const yAxis = ensure(body, 'div', 'uav-y-axis'), plot = ensure(body, 'div', 'uav-plot'), xAxis = ensure(body, 'div', 'uav-x-axis');
+    const plot = paintAxes(body, scene);
     paintRamp(body, scene); paintSize(body, scene);
     const cells = ensure(plot, 'div', 'uav-cells'), dims = data.catalog.dimensions;
-    // The labels and the keys say again what each cell's name says whole.
-    for (const el of [yAxis, xAxis]) el.setAttribute('aria-hidden', 'true');
-    const texts = (part: string) => scene.nodes.filter((n): n is TextNode => n.part === part && n.kind === 'text');
-    keyed(yAxis, texts('y-axis'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-t', n.t); });
-    keyed(xAxis, texts('x-axis'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-x', n.x); el.setAttribute('data-anchor', n.anchor); });
 
     if (!grids.has(cells)) bind(cells);
     const at = new Map(data.result.rows.map((r) => [(xf ? r[xf] : '') + '\n' + (yf ? r[yf] : ''), r])), rows = new Map<string, Row>();

@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { CHROME_CSS } from '../packages/dom/src/chrome/index.ts';
+import { AXES_CSS } from '../packages/dom/src/chrome/axes.ts';
 import { LEGEND_CSS } from '../packages/dom/src/chrome/legend.ts';
 import { RAMP_CSS } from '../packages/dom/src/chrome/ramp.ts';
 import { SIZE_CSS } from '../packages/dom/src/chrome/size.ts';
 import { LAYOUTS } from '../packages/dom/src/layouts/index.ts';
+import { PIXELS_CSS } from '../packages/dom/src/pixels.ts';
 import { BASE_CSS } from '../packages/dom/src/view.ts';
 
 // The chrome: what a view has beside its marks, painted by one module each and styled from one place. String work:
@@ -11,6 +13,14 @@ import { BASE_CSS } from '../packages/dom/src/view.ts';
 describe('chrome', () => {
   it('joins the base sheet once, so every layout has it, a custom mark\'s among them', () => {
     expect(BASE_CSS.split(CHROME_CSS)).toHaveLength(2);
+  });
+  it('styles the axes in its own sheet, before the sheet that sets their labels on whole px, and a plot and a grid say only where each stands', () => {
+    expect(CHROME_CSS).toContain(AXES_CSS);
+    expect(BASE_CSS.indexOf(AXES_CSS)).toBeLessThan(BASE_CSS.indexOf(PIXELS_CSS));
+    for (const p of Object.values(LAYOUTS)) expect(p.css).not.toMatch(/(^|\n)(:is\()?\.uav-[xy]-axis\b/);
+    for (const layout of ['cartesian', 'matrix']) for (const [axis, area] of [['x', 'x'], ['y', 'y']]) expect(LAYOUTS[layout]!.css).toContain(`.uav[data-layout="${layout}"] .uav-${axis}-axis { grid-area: ${area}; }`);
+    // A label given up on either axis keeps its box, in a plot as in a grid.
+    expect(AXES_CSS).toContain(':is(.uav-x-axis, .uav-y-axis) [data-thin] { visibility: hidden; }');
   });
   it('styles both forms of the legend in its own sheet, and a layout says only where it stands and what it does in a box', () => {
     expect(CHROME_CSS).toContain(LEGEND_CSS);

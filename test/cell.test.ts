@@ -213,8 +213,8 @@ describe('prose, the preset and errors', () => {
     expect(err({ query: q, layers: [{ mark: 'bar', encode: { x: 'hour', y: 'weekday', color: 'visitors' } }] })).toBe(grid);
     expect(err({ query: q, layers: [{ mark: 'cell', encode: { x: 'hour', y: 'weekday' } }] })).toBe(grid);
     expect(err({ query: q, layers: [...expand(heatmap).layers!, { mark: 'rule', encode: { y: 3 } }] })).toBe(grid);
-    expect(err({ query: { metrics: ['visitors'], by: ['weekday'] }, layers: [{ mark: 'cell', encode: { x: 'weekday', y: 'visitors' } }] })).toBe('The "cell" mark has no rule for a time or category axis yet. Use line, area, bar, rule, dot, text or tick.');
-    expect(err({ query: q, layers: [{} as never] })).toBe('Layer 1 has no "mark". Use one of: line, area, bar, rule, text, arc, cell, dot, tick.');
+    expect(err({ query: { metrics: ['visitors'], by: ['weekday'] }, layers: [{ mark: 'cell', encode: { x: 'weekday', y: 'visitors' } }] })).toBe('The "cell" mark has no rule for a time or category axis yet. Use line, area, bar, rule, dot, text, tick or unit.');
+    expect(err({ query: q, layers: [{} as never] })).toBe('Layer 1 has no "mark". Use one of: line, area, bar, rule, text, arc, cell, dot, tick, unit.');
     expect(view({ spec: 'view/0', query: heatmap.query, layers: expand(heatmap).layers }), JSON.stringify(view.errors)).toBe(true);
   });
 });

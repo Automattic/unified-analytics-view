@@ -217,7 +217,7 @@ describe('the painter\'s half, as strings', () => {
   it('its rules compile to the labels going, and then to the swap for the grid, by width and by height', () => {
     const css = compileFitRules(LINK_RULES);
     expect(css).toContain('@container uav-view (inline-size < 319.5px) {\n  .uav[data-layout="link"]:not([data-keep~="guides"]) .uav-labels { display: none; }');
-    expect(css).toContain('@container uav-view (inline-size < 279.5px) {\n  .uav[data-layout="link"]:not([data-keep~="marks"]) { display: none; }\n  .uav[data-layout="link"]:not([data-keep~="marks"]) ~ .uav-fallback { display: block; }');
+    expect(css).toContain('@container uav-view (inline-size < 279.5px) {\n  .uav[data-layout="link"]:not([data-keep~="marks"]):has(~ .uav-fallback[data-rule="marks"]) { display: none; }\n  .uav[data-layout="link"]:not([data-keep~="marks"]) ~ .uav-fallback[data-rule="marks"] { display: block; }');
     expect(css).toContain('@container uav-view (block-size < 119.5px)');
     expect(LINK_RULES.map((r) => [r.id, r.fallback])).toEqual([['guides', undefined], ['marks', 'heatmap']]);
   });

@@ -272,8 +272,8 @@ describe('fitting the container (reference section 10.1)', () => {
 describe('validation', () => {
   it('names the fix', () => {
     const err = (s: Spec) => { try { resolve(s, runQuery(s.query), makeContainer(346), catalog); } catch (e) { return (e as Error).message; } };
-    expect(err(invalid['unknown preset']!)).toBe('Unknown preset "no-such-preset". The library has: line, bar-list, share-bar, grouped-bar, stacked-bar, stacked-area, pie, donut, pie-semi-circle, gauge, rose, radial-bar, sunburst, heatmap, funnel, box-plot, error-bars, waterfall, candlestick, fan, dumbbell, bullet. Registered: choropleth, symbol-map, sankey, tile-grid-map, hex-tile-map, treemap, pair-list. Use one of those, or register it with registerPreset("no-such-preset", …) before the view is resolved.');
-    expect(err(invalid['dimension, no layers']!)).toBe('This spec has a dimension but no layers, so there is nothing to draw it with. Add "layers", or "use" one of: line, bar-list, share-bar, grouped-bar, stacked-bar, stacked-area, pie, donut, pie-semi-circle, gauge, rose, radial-bar, sunburst, heatmap, funnel, box-plot, error-bars, waterfall, candlestick, fan, dumbbell, bullet, choropleth, symbol-map, sankey, tile-grid-map, hex-tile-map, treemap, pair-list.');
+    expect(err(invalid['unknown preset']!)).toBe('Unknown preset "no-such-preset". The library has: line, bar-list, share-bar, bar, grouped-bar, stacked-bar, stacked-area, pie, donut, pie-semi-circle, gauge, rose, radial-bar, sunburst, heatmap, funnel, box-plot, error-bars, waterfall, candlestick, fan, dumbbell, bullet, waffle, unit-chart, isotype, parliament, icon-array. Registered: choropleth, symbol-map, sankey, tile-grid-map, hex-tile-map, treemap, pair-list. Use one of those, or register it with registerPreset("no-such-preset", …) before the view is resolved.');
+    expect(err(invalid['dimension, no layers']!)).toBe('This spec has a dimension but no layers, so there is nothing to draw it with. Add "layers", or "use" one of: line, bar-list, share-bar, bar, grouped-bar, stacked-bar, stacked-area, pie, donut, pie-semi-circle, gauge, rose, radial-bar, sunburst, heatmap, funnel, box-plot, error-bars, waterfall, candlestick, fan, dumbbell, bullet, waffle, unit-chart, isotype, parliament, icon-array, choropleth, symbol-map, sankey, tile-grid-map, hex-tile-map, treemap, pair-list.');
     expect(err(invalid['preset, no dimension']!)).toBe('The "line" preset needs a dimension in query.by.');
     expect(err({ query: { metrics: ['pageviews'], by: ['page'] }, layers: [{ mark: 'bar', encode: { y: 'page', x: 'visitors' } }] }))
       .toBe('Layer 1 encodes "visitors" on x, which the query does not return. It returns: page, pageviews.');
@@ -292,9 +292,9 @@ describe('schemas', () => {
     for (const s of Object.values(samples)) expect(view(s.spec), JSON.stringify(view.errors)).toBe(true);
     expect(cat(catalog), JSON.stringify(cat.errors)).toBe(true);
   });
-  it('reject a dimension with nothing to draw it, and a preset with no dimension', () => {
+  it('reject a dimension with nothing to draw it, and leave a preset with no dimension to resolve(), which knows which presets take none', () => {
     expect(view(invalid['dimension, no layers'])).toBe(false);
-    expect(view(invalid['preset, no dimension'])).toBe(false);
+    expect(view(invalid['preset, no dimension'])).toBe(true);
     expect(view({ ...trend, width: 346 })).toBe(false);
   });
   it('reject presentation in a spec: the tldr value and the guides are the container\'s to decide', () => {

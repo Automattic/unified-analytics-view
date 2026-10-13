@@ -1,9 +1,9 @@
 import { CONTAINER_RULES, KEEP } from './container.ts';
-import { applies, fallbackRule, ruleFor, type FitRule } from './fit.ts';
+import { applies, fallbackRule, gaveWay, ruleFor, type FitRule } from './fit.ts';
 import { fmtTime, rangeLabel } from './format.ts';
 import { customMarks } from './marks.ts';
 import { PRESETS, expand, fills, presetNames, usesPrevious } from './presets.ts';
-import { COLUMNS_BLOCK, place } from './place.ts';
+import { COLUMNS_BLOCK, UNIT_KEY_BLOCK, place } from './place.ts';
 import { BUILT_IN_MARKS, DETAIL_LAYOUTS, buildScene, columnLabel, columnsOf, tldrValueText, isDim, roleOf, seriesOf, trackBeside, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
 import { gridProse, rangeProse, tldrProse } from './prose.ts';
 import type { Catalog, Container, Layer, Layout, Plan, PlanShape, PresetLibrary, Query, Reduction, ReductionId, Result, Role, PlacedScene, Spec } from './types.ts';
@@ -38,6 +38,8 @@ function detectLayout(catalog: Catalog, layers: Layer[]): Layout {
   // A cell along one dimension is a grid one column wide or one row tall, and not a list's rows or a plot.
   if (layers.some((l) => l.mark === 'cell' && l.encode && (isDim(catalog, l.encode.y) || (l.encode.y == null && isDim(catalog, l.encode.x))))) return 'matrix';
   for (const [x, y, color, layout] of LAYOUTS) if (layers.some((l) => l.encode && is(x, l.encode.x) && is(y, l.encode.y) && is(color, l.encode.color))) return layout;
+  // A unit with a metric and no dimension at all is a grid read against the metric's range, in the place a band has.
+  if (layers.some((l) => l.mark === 'unit' && isMetric(catalog, l.encode?.x))) return 'band';
   throw new Error('These layers put no dimension on x, y or color, so there is nothing to lay out.');
 }
 
@@ -45,7 +47,7 @@ function checkLayers(layers: Layer[], q: Query, catalog: Catalog, result: Result
   const by = q.by || [], known = by.concat(q.metrics);
   if (by.length > 2 || (by.length === 2 && by[0] === by[1])) throw new Error('A view is by one dimension or by two different ones, and query.by has: ' + by.join(', ') + '. Remove all but two.');
   layers.forEach((l, i) => {
-    if (!l || !l.mark) throw new Error('Layer ' + (i + 1) + ' has no "mark". Use one of: line, area, bar, rule, text, arc, cell, dot, tick.');
+    if (!l || !l.mark) throw new Error('Layer ' + (i + 1) + ' has no "mark". Use one of: line, area, bar, rule, text, arc, cell, dot, tick, unit.');
     // A name the schema cannot check: it is one of core's marks or one registered in code, and anything else is an error here.
     if (!BUILT_IN_MARKS.includes(l.mark) && !customMarks().has(l.mark)) throw new Error('Layer ' + (i + 1) + ' has the mark "' + l.mark + '", which is not built in and is not registered. Built in: ' + BUILT_IN_MARKS.join(', ') + '. Registered: ' + ([...customMarks().keys()].join(', ') || 'none') + '. Use one of those, or register it with registerMark("' + l.mark + '", …) before the view is resolved.');
     // A second end belongs to a mark that can run from one value to another, and needs the first end to run from.
@@ -53,6 +55,15 @@ function checkLayers(layers: Layer[], q: Query, catalog: Catalog, result: Result
       if (l.encode?.[end] == null) continue;
       if (['bar', 'rule', 'area'].indexOf(l.mark) < 0) throw new Error('Layer ' + (i + 1) + ' is a "' + l.mark + '" with "' + end + '", and only a bar, a rule or an area runs from one value to another. Use one of those, or remove "' + end + '".');
       if (typeof l.encode[start] !== 'string' || isDim(catalog, l.encode[start])) throw new Error('Layer ' + (i + 1) + ' has "' + end + '" and no value on ' + start + ' to run from. Encode where it starts on ' + start + ': a metric, or a companion the result returns with one.');
+    }
+    // A unit counts one value in glyphs, in its own paint or a colour for each group. What would lay glyphs over glyphs, or run them from a second value, is refused here by name.
+    if (l.mark === 'unit') {
+      const n = 'Layer ' + (i + 1) + ' is a "unit"', e = l.encode || {}, grid = !isDim(catalog, e.x) && !isDim(catalog, e.y) && e.angle == null;
+      // With no dimension it reads the engine's total. A query by one would return rows that nothing here draws.
+      if (grid && e.y == null && !isDim(catalog, e.color) && by.length) throw new Error(n + ' with no dimension, which reads "' + e.x + '" over the whole range, and the query is by "' + by[0] + '". Encode "' + by[0] + '" on color to divide the grid by it, or remove it from query.by.');
+      if (l.series) throw new Error(n + ' with series: "' + l.series + '", and a unit draws this period\'s value alone: glyphs of two periods would lie over each other. Remove "series", or use "bar" or "line" for the comparison.');
+      if (l.stack && !(l.stack === 'normalize' && grid)) throw new Error(n + ' with stack: "' + l.stack + '", and a unit\'s glyphs are counted from nothing, each group on its own. ' + (grid ? 'A grid divided by color is shares of the whole already: remove "stack", or write "normalize".' : 'Remove "stack", or use "bar" to stack a second dimension.'));
+      if ((isDim(catalog, e.x) || isDim(catalog, e.y)) && [e.color, e.detail].some((f) => isDim(catalog, f) && f !== e.x && f !== e.y)) throw new Error(n + ' split by "' + [e.color, e.detail].find((f) => isDim(catalog, f) && f !== e.x && f !== e.y) + '", and a unit on an axis counts one value for each row: glyphs of several series would lie over each other. Use "bar" with "stack" for a second dimension, or remove it from the layer and from query.by.');
     }
     if (l.series === 'delta' && !(l.mark === 'text' && isDim(catalog, l.encode && l.encode.y) && typeof (l.encode && l.encode.text) === 'string' && (l.encode!.text as string) in catalog.metrics))
       throw new Error('Layer ' + (i + 1) + ' has series: "delta", which is a row\'s change in a metric. Make it a text layer with the dimension on y and the metric on text.');
@@ -85,8 +96,8 @@ function checkLayers(layers: Layer[], q: Query, catalog: Catalog, result: Result
 }
 
 /** Fit a spec to a container. Throws, with a message that names the fix, when the spec is invalid.
- * `via` is resolve()'s own: the layouts this view has given up for a rule's `fallback` on its way here. */
-export function resolve(spec0: Spec, result: Result, container: Container, catalog: Catalog, presets: PresetLibrary = PRESETS, via: Layout[] = []): Plan {
+ * `via` is resolve()'s own: what this view has given up for a rule's `fallback` on its way here. */
+export function resolve(spec0: Spec, result: Result, container: Container, catalog: Catalog, presets: PresetLibrary = PRESETS, via: string[] = []): Plan {
   const spec = expand(spec0, presets), q = spec.query || ({} as Query);
   if (!q.metrics || !q.metrics.length) throw new Error('A view needs query.metrics, for example ["visitors"].');
   // A name the catalog does not carry is refused here, once, before anything reads its definition.
@@ -105,7 +116,9 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
     layers = layers.filter((l) => !usesPrevious(l));
   }
   // An arc is a share of a whole unless it is a slice or a ring of its own: those are read by how far they reach, and ranked.
-  const share = layers.some((l) => l.stack === 'normalize' || (l.mark === 'arc' && !isDim(catalog, l.encode?.angle) && !isDim(catalog, l.encode?.radius)));
+  // A unit divided by color with no dimension on an axis is shares of a whole, as an arc's segments are: a grid, or seats.
+  const unit = layers.some((l) => l.mark === 'unit'), divided = (l: Layer) => l.mark === 'unit' && isDim(catalog, l.encode?.color) && !isDim(catalog, l.encode?.x) && !isDim(catalog, l.encode?.y);
+  const share = layers.some((l) => l.stack === 'normalize' || (l.mark === 'arc' && !isDim(catalog, l.encode?.angle) && !isDim(catalog, l.encode?.radius)) || divided(l));
   // A custom mark brings the rules of its own layout. A context's rules for that layout come first.
   const laid = layers.length ? detectLayout(catalog, layers) : 'none', custom = customMarks().get(laid), fit = custom ? rules.fit.concat(custom.rules) : rules.fit;
   // A layout that does not read detail would draw its series over each other, and say nothing. A custom mark reads its own channels.
@@ -114,7 +127,8 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   // A plot of points has no sparkline form: two metrics need both their axes to be read. So it has no bare rung, and
   // below the room its axes need it is the number alone. Its `points` rule says so, where the others' is `axes`.
   const points = !!layers.length && isPoints(catalog, layers);
-  const p: PlanShape = { layout: laid, layers, guides: {}, tldrValue: rules.tldrValue.above === 'always' || !!M.instant || !layers.length, side: false, rowLimit: null,
+  // Glyphs with no dimension say how far along its range a metric is, and not what it is: the number stands above them.
+  const p: PlanShape = { layout: laid, layers, guides: {}, tldrValue: rules.tldrValue.above === 'always' || !!M.instant || !layers.length || (unit && !by), side: false, rowLimit: null,
                          share, text: tldrProse(q, result, share, catalog, points) };
   if (p.layout === 'cartesian') p.guides = { x: true, y: true, grid: true };
   if (p.layout === 'matrix') { p.guides = { x: true, y: true, ramp: true }; p.text = gridProse(q, result, catalog) ?? p.text; }
@@ -125,7 +139,8 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   if (custom) p.guides = { ramp: true, size: true };
   // A layout with a rule that names a `fallback` gives way to that preset, whole, where the rule applies: the same query,
   // planned again. Asked before the reductions, which have nothing to give up for a view that is not this one.
-  const swap = layers.length ? fallbackRule(fit, p.layout, keep, via, (use) => fills(use, q, presets)) : undefined;
+  // A rule for one mark is for a view that holds it, and a preset the query cannot fill is no fallback of this view's.
+  const swap = layers.length ? fallbackRule(fit, p.layout, keep, via, { marks: layers.map((l) => l.mark), fills: (use) => fills(use, q, presets) }) : undefined;
   // A split plot starts with its legend. Its rules step that down to a label at the end of each line, where there
   // are lines, and then to nothing. They are asked once, of the view: unlike the reductions, they change no one else's room.
   const series = p.layout === 'cartesian' ? seriesOf(catalog, layers) : null;
@@ -138,16 +153,20 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   const labelled = p.layout === 'cartesian' && layers.some((l) => l.mark === 'text'), sized = p.layout === 'cartesian' && layers.some((l) => l.encode && l.encode.size != null);
   if (labelled && !short('point-labels')) p.guides.pointLabels = true;
   if (sized && !short('size')) p.guides.size = true;
-  if (p.layout === 'band') p.guides = { legend: 'full' };
+  // A band divided by a dimension has a legend. A grid that reads a metric against its range has none.
+  if (p.layout === 'band') p.guides = layers.some((l) => isDim(catalog, l.encode && l.encode.color)) ? { legend: 'full' } : {};
   // A circle divided by a dimension has the band's legend. One that reads a metric against its range has none.
   if (p.layout === 'radial' && layers.some((l) => isDim(catalog, l.encode && l.encode.color))) p.guides = { legend: 'full' };
   // One divided into slices by a dimension on angle has a label for each round its rim.
   else if (p.layout === 'radial' && layers.some((l) => isDim(catalog, l.encode && l.encode.angle))) p.guides = { rim: true };
+  // What a unit's glyph is worth is said under them, and goes before the glyphs do. Asked once, as the legend is.
+  const noKey = unit && short('unit-key', p.layout);
+  if (unit && !noKey) p.guides.unitKey = true;
   if (result.meta.empty || (M.instant && !result.rows.length)) {
     if (M.instant || !layers.length) { p.layout = 'none'; p.layers = []; p.tldrValue = true; p.guides = {}; }
     else { p.layout = 'notice'; p.layers = []; p.guides = {}; p.tldrValue = false; }
   } else if (swap && applies(swap, { view: { inline: container.width, block: container.height } })) {
-    const { layers: _layers, ...rest } = spec0, plan = resolve({ ...rest, use: swap.fallback }, result, container, catalog, presets, via.concat(p.layout));
+    const { layers: _layers, ...rest } = spec0, plan = resolve({ ...rest, use: swap.fallback }, result, container, catalog, presets, via.concat(gaveWay(swap)));
     return { ...plan, dropped: ['the ' + p.layout + ' marks (drawn as "' + swap.fallback + '")'].concat(plan.dropped) };
   }
 
@@ -178,6 +197,8 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
     if (customMarks().has(p.layout)) return { rule: rule(keyed() && keep.indexOf('guides') < 0 ? 'guides' : 'marks'), measured: 0 };
     return { rule: rule('notice'), measured: 0 };
   }
+  // Whether the scene shows the key to a unit's glyphs: the plan has it on, and a glyph is worth more than one.
+  const unitKeyed = () => !!p.guides.unitKey && buildScene(p, q, result, catalog).parts.includes('unit-key');
   // Which of a custom mark's two keys its scene shows, if either.
   const keyed = () => (['ramp', 'size'] as const).find((g) => p.guides[g] && buildScene(p, q, result, catalog).parts.includes(g));
   // A number that stands alone or above the marks has to fit too. No rule can say so: the need is its own width.
@@ -200,8 +221,15 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
     if (secondary && scene.plot && p.layers.some((l) => roleOf(l) !== 'primary')) return !applies(secondary, { view, plot: { inline: scene.plot.w, block: scene.plot.h } });
     return true;
   }
-  const act: Record<ReductionId, () => string | null> = {
+  const act: Record<ReductionId | 'guides', () => string | null> = {
     'drop-guides': () => {
+      // The key to a unit's glyphs is the first guide to go, and where that is enough the rest stay.
+      const key = unitKeyed() ? 'the key to what a glyph is worth' : null;
+      if (key) { p.guides = { ...p.guides, unitKey: false }; if (fits()) return key; }
+      const rest = act.guides();
+      return key && rest ? key + ', ' + rest : key || rest;
+    },
+    guides: () => {
       if (p.layout === 'cartesian' && points) return null;                 // no bare plot: the next step that applies is the number
       if (p.layout === 'cartesian' && (p.guides.x || p.guides.y || p.guides.grid)) { p.guides = { x: false, y: false, grid: false }; p.tldrValue = true; p.side = true; return 'axes and grid (added the number to make up for them)'; }
       if (p.layout === 'band' && p.guides.legend === 'full') { p.guides = { legend: 'top' }; return 'the legend, except the largest segment'; }
@@ -228,7 +256,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
       if (p.layout !== 'rows' || container.height == null) return null;
       const n = result.rows.length, cur = p.rowLimit || n, rh = rules.rows.rowHeight + rules.rows.gap;
       const above = p.tldrValue ? alone({ ...p, layout: 'none', layers: [] }) + 16 : 0;
-      const k = Math.max(1, Math.floor((container.height - above - (p.guides.columns ? COLUMNS_BLOCK : 0) + rules.rows.gap) / rh));
+      const k = Math.max(1, Math.floor((container.height - above - (p.guides.columns ? COLUMNS_BLOCK : 0) - (unitKeyed() ? UNIT_KEY_BLOCK : 0) + rules.rows.gap) / rh));
       if (k >= cur) return null;
       p.rowLimit = k;
       return k + 1 === n ? 'row ' + n : 'rows ' + (k + 1) + ' to ' + n;
@@ -258,6 +286,8 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   if (p.layout === 'cartesian' && p.guides.x && labelled && !p.guides.pointLabels) dropped.push('the labels on the points');
   if (p.layout === 'cartesian' && p.guides.x && sized && !p.guides.size) dropped.push('the key to sizes');
   if (p.layout === 'rows' && columnsOf(catalog, p.layers).length > 1 && !p.guides.columns) dropped.push('the column headers');
+  // The key a rule took before any reduction ran. One that went with the axes, or in `drop-guides`, is said there.
+  if (noKey && (p.layout !== 'cartesian' || p.guides.x) && buildScene({ ...p, guides: { ...p.guides, unitKey: true } }, q, result, catalog).parts.includes('unit-key')) dropped.push('the key to what a glyph is worth');
   const midTick = rule('mid-tick');
   if (p.layout === 'cartesian' && p.guides.x && midTick && applies(midTick, { view: { inline: container.width } }) && catalog.dimensions[xDimOf(catalog, p.layers)!]?.type === 'time') dropped.push('the middle date label');
 

@@ -57,8 +57,13 @@ export interface Result {
 }
 
 /* The view spec. */
-/** The marks core draws, and the name of any custom mark registered in code (marks.ts). */
-export type Mark = 'line' | 'area' | 'bar' | 'rule' | 'text' | 'arc' | 'cell' | 'dot' | 'tick' | (string & {});
+/** The marks core draws, and the name of any custom mark registered in code (marks.ts).
+ * `unit` draws a value as counted glyphs, one for so many, where a `bar` or an `arc` would draw it as a length. Its
+ * form is what is on its channels: a dimension on x and a metric on y is a stack up from the axis, a dimension on y and
+ * a metric on x a run along a row's track, a metric on x and a dimension on `color` a grid of a hundred divided by
+ * share, a metric on x alone that grid filled to the metric's place in its catalog `domain`, and a metric on `angle`
+ * with a dimension on `color` and `sweep: "half"` seats round a half circle. What a glyph is worth comes from the data (unit.ts). */
+export type Mark = 'line' | 'area' | 'bar' | 'rule' | 'text' | 'arc' | 'cell' | 'dot' | 'tick' | 'unit' | (string & {});
 /** `x2` and `y2` are the second end of a `bar`, a `rule` or an `area`: it runs from the value on `x` or `y` to the one there.
  * `detail` is a dimension that splits a layer into series as one on `color` does, and paints none of them apart:
  * every series is in the layer's own paint, with no legend, and as many as the result holds.
@@ -78,7 +83,8 @@ export interface Layer {
   /** On a layer split by `color`, and not by `detail`: each series starts where the one under it ends. `normalize` makes each a share of the whole,
    * and `center` sets each stack half on either side of zero. */
   stack?: 'zero' | 'normalize' | 'center';
-  /** On an `arc`: the arcs run over the top half of the circle, from left to right, and not all the way round.
+  /** On an `arc`: the arcs run over the top half of the circle, from left to right, and not all the way round. On a
+   * `unit` about a centre: its seats sit round that half, which is the one way they are drawn.
    * The one layer field that is neither data nor role. */
   sweep?: 'half';
   label?: string;
@@ -105,6 +111,8 @@ export interface Guides {
   columns?: boolean;
   /** The labels round a circle that a dimension on `angle` divides: which slice is which. */
   rim?: boolean;
+  /** Under a `unit`'s glyphs: what one of them is worth. A scene has none where that is one. */
+  unitKey?: boolean;
 }
 export interface Spec {
   spec?: string;
@@ -178,7 +186,9 @@ export type Part = 'number' | 'plot' | 'x-axis' | 'y-axis' | 'y-axis-2' | 'label
   /* `rim` holds the labels round a circle of slices. It shares the `radial` part's box, and the circle gives up a margin to it. */
   | 'rim'
   /* `note` is a line of text under a custom mark's own parts, saying what they could not draw. It goes with the guides. */
-  | 'note';
+  | 'note'
+  /* `unit-key` is a line of text under a `unit`'s glyphs, saying what one of them is worth: "Each is 500". It goes with the guides. */
+  | 'unit-key';
 interface NodeBase {
   key: string;
   part: Part;
@@ -197,7 +207,8 @@ interface NodeBase {
   tone?: 'soft';
   note?: string;
 }
-/** A bar in the plot (`x` and `w` across, and up the plot from `v0` to `v`), a row's bar (across its track from `v0` to `v`), a band segment (`v` is its share) or a legend swatch.
+/** A bar in the plot (`x` and `w` across, and up the plot from `v0` to `v`), a row's bar (across its track from `v0` to `v`), a band segment (`v` is its share), a legend swatch,
+ * or in `band` a cell of a `unit`'s grid, with `x`, `w`, `y` and `h` as a cell of a grid of cells has them.
  * `v0` is absent where a bar starts at the bottom of the plot, or at the start of the track. A bar that hangs below its start has `v` under `v0`.
  * A bar with a second end runs from the first, `v0`, to it, `v`, and is painted by which way it goes. */
 export interface RectNode extends NodeBase {
@@ -222,8 +233,13 @@ export interface PathNode extends NodeBase {
  * One with a `row` is that row's own: a rule from one of its values to another, or a tick across its band at one. In `rows` it is in the row's
  * track: `x` and `x2` run along the track and `t` up the row, so a rule lies at 0.5 and a tick stands from 0 to 1. */
 export interface LineNode extends NodeBase { kind: 'line'; t: number; x?: number; x2?: number; t2?: number; width?: number; dash?: string }
-/** The pulse beside the number, or a dot at `x` and `t`: in `plot` on a time or category axis, in `points` where x is a metric too, and in `rows` along a row's track, half way up it. `size` is a step from 1 up, not a radius: how big a step is, in pixels, is the painter's. */
-export interface CircleNode extends NodeBase { kind: 'circle'; pulse: boolean; x?: number; t?: number; size?: number }
+/** The pulse beside the number, or a dot at `x` and `t`: in `plot` on a time or category axis, in `points` where x is a metric too, and in `rows` along a row's track, half way up it. `size` is a step from 1 up, not a radius: how big a step is, in pixels, is the painter's.
+ * A glyph of a `unit` states the room it has, as a cell states its own: `w` across and `h` up, as ratios of its part's
+ * box, with `x` and `t` at the middle of it. A scene cannot say that it is round, since the two ratios are of different
+ * lengths, so a painter draws the largest circle that room holds, by the lesser of the two in pixels: in a plot a glyph
+ * is as wide as its band where the plot is tall enough, and where it is not, as tall as its share of the height.
+ * In `radial` it is a seat, and `x` and `t` are across and up the part's box, as a point's are in a plot. */
+export interface CircleNode extends NodeBase { kind: 'circle'; pulse: boolean; x?: number; t?: number; size?: number; w?: number; h?: number }
 /** One row of the `rows` part: the thing a painter keys and a reader chooses. It draws nothing itself, and place() leaves it out. */
 export interface RowNode extends NodeBase { kind: 'row'; row: string }
 /** Text in the number, rows, legend and notice parts is set in order and carries no position. In `labels` it sits beside the plot at height `t`.
@@ -273,7 +289,7 @@ export interface Scene {
   scale?: 'band' | 'point' | 'linear';
   /** In `rows`: the track stands beside the label and the values, and not behind them, because its marks are read by where they are: a dot, a rule, a tick, or a bar with two ends. */
   track?: 'beside';
-  /** Where a part holds its shape, its width over its height: 1 for a circle of arcs, 2 for the top half of one.
+  /** Where a part holds its shape, its width over its height: 1 for a circle of arcs, 2 for the top half of one, 1 for a `unit`'s grid in `band`.
    * A painter fits a box of that shape inside the room the part has, and never stretches it. */
   aspect?: number;
   nodes: SceneNode[];

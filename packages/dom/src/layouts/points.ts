@@ -1,6 +1,7 @@
 import { declutter, type CircleNode, type Scene, type SceneNode, type TextNode } from '@unified-analytics/core';
 import { attr, ensure, keyed, pageWay, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
+import { unitDot } from './unit.ts';
 
 /* What a plot gains with `dot`, with `text` on its points, and with a metric on x: dots, the labels on them, the key
  * to their sizes, and a rule that stands at a value on x. It is the cartesian layout's, kept in a file of its own:
@@ -89,7 +90,7 @@ export function measurePoints(body: HTMLElement): void {
 /** Paint them, after the plot's own parts. `plot` is the cartesian layout's `.uav-plot`. */
 export function paintPoints(body: HTMLElement, plot: HTMLElement, scene: Scene): void {
   const nodes = scene.nodes, dots = (part: string) => nodes.filter((n): n is CircleNode => n.part === part && n.kind === 'circle');
-  const dot = (el: HTMLElement | SVGElement, n: CircleNode) => { prop(el, '--uav-x', n.x); prop(el, '--uav-t', n.t); prop(el, '--uav-size', n.size); };
+  const dot = (el: HTMLElement | SVGElement, n: CircleNode) => { prop(el, '--uav-x', n.x); prop(el, '--uav-t', n.t); prop(el, '--uav-size', n.size); unitDot(el, n); };
   const points = dots('points'), sizes = new Map(points.concat(dots('plot')).map((n) => [n.row, n.size]));
   keyed(ensure(plot, 'div', 'uav-dots'), dots('plot'), () => 'i', dot);
   // Points at two metrics are their own hit targets. The plot's layer of them, which tiles it along x, stands down.

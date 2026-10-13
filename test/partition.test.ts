@@ -332,10 +332,10 @@ describe('a layout with a fallback for each shape of query', () => {
     expect(fills('no-such-preset', one)).toBe(true);
   });
   it('the rule that applies is the first whose preset the query can fill, and with nothing asked it is the first, as it was', () => {
-    const rule = (q: Spec['query']) => fallbackRule(PARTITION_RULES, 'partition', [], [], (use) => fills(use, q))?.fallback;
+    const rule = (q: Spec['query']) => fallbackRule(PARTITION_RULES, 'partition', [], [], { marks: ['partition'], fills: (use) => fills(use, q) })?.fallback;
     expect([rule(treemap.query), rule(tiles.query)]).toEqual(['pair-list', 'bar-list']);
     expect(fallbackRule(PARTITION_RULES, 'partition')?.fallback).toBe('pair-list');
-    expect(fallbackRule(PARTITION_RULES, 'partition', ['marks'], [], () => true)).toBeUndefined();
+    expect(fallbackRule(PARTITION_RULES, 'partition', ['marks'], [], { marks: ['partition'], fills: () => true })).toBeUndefined();
   });
   it('the list of pairs is rows in the engine\'s order, each named by both dimensions, and it needs both', () => {
     const { ratio, result, plan } = run({ ...treemap, use: 'pair-list' }, 346);
@@ -357,7 +357,7 @@ describe('the painter\'s half, as strings and plain functions', () => {
   it('its rules compile to the ramp going, and then to the swap for the list, by width and by height', () => {
     const css = compileFitRules(PARTITION_RULES, { partition: partitionPainter.fit ?? {} }), fig = (keep: string) => '.uav[data-layout="partition"]:not([data-keep~="' + keep + '"])';
     expect(css).toContain('@container uav-view (inline-size < 319.5px) {\n  ' + fig('guides') + ' :is(.uav-ramp, .uav-size) { display: none; }\n}');
-    const swap = '  ' + fig('marks') + ' { display: none; }\n  ' + fig('marks') + ' ~ .uav-fallback { display: block; }\n}';
+    const swap = '  ' + fig('marks') + ':has(~ .uav-fallback[data-rule="marks"]) { display: none; }\n  ' + fig('marks') + ' ~ .uav-fallback[data-rule="marks"] { display: block; }\n}';
     expect(css).toContain('@container uav-view (inline-size < 279.5px) {\n' + swap);
     expect(css).toContain('@container uav-view (block-size < 119.5px) {\n' + swap);
   });

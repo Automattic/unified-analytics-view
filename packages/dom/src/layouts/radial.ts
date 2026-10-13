@@ -1,8 +1,9 @@
-import { arcD, declutter, type ArcNode, type TextNode } from '@unified-analytics/core';
-import { ensure, keyed, paintVar, prop, text } from '../dom.ts';
+import { arcD, declutter, type ArcNode, type CircleNode, type TextNode } from '@unified-analytics/core';
+import { attr, ensure, keyed, paintVar, prop, text } from '../dom.ts';
 import type { LayoutPainter } from '../layout.ts';
 import { FOCUS, HOVER, token } from '../tokens.ts';
 import { paintLegend } from './band.ts';
+import { paintUnitKey, unitDot } from './unit.ts';
 
 /* Arcs about one centre, and under them the legend a band has. The part holds its shape: it is as wide as the view up
  * to 160 px and its height follows from the scene's aspect, 1 for a circle and 2 for the top half of one. Its SVG has
@@ -21,7 +22,11 @@ import { paintLegend } from './band.ts';
  * width: the \`rim\` rule holds that wide enough, and gives the circle its margin back when it takes them away. */
 const css = `
 .uav[data-layout="radial"] .uav-body { display: flex; flex-direction: column; }
-.uav-radial { position: relative; flex: none; align-self: center; box-sizing: border-box; padding: var(--uav-rim, 0px); inline-size: min(100%, 160px); aspect-ratio: var(--uav-aspect, 1); container: uav-plot / inline-size; }
+.uav-radial { position: relative; flex: none; align-self: center; box-sizing: border-box; padding: var(--uav-rim, 0px); inline-size: min(100%, var(--uav-radial-most, 160px)); aspect-ratio: var(--uav-aspect, 1); container: uav-plot / inline-size; }
+/* A unit's seats are dots over the part's box, placed across and up it as a plot's are, from the left whichever way
+ * the page reads. They are their own hit targets. A hundred of them are small, so the part is given 240 px. */
+.uav-radial > .uav-dots { direction: ltr; }
+.uav-radial > .uav-dots i { pointer-events: auto; }
 /* The arcs run clockwise whichever way the page reads, and the keys step the way they run (keys.ts). */
 .uav-radial svg { position: relative; display: block; inline-size: 100%; block-size: 100%; overflow: visible; direction: ltr; }
 /* Two SVGs lie one on the other, so neither takes the pointer for its empty box: only an arc does. */
@@ -59,11 +64,13 @@ const css = `
  * need the \`legend-top\` rule takes both away. */
 @container uav-view (block-size >= 0px) {
   .uav[data-layout="radial"] .uav-body { container-type: size; overflow: hidden; --uav-legend-block: calc(70px + var(--uav-rows, 1) * (var(--uav-legend-line) + 4px)); }
-  .uav[data-layout="radial"] .uav-radial { flex: 0 1 calc(160px / var(--uav-aspect, 1)); min-block-size: 0; max-block-size: calc(100cqi / var(--uav-aspect, 1)); inline-size: auto; max-inline-size: 100%; }
+  .uav[data-layout="radial"] .uav-radial { flex: 0 1 calc(var(--uav-radial-most, 160px) / var(--uav-aspect, 1)); min-block-size: 0; max-block-size: calc(100cqi / var(--uav-aspect, 1)); inline-size: auto; max-inline-size: 100%; }
   .uav[data-layout="radial"] :is(.uav-legend, .uav-legend-top) { flex: none; }
   .uav[data-layout="radial"]:not([data-keep~="guides"]) .uav-legend { overflow: hidden; max-block-size: max(0px, (100cqb - var(--uav-legend-block) + 0.01px) * 999999);
     margin-block-start: clamp(0px, (100cqb - var(--uav-legend-block) + 0.01px) * 999999, 10px); }
   .uav[data-layout="radial"][data-parts~="legend"]:not([data-keep~="guides"]) .uav-legend-top { display: block; overflow: hidden; max-block-size: max(0px, (var(--uav-legend-block) - 100cqb) * 999999); }
+  /* Seats keep 80 px of height under the full legend, the least place() builds them to, where arcs keep 64. */
+  .uav[data-layout="radial"] .uav-body:has(.uav-dots > [data-unit]) { --uav-legend-block: calc(86px + var(--uav-rows, 1) * (var(--uav-legend-line) + 4px)); }
 }`;
 
 type Arc = Pick<ArcNode, 'a0' | 'a1' | 'r0' | 'r1'>;
@@ -117,16 +124,22 @@ export const radial: LayoutPainter = {
     let below = part.querySelector<SVGSVGElement>(':scope > svg.uav-under');
     if (!below && under.length) { below = part.insertBefore(document.createElementNS('http://www.w3.org/2000/svg', 'svg'), svg); below.setAttribute('class', 'uav-under'); below.setAttribute('aria-hidden', 'true'); }
     if (below) { below.setAttribute('viewBox', box); keyed(below, under, () => 'path', (el, n) => turn(el as SVGElement, n)); }
-    // Each segment is its own hit target. Arcs that read one value against a range have no row to step to.
-    if (rows.length) { svg.setAttribute('data-hits', 'x'); svg.removeAttribute('aria-hidden'); } else { svg.removeAttribute('data-hits'); svg.setAttribute('aria-hidden', 'true'); }
+    const seats = scene.nodes.filter((n): n is CircleNode => n.part === 'radial' && n.kind === 'circle');
+    // Each segment is its own hit target. Arcs that read one value against a range have no row to step to, and
+    // where a unit's seats stand there are no arcs: the seats are the targets, a group of them to a row (keys.ts).
+    if (rows.length && !seats.length) { svg.setAttribute('data-hits', 'x'); svg.removeAttribute('aria-hidden'); } else { svg.removeAttribute('data-hits'); svg.setAttribute('aria-hidden', 'true'); }
     part.toggleAttribute('data-half', aspect !== 1);
-    prop(part, '--uav-aspect', aspect); prop(body, '--uav-rows', rows.length);
+    prop(part, '--uav-aspect', aspect); prop(body, '--uav-rows', rows.length); prop(part, '--uav-radial-most', seats.length ? '240px' : null);
     keyed(svg, arcs.filter((n) => !under.includes(n)), () => 'path', (el, n) => turn(el as SVGElement, n));
+    const dots = ensure(part, 'div', 'uav-dots');
+    attr(dots, 'data-hits', seats.length ? 'x' : null);
+    keyed(dots, seats, () => 'i', (el, n) => { prop(el, '--uav-x', n.x); prop(el, '--uav-t', n.t); unitDot(el, n); });
     const hole = ensure(part, 'b', 'uav-hole'), number = scene.nodes.find((n) => n.part === 'hole');
     if (number?.kind === 'text') { text(hole, number); prop(hole, '--uav-paint', paintVar(number.paint)); } else hole.textContent = '';
     const rim = ensure(part, 'div', 'uav-rim');
     rim.setAttribute('aria-hidden', 'true');                                 // each slice is named by its readout, which says this and its value
     keyed(rim, scene.nodes.filter((n): n is TextNode => n.part === 'rim' && n.kind === 'text'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-x', n.x); prop(el, '--uav-t', n.t); });
+    paintUnitKey(body, scene);
     paintLegend(body, scene);
   },
 

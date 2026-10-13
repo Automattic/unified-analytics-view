@@ -464,6 +464,15 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
   treemap: { label: 'A treemap: page views by section, and by page in each', spec: { spec: 'view/0', title: 'Page views by section and page', use: 'treemap', query: { metrics: ['pageviews'], by: ['section', 'page'], range: '28d' } } },
   treemap1: { label: 'A treemap of one level: visitors by channel', spec: { spec: 'view/0', title: 'Visitors by channel', query: { metrics: ['visitors'], by: ['channel'], range: '28d' },
             layers: [{ mark: 'partition', encode: { x: 'channel', size: 'visitors' } }] } },
+  // The `unit` mark, a sample for each of its forms (docs/uncommon-coverage-plan.md, step 6). They are swept, and have
+  // their golden scenes, in test/unit.test.ts.
+  waffle:  { label: 'Waffle: device share, a hundred cells', spec: { spec: 'view/0', title: 'Devices, cell by cell', use: 'waffle', query: { metrics: ['visitors'], by: ['device'], range: '28d' } } },
+  units:   { label: 'Unit chart: visitors by weekday, counted', spec: { spec: 'view/0', title: 'Visitors by weekday', use: 'unit-chart', query: { metrics: ['visitors'], by: ['weekday'], range: '28d' } } },
+  wilkinson: { label: 'Wilkinson dot plot: page views by load time, a dot for so many', spec: { spec: 'view/0', title: 'Load time, in dots', query: { metrics: ['pageviews'], by: ['load_time'], range: '28d' },
+            layers: [{ mark: 'unit', encode: { x: 'load_time', y: 'pageviews' } }] } },
+  isotype: { label: 'Isotype: visitors by channel, a run of glyphs each', spec: { spec: 'view/0', title: 'Visitors by channel', use: 'isotype', query: { metrics: ['visitors'], by: ['channel'], range: '28d' } } },
+  parliament: { label: 'Parliament: visitors by channel, as seats', spec: { spec: 'view/0', title: 'Channels, seat by seat', use: 'parliament', query: { metrics: ['visitors'], by: ['channel'], range: '28d' } } },
+  icons:   { label: 'Icon array: sign-ups against their range', spec: { spec: 'view/0', title: 'Sign-ups, of 500', use: 'icon-array', query: { metrics: ['signups'], range: '28d' } } },
   unmapped: { label: 'A map with rows it has no shape for: visitors by every country seen', spec: { spec: 'view/0', title: 'Visitors by country, all of them', query: { metrics: ['visitors'], by: ['visitor_country'], range: '28d' },
             layers: [{ mark: 'geo', encode: { x: 'visitor_country', color: 'visitors' } }] } },
   // The Uncommon types that today's marks already say (docs/uncommon-coverage-plan.md, step 0, and what it found in section 7).

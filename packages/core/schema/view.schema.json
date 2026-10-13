@@ -74,7 +74,7 @@
         "stack": { "enum": ["zero", "normalize", "center", "diverge"], "description": "On a layer split by color: each series starts where the one under it ends. \"normalize\" makes each a share of the whole, and \"center\" sets each stack half on either side of zero. \"diverge\" sets the first half of the series below zero and the second half above it, in the series' order, and with an odd count the middle one half on each side: two series are a population pyramid, and five a Likert chart. Its axis counts away from zero on both sides. A bar split by color with no stack sits beside its neighbours. In rows, a stacked bar is the one mark whose color may be the query's second dimension: each row's bar is divided into a series for each of its values, with a legend." },
         "sweep": { "const": "half", "description": "On an arc: the arcs run over the top half of the circle and not all the way round. The one layer field that is neither data nor role." },
         "label": { "type": "string", "description": "Text for a rule." },
-        "align": { "const": "end" },
+        "align": { "enum": ["start", "end"], "description": "On a text layer in rows, \"end\" sets it as a column of values. On a tick, the half of it to that side of the middle of its band: an OHLC chart's open is a tick to the start, and its close one to the end." },
         "paint": { "type": "string", "description": "A paint token, never a colour: series.1 to series.6, compare, rule, ink, ink.muted, delta. A layer with none takes series.1, so a second metric on the same plot wants \"series.2\". \"delta\" is the paint of the metric's change over the range: good or bad by its polarity, and the layer's own where there is no change to judge." }
       }
     }

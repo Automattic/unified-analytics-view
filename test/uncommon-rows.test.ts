@@ -256,3 +256,45 @@ describe('size on a bar: a column as wide as its share', () => {
     expect(err(mekko(), { ...result, totals: { visitors: null } })).toBe('A bar with "visitors" on size is as wide as its share of the engine\'s total of it, and this result\'s totals give null for "visitors". Return the total from the query layer, or remove "size" for columns of one width.');
   });
 });
+
+describe('a tick at the foot of a plot of points, and half a tick', () => {
+  const q = { metrics: ['embed_x', 'embed_y'], by: ['term'], range: '28d' };
+  const rug = (x = 'embed_x', first = false): Spec => { const dot: Layer = { mark: 'dot', encode: { x: 'embed_x', y: 'embed_y' } }, tick: Layer = { mark: 'tick', encode: { x } }; return { query: q, layers: first ? [tick, dot] : [dot, tick] }; };
+
+  it('with a metric on x and nothing on y is a short stroke for each row, where its dot is along x: the rug', () => {
+    const { ratio, scene, plan } = run(rug()), strokes = of<{ x: number; x2: number; t: number; t2: number; row: string; opacity: number; paint: string; width?: number }>(ratio.nodes, 'primary:tick:');
+    const dots = of<{ x: number; row: string }>(ratio.nodes, 'primary:dot:');
+    expect(strokes.length).toBe(24);
+    strokes.forEach((n, i) => expect([n.x, n.x2, n.t, n.t2, n.row, n.paint, n.opacity, n.width]).toEqual([dots[i]!.x, dots[i]!.x, 0, 0.05, dots[i]!.row, 'ink', 0.5, undefined]));
+    expect(strokes.every((n) => (n as any).part === 'plot')).toBe(true);
+    expect([plan.layout, ratio.parts, ratio.scale]).toEqual(['cartesian', ['y-axis', 'plot', 'points', 'x-axis'], 'linear']);
+    // In pixels it stands on the foot of the plot, under its row's dot.
+    const px = of<{ x1: number; x2: number; y1: number; y2: number }>(scene.nodes, 'primary:tick:')[0]!, dot = of<{ cx: number }>(scene.nodes, 'primary:dot:')[0]!;
+    expect([px.x1, px.x2, px.y1]).toEqual([dot.cx, dot.cx, 162]);
+    expect(px.y1 - px.y2).toBeCloseTo(152 * 0.05, 9);
+  });
+  it('changes nothing else of the plot: the same scale, the same sentence, the same steps down', () => {
+    const plain: Spec = { query: q, layers: [rug().layers![0]!] }, a = run(rug()), b = run(plain);
+    expect(of(a.ratio.nodes, 'xtick:')).toEqual(of(b.ratio.nodes, 'xtick:'));
+    expect(of(a.ratio.nodes, 'primary:dot:')).toEqual(of(b.ratio.nodes, 'primary:dot:'));
+    expect(a.plan.text).toBe(b.plan.text);
+    expect(run(rug(), 234).plan.layout).toBe('none');
+    expect(of(run(rug('embed_x', true)).ratio.nodes, 'primary:tick:').length).toBe(24);
+  });
+  it('is refused at a metric the plot\'s x does not measure, and with a metric on y it is still no rug', () => {
+    expect(err({ ...rug('embed_y') })).toBe('Layer 2 is a tick at "embed_y" along the foot of a plot whose x is "embed_x", so it would stand at places the axis does not measure. Encode "embed_x" on its x.');
+    expect(err({ query: q, layers: [{ mark: 'tick', encode: { x: 'embed_x', y: 'embed_y' } }] })).toBe('Layer 1 is a tick with the metric "embed_x" on x, and a tick needs a dimension there to stand on. Use "dot" for a point at two metrics, or put a dimension on x.');
+  });
+  it('with align is the half of a tick to one side of its band\'s middle', () => {
+    const day = { metrics: ['response_time'], by: ['date.day'], range: '28d' }, at = (align?: Layer['align']) => of<{ x: number; x2: number; t: number; t2: number }>(run({ query: day, layers: [{ mark: 'tick', encode: { x: 'date.day', y: 'response_time@open' }, ...(align && { align }) }] }).ratio.nodes, 'primary:tick:')[3]!;
+    const whole = at(), start = at('start'), end = at('end'), mid = (whole.x + whole.x2) / 2;
+    expect([start.x, start.x2]).toEqual([whole.x, mid]);
+    expect([end.x, end.x2]).toEqual([mid, whole.x2]);
+    expect([start.t, start.t2, end.t]).toEqual([whole.t, whole.t, whole.t]);
+  });
+  it('and in a row\'s track, where the start is the top of the row', () => {
+    const list = (align?: Layer['align']): Spec => ({ query: { metrics: ['pageviews'], by: ['page'], limit: 3 }, layers: [{ mark: 'tick', encode: { y: 'page', x: 'pageviews' }, ...(align && { align }) }, label('page')] });
+    const ends = (align?: Layer['align']) => { const n = of<{ t: number; t2: number }>(run(list(align)).ratio.nodes, 'primary:tick:')[0]!; return [n.t, n.t2]; };
+    expect([ends(), ends('start'), ends('end')]).toEqual([[0, 1], [0.5, 1], [0, 0.5]]);
+  });
+});

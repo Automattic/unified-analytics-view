@@ -80,7 +80,8 @@ export interface Layer {
    * The one layer field that is neither data nor role. */
   sweep?: 'half';
   label?: string;
-  align?: 'end';
+  /** On a `text` layer in rows, `end` sets it as a column of values. On a `tick`, the half of it to that side of its band's middle. */
+  align?: 'start' | 'end';
   /** A paint token in place of the layer's own. `delta` is the paint of its metric's change over the range: good or bad by
    * the metric's polarity, and the layer's own where there is no change to judge. */
   paint?: string;

@@ -156,10 +156,16 @@ const label: MarkFn = (l, { id, series, role, rows, k, unit, ends, size, say }) 
   return rows.map((r): TextNode => ({ key: id + ':' + k(r) + (series == null ? '' : ':' + series), part: 'point-labels', kind: 'text', x: unit.cx(k(r)), t: ends(r)[1], text: say(r, f),
     anchor: 'middle', font: 'tick', paint: 'ink', halo: true, row: k(r), ...(series != null && { series }), rank: order.indexOf(r) + 1, layer: 'guide', role }));
 };
-// A short stroke across its row's band, at its value.
-const tick: MarkFn = (l, { id, series, role, rows, k, unit, ends }) => rows.map((r): SceneNode => {
-  const x = unit.x(k(r)), t = ends(r)[1];
-  return { key: id + ':' + k(r) + (series == null ? '' : ':' + series), part: 'plot', kind: 'line', x, x2: x + (unit.span ? unit.span(k(r)) : unit.w), t, t2: t, row: k(r), ...(series != null && { series }), paint: l.paint || 'ink', width: 2, layer: 'data', role };
+const RUG = 0.05;    // how far up the plot a stroke of a rug stands
+// A short stroke across its row's band, at its value. With `align` it is the half of that to one side of the band's
+// middle: the start, which is where x begins, or the end.
+// In a plot of points, with a metric on x and nothing on y, it is a stroke at the foot of the plot at each row's value
+// there: a rug. Strokes lie over each other where rows are close, so each lets the ones under it show.
+const tick: MarkFn = (l, { id, series, role, rows, k, unit, ends, xv }) => rows.map((r): SceneNode => {
+  const own = { key: id + ':' + k(r) + (series == null ? '' : ':' + series), part: 'plot' as const, kind: 'line' as const, row: k(r), ...(series != null && { series }), paint: l.paint || 'ink', layer: 'data' as const, role };
+  if (l.encode!.y == null) { const at = xv!(num(r, l.encode!.x as string)); return { ...own, x: at, x2: at, t: 0, t2: RUG, opacity: MASS }; }
+  const w = unit.span ? unit.span(k(r)) : unit.w, x = unit.x(k(r)) + (l.align === 'end' ? w / 2 : 0), t = ends(r)[1];
+  return { ...own, x, x2: x + (l.align ? w / 2 : w), t, t2: t, width: 2 };
 });
 /** A layer's own paint, where it states one. `delta` is the paint of its metric's change over the range, as the tldr
  * value's delta has it: good or bad by the metric's polarity. With no change to judge, the layer has stated none. */
@@ -366,10 +372,13 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     const draw = PLOT_MARKS[l.mark], prev = l.series === 'previous', span = spans[i]!;
     if (!draw) throw new Error('The "' + l.mark + '" mark has no rule for a time or category axis yet. Use line, area, bar, rule, dot, text or tick.');
     // A bar stands on a row's share of x, and a tick lies across it. A metric there gives it none, and neither does a number dimension that came with no bins.
-    if ((l.mark === 'bar' || l.mark === 'tick') && xOn && !xDim) throw new Error('Layer ' + (i + 1) + ' is a ' + l.mark + ' with the metric "' + xOn + '" on x, and a ' + l.mark + ' needs a dimension there to stand on. Use "dot" for a point at two metrics, or put a dimension on x.');
+    // But for a tick with nothing on y, which stands at the foot of a plot of points at each row's value on x: a rug.
+    const rug = l.mark === 'tick' && !!xOn && !xDim && l.encode!.y == null;
+    if (rug && l.encode!.x !== xOn) throw new Error('Layer ' + (i + 1) + ' is a tick at ' + JSON.stringify(l.encode!.x) + ' along the foot of a plot whose x is "' + xOn + '", so it would stand at places the axis does not measure. Encode "' + xOn + '" on its x.');
+    if ((l.mark === 'bar' || l.mark === 'tick') && xOn && !xDim && !rug) throw new Error('Layer ' + (i + 1) + ' is a ' + l.mark + ' with the metric "' + xOn + '" on x, and a ' + l.mark + ' needs a dimension there to stand on. Use "dot" for a point at two metrics, or put a dimension on x.');
     if (l.mark === 'bar' && xOn && rows.length && rows[0]![xOn + '@end'] == null) throw new Error('Bars on the number dimension "' + xOn + '" need its bins, and this result has no "' + xOn + '@end". Return where each bin ends from the query layer, or use line or dot.');
     const v = scaleOf(l).v;
-    const d: Draw = { say, id: ids[i]!, role: roleOf(l), paint: paintOf(l, catalog, result) || (prev ? 'compare' : 'series.1'), prev, rows: rows.filter((r) => span.has(r)), k, unit, v, xv, size, points: !!xOn && !xDim,
+    const d: Draw = { say, id: ids[i]!, role: roleOf(l), paint: paintOf(l, catalog, result) || (prev ? 'compare' : 'series.1'), prev, rows: rows.filter((r) => (rug ? r[xOn!] != null : span.has(r))), k, unit, v, xv, size, points: !!xOn && !xDim,
       ends: (r) => { const [lo, hi] = span.get(r)!; return [v(lo), v(hi)]; },
       ...(l.mark === 'bar' && !l.paint && (l.encode!.y2 != null || diverges(l)) && { polarity: metricOf(catalog, l.encode!.y)?.polarity }) };
     if (!splitOf(catalog, l, xField)) return nodes.push(...draw(l, d));
@@ -470,7 +479,8 @@ const trackBar: TrackFn = (_l, d) => {
 // A rule lies along the track from one of the row's values to another, or from zero where it has one end.
 const trackRule: TrackFn = (l, { id, role, k, at, to, v }) => [{ key: id + ':' + k, part: 'rows', kind: 'line', x: v(at), x2: v(to ?? 0), t: 0.5, row: k, paint: l.paint || 'ink', layer: 'data', role }];
 // A tick stands across the row at its value.
-const trackTick: TrackFn = (l, d) => [{ ...inRow(d), part: 'rows', kind: 'line', x: d.v(d.at), x2: d.v(d.at), t: 0, t2: 1, paint: l.paint || 'ink', width: 2, ...(d.mass && { opacity: MASS }), layer: 'data', role: d.role }];
+// With `align` it is the half of that to one side of the row's middle: the start is the top of the row, where a page begins.
+const trackTick: TrackFn = (l, d) => [{ ...inRow(d), part: 'rows', kind: 'line', x: d.v(d.at), x2: d.v(d.at), t: l.align === 'start' ? 0.5 : 0, t2: l.align === 'end' ? 0.5 : 1, paint: l.paint || 'ink', width: 2, ...(d.mass && { opacity: MASS }), layer: 'data', role: d.role }];
 // A dot stands on the track at its value, half way up the row. With a dimension on detail the row has one for each of its pairs.
 const trackDot: TrackFn = (_l, d) => [{ ...inRow(d), part: 'rows', kind: 'circle', pulse: false, x: d.v(d.at), t: 0.5, paint: d.paint, ...(d.mass && { opacity: MASS }), layer: 'data', role: d.role }];
 /* The marks a row's track draws, by name. A new mark is a function here. Text is not among them: it is set in the row, not on the scale. */

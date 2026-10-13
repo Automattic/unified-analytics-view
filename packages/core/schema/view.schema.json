@@ -54,12 +54,12 @@
           "properties": {
             "x": { "$ref": "#/definitions/field" },
             "y": { "$ref": "#/definitions/field" },
-            "color": { "$ref": "#/definitions/field" },
+            "color": { "$ref": "#/definitions/field", "description": "A dimension splits the layer into series, a colour each. A metric, on a cell, on a dot in a grid or on a custom mark that reads it, is quantized to a colour ramp: the sequential one, or the diverging one where its values or its catalog domain cross zero. No field chooses the ramp." },
             "detail": { "type": "string", "description": "One of the query's dimensions. It splits the layer into a series for each value, as a dimension on color does, and paints none apart: every series is in the layer's own paint, there is no legend, and the limit of six series does not apply. Many lines in one paint. Not with the same layer's color in a plot, and not with stack. On an arc split by color it is the second ring: each segment divided among this dimension's values, in the segment's colour." },
             "text": { "$ref": "#/definitions/field" },
             "angle": { "$ref": "#/definitions/field", "description": "For an arc. A metric, with a dimension on color: each segment is its share of the total, and a second dimension on detail divides each segment again in a ring outside it. A metric, with a dimension on radius: each ring's arc sweeps to its value. A metric alone is read against its catalog domain. A dimension, with a metric on radius: an equal slice for each value, in the engine's order." },
             "radius": { "anyOf": [{ "type": "number", "minimum": 0, "exclusiveMaximum": 1 }, { "type": "string" }], "description": "For an arc. A number is the inner radius, as a share of the outer: 0.6 makes a donut. A metric, with a dimension on angle, is how far each slice reaches from the centre, on a square-root scale, so its area carries the value: there is no inner radius then. A dimension, with a metric on angle, gives each value a ring, six at most; with nothing on angle it is the whole ring." },
-            "size": { "$ref": "#/definitions/field", "description": "A metric. A dot's size is one of a few steps, and the painter says how big each is." },
+            "size": { "$ref": "#/definitions/field", "description": "A metric. A dot's size is one of a few steps, and the painter says how big each is. On a dot in a grid, with a dimension on both x and y, the step is by how far the value is from zero." },
             "x2": { "$ref": "#/definitions/field", "description": "For a bar, a rule or an area with a field on x: its second end. The mark runs from the value on x to this one." },
             "y2": { "$ref": "#/definitions/field", "description": "For a bar, a rule or an area with a field on y: its second end. The mark runs from the value on y to this one." }
           }

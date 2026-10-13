@@ -34,7 +34,7 @@ describe('the fixture engine', () => {
     expect(rows.reduce((s, r) => s + (r.pageviews as number), 0)).toBe(totals.pageviews);
     // A density is a share of the whole per second, so over the bins it comes to one.
     expect(rows.reduce((s, r) => s + (r['pageviews@density'] as number) * 0.5, 0)).toBeCloseTo(1, 3);
-    expect(() => runQuery({ metrics: ['pageviews'], by: ['load_time', 'device'] })).toThrow('The fixture bins a count by "load_time" and nothing more. Query a count by it alone.');
+    expect(() => runQuery({ metrics: ['pageviews'], by: ['load_time', 'device'] })).toThrow('The fixture bins a count by "load_time", alone or with "page_weight", and nothing more. Query a count by one of those.');
     expect(runQuery(histogram!.query, 'empty')).toMatchObject({ rows: [], meta: { empty: true } });
   });
   it('the catalog and the samples are valid', () => {

@@ -54,11 +54,13 @@ const MARKS: Mark[] = [
   { name: 'tick', note: 'The middle of a box, with the range as a rule and the quartiles as a bar.', spec: S('box'), series: true, states: [{ label: 'a target in rows', spec: S('bullet') }, { label: 'with an interval', spec: S('errors') }, { label: 'a band and a line', spec: S('fan') }] },
   { name: 'arc', note: 'A colour for each value.', spec: S('donut'), states: [{ label: 'a pie', spec: S('pie') }, { label: 'a half', spec: S('half') }, { label: 'against a target', spec: S('gauge') }] },
   { name: 'band', note: 'One bar divided, a colour for each value.', spec: S('mix') },
-  { name: 'cell', note: 'Filled by the sequential ramp.', spec: S('heatmap') },
+  { name: 'cell', note: 'Filled by the sequential ramp, or by the diverging one where its values cross zero.', spec: S('heatmap'), states: [{ label: 'signed, on the diverging ramp', spec: S('correlogram') }, { label: 'one row', spec: S('stripes') }, { label: 'two binned quantities', spec: S('bins2d') },
+    { label: 'dots in place of cells', spec: S('circles') }, { label: 'dots over cells, sized by another metric', spec: { query: { metrics: ['pageviews', 'visitors'], by: ['page', 'next_page'], range: '28d' },
+      layers: [{ mark: 'cell', encode: { y: 'page', x: 'next_page', color: 'pageviews' } }, { mark: 'dot', encode: { y: 'page', x: 'next_page', size: 'visitors' }, paint: 'ink' }] } }] },
   { name: 'unit', note: 'A value as counted glyphs: a stack up from the axis, and what one is worth under it.', spec: S('units'), series: true, states: [
     { label: 'a group chosen', spec: S('units'), active: true }, { label: 'on bins: a Wilkinson dot plot', spec: S('wilkinson') }, { label: 'a run along a row', spec: S('isotype') },
     { label: 'a hundred cells, by share', spec: S('waffle') }, { label: 'seats round a half circle', spec: S('parliament') }, { label: 'against the metric\'s range', spec: S('icons') }, { label: 'no data', spec: S('units'), scenario: 'empty' }] },
-  { name: 'geo', note: 'Filled by the sequential ramp, or a symbol on each region.', spec: S('map'), states: [{ label: 'symbols', spec: S('symbols') }, { label: 'square tiles', spec: S('tiles') }, { label: 'hex tiles', spec: S('hexes') }] },
+  { name: 'geo', note: 'Filled by the sequential ramp, or the diverging one where its values cross zero, or a symbol on each region.', spec: S('map'), states: [{ label: 'symbols', spec: S('symbols') }, { label: 'square tiles', spec: S('tiles') }, { label: 'hex tiles', spec: S('hexes') }] },
   { name: 'link', note: 'A ribbon for each pair, in its source\'s colour as a tint. A node is as tall as the engine\'s total.', spec: S('sankey'), states: [{ label: 'a ribbon chosen', spec: S('sankey'), active: true }] },
   { name: 'partition', note: 'A box divided by area, and each part divided again. A colour for each parent.', spec: S('treemap'), states: [
     { label: 'one level', spec: S('treemap1') },

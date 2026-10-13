@@ -239,7 +239,10 @@ export interface LineNode extends NodeBase { kind: 'line'; t: number; x?: number
  * lengths, so a painter draws the largest circle that room holds, by the lesser of the two in pixels: in a plot a glyph
  * is as wide as its band where the plot is tall enough, and where it is not, as tall as its share of the height.
  * In `radial` it is a seat, and `x` and `t` are across and up the part's box, as a point's are in a plot. */
-export interface CircleNode extends NodeBase { kind: 'circle'; pulse: boolean; x?: number; t?: number; size?: number; w?: number; h?: number }
+export interface CircleNode extends NodeBase { kind: 'circle'; pulse: boolean; x?: number; t?: number; size?: number; w?: number; h?: number;
+  /** A dot of a grid: the two dimension values it stands at, as a cell's. It has no `row`. */
+  pair?: [x: string, y: string];
+}
 /** One row of the `rows` part: the thing a painter keys and a reader chooses. It draws nothing itself, and place() leaves it out. */
 export interface RowNode extends NodeBase { kind: 'row'; row: string }
 /** Text in the number, rows, legend and notice parts is set in order and carries no position. In `labels` it sits beside the plot at height `t`.

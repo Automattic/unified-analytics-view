@@ -256,6 +256,13 @@ describe('partition, painted by a second metric', () => {
     expect([run(ramped, 319).ratio.parts, run(ramped, 319).plan.dropped]).toEqual([['plot'], ['the colour ramp']]);
     expect(run(ramped, 346).scene.nodes.find((n) => n.key === 'ramp:1')).toMatchObject({ ty: 346 / ASPECT });
   });
+  it('takes the diverging ramp where the metric on color crosses zero, as a grid does, with zero said in its middle', () => {
+    const mid = result.rows.map((r) => r.visitors as number).sort((a, b) => a - b)[result.rows.length >> 1]!;
+    const signed = run(ramped, 346, null, 'typical', 'svg', { ...result, rows: result.rows.map((r) => ({ ...r, visitors: (r.visitors as number) - mid })) });
+    expect(kids(signed.ratio).every((n) => /^div\.[1-9]$/.test(n.paint))).toBe(true);
+    expect(signed.ratio.nodes.filter((n) => n.part === 'ramp').map((n) => n.key)).toEqual(['ramp:low', 'ramp:1', 'ramp:2', 'ramp:3', 'ramp:4', 'ramp:5', 'ramp:zero', 'ramp:6', 'ramp:7', 'ramp:8', 'ramp:9', 'ramp:high']);
+    expect(signed.scene.nodes.some((n) => n.key === 'ramp:zero')).toBe(true);
+  });
 });
 
 describe('place()', () => {

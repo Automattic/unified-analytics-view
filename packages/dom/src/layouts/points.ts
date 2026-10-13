@@ -15,7 +15,7 @@ import { unitDot } from './unit.ts';
  *     .uav-points            dots at two metrics. They are their own targets, in two dimensions: data-hits="xy"
  *     .uav-point-labels      a label on each point. The measured pass hides the ones that collide
  *   .uav-size                the key to sizes, under the plot */
-const DOT = 'calc(4px + var(--uav-size, 0.4) * 5px)';
+export const DOT = 'calc(4px + var(--uav-size, 0.4) * 5px)';
 export const POINTS_CSS = `
 .uav-dots, .uav-points, .uav-point-labels { position: absolute; inset: 0; }
 .uav-body[data-scale="point"] :is(.uav-dots, .uav-point-labels) { inset-inline: 2px; }

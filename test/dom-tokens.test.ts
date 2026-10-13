@@ -42,7 +42,7 @@ describe('the public tokens', () => {
   it('are what a scene\'s paint tokens read, by the table or by name', () => {
     expect(paintVar('ink.muted')).toBe('var(--ua-charts-color-label-secondary, GrayText)');
     expect(paintVar('delta.bad')).toBe('var(--ua-charts-color-delta-bad, var(--ua-charts-color-trend-down, currentColor))');
-    for (const paint of ['series.2', 'seq.10', 'seq.none']) expect(NAMED.test(paintVar(paint).slice(16, paintVar(paint).indexOf(',')))).toBe(true);
+    for (const paint of ['series.2', 'seq.10', 'seq.none', 'div.5']) expect(NAMED.test(paintVar(paint).slice(16, paintVar(paint).indexOf(',')))).toBe(true);
   });
 });
 

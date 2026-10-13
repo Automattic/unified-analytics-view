@@ -3,7 +3,7 @@ import { scaleBand, scaleLinear, scalePoint, scaleQuantize } from 'd3-scale';
 import { CHAR_W, delta, fmt, fmtPct, fmtTime, formatBin, formatDimension, formatUnit, formatValue } from './format.ts';
 import { arcD, pathD } from './path.ts';
 import { customMarks } from './marks.ts';
-import { NOW, emptyNote, leader, portion } from './prose.ts';
+import { NOW, crossesZero, emptyNote, endsOf, leader, portion } from './prose.ts';
 import { UNIT_CELLS, UNIT_MOST, UNIT_SEATS, unitCount, unitSeats, unitShares, unitWorth } from './unit.ts';
 import type { ArcNode, Catalog, DimensionDef, Guides, Layer, Mark, MetricDef, Part, PathNode, PlanShape, Polarity, Query, RectNode, Result, Role, Row, Scene, SceneNode, TextNode } from './types.ts';
 
@@ -398,7 +398,8 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
 }
 /** The key to sizes: the metric's name, then each step with the most it stands for, in the metric's unit. */
 export function sizeKey(metric: MetricDef, top: number): SceneNode[] {
-  const whole = (n: number) => (metric.unit === 'count' ? Math.round(n) : n);     // a step of a count is a whole number of things
+  // A step of a count is a whole number of things. Where the most is so few that the steps would round to each other, they are said as they are.
+  const whole = (n: number) => (metric.unit === 'count' && top >= SIZES ** 2 ? Math.round(n) : n);
   const nodes: SceneNode[] = [{ key: 'size:title', part: 'size', kind: 'text', text: metric.label, anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' }];
   for (let s = 1; s <= SIZES; s++) {
     nodes.push({ key: 'size:' + s, part: 'size', kind: 'circle', pulse: false, size: s, paint: 'ink.muted', layer: 'guide' });
@@ -746,42 +747,58 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
 }
 
 const SEQ = 10;     // paint tokens run from seq.1 to seq.10, and seq.none is a cell with no value
-/** The sequential colour scale, which outputs tokens: a value is quantized to a step of the ramp, between the least and
- * the most of `vals`, or the ends of the domain the catalog states for `metric`, whose unit the two ends are written in. No value is `seq.none` and not the
- * lowest step: nothing is not a little. `ramp` is its legend, set in order: the low value, a swatch for each step, the
- * high value, and with `none` the swatch for no value. */
+const DIV = 9;      // and from div.1 to div.9 where the values cross zero: four steps below it, div.5 at it, four above
+/** The colour scale, which outputs tokens: a value is quantized to a step of a ramp, between the least and the most
+ * of `vals`, or the ends of the domain the catalog states for `metric`, whose unit the ends are written in. Which
+ * ramp is read from those ends and is no one's to state. Where they cross zero the scale is diverging about it:
+ * zero is in the neutral middle step, and both arms are measured by the end farther from zero, so two values as far
+ * from zero as each other are as many steps from the middle. Anything else is sequential. No value is `seq.none`
+ * on either ramp, and not a step of it: nothing is not a little, and it is not zero. `ramp` is the legend, set in
+ * order: the low end, a swatch for each step, the high end, and with `none` the swatch for no value. A diverging
+ * one says zero after its middle swatch, and its ends are the scale's, which are as far from zero as each other. */
 export function seqScale(vals: number[], metric?: MetricDef): { paint(v: number | null | undefined): string; ramp(none: boolean): SceneNode[] } {
-  const [lo, hi] = (metric && metric.domain) || [min(vals) ?? 0, max(vals) ?? 0], say = (n: number) => (metric ? formatValue(n, metric, 'compact') : fmt(n, true));
+  const [lo, hi] = endsOf(vals, metric), say = (n: number) => (metric ? formatValue(n, metric, 'compact') : fmt(n, true));
+  const far = Math.max(-lo, hi), div = crossesZero([lo, hi]), name = div ? 'div.' : 'seq.', n = div ? DIV : SEQ;
   // Values that are all one have no least and most. They are measured from zero.
-  const ends = lo < hi ? [lo, hi] : [Math.min(lo, 0), Math.max(hi, lo ? 0 : 1)];
-  const step = scaleQuantize<number>().domain(ends).range(Array.from({ length: SEQ }, (_, i) => i + 1));
+  const ends = div ? [-far, far] : lo < hi ? [lo, hi] : [Math.min(lo, 0), Math.max(hi, lo ? 0 : 1)];
+  const step = scaleQuantize<number>().domain(ends).range(Array.from({ length: n }, (_, i) => i + 1));
   const end = (key: string, v: string): SceneNode => ({ key: 'ramp:' + key, part: 'ramp', kind: 'text', text: v, anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' });
-  const swatch = (key: string | number): SceneNode => ({ key: 'ramp:' + key, part: 'ramp', kind: 'rect', paint: 'seq.' + key, layer: 'data' });
+  const swatch = (key: string | number, paint = name + key): SceneNode => ({ key: 'ramp:' + key, part: 'ramp', kind: 'rect', paint, layer: 'data' });
   return {
-    paint: (v) => (v == null ? 'seq.none' : 'seq.' + step(v)),
-    ramp: (none) => [end('low', say(ends[0]!)), ...Array.from({ length: SEQ }, (_, i) => swatch(i + 1)), end('high', say(ends[1]!)), ...(none ? [swatch('none'), end('none:label', 'No data')] : [])],
+    paint: (v) => (v == null ? 'seq.none' : name + step(v)),
+    ramp: (none) => [end('low', say(ends[0]!)), ...Array.from({ length: n }, (_, i) => (div && i === (DIV - 1) / 2 ? [swatch(i + 1), end('zero', say(0))] : [swatch(i + 1)])).flat(), end('high', say(ends[1]!)), ...(none ? [swatch('none', 'seq.none'), end('none:label', 'No data')] : [])],
   };
 }
 
-// A dimension on x and another on y, and a metric on color: a grid of cells, each painted a step of the sequential ramp.
+// A dimension on x and another on y, and a metric on color: a grid of cells, each painted a step of the colour scale.
 // With none on x the grid is one column wide, a strip, and with none on y it is one row tall.
 // Both positions are discrete and the cells meet; the gap between them is the painter's. A cell with no value is
 // `seq.none` and not the lowest step: nothing is not a little. A pair the result has no row for is drawn the same way.
+// A `dot` stands in the middle of each pair, in place of the cell or over it, sized by a metric in a plot's size steps:
+// by how far the value is from zero, whichever side it is on. Alone, it may be painted by a metric too, as a cell is.
 function sceneMatrix(catalog: Catalog, layers: Layer[], result: Result): Body {
-  const l = layers[0]!, { x: xf, y: yf, color: m } = l.encode || {};
-  if (layers.length > 1 || l.mark !== 'cell' || (xf != null && !isDim(catalog, xf)) || (yf != null && !isDim(catalog, yf)) || (xf == null && yf == null) || typeof m !== 'string' || !(m in catalog.metrics)) {
-    throw new Error('A dimension on both x and y makes a grid, and a grid draws one layer: a "cell" with a metric on color. Write { "mark": "cell", "encode": { "x": "' + xf + '", "y": "' + yf + '", "color": a metric } } alone, leave x or y out for one column or one row, or move a dimension off an axis.');
+  const cell = layers.find((l) => l.mark === 'cell'), dot = layers.find((l) => l.mark === 'dot'), l = cell || dot || layers[0]!, { x: xf, y: yf } = l.encode || {};
+  const metric = (f: unknown): f is string => typeof f === 'string' && f in catalog.metrics, of = (r: Row, f: string | undefined) => (f == null ? '' : String(r[f]));
+  // One colour scale to a grid: the cell's, or the dot's where it stands alone.
+  const m = cell ? cell.encode!.color : dot && dot.encode!.color, sized = dot && dot.encode!.size;
+  if (layers.length !== (cell ? 1 : 0) + (dot ? 1 : 0) || layers.length > 2 || (xf != null && !isDim(catalog, xf)) || (yf != null && !isDim(catalog, yf)) || (xf == null && yf == null) || (cell && !metric(m))
+    || (dot && (!metric(sized) || xf == null || yf == null || dot.encode!.x !== xf || dot.encode!.y !== yf || (cell ? dot.encode!.color != null : m != null && !metric(m))))) {
+    throw new Error('A dimension on both x and y makes a grid, and a grid draws a "cell" with a metric on color, a "dot" with a metric on size, or the two together on the same x and y. Write { "mark": "cell", "encode": { "x": "' + xf + '", "y": "' + yf + '", "color": a metric } }, or { "mark": "dot", "encode": { "x": "' + xf + '", "y": "' + yf + '", "size": a metric } }, which may have a metric on color where no cell has one. Leave x or y out of a cell alone for one column or one row, or move a dimension off an axis.');
   }
   // Each dimension in its own order, which is the engine's, so the grid does not turn with the ranking.
   const domain = (f: string) => [...new Set(((result.totalsBy && result.totalsBy[f]) || result.rows).map((r) => String(r[f])))];
   // A binned quantity has an order of its own, least first, whatever the engine ranked its rows by.
   const binned = (f: string | undefined) => (f == null ? [''] : catalog.dimensions[f]!.type === 'number' ? domain(f).sort((a, b) => Number(a) - Number(b)) : domain(f));
-  const of = (r: Row, f: string | undefined) => (f == null ? '' : String(r[f]));
-  const xs = binned(xf), ys = binned(yf), at = new Map(result.rows.map((r) => [of(r, xf) + '\n' + of(r, yf), r[m] as number | null | undefined]));
+  // Down the side a category is read from the top, as a table is. A quantity beside another dimension is read from the
+  // foot, as a plot's y axis is: its least bin is the bottom row. Alone it is one column, a list, and reads down.
+  const xs = binned(xf), ys = xf != null && yf != null && catalog.dimensions[yf]!.type === 'number' ? binned(yf).reverse() : binned(yf);
+  const held = (f: string) => new Map(result.rows.map((r) => [of(r, xf) + '\n' + of(r, yf), r[f] as number | null | undefined])), known = (at: Map<string, number | null | undefined>) => [...at.values()].filter((v): v is number => v != null);
   // The colour scale runs from the least to the most of the cells drawn. That is geometry, as the top of a y scale is,
   // and not a total, so it is read from the rows. A domain the catalog states for the metric comes before it.
-  const vals = [...at.values()].filter((v): v is number => v != null), seq = seqScale(vals, catalog.metrics[m]!);
-  const nodes: SceneNode[] = [], id = layerKeys(layers)[0]!, role = roleOf(l), nx = xs.length, ny = ys.length;
+  const at = metric(m) ? held(m) : null, vals = at ? known(at) : [], seq = at && seqScale(vals, catalog.metrics[m as string]!);
+  // A size is read the same way: the most a dot stands for is the value farthest from zero, or the farther end of a stated domain.
+  const sizes = metric(sized) ? held(sized) : null, top = sizes ? Math.max(...endsOf(known(sizes), catalog.metrics[sized as string]!).map(Math.abs)) || 1 : 1;
+  const nodes: SceneNode[] = [], ids = layerKeys(layers), nx = xs.length, ny = ys.length;
   // Every sixth label stays, and the rest are ranked to be given up where they would meet: every third goes last.
   const rank = (i: number) => (i % 6 ? { rank: i % 3 ? 2 : 1 } : {});
   const end = (f: string, v: string) => result.rows.find((r) => String(r[f]) === v)?.[f + '@end'];
@@ -792,12 +809,16 @@ function sceneMatrix(catalog: Catalog, layers: Layer[], result: Result): Body {
   const edges = xf != null && xs.length > 0 && xs.every((x) => end(xf, x) != null);
   if (xf != null) xs.forEach((x, i) => nodes.push({ key: 'xtick:' + x, part: 'x-axis', kind: 'text', x: (i + (edges ? 0 : 0.5)) / nx, text: tick(xf, x), anchor: edges && !i ? 'start' : 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...rank(i) }));
   if (edges) nodes.push({ key: 'xtick:end', part: 'x-axis', kind: 'text', x: 1, text: String(end(xf!, xs[nx - 1]!)), anchor: 'end', font: 'tick', paint: 'ink.muted', layer: 'guide' });
-  // A row of the grid at a time, from the top: reading order.
-  ys.forEach((y, j) => xs.forEach((x, i) => {
-    const v = at.get(x + '\n' + y);
-    nodes.push({ key: id + ':' + x + ':' + y, part: 'plot', kind: 'rect', x: i / nx, w: 1 / nx, y: j / ny, h: 1 / ny, pair: [x, y], paint: seq.paint(v), layer: 'data', role });
-  }));
-  nodes.push(...seq.ramp(vals.length < nx * ny));
+  // A row of the grid at a time, from the top: reading order. A layer at a time, the cells under the dots.
+  const each = (draw: (x: string, y: string, i: number, j: number) => SceneNode) => ys.forEach((y, j) => xs.forEach((x, i) => nodes.push(draw(x, y, i, j))));
+  if (cell) each((x, y, i, j) => ({ key: ids[layers.indexOf(cell)] + ':' + x + ':' + y, part: 'plot', kind: 'rect', x: i / nx, w: 1 / nx, y: j / ny, h: 1 / ny, pair: [x, y], paint: seq!.paint(at!.get(x + '\n' + y)), layer: 'data', role: roleOf(cell) }));
+  // A dot with no value is the least a painter draws, in the paint of no value: the pair is still there to be read.
+  if (dot) each((x, y, i, j) => {
+    const v = sizes!.get(x + '\n' + y), paint = v == null ? 'seq.none' : !cell && seq ? seq.paint(at!.get(x + '\n' + y)) : dot.paint || 'series.1';
+    return { key: ids[layers.indexOf(dot)] + ':' + x + ':' + y, part: 'plot', kind: 'circle', pulse: false, x: (i + 0.5) / nx, t: 1 - (j + 0.5) / ny, ...(v != null && { size: sizeStep(Math.abs(v), top) }), pair: [x, y], paint, layer: 'data', role: roleOf(dot) };
+  });
+  if (seq) nodes.push(...seq.ramp(vals.length < nx * ny));
+  if (sizes) nodes.push(...sizeKey(catalog.metrics[sized as string]!, top));
   return { nodes, rows: xs, ys };
 }
 
@@ -825,7 +846,8 @@ function sceneNumber(catalog: Catalog, q: Query, result: Result, share: boolean)
   if (by && catalog.dimensions[by]!.type === 'categorical' && rows.length) {
     const top = leader(result, by, m)!;                                      // with two dimensions a row is a pair, so the leader is the engine's
     const name = formatDimension(top[by], catalog.dimensions[by]!);
-    note = share && t[m] ? name + ' ' + fmtPct(num(top, m) / t[m]!) : 'Top: ' + name;   // with no total there is no share to say
+    // With no total there is no share to say, and where the engine has no figure for any value there is no top one either.
+    note = share && t[m] ? name + ' ' + fmtPct(num(top, m) / t[m]!) : top[m] == null ? note : 'Top: ' + name;
   }
   const dl = q.compare === 'previous' ? delta(t[m] as number, t[m + '@previous'], M.polarity) : null;
   value(formatValue(t[m], M), formatValue(t[m], M, 'compact'));
@@ -883,7 +905,8 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
     if (p.guides.y) parts.push('y-axis');
     parts.push('plot');
     if (p.guides.x) parts.push('x-axis');
-    if (p.guides.ramp) parts.push('ramp');
+    if (p.guides.ramp && body.nodes.some((n) => n.part === 'ramp')) parts.push('ramp');
+    if (p.guides.size && body.nodes.some((n) => n.part === 'size')) parts.push('size');
   } else if (p.layout === 'rows') {
     if (p.guides.columns) parts.push('columns');
     parts.push('rows');

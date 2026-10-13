@@ -35,7 +35,9 @@ export function companions(m: string, row: Row | undefined, layers: Layer[]): st
  * encodes, under its suffix: what a range or a tick is drawn from is said as well as shown. */
 export function readout(row: Row, q: Query, catalog: Catalog, layers: Layer[]): string {
   // A bin is named by both its ends, as its label on an axis is.
-  const dims = (q.by || []).map((d) => (row[d + '@end'] == null ? formatDimension(row[d], catalog.dimensions[d]!) : formatBin(row[d], row[d + '@end']))).join(', '), partial = partialNote(row);
+  // Two bins are each named by their dimension as well: two bare ranges do not say which is which.
+  const both = (q.by || []).filter((d) => row[d + '@end'] != null).length > 1;
+  const dims = (q.by || []).map((d) => (row[d + '@end'] == null ? formatDimension(row[d], catalog.dimensions[d]!) : (both ? catalog.dimensions[d]!.label + ' ' : '') + formatBin(row[d], row[d + '@end']))).join(', '), partial = partialNote(row);
   const values = q.metrics.map((m) => {
     const def = catalog.metrics[m]!, prev = q.compare === 'previous' ? row[m + '@previous'] : null;
     const more = companions(m, row, layers).filter((f) => row[f] != null).map((f) => ', ' + f.slice(m.length + 1) + ' ' + formatValue(row[f] as number, def)).join('');

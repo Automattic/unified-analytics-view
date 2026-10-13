@@ -1040,6 +1040,114 @@
         "$description": "Contrast ratio: 5.00"
       }
     },
+    "div-below": {
+      "100": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.2392,
+            0.3922,
+            0.5686
+          ],
+          "alpha": 1,
+          "hex": "#3d6491"
+        },
+        "$description": "Contrast ratio: 3.20"
+      },
+      "200": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.302,
+            0.4941,
+            0.7333
+          ],
+          "alpha": 1,
+          "hex": "#4d7ebb"
+        },
+        "$description": "Contrast ratio: 4.70"
+      },
+      "300": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.3922,
+            0.6078,
+            0.8902
+          ],
+          "alpha": 1,
+          "hex": "#649be3"
+        },
+        "$description": "Contrast ratio: 6.85"
+      },
+      "400": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.5569,
+            0.7373,
+            0.9843
+          ],
+          "alpha": 1,
+          "hex": "#8ebcfb"
+        },
+        "$description": "Contrast ratio: 10.00"
+      }
+    },
+    "div-above": {
+      "100": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.6275,
+            0.2824,
+            0.0902
+          ],
+          "alpha": 1,
+          "hex": "#a04817"
+        },
+        "$description": "Contrast ratio: 3.20"
+      },
+      "200": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.8118,
+            0.3451,
+            0.0784
+          ],
+          "alpha": 1,
+          "hex": "#cf5814"
+        },
+        "$description": "Contrast ratio: 4.70"
+      },
+      "300": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.9843,
+            0.4275,
+            0.1059
+          ],
+          "alpha": 1,
+          "hex": "#fb6d1b"
+        },
+        "$description": "Contrast ratio: 6.85"
+      },
+      "400": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            1,
+            0.6431,
+            0.3922
+          ],
+          "alpha": 1,
+          "hex": "#ffa464"
+        },
+        "$description": "Contrast ratio: 10.00"
+      }
+    },
     "seq": {
       "100": {
         "$value": {

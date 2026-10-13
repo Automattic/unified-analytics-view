@@ -3,7 +3,7 @@ import { CHAR_W, clip } from './format.ts';
 import { applies, ruleFor } from './fit.ts';
 import { customMarks } from './marks.ts';
 import { arcD, pathD } from './path.ts';
-import { TICK_W, xScale } from './scene.ts';
+import { SIZES, TICK_W, xScale } from './scene.ts';
 import type { CircleNode, Container, Part, PathNode, PlacedCircle, PlacedNode, PlacedRect, PlacedScene, PlacedText, RectNode, Scene, SceneNode, TextNode } from './types.ts';
 
 /* place() turns the ratio scene into pixels, for painters with no CSS: the dot
@@ -161,19 +161,24 @@ function placeMatrix(scene: Scene, W: number, H: number): PlacedNode[] {
     if (n.kind === 'rect' && n.part === 'plot') {
       const { part, role, rank, x, w, y, h, pair, ...rest } = n;
       out.push({ ...rest, x: ml + x! * pw, y: y! * ph, w: Math.max(1, w! * pw - 1), h: Math.max(1, h! * ph - 1), rx: 1 });
+    } else if (n.kind === 'circle' && n.part === 'plot') {
+      // A dot is a plot's dot, and no wider than its cell: where the cells are small each step is its share of one.
+      const { pair, ...dot } = n, room = Math.min(pw / (scene.rows?.length || 1), ph / (scene.ys?.length || 1)) - 1;
+      out.push({ ...circle(dot, ml + n.x! * pw, (1 - n.t!) * ph), r: Math.max(0.5, Math.min(radius(n.size), (room * (n.size ?? 0.4)) / SIZES / 2)) });
     } else if (n.kind === 'text' && ys.includes(n)) { if ((n.rank || 0) < yr) out.push(text(n, ml - 6, (1 - n.t!) * ph, clip(n.text, LABEL))); }
     else if (n.kind === 'text' && xs.includes(n) && (n.rank || 0) < xr) out.push(text(n, ml + n.x! * pw, H - 5));
   });
   return out;
 }
 
+const STRIP = 34 + 22;    // one row of cells, and the labels along its foot
 // A grid's ramp, set in a line in the scene's order: text by character width, swatches side by side. What the line has no room for is left out.
 function placeRamp(scene: Scene, W: number): Block {
   const nodes: PlacedNode[] = [];
   let x = 0;
-  scene.nodes.forEach((n) => {
-    if (n.part !== 'ramp') return;
-    const w = n.kind === 'text' ? n.text.length * CHAR_W + 6 : 15, lead = n.key === 'ramp:none' ? 10 : n.kind === 'text' && x ? 5 : 0;
+  // The swatch that zero is said beside stands a little clear of the arm before it, so the two read as a pair, as no value's do.
+  scene.nodes.filter((n) => n.part === 'ramp').forEach((n, i, ramp) => {
+    const w = n.kind === 'text' ? n.text.length * CHAR_W + 6 : 15, lead = n.key === 'ramp:none' ? 10 : (n.kind === 'text' && x) || ramp[i + 1]?.key === 'ramp:zero' ? 5 : 0;
     if (x + lead + w > W) return;
     if (n.kind === 'rect') nodes.push(rect(n, x + lead, 8, 14, 10, 1)); else if (n.kind === 'text') nodes.push(text(n, x + lead, 13));
     x += lead + w;
@@ -375,8 +380,11 @@ export function place(scene: Scene, container: Container): PlacedScene {
     } else if (scene.layout === 'matrix') {
       // A grid has no bare form. The least it is built to is its `marks` rule's block need, and its ramp is set under it.
       const least = ruleFor(rules.fit, 'matrix', 'marks')?.needs.block ?? 0;
-      const ramp = scene.parts.includes('ramp') ? placeRamp(scene, W) : { nodes: [], height: 0 };
-      const ph = H ? Math.max(least, Math.min(rules.axes.height, H - above - ramp.height)) : rules.axes.height;
+      const keys = [scene.parts.includes('ramp') && placeRamp(scene, W), scene.parts.includes('size') && placeSize(scene)].filter((b): b is Block => !!b);
+      const ramp = { nodes: keys.flatMap((b, i) => shift(b.nodes, 0, keys.slice(0, i).reduce((s, k) => s + k.height, 0))), height: keys.reduce((s, b) => s + b.height, 0) };
+      // One row of cells is as tall as a cell, with its labels under it, where nothing says how tall the view is.
+      const strip = scene.ys?.length === 1 && scene.ys[0] === '';
+      const ph = H ? Math.max(least, Math.min(rules.axes.height, H - above - ramp.height)) : strip ? STRIP : rules.axes.height;
       body = { nodes: placeMatrix(scene, W, ph).concat(shift(ramp.nodes, 0, ph)), height: ph + ramp.height };
     } else if (scene.layout === 'rows') {
       body = placeRows(scene, W, rules.rows);

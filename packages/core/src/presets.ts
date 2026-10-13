@@ -101,6 +101,14 @@ export function customPresets(): ReadonlyMap<string, PresetLibrary[string]> {
 /** Every name a spec may `use`: the library's, then the registered ones it does not have. */
 export const presetNames = (presets: PresetLibrary = PRESETS): string[] => Object.keys(presets).concat([...REGISTERED.keys()].filter((n) => !Object.hasOwn(presets, n)));
 
+/** Whether a query has a field for every slot a preset's layers name: a dimension, a second one, a second metric.
+ * expand() refuses a preset the query cannot fill, by name. This asks first, for a fit rule's `fallback` (fit.ts). An
+ * unknown name is not answered here: expand() says so. */
+export function fills(use: string, q: Spec['query'], presets: PresetLibrary = PRESETS): boolean {
+  const p = Object.hasOwn(presets, use) ? presets[use] : REGISTERED.get(use), has: Record<string, unknown> = { $by: (q.by || [])[0], $split: (q.by || [])[1], $metric2: (q.metrics || [])[1] };
+  return !p || !p.layers.some((l) => Object.values(l.encode || {}).some((f) => typeof f === 'string' && f in has && has[f] == null));
+}
+
 export function expand(spec: Spec, presets: PresetLibrary = PRESETS): Spec {
   if (!spec.use) return spec;
   // The library handed in first, by its own keys, so "constructor" is no preset. Then the registry.

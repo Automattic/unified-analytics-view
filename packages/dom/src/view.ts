@@ -1,4 +1,4 @@
-import { CONTAINER_RULES, buildScene, expand, fallbackRule, formatDimension, formatValue, resolve, unboundedContainer } from '@unified-analytics/core';
+import { CONTAINER_RULES, buildScene, expand, fallbackRule, fills, formatDimension, formatValue, resolve, unboundedContainer } from '@unified-analytics/core';
 import type { Catalog, ContainerRules, Layer, Layout, Query, Result, Row, SceneNode, Spec } from '@unified-analytics/core';
 import { compileFitRules, type FitExtras } from './compile.ts';
 import { attr, ensure, keyed, paintVar, text } from './dom.ts';
@@ -369,7 +369,7 @@ export class UaView extends Base {
       if (!this.hasAttribute('table')) this.#table.replaceChildren();
       else if (painter?.table) painter.table(this.#table, spec.title, scene, data); else paintTable(this.#table, spec.title, data.query, result, catalog, plan.layers);
       this.#keys.paint(scene, expand(spec).query, result, catalog, plan.layers);
-      const swap = fallbackRule(fits, scene.layout, spec.keep, this.via), { layers: _layers, ...rest } = spec;
+      const swap = fallbackRule(fits, scene.layout, spec.keep, this.via, (use) => fills(use, spec.query)), { layers: _layers, ...rest } = spec;
       if (swap) Object.assign(this.#fallback ??= this.#root.appendChild(Object.assign(document.createElement(this.localName) as UaView, { className: 'uav-fallback' })),
         { via: this.via.concat(scene.layout), spec: { ...rest, use: swap.fallback }, result, catalog, rules });
       else { this.#fallback?.remove(); this.#fallback = null; }

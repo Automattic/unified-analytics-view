@@ -89,10 +89,12 @@ export function applies(rule: FitRule, room: { view: Room; plot?: Room | null })
   return !!c && (short(rule.needs.inline, c.inline) || short(rule.needs.block, c.block));
 }
 
-/** The rule under which a layout gives way to a preset: the first of its rules that names a `fallback` and that the
- * spec's `keep` leaves on. `via` holds the layouts the view has already given up on its way here. A fallback that leads
+/** The rule under which a layout gives way to a preset: the first of its rules that names a `fallback`, that the
+ * spec's `keep` leaves on, and whose preset the query can fill (`can`, which presets.ts answers). A layout that draws
+ * queries of more than one shape names a fallback for each, in rules of the same need, and the first that can be
+ * drawn is the one. `via` holds the layouts the view has already given up on its way here. A fallback that leads
  * back to one of them would never settle, so that throws. */
-export function fallbackRule(rules: FitRule[], layout: Layout, keep: KeepPart[] = [], via: Layout[] = []): FitRule | undefined {
+export function fallbackRule(rules: FitRule[], layout: Layout, keep: KeepPart[] = [], via: Layout[] = [], can: (preset: string) => boolean = () => true): FitRule | undefined {
   if (via.includes(layout)) throw new Error('A fit rule\'s "fallback" leads back to the "' + layout + '" layout (' + via.concat(layout).join(', then ') + '), so the view would never settle. Name a preset that is laid out another way, or remove "fallback" from the rule.');
-  return rules.find((r) => r.layout === layout && r.fallback && !(r.keep && keep.includes(r.keep)));
+  return rules.find((r) => r.layout === layout && r.fallback && !(r.keep && keep.includes(r.keep)) && can(r.fallback));
 }

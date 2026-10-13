@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CONTAINER_RULES, buildScene, expand, pathD, resolve, unboundedContainer, type PathNode, type RectNode } from '@unified-analytics/core';
 import { catalog, moreSamples, runQuery, type Scenario } from '@unified-analytics/fixtures';
 import { compileFitRules } from '../packages/dom/src/compile.ts';
-import { band } from '../packages/dom/src/layouts/band.ts';
+import { LEGEND_CSS } from '../packages/dom/src/chrome/legend.ts';
 import { cartesian } from '../packages/dom/src/layouts/cartesian.ts';
 import { KEYS_CSS, hitNodes, readout, readoutAt, rowsAt, stepSeries } from '../packages/dom/src/keys.ts';
 import { apart } from '../packages/dom/src/measure.ts';
@@ -77,13 +77,14 @@ describe('the cartesian layout\'s guides', () => {
   });
   it('keeps the labels out until a rule brings them in, and the legend out of a plot that is not split', () => {
     expect(cartesian.css).toContain('.uav-labels { grid-area: labels; display: none; }');
-    expect(cartesian.css).toContain('.uav[data-layout="cartesian"]:not([data-parts~="legend"]) .uav-legend { display: none; }');
+    expect(LEGEND_CSS).toContain('.uav:not([data-parts~="legend"]) .uav-legend { display: none; }');
     expect(of('series').scene.parts).toContain('legend');
     expect(of('diverging').scene.parts).not.toContain('legend');
   });
   it('says the band\'s legend differently, under the same class, and leaves the band\'s alone', () => {
-    expect(cartesian.css).toContain('.uav[data-layout="cartesian"] .uav-legend { grid-area: legend; display: flex; flex-wrap: wrap;');
-    expect(band.css).toContain('.uav-legend { display: grid;');
+    expect(cartesian.css).toContain('.uav[data-layout="cartesian"] .uav-legend { grid-area: legend; }');
+    expect(LEGEND_CSS).toContain('.uav-legend[data-names] { display: flex; flex-wrap: wrap;');
+    expect(LEGEND_CSS).toContain('.uav-legend { display: grid;');
   });
 });
 

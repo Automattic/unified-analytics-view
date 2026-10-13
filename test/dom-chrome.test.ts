@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CHROME_CSS } from '../packages/dom/src/chrome/index.ts';
+import { LEGEND_CSS } from '../packages/dom/src/chrome/legend.ts';
 import { RAMP_CSS } from '../packages/dom/src/chrome/ramp.ts';
 import { SIZE_CSS } from '../packages/dom/src/chrome/size.ts';
 import { LAYOUTS } from '../packages/dom/src/layouts/index.ts';
@@ -10,6 +11,13 @@ import { BASE_CSS } from '../packages/dom/src/view.ts';
 describe('chrome', () => {
   it('joins the base sheet once, so every layout has it, a custom mark\'s among them', () => {
     expect(BASE_CSS.split(CHROME_CSS)).toHaveLength(2);
+  });
+  it('styles both forms of the legend in its own sheet, and a layout says only where it stands and what it does in a box', () => {
+    expect(CHROME_CSS).toContain(LEGEND_CSS);
+    for (const p of Object.values(LAYOUTS)) expect(p.css).not.toMatch(/(^|\n)\.uav-legend\b|\.uav-legend span|flex-wrap: wrap; gap: 0 14px/);
+    // What keys.ts marks the chosen entry by is a span in either form.
+    expect(LEGEND_CSS).toContain('.uav-legend[data-names] span::before {');
+    expect(LEGEND_CSS).toContain('.uav-legend span, .uav-legend-top span {');
   });
   it('styles the ramp in its own sheet, and no layout\'s sheet styles it again', () => {
     expect(CHROME_CSS).toContain(RAMP_CSS);

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CONTAINER_RULES, FIT_RULES } from '@unified-analytics/core';
 import { compileFitRules } from '@unified-analytics/dom';
+import { LEGEND_CSS } from '../packages/dom/src/chrome/legend.ts';
 import { band } from '../packages/dom/src/layouts/band.ts';
 
 // String work only, as in dom-compile.test.ts. What the browser makes of it is checked on the bench.
@@ -9,7 +10,7 @@ const css = compileFitRules([...FIT_RULES.filter((r) => r.layout === 'band'), ..
 
 describe('the band layout', () => {
   it('hides the one-line legend until a rule or the plan asks for it', () => {
-    expect(band.css).toContain('.uav-legend-top { display: none; }');
+    expect(LEGEND_CSS).toContain('.uav-legend-top { display: none; }');
     expect(band.css).toContain('.uav[data-layout="band"][data-parts~="legend-top"] .uav-legend-top { display: block; }');
   });
 

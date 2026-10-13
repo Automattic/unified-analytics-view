@@ -1,25 +1,18 @@
-import type { RectNode, Scene, TextNode } from '@unified-analytics/core';
-import { attr, ensure, keyed, prop, text } from '../dom.ts';
+import type { RectNode } from '@unified-analytics/core';
+import { paintLegend } from '../chrome/legend.ts';
+import { attr, ensure, keyed, prop } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
 import { paintUnitKey } from './unit.ts';
 
 /* One band, split by colour, and its legend. Segments are flex items that grow by their share, so the band needs no
  * width. The scene holds both legends: the full one is a grid of swatch, label and share, the one-line one a line of
- * text. The stylesheet shows one of them. Sizes are the pixel painter's: a 24 px bar and 24 px to a legend row, of which
- * 20 are the line's where a label is 13 px. The line follows the label's face from there (--uav-legend-line, view.ts). */
+ * text (chrome/legend.ts). The stylesheet here shows one of them. Sizes are the pixel painter's: a 24 px bar and 24 px
+ * to a legend row, of which 20 are the line's where a label is 13 px. */
 const css = `
 .uav-band { display: flex; gap: 2px; block-size: 24px; }
 .uav-band i { flex: var(--uav-v) 1 0px; min-inline-size: 0; background: var(--uav-paint); border-radius: ${token('border-radius-bar')}; }
-.uav-legend { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; grid-auto-rows: var(--uav-legend-line); gap: 4px 8px; align-items: center; margin-block-start: 10px; }
-.uav-legend i { grid-column: 1; block-size: 12px; border-radius: ${token('border-radius-swatch')}; background: var(--uav-paint); }
-.uav-legend span, .uav-legend-top span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--uav-paint); }
-.uav-legend .uav-f-label { grid-column: 2; }
-.uav-legend .uav-f-value { grid-column: 3; justify-self: end; }
-.uav-legend-top { display: none; }
-.uav-legend-top span { display: block; padding-block-start: 3px; line-height: calc(21 / 13); }
 /* The plan names one legend, and with no limits it is the full one. */
-.uav[data-layout="band"]:not([data-parts~="legend"]) .uav-legend { display: none; }
 .uav[data-layout="band"][data-parts~="legend-top"] .uav-legend-top { display: block; }
 /* In a box the body is a size container, so cqb is the room the band and its legend have. The full legend needs the
  * bar, 10 px and a line and its 4 px gap for each row, less the last gap: a height that depends on the data, which a container query cannot
@@ -69,10 +62,3 @@ export const band: LayoutPainter = {
     paintLegend(body, scene);
   },
 };
-
-/** Both legends of a whole split by colour, after whatever the body holds already. A circle of arcs has the same two. */
-export function paintLegend(body: HTMLElement, scene: Scene): void {
-  const nodes = (part: string) => scene.nodes.filter((n) => n.part === part);
-  keyed(ensure(body, 'div', 'uav-legend'), nodes('legend'), (n) => (n.kind === 'text' ? 'span' : 'i'), (el, n) => { if (n.kind === 'text') text(el, n); });
-  keyed(ensure(body, 'div', 'uav-legend-top'), nodes('legend-top').filter((n): n is TextNode => n.kind === 'text'), () => 'span', text);
-}

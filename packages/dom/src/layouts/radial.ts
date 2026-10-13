@@ -1,8 +1,8 @@
 import { arcD, declutter, type ArcNode, type CircleNode, type TextNode } from '@unified-analytics/core';
+import { paintLegend } from '../chrome/legend.ts';
 import { attr, ensure, keyed, paintVar, prop, text } from '../dom.ts';
 import type { LayoutPainter } from '../layout.ts';
 import { FOCUS, HOVER, token } from '../tokens.ts';
-import { paintLegend } from './band.ts';
 import { paintUnitKey, unitDot } from './unit.ts';
 
 /* Arcs about one centre, and under them the legend a band has. The part holds its shape: it is as wide as the view up
@@ -56,7 +56,6 @@ const css = `
 .uav-radial[data-half] .uav-hole { place-items: end center; }
 .uav[data-layout="radial"][data-parts~="hole"] .uav-hole { display: grid; }
 /* The plan names one legend, as it does for a band, or neither. */
-.uav[data-layout="radial"]:not([data-parts~="legend"]) .uav-legend { display: none; }
 .uav[data-layout="radial"][data-parts~="legend-top"] .uav-legend-top { display: block; }
 /* In a box the part gives way to the height, down to nothing, and its width follows; it is no taller than the body's
  * width allows its shape, which cqi is here, the part being a container itself. The legends swap as a band's do:

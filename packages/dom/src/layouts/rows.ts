@@ -1,5 +1,6 @@
 import { COLUMNS_BLOCK, columnRooms, type RowNode, type Scene, type SceneNode, type TextNode } from '@unified-analytics/core';
-import { attr, ensure, keyed, pageWay, paintVar, prop, text } from '../dom.ts';
+import { paintLegend } from '../chrome/legend.ts';
+import { attr, ensure, keyed, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
 import { TRACK_CSS, TRACK_FIT, trackMark } from './track.ts';
@@ -17,7 +18,7 @@ import { paintUnitKey } from './unit.ts';
  * Under a height limit only whole rows show: the list is as tall as the rows that fit, rounded down.
  *
  * A row divided into series has their key under the rows, in a grid row of its own: a swatch and a name for each, in a
- * line that wraps, as a split plot's is, or the one line that names the series with the most, in its colour. The plan
+ * line that wraps, as a split plot's is (chrome/legend.ts), or the one line that names the series with the most, in its colour. The plan
  * names the first, and a fit rule swaps them. Either comes out of the rows' room in a box. */
 const short = '(100cqi - var(--uav-need) + 0.01px) * 999999';
 
@@ -57,10 +58,6 @@ const css = `
 :is(.uav-row, .uav-columns) > [data-anchor="end"] { text-align: end; }
 :is(.uav-row, .uav-columns) > [data-rank] { max-inline-size: max(0px, ${short}); padding-inline: min(8px, max(0px, ${short})); }
 .uav[data-layout="rows"] :is(.uav-legend, .uav-legend-top) { grid-column: 1 / -1; grid-row: 3; }
-.uav[data-layout="rows"] .uav-legend { display: flex; flex-wrap: wrap; gap: 0 14px; margin-block-start: 6px; }
-.uav[data-layout="rows"]:not([data-parts~="legend"]) .uav-legend { display: none; }
-.uav[data-layout="rows"] .uav-legend span { line-height: var(--uav-legend-line); }
-.uav[data-layout="rows"] .uav-legend span::before { content: ""; display: inline-block; inline-size: 12px; block-size: 12px; margin-inline-end: 6px; border-radius: ${token('border-radius-swatch')}; vertical-align: -1px; background: var(--uav-swatch); }
 @container uav-view (block-size >= 0px) {
   .uav-rows { max-block-size: calc(round(down, 100% + var(--uav-row-gap), var(--uav-row-block) + var(--uav-row-gap)) - var(--uav-row-gap)); }
 }`;
@@ -114,10 +111,7 @@ export const rows: LayoutPainter = {
       });
     });
     paintUnitKey(body, scene);
-    // The key to a divided row's series: the swatch is the name's own, as in a split plot's legend.
-    const legend = ensure(body, 'div', 'uav-legend'), top = ensure(body, 'div', 'uav-legend-top'), swatch = new Map(scene.nodes.filter((n) => n.part === 'legend' && n.kind === 'rect').map((n) => [n.series, n.paint]));
-    pageWay(legend, body); pageWay(top, body);
-    keyed(legend, scene.nodes.filter((n): n is TextNode => n.part === 'legend' && n.kind === 'text'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-swatch', paintVar(swatch.get(n.series) ?? n.paint)); });
-    keyed(top, scene.nodes.filter((n): n is TextNode => n.part === 'legend-top' && n.kind === 'text'), () => 'span', text);
+    // The key to a divided row's series, and the one line that stands in for it.
+    paintLegend(body, scene);
   },
 };

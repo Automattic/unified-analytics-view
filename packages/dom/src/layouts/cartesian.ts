@@ -1,5 +1,6 @@
 import type { LineNode, PathNode, RectNode, SceneNode, TextNode } from '@unified-analytics/core';
-import { attr, ensure, ensureSvg, keyed, pageWay, paintVar, prop, text } from '../dom.ts';
+import { attr, ensure, ensureSvg, keyed, prop, text } from '../dom.ts';
+import { paintLegend } from '../chrome/legend.ts';
 import { paintSize } from '../chrome/size.ts';
 import { token } from '../tokens.ts';
 import { hitNodes } from '../keys.ts';
@@ -37,13 +38,8 @@ const css = `
 .uav-labels span { grid-area: 1 / 1; align-self: start; justify-self: start; position: relative; inset-block-start: calc((1 - var(--uav-t)) * 100%); translate: 0 calc(var(--uav-dy, 0px) - 50%);
   box-sizing: border-box; max-inline-size: 14ch; padding-inline-start: 6px; overflow: hidden; text-overflow: ellipsis; color: var(--uav-paint); }
 .uav-labels [data-thin] { visibility: hidden; }
-/* The legend of a split plot: a swatch and a name per series, in a row that wraps. The band's legend is a grid of
- * rows with a share in each, under the same class; this one says what differs. A name holds its own swatch, so a
- * wrap cannot part them. */
-.uav[data-layout="cartesian"] .uav-legend { grid-area: legend; display: flex; flex-wrap: wrap; gap: 0 14px; margin-block-start: 6px; }
-.uav[data-layout="cartesian"]:not([data-parts~="legend"]) .uav-legend { display: none; }
-.uav[data-layout="cartesian"] .uav-legend span { line-height: var(--uav-legend-line); }
-.uav[data-layout="cartesian"] .uav-legend span::before { content: ""; display: inline-block; inline-size: 12px; block-size: 12px; margin-inline-end: 6px; border-radius: ${token('border-radius-swatch')}; vertical-align: -1px; background: var(--uav-swatch); }
+/* The legend of a split plot is a swatch and a name per series, in a row that wraps (chrome/legend.ts). */
+.uav[data-layout="cartesian"] .uav-legend { grid-area: legend; }
 .uav-x-axis { grid-area: x; box-sizing: border-box; block-size: var(--uav-x-axis-block); padding-block-start: 5px; }
 .uav-x-axis span { grid-area: 1 / 1; justify-self: start; position: relative; inset-inline-start: calc(var(--uav-x) * 100%); translate: -50%; color: ${token('color-label-axis')}; }
 .uav-x-axis [data-anchor="start"] { translate: 0; }
@@ -55,7 +51,7 @@ const css = `
  * the whole frame is set that way: the plot, the axes on every side of it and the labels at the line ends stand
  * where they do on a page that reads from the left, and every mark, hit target and label is placed from the left.
  * A plot is set so wherever it is, a map's among them. What says what the marks are follows the page: paint() hands
- * the legend and the key to sizes the page's direction back (dom.ts), and the number and the prose are outside the
+ * the legend and the key to sizes the page's direction back (dom.ts, in chrome/), and the number and the prose are outside the
  * body. A label's words still run their own way: an Arabic one is set from the right, in a box placed from the left. */
 .uav[data-layout="cartesian"] .uav-body, .uav-plot { direction: ltr; }
 :is(.uav-x-axis, .uav-y-axis, .uav-y-axis-2, .uav-labels, .uav-refs, .uav-point-labels) > span { unicode-bidi: plaintext; }
@@ -143,14 +139,14 @@ export const cartesian: LayoutPainter = {
     // Series in one paint, by detail: the stylesheet draws the chosen one whole, out of the mass (keys.ts).
     body.toggleAttribute('data-mass', !!scene.detail);
     const yAxis = ensure(body, 'div', 'uav-y-axis'), plot = ensure(body, 'div', 'uav-plot'), xAxis = ensure(body, 'div', 'uav-x-axis');
-    const yAxis2 = ensure(body, 'div', 'uav-y-axis-2'), labels = ensure(body, 'div', 'uav-labels'), legend = ensure(body, 'div', 'uav-legend');
+    const yAxis2 = ensure(body, 'div', 'uav-y-axis-2'), labels = ensure(body, 'div', 'uav-labels');
+    paintLegend(body, scene);
     // ponytail: paint order is fixed at grid, bars, paths, then rules and labels, whatever the layer order.
     // One SVG per run of paths if a spec ever draws an area over bars.
     const loads = !plot.querySelector(':scope > svg');
     const grid = ensure(plot, 'div', 'uav-grid'), bars = ensure(plot, 'div', 'uav-bars'), svg = ensureSvg(plot), refs = ensure(plot, 'div', 'uav-refs');
     if (loads) { svg.setAttribute('data-draw', ''); once(svg, ['data-draw']); }
     for (const el of [yAxis, yAxis2, xAxis, labels]) el.setAttribute('aria-hidden', 'true');
-    pageWay(legend, body);
     const nodes = scene.nodes, texts = (part: string) => nodes.filter((n): n is TextNode => n.part === part && n.kind === 'text');
     const line = (el: HTMLElement | SVGElement, n: LineNode) => {
       const [on, off] = (n.dash || '').split(' ');
@@ -162,9 +158,6 @@ export const cartesian: LayoutPainter = {
     keyed(yAxis, texts('y-axis'), () => 'span', tick);
     keyed(yAxis2, texts('y-axis-2'), () => 'span', tick);
     keyed(labels, texts('labels'), () => 'span', tick);
-    // The swatch is the name's own, painted from the scene's swatch node.
-    const swatch = new Map(nodes.filter((n) => n.part === 'legend' && n.kind === 'rect').map((n) => [n.series, n.paint]));
-    keyed(legend, texts('legend'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-swatch', paintVar(swatch.get(n.series) ?? n.paint)); });
     // A label under a column of a width of its own (a row's, on a linear x) is ranked by that width, for the measured pass
     // alone: the rule that gives up a middle date is not its, so it carries its rank under another name.
     keyed(xAxis, texts('x-axis'), () => 'span', (el, n) => {

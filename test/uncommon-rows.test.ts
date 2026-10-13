@@ -205,3 +205,54 @@ describe('points coloured by a second dimension', () => {
     expect(run({ query: q, layers: [dot] }, 234).plan.layout).toBe('none');
   });
 });
+
+describe('size on a bar: a column as wide as its share', () => {
+  const q = { metrics: ['visitors'], by: ['channel', 'device'], range: '28d' };
+  const mekko = (more: Partial<Layer> = { stack: 'normalize' }, query: Spec['query'] = q): Spec => ({ query, layers: [{ mark: 'bar', encode: { x: 'channel', y: 'visitors', color: 'device', size: 'visitors' }, ...more }] });
+
+  it('sets each column edge to edge, as wide as its x\'s share of the engine\'s total, and divides it by share: the Marimekko', () => {
+    const { ratio, result, plan } = run(mekko()), all = result.totals.visitors!;
+    let from = 0;
+    for (const t of result.totalsBy!.channel!) {
+      const bars = of<{ x: number; w: number; v: number; v0?: number }>(ratio.nodes, 'primary:bar:' + t.channel + ':');
+      for (const n of bars) { expect(n.x).toBeCloseTo(from, 12); expect(n.w).toBeCloseTo((t.visitors as number) / all, 12); }
+      expect(bars[2]!.v).toBeCloseTo(1, 12);
+      from += (t.visitors as number) / all;
+    }
+    expect(from).toBeCloseTo(1, 12);
+    expect(ratio.scale).toBe('linear');
+    // A width is no dot's size: there is no key to sizes, and nothing of one to give up.
+    expect([ratio.parts, plan.guides.size, ratio.nodes.some((n) => n.part === 'size')]).toEqual([['y-axis', 'plot', 'x-axis', 'legend'], undefined, false]);
+    expect(of<{ text: string }>(ratio.nodes, 'ytick:').map((n) => n.text)).toEqual(['0%', '20%', '40%', '60%', '80%', '100%']);
+  });
+  it('is of the engine\'s total, so with a limit the columns stop short of the plot\'s end', () => {
+    const { ratio, result } = run(mekko({ stack: 'normalize' }, { ...q, limit: 3 })), last = of<{ x: number; w: number }>(ratio.nodes, 'primary:bar:Social:')[0]!;
+    expect(result.totalsBy!.channel!.length).toBe(3);
+    expect(last.x + last.w).toBeCloseTo(result.totalsBy!.channel!.reduce((s, r) => s + (r.visitors as number), 0) / result.totals.visitors!, 12);
+    expect(last.x + last.w).toBeLessThan(0.9);
+  });
+  it('labels each column under its middle, ranked by width, and a pixel painter leaves out the ones that would meet a wider column\'s', () => {
+    const { ratio, scene } = run(mekko()), ticks = of<{ key: string; x: number; rank?: number }>(ratio.nodes, 'xtick:');
+    expect(ticks.map((n) => [n.key, n.rank])).toEqual([['xtick:Search', undefined], ['xtick:Direct', 1], ['xtick:Social', 2], ['xtick:AI assistants', 3], ['xtick:Email', 4], ['xtick:Other', 5]]);
+    const bar = of<{ x: number; w: number }>(ratio.nodes, 'primary:bar:Direct:')[0]!;
+    expect(ticks[1]!.x).toBeCloseTo(bar.x + bar.w / 2, 12);
+    expect(of(scene.nodes, 'xtick:').map((n: any) => n.key)).toEqual(['xtick:Search', 'xtick:Direct', 'xtick:Social', 'xtick:Email']);
+    expect(of(run(mekko(), 700).scene.nodes, 'xtick:').map((n: any) => n.key)).toEqual(['xtick:Search', 'xtick:Direct', 'xtick:Social', 'xtick:AI assistants', 'xtick:Other']);
+    // The rule that gives up a middle date is not these labels': under 380 px they are still thinned by what meets.
+    expect(run(mekko(), 346).plan.dropped).toEqual([]);
+  });
+  it('is placed in pixels by its own ratios, and steps down as any plot does', () => {
+    const { scene } = run(mekko()), a = of<{ x: number; w: number }>(scene.nodes, 'primary:bar:Search:')[0]!, b = of<{ x: number; w: number }>(scene.nodes, 'primary:bar:Direct:')[0]!;
+    expect(a.x + a.w).toBeCloseTo(b.x, 9);
+    expect(run(mekko(), 250).plan).toMatchObject({ layout: 'cartesian', side: true, dropped: ['axes and grid (added the number to make up for them)'] });
+    expect(run(mekko(), 120).plan.layout).toBe('none');
+  });
+  it('is refused where the plot is not one of shares, and where the engine gives no total to be a share of', () => {
+    const fix = 'which makes each column as wide as its share of the engine\'s total. That is read in a plot of shares: a dimension on x, the query\'s other dimension on color, and stack: "normalize". Add what is missing, or remove "size".';
+    expect(err(mekko({ stack: 'zero' }))).toBe('Layer 1 is a bar with "visitors" on size, ' + fix);
+    expect(err(mekko({}))).toBe('Layer 1 is a bar with "visitors" on size, ' + fix);
+    expect(err({ query: { metrics: ['visitors'], by: ['channel'] }, layers: [{ mark: 'bar', encode: { x: 'channel', y: 'visitors', size: 'visitors' } }] })).toBe('Layer 1 is a bar with "visitors" on size, ' + fix);
+    const result = runQuery(q);
+    expect(err(mekko(), { ...result, totals: { visitors: null } })).toBe('A bar with "visitors" on size is as wide as its share of the engine\'s total of it, and this result\'s totals give null for "visitors". Return the total from the query layer, or remove "size" for columns of one width.');
+  });
+});

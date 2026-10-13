@@ -68,6 +68,8 @@ function checkLayers(layers: Layer[], q: Query, catalog: Catalog, result: Result
     // A stacked bar is the one mark that is divided there: by the query's other dimension, into a series for each of its values.
     const { x: lx, y: ly, color: lc } = l.encode || {}, divided = l.mark === 'bar' && !!l.stack && by.indexOf(lc as string) >= 0;
     if (l.mark !== 'cell' && !divided && isDim(catalog, ly) && !isDim(catalog, lx) && typeof lc === 'string' && lc.split('@')[0] !== ly) throw new Error('Layer ' + (i + 1) + ' is in rows by "' + ly + '" and encodes "' + lc + '" on color. A row is painted by its own dimension, for a colour each, or by a companion the result returns with it, for rows that go together. Encode "' + ly + '" on color, or remove it.' + (l.mark === 'bar' && by.indexOf(lc) >= 0 ? ' To divide each row\'s bar by "' + lc + '", give the layer "stack".' : ''));
+    // A size on a bar is its column's width, which is a share of a whole: so the plot is one of shares, column by column.
+    if (l.mark === 'bar' && l.encode?.size != null && !(isDim(catalog, lx) && isDim(catalog, lc) && lc !== lx && l.stack === 'normalize')) throw new Error('Layer ' + (i + 1) + ' is a bar with ' + JSON.stringify(l.encode.size) + ' on size, which makes each column as wide as its share of the engine\'s total. That is read in a plot of shares: a dimension on x, the query\'s other dimension on color, and stack: "normalize". Add what is missing, or remove "size".');
     Object.entries(l.encode || {}).forEach(([ch, f]) => {
       if (typeof f === 'number') return;
       if (ch === 'size' && !(f.split('@')[0]! in catalog.metrics)) throw new Error('Layer ' + (i + 1) + ' encodes "' + f + '" on size, and a size is a quantity. Encode one of the query\'s metrics: ' + q.metrics.join(', ') + '.');
@@ -135,7 +137,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   const twoUnits = p.layout === 'cartesian' && unitsOf(catalog, layers).length > 1;
   if (twoUnits && !short('axis-2')) p.guides.y2 = true;
   // Labels on the points go first, then the key to sizes. Both are asked once, as the legend is.
-  const labelled = p.layout === 'cartesian' && layers.some((l) => l.mark === 'text'), sized = p.layout === 'cartesian' && layers.some((l) => l.encode && l.encode.size != null);
+  const labelled = p.layout === 'cartesian' && layers.some((l) => l.mark === 'text'), sized = p.layout === 'cartesian' && layers.some((l) => l.mark !== 'bar' && l.encode && l.encode.size != null);
   if (labelled && !short('point-labels')) p.guides.pointLabels = true;
   if (sized && !short('size')) p.guides.size = true;
   if (p.layout === 'band') p.guides = { legend: 'full' };

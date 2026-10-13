@@ -96,12 +96,15 @@ function placePlot(scene: Scene, W: number, H: number, narrow: boolean): PlacedN
   const labelY = new Map<string, number>(), down = labels.slice().sort((a, b) => b.t! - a.t!);
   down.reduce((least, n) => { const at = Math.max(y(n.t!), least); labelY.set(n.key, at); return at + LABEL_LINE; }, -Infinity);
   down.reverse().reduce((most, n) => { const at = Math.min(labelY.get(n.key)!, most); labelY.set(n.key, at); return at - LABEL_LINE; }, y(0));
+  // Labels under columns of widths of their own, each a row on a linear x: one that would meet a label of a wider column is left out.
+  const under = gx && lin ? scene.nodes.filter((n): n is TextNode => n.part === 'x-axis' && n.kind === 'text' && n.row != null) : [];
+  const met = declutter(under.map((n) => ({ x: px(n.x!) - n.text.length * TICK_W / 2, y: 0, w: n.text.length * TICK_W, h: LABEL_LINE, rank: n.rank })), 6), thin = new Set(under.filter((_, i) => met[i]).map((n) => n.key));
   const out: PlacedNode[] = [];
   scene.nodes.forEach((n) => {
     if (n.part === 'number' || n.part === 'legend' || (n.part === 'labels' && !lw) || (n.part === 'y-axis-2' && !g2)) return;
     if (n.part === 'size') return;
     if (n.part === 'point-labels') { const a = tag.get(n.key); if (a) out.push(text(a.n, a.x, a.y, a.s)); return; }
-    if (n.rank && (n.part === 'x-axis' ? narrow : H < SHORT_PLOT)) return;
+    if (under.includes(n as TextNode) ? thin.has(n.key) : n.rank && (n.part === 'x-axis' ? narrow : H < SHORT_PLOT)) return;
     if (n.kind === 'line') {
       const { part, role, row, series, rank, t, x, x2, t2, ...rest } = n;
       out.push({ ...rest, x1: x == null ? ml : px(x), x2: x2 == null ? W - mr : px(x2), y1: y(t), y2: y(t2 ?? t) });

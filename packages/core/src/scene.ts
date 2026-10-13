@@ -263,7 +263,10 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   const painted = layers.some((l) => paintedOf(catalog, l, xField));
   if (painted && series.length > SERIES) throw new Error('Splitting by "' + split + '" makes ' + series.length + ' series, and there are ' + SERIES + ' series colours. Add "limit": ' + SERIES + ' to the query, or less.');
   const isTime = catalog.dimensions[xField]!.type === 'time';
-  const shared = layers.some((l) => l.mark === 'bar' || l.mark === 'tick') ? 'band' : 'point', scale = xOn ? 'linear' : shared;
+  // A bar with a metric on size is a column as wide as its x's share of the engine's total of that metric. The columns
+  // then stand edge to edge at widths of their own, so x is no band: every node carries its own place, as on a linear x.
+  const wide = layers.map((l) => (l.mark === 'bar' ? l.encode!.size : undefined)).find((f): f is string => typeof f === 'string');
+  const shared = layers.some((l) => l.mark === 'bar' || l.mark === 'tick') ? 'band' : 'point', scale = xOn || wide ? 'linear' : shared;
   const yField = (l: Layer) => (l.series === 'previous' ? l.encode!.y + '@previous' : (l.encode!.y as string));
   // Where each row's mark starts and ends, in its metric's own terms: from zero, or from the series stacked under it.
   // A stack runs in the series' order, the first at the bottom, and a value below zero stacks downward.
@@ -304,6 +307,15 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     return { v: (n: number) => (n - bottom) / (top - bottom), ticks: fine, coarse: two.length > 1 ? two : fine.filter((_, i) => i % 2 === 0), text: (t: number) => (share ? fmtPct(t) : formatUnit(away ? Math.abs(t) : t, u || lone, 'compact')) };
   });
   let unit: Draw['unit'] = xScale(keys, shared, 0, 1), xv: Draw['xv'];
+  // A column's width is its x's total over the engine's total, so with a `limit` the columns stop short of the plot's end, as a band does.
+  const widths = new Map<string, number>();
+  if (wide && keys.length) {
+    const all = result.totals[wide];
+    if (!all) throw new Error('A bar with "' + wide + '" on size is as wide as its share of the engine\'s total of it, and this result\'s totals give ' + JSON.stringify(all) + ' for "' + wide + '". Return the total from the query layer, or remove "size" for columns of one width.');
+    let run = 0;
+    const from = new Map(keys.map((key) => { const at = run, w = ((whole.get(said.get(key)!)?.[wide] as number) || 0) / all; widths.set(key, w); run += w; return [key, at]; }));
+    unit = { x: (key) => from.get(key)!, w: 0, cx: (key) => from.get(key)! + widths.get(key)! / 2, span: (key) => widths.get(key)! };
+  }
   if (xOn) {
     // A linear x. A row sits at its value, or where it has a bin, `<dimension>@end`, across it. A metric's scale holds
     // zero and is rounded, as y's is. A dimension's runs from its first bin to its last and no further, so bars meet
@@ -320,8 +332,8 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
       nodes.push({ key: 'xtick:' + t, part: 'x-axis', kind: 'text', x: to(t), text: xM ? formatValue(t, xM, 'compact') : fmt(t, true), anchor: to(t) <= 0 ? 'start' : to(t) >= 1 ? 'end' : 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...(i > 0 && i < all.length - 1 && { rank: 1 }) });
     });
   }
-  // One metric sizes the dots of a plot, whichever layers name it.
-  const sizeBy = layers.map((l) => l.encode && l.encode.size).find((f): f is string => typeof f === 'string');
+  // One metric sizes the dots of a plot, whichever layers name it. On a bar it is the column's width, and has no key.
+  const sizeBy = layers.map((l) => (l.mark === 'bar' ? undefined : l.encode && l.encode.size)).find((f): f is string => typeof f === 'string');
   const size = sizeBy ? { field: sizeBy, top: max(rows, (r) => num(r, sizeBy)) || 1 } : undefined;
 
   if (guides.y) scales.forEach(({ v, ticks, coarse, text }, ui) => ticks.forEach((t) => {
@@ -336,10 +348,13 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     const last = keys.length - 1;
     // First, middle and last, each once: one row has one tick. The prototype emits it twice, under one key.
     const idx = isTime ? [...new Set([0, Math.floor(last / 2), last])] : keys.map((_, i) => i);
+    // Under columns of unequal width a label is ranked by how wide its column is: the widest stays, and the rest are
+    // given up from the narrowest where they would meet, which only a painter that knows how wide a label is can see.
+    const order = wide ? keys.slice().sort((a, b) => widths.get(b)! - widths.get(a)!) : [];
     idx.forEach((i, j) => {
-      const mid = isTime && j > 0 && j < idx.length - 1;                  // given up on a narrow plot
+      const mid = isTime && j > 0 && j < idx.length - 1, rank = wide ? order.indexOf(keys[i]!) : mid ? 1 : 0;   // the middle date is given up on a narrow plot
       nodes.push({ key: 'xtick:' + keys[i], part: 'x-axis', kind: 'text', x: unit.cx(keys[i]!), row: keys[i]!, text: isTime ? fmtTime(said.get(keys[i]!)!) : said.get(keys[i]!)!,
-        anchor: !isTime ? 'middle' : j === 0 ? 'start' : j === idx.length - 1 ? 'end' : 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...(mid && { rank: 1 }) });
+        anchor: !isTime ? 'middle' : j === 0 ? 'start' : j === idx.length - 1 ? 'end' : 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...(rank && { rank }) });
     });
   }
   const ids = layerKeys(layers), ends = new Map<string, number>();

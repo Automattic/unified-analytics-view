@@ -20,11 +20,13 @@ const over = (result: Result, lead = ' in the ') => (result.meta.range ? lead + 
 const say = (catalog: Catalog, d: string, r: Row) => formatDimension(r[d], catalog.dimensions[d]!);
 
 /** The row for the value of a dimension that has the most of a metric: from the engine's totals by dimension where the
- * result has them, and otherwise the first row, which the engine ranks. A comparison of the engine's numbers, never a sum. */
+ * result has them, and otherwise from its rows, the first of equals. An engine that ranks its rows sends that one first;
+ * one that answers in the dimension's own order, an hour or a weekday, does not. A comparison of the engine's numbers, never a sum. */
 export function leader(result: Result, dim: string, m: string): Row | undefined {
-  const by = result.totalsBy && result.totalsBy[dim];
-  return by ? by.reduce<Row | undefined>((top, r) => (!top || (r[m] as number) > (top[m] as number) ? r : top), undefined) : result.rows[0];
+  return ((result.totalsBy && result.totalsBy[dim]) || result.rows).reduce<Row | undefined>((top, r) => (!top || (r[m] as number) > (top[m] as number) ? r : top), undefined);
 }
+/** Rows from the most of a metric to the least. Rows the engine ranked stay as they are; rows in a dimension's own order are ranked here, by comparing them. */
+const ranked = (rows: Row[], m: string) => rows.slice().sort((a, b) => ((b[m] as number) || 0) - ((a[m] as number) || 0));
 
 /** A value as its share of the engine's total. With no total, or a total of zero, there is no share to say, so the
  * value is said itself: a share is never worked out of the rows. */
@@ -68,7 +70,7 @@ export function tldrProse(q: Query, result: Result, share: boolean, catalog: Cat
     return M.label + ': ' + formatValue(t[m], M) + range + '. The most, ' + formatValue(top[m] as number, M) + ', at a ' + catalog.dimensions[by]!.label.toLowerCase() + ' of ' + top[by] + (end == null ? '' : ' to ' + end) + '.';
   }
   if (by && catalog.dimensions[by]!.type !== 'time' && rows.length) {
-    const label = catalog.dimensions[by]!.label.toLowerCase();
+    const label = catalog.dimensions[by]!.label.toLowerCase(), rows = ranked(result.rows, m);
     if (share && rows.length > 1 && t[m]) {                                  // with no total there is no share: the ranking is said, by value
       const tot = t[m]!;
       return say(catalog, by, rows[0]!) + ' is the largest ' + label + ' at ' + fmtPct((rows[0]![m] as number) / tot) + ' of ' + name + ', followed by ' + say(catalog, by, rows[1]!) + ' at ' + fmtPct((rows[1]![m] as number) / tot) + '.';

@@ -217,7 +217,11 @@ describe('a numeric dimension', () => {
     const { ratio, result } = run(density!, 346), [area, line] = ratio.nodes.filter((n) => n.kind === 'path') as any[];
     expect([area.key, area.fill, line.key]).toEqual(['context:area', true, 'primary:line']);
     expect(line.points.length).toBe(16);
-    expect(line.points[0]).toEqual({ row: '0', x: 0.25 / 8, v: (result.rows[0]!['pageviews@density'] as number) / 0.4 });
+    expect(line.points[0]).toEqual({ row: '0', x: 0.25 / 8, v: (result.rows[0]!['pageviews@density'] as number) / 0.4, w: 0.5 / 8 });
+    // Its rows are bins, so the line is flat across each and steps at its edge, as a bar there has no gap. The area under it too.
+    expect([area.curve, line.curve]).toEqual(['step', 'step']);
+    expect(line.d.split('L').length).toBe(32);
+    expect(line.d.startsWith('M0,') && line.d.split('L')[1].startsWith('6.25,')).toBe(true);
     expect(texts(ratio, 'y-axis')).toEqual(['0', '0.1', '0.2', '0.3', '0.4']);
     expect(hitNodes(ratio).length).toBe(16);
   });

@@ -63,8 +63,8 @@ export const MOTION_CSS = `
 @keyframes uav-beat-up { 0%, 88% { translate: 0 0; } 94% { translate: 0 -100%; } 94.001% { translate: 0 100%; } 100% { translate: 0 0; } }
 @keyframes uav-beat-down { 0%, 88% { translate: 0 0; } 94% { translate: 0 100%; } 94.001% { translate: 0 -100%; } 100% { translate: 0 0; } }`;
 
-/** A point of a path: where it is, and for an area where it starts when that is not the bottom. */
-export interface XV { x: number; v: number; v0?: number }
+/** A point of a path: where it is, for an area where it starts when that is not the bottom, and over bins how wide its step is. */
+export interface XV { x: number; v: number; v0?: number; w?: number }
 
 /** `from`, read at each x of `to`. A morph moves values and never x, so the two sets need not share their rows:
  * when they do, this is `from` itself. */
@@ -76,12 +76,13 @@ export function resample(from: XV[], to: XV[]): XV[] {
     return { x, v: at((p) => p.v), ...(based && { v0: at((p) => p.v0 || 0) }) };
   });
 }
-/** The points `p` of the way from one set to the other, x taken from `to`. Where either has a start, that moves too:
+/** The points `p` of the way from one set to the other, x taken from `to`, and with it how wide a step is: a morph
+ * moves values, and a bin stays where the new shape has it. Where either has a start, that moves too:
  * a stacked area's floor is the series under it, which is on its way as well. */
 export function mix(from: XV[], to: XV[], p: number): XV[] {
   return to.map((t, i) => {
     const f = from[i]!, f0 = f.v0 || 0, t0 = t.v0 || 0;
-    return { x: t.x, v: f.v + (t.v - f.v) * p, ...((f0 || t0) && { v0: f0 + (t0 - f0) * p }) };
+    return { x: t.x, v: f.v + (t.v - f.v) * p, ...((f0 || t0) && { v0: f0 + (t0 - f0) * p }), ...(t.w != null && { w: t.w }) };
   });
 }
 

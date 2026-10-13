@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildScene, resolve, unboundedContainer, type PathNode } from '@unified-analytics/core';
-import { catalog, runQuery, samples } from '@unified-analytics/fixtures';
+import { buildScene, pathD, resolve, unboundedContainer, type PathNode } from '@unified-analytics/core';
+import { catalog, moreSamples, runQuery, samples } from '@unified-analytics/fixtures';
 import { MOTION_CSS, mix, resample } from '../packages/dom/src/motion.ts';
 
 // A path's morph is points in and a string out, so it is held here with no DOM. That it runs, and what a
@@ -36,6 +36,24 @@ describe('resample and mix', () => {
 
   it('is half way at a half', () => {
     expect(mix([{ x: 0, v: 0.2 }], [{ x: 0.5, v: 0.6 }], 0.5)).toEqual([{ x: 0.5, v: 0.4 }]);
+  });
+});
+
+describe('steps over bins', () => {
+  const steps = (range: string) => { const spec = { ...moreSamples.density!.spec, query: { ...moreSamples.density!.spec.query, range } }, result = runQuery(spec.query); return buildScene(resolve(spec, result, unboundedContainer(), catalog), spec.query, result, catalog).nodes.filter((n): n is PathNode => n.kind === 'path'); };
+  it('a path is flat across each point\'s width and upright between two, with no curve: the bins\' own edges', () => {
+    expect(pathD([{ x: 0.25, v: 0.5, w: 0.5 }, { x: 0.75, v: 1, w: 0.5 }], 'step')).toBe('M0,50L50,50L50,0L100,0');
+    expect(pathD([{ x: 0.25, v: 0.5, w: 0.5 }, { x: 0.75, v: 1, w: 0.5 }], 'step', true)).toBe('M0,50L50,50L50,0L100,0L100,100L50,100L50,100L0,100Z');
+    // A bin apart from the one before it is joined to it across the gap, at no height of its own.
+    expect(pathD([{ x: 0.1, v: 0.5, w: 0.2 }, { x: 0.9, v: 1, w: 0.2 }], 'step')).toBe('M0,50L20,50L80,0L100,0');
+  });
+  it('a morph keeps every step as wide as the new shape has it, so each frame is steps and the last is the scene\'s own path', () => {
+    const [, from] = steps('28d'), [, to] = steps('7d');
+    expect([from!.curve, to!.curve]).toEqual(['step', 'step']);
+    const half = mix(resample(from!.points, to!.points), to!.points, 0.5);
+    expect(half.map((p) => p.w)).toEqual(to!.points.map((p) => p.w));
+    expect(pathD(half, to!.curve)).toMatch(/^M[\d.]+,[\d.]+(L[\d.]+,[\d.]+){31}$/);
+    expect(pathD(mix(resample(from!.points, to!.points), to!.points, 1), to!.curve)).toBe(to!.d);
   });
 });
 

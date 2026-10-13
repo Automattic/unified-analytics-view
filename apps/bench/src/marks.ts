@@ -1,6 +1,7 @@
 import type { Catalog, Spec } from '@unified-analytics/core';
 import { UaView, defineUaView, registerPainter, surfaceSheet } from '@unified-analytics/dom';
 import { catalog, moreSamples, runQuery, samples, type Scenario } from '@unified-analytics/fixtures';
+import { linkPainter } from '@unified-analytics/flow/dom';
 import { geoPainter } from '@unified-analytics/geo/dom';
 
 /* The marks: each one on its own, at a size where nothing has been given up, for tuning how it looks. A mark is
@@ -8,6 +9,7 @@ import { geoPainter } from '@unified-analytics/geo/dom';
  * is a <ua-view> on the fixtures, so what is here is the real painter. Theme "both" sets the page beside itself. */
 defineUaView();
 registerPainter(geoPainter);
+registerPainter(linkPainter);
 document.adoptedStyleSheets.push(surfaceSheet());
 
 const params = new URLSearchParams(location.search), theme = params.get('theme') ?? '';
@@ -51,6 +53,7 @@ const MARKS: Mark[] = [
   { name: 'band', note: 'One bar divided, a colour for each value.', spec: S('mix') },
   { name: 'cell', note: 'Filled by the sequential ramp.', spec: S('heatmap') },
   { name: 'geo', note: 'Filled by the sequential ramp, or a symbol on each region.', spec: S('map'), states: [{ label: 'symbols', spec: S('symbols') }] },
+  { name: 'link', note: 'A ribbon for each pair, in its source\'s colour as a tint. A node is as tall as the engine\'s total.', spec: S('sankey'), states: [{ label: 'a ribbon chosen', spec: S('sankey'), active: true }] },
 ];
 
 /** A view on a surface, with what it is under it. `series` paints it with that series colour in place of the first. */

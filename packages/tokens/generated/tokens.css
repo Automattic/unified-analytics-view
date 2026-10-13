@@ -79,10 +79,10 @@
   --ua-color-qual-rose-100: #ffc5d3; /** Contrast ratio: 1.35 */
   --ua-color-qual-rose-200: #ff457f; /** Contrast ratio: 3.00 */
   --ua-color-qual-rose-300: #cd0c64; /** Contrast ratio: 5.00 */
-  --ua-color-div-below-100: #598cc8; /** Contrast ratio: 3.20 */
-  --ua-color-div-below-200: #49709e; /** Contrast ratio: 4.70 */
-  --ua-color-div-below-300: #325682; /** Contrast ratio: 6.85 */
-  --ua-color-div-below-400: #1b21b4; /** Contrast ratio: 10.00 */
+  --ua-color-div-below-100: #568bce; /** Contrast ratio: 3.20 */
+  --ua-color-div-below-200: #4470a4; /** Contrast ratio: 4.70 */
+  --ua-color-div-below-300: #36567d; /** Contrast ratio: 6.85 */
+  --ua-color-div-below-400: #293e58; /** Contrast ratio: 10.00 */
   --ua-color-div-above-100: #e46114; /** Contrast ratio: 3.20 */
   --ua-color-div-above-200: #b54f15; /** Contrast ratio: 4.70 */
   --ua-color-div-above-300: #894018; /** Contrast ratio: 6.85 */
@@ -446,9 +446,9 @@
   --ua-color-qual-rose-100: #550629; /** Contrast ratio: 1.35 */
   --ua-color-qual-rose-200: #b9055a; /** Contrast ratio: 3.00 */
   --ua-color-qual-rose-300: #f81b6f; /** Contrast ratio: 5.00 */
-  --ua-color-div-below-100: #41648d; /** Contrast ratio: 3.20 */
-  --ua-color-div-below-200: #527fb4; /** Contrast ratio: 4.70 */
-  --ua-color-div-below-300: #659be0; /** Contrast ratio: 6.85 */
+  --ua-color-div-below-100: #3d6491; /** Contrast ratio: 3.20 */
+  --ua-color-div-below-200: #4d7ebb; /** Contrast ratio: 4.70 */
+  --ua-color-div-below-300: #649be3; /** Contrast ratio: 6.85 */
   --ua-color-div-below-400: #8ebcfb; /** Contrast ratio: 10.00 */
   --ua-color-div-above-100: #a04817; /** Contrast ratio: 3.20 */
   --ua-color-div-above-200: #cf5814; /** Contrast ratio: 4.70 */
@@ -722,9 +722,9 @@
   --ua-color-qual-rose-100: #550629; /** Contrast ratio: 1.35 */
   --ua-color-qual-rose-200: #b9055a; /** Contrast ratio: 3.00 */
   --ua-color-qual-rose-300: #f81b6f; /** Contrast ratio: 5.00 */
-  --ua-color-div-below-100: #41648d; /** Contrast ratio: 3.20 */
-  --ua-color-div-below-200: #527fb4; /** Contrast ratio: 4.70 */
-  --ua-color-div-below-300: #659be0; /** Contrast ratio: 6.85 */
+  --ua-color-div-below-100: #3d6491; /** Contrast ratio: 3.20 */
+  --ua-color-div-below-200: #4d7ebb; /** Contrast ratio: 4.70 */
+  --ua-color-div-below-300: #649be3; /** Contrast ratio: 6.85 */
   --ua-color-div-below-400: #8ebcfb; /** Contrast ratio: 10.00 */
   --ua-color-div-above-100: #a04817; /** Contrast ratio: 3.20 */
   --ua-color-div-above-200: #cf5814; /** Contrast ratio: 4.70 */

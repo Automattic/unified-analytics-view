@@ -129,11 +129,12 @@ let rose = hue("Rose", seed('rose'), '#ec1371', '#750039');
 // meet in a neutral step, neutral.600 (2.2). They say which side of zero, never good or bad: that is the delta's.
 // Each arm has four steps, numbered from the one nearest the middle (100) to the one farthest (400), at ratios of
 // its own against the page: each is 1.46 from its neighbour, and the first is 1.45 from the middle. No new hue:
-// below is seeded as the steel ramp is, and above by the orange constant alone, since the orange ramp's other two
-// keys turn it crimson as it deepens, and a red arm reads as bad.
+// each is seeded by its constant and by fewer of its ramp's other keys. Below has the steel ramp's light key and not
+// its indigo, which made the deepest step a brighter blue than the three before it. Above has the orange constant
+// alone, since the orange ramp's other two keys turn it crimson as it deepens, and a red arm reads as bad.
 const D = [3.2,4.7,6.85,10];
 const arm = (name, ...keys) => new Leo.Color({ name: "Div " + name, colorKeys: keys, ratios: D, colorSpace: "CAM02p", smooth: true });
-let below = arm("Below", seed('steel'), '#1d1bb1', '#7aaff5');
+let below = arm("Below", seed('steel'), '#7aaff5');
 let above = arm("Above", seed('orange'));
 
 let Untitled = new Leo.Theme({

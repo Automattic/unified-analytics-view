@@ -1,5 +1,6 @@
 import type { Catalog, Query, Result, Row, Spec } from '@unified-analytics/core';
 import { registerGeo, type Shapes } from '@unified-analytics/geo';
+import { registerPartition } from '@unified-analytics/partition';
 import shapes from './countries.json';
 
 /** Boundary shapes for the `geo` mark: 123 countries. A shape's id is its ISO 3166-1 alpha-2 code in capitals, which is
@@ -10,6 +11,8 @@ import shapes from './countries.json';
 export const countries: Shapes = shapes;
 // Handed to the mark here, as a product would at startup, so every sample resolves wherever the fixtures are loaded.
 registerGeo(countries);
+// The `partition` mark needs nothing handed to it. It is registered here for the same reason.
+registerPartition();
 
 /* Stands in for the query layer and the engines. Totals come from the
  * "engine", never from summing the rows a view happens to receive. */
@@ -39,6 +42,7 @@ export const catalog: Catalog = {
     step:       { label: 'Step',    type: 'categorical' },
     country:    { label: 'Country', type: 'categorical', values: 'country' },
     visitor_country: { label: 'Country', type: 'categorical', values: 'country' },
+    section:    { label: 'Section', type: 'categorical' },
   },
 };
 
@@ -101,6 +105,16 @@ MIX.country = [['US', 0.31, 0.33], ['IN', 0.12, 0.1], ['GB', 0.09, 0.1], ['DE', 
 // Every country the tracker saw, as real data has them: small ones the fixture's shapes leave out (Singapore, Malta and
 // Bahrain), and one it could not place, which arrives as an empty string.
 MIX.visitor_country = [...MIX.country, ['SG', 0.012, 0.01], ['MT', 0.006, 0.006], ['BH', 0.004, 0.004], ['', 0.008, 0.008]];
+// The site's sections, which divide the whole as a channel does, and the pages each one holds, by weight: a hierarchy of
+// two levels. A page is in one section, so a query by section and then page returns a row for each page, and not a
+// row for every pair. Only that query reads these: a query by page alone is still the eight pages above.
+MIX.section = [['Marketing', 0.42, 0.44], ['Blog', 0.27, 0.22], ['Docs', 0.21, 0.24], ['Changelog', 0.1, 0.1]];
+const SECTION_PAGES: Record<string, [string, number][]> = {
+  Marketing: [['/', 48], ['/pricing', 30], ['/about', 9], ['/customers', 7], ['/contact', 6]],
+  Blog:      [['/blog/launch-notes', 44], ['/blog/analytics-without-cookies', 21], ['/blog/a-year-in-numbers', 16], ['/blog', 12], ['/blog/hiring', 7]],
+  Docs:      [['/docs/getting-started', 46], ['/docs/api', 27], ['/docs/install', 18], ['/docs/faq', 9]],
+  Changelog: [['/changelog', 78], ['/changelog/2026', 22]],
+};
 // What a page has and a day does not: the share of its visitors who convert, in percent. A rate is the engine's to work out, and does not add up.
 const RATES: Record<string, number> = { '/': 2.1, '/pricing': 5.8, '/blog/launch-notes': 1.2, '/docs/getting-started': 3.4, '/changelog': 0.9, '/about': 1.6, '/blog/analytics-without-cookies': 2.7, '/contact': 4.4 };
 const RATE = 2.6;
@@ -263,17 +277,20 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
   // to the next, so every pair adds up to the outer row it came from. Time, when it is there, is the outer one.
   // ponytail: a total by the inner dimension is the sum of its pairs, and is not held to what a query by it alone returns.
   const [outer, inner] = dims[1] === 'date.day' ? [dims[1], dims[0]!] : [dims[0]!, dims[1]!];
+  if (dims.indexOf('section') >= 0 && dims.indexOf('page') >= 0 && outer !== 'section') throw new Error('The fixture has pages inside sections. Query by section and then page: ["section", "page"].');
   const fields = metrics.flatMap((m) => (wantPrev ? [m, m + '@previous'] : [m]));
-  const values: [string, number][] = inner === 'page' ? PAGES.map((p) => [p.page, p.visitors]) : MIX[inner]!.map((c) => [c[0], c[1]]);
+  // A section's own pages, where the two are a hierarchy. Otherwise every value of the inner dimension, under every outer one.
+  const nested = outer === 'section' && inner === 'page', all: [string, number][] = nested ? Object.values(SECTION_PAGES).flat() : inner === 'page' ? PAGES.map((p) => [p.page, p.visitors]) : MIX[inner]!.map((c) => [c[0], c[1]]);
   const uneven = seeded(days + 97), outerRows = rowsBy(outer);
   const pairs = outerRows.flatMap((o) => {
+    const values = nested ? SECTION_PAGES[o.section as string]! : all;
     const weights = values.map(([, w]) => w * (0.8 + 0.4 * uneven()));
     const parts = fields.map((f) => (o[f] == null ? null : apportion(o[f] as number, weights)));
     return values.map(([name], j): Row => ({ ...o, [inner]: name, ...Object.fromEntries(fields.map((f, i) => [f, parts[i] ? parts[i]![j]! : null])) }));
   });
   // Where the collector was down there is no count, which is not a count of none: Wednesdays from 3am to 5am.
   pairs.forEach((p) => { if (p.weekday === 'Wed' && ['3am', '4am', '5am'].indexOf(p.hour as string) >= 0) fields.forEach((f) => { p[f] = null; }); });
-  const innerRows = values.map(([name]) => {
+  const innerRows = all.map(([name]) => {
     const r: Row = { [inner]: name }, mine = pairs.filter((p) => p[inner] === name);
     fields.forEach((f) => { r[f] = mine.some((p) => p[f] != null) ? mine.reduce((s, p) => s + ((p[f] as number) || 0), 0) : null; });
     return r;
@@ -343,6 +360,10 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
   // A split that spends no colour (docs/uncommon-coverage-plan.md, step 1): a line for each country, all in one paint.
   spaghetti: { label: 'Spaghetti: visitors by day, a line for each of fifteen countries', spec: { spec: 'view/0', title: 'Visitors by country, day by day', query: { metrics: ['visitors'], by: ['date.day', 'country'], range: '28d' },
             layers: [{ mark: 'line', encode: { x: 'date.day', y: 'visitors', detail: 'country' } }] } },
+  // The `partition` mark (docs/uncommon-coverage-plan.md, step 9). They are swept, and have their golden scenes, in test/partition.test.ts.
+  treemap: { label: 'A treemap: page views by section, and by page in each', spec: { spec: 'view/0', title: 'Page views by section and page', use: 'treemap', query: { metrics: ['pageviews'], by: ['section', 'page'], range: '28d' } } },
+  tiles:   { label: 'A treemap of one level: visitors by channel', spec: { spec: 'view/0', title: 'Visitors by channel', query: { metrics: ['visitors'], by: ['channel'], range: '28d' },
+            layers: [{ mark: 'partition', encode: { x: 'channel', size: 'visitors' } }] } },
   unmapped: { label: 'A map with rows it has no shape for: visitors by every country seen', spec: { spec: 'view/0', title: 'Visitors by country, all of them', query: { metrics: ['visitors'], by: ['visitor_country'], range: '28d' },
             layers: [{ mark: 'geo', encode: { x: 'visitor_country', color: 'visitors' } }] } },
 };

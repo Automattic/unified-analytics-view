@@ -282,10 +282,16 @@ A custom mark registered in code and referenced by name is the escape hatch for 
 ]
 ```
 
-**The `geo` mark** draws a map, and is the one custom mark so far. It takes one layer, alone in the view. `x` is the dimension whose values are region keys (a `country` dimension holds ISO 3166-1 alpha-2 codes). `color` is a metric to fill each region by, on the sequential ramp; `size` is a metric for a symbol on each region. Either or both. The boundary shapes and the projection are handed over in code, not in the spec.
+**The `geo` mark** draws a map, and was the first custom mark. It takes one layer, alone in the view. `x` is the dimension whose values are region keys (a `country` dimension holds ISO 3166-1 alpha-2 codes). `color` is a metric to fill each region by, on the sequential ramp; `size` is a metric for a symbol on each region. Either or both. The boundary shapes and the projection are handed over in code, not in the spec.
 
 ```json
 { "query": { "metrics": ["visitors"], "by": ["country"] }, "layers": [{ "mark": "geo", "encode": { "x": "country", "color": "visitors" } }] }
+```
+
+**The `partition` mark** draws a treemap: a box divided by area, nested once. It is a custom mark, in `packages/partition`, and takes one layer, alone in the view. `x` is the dimension the box is divided by and `size` the metric each part's area is its share of. A second dimension on `detail` divides each part again. A metric on `color` paints every box a step of the sequential ramp, with the ramp under it; without one each value on `x` has a series colour, its children are in that colour, and more than six is an error that names the fix. Every area is a share of a total the engine gives: the whole box is the metric's total, a parent is its row of `totalsBy`, and a child is its value against its parent's. So with a `limit` the boxes stop short and the rest is left unpainted, as a band stops short of its end. Two dimensions without `totalsBy` is an error. A name shows only where it fits its box, and a child's only where its parent's does. Below the room it needs the view becomes a list of the same query: `bar-list` with one dimension, `pair-list` with two.
+
+```json
+{ "query": { "metrics": ["pageviews"], "by": ["section", "page"] }, "layers": [{ "mark": "partition", "encode": { "x": "section", "detail": "page", "size": "pageviews" } }] }
 ```
 
 `rows` is a track per row: a label, a track with a linear scale that bars, dots, rules and ticks draw in, and columns of values. Facets are not built (section 19, Decided 26). The plan and what building it found are in `docs/chart-coverage-plan.md`.
@@ -368,8 +374,10 @@ A companion is something the engine returns with a metric. A query cannot yet as
 |---|---|---|
 | `choropleth` | One dimension whose values are region keys | A map, each region filled by the metric on the sequential ramp |
 | `symbol-map` | The same | A map with a symbol on each region, sized by the metric |
+| `treemap` | Two categorical dimensions, a parent and its children, and `totalsBy` in the result | A box divided by area among the first dimension's values, and each part divided again among the second's (`packages/partition`) |
+| `pair-list` | Two categorical dimensions | Rows, one for each pair, named by both. What a treemap of two dimensions becomes below the room it needs |
 
-Both are working names, to check against `@automattic/charts`. A name must be letters, digits, `_` and `-`, and cannot be one the library has. A name already registered is replaced. `customPresets()` lists what is registered. The registry is a map and two functions, as the one for marks is, and a name in it is unknown until its package has been loaded: the error for an unknown preset lists the library and the registry, and names `registerPreset`.
+All four are working names, to check against `@automattic/charts`. A name must be letters, digits, `_` and `-`, and cannot be one the library has. A name already registered is replaced. `customPresets()` lists what is registered. The registry is a map and two functions, as the one for marks is, and a name in it is unknown until its package has been loaded: the error for an unknown preset lists the library and the registry, and names `registerPreset`.
 
 - The library ships the basics. Users and agents add their own presets to it.
 - A preset is named after the `@automattic/charts` component it replaces, where one exists: `line` for `LineChart`, `bar-list` for `BarListChart`. The prototype calls `line` by its earlier name, `trend`.

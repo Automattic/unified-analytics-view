@@ -366,7 +366,12 @@ The library ships these (`packages/core/src/presets.ts`). The three above are wr
 | `candlestick` | Companions `@open`, `@close`, `@min`, `@max` | A body and a wick for each value |
 | `fan` | Companions `@lower`, `@upper` | A line inside the band it is known to |
 | `dumbbell` | One categorical dimension, and `compare` | Rows with a dot for now and one for before, joined. Without `compare`, a dot each |
-| `bullet` | One categorical dimension, and a metric with a catalog `target` | Rows with a bar and a tick at the target |
+| `bullet` | One categorical dimension, and a metric with a catalog `target` | Rows with a bar and a tick at the target, over the metric's catalog `domain` divided at its `bands` |
+| `lollipop` | One categorical dimension | Rows with a stem from zero to a dot, the label and the value |
+| `pyramid` | Two dimensions: the rows, then the split | Rows with a bar divided about zero: the first half of the split's values to one side and the second half to the other. Two values are a population pyramid, five a Likert chart |
+| `strip` | Two dimensions: the rows, then the split | Rows with a dot for each value of the split, all in one paint |
+| `marimekko` | Two dimensions: the axis, then the split | Columns as wide as their share of the total, each divided by share |
+| `ohlc` | Companions `@open`, `@close`, `@min`, `@max` | A stroke from the least to the most for each value, with a tick for the opening to its start and one for the close to its end |
 
 A companion is something the engine returns with a metric. A query cannot yet ask for one by name (section 5), so a preset that needs companions works only against a result that has them.
 

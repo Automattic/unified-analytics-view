@@ -77,6 +77,32 @@ export const PRESETS: PresetLibrary = {
     { mark: 'tick', encode: { y: '$by', x: '$metric' }, role: 'reference' },
     { mark: 'text', encode: { y: '$by', text: '$by' } },
     { mark: 'text', encode: { y: '$by', text: '$metric' }, align: 'end' } ] },
+  // What rows, bars, ticks and rules took in step 4 of the Uncommon plan (docs/uncommon-coverage-plan.md). Working
+  // names, all five: check each against @automattic/charts before it ships.
+  // A stem from zero to a dot, for each row.
+  'lollipop': { layers: [
+    { mark: 'rule', encode: { y: '$by', x: '$metric' }, role: 'context' },
+    { mark: 'dot',  encode: { y: '$by', x: '$metric' } },
+    { mark: 'text', encode: { y: '$by', text: '$by' } },
+    { mark: 'text', encode: { y: '$by', text: '$metric' }, align: 'end' } ] },
+  // With a second dimension in the query, `$split`. A row's bar divided about zero: the first half of the split's values
+  // to one side and the second half to the other. Two values are a population pyramid, and five a Likert chart, which
+  // is why there is no `likert`: it would be these layers under another name.
+  'pyramid': { layers: [
+    { mark: 'bar',  encode: { y: '$by', x: '$metric', color: '$split' }, stack: 'diverge' },
+    { mark: 'text', encode: { y: '$by', text: '$by' } } ] },
+  // A dot for each value of the split, on its row's track, all in one paint.
+  'strip': { layers: [
+    { mark: 'dot',  encode: { y: '$by', x: '$metric', detail: '$split' } },
+    { mark: 'text', encode: { y: '$by', text: '$by' } } ] },
+  // Columns as wide as their share of the whole, each divided by share.
+  'marimekko': { layers: [
+    { mark: 'bar', encode: { x: '$by', y: '$metric', color: '$split', size: '$metric' }, stack: 'normalize' } ] },
+  // From the least to the most, with the opening to the start and the close to the end. The stroke is the central mark here, as a candlestick's body is.
+  'ohlc': { layers: [
+    { mark: 'rule', encode: { x: '$by', y: '$metric@min', y2: '$metric@max' }, role: 'primary' },
+    { mark: 'tick', encode: { x: '$by', y: '$metric@open' }, align: 'start' },
+    { mark: 'tick', encode: { x: '$by', y: '$metric@close' }, align: 'end' } ] },
 };
 
 /** Whether a layer draws from the period before: the previous series, a row's change on it, or a field of it by name. Such a layer goes where there is no such period. */

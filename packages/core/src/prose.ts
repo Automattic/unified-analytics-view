@@ -1,4 +1,4 @@
-import { delta, fmtPct, formatDimension, formatValue, rangeLabel } from './format.ts';
+import { delta, fmtPct, formatDimension, formatUnit, formatValue, rangeLabel } from './format.ts';
 import type { Catalog, MetricDef, Query, Result, Row } from './types.ts';
 
 /* What a view says of a metric with nothing to show, and of one that is read now. Each is made of the catalog's label
@@ -35,8 +35,9 @@ const at = (v: number, total: number | null | undefined, metric: MetricDef, of =
 /** More than one of a dimension's values, by its label: "pages", "countries". */
 export const plural = (label: string) => label.replace(/([^aeiou])y$/, '$1ie') + 's';
 
-/** The tldr prose: the text sibling of a view, derived from the query and the transforms, not from a named chart type. */
-export function tldrProse(q: Query, result: Result, share: boolean, catalog: Catalog, points = false): string {
+/** The tldr prose: the text sibling of a view, derived from the query and the transforms, not from a named chart type.
+ * `points` says the layers set one metric against another, and `"path"` that a line joins those points in the rows' order. */
+export function tldrProse(q: Query, result: Result, share: boolean, catalog: Catalog, points: boolean | 'path' = false): string {
   const m = q.metrics[0]!, M = catalog.metrics[m]!, t = result.totals, rows = result.rows, dims = q.by || [], by = dims[0];
   const range = over(result), name = M.label.toLowerCase();
   if (M.instant) {
@@ -59,6 +60,12 @@ export function tldrProse(q: Query, result: Result, share: boolean, catalog: Cat
     // out a point is would be a statistic, and those are the engine's.
     const two = q.metrics.slice(0, 2), label = (f: string) => catalog.metrics[f]!.label.toLowerCase(), of = (f: string) => rows.map((r) => r[f] as number);
     const top = two.map((f) => say(catalog, by, rows.reduce((a, r) => ((r[f] as number) > (a[f] as number) ? r : a))));
+    // Joined through time, the points are a path: where it set out and where it has got to, by the first and the last
+    // finished bucket, since the unfinished one is not yet anywhere.
+    const whole = rows.filter((r) => !r.partial), [a, b] = [whole[0], whole[whole.length - 1]];
+    if (points === 'path' && catalog.dimensions[by]!.type === 'time' && a && b && a !== b)
+      return 'From ' + say(catalog, by, a) + ' to ' + say(catalog, by, b) + ', ' + two.map((f, i) => label(f) + (i ? ' from ' : ' went from ') + formatValue(a[f] as number, catalog.metrics[f]!) + ' to ' + formatValue(b[f] as number, catalog.metrics[f]!)).join(' and ') + '. '
+        + (top[0] === top[1] ? top[0] + ' is highest on both.' : top[0] + ' is highest on ' + label(two[0]!) + ' and ' + top[1] + ' on ' + label(two[1]!) + '.');
     return 'Across ' + rows.length + ' ' + plural(catalog.dimensions[by]!.label.toLowerCase()) + range + ', ' + 'the range of ' + two.map((f) => label(f) + ' is ' + formatValue(Math.min(...of(f)), catalog.metrics[f]!) + ' to ' + formatValue(Math.max(...of(f)), catalog.metrics[f]!)).join(' and of ') + '. '
       + (top[0] === top[1] ? top[0] + ' is highest on both.' : top[0] + ' is highest on ' + label(two[0]!) + ' and ' + top[1] + ' on ' + label(two[1]!) + '.');
   }
@@ -102,6 +109,43 @@ export function rangeProse(q: Query, result: Result, catalog: Catalog, ends: [st
   if (!by || !vals.length) return '';
   const M = catalog.metrics[ends[0].split('@')[0]!] || catalog.metrics[q.metrics[0]!]!;      // the metric the ends are companions of
   return ' Between ' + formatValue(Math.min(...vals), M) + ' and ' + formatValue(Math.max(...vals), M) + ' across ' + rows.length + ' ' + catalog.dimensions[by]!.label.toLowerCase() + (rows.length === 1 ? '' : 's') + '.';
+}
+
+/** What a view of ranks says: which value of the split is first, and on how many of the values along x, and then who
+ * rose or fell the furthest from the first of those to the last. `field` holds each row's rank, 1 the first, as the
+ * engine returned it. Every clause is a comparison of those ranks, as the leader is: none is worked out here.
+ * Null where there is nothing to say it of, and the query's own sentence stands. */
+export function rankProse(q: Query, result: Result, catalog: Catalog, field: string, x: string): string | null {
+  const split = (q.by || []).find((d) => d !== x), rows = result.rows.filter((r) => r[field] != null);
+  if (result.meta.empty || !split || !rows.length) return null;
+  const xs = [...new Set(rows.map((r) => r[x]))], names = [...new Set(rows.map((r) => r[split]))], rank = (r: Row) => r[field] as number, place = (n: number) => formatUnit(n, 'rank');
+  const of = (name: Row[string]) => rows.filter((r) => r[split] === name), firsts = (name: Row[string]) => of(name).filter((r) => rank(r) === 1).length;
+  const top = names.reduce((a, n) => (firsts(n) > firsts(a) ? n : a)), n = firsts(top), dim = catalog.dimensions[x]!.label.toLowerCase(), what = catalog.dimensions[split]!.label.toLowerCase();
+  // A companion's rank is by the metric it came with. A metric that is itself a rank is by nothing else.
+  const by = field.includes('@') && catalog.metrics[field.split('@')[0]!] ? ' by ' + catalog.metrics[field.split('@')[0]!]!.label.toLowerCase() : '';
+  const said = (name: Row[string]) => say(catalog, split, { [split]: name });
+  let s = (result.meta.range ? 'In the ' + rangeLabel(result.meta.range) + ', ' : '') + said(top) + ' is first' + by + ' on ' + (n === xs.length ? 'all ' + n : n + ' of ' + xs.length) + ' ' + (xs.length === 1 ? dim : plural(dim)) + '.';
+  if (xs.length < 2) return s;
+  // From the first value along x to the last: the furthest rise, the furthest fall. A lower rank is a rise.
+  const moved = names.map((name) => { const at = of(name); return { name, from: rank(at[0]!), to: rank(at[at.length - 1]!) }; }).filter((m) => m.from !== m.to);
+  const rose = moved.filter((m) => m.to < m.from).sort((a, b) => (b.from - b.to) - (a.from - a.to))[0], fell = moved.filter((m) => m.to > m.from).sort((a, b) => (b.to - b.from) - (a.to - a.from))[0];
+  const went = (m: { name: Row[string]; from: number; to: number }, verb: string) => said(m.name) + ' ' + verb + ' from ' + place(m.from) + ' to ' + place(m.to);
+  if (rose || fell) s += ' ' + [rose && went(rose, 'rose'), fell && went(fell, 'fell')].filter(Boolean).join(', and ') + '.';
+  else s += names.some((name) => new Set(of(name).map(rank)).size > 1) ? ' Places changed along the way, and each ' + what + ' ended where it began.' : ' No ' + what + ' changed place.';
+  return s;
+}
+
+/** What a view says after its own sentence where an area between two ends is painted by direction: on how many of
+ * the finished rows the second end is above the first, and on how many below. `ends` are the two fields. A count of
+ * comparisons between the engine's numbers, row by row, and no sum. Empty where no finished row has both. */
+export function differenceProse(q: Query, result: Result, catalog: Catalog, ends: [string, string | number]): string {
+  const by = (q.by || [])[0], [from, to] = ends, at = (r: Row, f: string | number) => (typeof f === 'number' ? f : (r[f] as number | null | undefined));
+  const rows = result.rows.filter((r) => !r.partial && at(r, from) != null && at(r, to) != null);
+  if (!by || !rows.length) return '';
+  const above = rows.filter((r) => at(r, to)! > at(r, from)!).length, below = rows.filter((r) => at(r, to)! < at(r, from)!).length, dim = catalog.dimensions[by]!.label.toLowerCase();
+  // What the first end is called: the period before, a companion by its own label or its suffix, a metric by its label.
+  const M = catalog.metrics[from], name = from.endsWith('@previous') ? 'the previous period' : M ? M.label.toLowerCase() : from.slice(from.indexOf('@') + 1);
+  return ' Above ' + name + ' on ' + above + ' of ' + rows.length + ' ' + (rows.length === 1 ? dim : plural(dim)) + (below ? ', and below it on ' + below : '') + '.';
 }
 
 /** The tldr prose for a metric by two dimensions on a grid: the cell that holds the most, and the busiest value of each

@@ -72,4 +72,22 @@ describe('token output', () => {
     steps.slice(1).forEach((step, i) => expect(Math.abs(contrast(rgb(step), rgb(steps[i]!))), step).toBeGreaterThan(1.1));
     steps.slice(1).forEach((step, i) => expect(seq[(i + 2) * 100].$value.components[1], step).toBeGreaterThan(seq[(i + 1) * 100].$value.components[1]));
   });
+
+  // The diverging ramp: two arms of four steps and a neutral between them. What is held is what a reader needs: each
+  // step is told from the next, zero from no value, and a step is as far from zero in lightness as its opposite.
+  it('has a diverging ramp of nine steps about a neutral, each told from the next and the middle from no value, in both themes', () => {
+    const rgb = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)) as [number, number, number];
+    const apart = (a: string, b: string) => { const c = Math.abs(contrast(rgb(a), rgb(b))); return c < 1 ? 1 / c : c; };
+    for (const theme of ['light', 'dark'] as const) {
+      const color = JSON.parse(generated(`color.${theme}.tokens.json`)).color, hex = (ramp: string, step: number) => color[ramp][step].$value.hex as string;
+      const div = [400, 300, 200, 100].map((s) => hex('div-below', s)).concat(hex('neutral', 600), [100, 200, 300, 400].map((s) => hex('div-above', s)));
+      div.slice(1).forEach((step, i) => expect(apart(step, div[i]!), `${theme} div.${i + 1} and div.${i + 2}`).toBeGreaterThan(1.4));
+      // seq.none is neutral.400 in light and neutral.500 in dark (common.tokens.json and common.dark).
+      expect(apart(div[4]!, hex('neutral', theme === 'light' ? 400 : 500)), theme + ' zero and no value').toBeGreaterThan(1.6);
+      [0, 1, 2, 3].forEach((i) => expect(apart(div[i]!, div[8 - i]!), `${theme} div.${i + 1} and div.${9 - i}`).toBeLessThan(1.02));
+    }
+    const css = generated('tokens.css');
+    for (const [n, to] of [[1, 'div-below-400'], [4, 'div-below-100'], [5, 'neutral-600'], [6, 'div-above-100'], [9, 'div-above-400']] as const) expect(css).toContain(`--ua-color-div-${n}: var(--ua-color-${to});`);
+    expect(css).toContain('--ua-charts-color-div-5: var(--ua-color-div-5);');
+  });
 });

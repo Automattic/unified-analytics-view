@@ -74,9 +74,10 @@ export const TOKENS: Record<string, string> = {
   'motion-delay-tooltip': '500ms',
 };
 
-/** A colour a scene names that the table does not: `series.2` is `color-series-2`, and a sequential step `color-seq-4`.
- * Each has a tint (`-soft`) and, for a series, a step for text (`-text`). They fall back to `currentColor`. */
-export const NAMED = /^color-(series-\d+(-text|-soft)?|seq-(\d+|none)(-soft)?)$/;
+/** A colour a scene names that the table does not: `series.2` is `color-series-2`, a sequential step `color-seq-4`
+ * and a diverging one `color-div-5`. A series and a sequential step have a tint (`-soft`) and a series a step for
+ * text (`-text`). They fall back to `currentColor`. */
+export const NAMED = /^color-(series-\d+(-text|-soft)?|seq-(\d+|none)(-soft)?|div-\d+)$/;
 
 /** `var()` for a public token, with its fallback. One part of a view may fall back to another value: a row's bar is rounder. */
 export function token(name: string, fallback: string | undefined = TOKENS[name]): string {

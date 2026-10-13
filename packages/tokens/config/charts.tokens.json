@@ -103,6 +103,33 @@
       "seq-none": {
         "$value": "{color.seq-none}"
       },
+      "div-1": {
+        "$value": "{color.div-1}"
+      },
+      "div-2": {
+        "$value": "{color.div-2}"
+      },
+      "div-3": {
+        "$value": "{color.div-3}"
+      },
+      "div-4": {
+        "$value": "{color.div-4}"
+      },
+      "div-5": {
+        "$value": "{color.div-5}"
+      },
+      "div-6": {
+        "$value": "{color.div-6}"
+      },
+      "div-7": {
+        "$value": "{color.div-7}"
+      },
+      "div-8": {
+        "$value": "{color.div-8}"
+      },
+      "div-9": {
+        "$value": "{color.div-9}"
+      },
       "annotation": {
         "$value": "{color.muted-foreground}"
       },

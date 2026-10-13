@@ -137,6 +137,33 @@
     "seq-none": {
       "$value": "{color.neutral.400}"
     },
+    "div-1": {
+      "$value": "{color.div-below.400}"
+    },
+    "div-2": {
+      "$value": "{color.div-below.300}"
+    },
+    "div-3": {
+      "$value": "{color.div-below.200}"
+    },
+    "div-4": {
+      "$value": "{color.div-below.100}"
+    },
+    "div-5": {
+      "$value": "{color.neutral.600}"
+    },
+    "div-6": {
+      "$value": "{color.div-above.100}"
+    },
+    "div-7": {
+      "$value": "{color.div-above.200}"
+    },
+    "div-8": {
+      "$value": "{color.div-above.300}"
+    },
+    "div-9": {
+      "$value": "{color.div-above.400}"
+    },
     "switch-thumb-on": {
       "$value": "{color.neutral.200}"
     },

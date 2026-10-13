@@ -17,10 +17,16 @@ const SHORT_PLOT = 120;   // px of plot height under which ranked y ticks go
 const LABEL = 14;         // characters a label at a line's end is given before it is clipped
 const LABEL_LINE = 12;    // px from one such label to the next
 const RADIAL = 160;       // px across a circle of arcs that has room to spare
+const SEATS = 240;        // px across a half circle of seats that has: a seat of a hundred is then 11 px, and
+const SEATS_LEAST = 160;  // the least it is built to: a seat of 7. Under that the legend gives way before the seats do
+const GRID = 160;         // px across a unit's grid of a hundred that has room to spare, and
+const GRID_LEAST = 100;   // the least it is built to: a cell of 9 px, a hairline apart
 /** The line a unit's key takes under its glyphs, in px. */
 export const UNIT_KEY_BLOCK = 20;
 /** A dot's radius in px: by its size step, or the one size of a dot that has none. */
 export const radius = (size?: number) => (size ? 2 + 2.5 * size : 3);
+/** The radius of a unit's glyph in px, from the room it has across and up: the largest circle that holds, a hairline clear of the next. */
+export const glyphRadius = (w: number, h: number) => Math.max(1, Math.min(w, h) - 1) / 2;
 
 /** A label's box, and its rank: a ranked label is given up before an unranked one, and the higher its rank the sooner. */
 export interface LabelBox { x: number; y: number; w: number; h: number; rank?: number | undefined }
@@ -38,7 +44,7 @@ export function declutter(boxes: LabelBox[], gap = 2): boolean[] {
 }
 
 const rect = ({ part, role, row, series, rank, x: _x, w: _w, v, v0, ...n }: RectNode, x: number, y: number, w: number, h: number, rx: number): PlacedRect => ({ ...n, x, y, w, h, rx });
-const circle = ({ part, role, row, series, rank, x: _x, t: _t, size, ...n }: CircleNode, cx: number, cy: number): PlacedCircle => ({ ...n, cx, cy, r: radius(size) });
+const circle = ({ part, role, row, series, rank, x: _x, t: _t, size, w: _w, h: _h, ...n }: CircleNode, cx: number, cy: number, r = radius(size)): PlacedCircle => ({ ...n, cx, cy, r });
 const text = ({ part, role, row, series, rank, x: _x, t, short, ...n }: TextNode, x: number, y: number, s: string = n.text): PlacedText => ({ ...n, x, y, text: s });
 const fit = (s: string, room: number) => clip(s, Math.floor(room / CHAR_W));
 function shift(nodes: PlacedNode[], dx: number, dy: number): PlacedNode[] {
@@ -101,7 +107,7 @@ function placePlot(scene: Scene, W: number, H: number, narrow: boolean): PlacedN
   const out: PlacedNode[] = [];
   scene.nodes.forEach((n) => {
     if (n.part === 'number' || n.part === 'legend' || (n.part === 'labels' && !lw) || (n.part === 'y-axis-2' && !g2)) return;
-    if (n.part === 'size') return;
+    if (n.part === 'size' || n.part === 'unit-key') return;
     if (n.part === 'point-labels') { const a = tag.get(n.key); if (a) out.push(text(a.n, a.x, a.y, a.s)); return; }
     if (n.rank && (n.part === 'x-axis' ? narrow : H < SHORT_PLOT)) return;
     if (n.kind === 'line') {
@@ -115,7 +121,8 @@ function placePlot(scene: Scene, W: number, H: number, narrow: boolean): PlacedN
       const [bx, bw] = n.series == null && !lin ? [xs.x(n.row!), xs.w] : [px(n.x!), n.w! * pw], from = y(n.v0 ?? 0), to = y(n.v!);
       out.push(rect(n, bx, Math.min(from, to), bw, Math.abs(from - to), Math.min(2, bw / 4)));
     } else if (n.kind === 'circle') {
-      out.push(circle(n, at(n), y(n.t!)));
+      // A unit's glyph has its band's width and its share of the plot's height, and is as large as the lesser lets it be.
+      out.push(n.w == null ? circle(n, at(n), y(n.t!)) : circle(n, at(n), y(n.t!), glyphRadius(n.w * (pw - 2 * inset), n.h! * (y(0) - y(1)))));
     } else if (n.kind === 'text') {
       out.push(n.part === 'y-axis' ? text(n, ml - 6, y(n.t!)) : n.part === 'x-axis' ? text(n, at(n), H - 5)
         : n.part === 'y-axis-2' ? text(n, W - mr + 6, y(n.t!)) : n.part === 'labels' ? text(n, W - lw, labelY.get(n.key)!, clip(n.text, LABEL))
@@ -173,6 +180,14 @@ function placeRamp(scene: Scene, W: number): Block {
   return { nodes, height: 24 };
 }
 
+// What a unit's glyph is worth, in a line of its own under the glyphs, where the plan shows it.
+function placeUnitKey(scene: Scene): Block {
+  const nodes = scene.parts.includes('unit-key') ? scene.nodes.filter((n): n is TextNode => n.part === 'unit-key' && n.kind === 'text').map((n) => text(n, 0, UNIT_KEY_BLOCK / 2 + 2)) : [];
+  return { nodes, height: nodes.length ? UNIT_KEY_BLOCK : 0 };
+}
+/** `under` set after `over`, down the page. */
+const stack = (over: Block, under: Block): Block => ({ nodes: over.nodes.concat(shift(under.nodes, 0, over.height)), height: over.height + under.height });
+
 // The key to sizes, in one line: the metric's name, then each step's dot and the most it stands for.
 function placeSize(scene: Scene): Block {
   const nodes: PlacedNode[] = [], mid = 14;
@@ -226,9 +241,10 @@ function placeRows(scene: Scene, W: number, { rowHeight: rowH, gap }: Container[
     if (n.kind === 'rect') { const from = x(n.v0 ?? 0), to = x(n.v!), thin = beside ? 8 : 0; nodes.push(rect(n, Math.min(from, to), top + thin, Math.max(3, Math.abs(to - from)), rowH - 2 * thin, 3)); }
     else if (n.kind === 'text') nodes.push(n.anchor === 'end' ? text(n, edge(n.rank || 0), top + rowH / 2) : text(n, left(col.get(n.key)!), top + rowH / 2, col.get(n.key)! < last ? n.text : fit(n.text, own)));
     else if (n.kind === 'line') { const { part, role, row, series, rank, t, x: x1, x2, t2, ...rest } = n; nodes.push({ ...rest, x1: x(x1!), x2: x(x2!), y1: top + (1 - t) * rowH, y2: top + (1 - (t2 ?? t)) * rowH }); }
-    else if (n.kind === 'circle') nodes.push(circle(n, x(n.x!), top + (1 - n.t!) * rowH));
+    // A unit's glyph has its share of the track, and the row's height less 4 px above and below.
+    else if (n.kind === 'circle') nodes.push(circle(n, x(n.x!), top + (1 - n.t!) * rowH, n.w == null ? undefined : glyphRadius(n.w * (x(1) - x(0)), n.h! * rowH - 8)));
   });
-  return { nodes, height: head + Math.max(0, rows.length * (rowH + gap) - gap) };
+  return stack({ nodes, height: head + Math.max(0, rows.length * (rowH + gap) - gap) }, placeUnitKey(scene));
 }
 
 // The legend of a whole split by colour, under a band or a circle of arcs that ends at `top`: whichever of the two
@@ -251,6 +267,17 @@ function placeShares(scene: Scene, W: number, top: number): Block {
   return { nodes, height: h };
 }
 
+// A unit's grid, its key and the legend under them. The grid holds its shape, as a circle of arcs does: a square as wide
+// as the view up to GRID and no taller than `room` leaves once the key and the legend are set, though never under
+// GRID_LEAST. It sits in the middle of the width, and its cells are a hairline apart. `plot` is that square.
+function placeGrid(scene: Scene, W: number, room: number | null): Block & { plot: { w: number; h: number } } {
+  const key = placeUnitKey(scene), under = key.height + placeShares(scene, W, 0).height;
+  const S = Math.min(W, GRID, room == null ? Infinity : Math.max(GRID_LEAST, room - under)), left = (W - S) / 2;
+  const cells = scene.nodes.filter((n): n is RectNode => n.part === 'band' && n.kind === 'rect').map(({ y, h, ...n }) => rect(n, left + n.x! * S, y! * S, Math.max(1, n.w! * S - 1), Math.max(1, h! * S - 1), 1));
+  const above = stack({ nodes: cells, height: S }, key), legend = placeShares(scene, W, above.height);
+  return { nodes: above.nodes.concat(legend.nodes), height: legend.height, plot: { w: S, h: S } };
+}
+
 // One band and its legend.
 function placeBand(scene: Scene, W: number): Block {
   const barH = 24, gap = 2, rows = scene.rows!, usable = W - gap * (rows.length - 1);
@@ -271,8 +298,9 @@ function placeBand(scene: Scene, W: number): Block {
 // It sits in the middle of the width. `plot` is that box, which the `hole` rule asks about.
 function placeRadial(scene: Scene, W: number, room: number | null, container: Container): Block & { plot: { w: number; h: number } } {
   const rules = container.rules.fit, aspect = scene.aspect || 1, least = ruleFor(rules, 'radial', 'marks')?.needs.block ?? 0;
-  const under = placeShares(scene, W, 0).height;
-  const D = Math.min(W, RADIAL, room == null ? Infinity : Math.max(least, (room - under) * aspect)), h = D / aspect, plot = { w: D, h };
+  // Seats want more room than arcs do: a hundred of them are small. Their key is a line between them and the legend.
+  const key = placeUnitKey(scene), under = key.height + placeShares(scene, W, 0).height, seats = scene.nodes.some((n) => n.part === 'radial' && n.kind === 'circle');
+  const D = Math.min(W, seats ? SEATS : RADIAL, room == null ? Infinity : Math.max(seats ? SEATS_LEAST : least, (room - under) * aspect)), h = D / aspect, plot = { w: D, h };
   const nodes: PlacedNode[] = [];
   let r0 = 1;
   scene.nodes.forEach((n) => {
@@ -288,10 +316,13 @@ function placeRadial(scene: Scene, W: number, room: number | null, container: Co
       if (hole && applies(hole, { view: { inline: W }, plot: { inline: plot.w, block: plot.h } })) return;
       if (Math.hypot(wide / 2, tall) > r0 * D / 2) return;
       nodes.push({ ...text(n, W / 2, D / 2 - (aspect === 1 ? face.h / 2 : face.h)), h: face.h, cell: face.cell });
+    } else if (n.part === 'radial' && n.kind === 'circle') {
+      // A seat, across and up the part's own box.
+      nodes.push(circle(n, (W - D) / 2 + n.x! * D, (1 - n.t!) * h, glyphRadius(n.w! * D, n.h! * h)));
     }
   });
-  const legend = placeShares(scene, W, h);
-  return { nodes: nodes.concat(legend.nodes), height: legend.height, plot };
+  const above = stack({ nodes, height: h }, key), legend = placeShares(scene, W, above.height);
+  return { nodes: above.nodes.concat(legend.nodes), height: legend.height, plot };
 }
 
 /** The pixel scene for a container: the ratio scene, placed at its size. Pure. */
@@ -325,6 +356,8 @@ export function place(scene: Scene, container: Container): PlacedScene {
       const legend = scene.parts.includes('legend') ? placeLegend(scene, W) : { nodes: [], height: 0 };
       // The key to sizes goes under the legend, and both come out of the plot's height.
       if (scene.parts.includes('size')) { const sizes = placeSize(scene); legend.nodes.push(...shift(sizes.nodes, 0, legend.height)); legend.height += sizes.height; }
+      const key = placeUnitKey(scene);
+      legend.nodes.push(...shift(key.nodes, 0, legend.height)); legend.height += key.height;
       const ph = !guided ? rules.bare.height : H ? Math.max(least, Math.min(rules.axes.height, H - above - legend.height)) : rules.axes.height;
       body = { nodes: placePlot(scene, W, ph, narrow).concat(shift(legend.nodes, 0, ph)), height: ph + legend.height }; plot = { w: W, h: ph };
     } else if (scene.layout === 'matrix') {
@@ -344,6 +377,9 @@ export function place(scene: Scene, container: Container): PlacedScene {
       const own = customMarks().get(scene.layout)!.place(scene, W, H ? H - above - under : null, container);
       body = { nodes: keys.reduce((nodes, b, i) => nodes.concat(shift(b.nodes, 0, own.height + keys.slice(0, i).reduce((s, k) => s + k.height, 0))), own.nodes), height: own.height + under };
       if (own.plot) plot = own.plot;
+    } else if (scene.aspect) {
+      const grid = placeGrid(scene, W, H ? H - above : null);
+      body = grid; plot = grid.plot;
     } else {
       body = placeBand(scene, W);
     }

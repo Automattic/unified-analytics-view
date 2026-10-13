@@ -489,7 +489,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
       ends: (r) => { const [lo, hi] = span.get(r)!; return [v(lo), v(hi)]; },
       step: !!xDim && !!xOn && rows.length > 0 && rows[0]![xOn + '@end'] != null,
       // A mark with two ends is painted by which way it goes only where its layer says so: `paint: "direction"`.
-      ...((l.paint === 'direction' ? l.encode!.y2 != null : l.mark === 'bar' && !l.paint && l.encode!.y2 == null && diverges(l)) && { polarity: metricOf(catalog, l.encode!.y)?.polarity }) };
+      ...((l.paint === 'direction' ? l.encode!.y2 != null : l.mark === 'bar' && !l.paint && l.encode!.y2 == null && diverges(l)) && { polarity: metricOf(catalog, [l.encode!.y, l.encode!.y2].find((f) => typeof f === 'string'))?.polarity }) };
     if (!splitOf(catalog, l, xField)) return nodes.push(...draw(l, d));
     // Split by detail, every series is in the layer's own paint, and none has a label at its end: a label is in its series' colour.
     const plain = !paintedOf(catalog, l, xField);
@@ -716,7 +716,7 @@ function sceneRows(catalog: Catalog, layers: Layer[], result: Result, limit: num
         const [at, to] = on(l, r), two = l.encode!.x2 != null;
         if (at == null || (two && to == null)) return;                  // a row with nothing to mark has no mark
         nodes.push(...draw(l, { id: ids[li]!, role: roleOf(l), paint: paintOf(l, catalog, result) || shade(l, r) || (l.series === 'previous' ? 'compare' : 'series.1'), k, at, ...(two && { to: to! }), v, beside, worth: worths.get(l),
-          ...(l.mark === 'bar' && two && l.paint === 'direction' && { polarity: metricOf(catalog, l.encode!.x)?.polarity }) }));
+          ...(l.mark === 'bar' && two && l.paint === 'direction' && { polarity: metricOf(catalog, fieldOn(l))?.polarity }) }));
       } else if (l.mark === 'text') {
         const cell = cellOf(catalog, l, r);
         nodes.push({ key: ids[li] + ':' + k, part: 'rows', kind: 'text', row: k, text: cell.text,

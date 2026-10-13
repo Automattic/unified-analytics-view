@@ -55,8 +55,9 @@ function checkLayers(layers: Layer[], q: Query, catalog: Catalog, result: Result
       if (l.encode?.[end] == null) continue;
       if (['bar', 'rule', 'area'].indexOf(l.mark) < 0) throw new Error('Layer ' + (i + 1) + ' is a "' + l.mark + '" with "' + end + '", and only a bar, a rule or an area runs from one value to another. Use one of those, or remove "' + end + '".');
       // A rule may start at a number: to one of the row's values, which is the stroke from that value to the number, or to a place across the plot.
+      // A bar may too, to one of the row's values: the same bar, and by `paint: "direction"` one that runs from the number to the value.
       const from = l.encode[start], to = l.encode[end], across = l.encode.x2 != null && l.encode.y2 != null;
-      if (l.mark === 'rule' && typeof from === 'number' && (across || (typeof to === 'string' && !isDim(catalog, to)))) continue;
+      if ((l.mark === 'rule' || l.mark === 'bar') && typeof from === 'number' && ((across && l.mark === 'rule') || (typeof to === 'string' && !isDim(catalog, to)))) continue;
       if (l.mark === 'rule' && typeof from === 'number') throw new Error('Layer ' + (i + 1) + ' is a rule from ' + from + ' to ' + JSON.stringify(to) + ' on ' + start + ', so every row\'s would be the one stroke. Encode a metric, or a companion the result returns with one, at either end, or keep one number for a line at it.');
       if (typeof l.encode[start] !== 'string' || isDim(catalog, l.encode[start])) throw new Error('Layer ' + (i + 1) + ' has "' + end + '" and no value on ' + start + ' to run from. Encode where it starts on ' + start + ': a metric, or a companion the result returns with one.');
     }

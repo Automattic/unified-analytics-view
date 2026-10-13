@@ -317,9 +317,20 @@ describe('a rule from a number, and a rule across a plot', () => {
     // Both give the scale the same ends, so the ticks are the same.
     expect(of(run(up({ y: 200, y2: 'response_time@max' })).ratio.nodes, 'ytick:')).toEqual(of(run(up({ y: 'response_time@max', y2: 200 })).ratio.nodes, 'ytick:'));
   });
-  it('is still refused between two numbers, and a bar still starts at a field', () => {
+  it('is still refused between two numbers, and so is a bar; an area still starts at a field', () => {
     expect(err({ query: pages, layers: [{ mark: 'rule', encode: { x: 'page', y: 0, y2: 500 } }] })).toBe('Layer 1 is a rule from 0 to 500 on y, so every row\'s would be the one stroke. Encode a metric, or a companion the result returns with one, at either end, or keep one number for a line at it.');
-    expect(err({ query: pages, layers: [{ mark: 'bar', encode: { x: 'page', y: 0, y2: 'response_time@max' } }] })).toBe('Layer 1 has "y2" and no value on y to run from. Encode where it starts on y: a metric, or a companion the result returns with one.');
+    expect(err({ query: pages, layers: [{ mark: 'bar', encode: { x: 'page', y: 0, y2: 500 } }] })).toBe('Layer 1 has "y2" and no value on y to run from. Encode where it starts on y: a metric, or a companion the result returns with one.');
+    expect(err({ query: pages, layers: [{ mark: 'area', encode: { x: 'page', y: 0, y2: 'response_time@max' } }] })).toBe('Layer 1 has "y2" and no value on y to run from. Encode where it starts on y: a metric, or a companion the result returns with one.');
+  });
+  it('a bar may start at a number too: the same bar as one written from its value to the number, and by direction one that runs the other way', () => {
+    // At the merge, for the tornado (step 3, finding 18): a bar from zero to a gain is a gain.
+    const bars = (encode: Record<string, string | number>, paint?: string) => of<{ v: number; v0?: number; paint: string }>(run({ query: pages, layers: [{ mark: 'bar', encode: { x: 'page', ...encode }, ...(paint && { paint }) }] }).ratio.nodes, 'primary:bar:');
+    const from = bars({ y: 0, y2: 'response_time@max' }), to = bars({ y: 'response_time@max', y2: 0 });
+    expect(from.length).toBeGreaterThan(0);
+    expect(from.map((n) => [n.v0 ?? 0, n.v, n.paint])).toEqual(to.map((n) => [n.v, n.v0 ?? 0, n.paint]));
+    // Response time is better lower: up from zero is a loss, and down to zero a gain.
+    expect([...new Set(bars({ y: 0, y2: 'response_time@max' }, 'direction').map((n) => n.paint))]).toEqual(['delta.bad']);
+    expect([...new Set(bars({ y: 'response_time@max', y2: 0 }, 'direction').map((n) => n.paint))]).toEqual(['delta.good']);
   });
   it('with numbers at both ends on both axes is one line across a plot of points, drawn as a reference is', () => {
     const { ratio, scene, plan } = run({ query: scatter, layers: [{ mark: 'rule', encode: { x: 0, y: 0, x2: 2000, y2: 4 } }, dot] }), line = ratio.nodes.find((n) => n.key === 'reference:rule') as any;

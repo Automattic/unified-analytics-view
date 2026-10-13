@@ -113,8 +113,9 @@ describe('bars in rows: tornado, bullet', () => {
     const { ratio, scene, plan } = run(S('tornado'), 346), low = of<{ v: number; v0: number; paint: string }>(ratio.nodes, 'primary:bar:'), high = of<{ v: number; v0: number; paint: string }>(ratio.nodes, 'primary:bar#2:');
     const zero = 6200 / (6200 + 7800);
     expect(ratio.track).toBe('beside');
-    for (const [i, n] of low.entries()) { expect(n.v).toBeCloseTo(zero, 12); expect(high[i]!.v).toBeCloseTo(zero, 12); expect(n.v0 ?? 0).toBeLessThan(zero); expect(high[i]!.v0).toBeGreaterThan(zero); }
-    expect([low[0]!.v0 ?? 0, high[0]!.v0]).toEqual([0, 1]);
+    // Each runs from zero, which is a number on its first end, out to its value.
+    for (const [i, n] of low.entries()) { expect(n.v0).toBeCloseTo(zero, 12); expect(high[i]!.v0).toBeCloseTo(zero, 12); expect(n.v).toBeLessThan(zero); expect(high[i]!.v).toBeGreaterThan(zero); }
+    expect([low[0]!.v, high[0]!.v]).toEqual([0, 1]);
     expect([...new Set(low.map((n) => n.paint)), ...new Set(high.map((n) => n.paint))]).toEqual(['delta.bad', 'delta.good']);
     const px = (key: string) => scene.nodes.find((n) => n.key === key) as unknown as { x: number; w: number };
     expect(px('primary:bar:Traffic').x + px('primary:bar:Traffic').w).toBeCloseTo(px('primary:bar#2:Traffic').x, 9);
@@ -126,14 +127,15 @@ describe('bars in rows: tornado, bullet', () => {
     const plain: Spec = { ...S('tornado'), layers: S('tornado').layers!.map(({ paint: _paint, ...l }) => l) }, { ratio } = run(plain);
     expect([...new Set(of<{ paint: string }>(ratio.nodes, 'primary:bar').map((n) => n.paint))]).toEqual(['series.1']);
   });
-  it('for step 4: asked for by paint: "direction", a bar to zero is still read from its field to the number, so a gain to zero is a loss', () => {
-    // A bar's first end is a field and a number is its second, so a bar from zero to a gain is written from the gain to
-    // zero, and runs down. The sample states delta.bad and delta.good for that reason. A number as the first end mends it.
-    const asked: Spec = { ...S('tornado'), layers: S('tornado').layers!.map((l) => (l.mark === 'bar' ? { ...l, paint: 'direction' } : l)) }, { ratio } = run(asked);
+  it('the tornado asks for paint: "direction" and starts each bar at zero, so a gain reads as a gain; written from its field to zero it is still a loss', () => {
+    // A bar may start at a number (at the merge of step 4), so a bar from zero to a gain is written that way and runs up.
+    expect(S('tornado').layers!.filter((l) => l.mark === 'bar').map((l) => [l.encode!.x, l.paint])).toEqual([[0, 'direction'], [0, 'direction']]);
+    // Written from the field to the number it runs down, and is painted so: the way a bar is written is the way it goes.
+    const turned: Spec = { ...S('tornado'), layers: S('tornado').layers!.map((l) => (l.mark === 'bar' ? { ...l, encode: { y: 'factor', x: l.encode!.x2!, x2: 0 } } : l)) }, { ratio } = run(turned);
     expect([of<{ paint: string }>(ratio.nodes, 'primary:bar:')[0]!.paint, of<{ paint: string }>(ratio.nodes, 'primary:bar#2:')[0]!.paint]).toEqual(['delta.good', 'delta.bad']);
   });
   it('from zero with no second end the two bars lie behind the label, as a bar list\'s do', () => {
-    const behind: Spec = { ...S('tornado'), layers: S('tornado').layers!.map((l) => (l.mark === 'bar' ? { ...l, encode: { y: 'factor', x: l.encode!.x! } } : l)) }, { ratio } = run(behind);
+    const behind: Spec = { ...S('tornado'), layers: S('tornado').layers!.map((l) => (l.mark === 'bar' ? { ...l, encode: { y: 'factor', x: l.encode!.x2! }, paint: 'series.1' } : l)) }, { ratio } = run(behind);
     expect(ratio.track).toBe(undefined);
     expect(of<{ opacity: number }>(ratio.nodes, 'primary:bar').every((n) => n.opacity === 0.2)).toBe(true);
   });

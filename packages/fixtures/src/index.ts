@@ -566,7 +566,7 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
   lollipop: { label: 'Lollipop: visitors by channel, a stem from zero to each dot', spec: { spec: 'view/0', title: 'Visitors by channel', use: 'lollipop', query: { metrics: ['visitors'], by: ['channel'], range: '28d' } } },
   // Each bar states its paint: one with two ends is painted by which way it goes, and both of these go to zero.
   tornado: { label: 'Tornado: what each assumption could lose or gain of revenue, widest first', spec: { spec: 'view/0', title: 'What moves revenue', query: { metrics: ['revenue_effect'], by: ['factor'], range: '28d' },
-            layers: [{ mark: 'bar', encode: { y: 'factor', x: 'revenue_effect@low', x2: 0 }, paint: 'delta.bad' }, { mark: 'bar', encode: { y: 'factor', x: 'revenue_effect@high', x2: 0 }, paint: 'delta.good' }, { mark: 'text', encode: { y: 'factor', text: 'factor' } }] } },
+            layers: [{ mark: 'bar', encode: { y: 'factor', x: 0, x2: 'revenue_effect@low' }, paint: 'direction' }, { mark: 'bar', encode: { y: 'factor', x: 0, x2: 'revenue_effect@high' }, paint: 'direction' }, { mark: 'text', encode: { y: 'factor', text: 'factor' } }] } },
   pareto:  { label: 'Pareto: errors by cause, and the share the causes so far hold', spec: { spec: 'view/0', title: 'Errors by cause', query: { metrics: ['errors', 'errors_share'], by: ['cause'], range: '28d' },
             layers: [{ mark: 'bar', encode: { x: 'cause', y: 'errors' } }, { mark: 'line', encode: { x: 'cause', y: 'errors_share' }, paint: 'series.2' }] } },
   // A sparkline is not a spec's to ask for: it is what a line is where there is no room for its axes.

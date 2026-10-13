@@ -26,6 +26,14 @@ export const catalog: Catalog = {
     conversion_rate:  { label: 'Conversion rate', unit: 'ratio', polarity: 'up' },
     conversion_value: { label: 'Value',           unit: 'usd',   polarity: 'up', rangeTotal: 'sum' },
     response_time:    { label: 'Response time',   unit: 'ms',    polarity: 'down' },
+    // For the Uncommon types (docs/uncommon-coverage-plan.md, step 0). A share that runs up through the rows is a metric of
+    // its own, in its own unit. An effect and a place in an embedding have no total: the engine sends null for each.
+    errors:           { label: 'Errors',            unit: 'count', polarity: 'down', rangeTotal: 'sum' },
+    errors_share:     { label: 'Cumulative share',  unit: 'ratio', polarity: 'none' },
+    revenue_effect:   { label: 'Effect on revenue', unit: 'usd',   polarity: 'up' },
+    embed_x:          { label: 'First component',   unit: 'count', polarity: 'none' },
+    embed_y:          { label: 'Second component',  unit: 'count', polarity: 'none' },
+    requests:         { label: 'Requests',          unit: 'count', polarity: 'none', rangeTotal: 'sum' },
   },
   dimensions: {
     'date.day': { label: 'Day',     type: 'time' },
@@ -39,6 +47,13 @@ export const catalog: Catalog = {
     step:       { label: 'Step',    type: 'categorical' },
     country:    { label: 'Country', type: 'categorical', values: 'country' },
     visitor_country: { label: 'Country', type: 'categorical', values: 'country' },
+    'date.week': { label: 'Week',        type: 'time' },
+    next_page:   { label: 'Next page',   type: 'categorical' },
+    cause:       { label: 'Cause',       type: 'categorical' },
+    factor:      { label: 'Factor',      type: 'categorical' },
+    term:        { label: 'Search term', type: 'categorical' },
+    intent:      { label: 'Intent',      type: 'categorical' },
+    load_stem:   { label: 'Whole second', type: 'categorical' },
   },
 };
 
@@ -74,7 +89,9 @@ const DAILY = (function () {
     const response_time = Math.round((open + close) / 2 + (slow() - 0.5) * 30), wide = Math.round(18 + slow() * 30);
     const times = { 'response_time@open': open, 'response_time@close': close, 'response_time@min': Math.min(open, close) - Math.round(30 + slow() * 90),
       'response_time@max': Math.max(open, close) + Math.round(40 + slow() * 160), 'response_time@lower': response_time - wide, 'response_time@upper': response_time + wide };
-    return { iso: new Date(t).toISOString().slice(0, 10), visitors, pageviews, net_subscribers, revenue, signups, response_time, times, partial };
+    // Its quartiles lie half way from the mean to each end, so a band of them is always inside the band of the least and the most.
+    const quartiles = { 'response_time@p25': response_time - Math.round((response_time - times['response_time@min']) / 2), 'response_time@p75': response_time + Math.round((times['response_time@max'] - response_time) / 2) };
+    return { iso: new Date(t).toISOString().slice(0, 10), visitors, pageviews, net_subscribers, revenue, signups, response_time, times: { ...times, ...quartiles }, partial };
   });
 })();
 const PAGES: (Counts & { page: string; prev: Counts | null })[] = [
@@ -101,6 +118,8 @@ MIX.country = [['US', 0.31, 0.33], ['IN', 0.12, 0.1], ['GB', 0.09, 0.1], ['DE', 
 // Every country the tracker saw, as real data has them: small ones the fixture's shapes leave out (Singapore, Malta and
 // Bahrain), and one it could not place, which arrives as an empty string.
 MIX.visitor_country = [...MIX.country, ['SG', 0.012, 0.01], ['MT', 0.006, 0.006], ['BH', 0.004, 0.004], ['', 0.008, 0.008]];
+// Where a visitor goes from a page: the same pages again, so the pairs make a square.
+MIX.next_page = shares(PAGES.map((p) => p.page), PAGES.map((p) => p.visitors));
 // What a page has and a day does not: the share of its visitors who convert, in percent. A rate is the engine's to work out, and does not add up.
 const RATES: Record<string, number> = { '/': 2.1, '/pricing': 5.8, '/blog/launch-notes': 1.2, '/docs/getting-started': 3.4, '/changelog': 0.9, '/about': 1.6, '/blog/analytics-without-cookies': 2.7, '/contact': 4.4 };
 const RATE = 2.6;
@@ -123,8 +142,18 @@ const LOAD = { width: 0.5, weights: [2, 9, 21, 30, 27, 20, 14, 10, 7, 5, 4, 3, 2
 // Dimensions held as a table: a row per value, each metric now and in the period before, and the engine's own totals.
 // A rate is the engine's, row by row and over the whole: no view divides to get one, and it is not the sum of its rows.
 // Events are ranked as pages are. Steps come back in their own order, which is what makes them a funnel.
-type Cell = [now: number, before: number | null];
-const TABLES: Record<string, { fields: string[]; ranked: boolean; rows: [string, ...Cell[]][]; totals: Record<string, Cell> }> = {
+// `also` is what the engine says of a row beside its metrics: companions of a metric or of the dimension itself, by the
+// row's name. `split` is a second dimension the table may be asked by, and the value of it each row falls under.
+type Cell = [now: number | null, before: number | null];
+// Search terms set out in two components of an embedding, about the centre of the intent each falls under.
+const INTENTS: [string, number, number, string[]][] = [
+  ['Pricing', -0.55, 0.4,  ['pricing', 'plans', 'free trial', 'discount code', 'enterprise pricing', 'cost per seat', 'billing', 'refund policy']],
+  ['How to',  0.5,   0.45, ['getting started', 'install snippet', 'api keys', 'export csv', 'custom events', 'webhooks', 'sso setup', 'data retention']],
+  ['Privacy', 0.05,  -0.5, ['cookieless analytics', 'gdpr', 'consent banner', 'ip anonymisation', 'privacy policy', 'data residency', 'do not track', 'ccpa']],
+];
+const spread = seeded(71), near = (c: number) => Math.round((c + (spread() - 0.5) * 0.5) * 100) / 100;
+const TERMS = INTENTS.flatMap(([intent, x, y, terms]) => terms.map((term) => ({ term, intent, x: near(x), y: near(y) })));
+const TABLES: Record<string, { fields: string[]; ranked: boolean; rows: [string, ...Cell[]][]; totals: Record<string, Cell>; also?: Record<string, Row>; split?: [dim: string, of: Record<string, string>] }> = {
   event: { fields: ['conversions', 'conversion_rate', 'conversion_value'], ranked: true, rows: [
     ['Add to cart',       [1310, 1180], [0.124, 0.125], [48200, 43100]],
     ['Newsletter signup', [842, 610],   [0.08, 0.065],  [4210, 3050]],
@@ -139,7 +168,37 @@ const TABLES: Record<string, { fields: string[]; ranked: boolean; rows: [string,
     ['Started checkout',  [655, 690],    [0.062, 0.073]],
     ['Purchased',         [412, 371],    [0.039, 0.039]],
   ], totals: { conversion_rate: [0.039, 0.039] } },
+  // Errors from the most to the fewest, and the share of them all that the rows down to each one hold. The engine adds it up.
+  cause: { fields: ['errors', 'errors_share'], ranked: false, rows: [
+    ['Timeout',      [412, 380], [0.38, null]],
+    ['Not found',    [268, 301], [0.627, null]],
+    ['Server error', [171, 164], [0.785, null]],
+    ['Bad gateway',  [98, 120],  [0.875, null]],
+    ['Forbidden',    [61, 70],   [0.932, null]],
+    ['Rate limited', [40, 52],   [0.969, null]],
+    ['Other',        [34, 33],   [1, null]],
+  ], totals: { errors: [1084, 1120], errors_share: [1, 1] } },
+  // What revenue would gain or lose were each assumption at the low or the high end of its range, from the widest swing
+  // to the narrowest. Signed, from the forecast as it stands. There is no total of them to give.
+  factor: { fields: ['revenue_effect'], ranked: false, rows: [
+    ['Conversion rate', [800, null]], ['Traffic', [250, null]], ['Average order', [250, null]], ['Refund rate', [-350, null]], ['Ad spend', [100, null]], ['Churn', [-150, null]],
+  ], totals: { revenue_effect: [null, null] }, also: {
+    'Conversion rate': { 'revenue_effect@low': -6200, 'revenue_effect@high': 7800 }, 'Traffic': { 'revenue_effect@low': -5100, 'revenue_effect@high': 5600 },
+    'Average order': { 'revenue_effect@low': -3900, 'revenue_effect@high': 4400 }, 'Refund rate': { 'revenue_effect@low': -2600, 'revenue_effect@high': 1900 },
+    'Ad spend': { 'revenue_effect@low': -1500, 'revenue_effect@high': 1700 }, 'Churn': { 'revenue_effect@low': -900, 'revenue_effect@high': 600 },
+  } },
+  term: { fields: ['embed_x', 'embed_y'], ranked: false, rows: TERMS.map((t) => [t.term, [t.x, null], [t.y, null]]), totals: { embed_x: [null, null], embed_y: [null, null] },
+    split: ['intent', Object.fromEntries(TERMS.map((t) => [t.term, t.intent]))] },
+  // Load times to a tenth of a second, as a stem-and-leaf display has them: the whole seconds are the dimension, and the
+  // tenths of each request under it are a companion of the dimension, a string the engine wrote.
+  // ponytail: the leaves are the 28 days' and do not follow the range, as the counts do.
+  load_stem: { fields: ['requests'], ranked: false, rows: [['0', [5, 4]], ['1', [9, 8]], ['2', [12, 13]], ['3', [7, 9]], ['4', [4, 3]], ['5', [2, 2]], ['6', [1, 0]]],
+    totals: { requests: [40, 39] }, also: { '0': { 'load_stem@leaves': '4 6 7 8 9' }, '1': { 'load_stem@leaves': '0 1 2 2 4 5 7 8 9' }, '2': { 'load_stem@leaves': '0 0 1 1 2 3 3 4 5 6 8 9' },
+      '3': { 'load_stem@leaves': '0 1 3 4 6 7 9' }, '4': { 'load_stem@leaves': '1 2 5 8' }, '5': { 'load_stem@leaves': '3 7' }, '6': { 'load_stem@leaves': '2' } } },
 };
+/** The ISO week a day falls in, as the engine names a week: "2026-W37". A week is in the year its Thursday is in. */
+const isoWeek = (t: number) => { const thu = t + (3 - (new Date(t).getUTCDay() + 6) % 7) * DAY, y = new Date(thu).getUTCFullYear(); return y + '-W' + String(1 + Math.floor((thu - Date.UTC(y, 0, 1)) / (7 * DAY))).padStart(2, '0'); };
+const isTime = (d: string) => catalog.dimensions[d]!.type === 'time';
 const LIVE = [{ page: '/', present: 3 }, { page: '/pricing', present: 2 }, { page: '/blog/launch-notes', present: 1 }, { page: '/docs/getting-started', present: 1 }];
 
 export type Scenario = 'typical' | 'no-prior' | 'empty';
@@ -181,17 +240,20 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
   }
   const sum = (ds: Daily[], m: string) => ds.reduce((s, d) => s + d[m as D], 0);
   // A shorter range is the last days of the same series, and a mix of its own. 28 days is the fixture as it always was.
-  const days = Math.min(28, parseInt(q.range || '') || 28), mix = seeded(days), vary = () => (days === 28 ? 1 : 0.5 + mix());
-  const cur = DAILY.slice(56 - days), prev = DAILY.slice(56 - 2 * days, 56 - days);
-  // A table's counts follow the range. A rate does not.
-  const table = TABLES[by || ''], held = (m: string, n: number | null) => (n == null || catalog.metrics[m]!.unit === 'ratio' ? n : Math.round(n * days / 28));
+  // By week the range is its whole weeks, the last of them the one before today's, so no week is ragged or unfinished.
+  const weekly = dims.indexOf('date.week') >= 0, asked = Math.min(28, parseInt(q.range || '') || 28), days = weekly ? Math.max(7, asked - asked % 7) : asked, end = weekly ? 55 : 56;
+  if (weekly && wantPrev) throw new Error('The fixture has whole weeks with no period before them: its days run out a day short of four more. Remove "compare" from the query, or query by date.day.');
+  const mix = seeded(days), vary = () => (days === 28 ? 1 : 0.5 + mix());
+  const cur = DAILY.slice(end - days, end), prev = DAILY.slice(end - 2 * days, end - days);
+  // A table's counts follow the range. What does not add up over a range does not: a rate, an effect, a place.
+  const table = TABLES[by || ''], held = (m: string, n: number | null) => (n == null || !catalog.metrics[m]!.rangeTotal ? n : Math.round(n * days / 28));
   const elsewhere = metrics.find((m) => m !== 'page_conversion' && !(m in DAILY[0]!) && !(table && table.fields.indexOf(m) >= 0));
   if (elsewhere) throw new Error('The fixture has "' + elsewhere + '" by ' + Object.keys(TABLES).filter((d) => TABLES[d]!.fields.indexOf(elsewhere) >= 0).join(' or ') + ' only. Query it by that.');
-  if (table && dims.length > 1) throw new Error('The fixture has "' + by + '" on its own, and not with a second dimension. Remove "' + dims[1] + '" from by.');
+  if (table && dims.length > 1 && dims[1] !== table.split?.[0]) throw new Error('The fixture has "' + by + '" on its own, and not with a second dimension. Remove "' + dims[1] + '" from by.');
   metrics.forEach((m) => {
     const rate = m === 'page_conversion';
     const [now, before] = table && table.totals[m] ? table.totals[m]!.map((n) => held(m, n)) : rate ? [RATE, RATE - 0.2] : m === 'response_time' ? TIME : [sum(cur, m), sum(prev, m)];
-    totals[m] = now!;
+    totals[m] = now ?? null;
     if (wantPrev) totals[m + '@previous'] = hasPrev ? before! : null;
   });
   // One row per value of a dimension, in the dimension's own order, before any sort or limit.
@@ -209,13 +271,18 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
       });
       return r;
     });
+    if (dim === 'date.week') return Array.from({ length: days / 7 }, (_, w) => {
+      const ds = cur.slice(w * 7, w * 7 + 7), r: Row = { 'date.week': isoWeek(Date.parse(ds[0]!.iso)) };
+      metrics.forEach((m) => { r[m] = sum(ds, m); });
+      return r;
+    });
     if (table) {
       const missing = metrics.find((m) => table.fields.indexOf(m) < 0);
       if (missing) throw new Error('The fixture has "' + dim + '" with ' + table.fields.join(', ') + ', and not "' + missing + '". Query one of those.');
       return table.rows.map(([name, ...cells]) => {
-        const r: Row = { [dim]: name };
+        const r: Row = { [dim]: name, ...(dims[1] && { [dims[1]]: table.split![1][name]! }) };
         metrics.forEach((m) => { const [now, before] = cells[table.fields.indexOf(m)]!; r[m] = held(m, now); if (wantPrev) r[m + '@previous'] = hasPrev ? held(m, before) : null; });
-        return r;
+        return Object.assign(r, table.also?.[name]);
       });
     }
     const perPage = metrics.find((m) => m !== 'page_conversion' && m !== 'response_time' && !(m in PAGES[0]!));
@@ -256,13 +323,17 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
   // ponytail: it comes only with a query that compares. A query has no way to ask for a companion, and the prototype's
   // samples must come back as they were. When the contract can ask, this is asked for.
   const ranked = (rs: Row[]) => { if (by === 'page' && wantPrev && m0 === 'pageviews') rs.forEach((r, i) => { r['pageviews@rank'] = i + 1; }); return rs; };
-  if (table && !table.ranked) return { rows: rowsBy(by!).slice(0, q.limit || undefined), totals, meta };
+  if (table && !table.ranked) {
+    const kept = rowsBy(by!).slice(0, q.limit || undefined), split = dims[1];
+    // Asked by its second dimension too, a row is still one value of the first: each falls under one value of the second, which has no total of these.
+    return split ? { rows: kept, totals, totalsBy: { [by!]: kept, [split]: [...new Set(kept.map((r) => r[split]))].map((v) => ({ [split]: v, ...Object.fromEntries(metrics.map((m) => [m, null])) })) }, meta } : { rows: kept, totals, meta };
+  }
   if (dims.length < 2) return { rows: !by ? rows : catalog.dimensions[by]!.type !== 'categorical' ? rowsBy(by) : ranked(top(rowsBy(by))), totals, meta };
 
   // Two dimensions: one row per pair. Each value of the outer one is divided among the inner one's, unevenly from one
   // to the next, so every pair adds up to the outer row it came from. Time, when it is there, is the outer one.
   // ponytail: a total by the inner dimension is the sum of its pairs, and is not held to what a query by it alone returns.
-  const [outer, inner] = dims[1] === 'date.day' ? [dims[1], dims[0]!] : [dims[0]!, dims[1]!];
+  const [outer, inner] = isTime(dims[1]!) ? [dims[1]!, dims[0]!] : [dims[0]!, dims[1]!];
   const fields = metrics.flatMap((m) => (wantPrev ? [m, m + '@previous'] : [m]));
   const values: [string, number][] = inner === 'page' ? PAGES.map((p) => [p.page, p.visitors]) : MIX[inner]!.map((c) => [c[0], c[1]]);
   const uneven = seeded(days + 97), outerRows = rowsBy(outer);
@@ -273,15 +344,18 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
   });
   // Where the collector was down there is no count, which is not a count of none: Wednesdays from 3am to 5am.
   pairs.forEach((p) => { if (p.weekday === 'Wed' && ['3am', '4am', '5am'].indexOf(p.hour as string) >= 0) fields.forEach((f) => { p[f] = null; }); });
+  // Through time a pair has a running total too: what its value of the inner dimension has held since the range began.
+  // ponytail: of sign-ups alone, as a page's rank comes only with one query. When a query can ask for a companion, this is asked for.
+  if (isTime(outer) && metrics.indexOf('signups') >= 0) { const run: Record<string, number> = {}; pairs.forEach((p) => { const k = p[inner] as string; p['signups@running'] = run[k] = (run[k] || 0) + (p.signups as number); }); }
   const innerRows = values.map(([name]) => {
     const r: Row = { [inner]: name }, mine = pairs.filter((p) => p[inner] === name);
     fields.forEach((f) => { r[f] = mine.some((p) => p[f] != null) ? mine.reduce((s, p) => s + ((p[f] as number) || 0), 0) : null; });
     return r;
   });
   // `limit` keeps the first values of each categorical dimension. A total still covers what the limit left out of the other.
-  const kept = (rs: Row[], dim: string) => { const names = dim === 'date.day' ? null : top(rs).map((r) => r[dim]); return names ? rs.filter((r) => names.indexOf(r[dim]) >= 0) : rs; };
+  const kept = (rs: Row[], dim: string) => { const names = isTime(dim) ? null : top(rs).map((r) => r[dim]); return names ? rs.filter((r) => names.indexOf(r[dim]) >= 0) : rs; };
   const totalsBy = { [outer]: kept(outerRows, outer), [inner]: kept(innerRows, inner) };
-  const order = outer === 'date.day' ? outerRows : top(outerRows), within = totalsBy[inner]!.map((r) => r[inner]);
+  const order = isTime(outer) ? outerRows : top(outerRows), within = totalsBy[inner]!.map((r) => r[inner]);
   rows = order.flatMap((o) => pairs.filter((p) => p[outer] === o[outer] && within.indexOf(p[inner]) >= 0));
   return { rows, totals, totalsBy, meta };
 }
@@ -345,4 +419,33 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
             layers: [{ mark: 'line', encode: { x: 'date.day', y: 'visitors', detail: 'country' } }] } },
   unmapped: { label: 'A map with rows it has no shape for: visitors by every country seen', spec: { spec: 'view/0', title: 'Visitors by country, all of them', query: { metrics: ['visitors'], by: ['visitor_country'], range: '28d' },
             layers: [{ mark: 'geo', encode: { x: 'visitor_country', color: 'visitors' } }] } },
+  // The Uncommon types that today's marks already say (docs/uncommon-coverage-plan.md, step 0, and what it found in section 7).
+  // `dumbbell`, `bullet` and `fan` above are three of them. Each is swept, and has its golden scenes, with the samples of its layout, and what each one is is in test/uncommon.test.ts.
+  cleveland: { label: 'Cleveland dot plot: page views by page, ranked, so an ordered dot plot too', spec: { spec: 'view/0', title: 'Page views by page', use: 'dumbbell', query: { metrics: ['pageviews'], by: ['page'], range: '28d', limit: 8 } } },
+  lollipop: { label: 'Lollipop: visitors by channel, a stem from zero to each dot', spec: { spec: 'view/0', title: 'Visitors by channel', query: { metrics: ['visitors'], by: ['channel'], range: '28d' },
+            layers: [{ mark: 'rule', encode: { y: 'channel', x: 'visitors' }, role: 'context' }, { mark: 'dot', encode: { y: 'channel', x: 'visitors' } }, { mark: 'text', encode: { y: 'channel', text: 'channel' } }, { mark: 'text', encode: { y: 'channel', text: 'visitors' }, align: 'end' }] } },
+  // Each bar states its paint: one with two ends is painted by which way it goes, and both of these go to zero.
+  tornado: { label: 'Tornado: what each assumption could lose or gain of revenue, widest first', spec: { spec: 'view/0', title: 'What moves revenue', query: { metrics: ['revenue_effect'], by: ['factor'], range: '28d' },
+            layers: [{ mark: 'bar', encode: { y: 'factor', x: 'revenue_effect@low', x2: 0 }, paint: 'delta.bad' }, { mark: 'bar', encode: { y: 'factor', x: 'revenue_effect@high', x2: 0 }, paint: 'delta.good' }, { mark: 'text', encode: { y: 'factor', text: 'factor' } }] } },
+  pareto:  { label: 'Pareto: errors by cause, and the share the causes so far hold', spec: { spec: 'view/0', title: 'Errors by cause', query: { metrics: ['errors', 'errors_share'], by: ['cause'], range: '28d' },
+            layers: [{ mark: 'bar', encode: { x: 'cause', y: 'errors' } }, { mark: 'line', encode: { x: 'cause', y: 'errors_share' }, paint: 'series.2' }] } },
+  // A sparkline is not a spec's to ask for: it is what a line is where there is no room for its axes.
+  sparkline: { label: 'Sparkline: one line, which a narrow container draws bare beside the number', spec: { spec: 'view/0', title: 'Visitors', query: { metrics: ['visitors'], by: ['date.day'], range: '28d' },
+            layers: [{ mark: 'line', encode: { x: 'date.day', y: 'visitors' } }] } },
+  fans:    { label: 'Fan, two bands: response time by day, inside its quartiles, inside its least and most', spec: { spec: 'view/0', title: 'Response time, and how far it ranged', query: { metrics: ['response_time'], by: ['date.day'], range: '28d' },
+            layers: [{ mark: 'area', encode: { x: 'date.day', y: 'response_time@min', y2: 'response_time@max' }, role: 'context' }, { mark: 'area', encode: { x: 'date.day', y: 'response_time@p25', y2: 'response_time@p75' }, role: 'context' }, { mark: 'line', encode: { x: 'date.day', y: 'response_time' } }] } },
+  streamgraph: { label: 'Streamgraph: page views by day and channel, stacked about the middle', spec: { spec: 'view/0', title: 'Page views by channel', query: { metrics: ['pageviews'], by: ['date.day', 'channel'], range: '28d' },
+            layers: [{ mark: 'area', encode: { x: 'date.day', y: 'pageviews', color: 'channel' }, stack: 'center' }] } },
+  slopegraph: { label: 'Slopegraph: visitors by channel, one whole week against the next', spec: { spec: 'view/0', title: 'Visitors by channel, week on week', query: { metrics: ['visitors'], by: ['date.week', 'channel'], range: '14d' },
+            layers: [{ mark: 'line', encode: { x: 'date.week', y: 'visitors', color: 'channel' } }] } },
+  cumulative: { label: 'Cumulative flow: sign-ups so far, by day and channel', spec: { spec: 'view/0', title: 'Sign-ups so far', query: { metrics: ['signups'], by: ['date.day', 'channel'], range: '28d' },
+            layers: [{ mark: 'area', encode: { x: 'date.day', y: 'signups@running', color: 'channel' }, stack: 'zero' }] } },
+  calendar: { label: 'Calendar heatmap: visitors by weekday and week', spec: { spec: 'view/0', title: 'Visitors, day by day', use: 'heatmap', query: { metrics: ['visitors'], by: ['weekday', 'date.week'], range: '28d' } } },
+  stripes: { label: 'Stripes: net subscribers by day, one cell each. On the sequential ramp, so nothing is not neutral yet', spec: { spec: 'view/0', title: 'Net subscribers', query: { metrics: ['net_subscribers'], by: ['date.day'], range: '28d' },
+            layers: [{ mark: 'cell', encode: { x: 'date.day', color: 'net_subscribers' } }] } },
+  adjacency: { label: 'Adjacency matrix: page views by page and the page gone to next', spec: { spec: 'view/0', title: 'From page to page', use: 'heatmap', query: { metrics: ['pageviews'], by: ['page', 'next_page'], range: '28d' } } },
+  embedding: { label: 'Embedding scatter: search terms, set out in two components', spec: { spec: 'view/0', title: 'Search terms', query: { metrics: ['embed_x', 'embed_y'], by: ['term'], range: '28d' },
+            layers: [{ mark: 'dot', encode: { x: 'embed_x', y: 'embed_y' } }] } },
+  stem:    { label: 'Stem-and-leaf: load times, the seconds and the tenths under each', spec: { spec: 'view/0', title: 'Load times', query: { metrics: ['requests'], by: ['load_stem'], range: '28d' },
+            layers: [{ mark: 'text', encode: { y: 'load_stem', text: 'load_stem' } }, { mark: 'text', encode: { y: 'load_stem', text: 'load_stem@leaves' } }] } },
 };

@@ -4,7 +4,7 @@ import { ensure, keyed, pageWay, prop, text } from '../dom.ts';
 /* What the four layouts gain with `unit`, the mark that draws a value as counted glyphs. Each layout lays its own
  * glyphs out, in its own module, and this file holds what they share: the key that says what a glyph is worth, and
  * how a round glyph takes its size. There is little here, because a glyph is an element the layout already has: a dot
- * in a plot, a mark in a row's track, a segment of the band, a dot over the arcs. Its styles join the base sheet once (view.ts).
+ * in a plot, a mark in a row's track, a segment of the band, a dot over the arcs. Its styles join the base sheet once, with the rest of the chrome (index.ts).
  *
  * A glyph holds its shape. The scene gives a dot the room it has, `w` across and `h` up, as ratios of two different
  * lengths, so it cannot say that the dot is round: the stylesheet does, by taking the lesser of the two in pixels for

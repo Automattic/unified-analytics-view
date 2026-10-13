@@ -3,7 +3,7 @@ import { paintLegend } from '../chrome/legend.ts';
 import { attr, ensure, keyed, prop } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
-import { paintUnitKey } from './unit.ts';
+import { paintUnitKey } from '../chrome/unit.ts';
 
 /* One band, split by colour, and its legend. Segments are flex items that grow by their share, so the band needs no
  * width. The scene holds both legends: the full one is a grid of swatch, label and share, the one-line one a line of

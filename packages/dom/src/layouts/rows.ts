@@ -4,7 +4,7 @@ import { attr, ensure, keyed, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
 import { TRACK_CSS, TRACK_FIT, trackMark } from './track.ts';
-import { paintUnitKey } from './unit.ts';
+import { paintUnitKey } from '../chrome/unit.ts';
 
 /* A dimension on y: a row for each of its values. The body is one grid, with a track for the label, which gives way,
  * and one for each column of values, sized by its content. The headers and every row are subgrids of it, so a column

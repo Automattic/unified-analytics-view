@@ -3,7 +3,7 @@ import { paintLegend } from '../chrome/legend.ts';
 import { attr, ensure, keyed, paintVar, prop, text } from '../dom.ts';
 import type { LayoutPainter } from '../layout.ts';
 import { FOCUS, HOVER, token } from '../tokens.ts';
-import { paintUnitKey, unitDot } from './unit.ts';
+import { paintUnitKey, unitDot } from '../chrome/unit.ts';
 
 /* Arcs about one centre, and under them the legend a band has. The part holds its shape: it is as wide as the view up
  * to 160 px and its height follows from the scene's aspect, 1 for a circle and 2 for the top half of one. Its SVG has

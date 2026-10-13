@@ -4,7 +4,7 @@ import { compileFitRules } from '@unified-analytics/dom';
 import { band } from '../packages/dom/src/layouts/band.ts';
 import { radial } from '../packages/dom/src/layouts/radial.ts';
 import { rows } from '../packages/dom/src/layouts/rows.ts';
-import { UNIT_CSS } from '../packages/dom/src/layouts/unit.ts';
+import { UNIT_CSS } from '../packages/dom/src/chrome/unit.ts';
 import { BASE_CSS } from '../packages/dom/src/view.ts';
 
 // String work only, as in dom-band.test.ts. What the browser makes of it is checked on the bench: the glyphs were

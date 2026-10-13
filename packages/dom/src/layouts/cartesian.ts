@@ -10,7 +10,7 @@ import { apart } from '../measure.ts';
 import { morph, once } from '../motion.ts';
 import { POINTS_CSS, POINTS_FIT, measurePoints, paintPoints } from './points.ts';
 import { RANGES_CSS, paintRanges } from './ranges.ts';
-import { paintUnitKey } from './unit.ts';
+import { paintUnitKey } from '../chrome/unit.ts';
 
 /* A dimension on x, a metric on y. The y axis is a column sized by its labels, the x axis a row under the plot,
  * and the plot a size container, so rules about roles can ask how much room the marks have.

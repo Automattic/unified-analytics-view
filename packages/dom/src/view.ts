@@ -7,7 +7,6 @@ import { DOTS_CSS } from './dots.ts';
 import { PIXELS_CSS, pixels } from './pixels.ts';
 import { KEYS_CSS, Keys, companionLabel, companions, hideReadout, readoutOf } from './keys.ts';
 import { LAYOUTS, painterOf } from './layouts/index.ts';
-import { UNIT_CSS } from './layouts/unit.ts';
 import { NUMBER_FITS, fitNumber, readNumber } from './measure.ts';
 import { MOTION_CSS, begin, register, settle } from './motion.ts';
 import { FACES, token } from './tokens.ts';
@@ -91,7 +90,6 @@ export const BASE_CSS = `@layer uav {
 
 ${painters.map((p) => p.css).join('\n')}
 ${CHROME_CSS}
-${UNIT_CSS}
 ${MOTION_CSS}
 ${KEYS_CSS}
 ${DOTS_CSS}

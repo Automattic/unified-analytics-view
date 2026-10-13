@@ -12,7 +12,7 @@ import { token } from '../tokens.ts';
  * and a dot are set back by half their width from where they stand, and not moved there, so a track reads from the
  * right where the page does. A glyph of a `unit` is a dot with room of its own: its share of the track across, and the
  * row's height less 4 px above and below. It is as wide as the lesser of the two, less a hairline, and as tall as it is
- * wide (unit.ts).
+ * wide (chrome/unit.ts).
  *
  * A bar divided into series is its parts end to end, parted by a line's width as a stack's are in a plot, and none
  * has a least length: one would lie over the next. A part of the range behind the marks is as tall as the row, under

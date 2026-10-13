@@ -1,7 +1,7 @@
 import { declutter, type CircleNode, type PathNode, type Scene, type SceneNode, type TextNode } from '@unified-analytics/core';
 import { attr, ensure, keyed, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
-import { unitDot } from './unit.ts';
+import { unitDot } from '../chrome/unit.ts';
 
 /* What a plot gains with `dot`, with `text` on its points, and with a metric on x: dots, the labels on them, the key
  * to their sizes (the chrome's), and a rule that stands at a value on x. It is the cartesian layout's, kept in a file of its own:

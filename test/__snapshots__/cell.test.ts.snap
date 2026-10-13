@@ -16632,7 +16632,7 @@ exports[`the grids of the Uncommon types > correlogram at 346 by any 1`] = `
 
 exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
 {
-  "height": 184,
+  "height": 56,
   "nodes": [
     {
       "anchor": "middle",
@@ -16643,7 +16643,7 @@ exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
       "paint": "ink.muted",
       "text": "Sep 8",
       "x": 4.178571428571428,
-      "y": 179,
+      "y": 51,
     },
     {
       "anchor": "middle",
@@ -16654,7 +16654,7 @@ exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
       "paint": "ink.muted",
       "text": "Sep 14",
       "x": 54.32142857142858,
-      "y": 179,
+      "y": 51,
     },
     {
       "anchor": "middle",
@@ -16665,7 +16665,7 @@ exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
       "paint": "ink.muted",
       "text": "Sep 20",
       "x": 104.46428571428572,
-      "y": 179,
+      "y": 51,
     },
     {
       "anchor": "middle",
@@ -16676,7 +16676,7 @@ exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
       "paint": "ink.muted",
       "text": "Sep 26",
       "x": 154.60714285714286,
-      "y": 179,
+      "y": 51,
     },
     {
       "anchor": "middle",
@@ -16687,10 +16687,10 @@ exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
       "paint": "ink.muted",
       "text": "Oct 2",
       "x": 204.75,
-      "y": 179,
+      "y": 51,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-08:",
       "kind": "rect",
       "layer": "data",
@@ -16701,7 +16701,7 @@ exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-09:",
       "kind": "rect",
       "layer": "data",
@@ -16712,7 +16712,7 @@ exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-10:",
       "kind": "rect",
       "layer": "data",
@@ -16723,7 +16723,7 @@ exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-11:",
       "kind": "rect",
       "layer": "data",
@@ -16734,7 +16734,7 @@ exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-12:",
       "kind": "rect",
       "layer": "data",
@@ -16745,7 +16745,7 @@ exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-13:",
       "kind": "rect",
       "layer": "data",
@@ -16756,7 +16756,7 @@ exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-14:",
       "kind": "rect",
       "layer": "data",
@@ -16767,7 +16767,7 @@ exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-15:",
       "kind": "rect",
       "layer": "data",
@@ -16778,7 +16778,7 @@ exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-16:",
       "kind": "rect",
       "layer": "data",
@@ -16789,7 +16789,7 @@ exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-17:",
       "kind": "rect",
       "layer": "data",
@@ -16800,7 +16800,7 @@ exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-18:",
       "kind": "rect",
       "layer": "data",
@@ -16811,7 +16811,7 @@ exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-19:",
       "kind": "rect",
       "layer": "data",
@@ -16822,7 +16822,7 @@ exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-20:",
       "kind": "rect",
       "layer": "data",
@@ -16833,7 +16833,7 @@ exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-21:",
       "kind": "rect",
       "layer": "data",
@@ -16844,7 +16844,7 @@ exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-22:",
       "kind": "rect",
       "layer": "data",
@@ -16855,7 +16855,7 @@ exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-23:",
       "kind": "rect",
       "layer": "data",
@@ -16866,7 +16866,7 @@ exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-24:",
       "kind": "rect",
       "layer": "data",
@@ -16877,7 +16877,7 @@ exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-25:",
       "kind": "rect",
       "layer": "data",
@@ -16888,7 +16888,7 @@ exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-26:",
       "kind": "rect",
       "layer": "data",
@@ -16899,7 +16899,7 @@ exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-27:",
       "kind": "rect",
       "layer": "data",
@@ -16910,7 +16910,7 @@ exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-28:",
       "kind": "rect",
       "layer": "data",
@@ -16921,7 +16921,7 @@ exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-29:",
       "kind": "rect",
       "layer": "data",
@@ -16932,7 +16932,7 @@ exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-30:",
       "kind": "rect",
       "layer": "data",
@@ -16943,7 +16943,7 @@ exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-10-01:",
       "kind": "rect",
       "layer": "data",
@@ -16954,7 +16954,7 @@ exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-10-02:",
       "kind": "rect",
       "layer": "data",
@@ -16965,7 +16965,7 @@ exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-10-03:",
       "kind": "rect",
       "layer": "data",
@@ -16976,7 +16976,7 @@ exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-10-04:",
       "kind": "rect",
       "layer": "data",
@@ -16987,7 +16987,7 @@ exports[`the grids of the Uncommon types > stripes at 234 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-10-05:",
       "kind": "rect",
       "layer": "data",
@@ -17376,7 +17376,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by 100 1`] = `
 
 exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
 {
-  "height": 208,
+  "height": 80,
   "nodes": [
     {
       "anchor": "middle",
@@ -17387,7 +17387,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "paint": "ink.muted",
       "text": "Sep 8",
       "x": 6.178571428571428,
-      "y": 179,
+      "y": 51,
     },
     {
       "anchor": "middle",
@@ -17398,7 +17398,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "paint": "ink.muted",
       "text": "Sep 14",
       "x": 80.32142857142857,
-      "y": 179,
+      "y": 51,
     },
     {
       "anchor": "middle",
@@ -17409,7 +17409,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "paint": "ink.muted",
       "text": "Sep 20",
       "x": 154.46428571428572,
-      "y": 179,
+      "y": 51,
     },
     {
       "anchor": "middle",
@@ -17420,7 +17420,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "paint": "ink.muted",
       "text": "Sep 26",
       "x": 228.60714285714286,
-      "y": 179,
+      "y": 51,
     },
     {
       "anchor": "middle",
@@ -17431,10 +17431,10 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "paint": "ink.muted",
       "text": "Oct 2",
       "x": 302.75,
-      "y": 179,
+      "y": 51,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-08:",
       "kind": "rect",
       "layer": "data",
@@ -17445,7 +17445,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-09:",
       "kind": "rect",
       "layer": "data",
@@ -17456,7 +17456,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-10:",
       "kind": "rect",
       "layer": "data",
@@ -17467,7 +17467,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-11:",
       "kind": "rect",
       "layer": "data",
@@ -17478,7 +17478,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-12:",
       "kind": "rect",
       "layer": "data",
@@ -17489,7 +17489,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-13:",
       "kind": "rect",
       "layer": "data",
@@ -17500,7 +17500,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-14:",
       "kind": "rect",
       "layer": "data",
@@ -17511,7 +17511,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-15:",
       "kind": "rect",
       "layer": "data",
@@ -17522,7 +17522,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-16:",
       "kind": "rect",
       "layer": "data",
@@ -17533,7 +17533,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-17:",
       "kind": "rect",
       "layer": "data",
@@ -17544,7 +17544,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-18:",
       "kind": "rect",
       "layer": "data",
@@ -17555,7 +17555,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-19:",
       "kind": "rect",
       "layer": "data",
@@ -17566,7 +17566,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-20:",
       "kind": "rect",
       "layer": "data",
@@ -17577,7 +17577,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-21:",
       "kind": "rect",
       "layer": "data",
@@ -17588,7 +17588,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-22:",
       "kind": "rect",
       "layer": "data",
@@ -17599,7 +17599,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-23:",
       "kind": "rect",
       "layer": "data",
@@ -17610,7 +17610,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-24:",
       "kind": "rect",
       "layer": "data",
@@ -17621,7 +17621,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-25:",
       "kind": "rect",
       "layer": "data",
@@ -17632,7 +17632,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-26:",
       "kind": "rect",
       "layer": "data",
@@ -17643,7 +17643,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-27:",
       "kind": "rect",
       "layer": "data",
@@ -17654,7 +17654,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-28:",
       "kind": "rect",
       "layer": "data",
@@ -17665,7 +17665,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-29:",
       "kind": "rect",
       "layer": "data",
@@ -17676,7 +17676,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-09-30:",
       "kind": "rect",
       "layer": "data",
@@ -17687,7 +17687,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-10-01:",
       "kind": "rect",
       "layer": "data",
@@ -17698,7 +17698,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-10-02:",
       "kind": "rect",
       "layer": "data",
@@ -17709,7 +17709,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-10-03:",
       "kind": "rect",
       "layer": "data",
@@ -17720,7 +17720,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-10-04:",
       "kind": "rect",
       "layer": "data",
@@ -17731,7 +17731,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "y": 0,
     },
     {
-      "h": 161,
+      "h": 33,
       "key": "primary:cell:2026-10-05:",
       "kind": "rect",
       "layer": "data",
@@ -17751,7 +17751,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "paint": "ink.muted",
       "text": "-20",
       "tx": 0,
-      "ty": 184,
+      "ty": 56,
       "x": 0,
       "y": 13,
     },
@@ -17763,7 +17763,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "paint": "div.1",
       "rx": 1,
       "tx": 0,
-      "ty": 184,
+      "ty": 56,
       "w": 14,
       "x": 25.799999999999997,
       "y": 8,
@@ -17776,7 +17776,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "paint": "div.2",
       "rx": 1,
       "tx": 0,
-      "ty": 184,
+      "ty": 56,
       "w": 14,
       "x": 40.8,
       "y": 8,
@@ -17789,7 +17789,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "paint": "div.3",
       "rx": 1,
       "tx": 0,
-      "ty": 184,
+      "ty": 56,
       "w": 14,
       "x": 55.8,
       "y": 8,
@@ -17802,7 +17802,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "paint": "div.4",
       "rx": 1,
       "tx": 0,
-      "ty": 184,
+      "ty": 56,
       "w": 14,
       "x": 70.8,
       "y": 8,
@@ -17815,7 +17815,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "paint": "div.5",
       "rx": 1,
       "tx": 0,
-      "ty": 184,
+      "ty": 56,
       "w": 14,
       "x": 90.8,
       "y": 8,
@@ -17830,7 +17830,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "paint": "ink.muted",
       "text": "0",
       "tx": 0,
-      "ty": 184,
+      "ty": 56,
       "x": 110.8,
       "y": 13,
     },
@@ -17842,7 +17842,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "paint": "div.6",
       "rx": 1,
       "tx": 0,
-      "ty": 184,
+      "ty": 56,
       "w": 14,
       "x": 123.4,
       "y": 8,
@@ -17855,7 +17855,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "paint": "div.7",
       "rx": 1,
       "tx": 0,
-      "ty": 184,
+      "ty": 56,
       "w": 14,
       "x": 138.4,
       "y": 8,
@@ -17868,7 +17868,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "paint": "div.8",
       "rx": 1,
       "tx": 0,
-      "ty": 184,
+      "ty": 56,
       "w": 14,
       "x": 153.4,
       "y": 8,
@@ -17881,7 +17881,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "paint": "div.9",
       "rx": 1,
       "tx": 0,
-      "ty": 184,
+      "ty": 56,
       "w": 14,
       "x": 168.4,
       "y": 8,
@@ -17896,7 +17896,7 @@ exports[`the grids of the Uncommon types > stripes at 346 by any 1`] = `
       "paint": "ink.muted",
       "text": "20",
       "tx": 0,
-      "ty": 184,
+      "ty": 56,
       "x": 188.4,
       "y": 13,
     },

@@ -157,6 +157,7 @@ function placeMatrix(scene: Scene, W: number, H: number): PlacedNode[] {
   return out;
 }
 
+const STRIP = 34 + 22;    // one row of cells, and the labels along its foot
 // A grid's ramp, set in a line in the scene's order: text by character width, swatches side by side. What the line has no room for is left out.
 function placeRamp(scene: Scene, W: number): Block {
   const nodes: PlacedNode[] = [];
@@ -329,7 +330,9 @@ export function place(scene: Scene, container: Container): PlacedScene {
       // A grid has no bare form. The least it is built to is its `marks` rule's block need, and its ramp is set under it.
       const least = ruleFor(rules.fit, 'matrix', 'marks')?.needs.block ?? 0;
       const ramp = scene.parts.includes('ramp') ? placeRamp(scene, W) : { nodes: [], height: 0 };
-      const ph = H ? Math.max(least, Math.min(rules.axes.height, H - above - ramp.height)) : rules.axes.height;
+      // One row of cells is as tall as a cell, with its labels under it, where nothing says how tall the view is.
+      const strip = scene.ys?.length === 1 && scene.ys[0] === '';
+      const ph = H ? Math.max(least, Math.min(rules.axes.height, H - above - ramp.height)) : strip ? STRIP : rules.axes.height;
       body = { nodes: placeMatrix(scene, W, ph).concat(shift(ramp.nodes, 0, ph)), height: ph + ramp.height };
     } else if (scene.layout === 'rows') {
       body = placeRows(scene, W, rules.rows);

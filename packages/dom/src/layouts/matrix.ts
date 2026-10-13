@@ -21,8 +21,9 @@ const css = `
  * the left of the cells. The ramp is a legend, and follows the page. */
 .uav[data-layout="matrix"] .uav-body { display: grid; grid-template: "y plot" minmax(0, 1fr) ". x" auto "ramp ramp" auto / auto minmax(0, 1fr); direction: ltr; }
 .uav[data-layout="matrix"] [data-thin] { visibility: hidden; }
-.uav[data-layout="matrix"]:has(> .uav-body[data-strip]) { --uav-body-block: 52px; }
-.uav-body[data-strip] .uav-ramp { display: none; }
+/* One row of cells is 34 px tall and no taller, with its labels and its ramp under it. Handed a box, it fills it. */
+.uav[data-layout="matrix"]:has(> .uav-body[data-strip]) { --uav-body-block: auto; }
+.uav[data-layout="matrix"] .uav-body[data-strip] { grid-template-rows: minmax(34px, 1fr) auto auto; }
 .uav-cells { position: absolute; inset: 0; display: grid; gap: 1px; grid-template: repeat(var(--uav-ny), minmax(0, 1fr)) / repeat(var(--uav-nx), minmax(0, 1fr)); }
 .uav-cells > div { display: contents; }
 .uav-cells i { grid-area: var(--uav-cy) / var(--uav-cx); background: var(--uav-paint); border-radius: ${token('border-radius-cell')}; }

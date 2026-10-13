@@ -216,15 +216,22 @@ export const DETAIL_LAYOUTS: string[] = ['cartesian'];
 
 /** Where each row of a layer that is split into a stack starts and ends, in its metric's own terms, by row. A stack
  * runs in the series' order, the first at its foot, and a value below zero stacks downward. `all` is what a row is a
- * share of: the engine's total for its x or its row, or 1. Centred, a stack sits half on each side of zero. */
+ * share of: the engine's total for its x or its row, or 1. Centred, a stack sits half on each side of zero.
+ * Diverging, the series keep their order and the stack is moved so that the first half of them lie below zero and the
+ * second half above it: with an odd count the middle one lies half on each side. Which side a series is on is its
+ * place among them, so a value below zero has no meaning there and is refused. */
 function stacked(rows: Row[], series: string[], split: string, k: (r: Row) => string, f: string, mode: Layer['stack'], all: (r: Row) => number): Map<Row, [number, number]> {
-  const out = new Map<Row, [number, number]>(), up: Record<string, number> = {}, down: Record<string, number> = {};
-  series.forEach((s) => rows.forEach((r) => {
+  const out = new Map<Row, [number, number]>(), up: Record<string, number> = {}, down: Record<string, number> = {}, under: Record<string, number> = {}, half = series.length / 2;
+  series.forEach((s, j) => rows.forEach((r) => {
     if (r[split] !== s || r[f] == null) return;
     const n = num(r, f), run = n < 0 ? down : up, from = run[k(r)] || 0, of = all(r);
+    if (mode === 'diverge' && n < 0) throw new Error('stack: "diverge" sets each series to one side of zero by its place among them, and "' + f + '" is ' + n + ' for "' + s + '" at "' + k(r) + '". Use stack: "zero", where a value below zero stacks downward.');
     run[k(r)] = from + n;
     out.set(r, [from / of, (from + n) / of]);
+    // What of this stack lies below zero: the whole of a series in the first half, and half of the middle one.
+    under[k(r)] = (under[k(r)] || 0) + (j + 1 <= half ? n : j < half ? n / 2 : 0) / of;
   }));
+  if (mode === 'diverge') out.forEach((ends, r) => out.set(r, [ends[0] - under[k(r)]!, ends[1] - under[k(r)]!]));
   if (mode === 'center') out.forEach((ends, r) => { const mid = ((up[k(r)] || 0) + (down[k(r)] || 0)) / 2; out.set(r, [ends[0] - mid, ends[1] - mid]); });
   return out;
 }
@@ -286,7 +293,9 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     const [bottom, top] = y.domain() as [number, number];
     // A short plot keeps the ticks a count of 2 would give on this scale. Where the two counts share only zero (a top of 8, 80, 800: steps of 5 and of 2), every other tick stays instead.
     const fine = y.ticks(4), two = y.ticks(2).filter((t) => fine.includes(t));
-    return { v: (n: number) => (n - bottom) / (top - bottom), ticks: fine, coarse: two.length > 1 ? two : fine.filter((_, i) => i % 2 === 0), text: (t: number) => (share ? fmtPct(t) : formatUnit(t, u || lone, 'compact')) };
+    // A diverging stack counts away from zero on both sides, so its ticks say how much and not which side: no series is less than nothing.
+    const away = layers.some((l) => l.stack === 'diverge' && splitOf(catalog, l, xField) && Math.max(0, units.indexOf(unitOf(catalog, l, xField)!)) === ui);
+    return { v: (n: number) => (n - bottom) / (top - bottom), ticks: fine, coarse: two.length > 1 ? two : fine.filter((_, i) => i % 2 === 0), text: (t: number) => (share ? fmtPct(t) : formatUnit(away ? Math.abs(t) : t, u || lone, 'compact')) };
   });
   let unit: Draw['unit'] = xScale(keys, shared, 0, 1), xv: Draw['xv'];
   if (xOn) {

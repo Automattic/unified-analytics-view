@@ -72,9 +72,10 @@ export interface Layer {
   series?: 'previous' | 'delta';
   role?: Role;
   /** On a layer split by `color`, and not by `detail`: each series starts where the one under it ends. `normalize` makes each a share of the whole,
-   * and `center` sets each stack half on either side of zero. In rows it is what lets a bar's `color` be the query's second
+   * and `center` sets each stack half on either side of zero. `diverge` sets the first half of the series below zero and the second
+   * half above it, in their order, and with an odd count the middle one half on each side. In rows it is what lets a bar's `color` be the query's second
    * dimension: each row's bar is divided into a series for each of its values. */
-  stack?: 'zero' | 'normalize' | 'center';
+  stack?: 'zero' | 'normalize' | 'center' | 'diverge';
   /** On an `arc`: the arcs run over the top half of the circle, from left to right, and not all the way round.
    * The one layer field that is neither data nor role. */
   sweep?: 'half';

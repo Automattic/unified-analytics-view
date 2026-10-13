@@ -81,3 +81,58 @@ describe('a row divided by a second dimension', () => {
     expect(run(split()).plan.text).toBe('Search is the largest channel at 41% of visitors, and Desktop the largest device at 50%.');
   });
 });
+
+describe('stack: "diverge"', () => {
+  const rows = (by: string[], limit: number): Spec => ({ query: { metrics: ['visitors'], by, limit }, layers: [{ mark: 'bar', encode: { y: by[0]!, x: 'visitors', color: by[1]! }, stack: 'diverge' }, label(by[0]!)] });
+  const plot = (by: string[], limit: number): Spec => ({ query: { metrics: ['visitors'], by, limit }, layers: [{ mark: 'bar', encode: { x: by[0]!, y: 'visitors', color: by[1]! }, stack: 'diverge' }] });
+  const ends = (n: { v: number; v0?: number }) => [n.v0 ?? 0, n.v];
+
+  it('with two series sets one to each side of zero in a row\'s track: the population pyramid', () => {
+    const { ratio, result } = run(rows(['channel', 'device'], 2)), pair = (c: string, d: string) => result.rows.find((r) => r.channel === c && r.device === d)!.visitors as number;
+    expect(ratio.series).toEqual(['Desktop', 'Mobile']);
+    // The track runs from the most on the first side to the most on the second, and zero is where the two meet in every row.
+    const zero = pair('Search', 'Desktop') / (pair('Search', 'Desktop') + pair('Search', 'Mobile'));
+    for (const c of ['Search', 'Direct']) {
+      const [a, b] = of<{ v: number; v0?: number }>(ratio.nodes, 'primary:bar:' + c + ':') as [any, any];
+      expect(ends(a)[1]).toBeCloseTo(zero, 12); expect(ends(b)[0]).toBeCloseTo(zero, 12);
+      expect(ends(b)[1] - ends(b)[0]).toBeCloseTo(pair(c, 'Mobile') / (pair('Search', 'Desktop') + pair('Search', 'Mobile')), 12);
+    }
+    expect(ends(of<{ v: number; v0?: number }>(ratio.nodes, 'primary:bar:Search:')[0]!)[0]).toBe(0);
+    expect(ratio.track).toBe('beside');
+  });
+  it('with an odd count sets the middle series half on each side: five are the Likert chart', () => {
+    const { ratio, result } = run(rows(['device', 'channel'], 5)), bars = of<{ v: number; v0?: number; series: string }>(ratio.nodes, 'primary:bar:Desktop:');
+    expect(bars.map((n) => n.series)).toEqual(['Search', 'Direct', 'Social', 'AI assistants', 'Email']);
+    bars.slice(1).forEach((n, i) => expect(ends(n)[0]).toBe(ends(bars[i]!)[1]));
+    // Zero is the middle of the third in every row.
+    const mid = (row: string) => { const [, , m] = of<{ v: number; v0?: number }>(ratio.nodes, 'primary:bar:' + row + ':'); return (ends(m!)[0] + ends(m!)[1]) / 2; };
+    expect(mid('Mobile')).toBeCloseTo(mid('Desktop'), 12); expect(mid('Tablet')).toBeCloseTo(mid('Desktop'), 12);
+    expect(result.rows.length).toBe(15);
+  });
+  it('on an axis sets the first half below the zero line, and its ticks count away from zero on both sides', () => {
+    const { ratio, result } = run(plot(['channel', 'device'], 2)), [a, b] = of<{ v: number; v0?: number }>(ratio.nodes, 'primary:bar:Search:') as [any, any];
+    const ticks = of<{ t: number; text: string }>(ratio.nodes, 'ytick:'), zero = ticks.find((n) => n.text === '0')!.t;
+    expect(ticks.map((n) => n.text)).toEqual(['3k', '2k', '1k', '0', '1k', '2k']);
+    expect(of(ratio.nodes, 'ytick:').map((n: any) => n.key)).toEqual(['ytick:-3000', 'ytick:-2000', 'ytick:-1000', 'ytick:0', 'ytick:1000', 'ytick:2000']);
+    expect([a.v, b.v0]).toEqual([zero, zero]);
+    expect(a.v0 ?? 0).toBeLessThan(zero); expect(b.v).toBeGreaterThan(zero);
+    expect(ratio.nodes.find((n) => n.key === 'grid:0')).toMatchObject({ paint: 'axis', t: zero });
+    // The readout and the sentence say each value as it is: nothing is negative but where it is drawn.
+    expect(result.rows.every((r) => (r.visitors as number) > 0)).toBe(true);
+    expect(run(plot(['channel', 'device'], 2)).plan.text).toBe('Search is the largest channel at 41% of visitors, and Desktop the largest device at 50%.');
+  });
+  it('leaves "center" as it was: half of the whole stack on each side, whatever the count', () => {
+    const centred: Spec = { ...plot(['channel', 'device'], 2), layers: [{ mark: 'bar', encode: { x: 'channel', y: 'visitors', color: 'device' }, stack: 'center' }] };
+    const [a, b] = of<{ v: number; v0?: number }>(run(centred).ratio.nodes, 'primary:bar:Search:') as [any, any], ticks = of<{ t: number; text: string }>(run(centred).ratio.nodes, 'ytick:');
+    expect(((a.v0 ?? 0) + b.v) / 2).toBeCloseTo(ticks.find((n) => n.text === '0')!.t, 12);
+    expect(ticks.map((n) => n.text)).toEqual(['-4k', '-2k', '0', '2k', '4k']);
+  });
+  it('refuses a value below zero, which has no side of its own to be on', () => {
+    const result = runQuery(plot(['channel', 'device'], 2).query), odd: Result = { ...result, rows: result.rows.map((r, i) => (i === 1 ? { ...r, visitors: -5 } : r)) };
+    expect(err(plot(['channel', 'device'], 2), odd)).toBe('stack: "diverge" sets each series to one side of zero by its place among them, and "visitors" is -5 for "Mobile" at "Search". Use stack: "zero", where a value below zero stacks downward.');
+  });
+  it('is in the schema, and needs a dimension on color as every stack does', () => {
+    expect(err({ query: { metrics: ['visitors'], by: ['channel'] }, layers: [{ mark: 'bar', encode: { y: 'channel', x: 'visitors' }, stack: 'diverge' }] }))
+      .toBe('Layer 1 has "stack" and no dimension on color, so there is nothing to stack. Encode the query\'s second dimension on color, or remove "stack".');
+  });
+});

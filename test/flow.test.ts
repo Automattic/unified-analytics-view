@@ -70,7 +70,7 @@ describe('the sweep', () => {
     }
     const { ratio, result } = run(sankey, 250);
     expect(ratio.ys).toEqual(result.totalsBy!.channel!.map((r) => r.channel));
-    expect(ratio.rows).toEqual(result.totalsBy!.section!.map((r) => r.section));
+    expect(ratio.rows).toEqual(result.totalsBy!.landing!.map((r) => r.landing));
     // `keep` switches the rule off, so there is no grid, and the Sankey stays where it has the room.
     expect(run({ ...sankey, keep: ['marks'] }, 346).plan).toMatchObject({ layout: 'link', preset: 'sankey', dropped: [] });
   });
@@ -80,15 +80,15 @@ describe('golden scenes', () => {
   for (const [w, h] of [[346, null], [300, null], [250, null]] as [number, number | null][]) it(`sankey at ${w} by ${h ?? 'any'}`, () => expect(run(sankey, w, h).scene).toMatchSnapshot());
 });
 
-describe('the fixture: visitors from channel to section', () => {
+describe('the fixture: visitors from channel to landing', () => {
   it('answers with a row for each pair, source by source, and the engine\'s total for each value of both', () => {
     const { rows, totals, totalsBy } = runQuery(sankey.query);
-    expect([rows.length, totalsBy!.channel!.length, totalsBy!.section!.length]).toEqual([30, 6, 5]);
-    expect(rows.slice(0, 2).map((r) => [r.channel, r.section])).toEqual([['Search', 'Home'], ['Search', 'Blog']]);
+    expect([rows.length, totalsBy!.channel!.length, totalsBy!.landing!.length]).toEqual([30, 6, 5]);
+    expect(rows.slice(0, 2).map((r) => [r.channel, r.landing])).toEqual([['Search', 'Home'], ['Search', 'Blog']]);
     for (const t of totalsBy!.channel!) expect(rows.filter((r) => r.channel === t.channel).reduce((s, r) => s + (r.visitors as number), 0), String(t.channel)).toBe(t.visitors);
     expect(Math.abs(totalsBy!.channel!.reduce((s, r) => s + (r.visitors as number), 0) - totals.visitors!)).toBeLessThanOrEqual(6);
     expect(runQuery(sankey.query, 'no-prior')).toEqual(runQuery(sankey.query));
-    expect(runQuery(sankey.query, 'empty')).toMatchObject({ rows: [], totalsBy: { channel: [], section: [] }, meta: { empty: true } });
+    expect(runQuery(sankey.query, 'empty')).toMatchObject({ rows: [], totalsBy: { channel: [], landing: [] }, meta: { empty: true } });
   });
 });
 
@@ -99,15 +99,15 @@ describe('link: two columns of nodes and a ribbon for each row', () => {
     expect([plan.layout, ratio.layout, plan.preset]).toEqual(['link', 'link', 'sankey']);
     expect(customPresets().has('sankey')).toBe(true);
     expect(PRESETS).not.toHaveProperty('sankey');
-    expect(expand(sankey).layers).toEqual([{ mark: 'link', encode: { x: 'channel', y: 'section', size: 'visitors' } }]);
+    expect(expand(sankey).layers).toEqual([{ mark: 'link', encode: { x: 'channel', y: 'landing', size: 'visitors' } }]);
     const written: Spec = { ...sankey, use: undefined, layers: expand(sankey).layers };
     for (const w of [346, 300, 250, 120]) expect(run(sankey, w).scene, String(w)).toEqual(run(written, w).scene);
     expect(err(() => expand({ ...sankey, query: { metrics: ['visitors'], by: ['channel'] } }))).toBe('The "sankey" preset needs two dimensions in query.by: the one on the axis, then the one to split by.');
   });
   it('a node for each value, in the engine\'s order, as tall as the engine\'s total for it and never a sum of the rows', () => {
     const nodes = rects(ratio);
-    expect(nodes.map((n) => n.key)).toEqual([...result.totalsBy!.channel!.map((r) => 'node:channel:' + r.channel), ...result.totalsBy!.section!.map((r) => 'node:section:' + r.section)]);
-    for (const [d, x] of [['channel', 0], ['section', 1]] as const) {
+    expect(nodes.map((n) => n.key)).toEqual([...result.totalsBy!.channel!.map((r) => 'node:channel:' + r.channel), ...result.totalsBy!.landing!.map((r) => 'node:landing:' + r.landing)]);
+    for (const [d, x] of [['channel', 0], ['landing', 1]] as const) {
       let y = 0;
       for (const t of result.totalsBy![d]!) {
         const n = nodes.find((r) => r.key === 'node:' + d + ':' + t[d])!;
@@ -122,15 +122,15 @@ describe('link: two columns of nodes and a ribbon for each row', () => {
   });
   it('a ribbon for each row, as wide at each end as the row\'s share of the node it meets, lying in the other column\'s order', () => {
     const paths = ribbons(ratio), nodes = rects(ratio);
-    expect(paths.map((n) => n.key)).toEqual(result.rows.map((r) => 'primary:link:' + r.channel + ':' + r.section));
-    expect(ratio.rows).toEqual(result.rows.map((r) => r.channel + ':' + r.section));
+    expect(paths.map((n) => n.key)).toEqual(result.rows.map((r) => 'primary:link:' + r.channel + ':' + r.landing));
+    expect(ratio.rows).toEqual(result.rows.map((r) => r.channel + ':' + r.landing));
     expect(paths.every((n) => n.row === n.key.slice('primary:link:'.length) && n.fill && n.layer === 'data' && n.role === 'primary')).toBe(true);
     const ends = (n: PathNode) => { const [a, , , c, d, , , b] = [...n.d!.matchAll(/[\d.]+,([\d.]+)/g)].map((m) => +m[1]!); return { y0: a!, w0: b! - a!, y1: c!, w1: d! - c! }; };
     result.rows.forEach((r, i) => {
-      const s = nodes.find((n) => n.key === 'node:channel:' + r.channel)!, t = nodes.find((n) => n.key === 'node:section:' + r.section)!, e = ends(paths[i]!);
-      const of = (d: 'channel' | 'section') => result.totalsBy![d]!.find((x) => x[d] === r[d])!.visitors as number;
+      const s = nodes.find((n) => n.key === 'node:channel:' + r.channel)!, t = nodes.find((n) => n.key === 'node:landing:' + r.landing)!, e = ends(paths[i]!);
+      const of = (d: 'channel' | 'landing') => result.totalsBy![d]!.find((x) => x[d] === r[d])!.visitors as number;
       expect(e.w0, paths[i]!.key).toBeCloseTo((r.visitors as number) / of('channel') * s.h! * 100, 1);
-      expect(e.w1, paths[i]!.key).toBeCloseTo((r.visitors as number) / of('section') * t.h! * 100, 1);
+      expect(e.w1, paths[i]!.key).toBeCloseTo((r.visitors as number) / of('landing') * t.h! * 100, 1);
     });
     // The first source's ribbons fill its node from the top, one under the other, in the targets' order.
     const first = paths.slice(0, 5).map(ends);
@@ -159,7 +159,7 @@ describe('link: two columns of nodes and a ribbon for each row', () => {
   });
   it('with a limit the totals still cover what it left out, so a column stops short of the foot and a node of its ribbons', () => {
     const spec: Spec = { ...sankey, query: { ...sankey.query, limit: 3 } }, { ratio: cut, result: r } = run(spec, 346);
-    expect([r.totalsBy!.channel!.length, r.totalsBy!.section!.length, r.rows.length]).toEqual([3, 3, 9]);
+    expect([r.totalsBy!.channel!.length, r.totalsBy!.landing!.length, r.rows.length]).toEqual([3, 3, 9]);
     const last = rects(cut).filter((n) => n.x === 0).pop()!;
     expect(last.y! + last.h!).toBeLessThan(0.9);
     expect(rects(cut).find((n) => n.key === 'node:channel:Search')!.h).toBeCloseTo((r.totalsBy!.channel![0]!.visitors as number) / r.totals.visitors! * (1 - GAP * 2), 9);
@@ -184,27 +184,27 @@ describe('link: two columns of nodes and a ribbon for each row', () => {
 
 describe('prose and errors', () => {
   it('says what a query by two dimensions says: who leads each, as a share of the engine\'s total. Core gives a custom mark no sentence of its own', () => {
-    expect(run(sankey, 346).plan.text).toBe('Search is the largest channel at 41% of visitors, and Home the largest section at 30%.');
-    expect(run(sankey, 250).plan.text).toBe('Most visitors at Search, Home (1,378) in the last 28 days. Search is the busiest channel at 41% of visitors, and Home the busiest section at 30%.');
+    expect(run(sankey, 346).plan.text).toBe('Search is the largest channel at 41% of visitors, and Home the largest landing at 30%.');
+    expect(run(sankey, 250).plan.text).toBe('Most visitors at Search, Home (1,378) in the last 28 days. Search is the busiest channel at 41% of visitors, and Home the busiest landing at 30%.');
     expect(run(sankey, 346, null, 'empty').plan.text).toBe('Visitors: nothing recorded in the last 28 days.');
   });
   it('errors name the fix: a wrong encoding, no totals from the engine, too many sources, a second layer, and x2', () => {
     const result = runQuery(sankey.query), at = (spec: Spec, r: Result = result) => err(() => resolve(spec, r, makeContainer(346), catalog));
-    expect(at(layered({ x: 'channel', y: 'visitors', size: 'visitors' }))).toBe('The query is by "section", and no layer encodes it, so its rows would be drawn over each other. Encode it on color, for a colour and a legend entry each, or on detail, for a series each in one paint, or remove it from query.by.');
-    expect(at({ ...layered({ x: 'channel', y: 'section', color: 'visitors' }) })).toBe('A "link" layer needs the metric each ribbon is as wide as on size, and this one has undefined there. Encode one of the query\'s metrics: visitors.');
-    expect(at({ query: sankey.query, layers: [{ mark: 'link', encode: { x: 'channel', color: 'section', size: 'visitors' } }] })).toBe('A "link" layer runs from the values of one dimension to the values of another, the source on x and the target on y, and this one has "channel" on x and undefined on y. Encode "channel" on x and "section" on y.');
+    expect(at(layered({ x: 'channel', y: 'visitors', size: 'visitors' }))).toBe('The query is by "landing", and no layer encodes it, so its rows would be drawn over each other. Encode it on color, for a colour and a legend entry each, or on detail, for a series each in one paint, or remove it from query.by.');
+    expect(at({ ...layered({ x: 'channel', y: 'landing', color: 'visitors' }) })).toBe('A "link" layer needs the metric each ribbon is as wide as on size, and this one has undefined there. Encode one of the query\'s metrics: visitors.');
+    expect(at({ query: sankey.query, layers: [{ mark: 'link', encode: { x: 'channel', color: 'landing', size: 'visitors' } }] })).toBe('A "link" layer runs from the values of one dimension to the values of another, the source on x and the target on y, and this one has "channel" on x and undefined on y. Encode "channel" on x and "landing" on y.');
     const one = { metrics: ['visitors'], by: ['channel'] };
     expect(at(layered({ x: 'channel', size: 'visitors' }, one), runQuery(one))).toBe('A "link" layer runs from the values of one dimension to the values of another, the source on x and the target on y, and this one has "channel" on x and undefined on y. Make query.by two dimensions, the source and then the target, and encode the first on x and the second on y.');
     expect(at(sankey, { ...result, totalsBy: undefined })).toBe('A "link" layer makes each node as tall as the engine\'s total for its value, and this result has no totalsBy for "channel". Return it from the query layer: a row for each value of "channel", holding its total of "visitors".');
-    expect(at(sankey, { ...result, totalsBy: { channel: result.totalsBy!.channel! } })).toMatch(/no totalsBy for "section"/);
-    const many: Spec = { ...sankey, query: { ...sankey.query, by: ['weekday', 'section'] } };
+    expect(at(sankey, { ...result, totalsBy: { channel: result.totalsBy!.channel! } })).toMatch(/no totalsBy for "landing"/);
+    const many: Spec = { ...sankey, query: { ...sankey.query, by: ['weekday', 'landing'] } };
     expect(at(many, runQuery(many.query))).toBe('Running from "weekday" makes 7 sources, and there are 6 series colours. Add "limit": 6 to the query, or less.');
     expect(at({ ...many, query: { ...many.query, limit: 6 } }, runQuery({ ...many.query, limit: 6 }))).toBeUndefined();
-    const enc = { x: 'channel', y: 'section', size: 'visitors' };
+    const enc = { x: 'channel', y: 'landing', size: 'visitors' };
     expect(at({ query: sankey.query, layers: [{ mark: 'link', encode: enc }, { mark: 'link', encode: enc }] })).toBe('A Sankey draws one "link" layer, and this view has 2. Keep one, with the source on x, the target on y and the metric on size.');
-    expect(at({ query: sankey.query, layers: [{ mark: 'link', encode: enc }, { mark: 'bar', encode: { x: 'channel', y: 'visitors', color: 'section' } }] })).toMatch(/^The "link" mark is laid out by its own code, and layer 2 is a "bar"/);
+    expect(at({ query: sankey.query, layers: [{ mark: 'link', encode: enc }, { mark: 'bar', encode: { x: 'channel', y: 'visitors', color: 'landing' } }] })).toMatch(/^The "link" mark is laid out by its own code, and layer 2 is a "bar"/);
     // The plan gave the target x2. Core keeps that for a mark that runs from one value to another, and says so.
-    expect(at(layered({ x: 'channel', x2: 'section', size: 'visitors' }))).toBe('Layer 1 is a "link" with "x2", and only a bar, a rule or an area runs from one value to another. Use one of those, or remove "x2".');
+    expect(at(layered({ x: 'channel', x2: 'landing', size: 'visitors' }))).toBe('Layer 1 is a "link" with "x2", and only a bar, a rule or an area runs from one value to another. Use one of those, or remove "x2".');
   });
 });
 

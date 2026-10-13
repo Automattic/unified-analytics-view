@@ -85,7 +85,7 @@ const specs: Record<string, Spec> = {
   kept: { ...trend, keep: ['guides'] },
 };
 const invalid: Record<string, Spec> = {
-  'unknown preset': { spec: 'view/0', use: 'treemap', query: { metrics: ['visitors'], by: ['channel'] } },
+  'unknown preset': { spec: 'view/0', use: 'no-such-preset', query: { metrics: ['visitors'], by: ['channel'] } },
   'dimension, no layers': { spec: 'view/0', query: { metrics: ['visitors'], by: ['channel'] } },
   'preset, no dimension': { spec: 'view/0', use: 'line', query: { metrics: ['visitors'] } },
 };
@@ -272,8 +272,8 @@ describe('fitting the container (reference section 10.1)', () => {
 describe('validation', () => {
   it('names the fix', () => {
     const err = (s: Spec) => { try { resolve(s, runQuery(s.query), makeContainer(346), catalog); } catch (e) { return (e as Error).message; } };
-    expect(err(invalid['unknown preset']!)).toBe('Unknown preset "treemap". The library has: line, bar-list, share-bar, grouped-bar, stacked-bar, stacked-area, pie, donut, pie-semi-circle, gauge, rose, radial-bar, sunburst, heatmap, funnel, box-plot, error-bars, waterfall, candlestick, fan, dumbbell, bullet. Registered: choropleth, symbol-map, sankey, tile-grid-map, hex-tile-map. Use one of those, or register it with registerPreset("treemap", …) before the view is resolved.');
-    expect(err(invalid['dimension, no layers']!)).toBe('This spec has a dimension but no layers, so there is nothing to draw it with. Add "layers", or "use" one of: line, bar-list, share-bar, grouped-bar, stacked-bar, stacked-area, pie, donut, pie-semi-circle, gauge, rose, radial-bar, sunburst, heatmap, funnel, box-plot, error-bars, waterfall, candlestick, fan, dumbbell, bullet, choropleth, symbol-map, sankey, tile-grid-map, hex-tile-map.');
+    expect(err(invalid['unknown preset']!)).toBe('Unknown preset "no-such-preset". The library has: line, bar-list, share-bar, grouped-bar, stacked-bar, stacked-area, pie, donut, pie-semi-circle, gauge, rose, radial-bar, sunburst, heatmap, funnel, box-plot, error-bars, waterfall, candlestick, fan, dumbbell, bullet. Registered: choropleth, symbol-map, sankey, tile-grid-map, hex-tile-map, treemap, pair-list. Use one of those, or register it with registerPreset("no-such-preset", …) before the view is resolved.');
+    expect(err(invalid['dimension, no layers']!)).toBe('This spec has a dimension but no layers, so there is nothing to draw it with. Add "layers", or "use" one of: line, bar-list, share-bar, grouped-bar, stacked-bar, stacked-area, pie, donut, pie-semi-circle, gauge, rose, radial-bar, sunburst, heatmap, funnel, box-plot, error-bars, waterfall, candlestick, fan, dumbbell, bullet, choropleth, symbol-map, sankey, tile-grid-map, hex-tile-map, treemap, pair-list.');
     expect(err(invalid['preset, no dimension']!)).toBe('The "line" preset needs a dimension in query.by.');
     expect(err({ query: { metrics: ['pageviews'], by: ['page'] }, layers: [{ mark: 'bar', encode: { y: 'page', x: 'visitors' } }] }))
       .toBe('Layer 1 encodes "visitors" on x, which the query does not return. It returns: page, pageviews.');

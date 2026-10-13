@@ -41,6 +41,9 @@ importers:
       '@unified-analytics/geo':
         specifier: workspace:*
         version: link:packages/geo
+      '@unified-analytics/partition':
+        specifier: workspace:*
+        version: link:packages/partition
       '@unified-analytics/spacefast':
         specifier: workspace:*
         version: link:packages/spacefast
@@ -86,6 +89,9 @@ importers:
       '@unified-analytics/geo':
         specifier: workspace:*
         version: link:../../packages/geo
+      '@unified-analytics/partition':
+        specifier: workspace:*
+        version: link:../../packages/partition
       '@unified-analytics/spacefast':
         specifier: workspace:*
         version: link:../../packages/spacefast
@@ -132,6 +138,9 @@ importers:
       '@unified-analytics/geo':
         specifier: workspace:*
         version: link:../geo
+      '@unified-analytics/partition':
+        specifier: workspace:*
+        version: link:../partition
 
   packages/flow:
     dependencies:
@@ -153,6 +162,15 @@ importers:
       d3-geo:
         specifier: ^3.1.1
         version: 3.1.1
+
+  packages/partition:
+    dependencies:
+      '@unified-analytics/core':
+        specifier: workspace:*
+        version: link:../core
+      '@unified-analytics/dom':
+        specifier: workspace:*
+        version: link:../dom
 
   packages/spacefast:
     dependencies:

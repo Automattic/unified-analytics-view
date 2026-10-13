@@ -1,6 +1,7 @@
 import type { Catalog, Query, Result, Row, Spec } from '@unified-analytics/core';
 import { registerLink } from '@unified-analytics/flow';
 import { registerGeo, type Shapes } from '@unified-analytics/geo';
+import { registerPartition } from '@unified-analytics/partition';
 import shapes from './countries.json';
 import hexes from './tiles-hex.json';
 import squares from './tiles-square.json';
@@ -24,6 +25,8 @@ export const tiles: { square: Shapes; hex: Shapes } = { square: squares, hex: he
 // not say which shapes to draw. Each is a custom mark to the grammar's count. The preset names are working names.
 registerGeo(tiles.square, { name: 'geo-tiles', presets: { color: 'tile-grid-map' } });
 registerGeo(tiles.hex, { name: 'geo-hexes', presets: { color: 'hex-tile-map' } });
+// The `partition` mark needs nothing handed to it. It is registered here for the same reason.
+registerPartition();
 
 /* Stands in for the query layer and the engines. Totals come from the
  * "engine", never from summing the rows a view happens to receive. */
@@ -68,6 +71,7 @@ export const catalog: Catalog = {
     term:        { label: 'Search term', type: 'categorical' },
     intent:      { label: 'Intent',      type: 'categorical' },
     load_stem:   { label: 'Whole second', type: 'categorical' },
+    landing:     { label: 'Landing',     type: 'categorical' },
     section:    { label: 'Section', type: 'categorical' },
   },
 };
@@ -139,7 +143,17 @@ MIX.visitor_country = [...MIX.country, ['SG', 0.012, 0.01], ['MT', 0.006, 0.006]
 // Where a visitor goes from a page: the same pages again, so the pairs make a square.
 MIX.next_page = shares(PAGES.map((p) => p.page), PAGES.map((p) => p.visitors));
 // The part of the site a visit lands in. With `channel` it is a flow: where visitors come from, and where they arrive.
-MIX.section = [['Home', 0.3, 0.31], ['Blog', 0.26, 0.22], ['Docs', 0.2, 0.22], ['Pricing', 0.16, 0.17], ['Changelog', 0.08, 0.08]];
+MIX.landing = [['Home', 0.3, 0.31], ['Blog', 0.26, 0.22], ['Docs', 0.2, 0.22], ['Pricing', 0.16, 0.17], ['Changelog', 0.08, 0.08]];
+// The site's sections, which divide the whole as a channel does, and the pages each one holds, by weight: a hierarchy of
+// two levels. A page is in one section, so a query by section and then page returns a row for each page, and not a
+// row for every pair. Only that query reads these: a query by page alone is still the eight pages above.
+MIX.section = [['Marketing', 0.42, 0.44], ['Blog', 0.27, 0.22], ['Docs', 0.21, 0.24], ['Changelog', 0.1, 0.1]];
+const SECTION_PAGES: Record<string, [string, number][]> = {
+  Marketing: [['/', 48], ['/pricing', 30], ['/about', 9], ['/customers', 7], ['/contact', 6]],
+  Blog:      [['/blog/launch-notes', 44], ['/blog/analytics-without-cookies', 21], ['/blog/a-year-in-numbers', 16], ['/blog', 12], ['/blog/hiring', 7]],
+  Docs:      [['/docs/getting-started', 46], ['/docs/api', 27], ['/docs/install', 18], ['/docs/faq', 9]],
+  Changelog: [['/changelog', 78], ['/changelog/2026', 22]],
+};
 // What a page has and a day does not: the share of its visitors who convert, in percent. A rate is the engine's to work out, and does not add up.
 const RATES: Record<string, number> = { '/': 2.1, '/pricing': 5.8, '/blog/launch-notes': 1.2, '/docs/getting-started': 3.4, '/changelog': 0.9, '/about': 1.6, '/blog/analytics-without-cookies': 2.7, '/contact': 4.4 };
 const RATE = 2.6;
@@ -354,10 +368,13 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
   // to the next, so every pair adds up to the outer row it came from. Time, when it is there, is the outer one.
   // ponytail: a total by the inner dimension is the sum of its pairs, and is not held to what a query by it alone returns.
   const [outer, inner] = isTime(dims[1]!) ? [dims[1]!, dims[0]!] : [dims[0]!, dims[1]!];
+  if (dims.indexOf('section') >= 0 && dims.indexOf('page') >= 0 && outer !== 'section') throw new Error('The fixture has pages inside sections. Query by section and then page: ["section", "page"].');
   const fields = metrics.flatMap((m) => (wantPrev ? [m, m + '@previous'] : [m]));
-  const values: [string, number][] = inner === 'page' ? PAGES.map((p) => [p.page, p.visitors]) : MIX[inner]!.map((c) => [c[0], c[1]]);
+  // A section's own pages, where the two are a hierarchy. Otherwise every value of the inner dimension, under every outer one.
+  const nested = outer === 'section' && inner === 'page', all: [string, number][] = nested ? Object.values(SECTION_PAGES).flat() : inner === 'page' ? PAGES.map((p) => [p.page, p.visitors]) : MIX[inner]!.map((c) => [c[0], c[1]]);
   const uneven = seeded(days + 97), outerRows = rowsBy(outer);
   const pairs = outerRows.flatMap((o) => {
+    const values = nested ? SECTION_PAGES[o.section as string]! : all;
     const weights = values.map(([, w]) => w * (0.8 + 0.4 * uneven()));
     const parts = fields.map((f) => (o[f] == null ? null : apportion(o[f] as number, weights)));
     return values.map(([name], j): Row => ({ ...o, [inner]: name, ...Object.fromEntries(fields.map((f, i) => [f, parts[i] ? parts[i]![j]! : null])) }));
@@ -367,7 +384,7 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
   // Through time a pair has a running total too: what its value of the inner dimension has held since the range began.
   // ponytail: of sign-ups alone, as a page's rank comes only with one query. When a query can ask for a companion, this is asked for.
   if (isTime(outer) && metrics.indexOf('signups') >= 0) { const run: Record<string, number> = {}; pairs.forEach((p) => { const k = p[inner] as string; p['signups@running'] = run[k] = (run[k] || 0) + (p.signups as number); }); }
-  const innerRows = values.map(([name]) => {
+  const innerRows = all.map(([name]) => {
     const r: Row = { [inner]: name }, mine = pairs.filter((p) => p[inner] === name);
     fields.forEach((f) => { r[f] = mine.some((p) => p[f] != null) ? mine.reduce((s, p) => s + ((p[f] as number) || 0), 0) : null; });
     return r;
@@ -443,6 +460,10 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
   rose:    { label: 'A rose: visitors by hour of the day', spec: { spec: 'view/0', title: 'Visitors by hour', use: 'rose', query: { metrics: ['visitors'], by: ['hour'], range: '28d' } } },
   rings:   { label: 'Radial bars: visitors by channel', spec: { spec: 'view/0', title: 'Visitors by channel', use: 'radial-bar', query: { metrics: ['visitors'], by: ['channel'], range: '28d' } } },
   sunburst: { label: 'A sunburst: visitors by device, then by channel', spec: { spec: 'view/0', title: 'Visitors by device and channel', use: 'sunburst', query: { metrics: ['visitors'], by: ['device', 'channel'], range: '28d' } } },
+  // The `partition` mark (docs/uncommon-coverage-plan.md, step 9). They are swept, and have their golden scenes, in test/partition.test.ts.
+  treemap: { label: 'A treemap: page views by section, and by page in each', spec: { spec: 'view/0', title: 'Page views by section and page', use: 'treemap', query: { metrics: ['pageviews'], by: ['section', 'page'], range: '28d' } } },
+  treemap1: { label: 'A treemap of one level: visitors by channel', spec: { spec: 'view/0', title: 'Visitors by channel', query: { metrics: ['visitors'], by: ['channel'], range: '28d' },
+            layers: [{ mark: 'partition', encode: { x: 'channel', size: 'visitors' } }] } },
   unmapped: { label: 'A map with rows it has no shape for: visitors by every country seen', spec: { spec: 'view/0', title: 'Visitors by country, all of them', query: { metrics: ['visitors'], by: ['visitor_country'], range: '28d' },
             layers: [{ mark: 'geo', encode: { x: 'visitor_country', color: 'visitors' } }] } },
   // The Uncommon types that today's marks already say (docs/uncommon-coverage-plan.md, step 0, and what it found in section 7).
@@ -475,5 +496,5 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
   stem:    { label: 'Stem-and-leaf: load times, the seconds and the tenths under each', spec: { spec: 'view/0', title: 'Load times', query: { metrics: ['requests'], by: ['load_stem'], range: '28d' },
             layers: [{ mark: 'text', encode: { y: 'load_stem', text: 'load_stem' } }, { mark: 'text', encode: { y: 'load_stem', text: 'load_stem@leaves' } }] } },
   // The `link` mark (step 8 of docs/uncommon-coverage-plan.md). Swept, with its golden scenes, in test/flow.test.ts.
-  sankey:  { label: 'Sankey: visitors from channel to the section they land in', spec: { spec: 'view/0', title: 'Where visitors land', use: 'sankey', query: { metrics: ['visitors'], by: ['channel', 'section'], range: '28d' } } },
+  sankey:  { label: 'Sankey: visitors from channel to the section they land in', spec: { spec: 'view/0', title: 'Where visitors land', use: 'sankey', query: { metrics: ['visitors'], by: ['channel', 'landing'], range: '28d' } } },
 };

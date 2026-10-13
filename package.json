@@ -19,6 +19,7 @@
     "@unified-analytics/fixtures": "workspace:*",
     "@unified-analytics/flow": "workspace:*",
     "@unified-analytics/geo": "workspace:*",
+    "@unified-analytics/partition": "workspace:*",
     "@unified-analytics/spacefast": "workspace:*",
     "@unified-analytics/tokens": "workspace:*",
     "ajv": "^8.20.0",

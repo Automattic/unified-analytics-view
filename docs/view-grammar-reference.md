@@ -299,10 +299,16 @@ Each name is a custom mark to the health check of section 9. Below the room a ma
 **The `link` mark** draws a Sankey of one step, and is the second custom mark (built October 12, in `packages/flow`, with no dependency but core). It takes one layer, alone in the view, of a query by two dimensions. `x` is the source dimension, `y` the target and `size` the metric. Two columns of nodes, the sources on the left: a node for each value, in the engine's order, as tall as the engine's total for it, so a result with no `totalsBy` is an error. A ribbon for each row, as wide at each end as the row's share of the node it meets; a row whose value is null or zero has none. A source takes a series colour, so more than six is an error that names `limit`; its ribbons are that colour as a tint, and a target is neutral. Short of room it gives up its labels, and then becomes the `heatmap` of the same query, with the sources down the side.
 
 ```json
-{ "query": { "metrics": ["visitors"], "by": ["channel", "section"] }, "layers": [{ "mark": "link", "encode": { "x": "channel", "y": "section", "size": "visitors" } }] }
+{ "query": { "metrics": ["visitors"], "by": ["channel", "landing"] }, "layers": [{ "mark": "link", "encode": { "x": "channel", "y": "landing", "size": "visitors" } }] }
 ```
 
 The target is on `y` because a custom mark cannot add a channel, and `x2` is kept for a bar, a rule or an area. A view of it says the sentence any query by two dimensions says, who leads each dimension, and not its largest flow: a custom mark has no way to give the prose (`docs/uncommon-coverage-plan.md`, section 7).
+
+**The `partition` mark** draws a treemap: a box divided by area, nested once. It is a custom mark, in `packages/partition`, and takes one layer, alone in the view. `x` is the dimension the box is divided by and `size` the metric each part's area is its share of. A second dimension on `detail` divides each part again. A metric on `color` paints every box a step of the sequential ramp, with the ramp under it; without one each value on `x` has a series colour, its children are in that colour, and more than six is an error that names the fix. Every area is a share of a total the engine gives: the whole box is the metric's total, a parent is its row of `totalsBy`, and a child is its value against its parent's. So with a `limit` the boxes stop short and the rest is left unpainted, as a band stops short of its end. Two dimensions without `totalsBy` is an error. A name shows only where it fits its box, and a child's only where its parent's does. Below the room it needs the view becomes a list of the same query: `bar-list` with one dimension, `pair-list` with two.
+
+```json
+{ "query": { "metrics": ["pageviews"], "by": ["section", "page"] }, "layers": [{ "mark": "partition", "encode": { "x": "section", "detail": "page", "size": "pageviews" } }] }
+```
 
 `rows` is a track per row: a label, a track with a linear scale that bars, dots, rules and ticks draw in, and columns of values. Facets are not built (section 19, Decided 26). The plan and what building it found are in `docs/chart-coverage-plan.md`.
 
@@ -387,6 +393,8 @@ A companion is something the engine returns with a metric. A query cannot yet as
 |---|---|---|
 | `choropleth` | One dimension whose values are region keys | A map, each region filled by the metric on the sequential ramp |
 | `symbol-map` | The same | A map with a symbol on each region, sized by the metric |
+| `treemap` | Two categorical dimensions, a parent and its children, and `totalsBy` in the result | A box divided by area among the first dimension's values, and each part divided again among the second's (`packages/partition`) |
+| `pair-list` | Two categorical dimensions | Rows, one for each pair, named by both. What a treemap of two dimensions becomes below the room it needs |
 
 A page that registers the mark again for a set of tiles (section 7) names the presets that draw it. The fixtures register two, for the marks `geo-tiles` and `geo-hexes` (built October 12):
 
@@ -401,7 +409,7 @@ A page that registers the mark again for a set of tiles (section 7) names the pr
 |---|---|---|
 | `sankey` | Two dimensions, the source and then the target, and `totalsBy` in the result | A Sankey of one step: a node for each value, and a ribbon for each pair |
 
-All five are working names, to check against `@automattic/charts`. A name must be letters, digits, `_` and `-`, and cannot be one the library has. A name already registered is replaced. `customPresets()` lists what is registered. The registry is a map and two functions, as the one for marks is, and a name in it is unknown until its package has been loaded: the error for an unknown preset lists the library and the registry, and names `registerPreset`.
+All seven are working names, to check against `@automattic/charts`. A name must be letters, digits, `_` and `-`, and cannot be one the library has. A name already registered is replaced. `customPresets()` lists what is registered. The registry is a map and two functions, as the one for marks is, and a name in it is unknown until its package has been loaded: the error for an unknown preset lists the library and the registry, and names `registerPreset`.
 
 - The library ships the basics. Users and agents add their own presets to it.
 - A preset is named after the `@automattic/charts` component it replaces, where one exists: `line` for `LineChart`, `bar-list` for `BarListChart`. The prototype calls `line` by its earlier name, `trend`.

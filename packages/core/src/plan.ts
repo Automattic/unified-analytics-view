@@ -2,7 +2,7 @@ import { CONTAINER_RULES, KEEP } from './container.ts';
 import { applies, fallbackRule, ruleFor, type FitRule } from './fit.ts';
 import { fmtTime, rangeLabel } from './format.ts';
 import { customMarks } from './marks.ts';
-import { PRESETS, expand, presetNames, usesPrevious } from './presets.ts';
+import { PRESETS, expand, fills, presetNames, usesPrevious } from './presets.ts';
 import { COLUMNS_BLOCK, place } from './place.ts';
 import { BUILT_IN_MARKS, DETAIL_LAYOUTS, buildScene, columnLabel, columnsOf, tldrValueText, isDim, roleOf, seriesOf, trackBeside, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
 import { gridProse, rangeProse, tldrProse } from './prose.ts';
@@ -125,7 +125,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   if (custom) p.guides = { ramp: true, size: true };
   // A layout with a rule that names a `fallback` gives way to that preset, whole, where the rule applies: the same query,
   // planned again. Asked before the reductions, which have nothing to give up for a view that is not this one.
-  const swap = layers.length ? fallbackRule(fit, p.layout, keep, via) : undefined;
+  const swap = layers.length ? fallbackRule(fit, p.layout, keep, via, (use) => fills(use, q, presets)) : undefined;
   // A split plot starts with its legend. Its rules step that down to a label at the end of each line, where there
   // are lines, and then to nothing. They are asked once, of the view: unlike the reductions, they change no one else's room.
   const series = p.layout === 'cartesian' ? seriesOf(catalog, layers) : null;

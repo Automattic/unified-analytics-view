@@ -151,14 +151,14 @@ describe('the same mark under another name', () => {
     expect(shapes(run(map, 346).ratio).length).toBe(123);
   });
   it('its presets are the ones the page names, and each is the layers written out', () => {
-    expect([...customPresets().keys()]).toEqual(['choropleth', 'symbol-map', 'sankey', 'tile-grid-map', 'hex-tile-map']);
+    expect([...customPresets().keys()]).toEqual(['choropleth', 'symbol-map', 'sankey', 'tile-grid-map', 'hex-tile-map', 'treemap', 'pair-list']);
     expect(expand(grid).layers).toEqual([{ mark: 'geo-tiles', encode: { x: 'country', color: 'visitors' } }]);
     expect(expand(hex).layers).toEqual([{ mark: 'geo-hexes', encode: { x: 'country', color: 'visitors' } }]);
     expect([run(grid, 346).plan.preset, run(hex, 346).plan.preset]).toEqual(['tile-grid-map', 'hex-tile-map']);
     // Under a name of its own it registers only the presets it is given: none, or either.
     registerGeo(tiles.square, { name: 'bare-tiles' });
     registerGeo(tiles.square, { name: 'sized-tiles', presets: { size: 'tile-symbols' } });
-    expect([...customPresets().keys()].slice(5)).toEqual(['tile-symbols']);
+    expect([...customPresets().keys()].slice(7)).toEqual(['tile-symbols']);
     expect(expand({ ...grid, use: 'tile-symbols' }).layers).toEqual([{ mark: 'sized-tiles', encode: { x: 'country', size: 'visitors' } }]);
   });
   it('its rules name its own layout, which is what makes it fall back, and the rules of `geo` are as they were', () => {

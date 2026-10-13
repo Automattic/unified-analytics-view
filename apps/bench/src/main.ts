@@ -3,6 +3,7 @@ import { UaView, defineUaView, registerPainter, surfaceSheet } from '@unified-an
 import { catalog, moreSamples, runQuery, samples as known, type Scenario } from '@unified-analytics/fixtures';
 import { linkPainter } from '@unified-analytics/flow/dom';
 import { geoPainter, geoPainterAs } from '@unified-analytics/geo/dom';
+import { partitionPainter } from '@unified-analytics/partition/dom';
 
 /* The bench: every sample, in frames that stand in for containers.
  * Controls live in the URL, so a reload or a shared link keeps them. */
@@ -23,6 +24,7 @@ registerPainter(geoPainter);
 for (const name of ['geo-tiles', 'geo-hexes']) registerPainter(geoPainterAs(name));
 // And the `link` mark's, which the fixtures register with nothing to hand it.
 registerPainter(linkPainter);
+registerPainter(partitionPainter);
 document.adoptedStyleSheets.push(surfaceSheet());
 
 function paint(frame: HTMLElement) {

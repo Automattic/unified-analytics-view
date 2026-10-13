@@ -1,6 +1,6 @@
 import type { CircleNode, PathNode, TextNode } from '@unified-analytics/core';
 import { FOCUS, HOVER, attr, ensure, keyed, prop, text, token, type LayoutPainter } from '@unified-analytics/dom';
-import { GEO_RULES } from './index.ts';
+import { GEO_RULES, geoRules } from './index.ts';
 
 /* The `geo` mark's half for the DOM: the painter of its layout, for registerPainter().
  *
@@ -167,3 +167,8 @@ export const geoPainter: LayoutPainter = {
     keyed(sizes, scene.nodes.filter((n) => n.part === 'size'), (n) => (n.kind === 'text' ? 'span' : 'i'), (el, n) => { if (n.kind === 'text') text(el, n); else if (n.kind === 'circle') prop(el, '--uav-size', n.size); });
   },
 };
+
+/** The painter of the mark registered under another name (`registerGeo(shapes, { name })`): the same painter, as the
+ * layout of that name. Register one for each name a page registers.
+ * ponytail: the stylesheet is written out again for each name. One sheet with a list of names if a page has many. */
+export const geoPainterAs = (name: string): LayoutPainter => ({ ...geoPainter, layout: name, css: css.replaceAll('[data-layout="geo"]', '[data-layout="' + name + '"]'), rules: () => geoRules(name) });

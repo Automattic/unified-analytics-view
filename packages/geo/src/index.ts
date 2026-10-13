@@ -1,4 +1,4 @@
-import { geoEqualEarth, geoPath, type ExtendedFeatureCollection, type GeoProjection } from 'd3-geo';
+import { geoEqualEarth, geoIdentity, geoPath, type ExtendedFeatureCollection, type GeoProjection } from 'd3-geo';
 import { dotRadius, notShownNote, registerMark, registerPreset, roleOf, seqScale, sizeKey, sizeStep } from '@unified-analytics/core';
 import type { CircleNode, CustomMark, FitRule, Part, PathNode, PlacedNode, Row, SceneNode, TextNode } from '@unified-analytics/core';
 
@@ -17,13 +17,19 @@ import type { CircleNode, CustomMark, FitRule, Part, PathNode, PlacedNode, Row, 
  *
  * The boundary shapes are an input, handed in when the mark is made, as the catalog is handed to core. They are
  * projected here, once, into a box 100 wide. The part holds that box's shape and is never stretched.
+ *
+ * A tile map is this mark with other shapes: a file of equal squares or hexagons, one for each region, drawn on a flat
+ * sheet. Such a file says `planar`, and is fitted to the box as it is, with no map projection. A page that draws
+ * both a map and tiles registers the mark once for each set of shapes, under a name each (`registerGeo`): the name is
+ * what a spec says in `mark`, so no field of a spec chooses the shapes.
  * This is the only package that depends on d3-geo. */
 
 /** Boundary shapes: a GeoJSON FeatureCollection with a feature for each region, whose `id` is the value the region's
  * dimension has for it, matched as it is written: "US" is not "us". `properties.name` is what the region is called.
  * A feature with a name and no id is drawn and can have no row: land no value of the dimension stands for.
- * `keys` says what the ids are, for the error a result that matches none of them gets. */
-export interface Shapes { type: string; keys?: string; features: { type: string; id?: string | number; properties?: { name?: string } | null; geometry: { type: string; coordinates: unknown[] } | null }[] }
+ * `keys` says what the ids are, for the error a result that matches none of them gets.
+ * `planar` says the coordinates are x and y on a flat sheet, y downward, and not longitude and latitude: tiles. */
+export interface Shapes { type: string; keys?: string; planar?: boolean; features: { type: string; id?: string | number; properties?: { name?: string } | null; geometry: { type: string; coordinates: unknown[] } | null }[] }
 
 const BOX = 100;      // the width of the box paths are drawn in. Its height follows from the shapes
 const MAP = 480;      // px across a map that has room to spare
@@ -31,30 +37,41 @@ const NOTE = 18;      // px the line of the note takes under the map
 
 /* Below the room a map needs it is not a smaller map: the view becomes the ranked list of the same query. The note goes
  * with the keys, before that, so it never takes the room of a small map, and is never beside the list, which has every row. */
-export const GEO_RULES: FitRule[] = [
-  { id: 'guides', layout: 'geo', container: 'view', needs: { inline: 320, block: 170 },      // the ramp, and the key to sizes
+export const geoRules = (layout: string): FitRule[] => [
+  { id: 'guides', layout, container: 'view', needs: { inline: 320, block: 170 },      // the ramp, and the key to sizes
     hide: ['ramp', 'size', 'note'], keep: 'guides' },
-  { id: 'marks',  layout: 'geo', container: 'view', needs: { inline: 280, block: 120 },      // regions too small to tell apart
+  { id: 'marks',  layout, container: 'view', needs: { inline: 280, block: 120 },      // regions too small to tell apart
     hide: [], fallback: 'bar-list', keep: 'marks' },
 ];
+/** The rules of the mark under its own name, `geo`. Under another name they are `geoRules(name)`: a rule names its layout. */
+export const GEO_RULES: FitRule[] = geoRules('geo');
+
+/** How a set of shapes is made a mark. `name` is the name it is registered under, `geo` where none is given: a custom
+ * mark is a layout of that name, so its rules and its painter (`geoPainterAs`) are told it too. `projection` is
+ * d3-geo's. With none, shapes of the world are drawn in Equal Earth, which keeps areas true, and `planar` shapes as they are. */
+export interface GeoOptions { name?: string; projection?: GeoProjection }
 
 /** A path drawn in the scene's box, at `k` times the size. Paths here are moves and lines to absolute points, so every number in one is a length. */
 const scaled = (d: string, k: number) => d.replace(/-?\d+(?:\.\d+)?/g, (n) => String(Math.round(Number(n) * k * 100) / 100));
 
 /** The geo mark for a set of boundary shapes. They are fitted to the box whole, so the map is of the shapes handed in:
- * the world, or one country's regions. `projection` is d3-geo's, and Equal Earth where none is given, which keeps areas true. */
-export function geoMark(shapes: Shapes, projection: GeoProjection = geoEqualEarth()): CustomMark {
+ * the world, one country's regions, or a sheet of tiles. */
+export function geoMark(shapes: Shapes, { name = 'geo', projection }: GeoOptions = {}): CustomMark {
   if (!shapes || shapes.type !== 'FeatureCollection' || !Array.isArray(shapes.features) || !shapes.features.length || shapes.features.some((f) => !f || (f.id == null && !f.properties?.name))) {
     throw new Error('The geo mark needs boundary shapes: a GeoJSON FeatureCollection in which every feature has an "id", the value the region\'s dimension has for it, or where no value stands for it a "properties.name". Hand one to geoMark() or registerGeo().');
   }
-  const all = shapes as unknown as ExtendedFeatureCollection, path = geoPath(projection.fitWidth(BOX, all)).digits(1);
+  // A tile is a few units across where a country is many, so its corners are kept to a hundredth: every tile the same size.
+  const all = shapes as unknown as ExtendedFeatureCollection, rules = geoRules(name);
+  // d3-geo's identity fits to a width as a projection does, and its types do not say so.
+  const flat = () => geoIdentity() as unknown as GeoProjection;
+  const path = geoPath((projection ?? (shapes.planar ? flat() : geoEqualEarth())).fitWidth(BOX, all)).digits(shapes.planar ? 2 : 1);
   const height = path.bounds(all)[1][1], aspect = Math.round(BOX / height * 1000) / 1000;
   // ponytail: a symbol stands at the centroid of the whole shape, which for a country with far-flung parts is not on
   // its mainland. The centroid of its largest polygon, if that shows.
   const regions = all.features.map((f) => { const [cx, cy] = path.centroid(f); return { id: f.id == null ? null : String(f.id), key: String(f.id ?? f.properties!.name), d: path(f), x: cx / BOX, t: 1 - cy / height }; }).filter((s) => s.d && Number.isFinite(s.x + s.t));
 
   return {
-    rules: GEO_RULES,
+    rules,
 
     scene({ layers, guides, query, result, catalog }) {
       const l = layers[0]!, { x: dim, color, size } = l.encode || {}, rows = result.rows;
@@ -97,7 +114,7 @@ export function geoMark(shapes: Shapes, projection: GeoProjection = geoEqualEart
     // A box of the shapes' own aspect: as wide as the view up to MAP, no taller than the room, and in the middle of the width.
     // The note is a line under it, at the start of the width as the keys are, and the room it takes is not the map's.
     place(scene, W, room, container) {
-      const least = container.rules.fit.concat(GEO_RULES).find((r) => r.layout === scene.layout && r.id === 'marks')?.needs.block ?? 0;
+      const least = container.rules.fit.concat(rules).find((r) => r.layout === scene.layout && r.id === 'marks')?.needs.block ?? 0;
       const note = scene.parts.includes('note') ? scene.nodes.find((n): n is TextNode => n.part === 'note' && n.kind === 'text') : undefined, under = note ? NOTE : 0;
       const w = Math.min(W, MAP, room == null ? Infinity : Math.max(least, room - under) * scene.aspect!), h = w / scene.aspect!, left = (W - w) / 2;
       const nodes: PlacedNode[] = [];
@@ -112,10 +129,17 @@ export function geoMark(shapes: Shapes, projection: GeoProjection = geoEqualEart
 }
 
 /** Register the `geo` mark with its boundary shapes, and the presets that draw it. A spec then names the mark in
- * `mark`, or a preset in `use`. */
-export function registerGeo(shapes: Shapes, projection?: GeoProjection): void {
-  registerMark('geo', geoMark(shapes, projection));
+ * `mark`, or a preset in `use`.
+ *
+ * Other shapes are the same mark registered again under a name of its own, and `presets` names the presets that draw
+ * it: the one that fills each region on `color`, and the one that stands a symbol on each on `size`. Under `geo` they
+ * are `choropleth` and `symbol-map`, and under another name there are only the ones given.
+ * Each name is a custom mark, and counts against the grammar as one. */
+export function registerGeo(shapes: Shapes, { presets, ...options }: GeoOptions & { presets?: { color?: string; size?: string } } = {}): void {
+  const name = options.name ?? 'geo';
+  registerMark(name, geoMark(shapes, options));
   // Core cannot name this mark, so its presets are registered here. Working names: check each against @automattic/charts before it ships.
-  registerPreset('choropleth', { layers: [{ mark: 'geo', encode: { x: '$by', color: '$metric' } }] });
-  registerPreset('symbol-map', { layers: [{ mark: 'geo', encode: { x: '$by', size: '$metric' } }] });
+  const { color, size } = presets ?? (name === 'geo' ? { color: 'choropleth', size: 'symbol-map' } : {});
+  if (color) registerPreset(color, { layers: [{ mark: name, encode: { x: '$by', color: '$metric' } }] });
+  if (size) registerPreset(size, { layers: [{ mark: name, encode: { x: '$by', size: '$metric' } }] });
 }

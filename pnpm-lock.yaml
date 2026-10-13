@@ -35,6 +35,9 @@ importers:
       '@unified-analytics/fixtures':
         specifier: workspace:*
         version: link:packages/fixtures
+      '@unified-analytics/flow':
+        specifier: workspace:*
+        version: link:packages/flow
       '@unified-analytics/geo':
         specifier: workspace:*
         version: link:packages/geo
@@ -77,6 +80,9 @@ importers:
       '@unified-analytics/fixtures':
         specifier: workspace:*
         version: link:../../packages/fixtures
+      '@unified-analytics/flow':
+        specifier: workspace:*
+        version: link:../../packages/flow
       '@unified-analytics/geo':
         specifier: workspace:*
         version: link:../../packages/geo
@@ -120,9 +126,21 @@ importers:
       '@unified-analytics/core':
         specifier: workspace:*
         version: link:../core
+      '@unified-analytics/flow':
+        specifier: workspace:*
+        version: link:../flow
       '@unified-analytics/geo':
         specifier: workspace:*
         version: link:../geo
+
+  packages/flow:
+    dependencies:
+      '@unified-analytics/core':
+        specifier: workspace:*
+        version: link:../core
+      '@unified-analytics/dom':
+        specifier: workspace:*
+        version: link:../dom
 
   packages/geo:
     dependencies:

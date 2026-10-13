@@ -11,6 +11,7 @@
     "@unified-analytics/core": "workspace:*",
     "@unified-analytics/dom": "workspace:*",
     "@unified-analytics/fixtures": "workspace:*",
+    "@unified-analytics/flow": "workspace:*",
     "@unified-analytics/geo": "workspace:*",
     "@unified-analytics/spacefast": "workspace:*",
     "@unified-analytics/tokens": "workspace:*",

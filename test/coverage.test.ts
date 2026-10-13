@@ -43,7 +43,7 @@ describe('the sweep, for what the prototype does not know', () => {
     it(name + ': resolves in every data state, and steps down to the number and then the prose', () => {
       expect(view(spec), JSON.stringify(view.errors)).toBe(true);
       // A plot of points has no bare form: under the room its axes need it is the number alone (test/points.test.ts).
-      const points = ['scatter', 'bubble', 'quadrant', 'embedding'].includes(name);
+      const points = ['scatter', 'bubble', 'quadrant', 'embedding', 'connected'].includes(name);
       // Rows of text with no column of values ask for their label's 90 px and nothing measured, so they are still rows at 120.
       const plain = name === 'stem';
       for (const sc of scenarios) {
@@ -51,7 +51,8 @@ describe('the sweep, for what the prototype does not know', () => {
         const layouts = [346, 250, 120, 10].map((w) => run(spec, w, null, sc).plan.layout), marks = run(spec, 700).plan.layout;
         expect(layouts, sc).toEqual(sc === 'empty' ? ['notice', 'notice', 'none', 'prose'] : [marks, points ? 'none' : marks, plain ? marks : 'none', 'prose']);
         // What rows give up first is their own, and is held in test/coverage-rows.test.ts.
-        if (marks === 'cartesian' && !points) expect(run(spec, 250, null, sc).plan.dropped[0], sc).toBe(sc === 'empty' ? undefined : 'axes and grid (added the number to make up for them)');
+        // A plot that compares says first what it has no prior period for, where it has none: the difference sample is the one such plot here.
+        if (marks === 'cartesian' && !points) expect(run(spec, 250, null, sc).plan.dropped.filter((d) => !d.includes('(no prior data)'))[0], sc).toBe(sc === 'empty' ? undefined : 'axes and grid (added the number to make up for them)');
         // With room for everything, all that is missing is what there is no prior period to say.
         expect(run(spec, 700, null, sc).plan.dropped, sc).toEqual(sc === 'no-prior' && spec.query.compare ? [expect.stringContaining('(no prior data)')] : []);
       }

@@ -233,7 +233,7 @@ describe('a numeric dimension', () => {
   });
   it('errors name the fix: a companion the result lacks, bars with no bins, and a bar on a metric', () => {
     expect(err({ ...density!, layers: [{ mark: 'line', encode: { x: 'load_time', y: 'pageviews@p99' } }] }))
-      .toBe('Layer 1 encodes "pageviews@p99" on y, which the result does not return. With "pageviews" it returns: pageviews@density.');
+      .toBe('Layer 1 encodes "pageviews@p99" on y, which the result does not return. With "pageviews" it returns: pageviews@density, pageviews@cumulative.');
     expect(err({ ...density!, layers: [{ mark: 'line', encode: { x: 'load_time', y: 'visitors@density' } }] }))
       .toBe('Layer 1 encodes "visitors@density" on y, which the query does not return. It returns: load_time, pageviews.');
     const result = runQuery(histogram!.query), raw = { ...result, rows: result.rows.map(({ 'load_time@end': _end, ...r }) => r) };

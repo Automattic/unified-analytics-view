@@ -82,6 +82,14 @@ describe('the unit rank', () => {
     // A label stands where its line ends, so the labels read in the last day's order.
     expect(s.scene.nodes.filter((n) => n.part === 'labels').map((n) => [(n as { text: string }).text, (n as { t: number }).t])).toEqual([['Search', 0.5], ['Direct', 1], ['Social', 0]]);
   });
+  it('is said in prose: who is first and on how many of the rows, and who rose and fell the furthest from the first to the last', () => {
+    expect(scene(bump, pairs).plan.text).toBe('In the last 3 days, Search is first by hits on 2 of 3 days. Direct rose from 2nd to 1st, and Search fell from 1st to 2nd.');
+    // Nobody moved: said so. The ranks are the engine's, and none is worked out from the hits.
+    const still: Result = { ...pairs, rows: pairs.rows.map((r) => ({ ...r, 'hits@rank': 1 + SOURCES.indexOf(r.source as string) })) };
+    expect(scene(bump, still).plan.text).toBe('In the last 3 days, Search is first by hits on all 3 days. No source changed place.');
+    // With no range in the answer none is named.
+    expect(scene(bump, { ...still, meta: { compare: null, notes: [] } }).plan.text).toBe('Search is first by hits on all 3 days. No source changed place.');
+  });
   it('past ten ranks has a tick for every few, the first and the last among them', () => {
     const many: Result = { ...pairs, rows: Array.from({ length: 23 }, (_, j) => ({ 'date.day': '2026-10-01', source: 'S' + j, hits: 100 - j, 'hits@rank': j + 1 })), totalsBy: undefined as never };
     const s = scene({ ...bump, layers: [{ mark: 'dot', encode: { x: 'date.day', y: 'hits@rank', detail: 'source' } }] }, many);

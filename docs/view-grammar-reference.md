@@ -192,16 +192,16 @@ A layer:
 | Field | Meaning |
 |---|---|
 | `mark` | `line`, `area`, `bar`, `rule`, `text`, `dot`, `tick`, `cell`, `arc`, or the name of a custom mark registered in code |
-| `encode` | Channel to field: `x`, `y`, `x2`, `y2`, `color`, `detail`, `size`, `text`, `angle`, `radius`. A field is a dimension name, a metric name, a companion the result returns (`metric@p25`), or a number (for a rule, or an arc's inner radius). In rows, `color` paints each row: the rows' own dimension is a colour for each, and a companion of it (`source@kind`) paints rows that share a value alike. Built October 8, for the sidebar test case. `detail` is one of the query's dimensions: it splits the layer into a series for each value, as a dimension on `color` does, and paints none apart. Every series is in the layer's own paint, there is no legend and no label at a line's end, and the limit of six series does not apply, since no series colour is spent. A layer in a plot is split once, by `color` or by `detail`, and a layer split by `detail` takes no `stack`. Read in a plot with a dimension on x; built October 12 |
+| `encode` | Channel to field: `x`, `y`, `x2`, `y2`, `color`, `detail`, `size`, `text`, `angle`, `radius`. A field is a dimension name, a metric name, a companion the result returns (`metric@p25`), or a number (for a rule, or an arc's inner radius). In rows, `color` paints each row: the rows' own dimension is a colour for each, and a companion of it (`source@kind`) paints rows that share a value alike. Built October 8, for the sidebar test case. `detail` is one of the query's dimensions: it splits the layer into a series for each value, as a dimension on `color` does, and paints none apart. Every series is in the layer's own paint, there is no legend and no label at a line's end, and the limit of six series does not apply, since no series colour is spent. A layer in a plot is split once, by `color` or by `detail`, and a layer split by `detail` takes no `stack`. Read in a plot with a dimension on x; built October 12. In rows it is read by a `dot` or a `tick`, which then has one to each pair of a row and a detail value, drawn at half strength, and in a plot of points a `dot` with one dimension on `color` and the other on `detail` is a point for each value of `detail`'s, coloured by `color`'s (step 4, October 12). `x2` and `y2` are the second end of a `bar`, a `rule` or an `area`; a `rule` may start at a number, and with all four it is a line across a plot of points. `size` on a `bar` is its column's width, in a plot of shares. A `bar` in rows with nothing on `x` is the range behind the row's marks |
 | `series` | `"previous"` draws the comparison companion of the metric. Comparison is a property of a layer, not a second metric. `"delta"`, on a `text` layer in rows, is the row's change, painted by polarity |
 | `role` | `primary`, `comparison`, `reference`, `context`. Defaults: a `previous` series is `comparison`, a `rule` is `reference`, everything else is `primary` |
-| `stack` | `"zero"`, `"normalize"` for share of whole, or `"center"`, on a layer split by `color`, and not by `detail`. A `bar` split by `color` or by `detail` with no `stack` sits beside its neighbours |
+| `stack` | `"zero"`, `"normalize"` for share of whole, `"center"`, or `"diverge"`, on a layer split by `color`, and not by `detail`. `"diverge"` sets the first half of the series below zero and the second half above it, in their order, and with an odd count the middle one half on each side; its axis counts away from zero on both sides (built October 12). A `bar` split by `color` or by `detail` with no `stack` sits beside its neighbours. In rows, `stack` is what lets a bar's `color` be the query's second dimension: each row's bar is divided into a series for each of its values (built October 12) |
 | `sweep` | `"half"` for an `arc`. The one layer field that is neither data nor role |
 | `label` | Text for a rule |
-| `align` | `"end"` for right-aligned text |
+| `align` | `"end"` for right-aligned text. On a `tick`, `"start"` or `"end"` is the half of it to that side of its band's middle (built October 12) |
 | `paint` | Override the paint token. `"delta"` is the paint of the metric's change over the range: good or bad by its polarity, and the layer's own where there is no change to judge. Built October 8, for the sidebar test case |
 
-Paint tokens an author may name: `series.1` to `series.6`, `compare`, `rule`, `ink`, `ink.muted`, `delta`, `delta.good` and `delta.bad`. A layer with no `paint` takes `series.1`, or `compare` for a `previous` series; a layer split by a dimension on `color` takes a series colour per value, and one split by `detail` keeps its own for every value.
+Paint tokens an author may name: `series.1` to `series.6`, `compare`, `rule`, `ink`, `ink.muted`, `delta`, `delta.good` and `delta.bad`. A scene also names `band.1` to `band.3`, for the parts a metric's catalog `bands` divide its range into, the least first: three neutral steps, and not an author's to choose. A layer with no `paint` takes `series.1`, or `compare` for a `previous` series; a layer split by a dimension on `color` takes a series colour per value, and one split by `detail` keeps its own for every value.
 
 **Several metrics on one plot.** Each is a layer of its own, and each takes `series.1` unless its `paint` says otherwise, so give the second `"paint": "series.2"`. Metrics of one unit share the y axis, however far apart their values are. Metrics of two units get an axis each; three units is an error. There is no legend for layers that differ by metric: a legend comes only from a dimension on `color`. That is a known gap (October 8).
 
@@ -239,11 +239,11 @@ The JSON Schema for a spec is `packages/core/schema/view.schema.json`, and the c
 |---|---|---|---|
 | `line` | x, y, color, detail | Connects neighbouring rows, so x must be ordered. Split by `detail` its lines are drawn light, so where many run together reads darker | Proven; split by `detail` built October 12 |
 | `area` | x, y, y2, color, detail | Fills to a zero baseline, or between two ends | Proven; split, stacked and ranged forms built October 8; split by `detail` built October 12 |
-| `bar` | x, y, x2, y2, color, detail | Has a baseline, so the scale holds zero. With two ends it floats | Proven; split, stacked, signed and ranged forms built October 8; split by `detail` built October 12 |
-| `rule` | x or y (a constant), or fields per row with x2 or y2 | A reference line with an optional label, or a segment per row | Proven; constant on x and the per-row form built October 8 |
+| `bar` | x, y, x2, y2, color, detail, size | Has a baseline, so the scale holds zero. With two ends it floats. In rows, stacked, it is divided by the query's second dimension. With a metric on `size`, in a plot of shares, its column is as wide as its x's share of the engine's total. In rows with nothing on x it is the metric's catalog `domain` behind the row's marks, divided at its `bands` | Proven; split, stacked, signed and ranged forms built October 8; split by `detail` built October 12; divided rows, `size` and the range built October 12 |
+| `rule` | x or y (a constant), or fields per row with x2 or y2, or all four | A reference line with an optional label, or a segment per row, which may run from a number to a field or from a field to a number. With x, y, x2 and y2 it is a line across a plot of points: one line where all four are numbers, drawn as a reference is and with no label, and a line for each row where any is a field | Proven; constant on x and the per-row form built October 8; a number as the start and the line across a plot built October 12 |
 | `text` | y, text; in a plot x, y, text | A label per row, a column of values, or a label on a point | Proven in rows; in the plot built October 8 |
-| `dot` | x, y, size, color | A point. Its radius is the painter's, in pixels | Built October 8 |
-| `tick` | x, y | A short stroke across its band at a value | Built October 8 |
+| `dot` | x, y, size, color, detail | A point. Its radius is the painter's, in pixels. In rows with a dimension on `detail` a row has a dot for each of its pairs, at half strength so that where they lie over each other the row reads darker | Built October 8; several to a row October 12 |
+| `tick` | x, y, detail | A short stroke across its band at a value, or with `align` the half of it to one side of the band's middle. In a plot of points, with the plot's metric on x and nothing on y, it is a stroke at the foot of the plot for each row: a rug. In rows it may be several to a row, by `detail`, as a dot may | Built October 8; `align`, the rug and several to a row October 12 |
 | `cell` | x, y, color | Both positions discrete; colour quantized to the `seq` ramp. With no x it is one column and with no y one row, a strip. A binned dimension's row is labelled by its bin, and along the foot at its edges | Built October 8; the strip October 9 |
 | `arc` | angle, radius (a number), color | Its own mark. No general polar coordinate system | Built October 8 |
 
@@ -255,7 +255,7 @@ A custom mark registered in code and referenced by name is the escape hatch for 
 
 ### Transforms
 
-`stack` is the only one: `"zero"`, `"normalize"` and `"center"`, on any axis. Binning, quantiles, density and running totals are not transforms: the engine returns them (section 19, Decided 25).
+`stack` is the only one: `"zero"`, `"normalize"`, `"center"` and `"diverge"`, on any axis and in a row's track. Binning, quantiles, density and running totals are not transforms: the engine returns them (section 19, Decided 25).
 
 ### Layouts
 
@@ -295,6 +295,22 @@ A custom mark registered in code and referenced by name is the escape hatch for 
 ```
 
 Each name is a custom mark to the health check of section 9. Below the room a map needs, a tile map is the same ranked list. A tile carries no label yet: the mark names a region in its readout and the table, and nowhere on the tile.
+
+**A row may be divided by the query's second dimension** (built October 12). A `bar` with `stack` takes that dimension on `color`: the rows are the values of the first dimension, in the order the result first has them, and each row's bar is a series for each value of the second, end to end, in that dimension's own order, which is the engine's. Series colours follow that order, six at most, and a legend stands under the rows. It steps down as a band's does: to one line that names the series with the most, in its colour, and then to nothing, before the rows go. A row's text reads the engine's total for the row (`totalsBy`), and a share under `"normalize"` is of that total: no pair is ever summed. Such a track stands beside its label, as any track read by position does. Any other mark in rows is still painted by the row's own dimension.
+
+```json
+{ "query": { "metrics": ["visitors"], "by": ["age", "sex"] },
+  "layers": [
+    { "mark": "bar",  "encode": { "y": "age", "x": "visitors", "color": "sex" }, "stack": "diverge" },
+    { "mark": "text", "encode": { "y": "age", "text": "age" } }
+  ] }
+```
+
+With `stack: "diverge"` and two series that is a population pyramid; with five it is a Likert chart, the middle answer half on each side of zero. A row's track has no axis, so nothing there says a count: the readout does, and no count is below zero anywhere but in where it is drawn. A diverging stack of shares needs the engine to send the share as a metric, since `stack` holds one value.
+
+**Several marks to a row** (built October 12). A `dot` or a `tick` in rows with the second dimension on `detail` has one mark for each pair, each at its own value on the row's track, all in the layer's paint and at half strength. That is a strip plot. There is no legend and no limit of six. The readout of a row says how many it holds and which has the most.
+
+**The range behind a row's marks** (built October 12). A `bar` in rows with nothing on `x` is no mark of a value: it is the catalog `domain` of the metric the row's other marks put on the track, drawn as tall as the row and under them, in a part for each of the catalog's `bands`, painted `band.1` to `band.3` from the least. The track's scale then holds the whole domain. A metric with no `domain` has no range drawn, and that is no error, as a metric with no `target` has no tick at one. The `bullet` preset has this layer. The gauge's bands are not drawn yet.
 
 `rows` is a track per row: a label, a track with a linear scale that bars, dots, rules and ticks draw in, and columns of values. Facets are not built (section 19, Decided 26). The plan and what building it found are in `docs/chart-coverage-plan.md`.
 
@@ -710,6 +726,9 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 29. A fit rule may name a `fallback` preset that the view becomes below the rule's need. (October 7)
 30. `d3-geo` is allowed in a `packages/geo` of its own. Core keeps its three dependencies. (October 7)
 31. `detail` splits a layer into series without painting them apart. It is a channel that takes a dimension: one series per value, all in the layer's own paint, with no legend and no limit of six. The query's second dimension may go to `color`, to `detail`, to `facet` or to the other axis. (October 12)
+
+32. A stack may diverge: `stack: "diverge"` sets the first half of a layer's series below zero and the second half above it, in the series' own order, and the middle one of an odd count half on each side. `"center"` stays as the silhouette a streamgraph uses. An axis under a diverging stack counts away from zero on both sides, so no series is said to be less than nothing. (October 12)
+33. A row may be divided by the query's second dimension: a `bar` with `stack` in rows takes it on `color`, and a `dot` or a `tick` takes it on `detail`. The rows are the first dimension's values, and what a row says of itself is the engine's total for it. So the query's second dimension may go to `color`, to `detail`, to `facet` or to the other axis, in rows as in a plot. (October 12)
 
 ### Open
 

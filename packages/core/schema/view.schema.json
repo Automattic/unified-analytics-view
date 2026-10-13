@@ -51,7 +51,7 @@
       "additionalProperties": false,
       "properties": {
         "mark": { "anyOf": [
-          { "enum": ["line", "area", "bar", "rule", "text", "arc", "cell", "dot", "tick"] },
+          { "enum": ["line", "area", "bar", "rule", "text", "arc", "cell", "dot", "tick", "unit"], "description": "\"unit\" draws a value as counted glyphs, one for so many, and what one is worth is worked out from the data. Its form is what is on its channels: a dimension on x and a metric on y is a stack up from the axis; a dimension on y and a metric on x is a run along each row; a metric on x and a dimension on color is a grid of a hundred divided by share; a metric on x alone, with no dimension in the query, is that grid filled to the metric's place in its catalog domain; a metric on angle and a dimension on color, with sweep \"half\", is seats round a half circle. It takes no x2 or y2, no series and no negative value." },
           { "type": "string", "pattern": "^[\\w-]+$", "description": "The name of a custom mark registered in code. \"geo\" is the one so far: one layer alone, with the dimension of region keys on x and a metric on color (a fill) or on size (a symbol). A schema cannot list those: resolve() checks the name against the registry, and its error lists the marks there are." } ] },
         "encode": {
           "type": "object",
@@ -71,8 +71,8 @@
         },
         "series": { "enum": ["previous", "delta"], "description": "\"previous\" draws the comparison companion of the metric. On a text layer in rows, \"delta\" says each row's change on the previous period, painted by the metric's polarity. Either needs \"compare\" in the query." },
         "role": { "enum": ["primary", "comparison", "reference", "context"] },
-        "stack": { "enum": ["zero", "normalize", "center"], "description": "On a layer split by color: each series starts where the one under it ends. \"normalize\" makes each a share of the whole, and \"center\" sets each stack half on either side of zero. A bar split by color with no stack sits beside its neighbours." },
-        "sweep": { "const": "half", "description": "On an arc: the arcs run over the top half of the circle and not all the way round. The one layer field that is neither data nor role." },
+        "stack": { "enum": ["zero", "normalize", "center"], "description": "On a layer split by color: each series starts where the one under it ends. \"normalize\" makes each a share of the whole, and \"center\" sets each stack half on either side of zero. A bar split by color with no stack sits beside its neighbours. A unit takes none, but \"normalize\" on its grid, which is shares already." },
+        "sweep": { "const": "half", "description": "On an arc: the arcs run over the top half of the circle and not all the way round. On a unit with a metric on angle: its seats sit round that half, and it is required. The one layer field that is neither data nor role." },
         "label": { "type": "string", "description": "Text for a rule." },
         "align": { "const": "end" },
         "paint": { "type": "string", "description": "A paint token, never a colour: series.1 to series.6, compare, rule, ink, ink.muted, delta. A layer with none takes series.1, so a second metric on the same plot wants \"series.2\". \"delta\" is the paint of the metric's change over the range: good or bad by its polarity, and the layer's own where there is no change to judge." }

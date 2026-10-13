@@ -171,7 +171,7 @@ describe('validation', () => {
   it('errors name the fix', () => {
     expect(err(arc({ angle: 'visitors', color: 'channel', radius: 1.2 }))).toBe('Layer 1 has 1.2 on radius. It takes a number from 0 up to 1: the inner radius, as a share of the outer. 0.6 makes a donut.');
     expect(err({ ...arc({ angle: 'visitors', color: 'channel' }), layers: [{ mark: 'arc', encode: { angle: 'visitors', color: 'channel' } }, { mark: 'bar', encode: { x: 'visitors' } }] }))
-      .toBe('The "bar" mark has no rule about a centre yet. Use arc, or take "angle" off the other layers.');
+      .toBe('The "bar" mark has no rule about a centre yet. Use arc or unit, or take "angle" off the other layers.');
     expect(err({ ...arc({ angle: 'visitors', color: 'page' }), query: { metrics: ['visitors'], by: ['page'] } }))
       .toBe('Splitting by "page" makes 8 segments, and there are 6 series colours. Add "limit": 6 to the query, or less.');
     expect(err({ spec: 'view/0', query: { metrics: ['visitors'] }, layers: [{ mark: 'arc', encode: { angle: 'visitors' } }] }))
@@ -179,6 +179,6 @@ describe('validation', () => {
     expect(err(arc({ angle: 'channel', color: 'channel' }))).toBe('Layer 1 splits by "channel" with "channel" on angle. Put a metric on angle: each segment is its share of that metric\'s total.');
     expect(err({ spec: 'view/0', use: 'pie', query: { metrics: ['visitors'] } })).toBe('The "pie" preset needs a dimension in query.by.');
     expect(err({ spec: 'view/0', query: { metrics: ['visitors'], by: ['channel'] }, layers: [{ mark: 'arc', encode: { x: 'channel', y: 'visitors' } }] }))
-      .toBe('The "arc" mark has no rule for a time or category axis yet. Use line, area, bar, rule, dot, text or tick.');
+      .toBe('The "arc" mark has no rule for a time or category axis yet. Use line, area, bar, rule, dot, text, tick or unit.');
   });
 });

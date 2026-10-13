@@ -17,6 +17,8 @@ const SHORT_PLOT = 120;   // px of plot height under which ranked y ticks go
 const LABEL = 14;         // characters a label at a line's end is given before it is clipped
 const LABEL_LINE = 12;    // px from one such label to the next
 const RADIAL = 160;       // px across a circle of arcs that has room to spare
+/** The line a unit's key takes under its glyphs, in px. */
+export const UNIT_KEY_BLOCK = 20;
 /** A dot's radius in px: by its size step, or the one size of a dot that has none. */
 export const radius = (size?: number) => (size ? 2 + 2.5 * size : 3);
 

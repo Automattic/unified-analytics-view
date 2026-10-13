@@ -166,10 +166,10 @@ describe('geo, filled by a metric', () => {
   // The colour scale is the grid's, in one place (seqScale), so a map of signed values is diverging about zero as a grid is.
   it('fills regions whose values cross zero on the diverging ramp, with zero the neutral step, and a region with no row still seq.none', () => {
     const typical = runQuery(map.query), mid = typical.rows[7]!.visitors as number;
-    const signed = { ...typical, rows: typical.rows.map((r) => ({ ...r, visitors: (r.visitors as number) - mid })) };
-    const scene = run(map, 346, null, 'typical', 'svg', signed).ratio, far = Math.max(...signed.rows.map((r) => Math.abs(r.visitors)));
+    const signed: Result = { ...typical, rows: typical.rows.map((r) => ({ ...r, visitors: (r.visitors as number) - mid })) }, at = (r: Result['rows'][number]) => r.visitors as number;
+    const scene = run(map, 346, null, 'typical', 'svg', signed).ratio, far = Math.max(...signed.rows.map((r) => Math.abs(at(r))));
     const fill = (id: string) => shapes(scene).find((n) => n.key === 'primary:geo:' + id)!.paint;
-    for (const r of signed.rows) expect(fill(r.country as string), r.country as string).toBe('div.' + Math.min(9, 1 + Math.floor(((r.visitors + far) / (2 * far)) * 9)));
+    for (const r of signed.rows) expect(fill(r.country as string), r.country as string).toBe('div.' + Math.min(9, 1 + Math.floor(((at(r) + far) / (2 * far)) * 9)));
     expect([fill(typical.rows[0]!.country as string), fill(typical.rows[7]!.country as string)]).toEqual(['div.9', 'div.5']);
     expect(shapes(scene).filter((n) => n.row == null).every((n) => n.paint === 'seq.none')).toBe(true);
     expect(scene.nodes.filter((n) => n.part === 'ramp').map((n) => n.key)).toEqual(['ramp:low', 'ramp:1', 'ramp:2', 'ramp:3', 'ramp:4', 'ramp:5', 'ramp:zero', 'ramp:6', 'ramp:7', 'ramp:8', 'ramp:9', 'ramp:high', 'ramp:none', 'ramp:none:label']);

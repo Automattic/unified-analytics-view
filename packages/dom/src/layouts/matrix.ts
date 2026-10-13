@@ -1,4 +1,4 @@
-import { formatDimension, formatValue, type CircleNode, type RectNode, type Row, type TextNode } from '@unified-analytics/core';
+import { formatBin, formatDimension, formatValue, type CircleNode, type RectNode, type Row, type TextNode } from '@unified-analytics/core';
 import { attr, ensure, keyed, nodePaint, pageWay, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { hideReadout, placeReadout, readout, readoutOf } from '../keys.ts';
@@ -186,7 +186,10 @@ export const matrix: LayoutPainter = {
     const { x: xf, y: yf, color, size } = layers[0]!.encode as Record<string, string>, m = color ?? size, M = catalog.metrics[m!]!;
     const at = new Map(result.rows.map((r) => [(xf ? r[xf] : '') + '\n' + (yf ? r[yf] : ''), r[m!]]));
     const value = (v: Row[string]) => formatValue(v as number | null, M, 'exact');
-    const total = (f: string, k: string) => value(result.totalsBy?.[f]?.find((r) => r[f] === k)?.[m!]);
+    // A value is a key here, and so a string: a bin's start is a number in the result. A bin is named by both its ends.
+    const of = (f: string, k: string) => (result.totalsBy?.[f] ?? result.rows).find((r) => String(r[f]) === k);
+    const total = (f: string, k: string) => value(result.totalsBy?.[f]?.find((r) => String(r[f]) === k)?.[m!]);
+    const name = (f: string, k: string) => (of(f, k)?.[f + '@end'] == null ? formatDimension(k, catalog.dimensions[f]!) : formatBin(k, of(f, k)![f + '@end']));
     const cell = (tr: HTMLTableRowElement, s: string, scope?: 'col' | 'row', num = !scope) => {
       const c = tr.appendChild(document.createElement(scope ? 'th' : 'td'));
       c.textContent = s; if (scope) c.scope = scope; if (num) c.setAttribute('data-num', '');
@@ -205,12 +208,12 @@ export const matrix: LayoutPainter = {
       return;
     }
     cell(head, catalog.dimensions[yf]!.label, 'col');
-    for (const x of xs) cell(head, formatDimension(x, catalog.dimensions[xf]!), 'col', true);
+    for (const x of xs) cell(head, name(xf, x), 'col', true);
     cell(head, 'Total', 'col', true);
     // A quantity down the side is drawn from the foot, as a plot is, and listed from its least, as a table is.
     for (const y of catalog.dimensions[yf]!.type === 'number' ? (scene.ys ?? []).slice().reverse() : scene.ys ?? []) {
       const tr = body.insertRow();
-      cell(tr, formatDimension(y, catalog.dimensions[yf]!), 'row');
+      cell(tr, name(yf, y), 'row');
       for (const x of xs) cell(tr, value(at.get(x + '\n' + y)));
       cell(tr, total(yf, y));
     }

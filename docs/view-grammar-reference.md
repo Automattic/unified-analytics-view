@@ -362,6 +362,15 @@ The library ships these (`packages/core/src/presets.ts`). The three above are wr
 
 A companion is something the engine returns with a metric. A query cannot yet ask for one by name (section 5), so a preset that needs companions works only against a result that has them.
 
+**A custom mark's package registers its own presets.** Core cannot name a custom mark, so the library cannot hold a preset that draws one. The package that registers the mark registers its presets beside it, with `registerPreset(name, { layers })` (`packages/core/src/presets.ts`), written in the same slots. `expand` looks in the library first and then in the registry, so a spec uses a registered name as it uses any other, and a fit rule's `fallback` may name one. `registerGeo` registers two (built October 12):
+
+| Preset | The query needs | Draws |
+|---|---|---|
+| `choropleth` | One dimension whose values are region keys | A map, each region filled by the metric on the sequential ramp |
+| `symbol-map` | The same | A map with a symbol on each region, sized by the metric |
+
+Both are working names, to check against `@automattic/charts`. A name must be letters, digits, `_` and `-`, and cannot be one the library has. A name already registered is replaced. `customPresets()` lists what is registered. The registry is a map and two functions, as the one for marks is, and a name in it is unknown until its package has been loaded: the error for an unknown preset lists the library and the registry, and names `registerPreset`.
+
 - The library ships the basics. Users and agents add their own presets to it.
 - A preset is named after the `@automattic/charts` component it replaces, where one exists: `line` for `LineChart`, `bar-list` for `BarListChart`. The prototype calls `line` by its earlier name, `trend`.
 - A `previous` layer is left out on expansion when the query has no `compare`.

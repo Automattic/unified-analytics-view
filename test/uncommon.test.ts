@@ -89,14 +89,16 @@ describe('dots and stems in rows: Cleveland dot plot, ordered dot plot, lollipop
     expect(stems.length).toBe(6);
     stems.forEach((s, i) => expect([s.x, s.x2]).toEqual([dots[i]!.x, 0]));
   });
-  it('a stem ends at a number where that is its second end, and cannot start at one', () => {
+  it('a stem runs between a number and the row\'s value, written from either end', () => {
     const lollipop = S('lollipop'), [stem, ...rest] = lollipop.layers!, from = (encode: Record<string, string | number>): Spec => ({ ...lollipop, layers: [{ ...stem!, encode }, ...rest] });
     const { ratio } = run(from({ y: 'channel', x: 'visitors', x2: 1000 })), stems = of<{ x: number; x2: number }>(ratio.nodes, 'context:rule:'), dots = of<{ x: number }>(ratio.nodes, 'primary:dot:');
     // The track still holds zero, so 1,000 is that far along it.
     expect(new Set(stems.map((s) => s.x2)).size).toBe(1);
     expect(stems[0]!.x2).toBeCloseTo(1000 / 4318 * dots[0]!.x, 9);
-    // For step 4: the same stem written from the number is refused.
-    expect(err(from({ y: 'channel', x: 1000, x2: 'visitors' }))).toBe('Layer 1 has "x2" and no value on x to run from. Encode where it starts on x: a metric, or a companion the result returns with one.');
+    // Step 4: written from the number it is the same stroke, its two ends named the other way round. It was refused.
+    const back = of<{ x: number; x2: number }>(run(from({ y: 'channel', x: 1000, x2: 'visitors' })).ratio.nodes, 'context:rule:');
+    expect(back.map((s) => [s.x2, s.x])).toEqual(stems.map((s) => [s.x, s.x2]));
+    expect(run(from({ y: 'channel', x: 1000, x2: 'visitors' })).scene.nodes.map((n) => ({ ...n, x1: 0, x2: 0 }))).toEqual(run(from({ y: 'channel', x: 'visitors', x2: 1000 })).scene.nodes.map((n) => ({ ...n, x1: 0, x2: 0 })));
   });
   it('the same marks stand on an axis: a stem up from zero under each dot', () => {
     const up: Spec = { query: S('lollipop').query, layers: [{ mark: 'rule', encode: { x: 'channel', y: 'visitors' }, role: 'context' }, { mark: 'dot', encode: { x: 'channel', y: 'visitors' } }] };

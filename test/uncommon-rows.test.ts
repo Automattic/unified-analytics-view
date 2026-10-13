@@ -298,3 +298,52 @@ describe('a tick at the foot of a plot of points, and half a tick', () => {
     expect([ends(), ends('start'), ends('end')]).toEqual([[0, 1], [0.5, 1], [0, 0.5]]);
   });
 });
+
+describe('a rule from a number, and a rule across a plot', () => {
+  const pages = { metrics: ['response_time'], by: ['page'], range: '28d', limit: 4 };
+  const scatter = { metrics: ['visitors', 'page_conversion'], by: ['page'], range: '28d' };
+  const dot: Layer = { mark: 'dot', encode: { x: 'visitors', y: 'page_conversion' } };
+
+  it('on an axis a rule from a number to a row\'s value is the stroke from the value to the number', () => {
+    const up = (encode: Record<string, string | number>): Spec => ({ query: pages, layers: [{ mark: 'rule', encode: { x: 'page', ...encode } }] });
+    const a = of<{ x: number; t: number; t2: number }>(run(up({ y: 200, y2: 'response_time@max' })).ratio.nodes, 'reference:rule:'), b = of<{ x: number; t: number; t2: number }>(run(up({ y: 'response_time@max', y2: 200 })).ratio.nodes, 'reference:rule:');
+    expect(a.length).toBe(4);
+    expect(a.map((n) => [n.x, n.t, n.t2])).toEqual(b.map((n) => [n.x, n.t2, n.t]));
+    expect(new Set(a.map((n) => n.t)).size).toBe(1);
+    // Both give the scale the same ends, so the ticks are the same.
+    expect(of(run(up({ y: 200, y2: 'response_time@max' })).ratio.nodes, 'ytick:')).toEqual(of(run(up({ y: 'response_time@max', y2: 200 })).ratio.nodes, 'ytick:'));
+  });
+  it('is still refused between two numbers, and a bar still starts at a field', () => {
+    expect(err({ query: pages, layers: [{ mark: 'rule', encode: { x: 'page', y: 0, y2: 500 } }] })).toBe('Layer 1 is a rule from 0 to 500 on y, so every row\'s would be the one stroke. Encode a metric, or a companion the result returns with one, at either end, or keep one number for a line at it.');
+    expect(err({ query: pages, layers: [{ mark: 'bar', encode: { x: 'page', y: 0, y2: 'response_time@max' } }] })).toBe('Layer 1 has "y2" and no value on y to run from. Encode where it starts on y: a metric, or a companion the result returns with one.');
+  });
+  it('with numbers at both ends on both axes is one line across a plot of points, drawn as a reference is', () => {
+    const { ratio, scene, plan } = run({ query: scatter, layers: [{ mark: 'rule', encode: { x: 0, y: 0, x2: 2000, y2: 4 } }, dot] }), line = ratio.nodes.find((n) => n.key === 'reference:rule') as any;
+    const ticks = (k: string) => of<{ text: string; x?: number; t?: number }>(ratio.nodes, k), x2k = ticks('xtick:').find((n) => n.text === '2k')!.x!, y4 = ticks('ytick:').find((n) => n.text === '4%')!.t!;
+    expect(line).toMatchObject({ kind: 'path', part: 'plot', paint: 'rule', dash: '5 3', width: 1.5, role: 'reference', layer: 'data' });
+    expect(line.points).toEqual([{ row: '', x: ticks('xtick:').find((n) => n.text === '0')!.x, v: 0 }, { row: '', x: x2k, v: y4 }]);
+    expect(line.fill).toBe(undefined);
+    // It is a place on each scale, so the scales hold it, as they hold a rule at one number.
+    const far = run({ query: scatter, layers: [{ mark: 'rule', encode: { x: 0, y: 0, x2: 9000, y2: 30 } }, dot] }).ratio;
+    expect([of<{ text: string }>(far.nodes, 'xtick:').pop()!.text, of<{ text: string }>(far.nodes, 'ytick:').pop()!.text]).toEqual(['10k', '30%']);
+    // In pixels it is a straight stroke between the two places, and the plot is read by its points as before.
+    expect((scene.nodes.find((n) => n.key === 'reference:rule') as any).d).toMatch(/^M[\d.]+,[\d.]+L[\d.]+,[\d.]+$/);
+    expect(plan.text).toBe(run({ query: scatter, layers: [dot] }).plan.text);
+    expect(ratio.rows!.length).toBe(8);
+  });
+  it('with a field at an end is a line for each row, from its own values', () => {
+    const then = { ...scatter, metrics: ['visitors', 'pageviews'], compare: 'previous' as const };
+    const { ratio, result } = run({ query: then, layers: [{ mark: 'rule', encode: { x: 'visitors@previous', y: 'pageviews@previous', x2: 'visitors', y2: 'pageviews' }, role: 'context' }, { mark: 'dot', encode: { x: 'visitors', y: 'pageviews' } }] });
+    const lines = of<{ key: string; row: string; points: { x: number; v: number }[]; paint: string; dash?: string }>(ratio.nodes, 'context:rule:'), dots = of<{ x: number; t: number; row: string }>(ratio.nodes, 'primary:dot:');
+    // A page with no period before it has no line.
+    expect(lines.length).toBe(result.rows.filter((r) => r['visitors@previous'] != null).length);
+    expect(lines.length).toBe(7);
+    for (const n of lines) { const d = dots.find((o) => o.row === n.row)!; expect([n.points[1]!.x, n.points[1]!.v, n.paint, n.dash]).toEqual([d.x, d.t, 'ink', undefined]); }
+    expect(lines[0]!.key).toBe('context:rule:/');
+  });
+  it('is refused on a time or a category axis, and with a label it has no place for', () => {
+    expect(err({ query: pages, layers: [{ mark: 'bar', encode: { x: 'page', y: 'response_time' } }, { mark: 'rule', encode: { x: 0, y: 0, x2: 1, y2: 500 } }] }))
+      .toBe('A rule with x, y, x2 and y2 runs across a plot from one place to another, and this plot has a time or a category on x, where a place has no number. Put a metric on the other layers\' x, or keep y and y2 alone for a stroke at each x.');
+    expect(err({ query: scatter, layers: [{ mark: 'rule', encode: { x: 0, y: 0, x2: 2000, y2: 4 }, label: 'Even' }, dot] })).toBe('A rule that runs across a plot has no place for its label yet. Remove "label", and name the line in the view\'s title.');
+  });
+});

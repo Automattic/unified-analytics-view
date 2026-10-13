@@ -60,6 +60,7 @@ export interface Result {
 /** The marks core draws, and the name of any custom mark registered in code (marks.ts). */
 export type Mark = 'line' | 'area' | 'bar' | 'rule' | 'text' | 'arc' | 'cell' | 'dot' | 'tick' | (string & {});
 /** `x2` and `y2` are the second end of a `bar`, a `rule` or an `area`: it runs from the value on `x` or `y` to the one there.
+ * A `rule` may start at a number, and with all four it is a line across a plot of points, from (`x`, `y`) to (`x2`, `y2`).
  * `detail` is a dimension that splits a layer into series as one on `color` does, and paints none of them apart:
  * every series is in the layer's own paint, with no legend, and as many as the result holds. */
 export type Channel = 'x' | 'y' | 'color' | 'detail' | 'text' | 'angle' | 'radius' | 'size' | 'x2' | 'y2';

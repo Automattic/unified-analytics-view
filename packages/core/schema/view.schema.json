@@ -65,8 +65,8 @@
             "angle": { "$ref": "#/definitions/field", "description": "For an arc: a metric. With a dimension on color each segment is its share of the total. With none the metric is read against its catalog domain." },
             "radius": { "type": "number", "minimum": 0, "exclusiveMaximum": 1, "description": "For an arc: the inner radius, as a share of the outer. 0.6 makes a donut." },
             "size": { "$ref": "#/definitions/field", "description": "A metric. A dot's size is one of a few steps, and the painter says how big each is." },
-            "x2": { "$ref": "#/definitions/field", "description": "For a bar, a rule or an area with a field on x: its second end. The mark runs from the value on x to this one." },
-            "y2": { "$ref": "#/definitions/field", "description": "For a bar, a rule or an area with a field on y: its second end. The mark runs from the value on y to this one." }
+            "x2": { "$ref": "#/definitions/field", "description": "For a bar, a rule or an area with a field on x: its second end. The mark runs from the value on x to this one. A rule may also start at a number and run to a field here. With y2 as well, a rule is one line across a plot of points, from (x, y) to (x2, y2): numbers for the one line, and a field for a line to each row." },
+            "y2": { "$ref": "#/definitions/field", "description": "For a bar, a rule or an area with a field on y: its second end. The mark runs from the value on y to this one. A rule may also start at a number and run to a field here." }
           }
         },
         "series": { "enum": ["previous", "delta"], "description": "\"previous\" draws the comparison companion of the metric. On a text layer in rows, \"delta\" says each row's change on the previous period, painted by the metric's polarity. Either needs \"compare\" in the query." },

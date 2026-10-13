@@ -117,10 +117,27 @@ const bar: MarkFn = (_l, { id, series, role, paint, prev, rows, k, unit, ends, p
   return { key: id + ':' + k(r) + (series == null ? '' : ':' + series), part: 'plot', kind: 'rect', x: unit.x(k(r)) + j * w, w, v, ...(v0 && { v0 }), row: k(r), ...(series != null && { series }),
     paint: toned(polarity, v0, v, paint), opacity: r.partial && !prev ? 0.4 : 1, layer: 'data', role };
 });
+/** Whether a rule runs across the plot from one place to another: it has both ends on both axes. */
+const across = (l: Layer) => l.mark === 'rule' && l.encode != null && l.encode.x2 != null && l.encode.y2 != null;
 const rule: MarkFn = (l, { id, series, role, rows, k, unit, ends, v, xv }) => {
-  const { x, y } = l.encode || {};
-  // A field on y: a segment for each row, standing at its x from one of its values to another, or up from zero where it has one end.
-  if (typeof y === 'string') return rows.map((r): SceneNode => {
+  const { x, y, x2, y2 } = l.encode || {};
+  // Both ends on both axes: one line across the plot, from (x, y) to (x2, y2). Numbers make the one line, drawn as a
+  // reference is. A field is a row's own value, so with any field there is a line for each row, in the layer's paint.
+  // It is a path of two points, since a painter's line is level or upright.
+  if (across(l)) {
+    if (!xv) throw new Error('A rule with x, y, x2 and y2 runs across a plot from one place to another, and this plot has a time or a category on x, where a place has no number. Put a metric on the other layers\' x, or keep y and y2 alone for a stroke at each x.');
+    if (l.label) throw new Error('A rule that runs across a plot has no place for its label yet. Remove "label", and name the line in the view\'s title.');
+    const at = (f: string | number | undefined, r?: Row) => (typeof f === 'number' ? f : r && (r[f!] as number | null | undefined));
+    const line = (key: string, r?: Row): SceneNode[] => {
+      const [x0, y0, x1, y1] = [x, y, x2, y2].map((f) => at(f, r));
+      if (x0 == null || y0 == null || x1 == null || y1 == null) return [];   // a row with an end missing has no line
+      const points = [{ row: r ? k(r) : '', x: xv(x0), v: v(y0) }, { row: r ? k(r) : '', x: xv(x1), v: v(y1) }];
+      return [{ key, part: 'plot', kind: 'path', d: pathD(points), points, ...(r ? { row: k(r), paint: l.paint || 'ink', width: 2 } : { paint: 'rule', width: 1.5, dash: '5 3' }), layer: 'data', role }];
+    };
+    return [x, y, x2, y2].every((f) => typeof f === 'number') ? line(id) : rows.flatMap((r) => line(id + ':' + k(r), r));
+  }
+  // A field on y, or on y2 from a number: a segment for each row, standing at its x from one of its values to another, or up from zero where it has one end.
+  if (typeof y === 'string' || y2 != null) return rows.map((r): SceneNode => {
     const [t, t2] = ends(r), at = unit.cx(k(r));
     return { key: id + ':' + k(r) + (series == null ? '' : ':' + series), part: 'plot', kind: 'line', x: at, x2: at, t, t2, row: k(r), ...(series != null && { series }), paint: l.paint || 'ink', layer: 'data', role };
   });
@@ -256,7 +273,7 @@ function stacked(rows: Row[], series: string[], split: string, k: (r: Row) => st
 function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, result: Result, by?: string): Body {
   const nodes: SceneNode[] = [], rows = result.rows;
   const xDim = xDimOf(catalog, layers), xField = (xDim || pointDimOf(catalog, layers, by))!;
-  const xOn = !xDim ? (layers.map((l) => l.encode && l.encode.x).find((f) => typeof f === 'string') as string) : catalog.dimensions[xDim]!.type === 'number' ? xDim : null;
+  const xOn = !xDim ? (layers.map((l) => (across(l) ? undefined : l.encode && l.encode.x)).find((f) => typeof f === 'string') as string) : catalog.dimensions[xDim]!.type === 'number' ? xDim : null;
   // A view has two dimensions at most and one is on x, so there is one to split by. Its order is the engine's, not the rows':
   // paint follows it, so a value keeps its colour when the ranking moves.
   const split = layers.map((l) => splitOf(catalog, l, xField)).find(Boolean) || null;
@@ -280,7 +297,10 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   const whole = new Map(((result.totalsBy && result.totalsBy[xField]) || []).map((r) => [k(r), r]));
   const spans = layers.map((l) => {
     const out = new Map<Row, [number, number]>();
-    if (typeof (l.encode && l.encode.y) !== 'string') return out;
+    // A rule from a number to one of the row's values is the same stroke as one from the value to the number.
+    const from = l.encode && l.encode.y, upTo = l.encode && l.encode.y2;
+    if (typeof from === 'number' && typeof upTo === 'string' && !across(l)) { rows.forEach((r) => { if (r[upTo] != null) out.set(r, [from, num(r, upTo)]); }); return out; }
+    if (typeof (l.encode && l.encode.y) !== 'string' || across(l)) return out;
     const f = yField(l), share = l.stack === 'normalize', y2 = l.encode!.y2;
     // A second end: the mark runs from one of the engine's values to another, and stands on nothing. A row with either missing has no mark.
     if (y2 != null) { rows.forEach((r) => { const to = typeof y2 === 'number' ? y2 : r[y2]; if (r[f] != null && to != null) out.set(r, [num(r, f), to as number]); }); return out; }
@@ -295,12 +315,14 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   // by height. Shares run to the whole.
   const units = unitsOf(catalog, layers), scaleOf = (l: Layer) => scales[Math.max(0, units.indexOf(unitOf(catalog, l, xField)!))]!;
   // Where no layer has a metric itself on y, only companions of one (a box's quartiles), the ticks are in that metric's unit, as the readout says a companion.
-  const lone = metricOf(catalog, layers.map((l) => l.encode && l.encode.y).find((y) => typeof y === 'string'))?.unit || 'count';
+  const lone = metricOf(catalog, layers.flatMap((l) => (l.encode ? [l.encode.y, l.encode.y2] : [])).find((y) => typeof y === 'string'))?.unit || 'count';
   const scales = (units.length ? units : ['']).map((u, ui) => {
     const vals: number[] = [];
     layers.forEach((l, i) => {
       const y = l.encode && l.encode.y;
-      if (typeof y === 'number') { if (!ui) vals.push(y); } else if (Math.max(0, units.indexOf(unitOf(catalog, l, xField)!)) === ui) spans[i]!.forEach((ends) => vals.push(...ends));
+      // A rule across the plot is held by the scale at both its ends: its numbers on the first, and its fields on their unit's.
+      if (across(l)) { if (Math.max(0, units.indexOf(unitOf(catalog, l, xField)!)) === ui) for (const f of [y, l.encode!.y2]) vals.push(...(typeof f === 'number' ? [f] : rows.map((r) => r[f!] as number).filter((n) => n != null))); }
+      else if (typeof y === 'number' && !spans[i]!.size) { if (!ui) vals.push(y); } else if (Math.max(0, units.indexOf(unitOf(catalog, l, xField)!)) === ui) spans[i]!.forEach((ends) => vals.push(...ends));
     });
     const share = u === 'share', lo = Math.min(0, min(vals) ?? 0), hi = share ? 1 : Math.max(0, max(vals) ?? 0) || (lo ? 0 : 1);
     const y = scaleLinear().domain([lo, hi]);
@@ -327,7 +349,8 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     // zero and is rounded, as y's is. A dimension's runs from its first bin to its last and no further, so bars meet
     // the edges of the plot. Its ticks are y's too, and all but the two ends are ranked, as the middle date is.
     const at = new Map(rows.map((r) => [k(r), r])), lo = (key: string) => num(at.get(key)!, xOn), hi = (key: string) => (at.get(key)![xOn + '@end'] as number | undefined) ?? lo(key);
-    const vals = keys.flatMap((key) => [lo(key), hi(key)]).concat(layers.map((l) => l.encode && l.encode.x).filter((x): x is number => typeof x === 'number'));
+    const vals = keys.flatMap((key) => [lo(key), hi(key)]).concat(layers.map((l) => l.encode && l.encode.x).filter((x): x is number => typeof x === 'number'))
+      .concat(layers.filter(across).flatMap((l) => [l.encode!.x, l.encode!.x2].flatMap((f) => (typeof f === 'number' ? [f] : rows.map((r) => r[f!] as number).filter((n) => n != null)))));
     const x = scaleLinear().domain(xDim ? [min(vals) ?? 0, max(vals) ?? 1] : [Math.min(0, min(vals) ?? 0), Math.max(0, max(vals) ?? 0) || 1]);
     if (guides.x && !xDim) x.nice(4);
     const [left, right] = x.domain() as [number, number], to = (n: number) => (n - left) / (right - left || 1);
@@ -378,7 +401,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     if ((l.mark === 'bar' || l.mark === 'tick') && xOn && !xDim && !rug) throw new Error('Layer ' + (i + 1) + ' is a ' + l.mark + ' with the metric "' + xOn + '" on x, and a ' + l.mark + ' needs a dimension there to stand on. Use "dot" for a point at two metrics, or put a dimension on x.');
     if (l.mark === 'bar' && xOn && rows.length && rows[0]![xOn + '@end'] == null) throw new Error('Bars on the number dimension "' + xOn + '" need its bins, and this result has no "' + xOn + '@end". Return where each bin ends from the query layer, or use line or dot.');
     const v = scaleOf(l).v;
-    const d: Draw = { say, id: ids[i]!, role: roleOf(l), paint: paintOf(l, catalog, result) || (prev ? 'compare' : 'series.1'), prev, rows: rows.filter((r) => (rug ? r[xOn!] != null : span.has(r))), k, unit, v, xv, size, points: !!xOn && !xDim,
+    const d: Draw = { say, id: ids[i]!, role: roleOf(l), paint: paintOf(l, catalog, result) || (prev ? 'compare' : 'series.1'), prev, rows: rows.filter((r) => (rug ? r[xOn!] != null : across(l) || span.has(r))), k, unit, v, xv, size, points: !!xOn && !xDim,
       ends: (r) => { const [lo, hi] = span.get(r)!; return [v(lo), v(hi)]; },
       ...(l.mark === 'bar' && !l.paint && (l.encode!.y2 != null || diverges(l)) && { polarity: metricOf(catalog, l.encode!.y)?.polarity }) };
     if (!splitOf(catalog, l, xField)) return nodes.push(...draw(l, d));
@@ -526,7 +549,7 @@ export function listRows(catalog: Catalog, layers: Layer[], result: Result): Row
 function sceneRows(catalog: Catalog, layers: Layer[], result: Result, limit: number | null): Body {
   const nodes: SceneNode[] = [];
   const { dim, split, own, items: all } = listOf(catalog, layers, result), items = all.slice(0, limit || all.length), rows = items.map((i) => i.row), shown = items.flatMap((i) => i.pairs);
-  const tracked = layers.filter((l) => TRACK_MARKS[l.mark]), units = [...new Set(tracked.map((l) => metricOf(catalog, l.encode!.x)?.unit))];
+  const tracked = layers.filter((l) => TRACK_MARKS[l.mark]), units = [...new Set(tracked.map((l) => metricOf(catalog, [l.encode!.x, l.encode!.x2].find((f) => typeof f === 'string'))?.unit))];
   if (units.length > 1) throw new Error('These rows have marks that measure in ' + units.length + ' units (' + units.join(', ') + '), and a row has one track. Keep the marks of one unit, and show the other metric as a text layer.');
   // What a layer puts on the track in one row: its value, and its second end where it has one. A layer of the previous
   // series reads the metric's companion. A tick that is a `reference` stands at the metric's catalog `target`, as a gauge's mark does.

@@ -45,6 +45,9 @@ export const catalog: Catalog = {
     embed_x:          { label: 'First component',   unit: 'count', polarity: 'none' },
     embed_y:          { label: 'Second component',  unit: 'count', polarity: 'none' },
     requests:         { label: 'Requests',          unit: 'count', polarity: 'none', rangeTotal: 'sum' },
+    // How far two assumptions move together, from -1 to 1 (docs/uncommon-coverage-plan.md, step 5). It has no total, and
+    // no unit: a plain number is written as a count is. Its domain crosses zero, so it is painted on the diverging ramp.
+    correlation:      { label: 'Correlation',       unit: 'count', polarity: 'none', domain: [-1, 1] },
   },
   dimensions: {
     'date.day': { label: 'Day',     type: 'time' },
@@ -65,6 +68,8 @@ export const catalog: Catalog = {
     term:        { label: 'Search term', type: 'categorical' },
     intent:      { label: 'Intent',      type: 'categorical' },
     load_stem:   { label: 'Whole second', type: 'categorical' },
+    other_factor: { label: 'Other factor', type: 'categorical' },
+    page_weight: { label: 'Page weight', type: 'number' },
   },
 };
 
@@ -207,6 +212,19 @@ const TABLES: Record<string, { fields: string[]; ranked: boolean; rows: [string,
     totals: { requests: [40, 39] }, also: { '0': { 'load_stem@leaves': '4 6 7 8 9' }, '1': { 'load_stem@leaves': '0 1 2 2 4 5 7 8 9' }, '2': { 'load_stem@leaves': '0 0 1 1 2 3 3 4 5 6 8 9' },
       '3': { 'load_stem@leaves': '0 1 3 4 6 7 9' }, '4': { 'load_stem@leaves': '1 2 5 8' }, '5': { 'load_stem@leaves': '3 7' }, '6': { 'load_stem@leaves': '2' } } },
 };
+// How far each assumption of the forecast moves with each other, from -1 to 1: the same both ways, and 1 with itself.
+const FACTORS = TABLES.factor!.rows.map((r) => r[0]);
+const CORRELATIONS = [
+  [1, -0.42, 0.18, -0.31, -0.12, -0.56],
+  [-0.42, 1, -0.24, 0.08, 0.81, 0.22],
+  [0.18, -0.24, 1, 0.47, -0.05, -0.19],
+  [-0.31, 0.08, 0.47, 1, 0.03, 0.66],
+  [-0.12, 0.81, -0.05, 0.03, 1, 0.29],
+  [-0.56, 0.22, -0.19, 0.66, 0.29, 1],
+];
+// Page weight in megabytes, in bins half a megabyte wide: the weight of each. A heavier page loads later, so the two
+// binned together lie along a ridge, a second of load time to each megabyte.
+const WEIGHT = { width: 0.5, weights: [3, 10, 22, 26, 18, 11, 6, 4] };
 /** The ISO week a day falls in, as the engine names a week: "2026-W37". A week is in the year its Thursday is in. */
 const isoWeek = (t: number) => { const thu = t + (3 - (new Date(t).getUTCDay() + 6) % 7) * DAY, y = new Date(thu).getUTCFullYear(); return y + '-W' + String(1 + Math.floor((thu - Date.UTC(y, 0, 1)) / (7 * DAY))).padStart(2, '0'); };
 const isTime = (d: string) => catalog.dimensions[d]!.type === 'time';
@@ -235,7 +253,11 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
   const totals: Result['totals'] = {}; let rows: Row[] = [];
   const live = metrics.indexOf('present') >= 0;
   if (metrics.indexOf('page_conversion') >= 0 && dims.length && (dims.length > 1 || by !== 'page')) throw new Error('The fixture has "page_conversion" page by page, and not by anything else. Query it by page alone.');
-  if (dims.indexOf('load_time') >= 0 && (dims.length > 1 || live || metrics.indexOf('page_conversion') >= 0)) throw new Error('The fixture bins a count by "load_time" and nothing more. Query a count by it alone.');
+  const binned = dims.length === 2 && dims.indexOf('load_time') >= 0 && dims.indexOf('page_weight') >= 0;
+  if (dims.indexOf('load_time') >= 0 && ((dims.length > 1 && !binned) || live || metrics.indexOf('page_conversion') >= 0)) throw new Error('The fixture bins a count by "load_time", alone or with "page_weight", and nothing more. Query a count by one of those.');
+  if (dims.indexOf('page_weight') >= 0 && (!binned || metrics.some((m) => !(m in DAILY[0]!)))) throw new Error('The fixture bins a count by "page_weight" together with "load_time", and not otherwise. Query a count by both.');
+  const paired = [...dims].sort().join() === 'factor,other_factor';
+  if ((metrics.indexOf('correlation') >= 0 || dims.indexOf('other_factor') >= 0) && (metrics.length > 1 || metrics[0] !== 'correlation' || !paired)) throw new Error('The fixture has "correlation" between a factor and another, and nothing else of the two. Query it alone, by factor and other_factor.');
   if (metrics.indexOf('response_time') >= 0 && (dims.length > 1 || (by && by !== 'page' && by !== 'date.day'))) throw new Error('The fixture has "response_time" by day or page by page, and not by anything else. Query it by date.day or by page alone.');
   if (live && (metrics.length > 1 || dims.length > 1 || (by && by !== 'page'))) throw new Error('"present" is an instantaneous count. Query it alone, optionally by page.');
 
@@ -248,6 +270,12 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
     totals.present = LIVE.reduce((s, d) => s + d.present, 0);
     meta.range = 'now';
     return { rows: by ? LIVE.map((d) => ({ ...d })) : [], totals, meta };
+  }
+  // A correlation is of a pair and has no total, over the range or by either factor. The pairs come as the query names them.
+  if (paired) {
+    const none = { correlation: null, ...(wantPrev && { 'correlation@previous': null }) };
+    return { rows: FACTORS.flatMap((a, i) => FACTORS.map((b, j): Row => ({ [dims[0]!]: a, [dims[1]!]: b, ...none, correlation: CORRELATIONS[i]![j]! }))), totals: none,
+      totalsBy: Object.fromEntries(dims.map((d) => [d, FACTORS.map((f): Row => ({ [d]: f, ...none }))])), meta };
   }
   const sum = (ds: Daily[], m: string) => ds.reduce((s, d) => s + d[m as D], 0);
   // A shorter range is the last days of the same series, and a mix of its own. 28 days is the fixture as it always was.
@@ -267,6 +295,17 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
     totals[m] = now ?? null;
     if (wantPrev) totals[m + '@previous'] = hasPrev ? before! : null;
   });
+  // Two binned quantities: a row for each pair of bins, with both ends of each, and the count that fell in both. The
+  // pairs divide the whole of the total, and a pair nothing fell in is a count of none, not no count.
+  // ponytail: no period before, as a pair of any two dimensions has none of its own.
+  if (binned) {
+    const bins = (d: string, i: number) => { const w = d === 'load_time' ? LOAD.width : WEIGHT.width; return { [d]: i * w, [d + '@end']: (i + 1) * w }; };
+    const pairs = LOAD.weights.flatMap((l, i) => WEIGHT.weights.map((w, j) => ({ i, j, w: l * w * Math.exp(-((i / 2 - j) ** 2) / 5) * vary() })));
+    const parts = metrics.map((m) => apportion(totals[m]!, pairs.map((p) => p.w)));
+    const rows = pairs.map((p, k): Row => ({ ...bins('load_time', p.i), ...bins('page_weight', p.j), ...Object.fromEntries(metrics.map((m, n) => [m, parts[n]![k]!])) }));
+    const along = (d: string, n: number, of: 'i' | 'j') => Array.from({ length: n }, (_, b): Row => ({ ...bins(d, b), ...Object.fromEntries(metrics.map((m, k) => [m, pairs.reduce((s, p, at) => s + (p[of] === b ? parts[k]![at]! : 0), 0)])) }));
+    return { rows, totals, totalsBy: { load_time: along('load_time', LOAD.weights.length, 'i'), page_weight: along('page_weight', WEIGHT.weights.length, 'j') }, meta };
+  }
   // One row per value of a dimension, in the dimension's own order, before any sort or limit.
   function rowsBy(dim: string): Row[] {
     // Companions come with a query by one dimension. A running total is the engine's: what the range held before each
@@ -456,6 +495,10 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
   calendar: { label: 'Calendar heatmap: visitors by weekday and week', spec: { spec: 'view/0', title: 'Visitors, day by day', use: 'heatmap', query: { metrics: ['visitors'], by: ['weekday', 'date.week'], range: '28d' } } },
   stripes: { label: 'Stripes: net subscribers by day, one cell each, on the diverging ramp: a day near no change is neutral', spec: { spec: 'view/0', title: 'Net subscribers', query: { metrics: ['net_subscribers'], by: ['date.day'], range: '28d' },
             layers: [{ mark: 'cell', encode: { x: 'date.day', color: 'net_subscribers' } }] } },
+  // A correlation matrix: the catalog states that a correlation runs from -1 to 1, so zero is the ramp's neutral middle.
+  correlogram: { label: 'Correlogram: how far each assumption moves with each other, from -1 to 1', spec: { spec: 'view/0', title: 'How the assumptions move together', use: 'heatmap', query: { metrics: ['correlation'], by: ['factor', 'other_factor'], range: '28d' } } },
+  // A grid on two binned quantities: the square-binned form of a hexbin and of a 2D density plot.
+  bins2d:  { label: '2D histogram: page views by load time and page weight, a square bin for each pair', spec: { spec: 'view/0', title: 'Load time by page weight', use: 'heatmap', query: { metrics: ['pageviews'], by: ['page_weight', 'load_time'], range: '28d' } } },
   adjacency: { label: 'Adjacency matrix: page views by page and the page gone to next', spec: { spec: 'view/0', title: 'From page to page', use: 'heatmap', query: { metrics: ['pageviews'], by: ['page', 'next_page'], range: '28d' } } },
   embedding: { label: 'Embedding scatter: search terms, set out in two components', spec: { spec: 'view/0', title: 'Search terms', query: { metrics: ['embed_x', 'embed_y'], by: ['term'], range: '28d' },
             layers: [{ mark: 'dot', encode: { x: 'embed_x', y: 'embed_y' } }] } },

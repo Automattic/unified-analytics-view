@@ -57,9 +57,10 @@ describe('golden scenes', () => {
   }
 });
 
-// The grids step 0 of docs/uncommon-coverage-plan.md added: a calendar, a strip of days and a square of pages.
+// The grids step 0 of docs/uncommon-coverage-plan.md added: a calendar, a strip of days and a square of pages. And
+// step 5's: a correlation matrix and its circles, and a count by two binned quantities.
 describe('the grids of the Uncommon types', () => {
-  const grids = Object.fromEntries(['calendar', 'stripes', 'adjacency'].map((k) => [k, moreSamples[k]!.spec]));
+  const grids = Object.fromEntries(['calendar', 'stripes', 'adjacency', 'correlogram', 'bins2d'].map((k) => [k, moreSamples[k]!.spec]));
   for (const [name, spec] of Object.entries(grids)) {
     it(name + ': unique keys, no NaN, nothing taller than the container allows, ratios from 0 to 1, and every data state', () => {
       expect(view(spec), JSON.stringify(view.errors)).toBe(true);
@@ -118,6 +119,39 @@ describe('the grids of the Uncommon types', () => {
     const holed = { ...result, rows: result.rows.map((r, i) => (i ? r : { ...r, net_subscribers: null })) }, scene = buildScene(resolve(grids.stripes!, holed, makeContainer(700), catalog), grids.stripes!.query, holed, catalog);
     expect(cells(scene)[0]!.paint).toBe('seq.none');
     expect(scene.nodes.filter((n) => n.part === 'ramp').slice(-2).map((n) => [n.key, n.paint])).toEqual([['ramp:none', 'seq.none'], ['ramp:none:label', 'ink.muted']]);
+  });
+  it('a correlation matrix is on the diverging ramp by the domain its catalog states, and its prose says how far it runs each way, and between which two', () => {
+    const { ratio, plan, result } = run(grids.correlogram!, 700), value = (n: RectNode) => result.rows.find((r) => r.other_factor === n.pair![0] && r.factor === n.pair![1])!.correlation as number;
+    expect(catalog.metrics.correlation!.domain).toEqual([-1, 1]);
+    expect(ratio.ys).toEqual(ratio.rows);
+    expect(texts(ratio, 'ramp:')).toEqual(['-1', '0', '1']);
+    // The values run from -0.56 to 1, and are measured from -1: the deepest step below zero is not reached.
+    for (const n of cells(ratio)) expect(n.paint, n.key).toBe('div.' + Math.min(9, 1 + Math.floor(((value(n) + 1) / 2) * 9)));
+    expect([...new Set(cells(ratio).map((n) => n.paint))].sort()).toEqual(['div.2', 'div.3', 'div.4', 'div.5', 'div.6', 'div.7', 'div.8', 'div.9']);
+    expect(cells(ratio).filter((n) => n.pair![0] === n.pair![1]).every((n) => n.paint === 'div.9')).toBe(true);
+    // A factor with itself is 1, which is no finding: the prose passes it over. There is no total, so no share and no top factor.
+    expect(plan.text).toBe('Correlation runs from -0.56 (Conversion rate and Churn) to 0.81 (Traffic and Ad spend) in the last 28 days.');
+    expect(result.totals.correlation).toBeNull();
+    expect(texts(run(grids.correlogram!, 120).ratio, 'value')).toEqual(['–']);
+    expect(run(grids.correlogram!, 120).ratio.nodes.some((n) => n.key === 'sub')).toBe(false);
+  });
+  it('a count by two binned quantities is drawn as a plot reads: each in number order, the least bin at the foot, labelled by its bin down the side and by its edges along the foot', () => {
+    const { ratio, plan, result } = run(grids.bins2d!, 700);
+    expect(result.rows[1]).toEqual({ load_time: 0, 'load_time@end': 0.5, page_weight: 0.5, 'page_weight@end': 1, pageviews: 46 });
+    expect(result.rows.length).toBe(16 * 8);
+    expect(result.rows.reduce((s, r) => s + (r.pageviews as number), 0)).toBe(result.totals.pageviews);
+    expect(ratio.ys).toEqual(['3.5', '3', '2.5', '2', '1.5', '1', '0.5', '0']);
+    expect(ratio.rows).toEqual(Array.from({ length: 16 }, (_, i) => String(i / 2)));
+    expect(texts(ratio, 'ytick:')).toEqual(['3.5–4', '3–3.5', '2.5–3', '2–2.5', '1.5–2', '1–1.5', '0.5–1', '0–0.5']);
+    expect(texts(ratio, 'xtick:')).toEqual(Array.from({ length: 17 }, (_, i) => String(i / 2)));
+    // The bottom left cell is the least of both, and the engine's order does not move it.
+    const corner = cells(ratio).find((n) => n.pair![0] === '0' && n.pair![1] === '0')!;
+    expect(corner).toMatchObject({ key: 'primary:cell:0:0', x: 0, y: 7 / 8 });
+    expect(cells(run(grids.bins2d!, 700, null, 'typical', 'svg', { ...result, rows: result.rows.slice().reverse() }).ratio)).toEqual(cells(ratio));
+    // A pair nothing fell in is a count of none, a step of the ramp, and not no value.
+    expect(result.rows.some((r) => r.pageviews === 0)).toBe(true);
+    expect(cells(ratio).every((n) => /^seq\.\d+$/.test(n.paint))).toBe(true);
+    expect(plan.text).toBe('Most page views at page weight 1–1.5, load time 1.5–2 (1,770) in the last 28 days. 1.5–2 is the busiest page weight at 32% of page views, and 2–2.5 the busiest load time at 19%.');
   });
   it('a square of pages has the same values down the side as across', () => {
     const { ratio } = run(grids.adjacency!, 700);

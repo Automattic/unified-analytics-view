@@ -104,7 +104,8 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
     if (!result.meta.empty) [['previous', 'comparison series'], ['delta', 'the change on the previous period']].forEach(([series, what]) => { if (layers.some((l) => l.series === series)) dropped.push(what + why); });
     layers = layers.filter((l) => !usesPrevious(l));
   }
-  const share = layers.some((l) => l.stack === 'normalize' || l.mark === 'arc');
+  // An arc is a share of a whole unless it is a slice or a ring of its own: those are read by how far they reach, and ranked.
+  const share = layers.some((l) => l.stack === 'normalize' || (l.mark === 'arc' && !isDim(catalog, l.encode?.angle) && !isDim(catalog, l.encode?.radius)));
   // A custom mark brings the rules of its own layout. A context's rules for that layout come first.
   const laid = layers.length ? detectLayout(catalog, layers) : 'none', custom = customMarks().get(laid), fit = custom ? rules.fit.concat(custom.rules) : rules.fit;
   // A layout that does not read detail would draw its series over each other, and say nothing. A custom mark reads its own channels.
@@ -140,6 +141,8 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   if (p.layout === 'band') p.guides = { legend: 'full' };
   // A circle divided by a dimension has the band's legend. One that reads a metric against its range has none.
   if (p.layout === 'radial' && layers.some((l) => isDim(catalog, l.encode && l.encode.color))) p.guides = { legend: 'full' };
+  // One divided into slices by a dimension on angle has a label for each round its rim.
+  else if (p.layout === 'radial' && layers.some((l) => isDim(catalog, l.encode && l.encode.angle))) p.guides = { rim: true };
   if (result.meta.empty || (M.instant && !result.rows.length)) {
     if (M.instant || !layers.length) { p.layout = 'none'; p.layers = []; p.tldrValue = true; p.guides = {}; }
     else { p.layout = 'notice'; p.layers = []; p.guides = {}; p.tldrValue = false; }
@@ -170,7 +173,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
     if (p.layout === 'cartesian') return p.side ? { rule: rule('marks'), measured: Math.max(0, container.displayWidth(valueLen) - rules.bare.numberWidth) } : { rule: (points && rule('points')) || rule('axes'), measured: 0 };
     if (p.layout === 'rows') return { rule: beside() || rule('marks'), measured: valueRoomOf(catalog, p.layers, result.rows) };
     if (p.layout === 'band') return { rule: rule(p.guides.legend === 'full' ? 'legend' : 'marks'), measured: 0 };
-    if (p.layout === 'radial') return { rule: rule(p.guides.legend === 'full' ? 'legend' : 'marks'), measured: 0 };
+    if (p.layout === 'radial') return { rule: rule(p.guides.legend === 'full' ? 'legend' : p.guides.rim ? 'rim' : 'marks'), measured: 0 };
     if (p.layout === 'matrix') return { rule: rule(p.guides.ramp && keep.indexOf('guides') < 0 ? 'ramp' : 'marks'), measured: 0 };   // a ramp the spec keeps asks for no room of its own
     if (customMarks().has(p.layout)) return { rule: rule(keyed() && keep.indexOf('guides') < 0 ? 'guides' : 'marks'), measured: 0 };
     return { rule: rule('notice'), measured: 0 };
@@ -208,6 +211,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
         p.guides = {};
         return 'the legend';
       }
+      if (p.layout === 'radial' && p.guides.rim) { p.guides = {}; return 'the labels round the rim'; }
       if (p.layout === 'matrix' && p.guides.ramp) { p.guides = { ...p.guides, ramp: false }; return 'the colour ramp'; }
       if (customMarks().has(p.layout)) { const key = keyed(); p.guides = {}; return key ? (key === 'ramp' ? 'the colour ramp' : 'the key to sizes') : null; }
       return null;

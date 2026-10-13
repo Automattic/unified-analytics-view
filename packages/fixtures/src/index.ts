@@ -127,6 +127,9 @@ const WEEKDAYS = shares(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], [1.06
 const HOURS = shares(Array.from({ length: 24 }, (_, h) => (h % 12 || 12) + (h < 12 ? 'am' : 'pm')), Array.from({ length: 24 }, (_, h) => 0.15 + Math.exp(-((h - 11) ** 2) / 18) + 0.6 * Math.exp(-((h - 20) ** 2) / 8)));
 // A dimension whose values divide a total: each value's share of it, now and in the period before.
 const MIX: Record<string, [string, number, number][]> = { channel: CHANNELS, device: DEVICES, weekday: WEEKDAYS, hour: HOURS };
+// Dimensions with an order of their own. Asked for alone, each is answered in it, as days and bins are, and not ranked:
+// the week from Monday and the day from midnight. A rose and a clock are drawn in the order they come.
+const OWN_ORDER = ['weekday', 'hour'];
 // Where visitors are, as the engine sends a country: its ISO 3166-1 alpha-2 code, in capitals.
 MIX.country = [['US', 0.31, 0.33], ['IN', 0.12, 0.1], ['GB', 0.09, 0.1], ['DE', 0.08, 0.08], ['BR', 0.07, 0.06], ['CA', 0.06, 0.06], ['FR', 0.05, 0.05],
   ['AU', 0.045, 0.05], ['JP', 0.04, 0.04], ['ES', 0.035, 0.035], ['MX', 0.03, 0.03], ['ID', 0.025, 0.02], ['NG', 0.02, 0.015], ['ZA', 0.015, 0.015], ['SE', 0.01, 0.015]];
@@ -345,7 +348,7 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
     // Asked by its second dimension too, a row is still one value of the first: each falls under one value of the second, which has no total of these.
     return split ? { rows: kept, totals, totalsBy: { [by!]: kept, [split]: [...new Set(kept.map((r) => r[split]))].map((v) => ({ [split]: v, ...Object.fromEntries(metrics.map((m) => [m, null])) })) }, meta } : { rows: kept, totals, meta };
   }
-  if (dims.length < 2) return { rows: !by ? rows : catalog.dimensions[by]!.type !== 'categorical' ? rowsBy(by) : ranked(top(rowsBy(by))), totals, meta };
+  if (dims.length < 2) return { rows: !by ? rows : catalog.dimensions[by]!.type !== 'categorical' ? rowsBy(by) : OWN_ORDER.indexOf(by) >= 0 ? rowsBy(by).slice(0, q.limit || undefined) : ranked(top(rowsBy(by))), totals, meta };
 
   // Two dimensions: one row per pair. Each value of the outer one is divided among the inner one's, unevenly from one
   // to the next, so every pair adds up to the outer row it came from. Time, when it is there, is the outer one.
@@ -436,6 +439,10 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
             layers: [{ mark: 'line', encode: { x: 'date.day', y: 'visitors', detail: 'country' } }] } },
   tiles:   { label: 'A tile grid map: visitors by country, each an equal square', spec: { spec: 'view/0', title: 'Visitors by country', use: 'tile-grid-map', query: { metrics: ['visitors'], by: ['country'], range: '28d' } } },
   hexes:   { label: 'A hex tile map: visitors by country, each an equal hexagon', spec: { spec: 'view/0', title: 'Visitors by country', use: 'hex-tile-map', query: { metrics: ['visitors'], by: ['country'], range: '28d' } } },
+  // An arc that reads data on angle and radius (docs/uncommon-coverage-plan.md, step 2). Swept, with golden scenes, in test/arc-data.test.ts.
+  rose:    { label: 'A rose: visitors by hour of the day', spec: { spec: 'view/0', title: 'Visitors by hour', use: 'rose', query: { metrics: ['visitors'], by: ['hour'], range: '28d' } } },
+  rings:   { label: 'Radial bars: visitors by channel', spec: { spec: 'view/0', title: 'Visitors by channel', use: 'radial-bar', query: { metrics: ['visitors'], by: ['channel'], range: '28d' } } },
+  sunburst: { label: 'A sunburst: visitors by device, then by channel', spec: { spec: 'view/0', title: 'Visitors by device and channel', use: 'sunburst', query: { metrics: ['visitors'], by: ['device', 'channel'], range: '28d' } } },
   unmapped: { label: 'A map with rows it has no shape for: visitors by every country seen', spec: { spec: 'view/0', title: 'Visitors by country, all of them', query: { metrics: ['visitors'], by: ['visitor_country'], range: '28d' },
             layers: [{ mark: 'geo', encode: { x: 'visitor_country', color: 'visitors' } }] } },
   // The Uncommon types that today's marks already say (docs/uncommon-coverage-plan.md, step 0, and what it found in section 7).

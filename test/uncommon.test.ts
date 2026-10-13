@@ -208,7 +208,7 @@ describe('points and text: embedding scatter, stem-and-leaf', () => {
     expect(['xtick:', 'ytick:'].map((k) => of<{ text: string }>(ratio.nodes, k).map((n) => n.text))).toEqual([['-1', '-0.5', '0', '0.5', '1'], ['-1', '-0.5', '0', '0.5', '1']]);
     expect(plan.text).toBe('Across 24 search terms in the last 28 days, the range of first component is -0.7 to 0.73 and of second component is -0.64 to 0.65. getting started is highest on first component and sso setup on second component.');
     // A place has no total, so what is left where the plot has no room is a dash, over a note that calls the first row the top one.
-    expect(run(S('embedding'), 234).scene.nodes.map((n) => [n.key, (n as { text?: string }).text])).toEqual([['value', '–'], ['sub', 'Top: pricing']]);
+    expect(run(S('embedding'), 234).scene.nodes.map((n) => [n.key, (n as { text?: string }).text])).toEqual([['value', '–'], ['sub', 'Top: getting started']]);
   });
   it('for step 1: its points cannot be coloured by a second dimension unless a text layer names each one', () => {
     const q = { ...S('embedding').query, by: ['term', 'intent'] }, dot = { mark: 'dot' as const, encode: { x: 'embed_x', y: 'embed_y', color: 'intent' } };
@@ -235,6 +235,6 @@ describe('points and text: embedding scatter, stem-and-leaf', () => {
     expect(narrow.plan.layout).toBe('rows');
     expect(of<{ text: string }>(narrow.scene.nodes, 'primary:text#2:').map((n) => n.text)[2]).toMatch(/…$/);
     // The sentence ranks rows that are in the dimension's own order.
-    expect(narrow.plan.text).toBe('Top whole seconds by requests, last 28 days: 0 (5), 1 (9), 2 (12).');
+    expect(narrow.plan.text).toBe('Top whole seconds by requests, last 28 days: 2 (12), 1 (9), 3 (7).');
   });
 });

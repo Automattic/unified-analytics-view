@@ -1,7 +1,7 @@
-import { arcD, type ArcNode } from '@unified-analytics/core';
+import { arcD, declutter, type ArcNode, type TextNode } from '@unified-analytics/core';
 import { ensure, keyed, paintVar, prop, text } from '../dom.ts';
 import type { LayoutPainter } from '../layout.ts';
-import { token } from '../tokens.ts';
+import { FOCUS, HOVER, token } from '../tokens.ts';
 import { paintLegend } from './band.ts';
 
 /* Arcs about one centre, and under them the legend a band has. The part holds its shape: it is as wide as the view up
@@ -9,12 +9,37 @@ import { paintLegend } from './band.ts';
  * a view box of that shape and the default preserveAspectRatio, so where a box leaves the part some other shape the
  * arcs sit in the middle of it and are not stretched. Paths are core's, drawn about the origin at a radius of 50.
  * The part is the `plot` container, which is what the `hole` rule asks about: the number sits over the hole of a
- * donut, and at the foot of a half circle. Sizes are the pixel painter's. */
+ * donut, and at the foot of a half circle. Sizes are the pixel painter's.
+ *
+ * A circle's points are one arc for each of its rows, in the SVG that carries `data-hits`. Arcs that are no point of
+ * their own lie in a second SVG under it, \`.uav-under\`: the whole ring behind a ring's value, and the arcs of a second
+ * ring. Each still says its row, so the pointer over it chooses that row, and one of a second ring says its own value
+ * as its series, which the pointer and the up and down keys choose (keys.ts).
+ *
+ * Labels round the rim are HTML over the part, each set outside the point of the rim the scene gave it. The circle
+ * gives up 14 px all round to them, a line's height, and those to either side run out of the part into the view's
+ * width: the \`rim\` rule holds that wide enough, and gives the circle its margin back when it takes them away. */
 const css = `
 .uav[data-layout="radial"] .uav-body { display: flex; flex-direction: column; }
-.uav-radial { position: relative; flex: none; align-self: center; inline-size: min(100%, 160px); aspect-ratio: var(--uav-aspect, 1); container: uav-plot / inline-size; }
+.uav-radial { position: relative; flex: none; align-self: center; box-sizing: border-box; padding: var(--uav-rim, 0px); inline-size: min(100%, 160px); aspect-ratio: var(--uav-aspect, 1); container: uav-plot / inline-size; }
 /* The arcs run clockwise whichever way the page reads, and the keys step the way they run (keys.ts). */
-.uav-radial svg { display: block; inline-size: 100%; block-size: 100%; overflow: visible; direction: ltr; }
+.uav-radial svg { position: relative; display: block; inline-size: 100%; block-size: 100%; overflow: visible; direction: ltr; }
+/* Two SVGs lie one on the other, so neither takes the pointer for its empty box: only an arc does. */
+.uav-radial svg { pointer-events: none; }
+.uav-radial svg path { pointer-events: auto; }
+.uav-radial svg.uav-under { position: absolute; inset: var(--uav-rim, 0px); inline-size: auto; block-size: auto; }
+/* An arc of a second ring that is chosen wears the outline, and its segment, chosen with it, gives its own up. */
+.uav-radial .uav-under path[data-chosen][data-active="keys"] { ${FOCUS.stroke} }
+.uav-radial .uav-under path[data-chosen][data-active="pointer"] { ${HOVER.stroke} }
+.uav-radial:has(.uav-under [data-chosen]) svg[data-hits] path:is([data-active="keys"], [data-active="pointer"]) { stroke: ${token('color-background')}; stroke-width: calc(${token('stroke-width-rule')} * 2); }
+/* Labels round the rim. Each is set from the point the scene gave it: to the right of one on the right, to the left of
+ * one on the left, over one at the top and under one at the foot, and by degrees between. */
+.uav[data-layout="radial"][data-parts~="rim"] .uav-radial { --uav-rim: 14px; }
+.uav-rim { position: absolute; inset: calc(var(--uav-rim, 0px) - 3px); pointer-events: none; direction: ltr; }
+.uav-rim span { position: absolute; left: calc(var(--uav-x) * 100%); top: calc((1 - var(--uav-t)) * 100%); translate: calc((var(--uav-x) - 1) * 100%) calc(var(--uav-t) * -100%);
+  white-space: nowrap; line-height: 1; color: var(--uav-paint); }
+.uav-rim [data-thin] { visibility: hidden; }
+.uav[data-layout="radial"]:not([data-parts~="rim"]) .uav-rim { display: none; }
 /* A segment is parted from the next by a line of one width from the rim to the middle: its own edge, drawn in the
  * colour of what the view is on. Two edges lie one on the other, so the line is as wide as either. It is two rules
  * wide: a hairline at a slant is smoothed to a different weight at every angle, and reads as uneven. The corners
@@ -75,22 +100,41 @@ export const radial: LayoutPainter = {
   fit: {
     // As the band's: the rule's data only sets a switch, and this is the swap.
     legend: { '.uav-legend': 'display: none;', '.uav-legend-top': 'display: block; max-block-size: none;' },
+    // The circle takes back the margin it gave the labels.
+    rim: { '.uav-radial': '--uav-rim: 0px;' },
     // The number alone. The body goes whole, and so does its grid row.
     marks: { '': 'grid-template: "number" auto / minmax(0, 1fr);', '.uav-body': 'display: none;', '.uav-number': 'align-self: start; margin: 0;' },
   },
 
   paint(body, scene) {
     const part = ensure(body, 'div', 'uav-radial'), aspect = scene.aspect ?? 1, rows = scene.rows ?? [];
-    let svg = part.querySelector<SVGSVGElement>(':scope > svg');
+    const arcs = scene.nodes.filter((n): n is ArcNode => n.kind === 'arc'), box = '-50 -50 100 ' + 100 / aspect;
+    // What lies under the points: an arc of a row that is not the row's own mark.
+    const under = arcs.filter((n) => n.row != null && (n.series != null || n.role !== 'primary'));
+    let svg = part.querySelector<SVGSVGElement>(':scope > svg:not(.uav-under)');
     if (!svg) svg = part.appendChild(document.createElementNS('http://www.w3.org/2000/svg', 'svg'));
-    svg.setAttribute('viewBox', '-50 -50 100 ' + 100 / aspect);
+    svg.setAttribute('viewBox', box);
+    let below = part.querySelector<SVGSVGElement>(':scope > svg.uav-under');
+    if (!below && under.length) { below = part.insertBefore(document.createElementNS('http://www.w3.org/2000/svg', 'svg'), svg); below.setAttribute('class', 'uav-under'); below.setAttribute('aria-hidden', 'true'); }
+    if (below) { below.setAttribute('viewBox', box); keyed(below, under, () => 'path', (el, n) => turn(el as SVGElement, n)); }
     // Each segment is its own hit target. Arcs that read one value against a range have no row to step to.
     if (rows.length) { svg.setAttribute('data-hits', 'x'); svg.removeAttribute('aria-hidden'); } else { svg.removeAttribute('data-hits'); svg.setAttribute('aria-hidden', 'true'); }
     part.toggleAttribute('data-half', aspect !== 1);
     prop(part, '--uav-aspect', aspect); prop(body, '--uav-rows', rows.length);
-    keyed(svg, scene.nodes.filter((n): n is ArcNode => n.kind === 'arc'), () => 'path', (el, n) => turn(el as SVGElement, n));
+    keyed(svg, arcs.filter((n) => !under.includes(n)), () => 'path', (el, n) => turn(el as SVGElement, n));
     const hole = ensure(part, 'b', 'uav-hole'), number = scene.nodes.find((n) => n.part === 'hole');
     if (number?.kind === 'text') { text(hole, number); prop(hole, '--uav-paint', paintVar(number.paint)); } else hole.textContent = '';
+    const rim = ensure(part, 'div', 'uav-rim');
+    rim.setAttribute('aria-hidden', 'true');                                 // each slice is named by its readout, which says this and its value
+    keyed(rim, scene.nodes.filter((n): n is TextNode => n.part === 'rim' && n.kind === 'text'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-x', n.x); prop(el, '--uav-t', n.t); });
     paintLegend(body, scene);
+  },
+
+  // Labels round the rim that would meet: the one of higher rank is hidden, and keeps its box. Read where they stand:
+  // a label moves only when the slices change, and the pass runs again when they have.
+  measure(body) {
+    const labels = Array.from(body.querySelectorAll<HTMLElement>('.uav-rim > span:not([data-exit])')).filter((el) => el.getClientRects().length);
+    const gone = declutter(labels.map((el) => { const r = el.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height, rank: Number(el.dataset.rank) || 0 }; }));
+    labels.forEach((el, i) => el.toggleAttribute('data-thin', gone[i]));
   },
 };

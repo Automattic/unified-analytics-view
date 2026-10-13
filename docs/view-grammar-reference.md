@@ -192,11 +192,11 @@ A layer:
 | Field | Meaning |
 |---|---|
 | `mark` | `line`, `area`, `bar`, `rule`, `text`, `dot`, `tick`, `cell`, `arc`, or the name of a custom mark registered in code |
-| `encode` | Channel to field: `x`, `y`, `x2`, `y2`, `color`, `detail`, `size`, `text`, `angle`, `radius`. A field is a dimension name, a metric name, a companion the result returns (`metric@p25`), or a number (for a rule, or an arc's inner radius). In rows, `color` paints each row: the rows' own dimension is a colour for each, and a companion of it (`source@kind`) paints rows that share a value alike. Built October 8, for the sidebar test case. `detail` is one of the query's dimensions: it splits the layer into a series for each value, as a dimension on `color` does, and paints none apart. Every series is in the layer's own paint, there is no legend and no label at a line's end, and the limit of six series does not apply, since no series colour is spent. A layer in a plot is split once, by `color` or by `detail`, and a layer split by `detail` takes no `stack`. Read in a plot with a dimension on x; built October 12 |
+| `encode` | Channel to field: `x`, `y`, `x2`, `y2`, `color`, `detail`, `size`, `text`, `angle`, `radius`. A field is a dimension name, a metric name, a companion the result returns (`metric@p25`), or a number (for a rule, or an arc's inner radius). In rows, `color` paints each row: the rows' own dimension is a colour for each, and a companion of it (`source@kind`) paints rows that share a value alike. Built October 8, for the sidebar test case. `detail` is one of the query's dimensions: it splits the layer into a series for each value, as a dimension on `color` does, and paints none apart. Every series is in the layer's own paint, there is no legend and no label at a line's end, and the limit of six series does not apply, since no series colour is spent. A layer in a plot is split once, by `color` or by `detail`, and a layer split by `detail` takes no `stack`. Read in a plot with a dimension on x; built October 12. On an `arc`, `angle` and `radius` take a metric and a dimension between them, and which holds what is the form (section 7, the `arc` row): a number on `radius` is the inner radius, a metric there is how far each slice reaches, and a dimension there is a ring for each value. `detail` on an `arc` split by `color` is a second ring; built October 12 |
 | `series` | `"previous"` draws the comparison companion of the metric. Comparison is a property of a layer, not a second metric. `"delta"`, on a `text` layer in rows, is the row's change, painted by polarity |
 | `role` | `primary`, `comparison`, `reference`, `context`. Defaults: a `previous` series is `comparison`, a `rule` is `reference`, everything else is `primary` |
 | `stack` | `"zero"`, `"normalize"` for share of whole, or `"center"`, on a layer split by `color`, and not by `detail`. A `bar` split by `color` or by `detail` with no `stack` sits beside its neighbours |
-| `sweep` | `"half"` for an `arc`. The one layer field that is neither data nor role |
+| `sweep` | `"half"` for an `arc` that is divided by `color`, or that reads a metric against its range. Refused with a dimension on `angle` or on `radius`: those go all the way round. The one layer field that is neither data nor role |
 | `label` | Text for a rule |
 | `align` | `"end"` for right-aligned text |
 | `paint` | Override the paint token. `"delta"` is the paint of the metric's change over the range: good or bad by its polarity, and the layer's own where there is no change to judge. Built October 8, for the sidebar test case |
@@ -245,7 +245,7 @@ The JSON Schema for a spec is `packages/core/schema/view.schema.json`, and the c
 | `dot` | x, y, size, color | A point. Its radius is the painter's, in pixels | Built October 8 |
 | `tick` | x, y | A short stroke across its band at a value | Built October 8 |
 | `cell` | x, y, color | Both positions discrete; colour quantized to the `seq` ramp. With no x it is one column and with no y one row, a strip. A binned dimension's row is labelled by its bin, and along the foot at its edges | Built October 8; the strip October 9 |
-| `arc` | angle, radius (a number), color | Its own mark. No general polar coordinate system | Built October 8 |
+| `arc` | angle, radius, color, detail | Its own mark. No general polar coordinate system: `angle` and `radius` take a metric and a dimension between them, and there are four forms. **A metric on `angle`, a dimension on `color`:** a segment for each row, its share of the engine's total; a number on `radius` is the inner radius. With a second dimension on `detail`, a ring outside it divides each segment among that dimension's values, lighter and in the segment's colour, with no legend entry: the query is by the two, and a segment's span is the engine's `totalsBy`. **A dimension on `angle`, a metric on `radius`:** an equal slice for each row, in the engine's order, reaching out to its value on a square-root scale, so its area carries the value. It starts at the centre and is drawn in one paint, with a label for each slice round the rim. **A dimension on `radius`, a metric on `angle`:** a ring for each row, six at most, the first outermost, swept against the catalog `domain`, or the largest row where there is none. With nothing on `angle` it is the whole ring, faint. The same dimension on `color` gives each ring a series colour and a legend entry that says its value. **A metric on `angle` alone:** read against its catalog `domain` | Built October 8; data on `angle` and `radius`, and the second ring, built October 12 |
 
 "Built October 8" means built, tested and looked at in headless Chromium by the agent that built it. What each one found is in `docs/chart-coverage-plan.md`, section 8.
 
@@ -268,7 +268,7 @@ A custom mark registered in code and referenced by name is the escape hatch for 
 | `band` | A dimension on color only | One stacked, normalized bar with a legend |
 | `cartesian` | A metric on x and on y | Points: `dot`, `text`, rules on either axis |
 | `matrix` | A dimension on x and on y, or a `cell` with one on either alone | A grid of `cell`s with a ramp |
-| `radial` | Anything on `angle` | `arc`s about one centre |
+| `radial` | Anything on `angle` | `arc`s about one centre, in a part that holds its shape. Under it the legend of what is on `color`, or round it a label for each slice of a dimension on `angle` (the `rim` part, which the `rim` fit rule gives up first). Its rows are the segments, slices or rings: the keys step through them, and up and down step out to a second ring and back |
 | a custom mark's name | A layer with that mark | Whatever the mark draws, alone |
 
 **A table is rows of `text` layers.** In `rows`, each `text` layer with a metric on `text` is a column of values, set at the end with `align: "end"`; one with the dimension on `text` is the row's label. With more than one column the columns get headers, from the metrics' labels. A bar is optional: rows with no bar, dot or tick are a plain table. Each column takes the unit of its own metric, so columns of different units, or of several currencies, are fine. A header cannot be authored, and a column that is not a metric is written raw.
@@ -366,6 +366,9 @@ The library ships these (`packages/core/src/presets.ts`). The three above are wr
 | `donut` | The same | A ring divided by share, with the total in the middle |
 | `pie-semi-circle` | The same | Half a ring |
 | `gauge` | No dimension, and a metric with a catalog `domain` | The metric against its range, with its `target` marked and its `bands` behind |
+| `rose` | One dimension, in the engine's order: an hour, a weekday, a month | An equal slice for each value, reaching out to its value by area. A working name |
+| `radial-bar` | One categorical dimension of six values or fewer (`limit`) | A ring for each value, in a colour of its own, swept to its value against the largest, or the metric's `domain`. A working name |
+| `sunburst` | Two dimensions: the segments, then what divides each. Needs `totalsBy` | A circle divided by share, and round it a ring that divides each segment again. A working name |
 | `heatmap` | Two dimensions: down the side, then across | A grid of cells coloured by the metric |
 | `funnel` | Two metrics, a count then a rate, by a dimension in the engine's order | Rows with a bar, the count and the rate |
 | `box-plot` | Companions `@min`, `@p25`, `@p50`, `@p75`, `@max` | A box and whiskers for each value |
@@ -693,7 +696,7 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 3. Comparison is a role on a layer (`series: "previous"`), not a second metric.
 4. Sizes and thresholds belong to the container and the design system. The spec has none; `keep` is the author's only lever.
 5. Totals come from the engine, never from summing rows.
-6. `arc` will be its own mark. No general polar coordinates.
+6. `arc` will be its own mark. No general polar coordinates. It reads data on `angle` and on `radius`, one a metric and the other a dimension, and that is a closed set of forms of one mark and not a coordinate system: no other mark is drawn about a centre, and nothing has an angle and a radius both from metrics. A slice that reaches to its value starts at the centre: there is no hole in a rose. (Extended October 12)
 7. The scene is the seam between structure and rendering. Paint tokens, never colours.
 8. Text stays in the DOM. Data marks may go to any renderer.
 9. Every view has a derived tldr prose.

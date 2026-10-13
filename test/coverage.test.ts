@@ -240,7 +240,7 @@ describe('detail splits a plot into series and paints none apart', () => {
     expect(err(by('line', {}, { color: 'country', detail: 'date.day' }))).toBe('Layer 1 encodes "country" on color and "date.day" on detail, ' + twice);
     expect(err(by('area', { stack: 'zero' }))).toBe('Layer 1 has "stack" and is split by detail, which paints every series alike, so a stack of them could not be read. Encode "country" on color in place of detail, or remove "stack".');
     const rows: Spec = { query: { metrics: ['visitors'], by: ['channel', 'device'] }, layers: [{ mark: 'bar', encode: { y: 'channel', x: 'visitors', detail: 'device' } }] };
-    expect(err(rows)).toBe('Layer 1 encodes "device" on detail, and these layers are laid out as "rows", which does not split a layer by detail. It is read in: cartesian. Put a dimension on x and a metric on y, or remove "detail".');
+    expect(err(rows)).toBe('Layer 1 encodes "device" on detail, and these layers are laid out as "rows", which does not split a layer by detail. It is read in: cartesian, radial. Put a dimension on x and a metric on y, or remove "detail".');
   });
 });
 

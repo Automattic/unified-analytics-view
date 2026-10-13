@@ -61,7 +61,11 @@ export interface Result {
 export type Mark = 'line' | 'area' | 'bar' | 'rule' | 'text' | 'arc' | 'cell' | 'dot' | 'tick' | (string & {});
 /** `x2` and `y2` are the second end of a `bar`, a `rule` or an `area`: it runs from the value on `x` or `y` to the one there.
  * `detail` is a dimension that splits a layer into series as one on `color` does, and paints none of them apart:
- * every series is in the layer's own paint, with no legend, and as many as the result holds. */
+ * every series is in the layer's own paint, with no legend, and as many as the result holds.
+ * On an `arc`, `angle` and `radius` take data between them, and which holds what is the form (scene.ts, sceneRadial):
+ * a metric on `angle` and a dimension on `color` is a share each, and `detail` beside them a second ring; a dimension on
+ * `angle` and a metric on `radius` is a slice each that reaches to its value; a dimension on `radius` and a metric on
+ * `angle` is a ring each. A number on `radius` is the inner radius. */
 export type Channel = 'x' | 'y' | 'color' | 'detail' | 'text' | 'angle' | 'radius' | 'size' | 'x2' | 'y2';
 export type Role = 'primary' | 'comparison' | 'reference' | 'context';
 export type KeepPart = 'guides' | 'secondary' | 'rows' | 'marks';
@@ -99,6 +103,8 @@ export interface Guides {
   size?: boolean;
   /** The headers over a row's columns, where it has more than one column of values. */
   columns?: boolean;
+  /** The labels round a circle that a dimension on `angle` divides: which slice is which. */
+  rim?: boolean;
 }
 export interface Spec {
   spec?: string;
@@ -169,6 +175,8 @@ export type Part = 'number' | 'plot' | 'x-axis' | 'y-axis' | 'y-axis-2' | 'label
   /* `points` holds the dots of a plot that sets one metric against another, and `point-labels` the labels on a plot's
    * points. Both lie over the plot and share its box. `size` is the key to the sizes of its dots. */
   | 'points' | 'point-labels' | 'size'
+  /* `rim` holds the labels round a circle of slices. It shares the `radial` part's box, and the circle gives up a margin to it. */
+  | 'rim'
   /* `note` is a line of text under a custom mark's own parts, saying what they could not draw. It goes with the guides. */
   | 'note';
 interface NodeBase {
@@ -221,7 +229,9 @@ export interface RowNode extends NodeBase { kind: 'row'; row: string }
 /** Text in the number, rows, legend and notice parts is set in order and carries no position. In `labels` it sits beside the plot at height `t`.
  * In `point-labels` it sits on the point at `x` and `t`, and its `rank` is its place among them, the largest point first.
  * In `rows`, text in the `value` face is a column: the first has no `rank`, and each one after it has its place among them as its rank,
- * so the last is given up first. A header in `columns` has the rank of the column it is over. */
+ * so the last is given up first. A header in `columns` has the rank of the column it is over.
+ * In `rim` it names a slice of a circle: `x` and `t` are where the middle of the slice meets the rim, as ratios of the
+ * `radial` part's box, and a painter sets it outside that point. The ranked ones are given up where they would meet. */
 export interface TextNode extends NodeBase {
   kind: 'text';
   text: string;
@@ -236,7 +246,8 @@ export interface TextNode extends NodeBase {
 }
 /** An arc about the centre of the `radial` part. `a0` and `a1` are in turns, clockwise from the top, and below zero to the
  * left of it. `r0` and `r1` are ratios of the part's radius. `d` is drawn about the origin at a radius of 50, so the
- * part's box runs from -50 to 50: `arcD(node)`. A painter with a size draws `arcD(node, radius)`. */
+ * part's box runs from -50 to 50: `arcD(node)`. A painter with a size draws `arcD(node, radius)`.
+ * In a second ring an arc has its parent's `row` and its own value as `series`. */
 export interface ArcNode extends NodeBase { kind: 'arc'; a0: number; a1: number; r0: number; r1: number; d: string }
 export type SceneNode = RectNode | PathNode | LineNode | CircleNode | TextNode | ArcNode | RowNode;
 export interface Scene {
@@ -247,12 +258,13 @@ export interface Scene {
   parts: Part[];
   /** The number sits beside a bare plot. */
   side?: boolean;
-  /** Dimension values in order: the x domain, the rows or the segments. */
+  /** Dimension values in order: the x domain, the rows or the segments. Of a circle: its segments, slices or rings. */
   rows?: string[];
   /** The colour dimension's values in its own order, where a plot is split into series. A series' paint is its place here. */
   series?: string[];
   /** The values of the dimension on `detail`, in its own order, where a plot is split into series that are not painted
-   * apart: each is the `series` of its nodes, all in one paint, and there is no legend. Absent where `series` is given. */
+   * apart: each is the `series` of its nodes, all in one paint, and there is no legend. Absent where `series` is given.
+   * Of a circle with a second ring: the values that ring divides each segment into, each in its segment's paint. */
   detail?: string[];
   /** In a grid, the y dimension's values in order, from the top. `rows` are then its columns. */
   ys?: string[];

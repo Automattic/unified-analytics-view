@@ -290,8 +290,10 @@ export class Keys {
     body.addEventListener('pointerover', (e) => {
       const k = row(e);
       if (k == null) return;
-      this.#fresh = e.pointerType !== 'mouse' && k !== this.#at;
-      this.#show(k, null, 'pointer');
+      // An arc of a circle's second ring is a target of its own: the pointer chooses it there, as up and down do (layouts/radial.ts).
+      const of = (e.target as Element).closest?.('.uav-under [data-series]')?.getAttribute('data-series'), series = of != null && this.#order.includes(of) ? of : null;
+      this.#fresh = e.pointerType !== 'mouse' && (k !== this.#at || series !== this.#series);
+      this.#show(k, series, 'pointer');
     });
     // As version 4: the point goes with the mouse, focus or none, and the next arrow starts from nothing. A touch has
     // no leaving to speak of.
@@ -378,7 +380,8 @@ export class Keys {
     const row = pair ?? (this.#order.length ? undefined : this.#rows[i]?.[0]);
     if (row && (point as Element).classList?.contains('uav-row') && written((point as Element).textContent ?? '', row, this.#q!, this.#catalog!, this.#layers)) { hideReadout(tip); return; }
     tip.textContent = says;
-    placeReadout(tip, this.#fig, point as HTMLElement);
+    // Over the arc of a second ring where one is chosen, and else over the row's point.
+    placeReadout(tip, this.#fig, (series != null && this.#body.querySelector<HTMLElement>('.uav-under [data-chosen]')) || (point as HTMLElement));
   }
 
   /** What the crosshair says at a row, or nothing where the readout says it instead: where an axis is not on show

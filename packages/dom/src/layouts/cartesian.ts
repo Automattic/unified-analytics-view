@@ -1,5 +1,5 @@
 import type { LineNode, PathNode, RectNode, SceneNode, TextNode } from '@unified-analytics/core';
-import { ensure, ensureSvg, keyed, pageWay, paintVar, prop, text } from '../dom.ts';
+import { attr, ensure, ensureSvg, keyed, pageWay, paintVar, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { hitNodes } from '../keys.ts';
 import { NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
@@ -122,7 +122,7 @@ export const cartesian: LayoutPainter = {
     const room = body.querySelector('.uav-x-axis')!.getBoundingClientRect().width;
     const gone = thin(labels.map((el) => {
       const w = el.getBoundingClientRect().width, lo = Number(el.style.getPropertyValue('--uav-x')) * room - (el.dataset.anchor === 'start' ? 0 : el.dataset.anchor === 'end' ? w : w / 2);
-      return { lo, hi: lo + w, rank: Number(el.dataset.rank) || 0 };
+      return { lo, hi: lo + w, rank: Number(el.dataset.rank ?? el.dataset.order) || 0 };
     }));
     labels.forEach((el, i) => el.toggleAttribute('data-thin', gone[i]));
     measurePoints(body);
@@ -163,7 +163,13 @@ export const cartesian: LayoutPainter = {
     // The swatch is the name's own, painted from the scene's swatch node.
     const swatch = new Map(nodes.filter((n) => n.part === 'legend' && n.kind === 'rect').map((n) => [n.series, n.paint]));
     keyed(legend, texts('legend'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-swatch', paintVar(swatch.get(n.series) ?? n.paint)); });
-    keyed(xAxis, texts('x-axis'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-x', n.x); el.setAttribute('data-anchor', n.anchor); });
+    // A label under a column of a width of its own (a row's, on a linear x) is ranked by that width, for the measured pass
+    // alone: the rule that gives up a middle date is not its, so it carries its rank under another name.
+    keyed(xAxis, texts('x-axis'), () => 'span', (el, n) => {
+      text(el, n); prop(el, '--uav-x', n.x); el.setAttribute('data-anchor', n.anchor);
+      const own = scene.scale === 'linear' && n.row != null;
+      attr(el, 'data-order', own ? n.rank ?? 0 : null); if (own) el.removeAttribute('data-rank');
+    });
     keyed(grid, nodes.filter((n): n is LineNode => inPlot(n) && n.kind === 'line' && n.layer === 'guide'), () => 'i', line);
     // Which rows hold bars side by side, and which hold a stack: more than one bar, at different places along x or at one.
     const rects = nodes.filter((n): n is RectNode => inPlot(n) && n.kind === 'rect'), places = new Map<string, Set<number>>(), counts = new Map<string, number>();
@@ -171,7 +177,8 @@ export const cartesian: LayoutPainter = {
     keyed(bars, rects, () => 'i', (el, n) => {
       prop(el, '--uav-x', n.x); prop(el, '--uav-w', n.w); prop(el, '--uav-v', n.v); prop(el, '--uav-v0', n.v0);
       const here = places.get(n.row ?? '')!.size, all = counts.get(n.row ?? '')!;
-      el.toggleAttribute('data-beside', here > 1); el.toggleAttribute('data-stacked', all > here);
+      // Columns of widths of their own stand edge to edge, each a series' on a linear x, and are parted as bars side by side are.
+      el.toggleAttribute('data-beside', here > 1 || (scene.scale === 'linear' && n.series != null)); el.toggleAttribute('data-stacked', all > here);
     });
     keyed(svg, nodes.filter((n): n is PathNode => inPlot(n) && n.kind === 'path'), () => 'path', (el, n) => {
       morph(el as SVGElement, n); el.toggleAttribute('data-fill', !!n.fill);

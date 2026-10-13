@@ -1,5 +1,6 @@
 import type { LineNode, PathNode, RectNode, SceneNode, TextNode } from '@unified-analytics/core';
 import { attr, ensure, ensureSvg, keyed, pageWay, paintVar, prop, text } from '../dom.ts';
+import { paintSize } from '../chrome/size.ts';
 import { token } from '../tokens.ts';
 import { hitNodes } from '../keys.ts';
 import { NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
@@ -196,7 +197,8 @@ export const cartesian: LayoutPainter = {
     const hits = ensure(plot, 'div', 'uav-hits');
     hits.setAttribute('data-hits', 'x');
     keyed(hits, hitNodes(scene), () => 'i', (el, n) => { prop(el, '--uav-x', n.x); prop(el, '--uav-w', n.w); prop(el, '--uav-c', n.c); });
-    paintPoints(body, plot, scene);
+    paintPoints(plot, scene);
+    paintSize(body, scene);
     paintRanges(plot, scene);
     paintUnitKey(body, scene);
   },

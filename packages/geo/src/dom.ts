@@ -1,5 +1,5 @@
 import type { CircleNode, PathNode, TextNode } from '@unified-analytics/core';
-import { FOCUS, HOVER, attr, ensure, keyed, paintRamp, prop, text, token, type LayoutPainter } from '@unified-analytics/dom';
+import { FOCUS, HOVER, attr, ensure, keyed, paintRamp, paintSize, prop, text, token, type LayoutPainter } from '@unified-analytics/dom';
 import { GEO_RULES, geoRules } from './index.ts';
 
 /* The `geo` mark's half for the DOM: the painter of its layout, for registerPainter().
@@ -160,11 +160,7 @@ export const geoPainter: LayoutPainter = {
 
     // The note is read: it says what the map does not. It is made whether or not there is one, so it stays above the keys.
     keyed(ensure(body, 'div', 'uav-note'), scene.nodes.filter((n): n is TextNode => n.part === 'note' && n.kind === 'text'), () => 'span', text);
-    paintRamp(body, scene);
-    // The key to sizes says again what each region's name says whole.
-    const sizes = ensure(body, 'div', 'uav-size');
-    sizes.setAttribute('aria-hidden', 'true');
-    keyed(sizes, scene.nodes.filter((n) => n.part === 'size'), (n) => (n.kind === 'text' ? 'span' : 'i'), (el, n) => { if (n.kind === 'text') text(el, n); else if (n.kind === 'circle') prop(el, '--uav-size', n.size); });
+    paintRamp(body, scene); paintSize(body, scene);
   },
 };
 

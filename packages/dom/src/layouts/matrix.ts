@@ -1,10 +1,11 @@
 import { formatBin, formatDimension, formatValue, type CircleNode, type RectNode, type Row, type TextNode } from '@unified-analytics/core';
-import { attr, ensure, keyed, nodePaint, pageWay, prop, text } from '../dom.ts';
+import { attr, ensure, keyed, nodePaint, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { hideReadout, placeReadout, readout, readoutOf } from '../keys.ts';
 import type { LayoutPainter } from '../layout.ts';
 import { thin } from '../measure.ts';
 import { paintRamp } from '../chrome/ramp.ts';
+import { paintSize } from '../chrome/size.ts';
 import { DOT } from './points.ts';
 
 /* A dimension on x, another on y, a metric on colour: a grid of cells. The cells are a CSS grid, each set in its
@@ -14,7 +15,7 @@ import { DOT } from './points.ts';
  *
  * A `dot` layer is drawn in the cell's own element, so a pair is one hit target whichever marks it has: alone, the
  * element has no fill and the dot is all there is; over a cell, it is the cell with the dot on it. Under the ramp,
- * the key to sizes a plot of points has (points.ts), in the same steps.
+ * the key to sizes a plot of points has (chrome/size.ts), in the same steps.
  *
  * A cell is its own hit target, and no cell carries `data-row`, so the element's keyboard (keys.ts) leaves this
  * layout alone and the one here stands in for it. It is version 4's model, taken to two dimensions: one tab stop,
@@ -132,16 +133,13 @@ export const matrix: LayoutPainter = {
   paint(body, scene, _rules, data) {
     const xs = scene.rows ?? [], ys = scene.ys ?? [], { x: xf, y: yf } = data.layers[0]!.encode as Record<string, string>;
     const yAxis = ensure(body, 'div', 'uav-y-axis'), plot = ensure(body, 'div', 'uav-plot'), xAxis = ensure(body, 'div', 'uav-x-axis');
-    paintRamp(body, scene);
-    const sizes = ensure(body, 'div', 'uav-size');
+    paintRamp(body, scene); paintSize(body, scene);
     const cells = ensure(plot, 'div', 'uav-cells'), dims = data.catalog.dimensions;
     // The labels and the keys say again what each cell's name says whole.
-    for (const el of [yAxis, xAxis, sizes]) el.setAttribute('aria-hidden', 'true');
-    pageWay(sizes, body);
+    for (const el of [yAxis, xAxis]) el.setAttribute('aria-hidden', 'true');
     const texts = (part: string) => scene.nodes.filter((n): n is TextNode => n.part === part && n.kind === 'text');
     keyed(yAxis, texts('y-axis'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-t', n.t); });
     keyed(xAxis, texts('x-axis'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-x', n.x); el.setAttribute('data-anchor', n.anchor); });
-    keyed(sizes, scene.nodes.filter((n): n is CircleNode | TextNode => n.part === 'size' && (n.kind === 'circle' || n.kind === 'text')), (n) => (n.kind === 'circle' ? 'i' : 'span'), (el, n) => { if (n.kind === 'text') text(el, n); else prop(el, '--uav-size', n.size); });
 
     if (!grids.has(cells)) bind(cells);
     const at = new Map(data.result.rows.map((r) => [(xf ? r[xf] : '') + '\n' + (yf ? r[yf] : ''), r])), rows = new Map<string, Row>();

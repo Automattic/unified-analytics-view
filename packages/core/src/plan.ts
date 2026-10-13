@@ -56,6 +56,13 @@ function checkLayers(layers: Layer[], q: Query, catalog: Catalog, result: Result
     }
     if (l.series === 'delta' && !(l.mark === 'text' && isDim(catalog, l.encode && l.encode.y) && typeof (l.encode && l.encode.text) === 'string' && (l.encode!.text as string) in catalog.metrics))
       throw new Error('Layer ' + (i + 1) + ' has series: "delta", which is a row\'s change in a metric. Make it a text layer with the dimension on y and the metric on text.');
+    // A dimension on detail splits a layer and paints nothing apart. It is one of the query's dimensions, and no companion or number.
+    const ld = l.encode?.detail;
+    if (ld != null && by.indexOf(ld as string) < 0) throw new Error('Layer ' + (i + 1) + ' encodes ' + JSON.stringify(ld) + ' on detail, and detail splits a layer by one of the query\'s dimensions' + (by.length ? ': ' + by.join(', ') + '. Encode one of those' : ', of which it has none. Add one to query.by') + ', or remove "detail".');
+    // A plot with a dimension on x has one more to split by, so a layer there is split once: painted apart, or not.
+    const lcd = l.encode?.color;
+    if (ld != null && isDim(catalog, lcd) && (lcd === ld || isDim(catalog, l.encode?.x))) throw new Error('Layer ' + (i + 1) + ' encodes "' + lcd + '" on color and "' + ld + '" on detail, and a layer is split into series once: painted apart with a legend by color, or all in its own paint by detail. Remove one of the two.');
+    if (l.stack && ld != null) throw new Error('Layer ' + (i + 1) + ' has "stack" and is split by detail, which paints every series alike, so a stack of them could not be read. Encode "' + ld + '" on color in place of detail, or remove "stack".');
     if (l.stack && !isDim(catalog, l.encode && l.encode.color)) throw new Error('Layer ' + (i + 1) + ' has "stack" and no dimension on color, so there is nothing to stack. Encode the query\'s second dimension on color, or remove "stack".');
     // In rows a colour says which rows go together, so it is the rows' own dimension or something the engine says of it.
     const { x: lx, y: ly, color: lc } = l.encode || {};
@@ -74,7 +81,7 @@ function checkLayers(layers: Layer[], q: Query, catalog: Catalog, result: Result
   if (!by.length && layers.some((l) => l.encode && [l.encode.x, l.encode.y].every((f) => typeof f === 'string' && f in catalog.metrics))) throw new Error('These layers set one metric against another, and the query has no dimension, so there is no row to draw a point for. Add one to query.by, for example ["page"].');
   // Rows come back one per pair. A dimension that no layer encodes would leave several rows drawn in one place.
   const unused = by.length === 2 && layers.length ? by.find((d) => !layers.some((l) => Object.values(l.encode || {}).indexOf(d) >= 0)) : null;
-  if (unused) throw new Error('The query is by "' + unused + '", and no layer encodes it, so its rows would be drawn over each other. Encode it on color, or remove it from query.by.');
+  if (unused) throw new Error('The query is by "' + unused + '", and no layer encodes it, so its rows would be drawn over each other. Encode it on color, for a colour and a legend entry each, or on detail, for a series each in one paint, or remove it from query.by.');
 }
 
 /** Fit a spec to a container. Throws, with a message that names the fix, when the spec is invalid.

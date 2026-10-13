@@ -118,7 +118,7 @@ describe('two dimensions', () => {
     const bar = (encode: Record<string, string>, by: string[]): Spec => ({ query: { metrics: ['visitors'], by }, layers: [{ mark: 'bar', encode }] });
     expect(err(bar({ x: 'date.day', y: 'visitors' }, ['date.day', 'channel', 'device']), { metrics: ['visitors'] })).toBe('A view is by one dimension or by two different ones, and query.by has: date.day, channel, device. Remove all but two.');
     expect(err(bar({ x: 'date.day', y: 'visitors', color: 'device' }, ['date.day', 'channel']))).toBe('Layer 1 encodes "device" on color, which the query does not return. It returns: date.day, channel, visitors.');
-    expect(err(bar({ x: 'date.day', y: 'visitors' }, ['date.day', 'channel']))).toBe('The query is by "channel", and no layer encodes it, so its rows would be drawn over each other. Encode it on color, or remove it from query.by.');
+    expect(err(bar({ x: 'date.day', y: 'visitors' }, ['date.day', 'channel']))).toBe('The query is by "channel", and no layer encodes it, so its rows would be drawn over each other. Encode it on color, for a colour and a legend entry each, or on detail, for a series each in one paint, or remove it from query.by.');
     expect(() => runQuery({ metrics: ['visitors'], by: ['channel', 'channel'] })).toThrow('A query is by one dimension or by two different ones. This one is by: channel, channel.');
   });
 });
@@ -392,6 +392,6 @@ describe('presets with a second dimension', () => {
   });
   it('errors name the fix: a split preset with one dimension, and a one-dimension preset with two', () => {
     expect(err({ use: 'stacked-bar', query: { metrics: ['visitors'], by: ['date.day'] } })).toBe('The "stacked-bar" preset needs two dimensions in query.by: the one on the axis, then the one to split by.');
-    expect(err({ use: 'line', query: { metrics: ['visitors'], by: ['date.day', 'device'] } })).toBe('The query is by "device", and no layer encodes it, so its rows would be drawn over each other. Encode it on color, or remove it from query.by.');
+    expect(err({ use: 'line', query: { metrics: ['visitors'], by: ['date.day', 'device'] } })).toBe('The query is by "device", and no layer encodes it, so its rows would be drawn over each other. Encode it on color, for a colour and a legend entry each, or on detail, for a series each in one paint, or remove it from query.by.');
   });
 });

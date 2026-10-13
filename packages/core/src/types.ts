@@ -59,8 +59,10 @@ export interface Result {
 /* The view spec. */
 /** The marks core draws, and the name of any custom mark registered in code (marks.ts). */
 export type Mark = 'line' | 'area' | 'bar' | 'rule' | 'text' | 'arc' | 'cell' | 'dot' | 'tick' | (string & {});
-/** `x2` and `y2` are the second end of a `bar`, a `rule` or an `area`: it runs from the value on `x` or `y` to the one there. */
-export type Channel = 'x' | 'y' | 'color' | 'text' | 'angle' | 'radius' | 'size' | 'x2' | 'y2';
+/** `x2` and `y2` are the second end of a `bar`, a `rule` or an `area`: it runs from the value on `x` or `y` to the one there.
+ * `detail` is a dimension that splits a layer into series as one on `color` does, and paints none of them apart:
+ * every series is in the layer's own paint, with no legend, and as many as the result holds. */
+export type Channel = 'x' | 'y' | 'color' | 'detail' | 'text' | 'angle' | 'radius' | 'size' | 'x2' | 'y2';
 export type Role = 'primary' | 'comparison' | 'reference' | 'context';
 export type KeepPart = 'guides' | 'secondary' | 'rows' | 'marks';
 export interface Layer {
@@ -69,7 +71,7 @@ export interface Layer {
   /** `previous` draws the metric's comparison companion. On a `text` layer in rows, `delta` says the row's change on it instead, painted by the metric's polarity. */
   series?: 'previous' | 'delta';
   role?: Role;
-  /** On a layer split by `color`: each series starts where the one under it ends. `normalize` makes each a share of the whole,
+  /** On a layer split by `color`, and not by `detail`: each series starts where the one under it ends. `normalize` makes each a share of the whole,
    * and `center` sets each stack half on either side of zero. */
   stack?: 'zero' | 'normalize' | 'center';
   /** On an `arc`: the arcs run over the top half of the circle, from left to right, and not all the way round.

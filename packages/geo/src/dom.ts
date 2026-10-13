@@ -1,5 +1,5 @@
 import type { CircleNode, PathNode, TextNode } from '@unified-analytics/core';
-import { FOCUS, HOVER, attr, ensure, keyed, prop, text, token, type LayoutPainter } from '@unified-analytics/dom';
+import { FOCUS, HOVER, attr, ensure, keyed, paintRamp, prop, text, token, type LayoutPainter } from '@unified-analytics/dom';
 import { GEO_RULES, geoRules } from './index.ts';
 
 /* The `geo` mark's half for the DOM: the painter of its layout, for registerPainter().
@@ -7,7 +7,7 @@ import { GEO_RULES, geoRules } from './index.ts';
  * The part holds its shape: it is as wide as the view up to 480 px and its height follows from the scene's aspect. Its
  * SVG has a view box of that shape, so the regions are never stretched, and the symbols are HTML over it, placed by
  * ratios of the same box and sized in pixels, as a plot's dots are. Under it, the ramp a grid has and the key to
- * sizes a plot has, in their own styles.
+ * sizes a plot has, in their own styles (the element's chrome).
  *
  *   .uav-plot
  *     svg
@@ -160,10 +160,10 @@ export const geoPainter: LayoutPainter = {
 
     // The note is read: it says what the map does not. It is made whether or not there is one, so it stays above the keys.
     keyed(ensure(body, 'div', 'uav-note'), scene.nodes.filter((n): n is TextNode => n.part === 'note' && n.kind === 'text'), () => 'span', text);
-    const ramp = ensure(body, 'div', 'uav-ramp'), sizes = ensure(body, 'div', 'uav-size');
-    // The keys say again what each region's name says whole.
-    for (const el of [ramp, sizes]) el.setAttribute('aria-hidden', 'true');
-    keyed(ramp, scene.nodes.filter((n) => n.part === 'ramp'), (n) => (n.kind === 'text' ? 'span' : 'i'), (el, n) => { if (n.kind === 'text') text(el, n); });
+    paintRamp(body, scene);
+    // The key to sizes says again what each region's name says whole.
+    const sizes = ensure(body, 'div', 'uav-size');
+    sizes.setAttribute('aria-hidden', 'true');
     keyed(sizes, scene.nodes.filter((n) => n.part === 'size'), (n) => (n.kind === 'text' ? 'span' : 'i'), (el, n) => { if (n.kind === 'text') text(el, n); else if (n.kind === 'circle') prop(el, '--uav-size', n.size); });
   },
 };

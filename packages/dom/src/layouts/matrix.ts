@@ -4,12 +4,13 @@ import { token } from '../tokens.ts';
 import { hideReadout, placeReadout, readout, readoutOf } from '../keys.ts';
 import type { LayoutPainter } from '../layout.ts';
 import { thin } from '../measure.ts';
+import { paintRamp } from '../chrome/ramp.ts';
 import { DOT } from './points.ts';
 
 /* A dimension on x, another on y, a metric on colour: a grid of cells. The cells are a CSS grid, each set in its
  * track by two custom properties, so nothing here runs on resize. The axes are the plot's own: the row labels are a
  * column sized by the widest, the column labels a row under the grid, and both are placed by the stylesheet
- * cartesian.ts wrote for `.uav-y-axis`, `.uav-x-axis` and `.uav-plot`. Below them, the ramp.
+ * cartesian.ts wrote for `.uav-y-axis`, `.uav-x-axis` and `.uav-plot`. Below them, the ramp (chrome/ramp.ts).
  *
  * A `dot` layer is drawn in the cell's own element, so a pair is one hit target whichever marks it has: alone, the
  * element has no fill and the dot is all there is; over a cell, it is the cell with the dot on it. Under the ramp,
@@ -40,13 +41,7 @@ const css = `
 .uav-cells i[data-dot]::before { content: ""; border-radius: 50%; background: var(--uav-dot);
   inline-size: min(${DOT}, (min(100cqw / var(--uav-nx), 100cqh / var(--uav-ny)) - 1px) * var(--uav-size, 0.4) / 4); aspect-ratio: 1; }
 .uav-cells [data-active] { z-index: 1; }
-.uav-ramp { grid-area: ramp; display: flex; align-items: center; gap: 1px; block-size: 24px; overflow: hidden; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.uav-ramp i { flex: none; inline-size: 14px; block-size: 10px; border-radius: ${token('border-radius-cell')}; background: var(--uav-paint); }
-.uav-ramp span { color: var(--uav-paint); margin-inline: 5px; }
-.uav-ramp span:first-child { margin-inline-start: 0; }
-.uav-ramp [data-key="ramp:none"] { margin-inline-start: 5px; }
-/* Zero is said beside its own swatch, the neutral one, which stands a little clear of the arm before it. */
-.uav-ramp i:has(+ [data-key="ramp:zero"]) { margin-inline-start: 4px; }`;
+.uav[data-layout="matrix"] .uav-ramp { grid-area: ramp; }`;
 
 /** Where a key moves to in a grid `nx` cells across and `ny` down, from `at` (null when none is chosen): left and
  * right along x, up and down along y, stopping at the edges. From nothing, any arrow is the first cell. Null when
@@ -136,15 +131,16 @@ export const matrix: LayoutPainter = {
 
   paint(body, scene, _rules, data) {
     const xs = scene.rows ?? [], ys = scene.ys ?? [], { x: xf, y: yf } = data.layers[0]!.encode as Record<string, string>;
-    const yAxis = ensure(body, 'div', 'uav-y-axis'), plot = ensure(body, 'div', 'uav-plot'), xAxis = ensure(body, 'div', 'uav-x-axis'), ramp = ensure(body, 'div', 'uav-ramp'), sizes = ensure(body, 'div', 'uav-size');
+    const yAxis = ensure(body, 'div', 'uav-y-axis'), plot = ensure(body, 'div', 'uav-plot'), xAxis = ensure(body, 'div', 'uav-x-axis');
+    paintRamp(body, scene);
+    const sizes = ensure(body, 'div', 'uav-size');
     const cells = ensure(plot, 'div', 'uav-cells'), dims = data.catalog.dimensions;
-    // The labels and the ramp say again what each cell's name says whole.
-    for (const el of [yAxis, xAxis, ramp, sizes]) el.setAttribute('aria-hidden', 'true');
-    pageWay(ramp, body); pageWay(sizes, body);
+    // The labels and the keys say again what each cell's name says whole.
+    for (const el of [yAxis, xAxis, sizes]) el.setAttribute('aria-hidden', 'true');
+    pageWay(sizes, body);
     const texts = (part: string) => scene.nodes.filter((n): n is TextNode => n.part === part && n.kind === 'text');
     keyed(yAxis, texts('y-axis'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-t', n.t); });
     keyed(xAxis, texts('x-axis'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-x', n.x); el.setAttribute('data-anchor', n.anchor); });
-    keyed(ramp, scene.nodes.filter((n) => n.part === 'ramp'), (n) => (n.kind === 'text' ? 'span' : 'i'), (el, n) => { if (n.kind === 'text') text(el, n); });
     keyed(sizes, scene.nodes.filter((n): n is CircleNode | TextNode => n.part === 'size' && (n.kind === 'circle' || n.kind === 'text')), (n) => (n.kind === 'circle' ? 'i' : 'span'), (el, n) => { if (n.kind === 'text') text(el, n); else prop(el, '--uav-size', n.size); });
 
     if (!grids.has(cells)) bind(cells);

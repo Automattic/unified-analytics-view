@@ -1,6 +1,7 @@
 import { CONTAINER_RULES, buildScene, expand, fallbackRule, fills, formatDimension, formatValue, gaveWay, metricOf, resolve, unboundedContainer } from '@unified-analytics/core';
 import type { Catalog, ContainerRules, Layer, Layout, Query, Result, Row, SceneNode, Spec } from '@unified-analytics/core';
 import { compileFitRules, type FitExtras } from './compile.ts';
+import { CHROME_CSS } from './chrome/index.ts';
 import { attr, ensure, keyed, paintVar, text } from './dom.ts';
 import { DOTS_CSS } from './dots.ts';
 import { PIXELS_CSS, pixels } from './pixels.ts';
@@ -89,6 +90,7 @@ export const BASE_CSS = `@layer uav {
 .uav-ruler > .uav-number > span { inline-size: max-content; }
 
 ${painters.map((p) => p.css).join('\n')}
+${CHROME_CSS}
 ${UNIT_CSS}
 ${MOTION_CSS}
 ${KEYS_CSS}

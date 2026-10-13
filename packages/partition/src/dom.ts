@@ -1,5 +1,5 @@
 import { formatDimension, formatValue, type RectNode, type Result, type Row, type TextNode } from '@unified-analytics/core';
-import { FOCUS, HOVER, attr, ensure, hideReadout, keyed, nodePaint, placeReadout, prop, readoutOf, text, token, type LayoutPainter } from '@unified-analytics/dom';
+import { FOCUS, HOVER, attr, ensure, hideReadout, keyed, nodePaint, paintRamp, placeReadout, prop, readoutOf, text, token, type LayoutPainter } from '@unified-analytics/dom';
 import { PARTITION_RULES, boxNames } from './index.ts';
 
 /* The `partition` mark's half for the DOM: the painter of its layout, for registerPainter().
@@ -181,10 +181,7 @@ export const partitionPainter: LayoutPainter = {
     if (on && (on.hasAttribute('data-exit') || !(plot.matches(':focus') || plot.matches(':hover')))) choose(plot, null);
     else if (on) choose(plot, on, on.getAttribute('data-active') as 'keys' | 'pointer');
 
-    // The ramp says again what each box's name says whole.
-    const ramp = ensure(body, 'div', 'uav-ramp');
-    ramp.setAttribute('aria-hidden', 'true');
-    keyed(ramp, scene.nodes.filter((n) => n.part === 'ramp'), (n) => (n.kind === 'text' ? 'span' : 'i'), (el, n) => { if (n.kind === 'text') text(el, n); });
+    paintRamp(body, scene);
   },
 
   /* A row for each row of the result, under a row for its parent that holds the engine's total for it, and the engine's

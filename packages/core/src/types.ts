@@ -72,7 +72,8 @@ export interface Layer {
   series?: 'previous' | 'delta';
   role?: Role;
   /** On a layer split by `color`, and not by `detail`: each series starts where the one under it ends. `normalize` makes each a share of the whole,
-   * and `center` sets each stack half on either side of zero. */
+   * and `center` sets each stack half on either side of zero. In rows it is what lets a bar's `color` be the query's second
+   * dimension: each row's bar is divided into a series for each of its values. */
   stack?: 'zero' | 'normalize' | 'center';
   /** On an `arc`: the arcs run over the top half of the circle, from left to right, and not all the way round.
    * The one layer field that is neither data nor role. */
@@ -89,7 +90,8 @@ export interface Guides {
   /** The second y axis, on the far side, where the layers measure in two units. */
   y2?: boolean;
   grid?: boolean;
-  /** On a band, `top` is the largest segment's label. On a split plot, `labels` is a label at the end of each line. */
+  /** On a band, `top` is the largest segment's label. On a split plot, `labels` is a label at the end of each line.
+   * On rows divided into series, `top` is one line that names the series with the most. */
   legend?: 'full' | 'top' | 'labels';
   /** Under a grid of cells: the steps of the colour scale, with its low and its high value. */
   ramp?: boolean;

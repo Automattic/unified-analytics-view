@@ -26,7 +26,7 @@ function gaveUp(r: FitRule, plan: Plan, unbounded: Plan): boolean | null {
   if (r.id === 'axes') return !(here && plan.guides.x);
   // A plot has a legend, and labels at its line ends, only where it is split into series.
   if (r.id === 'legend') return unbounded.guides.legend ? !(here && plan.guides.legend === 'full') : null;
-  if (r.id === 'labels') return unbounded.guides.legend ? !(here && !!plan.guides.legend) : null;
+  if (r.id === 'labels' || r.id === 'legend-top') return unbounded.guides.legend ? !(here && !!plan.guides.legend) : null;   // and a list its one line only where its rows are divided
   // And a second y axis only where its layers measure in two units.
   if (r.id === 'axis-2') return unbounded.guides.y2 ? !(here && !!plan.guides.y2) : null;
   // Labels on points, a key to sizes, and the rung a plot of points has in place of a bare plot: only where a view has them.

@@ -3,8 +3,8 @@ import { applies, fallbackRule, ruleFor, type FitRule } from './fit.ts';
 import { fmtTime, rangeLabel } from './format.ts';
 import { customMarks } from './marks.ts';
 import { PRESETS, expand, presetNames, usesPrevious } from './presets.ts';
-import { COLUMNS_BLOCK, place } from './place.ts';
-import { BUILT_IN_MARKS, DETAIL_LAYOUTS, buildScene, columnLabel, columnsOf, tldrValueText, isDim, roleOf, seriesOf, trackBeside, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
+import { COLUMNS_BLOCK, legendBlock, place } from './place.ts';
+import { BUILT_IN_MARKS, DETAIL_LAYOUTS, buildScene, columnLabel, columnsOf, tldrValueText, isDim, listRows, roleOf, seriesOf, trackBeside, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
 import { gridProse, rangeProse, tldrProse } from './prose.ts';
 import type { Catalog, Container, Layer, Layout, Plan, PlanShape, PresetLibrary, Query, Reduction, ReductionId, Result, Role, PlacedScene, Spec } from './types.ts';
 
@@ -65,8 +65,9 @@ function checkLayers(layers: Layer[], q: Query, catalog: Catalog, result: Result
     if (l.stack && ld != null) throw new Error('Layer ' + (i + 1) + ' has "stack" and is split by detail, which paints every series alike, so a stack of them could not be read. Encode "' + ld + '" on color in place of detail, or remove "stack".');
     if (l.stack && !isDim(catalog, l.encode && l.encode.color)) throw new Error('Layer ' + (i + 1) + ' has "stack" and no dimension on color, so there is nothing to stack. Encode the query\'s second dimension on color, or remove "stack".');
     // In rows a colour says which rows go together, so it is the rows' own dimension or something the engine says of it.
-    const { x: lx, y: ly, color: lc } = l.encode || {};
-    if (l.mark !== 'cell' && isDim(catalog, ly) && !isDim(catalog, lx) && typeof lc === 'string' && lc.split('@')[0] !== ly) throw new Error('Layer ' + (i + 1) + ' is in rows by "' + ly + '" and encodes "' + lc + '" on color. A row is painted by its own dimension, for a colour each, or by a companion the result returns with it, for rows that go together. Encode "' + ly + '" on color, or remove it.');
+    // A stacked bar is the one mark that is divided there: by the query's other dimension, into a series for each of its values.
+    const { x: lx, y: ly, color: lc } = l.encode || {}, divided = l.mark === 'bar' && !!l.stack && by.indexOf(lc as string) >= 0;
+    if (l.mark !== 'cell' && !divided && isDim(catalog, ly) && !isDim(catalog, lx) && typeof lc === 'string' && lc.split('@')[0] !== ly) throw new Error('Layer ' + (i + 1) + ' is in rows by "' + ly + '" and encodes "' + lc + '" on color. A row is painted by its own dimension, for a colour each, or by a companion the result returns with it, for rows that go together. Encode "' + ly + '" on color, or remove it.' + (l.mark === 'bar' && by.indexOf(lc) >= 0 ? ' To divide each row\'s bar by "' + lc + '", give the layer "stack".' : ''));
     Object.entries(l.encode || {}).forEach(([ch, f]) => {
       if (typeof f === 'number') return;
       if (ch === 'size' && !(f.split('@')[0]! in catalog.metrics)) throw new Error('Layer ' + (i + 1) + ' encodes "' + f + '" on size, and a size is a quantity. Encode one of the query\'s metrics: ' + q.metrics.join(', ') + '.');
@@ -155,9 +156,13 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   // is more than one column, and are a guide the view gives up when it is short. Both are asked once, as the legend is.
   // A track that stands beside its label asks for room of its own, by its own rule, as a plot of points does.
   const beside = () => (p.layout === 'rows' && trackBeside(p.layers) && rule('track')) || undefined;
+  // A row divided into series starts with its legend, as a band does, and steps it down the same way: to one line that
+  // names the series with the most, and then to nothing. Asked once, as a plot's is.
+  const divided = p.layout === 'rows' && layers.some((l) => l.stack);
+  if (divided) p.guides.legend = short('legend-top', 'rows') ? undefined : short('legend', 'rows') ? 'top' : 'full';
   if (p.layout === 'rows') {
     const label = (beside() || rule('marks'))?.needs.inline ?? 0;
-    for (let cols = columnsOf(catalog, p.layers); cols.length > 1 && container.width < label + valueRoomOf(catalog, p.layers, result.rows); cols = columnsOf(catalog, p.layers)) {
+    for (let cols = columnsOf(catalog, p.layers); cols.length > 1 && container.width < label + valueRoomOf(catalog, p.layers, listRows(catalog, p.layers, result)); cols = columnsOf(catalog, p.layers)) {
       const last = cols[cols.length - 1]!;
       p.layers = p.layers.filter((l) => l !== last);
       dropped.push('the "' + columnLabel(catalog, last) + '" column');
@@ -168,7 +173,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   // a number wider than the bare plot's rule allows it, or a row's widest value.
   function guard(): { rule?: FitRule | undefined; measured: number } {
     if (p.layout === 'cartesian') return p.side ? { rule: rule('marks'), measured: Math.max(0, container.displayWidth(valueLen) - rules.bare.numberWidth) } : { rule: (points && rule('points')) || rule('axes'), measured: 0 };
-    if (p.layout === 'rows') return { rule: beside() || rule('marks'), measured: valueRoomOf(catalog, p.layers, result.rows) };
+    if (p.layout === 'rows') return { rule: beside() || rule('marks'), measured: valueRoomOf(catalog, p.layers, listRows(catalog, p.layers, result)) };
     if (p.layout === 'band') return { rule: rule(p.guides.legend === 'full' ? 'legend' : 'marks'), measured: 0 };
     if (p.layout === 'radial') return { rule: rule(p.guides.legend === 'full' ? 'legend' : 'marks'), measured: 0 };
     if (p.layout === 'matrix') return { rule: rule(p.guides.ramp && keep.indexOf('guides') < 0 ? 'ramp' : 'marks'), measured: 0 };   // a ramp the spec keeps asks for no room of its own
@@ -222,9 +227,11 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
     },
     'trim-rows': () => {
       if (p.layout !== 'rows' || container.height == null) return null;
-      const n = result.rows.length, cur = p.rowLimit || n, rh = rules.rows.rowHeight + rules.rows.gap;
+      const n = listRows(catalog, p.layers, result).length, cur = p.rowLimit || n, rh = rules.rows.rowHeight + rules.rows.gap;
       const above = p.tldrValue ? alone({ ...p, layout: 'none', layers: [] }) + 16 : 0;
-      const k = Math.max(1, Math.floor((container.height - above - (p.guides.columns ? COLUMNS_BLOCK : 0) + rules.rows.gap) / rh));
+      // The key to a divided row's series stands under the rows, and its lines come out of their room.
+      const under = p.guides.legend ? legendBlock(buildScene(p, q, result, catalog), container.width) : 0;
+      const k = Math.max(1, Math.floor((container.height - above - (p.guides.columns ? COLUMNS_BLOCK : 0) - under + rules.rows.gap) / rh));
       if (k >= cur) return null;
       p.rowLimit = k;
       return k + 1 === n ? 'row ' + n : 'rows ' + (k + 1) + ' to ' + n;
@@ -254,6 +261,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   if (p.layout === 'cartesian' && p.guides.x && labelled && !p.guides.pointLabels) dropped.push('the labels on the points');
   if (p.layout === 'cartesian' && p.guides.x && sized && !p.guides.size) dropped.push('the key to sizes');
   if (p.layout === 'rows' && columnsOf(catalog, p.layers).length > 1 && !p.guides.columns) dropped.push('the column headers');
+  if (p.layout === 'rows' && divided && p.guides.legend !== 'full') dropped.push(p.guides.legend === 'top' ? 'the legend, except the series with the most' : 'the legend');
   const midTick = rule('mid-tick');
   if (p.layout === 'cartesian' && p.guides.x && midTick && applies(midTick, { view: { inline: container.width } }) && catalog.dimensions[xDimOf(catalog, p.layers)!]?.type === 'time') dropped.push('the middle date label');
 

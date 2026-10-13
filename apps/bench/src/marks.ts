@@ -37,10 +37,15 @@ const delta = (catalog?: Catalog): State => ({ label: 'painted by its change: ' 
 
 const MARKS: Mark[] = [
   { name: 'line', note: 'The last day is part done, so its tail is dashed.', spec: line, series: true, states: [
-    { label: 'a point chosen', spec: line, active: true }, { label: 'with the period before', spec: S('trend') }, delta(), delta(worse), { label: 'no data', spec: line, scenario: 'empty' }] },
-  { name: 'area', note: 'The fill under a line is a tint.', spec: area, series: true, states: [{ label: 'a point chosen', spec: area, active: true }, { label: 'stacked, a colour each', spec: S('area') }] },
+    { label: 'a point chosen', spec: line, active: true }, { label: 'with the period before', spec: S('trend') }, delta(), delta(worse), { label: 'no data', spec: line, scenario: 'empty' },
+    { label: 'steps over bins', spec: S('ecdf') }, { label: 'joining points, day by day', spec: S('connected') }, { label: 'joining points, with no dots', spec: { ...S('connected'), use: undefined, layers: [{ mark: 'line', encode: { x: 'visitors', y: 'signups' } }] } },
+    { label: 'by rank, first at the top', spec: S('bump') }, { label: 'a line each, in one paint', spec: S('spaghetti') }] },
+  { name: 'area', note: 'The fill under a line is a tint.', spec: area, series: true, states: [{ label: 'a point chosen', spec: area, active: true }, { label: 'stacked, a colour each', spec: S('area') },
+    { label: 'steps over bins', spec: S('density') }, { label: 'about the middle, with no value axis', spec: S('streamgraph') }, { label: 'between two ends, by direction', spec: S('difference') },
+    { label: 'by direction, where a fall is good', spec: S('difference'), catalog: { ...catalog, metrics: { ...catalog.metrics, revenue: { ...catalog.metrics.revenue!, polarity: 'down' } } } }] },
   { name: 'bar', note: 'On a time axis. The last day is part done, so its bar is faded.', spec: bars, series: true, states: [
-    { label: 'a bar chosen', spec: bars, active: true }, { label: 'below zero', spec: S('diverging') }, { label: 'stacked', spec: S('stacked') }, { label: 'side by side', spec: S('grouped') }, { label: 'floating, by direction', spec: S('waterfall') }] },
+    { label: 'a bar chosen', spec: bars, active: true }, { label: 'below zero', spec: S('diverging') }, { label: 'stacked', spec: S('stacked') }, { label: 'side by side', spec: S('grouped') }, { label: 'floating, by direction', spec: S('waterfall') },
+    { label: 'floating, with no paint stated', spec: { query: S('waterfall').query, layers: [{ mark: 'bar', encode: { x: 'date.day', y: 'net_subscribers@before', y2: 'net_subscribers@running' } }] } }] },
   { name: 'bar in rows', note: 'Behind its label a bar is a tint.', spec: rows, series: true, states: [
     { label: 'a row chosen', spec: rows, active: true }, { label: 'a colour for each row', spec: { query: rows.query, layers: [{ mark: 'bar', encode: { y: 'page', x: 'pageviews', color: 'page' } }, { mark: 'text', encode: { y: 'page', text: 'page' } }, { mark: 'text', encode: { y: 'page', text: 'pageviews' }, align: 'end' }] } },
     { label: 'with columns', spec: S('conversions') }, { label: 'with each row\'s change', spec: S('league') }] },

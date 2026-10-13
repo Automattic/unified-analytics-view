@@ -1,10 +1,10 @@
-import { CONTAINER_RULES, buildScene, expand, fallbackRule, formatDimension, formatValue, resolve, unboundedContainer } from '@unified-analytics/core';
+import { CONTAINER_RULES, buildScene, expand, fallbackRule, formatDimension, formatValue, metricOf, resolve, unboundedContainer } from '@unified-analytics/core';
 import type { Catalog, ContainerRules, Layer, Layout, Query, Result, Row, SceneNode, Spec } from '@unified-analytics/core';
 import { compileFitRules, type FitExtras } from './compile.ts';
 import { attr, ensure, keyed, paintVar, text } from './dom.ts';
 import { DOTS_CSS } from './dots.ts';
 import { PIXELS_CSS, pixels } from './pixels.ts';
-import { KEYS_CSS, Keys, companions, hideReadout, readoutOf } from './keys.ts';
+import { KEYS_CSS, Keys, companionLabel, companions, hideReadout, readoutOf } from './keys.ts';
 import { LAYOUTS, painterOf } from './layouts/index.ts';
 import { NUMBER_FITS, fitNumber, readNumber } from './measure.ts';
 import { MOTION_CSS, begin, register, settle } from './motion.ts';
@@ -203,10 +203,10 @@ export function pivot(q: Query, result: Result, fields: string[]): { cols: Row[s
 /* The table is rebuilt whole: nothing in it moves, so there is nothing to keep. Totals are the engine's, never a sum of the rows. */
 function paintTable(table: HTMLTableElement, title: string | undefined, q: Query, result: Result, catalog: Catalog, layers: Layer[]): void {
   const by = q.by || [], prev = q.compare === 'previous';
-  // A companion of a metric that a layer encodes has a column after it, under its suffix, as the readout says it. With two dimensions the table is a pivot, and has none.
+  // A companion of a metric that a layer encodes has a column after it, under its suffix, or its own label where the catalog has an entry for it, as the readout says it, and in its own unit. With two dimensions the table is a pivot, and has none.
   const more = (m: string) => (by.length === 2 ? [] : companions(m, result.rows[0], layers));
   const fields = q.metrics.flatMap((m) => [m, ...(prev ? [m + '@previous'] : []), ...more(m)]);
-  const label = (f: string) => { const [m, of] = f.split('@'); return catalog.metrics[m!]!.label + (of == null ? '' : ', ' + (of === 'previous' ? 'previous period' : of)); };
+  const label = (f: string) => { const [m, of] = f.split('@'); return catalog.metrics[m!]!.label + (of == null ? '' : ', ' + (of === 'previous' ? 'previous period' : companionLabel(f, catalog))); };
   const row = (parent: HTMLElement, cells: [text: string, tag: 'th' | 'td', num?: boolean][]) => {
     const tr = parent.appendChild(document.createElement('tr'));
     for (const [s, tag, num] of cells) { const c = tr.appendChild(document.createElement(tag)); c.textContent = s; if (num) c.setAttribute('data-num', ''); if (tag === 'th') c.scope = parent.tagName === 'THEAD' ? 'col' : 'row'; }
@@ -224,7 +224,7 @@ function paintTable(table: HTMLTableElement, title: string | undefined, q: Query
     return;
   }
   row(table.createTHead(), [...by.map((d): [string, 'th'] => [catalog.dimensions[d]!.label, 'th']), ...fields.map((f): [string, 'th', boolean] => [label(f), 'th', true])]);
-  const value = (v: Row[string], f: string) => formatValue(v as number | null, catalog.metrics[f.split('@')[0]!]!, 'exact');
+  const value = (v: Row[string], f: string) => formatValue(v as number | null, metricOf(catalog, f)!, 'exact');
   const body = table.createTBody(), totals = fields.map((f): [string, 'td', boolean] => [value(result.totals[f], f), 'td', true]);
   for (const r of result.rows) row(body, [...by.map((d): [string, 'th'] => [formatDimension(r[d], catalog.dimensions[d]!), 'th']), ...fields.map((f): [string, 'td', boolean] => [value(r[f], f), 'td', true])]);
   if (!by.length) row(body, totals);

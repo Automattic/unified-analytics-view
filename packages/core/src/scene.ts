@@ -441,7 +441,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     const xM = xDim ? undefined : metricOf(catalog, xOn);                 // a number dimension has no unit in the catalog, so its ticks are plain numbers
     unit = { x: (key) => to(lo(key)), w: 0, cx: (key) => to((lo(key) + hi(key)) / 2), span: (key) => to(hi(key)) - to(lo(key)) };
     if (guides.x && keys.length) x.ticks(4).forEach((t, i, all) => {
-      nodes.push({ key: 'xtick:' + t, part: 'x-axis', kind: 'text', x: to(t), text: xM ? formatValue(t, xM, 'compact') : fmt(t, true), anchor: to(t) <= 0 ? 'start' : to(t) >= 1 ? 'end' : 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...(i > 0 && i < all.length - 1 && { rank: 1 }) });
+      nodes.push(axisTick('x-axis', t, to(t), xM ? formatValue(t, xM, 'compact') : fmt(t, true), { anchor: to(t) <= 0 ? 'start' : to(t) >= 1 ? 'end' : 'middle', rank: Number(i > 0 && i < all.length - 1) }));
     });
   }
   // One metric sizes the dots of a plot, whichever layers name it. On a bar it is the column's width, and has no key.
@@ -450,11 +450,11 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
 
   if (guides.y) scales.forEach(({ v, ticks, coarse, text }, ui) => ticks.forEach((t) => {
     // A short plot keeps the ticks a count of 2 would give on this scale. The rest are ranked, to be given up there.
-    const rank = coarse.includes(t) ? {} : { rank: 1 };
+    const rank = Number(!coarse.includes(t));
     // The second scale's ticks are on the far side, keyed by its unit. The grid is the first scale's alone.
-    if (ui) { if (guides.y2) nodes.push({ key: 'ytick:' + units[ui] + ':' + t, part: 'y-axis-2', kind: 'text', t: v(t), text: text(t), anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...rank }); return; }
-    if (guides.grid) nodes.push({ key: 'grid:' + t, part: 'plot', kind: 'line', t: v(t), paint: t === 0 ? 'axis' : 'grid', layer: 'guide', ...rank });
-    nodes.push({ key: 'ytick:' + t, part: 'y-axis', kind: 'text', t: v(t), text: text(t), anchor: 'end', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...rank });
+    if (ui) { if (guides.y2) nodes.push(axisTick('y-axis-2', units[ui] + ':' + t, v(t), text(t), { rank })); return; }
+    if (guides.grid) nodes.push({ key: 'grid:' + t, part: 'plot', kind: 'line', t: v(t), paint: t === 0 ? 'axis' : 'grid', layer: 'guide', ...(rank && { rank }) });
+    nodes.push(axisTick('y-axis', t, v(t), text(t), { rank }));
   }));
   if (guides.x && keys.length && !xOn) {
     const last = keys.length - 1;
@@ -465,8 +465,8 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     const order = wide ? keys.slice().sort((a, b) => widths.get(b)! - widths.get(a)!) : [];
     idx.forEach((i, j) => {
       const mid = isTime && j > 0 && j < idx.length - 1, rank = wide ? order.indexOf(keys[i]!) : mid ? 1 : 0;   // the middle date is given up on a narrow plot
-      nodes.push({ key: 'xtick:' + keys[i], part: 'x-axis', kind: 'text', x: unit.cx(keys[i]!), row: keys[i]!, text: isTime ? fmtTime(said.get(keys[i]!)!) : said.get(keys[i]!)!,
-        anchor: !isTime ? 'middle' : j === 0 ? 'start' : j === idx.length - 1 ? 'end' : 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...(rank && { rank }) });
+      nodes.push(axisTick('x-axis', keys[i]!, unit.cx(keys[i]!), isTime ? fmtTime(said.get(keys[i]!)!) : said.get(keys[i]!)!,
+        { row: keys[i]!, anchor: !isTime ? 'middle' : j === 0 ? 'start' : j === idx.length - 1 ? 'end' : 'middle', rank }));
     });
   }
   const ids = layerKeys(layers), ends = new Map<string, number>();
@@ -515,6 +515,16 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   if (size) nodes.push(...sizeKey(metricOf(catalog, size.field)!, size.top));
   layers.forEach((l, i) => { if (worths[i] != null) nodes.push(...unitKey(ids[i]!, worths[i]!, metricOf(catalog, l.encode!.y))); });
   return { nodes, rows: keys, ...(split && (painted ? { series } : { detail: series })), scale };
+}
+/** A tick's label on an axis, whichever layout the axis is in: a plot's and a grid's are the same node. It stands at
+ * `at` along its axis, a ratio: across for the x axis, and up for the two beside the plot, whose labels end at the plot
+ * on the near side and start from it on the far one. One with a rank is given up for room before one with none, and
+ * one under a mark of a row says which. What stands on an axis, and which of its labels are ranked, is the layout's:
+ * a scale's round numbers, the first, middle and last of a run of days, every category, the edges of bins. */
+function axisTick(part: 'x-axis' | 'y-axis' | 'y-axis-2', k: string | number, at: number, text: string, { anchor, row, rank }: { anchor?: TextNode['anchor']; row?: string; rank?: number } = {}): TextNode {
+  const x = part === 'x-axis';
+  return { key: (x ? 'xtick:' : 'ytick:') + k, part, kind: 'text', ...(x ? { x: at } : { t: at }), ...(row != null && { row }), text, anchor: anchor ?? (x ? 'middle' : part === 'y-axis' ? 'end' : 'start'),
+    ...(!x && { baseline: 'middle' as const }), font: 'tick', paint: 'ink.muted', layer: 'guide', ...(rank && { rank }) };
 }
 /** The key to sizes: the metric's name, then each step with the most it stands for, in the metric's unit. */
 export function sizeKey(metric: MetricDef, top: number): SceneNode[] {
@@ -1001,15 +1011,15 @@ function sceneMatrix(catalog: Catalog, layers: Layer[], result: Result): Body {
   const sizes = metric(sized) ? held(sized) : null, top = sizes ? Math.max(...endsOf(known(sizes), catalog.metrics[sized as string]!).map(Math.abs)) || 1 : 1;
   const nodes: SceneNode[] = [], ids = layerKeys(layers), nx = xs.length, ny = ys.length;
   // Every sixth label stays, and the rest are ranked to be given up where they would meet: every third goes last.
-  const rank = (i: number) => (i % 6 ? { rank: i % 3 ? 2 : 1 } : {});
+  const rank = (i: number) => (i % 6 ? (i % 3 ? 2 : 1) : 0);
   const end = (f: string, v: string) => result.rows.find((r) => String(r[f]) === v)?.[f + '@end'];
   const tick = (f: string, v: string) => formatDimension(v, catalog.dimensions[f]!);
   // Down the side a bin's label is the bin, start to end. Along the foot there is no room for that, and a bin is read
   // as on any binned axis: an edge at each end of it.
-  if (yf != null) ys.forEach((y, j) => nodes.push({ key: 'ytick:' + y, part: 'y-axis', kind: 'text', t: 1 - (j + 0.5) / ny, text: end(yf, y) == null ? tick(yf, y) : formatBin(y, end(yf, y)), anchor: 'end', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...rank(j) }));
+  if (yf != null) ys.forEach((y, j) => nodes.push(axisTick('y-axis', y, 1 - (j + 0.5) / ny, end(yf, y) == null ? tick(yf, y) : formatBin(y, end(yf, y)), { rank: rank(j) })));
   const edges = xf != null && xs.length > 0 && xs.every((x) => end(xf, x) != null);
-  if (xf != null) xs.forEach((x, i) => nodes.push({ key: 'xtick:' + x, part: 'x-axis', kind: 'text', x: (i + (edges ? 0 : 0.5)) / nx, text: tick(xf, x), anchor: edges && !i ? 'start' : 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...rank(i) }));
-  if (edges) nodes.push({ key: 'xtick:end', part: 'x-axis', kind: 'text', x: 1, text: String(end(xf!, xs[nx - 1]!)), anchor: 'end', font: 'tick', paint: 'ink.muted', layer: 'guide' });
+  if (xf != null) xs.forEach((x, i) => nodes.push(axisTick('x-axis', x, (i + (edges ? 0 : 0.5)) / nx, tick(xf, x), { anchor: edges && !i ? 'start' : 'middle', rank: rank(i) })));
+  if (edges) nodes.push(axisTick('x-axis', 'end', 1, String(end(xf!, xs[nx - 1]!)), { anchor: 'end' }));
   // A row of the grid at a time, from the top: reading order. A layer at a time, the cells under the dots.
   const each = (draw: (x: string, y: string, i: number, j: number) => SceneNode) => ys.forEach((y, j) => xs.forEach((x, i) => nodes.push(draw(x, y, i, j))));
   if (cell) each((x, y, i, j) => ({ key: ids[layers.indexOf(cell)] + ':' + x + ':' + y, part: 'plot', kind: 'rect', x: i / nx, w: 1 / nx, y: j / ny, h: 1 / ny, pair: [x, y], paint: seq!.paint(at!.get(x + '\n' + y)), layer: 'data', role: roleOf(cell) }));

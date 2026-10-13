@@ -119,8 +119,14 @@ describe('bars in rows: tornado, bullet', () => {
     expect(plan.text).toBe('Top factors by effect on revenue, last 28 days: Conversion rate ($800), Traffic ($250), Average order ($250).');
     expect(run(S('tornado'), 100).scene.nodes.find((n) => n.key === 'value')).toMatchObject({ text: '–' });
   });
-  it('for step 3 and 4: a bar that runs to a number is painted by which way it goes, so one from a gain to zero is a loss', () => {
+  it('a bar with two ends and no paint is in its layer\'s own: the rule that painted every such bar by direction is gone', () => {
     const plain: Spec = { ...S('tornado'), layers: S('tornado').layers!.map(({ paint: _paint, ...l }) => l) }, { ratio } = run(plain);
+    expect([...new Set(of<{ paint: string }>(ratio.nodes, 'primary:bar').map((n) => n.paint))]).toEqual(['series.1']);
+  });
+  it('for step 4: asked for by paint: "direction", a bar to zero is still read from its field to the number, so a gain to zero is a loss', () => {
+    // A bar's first end is a field and a number is its second, so a bar from zero to a gain is written from the gain to
+    // zero, and runs down. The sample states delta.bad and delta.good for that reason. A number as the first end mends it.
+    const asked: Spec = { ...S('tornado'), layers: S('tornado').layers!.map((l) => (l.mark === 'bar' ? { ...l, paint: 'direction' } : l)) }, { ratio } = run(asked);
     expect([of<{ paint: string }>(ratio.nodes, 'primary:bar:')[0]!.paint, of<{ paint: string }>(ratio.nodes, 'primary:bar#2:')[0]!.paint]).toEqual(['delta.good', 'delta.bad']);
   });
   it('from zero with no second end the two bars lie behind the label, as a bar list\'s do', () => {

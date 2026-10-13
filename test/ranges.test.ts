@@ -100,7 +100,7 @@ describe('presets', () => {
   it('a slot may be followed by a suffix, which names a companion of what fills it', () => {
     expect(expand(box!).layers).toEqual([
       { mark: 'rule', encode: { x: 'page', y: 'response_time@min', y2: 'response_time@max' }, role: 'context' },
-      { mark: 'bar', encode: { x: 'page', y: 'response_time@p25', y2: 'response_time@p75' }, role: 'context', paint: 'series.1' },
+      { mark: 'bar', encode: { x: 'page', y: 'response_time@p25', y2: 'response_time@p75' }, role: 'context' },
       { mark: 'tick', encode: { x: 'page', y: 'response_time@p50' } },
     ]);
     const presets = { odd: { layers: [{ mark: 'bar' as const, encode: { x: '$by@end', y: '$metric2@a@b', color: '$split', size: '$other@p50', y2: 7 } }] } };
@@ -239,8 +239,54 @@ describe('paint by direction and polarity', () => {
     expect(paints(candlestick!, turned('response_time', 'up')).paints).toEqual(got.map((p) => (p === 'delta.good' ? 'delta.bad' : 'delta.good')));
     expect(new Set(paints(candlestick!, turned('response_time', 'none')).paints)).toEqual(new Set(['series.1']));
   });
-  it('is no spec field: a layer that states its paint keeps it, and a bar with one end is toned only where the bars go both ways from nothing', () => {
+  it('is asked for by the layer, with paint: "direction": the presets that want it state it, and a bar with two ends and no paint is in the layer\'s own', () => {
+    expect(expand(waterfall!).layers!.map((l) => l.paint)).toEqual(['direction']);
+    expect(expand(candlestick!).layers!.map((l) => l.paint)).toEqual([undefined, 'direction']);
+    // A box goes no way, and its preset no longer states a paint to say so.
+    expect(expand(box!).layers!.map((l) => l.paint)).toEqual([undefined, undefined, undefined]);
     expect(new Set(paints(box!).paints)).toEqual(new Set(['series.1']));
+    // The same bars written by hand with no paint: Decided 28 painted these by direction, and they are the layer's own now.
+    const plain = (spec: Spec): Spec => ({ ...spec, use: undefined, layers: expand(spec).layers!.map(({ paint: _paint, ...l }) => l) });
+    expect(new Set(paints(plain(waterfall!)).paints)).toEqual(new Set(['series.1']));
+    expect(new Set(paints(plain(candlestick!)).paints)).toEqual(new Set(['series.1']));
+    expect(view({ spec: 'view/0', query: waterfall!.query, layers: [{ mark: 'bar', encode: { x: 'date.day', y: 'net_subscribers@before', y2: 'net_subscribers@running' }, paint: 'direction' }] })).toBe(true);
+  });
+  it('is refused on a mark with one end, on a mark that is no bar or area, and beside a colour', () => {
+    const q = waterfall!.query, bad = (layer: Spec['layers'] & {}) => err({ spec: 'view/0', query: q, layers: layer });
+    expect(bad([{ mark: 'bar', encode: { x: 'date.day', y: 'net_subscribers' }, paint: 'direction' }]))
+      .toBe('Layer 1 is a "bar" with paint: "direction" and one end, and that paints a bar or an area by which way it runs from one value to another. Give a bar or an area its second end on x2 or y2, or name a paint token: series.1 to series.6, delta.good, delta.bad.');
+    expect(bad([{ mark: 'rule', encode: { x: 'date.day', y: 'net_subscribers@before', y2: 'net_subscribers@running' }, paint: 'direction' }]))
+      .toBe('Layer 1 is a "rule" with paint: "direction", and that paints a bar or an area by which way it runs from one value to another. Give a bar or an area its second end on x2 or y2, or name a paint token: series.1 to series.6, delta.good, delta.bad.');
+    expect(bad([{ mark: 'bar', encode: { x: 'date.day', y: 'net_subscribers@before', y2: 'net_subscribers@running', color: 'date.day' }, paint: 'direction' }]))
+      .toBe('Layer 1 has paint: "direction" and encodes "date.day" on color, and a mark has one paint: its series\' colour, or a gain\'s or a loss\'s. Remove one of the two.');
+  });
+  it('an area with two ends is cut where they cross, and each piece is a gain or a loss: the surplus and the deficit', () => {
+    const spec: Spec = { spec: 'view/0', query: { metrics: ['revenue'], by: ['date.day'], range: '28d', compare: 'previous' },
+      layers: [{ mark: 'area', encode: { x: 'date.day', y: 'revenue@previous', y2: 'revenue' }, paint: 'direction', role: 'context' }, { mark: 'line', encode: { x: 'date.day', y: 'revenue' } }] };
+    const { ratio, result } = run(spec, 700), pieces = ratio.nodes.filter((n) => n.kind === 'path' && n.fill) as any[];
+    // The unfinished day is in no area. Each time the two change sides between two whole days, a piece ends and the next begins.
+    const whole = result.rows.filter((r) => !r.partial), side = whole.map((r) => Math.sign((r.revenue as number) - (r['revenue@previous'] as number)));
+    expect(side.includes(0)).toBe(false);
+    expect(pieces.length).toBe(1 + side.filter((d, i) => i && d !== side[i - 1]).length);
+    expect(pieces.length).toBeGreaterThan(2);
+    pieces.forEach((n, i) => {
+      const rows = n.points.filter((p: any) => p.row != null), up = rows[0].v > rows[0].v0;
+      expect(rows.every((p: any) => (p.v > p.v0) === up), n.key).toBe(true);
+      expect([n.key, n.paint, n.opacity, n.tone, n.role], n.key).toEqual(['context:area:' + rows[0].row, up ? 'delta.good' : 'delta.bad', 0.14, 'soft', 'context']);
+      // It ends where the ends meet, which is no row's, and the next begins at that very point.
+      const next = pieces[i + 1], last = n.points[n.points.length - 1];
+      if (next) { expect(last.row).toBe(undefined); expect(last.v0).toBe(last.v); expect(next.points[0]).toEqual(last); expect(last.x).toBeGreaterThan(n.points[n.points.length - 2].x); expect(last.x).toBeLessThan(next.points[1].x); }
+    });
+    expect(new Set(ratio.nodes.map((n) => n.key)).size).toBe(ratio.nodes.length);
+    // A metric that is better when it falls turns every piece, and one with no better way has one area in the layer's own paint.
+    expect(run(spec, 700, null, 'typical', 'svg', turned('revenue', 'down')).ratio.nodes.filter((n) => n.kind === 'path' && n.fill).map((n) => n.paint)).toEqual(pieces.map((n) => (n.paint === 'delta.good' ? 'delta.bad' : 'delta.good')));
+    expect(run(spec, 700, null, 'typical', 'svg', turned('revenue', 'none')).ratio.nodes.filter((n) => n.kind === 'path' && n.fill).map((n) => [n.key, n.paint])).toEqual([['context:area', 'series.1']]);
+    // With no paint it is the fan's band, whole. With no period before there is nothing to run from, and the layer goes.
+    expect(run({ ...spec, layers: [{ ...spec.layers![0]!, paint: undefined }, spec.layers![1]!] }, 700).ratio.nodes.filter((n) => n.kind === 'path' && n.fill).map((n) => [n.key, n.paint])).toEqual([['context:area', 'series.1']]);
+    expect(run(spec, 700, null, 'no-prior').plan.dropped).toEqual([]);
+    expect(run(spec, 700, null, 'no-prior').ratio.nodes.filter((n) => n.kind === 'path').map((n) => n.key)).toEqual(['primary:line', 'primary:line:partial']);
+  });
+  it('a layer that states a paint token keeps it, and a bar with one end is toned only where the bars go both ways from nothing', () => {
     expect(new Set(paints({ ...waterfall!, layers: [{ ...expand(waterfall!).layers![0]!, paint: 'series.3' }] }).paints)).toEqual(new Set(['series.3']));
     // Bars that rise and fall from nothing are gains and losses: each is good or bad by its metric's polarity.
     expect(new Set(paints(moreSamples.diverging!.spec).paints)).toEqual(new Set(['delta.good', 'delta.bad']));
@@ -326,8 +372,10 @@ describe('a row\'s track', () => {
     // No mark lies under a label or a value.
     for (const n of marks(scene.nodes)) expect(Math.min(n.cx ?? n.x1, n.x2 ?? Infinity)).toBeGreaterThanOrEqual(from - 0.001);
   });
-  it('a bar takes a second end, runs from one to the other and is painted by which way it goes', () => {
-    const moved: Spec = { query: dumbbell!.query, layers: [{ mark: 'bar', encode: { y: 'page', x: 'pageviews@previous', x2: 'pageviews' } }, { mark: 'text', encode: { y: 'page', text: 'page' } }] };
+  it('a bar takes a second end, runs from one to the other and with paint: "direction" is painted by which way it goes', () => {
+    const plain: Spec = { query: dumbbell!.query, layers: [{ mark: 'bar', encode: { y: 'page', x: 'pageviews@previous', x2: 'pageviews' } }, { mark: 'text', encode: { y: 'page', text: 'page' } }] };
+    const moved: Spec = { ...plain, layers: [{ ...plain.layers![0]!, paint: 'direction' }, plain.layers![1]!] };
+    expect(new Set(run(plain, 346).ratio.nodes.filter((n) => n.kind === 'rect').map((n) => n.paint))).toEqual(new Set(['series.1']));
     const { ratio, scene } = run(moved, 346), bars = ratio.nodes.filter((n) => n.kind === 'rect') as any[];
     expect(bars.length).toBe(7);
     expect(bars[1]).toEqual({ key: 'primary:bar:/pricing', part: 'rows', kind: 'rect', v: 2960 / 4820, v0: 2310 / 4820, row: '/pricing', paint: 'delta.good', layer: 'data', role: 'primary' });

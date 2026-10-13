@@ -6,14 +6,16 @@ export interface PathBox<P> { x(p: P): number; y(v: number): number }
 const BOX: PathBox<{ x: number }> = { x: (p) => 100 * p.x, y: (v) => 100 * (1 - v) };
 
 /** The path through `points`: a line, or with `fill` an area down to the baseline, or to each point's `v0` where it
- * has one. Each point has its `x` across and its value `v` up, both 0 to 1. This is the one place a path string is made: the scene's `d` is
+ * has one. `curve` is `monotone`, smoothed and never past the values it joins, `step`, or none for straight segments. Each point has its `x` across and its value `v` up, both 0 to 1. This is the one place a path string is made: the scene's `d` is
  * `pathD(points, curve, fill)`, so a painter that moves the points between two scenes draws the scene's own `d` at rest.
  * place() passes its pixel box as `to`. Null when there are no points. */
-export function pathD<P extends { x: number; v: number; v0?: number }>(points: P[], curve?: 'monotone', fill?: boolean, to: PathBox<P> = BOX): string | null {
+export function pathD<P extends { x: number; v: number; v0?: number; w?: number }>(points: P[], curve?: 'monotone' | 'step', fill?: boolean, to: PathBox<P> = BOX): string | null {
   const y = (p: P) => to.y(p.v);
   const d = fill ? area<P>().x(to.x).y0((p) => to.y(p.v0 || 0)).y1(y) : line<P>().x(to.x).y(y);
-  if (curve) d.curve(curveMonotoneX);
-  return d(points);
+  if (curve === 'monotone') d.curve(curveMonotoneX);
+  // Steps: each point is a flat run across its own width, `w` about its `x`, so a bin is drawn from where it starts to
+  // where it ends, as its bar is, and the line steps where one bin meets the next.
+  return d(curve === 'step' ? points.flatMap((p) => [{ ...p, x: p.x - (p.w || 0) / 2 }, { ...p, x: p.x + (p.w || 0) / 2 }]) : points);
 }
 
 /** The path of an arc about the origin: `a0` to `a1` in turns, clockwise from the top, between `r0` and `r1` as ratios

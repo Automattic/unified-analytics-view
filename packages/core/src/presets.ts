@@ -46,19 +46,20 @@ export const PRESETS: PresetLibrary = {
     { mark: 'text', encode: { y: '$by', text: '$metric2' }, align: 'end' } ] },
   // Ranges, from the companions the engine returns with a metric. What supports the central mark is `context`, so it
   // goes first and the central mark stays. Working names, as those above are.
-  // The box states its paint: a bar with two ends is painted by which way it goes, and a box goes no way.
+  // A bar with two ends is in its layer's own paint, as a box is, unless the layer says `paint: "direction"`: then it is
+  // a gain or a loss by which way it runs, as a waterfall's step and a candle's body are.
   'box-plot': { layers: [
     { mark: 'rule', encode: { x: '$by', y: '$metric@min', y2: '$metric@max' }, role: 'context' },
-    { mark: 'bar',  encode: { x: '$by', y: '$metric@p25', y2: '$metric@p75' }, role: 'context', paint: 'series.1' },
+    { mark: 'bar',  encode: { x: '$by', y: '$metric@p25', y2: '$metric@p75' }, role: 'context' },
     { mark: 'tick', encode: { x: '$by', y: '$metric@p50' } } ] },
   'error-bars': { layers: [
     { mark: 'bar',  encode: { x: '$by', y: '$metric' } },
     { mark: 'rule', encode: { x: '$by', y: '$metric@lower', y2: '$metric@upper' }, role: 'context' } ] },
   'waterfall': { layers: [
-    { mark: 'bar',  encode: { x: '$by', y: '$metric@before', y2: '$metric@running' } } ] },
+    { mark: 'bar',  encode: { x: '$by', y: '$metric@before', y2: '$metric@running' }, paint: 'direction' } ] },
   'candlestick': { layers: [
     { mark: 'rule', encode: { x: '$by', y: '$metric@min', y2: '$metric@max' }, role: 'context' },
-    { mark: 'bar',  encode: { x: '$by', y: '$metric@open', y2: '$metric@close' } } ] },
+    { mark: 'bar',  encode: { x: '$by', y: '$metric@open', y2: '$metric@close' }, paint: 'direction' } ] },
   'fan': { layers: [
     { mark: 'area', encode: { x: '$by', y: '$metric@lower', y2: '$metric@upper' }, role: 'context' },
     { mark: 'line', encode: { x: '$by', y: '$metric' } } ] },

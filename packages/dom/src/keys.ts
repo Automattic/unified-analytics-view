@@ -102,6 +102,7 @@ export function crossMarks(scene: Scene, layers: Layer[], rows: Row[][], catalog
       // A line's unfinished tail, and an unfinished lead, are paths of their own, and the row where two meet is in both.
       if (n.kind !== 'path' || n.fill || n.part !== 'plot' || n.key.replace(/:partial(:lead)?$/, '') !== (n.series == null ? ids[li] : ids[li] + ':' + n.series)) continue;
       for (const p of n.points) {
+        if (p.row == null) continue;                                       // where an area's ends cross, which is no row's
         const at = rows[keys.indexOf(p.row)] ?? [], row = n.series == null ? at[0] : at.find((r) => String(r[split!]) === n.series), id = li + ':' + (n.series ?? '') + ':' + p.row;
         if (row?.[field] == null || seen.has(id)) continue;
         seen.add(id);
@@ -137,7 +138,7 @@ export function hitNodes(scene: Scene): (RectNode & { c: number })[] {
   for (const n of scene.nodes) {
     if (n.part !== 'plot') continue;
     if (n.kind === 'rect' && n.row != null && n.x != null) { const b = bars.get(n.row); bars.set(n.row, [Math.min(b?.[0] ?? n.x, n.x), Math.max(b?.[1] ?? n.x, n.x + (n.w || 0))]); }
-    else if (n.kind === 'path') for (const p of n.points) cx.set(p.row, p.x);
+    else if (n.kind === 'path') { for (const p of n.points) if (p.row != null) cx.set(p.row, p.x); }
     else if (n.kind === 'circle' && n.row != null && n.x != null) cx.set(n.row, n.x);       // a dot on a time or category axis
     else if (n.kind === 'line' && n.row != null && n.x != null) cx.set(n.row, (n.x + (n.x2 ?? n.x)) / 2);   // a row's rule, or its tick
   }

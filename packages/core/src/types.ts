@@ -80,7 +80,9 @@ export interface Layer {
   label?: string;
   align?: 'end';
   /** A paint token in place of the layer's own. `delta` is the paint of its metric's change over the range: good or bad by
-   * the metric's polarity, and the layer's own where there is no change to judge. */
+   * the metric's polarity, and the layer's own where there is no change to judge. `direction`, on a `bar` or an `area`
+   * with two ends, paints each mark by which way it runs from the first end to the second: `delta.good` or `delta.bad`
+   * by the metric's polarity, and the layer's own where the polarity is `none`. An area is cut where its ends cross. */
   paint?: string;
 }
 export interface Guides {
@@ -199,12 +201,14 @@ export interface RectNode extends NodeBase {
   /** The two dimension values a cell came from: the one on x, then the one on y. A cell has no `row`. */
   pair?: [x: string, y: string];
 }
-/** `d` is drawn in a 100 by 100 box, for the painter to stretch. `points` are what it was drawn from. An area's point has `v0` where it starts above the bottom of the plot. */
+/** `d` is drawn in a 100 by 100 box, for the painter to stretch. `points` are what it was drawn from. An area's point has `v0` where it starts above the bottom of the plot.
+ * A point with no `row` is where the two ends of an area cross, between two rows. With `curve: "step"` a point is a flat run `w` wide about its `x`: its bin.
+ * A path in `points` joins the points of two metrics in the order of their rows, straight from each to the next, and has no `curve`. */
 export interface PathNode extends NodeBase {
   kind: 'path';
   d: string | null;
-  points: { row: string; x: number; v: number; v0?: number }[];
-  curve?: 'monotone';
+  points: { row?: string; x: number; v: number; v0?: number; w?: number }[];
+  curve?: 'monotone' | 'step';
   fill?: boolean;
   width?: number;
   dash?: string | null;

@@ -6,6 +6,7 @@
   "exports": "./src/index.ts",
   "dependencies": {
     "@unified-analytics/core": "workspace:*",
+    "@unified-analytics/flow": "workspace:*",
     "@unified-analytics/geo": "workspace:*"
   }
 }

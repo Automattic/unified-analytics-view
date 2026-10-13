@@ -1,0 +1,14 @@
+{
+  "name": "@unified-analytics/flow",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./dom": "./src/dom.ts"
+  },
+  "dependencies": {
+    "@unified-analytics/core": "workspace:*",
+    "@unified-analytics/dom": "workspace:*"
+  }
+}

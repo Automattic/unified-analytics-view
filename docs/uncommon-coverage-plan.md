@@ -458,6 +458,50 @@ Merged. 840 tests pass, 24 of them new, and the typecheck is clean. Every golden
 - `CLAUDE.md` says the fixtures register the `geo` mark with a file of country shapes. They now register it three times. Left for its owner.
 - In the browser: Chromium only, at the bench's widths. Not checked: a page that reads from the right, the `dots` painter on screen, reduced motion, a touch pointer, and a screen reader.
 
+### Step 8, link (built October 12)
+
+Merged. 836 tests pass, twenty of them new, and the typecheck is clean. Every golden scene that existed is the same to the byte: three are new, in a file of their own. The parity tests are untouched. Sample added: `sankey`. Checked on the bench in headless Chromium: the Sankey at 346 px, the grid at 250 px from the same spec, a resize in place with no script, keyboard, hover, the table, both themes, the three data states and a box of 160 and of 100 px.
+
+**What was added**
+
+- **`packages/flow`,** with no dependency but core, and `packages/dom` for its painter, as `packages/geo` has. `linkMark` is the mark, `registerLink()` registers it and its preset, and `linkPainter` is the DOM's half. The scene half loads with no DOM.
+- **The scene:** two columns of nodes, a `rect` for each value in the engine's order, as tall as the engine's total for it from `totalsBy`; a `path` for each row of the result, as wide at each end as the row's share of the node it meets; a label for each node, in the `labels` part. Ribbons are drawn in a box 100 by 100 and stretched, as a plot's lines are.
+- **Paint:** `series.1` to `series.6` by a source's place in the engine's order, its ribbons the same paint with `tone: "soft"`, and a target `ink.muted`.
+- **Fit rules:** `guides` (320 by 140) hides the labels, and `marks` (280 by 120) has `fallback: "heatmap"`.
+- **The preset `sankey`,** registered with the mark. A working name.
+- **Fixtures:** a dimension `section` (Home, Blog, Docs, Pricing, Changelog), which with `channel` is a flow. The engine needed nothing else: it already answers two categorical dimensions with `totalsBy`.
+- **The bench:** the sample's frames on the first page, and `link` on the marks page with a ribbon chosen.
+
+**Nothing in `packages/core/src` changed.** The schema's descriptions of `mark` and `use` name the mark and the preset, in prose.
+
+**Choices, departures and findings**
+
+1. **The target is on `y`, not `x2`.** The plan said `x2`. `checkLayers` keeps `x2` for a bar, a rule or an area, and `encode` is a closed set. With the source on `x` and the target on `y`, none of core's checks needed a change, and its "no layer encodes it" error catches a missing target before the mark is asked. A test holds that `x2` is still refused, in core's words. **To decide,** with finding 3 of the coverage plan's step 8: `source` and `target` channels, or leave it.
+2. **A custom mark cannot give the prose.** The step asked for the largest flow by name and its share. `CustomMark` has `rules`, `scene` and `place`, and `resolve()` writes `plan.text` itself, so the Sankey says what any query by two dimensions says: "Search is the largest channel at 41% of visitors, and Home the largest section at 30%." The grid it falls back to says more, since `gridProse` is the matrix layout's: "Most visitors at Search, Home (1,378) in the last 28 days…". So one spec says two sentences at two widths, and the wider one says less. The registry was not widened. The smallest change that would close it is an optional `prose(view)` on `CustomMark` and one line in `plan.ts`. **To decide.**
+3. **Core cannot say that the labels went.** `resolve()` asks a custom mark's `guides` rule only when its scene shows a `ramp` or a `size` part, and `link` has neither. So between 280 and 320 px the plan still lists `labels` and `dropped` is empty. In the DOM the compiled rule hides them. For pixel painters `place()` asks the rule itself, and it has no spec, so `keep: ["guides"]` keeps the labels in the DOM and not there. A custom mark with a guide of its own needs a way to name it. **To decide.**
+4. **A result with no `totalsBy` is an error that names the fix,** as `stack: "normalize"` has. It names the dimension that lacks it.
+5. **The plot is as tall as the engine's total.** So with a `limit` a column stops short of the foot by what the values past the limit hold, as a band does, and a node stops short of full by the ribbons the limit left out. Where a column's totals come to more than the total, which a metric that does not add up gives, or the engine gives no total, the plot is as tall as the taller column. That sum fits the box and nothing else: no value is said from it. A node is never sized from the rows, and a test holds it by cutting the rows.
+6. **A value with no total, or a total of zero, has no node. A row with no value, a value of zero or less, or an end with no node has no ribbon,** and says nothing of it: the row is still in the table. A count of rows not shown, as `geo` has, was not built.
+7. **The grid reads the right way round.** `heatmap` puts the query's first dimension down the side and the second across, so the sources are the rows and the targets the columns, as a from-and-to table is read. Nothing was changed for it. At 250 px its x labels thin: Home, Blog and Pricing show, of five.
+8. **The labels are inside the columns, over the ribbons,** so no gutter has to be measured. Where two in a column would meet, the larger node's stands: `standing()`, used by `place()` at a line of 14 px and by the painter's measured pass at the real line. At the natural height of 184 px the fixture's smallest source, "Other", has no label.
+9. **The keyboard is the element's own, on the list of ribbons.** One tab stop, a listbox, and every arrow steps along the result's rows, which the engine sends source by source; each option is named by its readout, "Search, Blog: Visitors 1,211". Every ribbon's value is reached. A node is not a stop. **Proposed, not built:** up and down a column's nodes, left and right between the columns, and Enter into a node's ribbons, with the node's total said. It needs listeners of its own, as the grid has.
+10. **The table is the element's pivot of the query,** sources down the side, targets across, with the engine's totals at its edges. It has every flow and every node's total, so the painter has no table of its own. A node's total is nowhere else: hovering a node says nothing.
+11. **A chosen ribbon is told by the rest standing back** to 0.3, as well as by its edge. Ribbons lie over one another in the result's order, and a hairline's edge alone was not seen.
+12. **In the dark theme the ribbons are faint.** A series colour's soft tone there is close to the surface, since it was made to sit behind a label. The step asked for the soft tone, so it is as asked. **To look at:** the paint at an opacity, or a tone of its own.
+13. **Nothing moves on a data change but a fade.** A ribbon's shape is set, not morphed, and the nodes and labels are placed by properties that are not registered, so that they do not glide while the ribbons jump.
+14. **`no-prior` is `typical` for this sample:** the query does not compare. `empty` is the notice, and then the number.
+15. **The fixtures register the mark,** so `fixtures` depends on `flow`, as on `geo`. The painter is registered on the bench's first page and its marks page only.
+16. **A layer's `paint` is not read,** and a companion on `size` (`visitors@previous`) is taken as any field is, and is not tested.
+17. **Three presets need a custom mark, of 22.** There are two custom marks.
+
+**Not done**
+
+- No sentence of its own, and no report of the labels going: findings 2 and 3.
+- No keyboard stop or readout for a node: findings 9 and 10.
+- The natural height is a plot's, 184 px, whatever the count of nodes. Six sources fit; more than six is refused, but a target column has no limit.
+- Not checked: a screen reader, a page that reads from the right, a touch, any browser but Chromium, and the dot painter in a browser (it is swept in the tests).
+- `test/geo.test.ts` asserted the whole list of registered presets. It now asserts the first two, since the fixtures register a third.
+
 ## 8. What to count as it is built
 
 - **Custom marks.** There is one, `geo`. The plan adds two. Each is a hole in the grammar.

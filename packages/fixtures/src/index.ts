@@ -1,4 +1,5 @@
 import type { Catalog, Query, Result, Row, Spec } from '@unified-analytics/core';
+import { registerLink } from '@unified-analytics/flow';
 import { registerGeo, type Shapes } from '@unified-analytics/geo';
 import shapes from './countries.json';
 import hexes from './tiles-hex.json';
@@ -12,6 +13,8 @@ import squares from './tiles-square.json';
 export const countries: Shapes = shapes;
 // Handed to the mark here, as a product would at startup, so every sample resolves wherever the fixtures are loaded.
 registerGeo(countries);
+// The `link` mark is handed nothing. It is registered here for the same reason.
+registerLink();
 
 /** The same countries as equal tiles, squares and hexagons, each roughly where its country is: one for every country
  * above that has a code, under the same id and name, on a flat sheet (`planar`) and so drawn with no map projection.
@@ -65,6 +68,7 @@ export const catalog: Catalog = {
     term:        { label: 'Search term', type: 'categorical' },
     intent:      { label: 'Intent',      type: 'categorical' },
     load_stem:   { label: 'Whole second', type: 'categorical' },
+    section:    { label: 'Section', type: 'categorical' },
   },
 };
 
@@ -131,6 +135,8 @@ MIX.country = [['US', 0.31, 0.33], ['IN', 0.12, 0.1], ['GB', 0.09, 0.1], ['DE', 
 MIX.visitor_country = [...MIX.country, ['SG', 0.012, 0.01], ['MT', 0.006, 0.006], ['BH', 0.004, 0.004], ['', 0.008, 0.008]];
 // Where a visitor goes from a page: the same pages again, so the pairs make a square.
 MIX.next_page = shares(PAGES.map((p) => p.page), PAGES.map((p) => p.visitors));
+// The part of the site a visit lands in. With `channel` it is a flow: where visitors come from, and where they arrive.
+MIX.section = [['Home', 0.3, 0.31], ['Blog', 0.26, 0.22], ['Docs', 0.2, 0.22], ['Pricing', 0.16, 0.17], ['Changelog', 0.08, 0.08]];
 // What a page has and a day does not: the share of its visitors who convert, in percent. A rate is the engine's to work out, and does not add up.
 const RATES: Record<string, number> = { '/': 2.1, '/pricing': 5.8, '/blog/launch-notes': 1.2, '/docs/getting-started': 3.4, '/changelog': 0.9, '/about': 1.6, '/blog/analytics-without-cookies': 2.7, '/contact': 4.4 };
 const RATE = 2.6;
@@ -461,4 +467,6 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
             layers: [{ mark: 'dot', encode: { x: 'embed_x', y: 'embed_y' } }] } },
   stem:    { label: 'Stem-and-leaf: load times, the seconds and the tenths under each', spec: { spec: 'view/0', title: 'Load times', query: { metrics: ['requests'], by: ['load_stem'], range: '28d' },
             layers: [{ mark: 'text', encode: { y: 'load_stem', text: 'load_stem' } }, { mark: 'text', encode: { y: 'load_stem', text: 'load_stem@leaves' } }] } },
+  // The `link` mark (step 8 of docs/uncommon-coverage-plan.md). Swept, with its golden scenes, in test/flow.test.ts.
+  sankey:  { label: 'Sankey: visitors from channel to the section they land in', spec: { spec: 'view/0', title: 'Where visitors land', use: 'sankey', query: { metrics: ['visitors'], by: ['channel', 'section'], range: '28d' } } },
 };

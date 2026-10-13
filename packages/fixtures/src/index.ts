@@ -497,6 +497,9 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
             layers: [{ mark: 'cell', encode: { x: 'date.day', color: 'net_subscribers' } }] } },
   // A correlation matrix: the catalog states that a correlation runs from -1 to 1, so zero is the ramp's neutral middle.
   correlogram: { label: 'Correlogram: how far each assumption moves with each other, from -1 to 1', spec: { spec: 'view/0', title: 'How the assumptions move together', use: 'heatmap', query: { metrics: ['correlation'], by: ['factor', 'other_factor'], range: '28d' } } },
+  // The same matrix as circles: a dot for each pair, sized by how far its correlation is from zero and painted by which side it is on.
+  circles: { label: 'Correlogram, as circles: sized by how strong each correlation is, and painted by its sign', spec: { spec: 'view/0', title: 'How the assumptions move together', query: { metrics: ['correlation'], by: ['factor', 'other_factor'], range: '28d' },
+            layers: [{ mark: 'dot', encode: { y: 'factor', x: 'other_factor', size: 'correlation', color: 'correlation' } }] } },
   // A grid on two binned quantities: the square-binned form of a hexbin and of a 2D density plot.
   bins2d:  { label: '2D histogram: page views by load time and page weight, a square bin for each pair', spec: { spec: 'view/0', title: 'Load time by page weight', use: 'heatmap', query: { metrics: ['pageviews'], by: ['page_weight', 'load_time'], range: '28d' } } },
   adjacency: { label: 'Adjacency matrix: page views by page and the page gone to next', spec: { spec: 'view/0', title: 'From page to page', use: 'heatmap', query: { metrics: ['pageviews'], by: ['page', 'next_page'], range: '28d' } } },

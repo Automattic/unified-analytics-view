@@ -1,6 +1,6 @@
 import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { buildScene, expand, makeContainer, place, resolve, type PainterName, type RectNode, type Spec } from '@unified-analytics/core';
+import { buildScene, expand, makeContainer, place, resolve, sizeStep, type CircleNode, type PainterName, type RectNode, type Spec } from '@unified-analytics/core';
 import viewSchema from '@unified-analytics/core/schema/view.schema.json';
 import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
 
@@ -15,6 +15,7 @@ const run = (spec: Spec, w: number, h: number | null = null, scenario: (typeof s
 const err = (s: Spec) => { try { resolve(s, runQuery(s.query), makeContainer(346), catalog); } catch (e) { return (e as Error).message; } };
 const view = new Ajv().compile(viewSchema);
 const cells = (ratio: { nodes: unknown[] }) => (ratio.nodes as RectNode[]).filter((n) => n.part === 'plot' && n.kind === 'rect');
+const dots = (ratio: { nodes: unknown[] }) => (ratio.nodes as CircleNode[]).filter((n) => n.part === 'plot' && n.kind === 'circle');
 const texts = (scene: { nodes: unknown[] }, prefix: string) => (scene.nodes as { key: string; kind: string; text: string }[]).filter((n) => n.kind === 'text' && n.key.startsWith(prefix)).map((n) => n.text);
 
 describe('the sweep', () => {
@@ -60,7 +61,7 @@ describe('golden scenes', () => {
 // The grids step 0 of docs/uncommon-coverage-plan.md added: a calendar, a strip of days and a square of pages. And
 // step 5's: a correlation matrix and its circles, and a count by two binned quantities.
 describe('the grids of the Uncommon types', () => {
-  const grids = Object.fromEntries(['calendar', 'stripes', 'adjacency', 'correlogram', 'bins2d'].map((k) => [k, moreSamples[k]!.spec]));
+  const grids = Object.fromEntries(['calendar', 'stripes', 'adjacency', 'correlogram', 'circles', 'bins2d'].map((k) => [k, moreSamples[k]!.spec]));
   for (const [name, spec] of Object.entries(grids)) {
     it(name + ': unique keys, no NaN, nothing taller than the container allows, ratios from 0 to 1, and every data state', () => {
       expect(view(spec), JSON.stringify(view.errors)).toBe(true);
@@ -152,6 +153,48 @@ describe('the grids of the Uncommon types', () => {
     expect(result.rows.some((r) => r.pageviews === 0)).toBe(true);
     expect(cells(ratio).every((n) => /^seq\.\d+$/.test(n.paint))).toBe(true);
     expect(plan.text).toBe('Most page views at page weight 1–1.5, load time 1.5–2 (1,770) in the last 28 days. 1.5–2 is the busiest page weight at 32% of page views, and 2–2.5 the busiest load time at 19%.');
+  });
+  it('a dot stands in each pair of a grid in place of its cell, sized by how far its value is from zero and painted by the same scale a cell is', () => {
+    const { ratio, plan, result, scene } = run(grids.circles!, 700), value = (n: CircleNode) => result.rows.find((r) => r.other_factor === n.pair![0] && r.factor === n.pair![1])!.correlation as number;
+    expect(ratio).toMatchObject({ layout: 'matrix', parts: ['y-axis', 'plot', 'x-axis', 'ramp', 'size'] });
+    expect([cells(ratio).length, dots(ratio).length]).toEqual([0, 36]);
+    // In the middle of its pair, in the grid's reading order, keyed by the pair as a cell is.
+    expect(dots(ratio)[7]).toMatchObject({ key: 'primary:dot:Traffic:Traffic', pair: ['Traffic', 'Traffic'], x: 1.5 / 6, t: 1 - 1.5 / 6, size: 4, paint: 'div.9', layer: 'data', role: 'primary' });
+    expect(dots(ratio).every((n) => n.row == null)).toBe(true);
+    // The size steps are a plot's, by area, of the magnitude: the most is the farther end of the stated domain, 1.
+    for (const n of dots(ratio)) expect([n.size, n.paint], n.key).toEqual([sizeStep(Math.abs(value(n)), 1), 'div.' + Math.min(9, 1 + Math.floor(((value(n) + 1) / 2) * 9))]);
+    const of = (a: string, b: string) => dots(ratio).find((n) => n.pair![0] === a && n.pair![1] === b)!;
+    expect([of('Churn', 'Conversion rate'), of('Ad spend', 'Traffic'), of('Ad spend', 'Refund rate')].map((n) => [n.size, n.paint])).toEqual([[3, 'div.2'], [4, 'div.9'], [1, 'div.5']]);
+    // Its keys are the ramp and a plot's key to sizes, in the steps' own values where a count is too few to round.
+    expect(texts(ratio, 'ramp:')).toEqual(['-1', '0', '1']);
+    expect(texts(ratio, 'size:')).toEqual(['Correlation', '0.1', '0.3', '0.6', '1']);
+    expect(plan.text).toBe(run(grids.correlogram!, 700).plan.text);
+    // place() sets each no wider than its cell, the ramp under the grid and the key to sizes under the ramp.
+    const placed = scene.nodes.filter((n) => n.kind === 'circle' && /^primary:dot:/.test(n.key)) as unknown as { cx: number; cy: number; r: number }[];
+    expect(placed.length).toBe(36);
+    expect(Math.max(...placed.map((n) => n.r))).toBe(12);
+    expect(scene.height).toBe(184 + 24 + 28);
+    expect(scene.nodes.find((n) => n.key === 'size:title')).toMatchObject({ y: 14, ty: 184 + 24 });
+    // The two keys go together where there is no room, and the grid stays.
+    expect([run(grids.circles!, 234).ratio.parts.join(' '), run(grids.circles!, 234).plan.dropped]).toEqual(['y-axis plot x-axis', ['the colour ramp and the key to sizes']]);
+  });
+  it('a dot over a cell is sized by its own metric in its own paint, shrinks to its cell, and a pair with no value has the least dot in the paint of no value', () => {
+    const over: Spec = { spec: 'view/0', query: { metrics: ['visitors', 'pageviews'], by: ['weekday', 'hour'], range: '28d' },
+      layers: [{ mark: 'cell', encode: { y: 'weekday', x: 'hour', color: 'visitors' } }, { mark: 'dot', encode: { y: 'weekday', x: 'hour', size: 'pageviews' }, paint: 'ink' }] };
+    expect(view(over), JSON.stringify(view.errors)).toBe(true);
+    const { ratio, scene, result } = run(over, 700), most = Math.max(...result.rows.map((r) => (r.pageviews as number) ?? 0));
+    expect(ratio.parts).toEqual(['y-axis', 'plot', 'x-axis', 'ramp', 'size']);
+    expect([cells(ratio).length, dots(ratio).length]).toEqual([168, 168]);
+    expect(cells(ratio)).toEqual(cells(run(heatmap, 700).ratio).map((n) => ({ ...n, key: n.key.replace('primary:cell', 'primary:cell') })));
+    const none = dots(ratio).filter((n) => n.size == null);
+    expect(none.map((n) => [n.key, n.paint])).toEqual([['primary:dot:3am:Wed', 'seq.none'], ['primary:dot:4am:Wed', 'seq.none'], ['primary:dot:5am:Wed', 'seq.none']]);
+    expect(dots(ratio).filter((n) => n.size != null).every((n) => n.paint === 'ink')).toBe(true);
+    expect(dots(ratio).find((n) => n.pair!.join() === '11am,Wed')!.size).toBe(sizeStep(result.rows.find((r) => r.weekday === 'Wed' && r.hour === '11am')!.pageviews as number, most));
+    // Twenty-four columns in 700 px are narrower than a plot's largest dot, so each step is its share of the cell.
+    const cellW = (700 - (3 * 6.6 + 14)) / 24, placed = scene.nodes.filter((n) => n.kind === 'circle' && /^primary:dot:/.test(n.key)) as unknown as { r: number }[];
+    expect(Math.max(...placed.map((n) => n.r))).toBeCloseTo(Math.min(cellW, (184 - 22) / 7) / 2 - 0.5, 9);
+    // Every key is unique in both scenes, and the sweep holds: nothing taller than its box.
+    for (const [w, h] of [[346, null], [346, 160], [250, 100], [120, null]] as [number, number | null][]) { const s = run(over, w, h); expect(new Set(s.scene.nodes.map((n) => n.key)).size).toBe(s.scene.nodes.length); if (h != null && s.plan.layout !== 'prose') expect(s.scene.height).toBeLessThanOrEqual(h); }
   });
   it('a square of pages has the same values down the side as across', () => {
     const { ratio } = run(grids.adjacency!, 700);
@@ -263,10 +306,18 @@ describe('prose, the preset and errors', () => {
     expect(err({ use: 'heatmap', query: { metrics: ['visitors'], by: ['weekday'] } })).toBe('The "heatmap" preset needs two dimensions in query.by: the one on the axis, then the one to split by.');
   });
   it('errors name the fix: a grid of anything but one cell layer, a cell with no metric on color, and a cell on a plot', () => {
-    const q = { metrics: ['visitors'], by: ['weekday', 'hour'] }, grid = 'A dimension on both x and y makes a grid, and a grid draws one layer: a "cell" with a metric on color. Write { "mark": "cell", "encode": { "x": "hour", "y": "weekday", "color": a metric } } alone, leave x or y out for one column or one row, or move a dimension off an axis.';
+    const q = { metrics: ['visitors'], by: ['weekday', 'hour'] }, grid = 'A dimension on both x and y makes a grid, and a grid draws a "cell" with a metric on color, a "dot" with a metric on size, or the two together on the same x and y. Write { "mark": "cell", "encode": { "x": "hour", "y": "weekday", "color": a metric } }, or { "mark": "dot", "encode": { "x": "hour", "y": "weekday", "size": a metric } }, which may have a metric on color where no cell has one. Leave x or y out of a cell alone for one column or one row, or move a dimension off an axis.';
     expect(err({ query: q, layers: [{ mark: 'bar', encode: { x: 'hour', y: 'weekday', color: 'visitors' } }] })).toBe(grid);
     expect(err({ query: q, layers: [{ mark: 'cell', encode: { x: 'hour', y: 'weekday' } }] })).toBe(grid);
     expect(err({ query: q, layers: [...expand(heatmap).layers!, { mark: 'rule', encode: { y: 3 } }] })).toBe(grid);
+    // A dot with no metric on size, one on other dimensions than the cell's, a second colour scale, and two of either mark.
+    const dot = (encode: Record<string, string>) => ({ mark: 'dot' as const, encode: { x: 'hour', y: 'weekday', ...encode } });
+    expect(err({ query: q, layers: [dot({})] })).toBe(grid);
+    expect(err({ query: q, layers: [dot({ size: 'visitors', color: 'weekday' })] })).toBe(grid);
+    expect(err({ query: q, layers: [...expand(heatmap).layers!, dot({ size: 'visitors', color: 'visitors' })] })).toBe(grid);
+    expect(err({ query: q, layers: [...expand(heatmap).layers!, { mark: 'dot', encode: { x: 'weekday', y: 'hour', size: 'visitors' } }] })).toBe(grid);
+    expect(err({ query: q, layers: [dot({ size: 'visitors' }), dot({ size: 'visitors' })] })).toBe(grid);
+    expect(err({ query: q, layers: [dot({ size: 'visitors' })] })).toBeUndefined();
     expect(err({ query: { metrics: ['visitors'], by: ['weekday'] }, layers: [{ mark: 'cell', encode: { x: 'weekday', y: 'visitors' } }] })).toBe('The "cell" mark has no rule for a time or category axis yet. Use line, area, bar, rule, dot, text or tick.');
     expect(err({ query: q, layers: [{} as never] })).toBe('Layer 1 has no "mark". Use one of: line, area, bar, rule, text, arc, cell, dot, tick.');
     expect(view({ spec: 'view/0', query: heatmap.query, layers: expand(heatmap).layers }), JSON.stringify(view.errors)).toBe(true);

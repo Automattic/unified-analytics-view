@@ -201,7 +201,7 @@ A layer:
 | `align` | `"end"` for right-aligned text |
 | `paint` | Override the paint token. `"delta"` is the paint of the metric's change over the range: good or bad by its polarity, and the layer's own where there is no change to judge. Built October 8, for the sidebar test case |
 
-Paint tokens an author may name: `series.1` to `series.6`, `compare`, `rule`, `ink`, `ink.muted`, `delta`, `delta.good` and `delta.bad`. A layer with no `paint` takes `series.1`, or `compare` for a `previous` series; a layer split by a dimension on `color` takes a series colour per value, and one split by `detail` keeps its own for every value.
+Paint tokens an author may name: `series.1` to `series.6`, `compare`, `rule`, `ink`, `ink.muted`, `delta`, `delta.good` and `delta.bad`. A layer with no `paint` takes `series.1`, or `compare` for a `previous` series; a layer split by a dimension on `color` takes a series colour per value, and one split by `detail` keeps its own for every value. The steps of the two colour ramps, `seq.1` to `seq.10` and `div.1` to `div.9`, and `seq.none`, are the colour scale's and not an author's: a metric on `color` is quantized to them, and which ramp it is on is read from its values (decision 32).
 
 **Several metrics on one plot.** Each is a layer of its own, and each takes `series.1` unless its `paint` says otherwise, so give the second `"paint": "series.2"`. Metrics of one unit share the y axis, however far apart their values are. Metrics of two units get an axis each; three units is an error. There is no legend for layers that differ by metric: a legend comes only from a dimension on `color`. That is a known gap (October 8).
 
@@ -242,9 +242,9 @@ The JSON Schema for a spec is `packages/core/schema/view.schema.json`, and the c
 | `bar` | x, y, x2, y2, color, detail | Has a baseline, so the scale holds zero. With two ends it floats | Proven; split, stacked, signed and ranged forms built October 8; split by `detail` built October 12 |
 | `rule` | x or y (a constant), or fields per row with x2 or y2 | A reference line with an optional label, or a segment per row | Proven; constant on x and the per-row form built October 8 |
 | `text` | y, text; in a plot x, y, text | A label per row, a column of values, or a label on a point | Proven in rows; in the plot built October 8 |
-| `dot` | x, y, size, color | A point. Its radius is the painter's, in pixels | Built October 8 |
+| `dot` | x, y, size, color | A point. Its radius is the painter's, in pixels. With a dimension on both x and y it stands in a grid, in each pair: `size` is a metric, read by how far it is from zero, and `color` may be a metric where no `cell` has one | Built October 8; in a grid October 12 |
 | `tick` | x, y | A short stroke across its band at a value | Built October 8 |
-| `cell` | x, y, color | Both positions discrete; colour quantized to the `seq` ramp. With no x it is one column and with no y one row, a strip. A binned dimension's row is labelled by its bin, and along the foot at its edges | Built October 8; the strip October 9 |
+| `cell` | x, y, color | Both positions discrete; colour quantized to a ramp: `seq`, or `div` where the values or the catalog's `domain` cross zero, with zero in its neutral middle step and both arms measured by the end farther from zero. No value is `seq.none` on either. With no x it is one column and with no y one row, a strip. A binned dimension's row is labelled by its bin, and along the foot at its edges; a binned dimension on y beside another on x reads from the foot, its least bin lowest | Built October 8; the strip October 9; the diverging ramp October 12 |
 | `arc` | angle, radius (a number), color | Its own mark. No general polar coordinate system | Built October 8 |
 
 "Built October 8" means built, tested and looked at in headless Chromium by the agent that built it. What each one found is in `docs/chart-coverage-plan.md`, section 8.
@@ -267,7 +267,7 @@ A custom mark registered in code and referenced by name is the escape hatch for 
 | `rows` | A dimension on y | The ranked bar list: a bar behind a label and a value per row |
 | `band` | A dimension on color only | One stacked, normalized bar with a legend |
 | `cartesian` | A metric on x and on y | Points: `dot`, `text`, rules on either axis |
-| `matrix` | A dimension on x and on y, or a `cell` with one on either alone | A grid of `cell`s with a ramp |
+| `matrix` | A dimension on x and on y, or a `cell` with one on either alone | A grid of `cell`s with a ramp, of `dot`s with a key to sizes, or of both: one `cell` layer, one `dot` layer on the same x and y, or the two together. A diverging ramp says its low end, zero and its high end |
 | `radial` | Anything on `angle` | `arc`s about one centre |
 | a custom mark's name | A layer with that mark | Whatever the mark draws, alone |
 
@@ -282,7 +282,7 @@ A custom mark registered in code and referenced by name is the escape hatch for 
 ]
 ```
 
-**The `geo` mark** draws a map, and is the one custom mark so far. It takes one layer, alone in the view. `x` is the dimension whose values are region keys (a `country` dimension holds ISO 3166-1 alpha-2 codes). `color` is a metric to fill each region by, on the sequential ramp; `size` is a metric for a symbol on each region. Either or both. The boundary shapes and the projection are handed over in code, not in the spec.
+**The `geo` mark** draws a map, and is the one custom mark so far. It takes one layer, alone in the view. `x` is the dimension whose values are region keys (a `country` dimension holds ISO 3166-1 alpha-2 codes). `color` is a metric to fill each region by, on the sequential ramp, or the diverging one where its values cross zero, as a `cell` is; `size` is a metric for a symbol on each region. Either or both. The boundary shapes and the projection are handed over in code, not in the spec.
 
 ```json
 { "query": { "metrics": ["visitors"], "by": ["country"] }, "layers": [{ "mark": "geo", "encode": { "x": "country", "color": "visitors" } }] }
@@ -705,6 +705,7 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 29. A fit rule may name a `fallback` preset that the view becomes below the rule's need. (October 7)
 30. `d3-geo` is allowed in a `packages/geo` of its own. Core keeps its three dependencies. (October 7)
 31. `detail` splits a layer into series without painting them apart. It is a channel that takes a dimension: one series per value, all in the layer's own paint, with no legend and no limit of six. The query's second dimension may go to `color`, to `detail`, to `facet` or to the other axis. (October 12)
+32. A colour scale whose values cross zero is diverging about zero. Nothing in a spec says so: the ramp is read from the least and the most of the values drawn, or from the `domain` the catalog states for the metric. Zero is the neutral middle step, `div.5`, and both arms are measured by the end farther from zero, so two values as far from zero as each other are as many steps from the middle. Anything else is sequential, as before. The arms say below and above, never bad and good: that is polarity's, and the delta's paint. A grid and a map share the one scale. (October 12)
 
 ### Open
 

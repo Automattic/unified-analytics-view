@@ -38,7 +38,7 @@
       "additionalProperties": false,
       "properties": {
         "metrics": { "type": "array", "items": { "type": "string" }, "minItems": 1, "description": "Catalog metric names. The first is the primary metric." },
-        "by": { "type": "array", "items": { "type": "string" }, "maxItems": 2, "uniqueItems": true, "description": "Zero, one or two catalog dimensions. With two, a layer must encode each: the second usually goes to color, or to the other axis of a grid of cells." },
+        "by": { "type": "array", "items": { "type": "string" }, "maxItems": 2, "uniqueItems": true, "description": "Zero, one or two catalog dimensions. With two, a layer must encode each: the second usually goes to color, to detail, or to the other axis of a grid of cells." },
         "range": { "type": "string", "description": "For example \"28d\"." },
         "compare": { "const": "previous" },
         "limit": { "type": "integer", "minimum": 1, "description": "Top-N for each categorical dimension." }
@@ -60,6 +60,7 @@
             "x": { "$ref": "#/definitions/field" },
             "y": { "$ref": "#/definitions/field" },
             "color": { "$ref": "#/definitions/field" },
+            "detail": { "type": "string", "description": "One of the query's dimensions. It splits the layer into a series for each value, as a dimension on color does, and paints none apart: every series is in the layer's own paint, there is no legend, and the limit of six series does not apply. Many lines in one paint. Not with the same layer's color in a plot, and not with stack." },
             "text": { "$ref": "#/definitions/field" },
             "angle": { "$ref": "#/definitions/field", "description": "For an arc: a metric. With a dimension on color each segment is its share of the total. With none the metric is read against its catalog domain." },
             "radius": { "type": "number", "minimum": 0, "exclusiveMaximum": 1, "description": "For an arc: the inner radius, as a share of the outer. 0.6 makes a donut." },

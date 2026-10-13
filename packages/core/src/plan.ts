@@ -4,7 +4,7 @@ import { fmtTime, rangeLabel } from './format.ts';
 import { customMarks } from './marks.ts';
 import { PRESETS, expand, presetNames, usesPrevious } from './presets.ts';
 import { COLUMNS_BLOCK, place } from './place.ts';
-import { BUILT_IN_MARKS, buildScene, columnLabel, columnsOf, tldrValueText, isDim, roleOf, seriesOf, trackBeside, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
+import { BUILT_IN_MARKS, DETAIL_LAYOUTS, buildScene, columnLabel, columnsOf, tldrValueText, isDim, roleOf, seriesOf, trackBeside, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
 import { gridProse, rangeProse, tldrProse } from './prose.ts';
 import type { Catalog, Container, Layer, Layout, Plan, PlanShape, PresetLibrary, Query, Reduction, ReductionId, Result, Role, PlacedScene, Spec } from './types.ts';
 
@@ -56,6 +56,13 @@ function checkLayers(layers: Layer[], q: Query, catalog: Catalog, result: Result
     }
     if (l.series === 'delta' && !(l.mark === 'text' && isDim(catalog, l.encode && l.encode.y) && typeof (l.encode && l.encode.text) === 'string' && (l.encode!.text as string) in catalog.metrics))
       throw new Error('Layer ' + (i + 1) + ' has series: "delta", which is a row\'s change in a metric. Make it a text layer with the dimension on y and the metric on text.');
+    // A dimension on detail splits a layer and paints nothing apart. It is one of the query's dimensions, and no companion or number.
+    const ld = l.encode?.detail;
+    if (ld != null && by.indexOf(ld as string) < 0) throw new Error('Layer ' + (i + 1) + ' encodes ' + JSON.stringify(ld) + ' on detail, and detail splits a layer by one of the query\'s dimensions' + (by.length ? ': ' + by.join(', ') + '. Encode one of those' : ', of which it has none. Add one to query.by') + ', or remove "detail".');
+    // A plot with a dimension on x has one more to split by, so a layer there is split once: painted apart, or not.
+    const lcd = l.encode?.color;
+    if (ld != null && isDim(catalog, lcd) && (lcd === ld || isDim(catalog, l.encode?.x))) throw new Error('Layer ' + (i + 1) + ' encodes "' + lcd + '" on color and "' + ld + '" on detail, and a layer is split into series once: painted apart with a legend by color, or all in its own paint by detail. Remove one of the two.');
+    if (l.stack && ld != null) throw new Error('Layer ' + (i + 1) + ' has "stack" and is split by detail, which paints every series alike, so a stack of them could not be read. Encode "' + ld + '" on color in place of detail, or remove "stack".');
     if (l.stack && !isDim(catalog, l.encode && l.encode.color)) throw new Error('Layer ' + (i + 1) + ' has "stack" and no dimension on color, so there is nothing to stack. Encode the query\'s second dimension on color, or remove "stack".');
     // In rows a colour says which rows go together, so it is the rows' own dimension or something the engine says of it.
     const { x: lx, y: ly, color: lc } = l.encode || {};
@@ -74,7 +81,7 @@ function checkLayers(layers: Layer[], q: Query, catalog: Catalog, result: Result
   if (!by.length && layers.some((l) => l.encode && [l.encode.x, l.encode.y].every((f) => typeof f === 'string' && f in catalog.metrics))) throw new Error('These layers set one metric against another, and the query has no dimension, so there is no row to draw a point for. Add one to query.by, for example ["page"].');
   // Rows come back one per pair. A dimension that no layer encodes would leave several rows drawn in one place.
   const unused = by.length === 2 && layers.length ? by.find((d) => !layers.some((l) => Object.values(l.encode || {}).indexOf(d) >= 0)) : null;
-  if (unused) throw new Error('The query is by "' + unused + '", and no layer encodes it, so its rows would be drawn over each other. Encode it on color, or remove it from query.by.');
+  if (unused) throw new Error('The query is by "' + unused + '", and no layer encodes it, so its rows would be drawn over each other. Encode it on color, for a colour and a legend entry each, or on detail, for a series each in one paint, or remove it from query.by.');
 }
 
 /** Fit a spec to a container. Throws, with a message that names the fix, when the spec is invalid.
@@ -99,11 +106,14 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   }
   const share = layers.some((l) => l.stack === 'normalize' || l.mark === 'arc');
   // A custom mark brings the rules of its own layout. A context's rules for that layout come first.
-  const custom = layers.length ? customMarks().get(detectLayout(catalog, layers)) : undefined, fit = custom ? rules.fit.concat(custom.rules) : rules.fit;
+  const laid = layers.length ? detectLayout(catalog, layers) : 'none', custom = customMarks().get(laid), fit = custom ? rules.fit.concat(custom.rules) : rules.fit;
+  // A layout that does not read detail would draw its series over each other, and say nothing. A custom mark reads its own channels.
+  const lost = custom || DETAIL_LAYOUTS.includes(laid) ? -1 : layers.findIndex((l) => l.encode?.detail != null);
+  if (lost >= 0) throw new Error('Layer ' + (lost + 1) + ' encodes "' + layers[lost]!.encode!.detail + '" on detail, and these layers are laid out as "' + laid + '", which does not split a layer by detail. It is read in: ' + DETAIL_LAYOUTS.join(', ') + '. Put a dimension on x and a metric on y, or remove "detail".');
   // A plot of points has no sparkline form: two metrics need both their axes to be read. So it has no bare rung, and
   // below the room its axes need it is the number alone. Its `points` rule says so, where the others' is `axes`.
   const points = !!layers.length && isPoints(catalog, layers);
-  const p: PlanShape = { layout: layers.length ? detectLayout(catalog, layers) : 'none', layers, guides: {}, tldrValue: rules.tldrValue.above === 'always' || !!M.instant || !layers.length, side: false, rowLimit: null,
+  const p: PlanShape = { layout: laid, layers, guides: {}, tldrValue: rules.tldrValue.above === 'always' || !!M.instant || !layers.length, side: false, rowLimit: null,
                          share, text: tldrProse(q, result, share, catalog, points) };
   if (p.layout === 'cartesian') p.guides = { x: true, y: true, grid: true };
   if (p.layout === 'matrix') { p.guides = { x: true, y: true, ramp: true }; p.text = gridProse(q, result, catalog) ?? p.text; }

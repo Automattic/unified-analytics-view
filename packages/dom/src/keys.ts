@@ -1,4 +1,4 @@
-import { formatBin, formatDimension, formatValue, layerKeys, partialNote, rowKeys, unitsOf, type Catalog, type Layer, type Query, type RectNode, type Result, type Row, type Scene } from '@unified-analytics/core';
+import { formatBin, formatDimension, formatValue, layerKeys, partialNote, plural, rowKeys, unitsOf, type Catalog, type Layer, type Query, type RectNode, type Result, type Row, type Scene } from '@unified-analytics/core';
 import { attr, ensure, paintVar, prop } from './dom.ts';
 import { apart } from './measure.ts';
 import { FOCUS, HOVER, token } from './tokens.ts';
@@ -15,7 +15,13 @@ import { nearest } from './layouts/points.ts';
  *
  * A plot split into series has several values at each point. The point's readout says them all, and up and down
  * step through the series there: up from the whole point to the first series, which is the foot of a stack, and
- * down again to the whole. Left and right keep the series. Version 4 was not read for this; it is ours until it is. */
+ * down again to the whole. Left and right keep the series. Version 4 was not read for this; it is ours until it is.
+ *
+ * A plot split by `detail` has series in one paint and no legend, and may have any number of them. Its point says how
+ * many there are and which has the most, and not every one. Up and down step through them as they do through
+ * colours, one at a time in the engine's order: a chosen one stands out of the mass, which is the one way to read a
+ * single line of many. ponytail: one press a series, so the fortieth of forty is forty presses away. Home, End and a
+ * step of several would shorten it, if a plot of that many is ever read by keyboard. */
 
 /** The companions of a metric the view asked for: the fields of `row` that came with `m` and that one of the plan's
  * layers encodes, in the engine's order. A result may carry more, and those are not the view's to say. The comparison
@@ -49,22 +55,26 @@ export function written(shown: string, row: Row, q: Query, catalog: Catalog, lay
 }
 
 /** What the readout says for one point of a split plot, from the rows there: the x value, each metric with the
- * engine's total for that x when the result has one, and the value of every series. */
-export function readoutAt(rows: Row[], total: Row | undefined, q: Query, catalog: Catalog, x: string, split: string): string {
-  const first = rows[0] ?? {}, partial = partialNote(first);
+ * engine's total for that x when the result has one, and the value of every series. With `mass`, where the series
+ * are in one paint and may be many, it says how many there are and the one with the most there, by name: a comparison
+ * of the engine's rows, as the prose's leader is. */
+export function readoutAt(rows: Row[], total: Row | undefined, q: Query, catalog: Catalog, x: string, split: string, mass = false): string {
+  const first = rows[0] ?? {}, partial = partialNote(first), of = catalog.dimensions[split]!;
   return formatDimension(first[x], catalog.dimensions[x]!) + ': ' + q.metrics.map((m) => {
-    const def = catalog.metrics[m]!;
+    const def = catalog.metrics[m]!, said = (r: Row) => formatDimension(r[split], of) + ' ' + formatValue(r[m] as number | null, def);
+    const top = rows.filter((r) => r[m] != null).reduce<Row | undefined>((a, r) => (!a || (r[m] as number) > (a[m] as number) ? r : a), undefined);
     return def.label + (total ? ' ' + formatValue(total[m] as number | null, def) + (partial && ' ' + partial) : '')
-      + ' (' + rows.map((r) => formatDimension(r[split], catalog.dimensions[split]!) + ' ' + formatValue(r[m] as number | null, def)).join(', ') + ')';
+      + ' (' + (mass ? rows.length + ' ' + (rows.length === 1 ? of.label.toLowerCase() : plural(of.label.toLowerCase())) + (top ? ', the most ' + said(top) : '') : rows.map(said).join(', ')) + ')';
   }).join('; ');
 }
 
 /** The rows of the result at each point of the scene. One each, in step, unless the plot is split into series:
- * then `x` and `split` name the two dimensions, and a point has a row per series, in the series' order. A point is
+ * then `x` and `split` name the two dimensions, and a point has a row per series, in the series' order, whether they
+ * are painted apart (`scene.series`) or not (`scene.detail`). A point is
  * found by the key core gave its rows (rowKeys), never by their value: two rows may say one value, and each has a
  * point of its own. */
 export function rowsAt(scene: Scene, q: Query, result: Result): { rows: Row[][]; x?: string | undefined; split?: string } {
-  const keys = scene.rows ?? [], by = q.by || [], order = scene.series ?? [];
+  const keys = scene.rows ?? [], by = q.by || [], order = scene.series ?? scene.detail ?? [];
   // ponytail: scene.rows and result.rows are taken to run in step, as every scene builder with no split makes them.
   if (!order.length || by.length !== 2) return { rows: keys.map((_, i) => (result.rows[i] ? [result.rows[i]!] : [])), x: by[0] };
   const x = by.find((d) => result.rows.length > 0 && keys.includes(String(result.rows[0]![d]))) ?? by[0]!, split = by.find((d) => d !== x)!;
@@ -203,6 +213,8 @@ svg[data-hits] path[data-active="pointer"] { ${HOVER.stroke} }
 .uav-legend span[data-active] { text-decoration: underline; }
 /* A series chosen at a point: the rest of the plot stands back, and its name is marked wherever it is written. */
 .uav-plot:has([data-chosen]) :is(.uav-bars i, path):not([data-chosen]) { opacity: 0.3 !important; }
+/* In a plot split by detail every line is drawn light, so that many together read darker. The one chosen is drawn whole. */
+.uav-body[data-mass] .uav-plot path[data-chosen] { opacity: 1 !important; }
 :is(.uav-legend, .uav-labels) span[data-chosen] { text-decoration: underline; }`;
 
 /** A view's readout: one element, the figure's own, which every layout that says what is under the pointer sets.
@@ -314,9 +326,9 @@ export class Keys {
   /** After each paint: name the points the layout made, and keep the chosen one if it is still there. */
   paint(scene: Scene, q: Query, result: Result, catalog: Catalog, layers: Layer[]): void {
     const { rows, x, split } = rowsAt(scene, q, result), totals = (x != null && split != null && result.totalsBy?.[x]) || [];
-    this.#keys = scene.rows ?? []; this.#rows = rows; this.#order = split == null ? [] : scene.series ?? []; this.#split = split; this.#q = q; this.#catalog = catalog; this.#layers = layers;
+    this.#keys = scene.rows ?? []; this.#rows = rows; this.#order = split == null ? [] : scene.series ?? scene.detail ?? []; this.#split = split; this.#q = q; this.#catalog = catalog; this.#layers = layers;
     this.#x = x; this.#cross = crossMarks(scene, layers, rows, catalog, split);
-    this.#says = this.#keys.map((k, i) => (split == null ? readout(rows[i]![0] ?? {}, q, catalog, layers) : readoutAt(rows[i]!, totals.find((t) => String(t[x!]) === k), q, catalog, x!, split)));
+    this.#says = this.#keys.map((k, i) => (split == null ? readout(rows[i]![0] ?? {}, q, catalog, layers) : readoutAt(rows[i]!, totals.find((t) => String(t[x!]) === k), q, catalog, x!, split, !scene.series)));
     const box = this.#box();
     if (box) {
       attr(box, 'role', 'listbox'); attr(box, 'tabindex', this.#keys.length ? 0 : null);

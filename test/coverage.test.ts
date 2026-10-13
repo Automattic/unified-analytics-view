@@ -118,7 +118,7 @@ describe('two dimensions', () => {
     const bar = (encode: Record<string, string>, by: string[]): Spec => ({ query: { metrics: ['visitors'], by }, layers: [{ mark: 'bar', encode }] });
     expect(err(bar({ x: 'date.day', y: 'visitors' }, ['date.day', 'channel', 'device']), { metrics: ['visitors'] })).toBe('A view is by one dimension or by two different ones, and query.by has: date.day, channel, device. Remove all but two.');
     expect(err(bar({ x: 'date.day', y: 'visitors', color: 'device' }, ['date.day', 'channel']))).toBe('Layer 1 encodes "device" on color, which the query does not return. It returns: date.day, channel, visitors.');
-    expect(err(bar({ x: 'date.day', y: 'visitors' }, ['date.day', 'channel']))).toBe('The query is by "channel", and no layer encodes it, so its rows would be drawn over each other. Encode it on color, or remove it from query.by.');
+    expect(err(bar({ x: 'date.day', y: 'visitors' }, ['date.day', 'channel']))).toBe('The query is by "channel", and no layer encodes it, so its rows would be drawn over each other. Encode it on color, for a colour and a legend entry each, or on detail, for a series each in one paint, or remove it from query.by.');
     expect(() => runQuery({ metrics: ['visitors'], by: ['channel', 'channel'] })).toThrow('A query is by one dimension or by two different ones. This one is by: channel, channel.');
   });
 });
@@ -158,6 +158,87 @@ describe('color splits a plot into series', () => {
   it('a layer with no color is one series still, beside those that are split', () => {
     const scene = marks({ ...byDevice, layers: [...byDevice.layers!, { mark: 'rule', encode: { y: 200 }, label: 'Target' }] });
     expect(scene.nodes.filter((n) => n.role === 'reference').map((n) => [n.key, n.series])).toEqual([['reference:rule', undefined], ['reference:rule:label', undefined]]);
+  });
+});
+
+describe('detail splits a plot into series and paints none apart', () => {
+  const q = { metrics: ['visitors'], by: ['date.day', 'country'], range: '28d' };
+  const by = (mark: string, more: Record<string, unknown> = {}, encode: Record<string, string | number> = {}): Spec => ({ spec: 'view/0', query: q, layers: [{ mark, encode: { x: 'date.day', y: 'visitors', detail: 'country', ...encode }, ...more }] });
+  const marks = (spec: Spec, result = runQuery(spec.query)) => buildScene(resolve(spec, result, makeContainer(700), catalog), spec.query, result, catalog);
+  const countries = ['US', 'IN', 'GB', 'DE', 'BR', 'CA', 'FR', 'AU', 'JP', 'ES', 'MX', 'ID', 'NG', 'ZA', 'SE'];
+
+  it('a path per value for a line, keyed by the value, all in the layer\'s own paint and drawn light', () => {
+    const scene = marks(by('line')), paths = scene.nodes.filter((n) => n.kind === 'path');
+    expect(scene).toMatchObject({ layout: 'cartesian', detail: countries, scale: 'point' });
+    expect(scene.series).toBeUndefined();
+    expect(paths.map((n) => n.key)).toEqual(countries.flatMap((c) => ['primary:line:' + c, 'primary:line:' + c + ':partial']));
+    expect(paths.map((n) => n.series)).toEqual(countries.flatMap((c) => [c, c]));
+    expect(new Set(paths.map((n) => n.paint + ' ' + n.opacity))).toEqual(new Set(['series.1 0.5']));
+    expect(new Set(marks(by('line', { paint: 'series.3' })).nodes.filter((n) => n.kind === 'path').map((n) => n.paint))).toEqual(new Set(['series.3']));
+  });
+  it('more than six is no error: the limit is the count of colours, and none is spent', () => {
+    expect(marks(by('line')).detail!.length).toBe(15);
+    expect(err({ ...by('line'), layers: [{ mark: 'line', encode: { x: 'date.day', y: 'visitors', color: 'country' } }] })).toBe('Splitting by "country" makes 15 series, and there are 6 series colours. Add "limit": 6 to the query, or less.');
+  });
+  it('has no legend and no labels, in the scene, the plan or what the plan gives up', () => {
+    for (const w of [700, 346, 300, 250]) {
+      const { plan, ratio } = run(by('line'), w);
+      expect(ratio.nodes.filter((n) => n.part === 'legend' || n.part === 'labels'), String(w)).toEqual([]);
+      expect(ratio.parts.filter((p) => p === 'legend' || p === 'labels'), String(w)).toEqual([]);
+      expect(plan.guides.legend, String(w)).toBeUndefined();
+      expect(plan.dropped.filter((d) => d.includes('legend')), String(w)).toEqual([]);
+    }
+  });
+  it('a rect per pair for a bar, side by side in one paint, and a tint per value for an area', () => {
+    const rects = marks(by('bar')).nodes.filter((n): n is Extract<typeof n, { kind: 'rect' }> => n.kind === 'rect' && n.part === 'plot');
+    expect(rects.length).toBe(28 * 15);
+    expect(rects.slice(0, 2).map((n) => [n.key, n.series, n.row, n.paint])).toEqual([['primary:bar:2026-09-08:US', 'US', '2026-09-08', 'series.1'], ['primary:bar:2026-09-09:US', 'US', '2026-09-09', 'series.1']]);
+    const day = rects.filter((n) => n.row === '2026-09-08').sort((a, b) => a.x! - b.x!);
+    expect(day.map((n) => n.series)).toEqual(countries);
+    day.slice(1).forEach((n, i) => expect(n.x).toBeCloseTo(day[i]!.x! + day[i]!.w!, 9));
+    const areas = marks(by('area')).nodes.filter((n) => n.kind === 'path');
+    expect(areas.map((n) => [n.key, n.paint, n.tone, n.opacity])).toEqual(countries.map((c) => ['primary:area:' + c, 'series.1', 'soft', 0.14]));
+  });
+  it('place() draws every series, with keys of their own and no legend', () => {
+    const { scene, ratio } = run(by('line'), 346), keys = scene.nodes.map((n) => n.key);
+    expect(countries.every((c) => keys.includes('primary:line:' + c))).toBe(true);
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(keys.filter((k) => /^(swatch|legend|label):/.test(k))).toEqual([]);
+    expect(scene.height).toBe(run({ ...by('line'), query: { ...q, limit: 3 } }, 346).scene.height);
+    expect(ratio.detail).toEqual(countries);
+  });
+  it('a layer painted by color beside it brings the colours, the legend and the limit back', () => {
+    const both: Spec = { ...by('line'), query: { ...q, by: ['date.day', 'device'] }, layers: [{ mark: 'area', encode: { x: 'date.day', y: 'visitors', detail: 'device' } }, { mark: 'line', encode: { x: 'date.day', y: 'visitors', color: 'device' } }] };
+    const scene = marks(both), paths = scene.nodes.filter((n) => n.kind === 'path' && !n.key.includes(':partial'));
+    expect(scene.series).toEqual(['Desktop', 'Mobile', 'Tablet']);
+    expect(scene.detail).toBeUndefined();
+    expect(paths.map((n) => [n.key, n.paint])).toEqual([['primary:area:Desktop', 'series.1'], ['primary:area:Mobile', 'series.1'], ['primary:area:Tablet', 'series.1'], ['primary:line:Desktop', 'series.1'], ['primary:line:Mobile', 'series.2'], ['primary:line:Tablet', 'series.3']]);
+    expect(scene.nodes.filter((n) => n.part === 'legend').length).toBe(6);
+  });
+  it('color is as it was: its series are named in the scene, painted apart and drawn whole', () => {
+    const { ratio } = run(moreSamples.series!.spec, 700), paths = ratio.nodes.filter((n) => n.kind === 'path' && !n.key.includes(':partial'));
+    expect(ratio.series).toEqual(['Desktop', 'Mobile', 'Tablet']);
+    expect('detail' in ratio).toBe(false);
+    expect(paths.map((n) => [n.paint, n.opacity])).toEqual([['series.1', undefined], ['series.2', undefined], ['series.3', undefined]]);
+  });
+  it('the prose says who leads, and nothing of a colour or a legend', () => {
+    expect(run(moreSamples.spaghetti!.spec, 700).plan.text).toBe('United States is the largest country at 32% of visitors in the last 28 days, and leads on all 28 days.');
+  });
+  it('the schema takes a dimension\'s name on detail, and no number', () => {
+    expect(view(by('line')), JSON.stringify(view.errors)).toBe(true);
+    expect(view(by('line', {}, { detail: 5 }))).toBe(false);
+  });
+  it('errors name the fix: what is not a dimension of the query, a layer split twice, a stack, and a layout that does not read it', () => {
+    expect(err(by('line', {}, { detail: 'visitors' }))).toBe('Layer 1 encodes "visitors" on detail, and detail splits a layer by one of the query\'s dimensions: date.day, country. Encode one of those, or remove "detail".');
+    expect(err(by('line', {}, { detail: 'device' }))).toBe('Layer 1 encodes "device" on detail, and detail splits a layer by one of the query\'s dimensions: date.day, country. Encode one of those, or remove "detail".');
+    expect(err(by('line', {}, { detail: 5 }))).toBe('Layer 1 encodes 5 on detail, and detail splits a layer by one of the query\'s dimensions: date.day, country. Encode one of those, or remove "detail".');
+    expect(err({ query: { metrics: ['visitors'] }, layers: [{ mark: 'line', encode: { y: 'visitors', detail: 'country' } }] })).toBe('Layer 1 encodes "country" on detail, and detail splits a layer by one of the query\'s dimensions, of which it has none. Add one to query.by, or remove "detail".');
+    const twice = 'and a layer is split into series once: painted apart with a legend by color, or all in its own paint by detail. Remove one of the two.';
+    expect(err(by('line', {}, { color: 'country' }))).toBe('Layer 1 encodes "country" on color and "country" on detail, ' + twice);
+    expect(err(by('line', {}, { color: 'country', detail: 'date.day' }))).toBe('Layer 1 encodes "country" on color and "date.day" on detail, ' + twice);
+    expect(err(by('area', { stack: 'zero' }))).toBe('Layer 1 has "stack" and is split by detail, which paints every series alike, so a stack of them could not be read. Encode "country" on color in place of detail, or remove "stack".');
+    const rows: Spec = { query: { metrics: ['visitors'], by: ['channel', 'device'] }, layers: [{ mark: 'bar', encode: { y: 'channel', x: 'visitors', detail: 'device' } }] };
+    expect(err(rows)).toBe('Layer 1 encodes "device" on detail, and these layers are laid out as "rows", which does not split a layer by detail. It is read in: cartesian. Put a dimension on x and a metric on y, or remove "detail".');
   });
 });
 
@@ -392,6 +473,6 @@ describe('presets with a second dimension', () => {
   });
   it('errors name the fix: a split preset with one dimension, and a one-dimension preset with two', () => {
     expect(err({ use: 'stacked-bar', query: { metrics: ['visitors'], by: ['date.day'] } })).toBe('The "stacked-bar" preset needs two dimensions in query.by: the one on the axis, then the one to split by.');
-    expect(err({ use: 'line', query: { metrics: ['visitors'], by: ['date.day', 'device'] } })).toBe('The query is by "device", and no layer encodes it, so its rows would be drawn over each other. Encode it on color, or remove it from query.by.');
+    expect(err({ use: 'line', query: { metrics: ['visitors'], by: ['date.day', 'device'] } })).toBe('The query is by "device", and no layer encodes it, so its rows would be drawn over each other. Encode it on color, for a colour and a legend entry each, or on detail, for a series each in one paint, or remove it from query.by.');
   });
 });

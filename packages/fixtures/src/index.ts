@@ -340,6 +340,9 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
   bullet:  { label: 'Bullet: sign-ups by device, against the target', spec: { spec: 'view/0', title: 'Sign-ups against target', use: 'bullet', query: { metrics: ['signups'], by: ['device'], range: '28d' } } },
   map:     { label: 'A map: visitors by country', spec: { spec: 'view/0', title: 'Visitors by country', use: 'choropleth', query: { metrics: ['visitors'], by: ['country'], range: '28d' } } },
   symbols: { label: 'Symbols on a map: page views by country', spec: { spec: 'view/0', title: 'Page views by country', use: 'symbol-map', query: { metrics: ['pageviews'], by: ['country'], range: '28d' } } },
+  // A split that spends no colour (docs/uncommon-coverage-plan.md, step 1): a line for each country, all in one paint.
+  spaghetti: { label: 'Spaghetti: visitors by day, a line for each of fifteen countries', spec: { spec: 'view/0', title: 'Visitors by country, day by day', query: { metrics: ['visitors'], by: ['date.day', 'country'], range: '28d' },
+            layers: [{ mark: 'line', encode: { x: 'date.day', y: 'visitors', detail: 'country' } }] } },
   unmapped: { label: 'A map with rows it has no shape for: visitors by every country seen', spec: { spec: 'view/0', title: 'Visitors by country, all of them', query: { metrics: ['visitors'], by: ['visitor_country'], range: '28d' },
             layers: [{ mark: 'geo', encode: { x: 'visitor_country', color: 'visitors' } }] } },
 };

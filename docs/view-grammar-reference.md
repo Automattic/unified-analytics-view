@@ -192,16 +192,16 @@ A layer:
 | Field | Meaning |
 |---|---|
 | `mark` | `line`, `area`, `bar`, `rule`, `text`, `dot`, `tick`, `cell`, `arc`, or the name of a custom mark registered in code |
-| `encode` | Channel to field: `x`, `y`, `x2`, `y2`, `color`, `size`, `text`, `angle`, `radius`. A field is a dimension name, a metric name, a companion the result returns (`metric@p25`), or a number (for a rule, or an arc's inner radius). In rows, `color` paints each row: the rows' own dimension is a colour for each, and a companion of it (`source@kind`) paints rows that share a value alike. Built October 8, for the sidebar test case |
+| `encode` | Channel to field: `x`, `y`, `x2`, `y2`, `color`, `detail`, `size`, `text`, `angle`, `radius`. A field is a dimension name, a metric name, a companion the result returns (`metric@p25`), or a number (for a rule, or an arc's inner radius). In rows, `color` paints each row: the rows' own dimension is a colour for each, and a companion of it (`source@kind`) paints rows that share a value alike. Built October 8, for the sidebar test case. `detail` is one of the query's dimensions: it splits the layer into a series for each value, as a dimension on `color` does, and paints none apart. Every series is in the layer's own paint, there is no legend and no label at a line's end, and the limit of six series does not apply, since no series colour is spent. A layer in a plot is split once, by `color` or by `detail`, and a layer split by `detail` takes no `stack`. Read in a plot with a dimension on x; built October 12 |
 | `series` | `"previous"` draws the comparison companion of the metric. Comparison is a property of a layer, not a second metric. `"delta"`, on a `text` layer in rows, is the row's change, painted by polarity |
 | `role` | `primary`, `comparison`, `reference`, `context`. Defaults: a `previous` series is `comparison`, a `rule` is `reference`, everything else is `primary` |
-| `stack` | `"zero"`, `"normalize"` for share of whole, or `"center"`, on a layer split by `color`. A `bar` split by `color` with no `stack` sits beside its neighbours |
+| `stack` | `"zero"`, `"normalize"` for share of whole, or `"center"`, on a layer split by `color`, and not by `detail`. A `bar` split by `color` or by `detail` with no `stack` sits beside its neighbours |
 | `sweep` | `"half"` for an `arc`. The one layer field that is neither data nor role |
 | `label` | Text for a rule |
 | `align` | `"end"` for right-aligned text |
 | `paint` | Override the paint token. `"delta"` is the paint of the metric's change over the range: good or bad by its polarity, and the layer's own where there is no change to judge. Built October 8, for the sidebar test case |
 
-Paint tokens an author may name: `series.1` to `series.6`, `compare`, `rule`, `ink`, `ink.muted`, `delta`, `delta.good` and `delta.bad`. A layer with no `paint` takes `series.1`, or `compare` for a `previous` series; a layer split by a dimension on `color` takes a series colour per value.
+Paint tokens an author may name: `series.1` to `series.6`, `compare`, `rule`, `ink`, `ink.muted`, `delta`, `delta.good` and `delta.bad`. A layer with no `paint` takes `series.1`, or `compare` for a `previous` series; a layer split by a dimension on `color` takes a series colour per value, and one split by `detail` keeps its own for every value.
 
 **Several metrics on one plot.** Each is a layer of its own, and each takes `series.1` unless its `paint` says otherwise, so give the second `"paint": "series.2"`. Metrics of one unit share the y axis, however far apart their values are. Metrics of two units get an axis each; three units is an error. There is no legend for layers that differ by metric: a legend comes only from a dimension on `color`. That is a known gap (October 8).
 
@@ -237,9 +237,9 @@ The JSON Schema for a spec is `packages/core/schema/view.schema.json`, and the c
 
 | Mark | Channels today | What comes with it | Status |
 |---|---|---|---|
-| `line` | x, y, color | Connects neighbouring rows, so x must be ordered | Proven |
-| `area` | x, y, y2, color | Fills to a zero baseline, or between two ends | Proven; split, stacked and ranged forms built October 8 |
-| `bar` | x, y, x2, y2, color | Has a baseline, so the scale holds zero. With two ends it floats | Proven; split, stacked, signed and ranged forms built October 8 |
+| `line` | x, y, color, detail | Connects neighbouring rows, so x must be ordered. Split by `detail` its lines are drawn light, so where many run together reads darker | Proven; split by `detail` built October 12 |
+| `area` | x, y, y2, color, detail | Fills to a zero baseline, or between two ends | Proven; split, stacked and ranged forms built October 8; split by `detail` built October 12 |
+| `bar` | x, y, x2, y2, color, detail | Has a baseline, so the scale holds zero. With two ends it floats | Proven; split, stacked, signed and ranged forms built October 8; split by `detail` built October 12 |
 | `rule` | x or y (a constant), or fields per row with x2 or y2 | A reference line with an optional label, or a segment per row | Proven; constant on x and the per-row form built October 8 |
 | `text` | y, text; in a plot x, y, text | A label per row, a column of values, or a label on a point | Proven in rows; in the plot built October 8 |
 | `dot` | x, y, size, color | A point. Its radius is the painter's, in pixels | Built October 8 |
@@ -689,6 +689,7 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 28. A delta per row is `series: "delta"` on a `text` layer. A ranged bar is painted by its direction and the metric's polarity. (October 7)
 29. A fit rule may name a `fallback` preset that the view becomes below the rule's need. (October 7)
 30. `d3-geo` is allowed in a `packages/geo` of its own. Core keeps its three dependencies. (October 7)
+31. `detail` splits a layer into series without painting them apart. It is a channel that takes a dimension: one series per value, all in the layer's own paint, with no legend and no limit of six. The query's second dimension may go to `color`, to `detail`, to `facet` or to the other axis. (October 12)
 
 ### Open
 

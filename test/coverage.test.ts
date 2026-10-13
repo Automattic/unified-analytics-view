@@ -18,7 +18,8 @@ const view = new Ajv().compile(viewSchema);
 
 // The plots and the rows among them. Another layout has a suite of its own: test/radial.test.ts, test/cell.test.ts.
 // Ranges and ticks have one too: test/ranges.test.ts.
-const ranges = ['box', 'errors', 'waterfall', 'candlestick', 'fan', 'dumbbell', 'bullet', 'cleveland', 'lollipop', 'tornado', 'fans'];
+// And so have the samples of step 4 of the Uncommon plan: test/uncommon-rows.test.ts.
+const ranges = ['box', 'errors', 'waterfall', 'candlestick', 'fan', 'dumbbell', 'bullet', 'cleveland', 'lollipop', 'tornado', 'fans', 'pyramid', 'likert', 'strip', 'marimekko', 'rug', 'ohlc', 'qq'];
 const specs = Object.fromEntries(Object.entries(moreSamples).map(([k, s]) => [k, s.spec] as const).filter(([k, s]) => !ranges.includes(k) && ['cartesian', 'rows'].includes(run(s, 700).plan.layout)));
 const painters: PainterName[] = ['svg', 'dots'];
 const heights = [null, 300, 160, 100, 60, 40];

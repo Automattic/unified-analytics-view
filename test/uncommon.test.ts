@@ -90,7 +90,8 @@ describe('dots and stems in rows: Cleveland dot plot, ordered dot plot, lollipop
     stems.forEach((s, i) => expect([s.x, s.x2]).toEqual([dots[i]!.x, 0]));
   });
   it('a stem runs between a number and the row\'s value, written from either end', () => {
-    const lollipop = S('lollipop'), [stem, ...rest] = lollipop.layers!, from = (encode: Record<string, string | number>): Spec => ({ ...lollipop, layers: [{ ...stem!, encode }, ...rest] });
+    // The sample is written with the preset since step 4, so its layers are the expansion's.
+    const lollipop = expand(S('lollipop')), [stem, ...rest] = lollipop.layers!, from = (encode: Record<string, string | number>): Spec => ({ ...lollipop, layers: [{ ...stem!, encode }, ...rest] });
     const { ratio } = run(from({ y: 'channel', x: 'visitors', x2: 1000 })), stems = of<{ x: number; x2: number }>(ratio.nodes, 'context:rule:'), dots = of<{ x: number }>(ratio.nodes, 'primary:dot:');
     // The track still holds zero, so 1,000 is that far along it.
     expect(new Set(stems.map((s) => s.x2)).size).toBe(1);

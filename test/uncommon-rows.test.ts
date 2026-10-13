@@ -1,6 +1,8 @@
+import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { buildScene, makeContainer, place, resolve, type Layer, type Result, type Spec } from '@unified-analytics/core';
-import { catalog, runQuery } from '@unified-analytics/fixtures';
+import { buildScene, makeContainer, place, resolve, type Layer, type PainterName, type Result, type Spec } from '@unified-analytics/core';
+import viewSchema from '@unified-analytics/core/schema/view.schema.json';
+import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
 
 // Step 4 of docs/uncommon-coverage-plan.md: what rows, bars, ticks and rules take that they refused. Each part of the
 // step has its facts here. The samples are swept, and have their golden scenes, at the foot of this file.
@@ -11,6 +13,7 @@ const run = (spec: Spec, w = 346, h: number | null = null, result: Result = runQ
 const err = (spec: Spec, result: Result = runQuery(spec.query)) => { try { run(spec, 346, null, result); } catch (e) { return (e as Error).message; } };
 const of = <T = any>(nodes: { key: string }[], start: string) => nodes.filter((n) => n.key.startsWith(start)) as unknown as T[];
 const label = (y: string): Layer => ({ mark: 'text', encode: { y, text: y } });
+const S = (name: string) => moreSamples[name]!.spec, view = new Ajv().compile(viewSchema);
 
 describe('a row divided by a second dimension', () => {
   const q = { metrics: ['visitors'], by: ['channel', 'device'], range: '28d' };
@@ -382,5 +385,116 @@ describe('the range behind a row\'s marks, divided at the catalog\'s bands', () 
     expect(() => bands(withMetric({ domain: [0, 500], bands: [100, 200, 300] }))).toThrow('The catalog divides "signups" into 4 bands, and there are 3 band paints. Give its "bands" 2 values at most.');
     expect(() => bands(catalog, { query: q, layers: [{ mark: 'bar', encode: { y: 'device' }, role: 'context' }, label('device')] }))
       .toThrow('Layer 1 is a bar with nothing on x, which is the range a row\'s marks are read against, and no other mark in these rows puts a metric on x for it to be the range of. Add one, for example { "mark": "bar", "encode": { "y": "device", "x": a metric } }, or encode a metric on this bar\'s x.');
+  });
+});
+
+describe('the fixture engine, for step 4', () => {
+  it('keeps a dimension that has an order of its own in it, alone and as the rows of a pair, and divides each row its own way', () => {
+    const ages = ['18–24', '25–34', '35–44', '45–54', '55–64', '65+'], { rows, totals, totalsBy } = runQuery(S('pyramid').query);
+    expect(runQuery({ metrics: ['visitors'], by: ['age'] }).rows.map((r) => r.age)).toEqual(ages);
+    expect([...new Set(rows.map((r) => r.age))]).toEqual(ages);
+    expect(totalsBy!.sex!.map((r) => r.sex)).toEqual(['Female', 'Male']);
+    // Every pair adds up to its row, and the rows to the engine's total. Women are the fewer among the youngest and the more among the oldest.
+    for (const t of totalsBy!.age!) expect(rows.filter((r) => r.age === t.age).reduce((s, r) => s + (r.visitors as number), 0)).toBe(t.visitors);
+    expect(totalsBy!.age!.reduce((s, r) => s + (r.visitors as number), 0)).toBeCloseTo(totals.visitors!, -1);
+    const women = (age: string) => (rows.find((r) => r.age === age && r.sex === 'Female')!.visitors as number) / (totalsBy!.age!.find((r) => r.age === age)!.visitors as number);
+    expect(women('18–24')).toBeLessThan(0.5); expect(women('65+')).toBeGreaterThan(0.55);
+  });
+  it('answers a survey by statement and answer, the answers in their own order from one end to the other', () => {
+    const { rows, totalsBy } = runQuery(S('likert').query);
+    expect(rows.length).toBe(25);
+    expect(totalsBy!.answer!.map((r) => r.answer)).toEqual(['Strongly disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly agree']);
+    expect(totalsBy!.question!.map((r) => r.question)).toEqual(['Easy to set up', 'Clear reports', 'Fast enough', 'Good value', 'Would recommend']);
+    expect(runQuery(S('likert').query, 'empty')).toMatchObject({ rows: [], totalsBy: { question: [], answer: [] } });
+  });
+  it('returns every twentieth of the load times beside a normal curve\'s, with no total of either', () => {
+    const { rows, totals } = runQuery(S('qq').query);
+    expect(rows.length).toBe(19);
+    expect([rows[0], rows[18]]).toEqual([{ quantile: '5%', load_normal: 0.76, load_quantile: 1.1 }, { quantile: '95%', load_normal: 4.04, load_quantile: 5.6 }]);
+    expect(totals).toEqual({ load_normal: null, load_quantile: null });
+    expect(runQuery({ ...S('qq').query, range: '7d' }).rows).toEqual(rows);
+  });
+});
+
+describe('the samples of step 4', () => {
+  it('a population pyramid: an age band a row, women to one side of zero and men to the other, from the preset', () => {
+    const { ratio, plan, result } = run(S('pyramid'));
+    expect(plan.preset).toBe('pyramid');
+    expect(ratio.rows).toEqual(['18–24', '25–34', '35–44', '45–54', '55–64', '65+']);
+    expect(ratio.series).toEqual(['Female', 'Male']);
+    const zero = of<{ v: number }>(ratio.nodes, 'primary:bar:18–24:')[0]!.v;
+    for (const age of ratio.rows!) { const [f, m] = of<{ v: number; v0?: number; paint: string }>(ratio.nodes, 'primary:bar:' + age + ':') as [any, any]; expect([f.v, m.v0, f.paint, m.paint]).toEqual([zero, zero, 'series.1', 'series.2']); }
+    // The readout's and the sentence's numbers are the engine's, and no count is below zero.
+    expect(result.rows.every((r) => (r.visitors as number) > 0)).toBe(true);
+    expect(plan.text).toBe('25–34 is the largest age band at 27% of visitors, and Female the largest sex at 53%.');
+  });
+  it('a Likert chart: the same preset over five answers, the middle one half on each side of zero in every row', () => {
+    const { ratio, plan } = run(S('likert'));
+    expect(ratio.series).toEqual(['Strongly disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly agree']);
+    const mid = ratio.rows!.map((q) => { const n = of<{ v: number; v0: number }>(ratio.nodes, 'primary:bar:' + q + ':')[2]!; return (n.v0 + n.v) / 2; });
+    mid.forEach((m) => expect(m).toBeCloseTo(mid[0]!, 12));
+    expect(ratio.nodes.find((n) => n.key === 'legend-top')).toMatchObject({ text: 'Agree 33%', paint: 'series.4' });
+    expect(plan.text).toBe('Easy to set up is the largest statement at 20% of responses, and Agree the largest answer at 33%.');
+  });
+  it('a strip plot and a Marimekko, each from its preset', () => {
+    expect([run(S('strip')).plan.preset, run(S('strip')).ratio.nodes.filter((n) => n.kind === 'circle' && n.part === 'rows').length]).toEqual(['strip', 90]);
+    expect([run(S('marimekko')).plan.preset, run(S('marimekko')).ratio.scale]).toEqual(['marimekko', 'linear']);
+  });
+  it('an OHLC chart: a stroke from the day\'s least to its most, the opening to the start of its band and the close to the end', () => {
+    const { ratio, plan, result } = run(S('ohlc')), day = result.rows[5]!, k = day['date.day'] as string, node = (key: string) => ratio.nodes.find((n) => n.key === key + ':' + k) as any;
+    const stroke = node('primary:rule'), open = node('primary:tick'), close = node('primary:tick#2'), v = (f: string) => (day['response_time@' + f] as number) / 800;
+    expect(plan.layers.map((l) => l.role + ':' + l.mark)).toEqual(['primary:rule', 'primary:tick', 'primary:tick']);
+    expect([stroke.t, stroke.t2, open.t, close.t]).toEqual([v('min'), v('max'), v('open'), v('close')]);
+    expect([open.x2, close.x]).toEqual([stroke.x, stroke.x]);
+    expect(stroke.x - open.x).toBeCloseTo(close.x2 - stroke.x, 12);
+    // Every mark is the central one, so a short plot keeps them all, and the sentence says the range they run over.
+    expect(run(S('ohlc'), 250).plan.dropped).toEqual(['axes and grid (added the number to make up for them)']);
+    expect(plan.text).toBe('Response time: 436ms in the last 28 days.');
+  });
+  it('a Q-Q plot: a point for each quantile, and the line they would lie on were the times normal', () => {
+    const { ratio, plan } = run(S('qq')), line = ratio.nodes.find((n) => n.key === 'reference:rule') as any;
+    expect(line.points.map((p: any) => [p.x, p.v])).toEqual([[0, 0], [1, 1]]);
+    expect(ratio.nodes.filter((n) => n.part === 'points').length).toBe(19);
+    expect(['xtick:', 'ytick:'].map((k) => of<{ text: string }>(ratio.nodes, k).map((n) => n.text))).toEqual([['0ms', '2s', '4s', '6s'], ['0ms', '2s', '4s', '6s']]);
+    expect(plan.text).toBe('Across 19 quantiles in the last 28 days, the range of normal quantile is 760ms to 4s and of load time quantile is 1.1s to 5.6s. 95% is highest on both.');
+  });
+});
+
+describe('the sweep, for the samples of step 4', () => {
+  // The layout each has at 346, 250, 120 and 10 px. A plot of points has no bare form, and a track beside its label gives way under 160 px.
+  const samples: Record<string, string[]> = {
+    pyramid: ['rows', 'rows', 'none', 'prose'], likert: ['rows', 'rows', 'none', 'prose'], strip: ['rows', 'rows', 'none', 'prose'],
+    marimekko: ['cartesian', 'cartesian', 'none', 'prose'], ohlc: ['cartesian', 'cartesian', 'none', 'prose'],
+    // Neither has a total, so the number that stands in for the plot is a dash.
+    rug: ['cartesian', 'none', 'none', 'prose'], qq: ['cartesian', 'none', 'none', 'prose'],
+  };
+  const painters: PainterName[] = ['svg', 'dots'], heights = [null, 300, 160, 100, 60, 40], widths = [54, 80, 120, 170, 250, 290, 346, 500, 700];
+  const at = (name: string, w: number, h: number | null, sc: (typeof scenarios)[number], painter: PainterName = 'svg') => {
+    const spec = S(name), container = makeContainer(w, h, painter, 8), result = runQuery(spec.query, sc), plan = resolve(spec, result, container, catalog), ratio = buildScene(plan, spec.query, result, catalog);
+    return { plan, ratio, scene: place(ratio, container) };
+  };
+  for (const [name, layouts] of Object.entries(samples)) {
+    it(name + ': unique keys, no NaN, nothing taller than the container allows, and ratios from 0 to 1', () => {
+      for (const sc of scenarios) for (const p of painters) for (const h of heights) for (const w of widths) {
+        const where = [name, sc, p, w, h].join(' '), { plan, ratio, scene } = at(name, w, h, sc, p);
+        const keys = scene.nodes.map((n) => n.key), all = ratio.nodes.map((n) => n.key);
+        expect(new Set(keys).size, 'duplicate keys: ' + where).toBe(keys.length);
+        expect(new Set(all).size, 'duplicate keys in the ratio scene: ' + where).toBe(all.length);
+        expect(JSON.stringify([scene, ratio], (_, v) => (typeof v === 'number' && isNaN(v) ? 'NaN' : v)), 'NaN: ' + where).not.toMatch(/NaN/);
+        if (h != null && plan.layout !== 'prose') expect(scene.height, 'too tall: ' + where).toBeLessThanOrEqual(h);
+        for (const n of ratio.nodes as any[]) for (const f of ['x', 'x2', 'w', 'v', 'v0', 't', 't2']) if (n[f] != null) expect(n[f] >= 0 && n[f] <= 1, f + ': ' + where + ' ' + n.key).toBe(true);
+        expect(all.filter((k) => keys.includes(k)), 'placed keys: ' + where).toEqual(keys);
+      }
+    });
+    it(name + ': is in the schema, resolves in every data state, and steps down to the number', () => {
+      expect(view(S(name)), JSON.stringify(view.errors)).toBe(true);
+      for (const sc of scenarios) {
+        expect([346, 250, 120, 10].map((w) => at(name, w, null, sc).plan.layout), sc).toEqual(sc === 'empty' ? ['notice', 'notice', 'none', 'prose'] : layouts);
+        expect(at(name, 700, null, sc).plan.dropped, sc).toEqual([]);
+      }
+    });
+  }
+  it('golden scenes', () => {
+    for (const name of Object.keys(samples)) for (const [w, h] of [[346, null], [234, null], [346, 100]] as const) expect(at(name, w, h, 'typical').scene).toMatchSnapshot(`${name} at ${w} by ${h ?? 'any'}`);
   });
 });

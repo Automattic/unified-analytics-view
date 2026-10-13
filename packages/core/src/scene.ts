@@ -63,6 +63,8 @@ interface Draw {
   id: string;
   /** The series this is, where the layer is split into them. `rows` are then that series' alone. */
   series?: string;
+  /** The series are in one paint, by `detail`, and lie over each other: a line lets the ones under it show, so where many run together reads darker. */
+  mass?: boolean;
   role: Role;
   paint: string;
   prev: boolean;
@@ -94,7 +96,8 @@ const metricOf = (catalog: Catalog, f: unknown) => (typeof f === 'string' ? cata
  * polarity. One whose metric has no better way keeps its own paint. Positions are compared as they are drawn. */
 const toned = (polarity: Polarity | undefined, from: number, to: number, paint: string) => (!polarity || polarity === 'none' ? paint : (to < from) === (polarity === 'down') ? 'delta.good' : 'delta.bad');
 
-const path: MarkFn = (l, { id: layer, series, role: role0, paint, prev, rows: pts, k, unit, ends }) => {
+const MASS = 0.5;    // how much of its paint a line of a mass is drawn in
+const path: MarkFn = (l, { id: layer, series, mass, role: role0, paint, prev, rows: pts, k, unit, ends }) => {
   const id = series == null ? layer : layer + ':' + series, role = series == null ? { role: role0 } : { role: role0, series };
   const whole = pts.filter((r) => prev || !r.partial);
   if (!whole.length) return [];
@@ -102,11 +105,11 @@ const path: MarkFn = (l, { id: layer, series, role: role0, paint, prev, rows: pt
   const points = (rs: Row[]): PathNode['points'] => rs.map((r) => { const [v0, v] = ends(r); return { row: k(r), x: unit.cx(k(r)), v, ...(l.mark === 'area' && v0 && { v0 }) }; });
   // An area under a line is a tint. Stacked, each is the mark itself.
   if (l.mark === 'area') return [{ key: id, part: 'plot', kind: 'path', d: pathD(points(whole), 'monotone', true), points: points(whole), curve: 'monotone', fill: true, paint, ...(!(l.stack && series != null) && { opacity: 0.14, tone: 'soft' as const }), layer: 'data', ...role }];
-  const nodes: SceneNode[] = [{ key: id, part: 'plot', kind: 'path', d: pathD(points(whole), 'monotone'), points: points(whole), curve: 'monotone', paint, width: prev ? 1.5 : 2, dash: prev ? '3 3' : null, layer: 'data', ...role }];
+  const nodes: SceneNode[] = [{ key: id, part: 'plot', kind: 'path', d: pathD(points(whole), 'monotone'), points: points(whole), curve: 'monotone', paint, width: prev ? 1.5 : 2, dash: prev ? '3 3' : null, ...(mass && { opacity: MASS }), layer: 'data', ...role }];
   // A range that starts or ends inside a bucket leaves that one incomplete: dashed in from the first, and out to the last.
   const from = pts.indexOf(whole[0]!), lead = pts.slice(0, from).concat(whole[0]!), tail = [whole[whole.length - 1]!].concat(pts.slice(from).filter((r) => r.partial));
   for (const [key, rs] of [[':partial:lead', lead], [':partial', tail]] as const)
-    if (!prev && rs.length > 1) nodes.push({ key: id + key, part: 'plot', kind: 'path', d: pathD(points(rs)), points: points(rs), paint, width: 2, dash: '2 4', opacity: 0.75, layer: 'data', ...role, note: 'incomplete bucket' });
+    if (!prev && rs.length > 1) nodes.push({ key: id + key, part: 'plot', kind: 'path', d: pathD(points(rs)), points: points(rs), paint, width: 2, dash: '2 4', opacity: mass ? MASS : 0.75, layer: 'data', ...role, note: 'incomplete bucket' });
   return nodes;
 };
 const bar: MarkFn = (_l, { id, series, role, paint, prev, rows, k, unit, ends, polarity, slot: [j, n] = [0, 1] }) => rows.map((r) => {
@@ -338,7 +341,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     const plain = !paintedOf(catalog, l, xField);
     series.forEach((s, j) => {
       // Bars of one x that are not stacked sit side by side: overlapping bars are never what was meant. Lines and areas overlay.
-      const drawn = draw(l, { ...d, series: s, paint: prev || plain ? d.paint : 'series.' + (j + 1), rows: d.rows.filter((r) => r[split!] === s), ...(l.mark === 'bar' && !l.stack && { slot: [j, series.length] }) });
+      const drawn = draw(l, { ...d, series: s, paint: prev || plain ? d.paint : 'series.' + (j + 1), ...(plain && { mass: true }), rows: d.rows.filter((r) => r[split!] === s), ...(l.mark === 'bar' && !l.stack && { slot: [j, series.length] }) });
       nodes.push(...drawn);
       // Where the series' line ends, for its label: half way up its band where areas are stacked.
       const last = drawn.filter((n): n is PathNode => n.kind === 'path').map((n) => n.points[n.points.length - 1]!).pop();

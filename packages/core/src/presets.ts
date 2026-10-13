@@ -82,10 +82,30 @@ export function usesPrevious(l: Layer): boolean {
   return !!l.series || Object.values(l.encode || {}).some((f) => typeof f === 'string' && f.endsWith('@previous'));
 }
 
+/* Presets a custom mark's package brings. Core cannot name a custom mark, so it cannot write the preset that draws
+ * one: the package that registers the mark (marks.ts) registers its presets here, in the same slots as those above.
+ * A map and two functions, as the marks' registry is. Do not let it grow into a plugin system. */
+const REGISTERED = new Map<string, PresetLibrary[string]>();
+
+/** Register a preset under a name, or replace the one registered under it. */
+export function registerPreset(name: string, preset: PresetLibrary[string]): void {
+  if (!/^[\w-]+$/.test(name)) throw new Error('A preset cannot be named ' + JSON.stringify(name) + ': the name is written into specs. Use letters, digits, "_" and "-" only.');
+  if (Object.hasOwn(PRESETS, name)) throw new Error('A preset cannot be named "' + name + '", which core has already. Register it under another name.');
+  if (!Array.isArray(preset?.layers) || !preset.layers.length) throw new Error('The preset "' + name + '" has no layers, so a view that uses it would have nothing to draw. Hand registerPreset() { layers: [...] } with one layer at least.');
+  REGISTERED.set(name, preset);
+}
+/** The presets registered, by name. */
+export function customPresets(): ReadonlyMap<string, PresetLibrary[string]> {
+  return REGISTERED;
+}
+/** Every name a spec may `use`: the library's, then the registered ones it does not have. */
+export const presetNames = (presets: PresetLibrary = PRESETS): string[] => Object.keys(presets).concat([...REGISTERED.keys()].filter((n) => !Object.hasOwn(presets, n)));
+
 export function expand(spec: Spec, presets: PresetLibrary = PRESETS): Spec {
   if (!spec.use) return spec;
-  const p = presets[spec.use];
-  if (!p) throw new Error('Unknown preset "' + spec.use + '". The library has: ' + Object.keys(presets).join(', ') + '.');
+  // The library handed in first, by its own keys, so "constructor" is no preset. Then the registry.
+  const p = Object.hasOwn(presets, spec.use) ? presets[spec.use] : REGISTERED.get(spec.use);
+  if (!p) throw new Error('Unknown preset "' + spec.use + '". The library has: ' + (Object.keys(presets).join(', ') || 'none') + '. Registered: ' + ([...REGISTERED.keys()].join(', ') || 'none') + '. Use one of those, or register it with registerPreset(' + JSON.stringify(spec.use) + ', …) before the view is resolved.');
   const q = spec.query || {}, [by, split] = q.by || [], [m, m2] = q.metrics || [];
   if (!by && p.layers.some((l) => Object.values(l.encode || {}).indexOf('$by') >= 0)) throw new Error('The "' + spec.use + '" preset needs a dimension in query.by.');
   if (!split && p.layers.some((l) => Object.values(l.encode || {}).indexOf('$split') >= 0)) throw new Error('The "' + spec.use + '" preset needs two dimensions in query.by: the one on the axis, then the one to split by.');

@@ -1,7 +1,7 @@
 export * from './types.ts';
 export { CONTAINER_RULES, makeContainer, unboundedContainer } from './container.ts';
 export { FIT_RULES, applies, type FitRule, type Room } from './fit.ts';
-export { PRESETS, expand } from './presets.ts';
+export { PRESETS, customPresets, expand, registerPreset } from './presets.ts';
 export { resolve } from './plan.ts';
 export { buildScene, layerKeys, roleOf, rowKeys, unitsOf } from './scene.ts';
 export { COLUMNS_BLOCK, columnRooms, declutter, place, type LabelBox } from './place.ts';

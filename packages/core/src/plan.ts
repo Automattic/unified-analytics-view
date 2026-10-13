@@ -2,7 +2,7 @@ import { CONTAINER_RULES, KEEP } from './container.ts';
 import { applies, fallbackRule, ruleFor, type FitRule } from './fit.ts';
 import { fmtTime, rangeLabel } from './format.ts';
 import { customMarks } from './marks.ts';
-import { PRESETS, expand, usesPrevious } from './presets.ts';
+import { PRESETS, expand, presetNames, usesPrevious } from './presets.ts';
 import { COLUMNS_BLOCK, place } from './place.ts';
 import { BUILT_IN_MARKS, buildScene, columnLabel, columnsOf, tldrValueText, isDim, roleOf, seriesOf, trackBeside, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
 import { gridProse, rangeProse, tldrProse } from './prose.ts';
@@ -87,7 +87,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
     if (!Object.hasOwn(has, f)) throw new Error('The catalog has no ' + kind + ' "' + f + '". It has: ' + (Object.keys(has).join(', ') || 'none') + '. Add it to the catalog passed in, or correct the name in query.' + where + '.');
   const m = q.metrics[0]!, M = catalog.metrics[m]!, by = (q.by || [])[0], rules = container.rules || CONTAINER_RULES, keep = spec.keep || [], dropped: string[] = [];
   let layers = (spec.layers || []).slice();
-  if (!layers.length && by) throw new Error('This spec has a dimension but no layers, so there is nothing to draw it with. Add "layers", or "use" one of: ' + Object.keys(presets).join(', ') + '.');
+  if (!layers.length && by) throw new Error('This spec has a dimension but no layers, so there is nothing to draw it with. Add "layers", or "use" one of: ' + presetNames(presets).join(', ') + '.');
   checkLayers(layers, q, catalog, result);
   // A time no view can read is refused here, once, before anything is built or painted. fmtTime's error names the forms.
   for (const d of q.by || []) if (catalog.dimensions[d]?.type === 'time') for (const r of result.rows) if (r[d] != null) fmtTime(String(r[d]));

@@ -37,7 +37,7 @@ describe('the fixture engine: companions', () => {
   });
   it('returns a day\'s open and close, its least and most, and its interval', () => {
     const { rows } = runQuery(candlestick!.query), r = rows[0]!, f = (s: string) => r['response_time@' + s] as number;
-    expect(Object.keys(r)).toEqual(['date.day', 'partial', 'response_time', 'response_time@open', 'response_time@close', 'response_time@min', 'response_time@max', 'response_time@lower', 'response_time@upper']);
+    expect(Object.keys(r)).toEqual(['date.day', 'partial', 'response_time', 'response_time@open', 'response_time@close', 'response_time@min', 'response_time@max', 'response_time@lower', 'response_time@upper', 'response_time@p25', 'response_time@p75']);
     for (const d of rows) { const g = (s: string) => d['response_time@' + s] as number; expect(g('min') < Math.min(g('open'), g('close')) && g('max') > Math.max(g('open'), g('close')) && g('lower') < (d.response_time as number) && (d.response_time as number) < g('upper')).toBe(true); }
     expect(f('lower')).toBeLessThan(f('upper'));
     expect(runQuery({ ...candlestick!.query, range: '7d' }).rows).toEqual(rows.slice(21));

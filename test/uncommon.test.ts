@@ -130,10 +130,12 @@ describe('bars in rows: tornado, bullet', () => {
     expect(ratio.track).toBe(undefined);
     expect(of<{ opacity: number }>(ratio.nodes, 'primary:bar').every((n) => n.opacity === 0.2)).toBe(true);
   });
-  it('for step 4: a bullet is a bar and a tick at the target, and the catalog\'s bands are drawn nowhere', () => {
+  it('a bullet is a bar and a tick at the target, over the metric\'s range divided at the catalog\'s bands', () => {
+    // Step 4 drew the bands: until then they were read nowhere, and this was a bar and a tick.
     const { ratio } = run(S('bullet'));
     expect(catalog.metrics.signups!.bands).toEqual([200, 400]);
-    expect(ratio.nodes.filter((n) => n.part === 'rows').map((n) => n.key.split(':').slice(0, 2).join(':')).filter((k, i, a) => a.indexOf(k) === i)).toEqual(['row:Desktop', 'primary:bar', 'reference:tick', 'primary:text', 'primary:text#2', 'row:Mobile', 'row:Tablet']);
+    expect(ratio.nodes.filter((n) => n.part === 'rows').map((n) => n.key.split(':').slice(0, 2).join(':')).filter((k, i, a) => a.indexOf(k) === i)).toEqual(['row:Desktop', 'context:bar', 'primary:bar', 'reference:tick', 'primary:text', 'primary:text#2', 'row:Mobile', 'row:Tablet']);
+    expect(of<{ v: number; v0?: number; paint: string }>(ratio.nodes, 'context:bar:Desktop:').map((n) => [n.v0 ?? 0, n.v, n.paint])).toEqual([[0, 0.4, 'band.1'], [0.4, 0.8, 'band.2'], [0.8, 1, 'band.3']]);
   });
 });
 

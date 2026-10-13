@@ -347,3 +347,40 @@ describe('a rule from a number, and a rule across a plot', () => {
     expect(err({ query: scatter, layers: [{ mark: 'rule', encode: { x: 0, y: 0, x2: 2000, y2: 4 }, label: 'Even' }, dot] })).toBe('A rule that runs across a plot has no place for its label yet. Remove "label", and name the line in the view\'s title.');
   });
 });
+
+describe('the range behind a row\'s marks, divided at the catalog\'s bands', () => {
+  const q = { metrics: ['signups'], by: ['device'], range: '28d' };
+  const bullet: Spec = { query: q, use: 'bullet' };
+  const withMetric = (def: Partial<(typeof catalog.metrics)[string]>) => ({ ...catalog, metrics: { ...catalog.metrics, signups: { label: 'Sign-ups', unit: 'count', polarity: 'up' as const, ...def } } });
+  const bands = (cat = catalog, spec: Spec = bullet) => { const container = makeContainer(346, null, 'svg', 8), result = runQuery(q), plan = resolve(spec, result, container, cat), ratio = buildScene(plan, q, result, cat); return { ratio, scene: place(ratio, container) }; };
+
+  it('a bar with nothing on x is the metric\'s domain in every row, a part for each band, in paints of their own', () => {
+    const { ratio, scene } = bands(), parts = of<{ key: string; v: number; v0?: number; paint: string; layer: string; role: string; row: string }>(ratio.nodes, 'context:bar:Mobile:');
+    expect(parts.map((n) => [n.key, n.v0 ?? 0, n.v, n.paint])).toEqual([['context:bar:Mobile:1', 0, 0.4, 'band.1'], ['context:bar:Mobile:2', 0.4, 0.8, 'band.2'], ['context:bar:Mobile:3', 0.8, 1, 'band.3']]);
+    expect(parts.every((n) => n.layer === 'guide' && n.role === 'context' && n.row === 'Mobile')).toBe(true);
+    // They come before the bar and the tick, so a painter that draws in order has them behind, and they are as tall as the row.
+    const keys = ratio.nodes.map((n) => n.key);
+    expect(keys.indexOf('context:bar:Mobile:3')).toBeLessThan(keys.indexOf('primary:bar:Mobile'));
+    const px = of<{ x: number; w: number; y: number; h: number }>(scene.nodes, 'context:bar:Mobile:'), bar = scene.nodes.find((n) => n.key === 'primary:bar:Mobile') as any;
+    expect(px.map((n) => [n.y, n.h])).toEqual([[32, 28], [32, 28], [32, 28]]);
+    expect([bar.y, bar.h]).toEqual([40, 12]);
+    expect(px[0]!.x + px[0]!.w).toBeCloseTo(px[1]!.x, 9);
+    expect(ratio.track).toBe('beside');
+  });
+  it('holds the track to the whole domain, so a value is read against it', () => {
+    const { ratio } = bands();
+    expect((ratio.nodes.find((n) => n.key === 'primary:bar:Desktop') as any).v).toBeCloseTo(158 / 500, 12);
+    expect((ratio.nodes.find((n) => n.key === 'reference:tick:Desktop') as any).x).toBe(0.8);
+  });
+  it('is one part where the catalog gives no bands, and nothing where it gives no domain, as a target it does not give has no tick', () => {
+    expect(of<{ paint: string; v: number }>(bands(withMetric({ domain: [0, 500] })).ratio.nodes, 'context:bar:Desktop:').map((n) => [n.paint, n.v])).toEqual([['band.1', 1]]);
+    expect(of(bands(withMetric({ bands: [200, 400] })).ratio.nodes, 'context:bar:').length).toBe(0);
+    // A band outside the domain divides nothing.
+    expect(of(bands(withMetric({ domain: [0, 500], bands: [200, 900] })).ratio.nodes, 'context:bar:Desktop:').length).toBe(2);
+  });
+  it('errors name the fix: more bands than there are paints, and a range of no metric', () => {
+    expect(() => bands(withMetric({ domain: [0, 500], bands: [100, 200, 300] }))).toThrow('The catalog divides "signups" into 4 bands, and there are 3 band paints. Give its "bands" 2 values at most.');
+    expect(() => bands(catalog, { query: q, layers: [{ mark: 'bar', encode: { y: 'device' }, role: 'context' }, label('device')] }))
+      .toThrow('Layer 1 is a bar with nothing on x, which is the range a row\'s marks are read against, and no other mark in these rows puts a metric on x for it to be the range of. Add one, for example { "mark": "bar", "encode": { "y": "device", "x": a metric } }, or encode a metric on this bar\'s x.');
+  });
+});

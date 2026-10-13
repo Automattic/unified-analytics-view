@@ -233,8 +233,8 @@ function placeRows(scene: Scene, W: number, { rowHeight: rowH, gap }: Container[
     if (n.part !== 'rows' || n.kind === 'row') return;
     const top = head + rows.indexOf(n.row!) * (rowH + gap);
     // A bar lies from where its track has zero to its value, and is never thinner than 3 px. Beside the label it is a band through the middle of the row.
-    // One of a stack is as long as its share and no longer, or it would lie over the next.
-    if (n.kind === 'rect') { const from = x(n.v0 ?? 0), to = x(n.v!), thin = beside ? 8 : 0; nodes.push(rect(n, Math.min(from, to), top + thin, Math.max(n.series == null ? 3 : 0, Math.abs(to - from)), rowH - 2 * thin, n.series == null ? 3 : 0)); }
+    // One of a stack is as long as its share and no longer, or it would lie over the next. So is a part of the range behind the marks, which is as tall as the row.
+    if (n.kind === 'rect') { const from = x(n.v0 ?? 0), to = x(n.v!), band = n.layer === 'guide', thin = beside && !band ? 8 : 0, own = n.series == null && !band; nodes.push(rect(n, Math.min(from, to), top + thin, Math.max(own ? 3 : 0, Math.abs(to - from)), rowH - 2 * thin, own ? 3 : 0)); }
     else if (n.kind === 'text') nodes.push(n.anchor === 'end' ? text(n, edge(n.rank || 0), top + rowH / 2) : text(n, left(col.get(n.key)!), top + rowH / 2, col.get(n.key)! < last ? n.text : fit(n.text, own)));
     else if (n.kind === 'line') { const { part, role, row, series, rank, t, x: x1, x2, t2, ...rest } = n; nodes.push({ ...rest, x1: x(x1!), x2: x(x2!), y1: top + (1 - t) * rowH, y2: top + (1 - (t2 ?? t)) * rowH }); }
     else if (n.kind === 'circle') nodes.push(circle(n, x(n.x!), top + (1 - n.t!) * rowH));

@@ -103,6 +103,15 @@
       "seq-none": {
         "$value": "{color.seq-none}"
       },
+      "band-1": {
+        "$value": "{color.band-1}"
+      },
+      "band-2": {
+        "$value": "{color.band-2}"
+      },
+      "band-3": {
+        "$value": "{color.band-3}"
+      },
       "annotation": {
         "$value": "{color.muted-foreground}"
       },

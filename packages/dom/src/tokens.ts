@@ -24,6 +24,10 @@ export const TOKENS: Record<string, string> = {
   'color-delta-good': 'var(--ua-charts-color-trend-up, currentColor)',
   'color-delta-bad': 'var(--ua-charts-color-trend-down, currentColor)',
   'color-live': 'currentColor',
+  // The parts a metric's range is divided into behind a row's marks, the least first. Unthemed, three weights of the text's colour.
+  'color-band-1': 'color-mix(in srgb, currentColor 26%, transparent)',
+  'color-band-2': 'color-mix(in srgb, currentColor 16%, transparent)',
+  'color-band-3': 'color-mix(in srgb, currentColor 8%, transparent)',
   'color-background': 'Canvas',
   // The lit cells of a number in dots. With no token they are the colour of the text the number would have been.
   'color-label-screen': 'currentColor',

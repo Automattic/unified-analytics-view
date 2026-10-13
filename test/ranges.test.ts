@@ -114,7 +114,7 @@ describe('presets', () => {
       ['candlestick', 'cartesian', 'context:rule primary:bar'],
       ['fan', 'cartesian', 'context:area primary:line'],
       ['dumbbell', 'rows', 'context:rule comparison:dot primary:dot primary:text primary:text'],
-      ['bullet', 'rows', 'primary:bar reference:tick primary:text primary:text'],
+      ['bullet', 'rows', 'context:bar primary:bar reference:tick primary:text primary:text'],
     ]);
   });
   it('a dumbbell with no compare in the query is a dot for each row: its rule and its previous dot are left out on expansion', () => {
@@ -339,8 +339,10 @@ describe('a row\'s track', () => {
   it('a tick stands across the row at its value, and one that is a reference at the metric\'s catalog target', () => {
     const { ratio, scene, result } = run(bullet!, 346), top = catalog.metrics.signups!.target!;
     expect(result.rows.map((r) => r.signups)).toEqual([158, 124, 21]);
-    expect(at(ratio.nodes, 'reference:tick:Mobile')).toEqual({ key: 'reference:tick:Mobile', part: 'rows', kind: 'line', x: 1, x2: 1, t: 0, t2: 1, row: 'Mobile', paint: 'ink', width: 2, layer: 'data', role: 'reference' });
-    expect(at(ratio.nodes, 'primary:bar:Mobile')).toMatchObject({ v: 124 / top, paint: 'series.1' });
+    // The track holds the metric's whole domain since the range is drawn behind the marks (uncommon plan, step 4): it ran to the target, the most there was.
+    const [, most] = catalog.metrics.signups!.domain!;
+    expect(at(ratio.nodes, 'reference:tick:Mobile')).toEqual({ key: 'reference:tick:Mobile', part: 'rows', kind: 'line', x: top / most, x2: top / most, t: 0, t2: 1, row: 'Mobile', paint: 'ink', width: 2, layer: 'data', role: 'reference' });
+    expect(at(ratio.nodes, 'primary:bar:Mobile')).toMatchObject({ v: 124 / most, paint: 'series.1' });
     expect(at(scene.nodes, 'reference:tick:Mobile')).toMatchObject({ kind: 'line', y1: 32 + 28, y2: 32 });
     // A tick of its own value, and a metric with no target: no mark, and no error.
     const own: Spec = { query: bullet!.query, layers: [{ mark: 'tick', encode: { y: 'device', x: 'signups' } }, { mark: 'text', encode: { y: 'device', text: 'device' } }] };
@@ -348,9 +350,10 @@ describe('a row\'s track', () => {
     const bare: Catalog = { ...catalog, metrics: { ...catalog.metrics, signups: { label: 'Sign-ups', unit: 'count', polarity: 'up' } } };
     expect(marks(run(bullet!, 346, null, 'typical', 'svg', bare).ratio.nodes).map((n) => n.kind)).toEqual(['rect', 'rect', 'rect']);
   });
-  it('the catalog\'s bands are not drawn: there is no paint for them', () => {
+  it('the catalog\'s bands are drawn behind the marks, as a guide: the marks are the bar and the tick, as they were', () => {
     expect(catalog.metrics.signups!.bands).toEqual([200, 400]);
     expect(marks(run(bullet!, 346).ratio.nodes).length).toBe(6);
+    expect(run(bullet!, 346).ratio.nodes.filter((n) => n.paint.startsWith('band.')).length).toBe(9);
   });
   it('in the plot a reference tick stands at the target too', () => {
     const { ratio } = run({ query: { metrics: ['signups'], by: ['device'] }, layers: [{ mark: 'bar', encode: { x: 'device', y: 'signups' } }, { mark: 'tick', encode: { x: 'device', y: 'signups' }, role: 'reference' }] }, 346);

@@ -196,6 +196,7 @@ function paintOf(l: Layer, catalog: Catalog, result: Result): string | undefined
 const PLOT_MARKS: Partial<Record<Mark, MarkFn>> = { line: path, area: path, bar, rule, dot, text: label, tick };
 
 const SERIES = 6;   // paint tokens run from series.1 to series.6
+const BANDS = 3;    // and from band.1 to band.3: the parts a metric's catalog `bands` divide its range into, the least first
 
 /** The dimension a plot's layers put on x. */
 export function xDimOf(catalog: Catalog, layers: Layer[]): string | undefined {
@@ -508,9 +509,9 @@ const trackTick: TrackFn = (l, d) => [{ ...inRow(d), part: 'rows', kind: 'line',
 const trackDot: TrackFn = (_l, d) => [{ ...inRow(d), part: 'rows', kind: 'circle', pulse: false, x: d.v(d.at), t: 0.5, paint: d.paint, ...(d.mass && { opacity: MASS }), layer: 'data', role: d.role }];
 /* The marks a row's track draws, by name. A new mark is a function here. Text is not among them: it is set in the row, not on the scale. */
 const TRACK_MARKS: Partial<Record<Mark, TrackFn>> = { bar: trackBar, rule: trackRule, tick: trackTick, dot: trackDot };
-/** Whether a row's track is read by where its marks are, and so stands beside the label and not behind it: any mark but a bar from zero, and a bar that is divided into a stack. */
+/** Whether a row's track is read by where its marks are, and so stands beside the label and not behind it: any mark but a bar from zero, a bar that is divided into a stack, and the range behind the marks. */
 export function trackBeside(layers: Layer[]): boolean {
-  return layers.some((l) => TRACK_MARKS[l.mark] && (l.mark !== 'bar' || !!l.stack || (l.encode && l.encode.x2 != null)));
+  return layers.some((l) => TRACK_MARKS[l.mark] && (l.mark !== 'bar' || !!l.stack || (l.encode && (l.encode.x2 != null || l.encode.x == null))));
 }
 /** The marks core draws itself, as an error lists them. Any other name is a custom mark's, registered in code (marks.ts). */
 export const BUILT_IN_MARKS: string[] = [...new Set(Object.keys(PLOT_MARKS).concat(Object.keys(TRACK_MARKS), 'arc', 'cell'))];
@@ -549,7 +550,17 @@ export function listRows(catalog: Catalog, layers: Layer[], result: Result): Row
 function sceneRows(catalog: Catalog, layers: Layer[], result: Result, limit: number | null): Body {
   const nodes: SceneNode[] = [];
   const { dim, split, own, items: all } = listOf(catalog, layers, result), items = all.slice(0, limit || all.length), rows = items.map((i) => i.row), shown = items.flatMap((i) => i.pairs);
-  const tracked = layers.filter((l) => TRACK_MARKS[l.mark]), units = [...new Set(tracked.map((l) => metricOf(catalog, [l.encode!.x, l.encode!.x2].find((f) => typeof f === 'string'))?.unit))];
+  // A bar with nothing on x is no mark of a value: it is the range the row's marks are read against, as an arc with
+  // nothing on angle is a gauge's. It is the catalog `domain` of the metric the other marks put on the track, divided
+  // where the catalog's `bands` divide it. The track's scale holds it whole.
+  const ranged = (l: Layer) => l.mark === 'bar' && l.encode!.x == null && l.encode!.x2 == null, fieldOn = (l: Layer) => [l.encode!.x, l.encode!.x2].find((f) => typeof f === 'string') as string | undefined;
+  const tracked = layers.filter((l) => TRACK_MARKS[l.mark] && !ranged(l)), units = [...new Set(tracked.map((l) => metricOf(catalog, fieldOn(l))?.unit))];
+  const behind = layers.findIndex(ranged), of = (tracked.map(fieldOn).find(Boolean) || '').split('@')[0]!, range = behind < 0 ? undefined : catalog.metrics[of];
+  if (behind >= 0 && !range) throw new Error('Layer ' + (behind + 1) + ' is a bar with nothing on x, which is the range a row\'s marks are read against, and no other mark in these rows puts a metric on x for it to be the range of. Add one, for example { "mark": "bar", "encode": { "y": "' + dim + '", "x": a metric } }, or encode a metric on this bar\'s x.');
+  // Where each part of the range starts and ends: the domain's two ends, and each band between them. A metric the
+  // catalog gives no domain has no range to draw, as one with no target has no tick at it: no mark, and no error.
+  const [least, most] = (range && range.domain) || [], edges = least == null || most == null ? [] : [least, ...((range && range.bands) || []).filter((b) => b > least && b < most), most];
+  if (edges.length - 1 > BANDS) throw new Error('The catalog divides "' + of + '" into ' + (edges.length - 1) + ' bands, and there are ' + BANDS + ' band paints. Give its "bands" ' + (BANDS - 1) + ' values at most.');
   if (units.length > 1) throw new Error('These rows have marks that measure in ' + units.length + ' units (' + units.join(', ') + '), and a row has one track. Keep the marks of one unit, and show the other metric as a text layer.');
   // What a layer puts on the track in one row: its value, and its second end where it has one. A layer of the previous
   // series reads the metric's companion. A tick that is a `reference` stands at the metric's catalog `target`, as a gauge's mark does.
@@ -568,7 +579,7 @@ function sceneRows(catalog: Catalog, layers: Layer[], result: Result, limit: num
   if (lost >= 0) throw new Error('Layer ' + (lost + 1) + ' is a "' + layers[lost]!.mark + '" in rows with "' + split + '" on detail, which would lay one over another in each row, all in one paint. Use "dot" or "tick" for a mark at each value' + (layers[lost]!.mark === 'bar' ? ', or encode "' + split + '" on color and give the bar "stack"' : '') + ', or remove "detail".');
   const whole = new Map(items.flatMap((i) => i.pairs.map((r) => [r, i.row] as const)));
   const spans = new Map(tracked.filter((l) => divides(l) && l.stack).map((l) => { const f = l.encode!.x as string; return [l, stacked(shown, series, split!, (r) => own.get(r)!, f, l.stack, l.stack === 'normalize' ? (r) => (whole.get(r)![f] as number) || Infinity : () => 1)] as const; }));
-  const vals = tracked.flatMap((l) => (spans.has(l) ? [...spans.get(l)!.values()].flat() : divides(l) ? shown.flatMap((r) => on(l, r) as number[]) : rows.flatMap((r) => on(l, r) as number[]))), beside = trackBeside(layers);
+  const vals = edges.concat(tracked.flatMap((l) => (spans.has(l) ? [...spans.get(l)!.values()].flat() : divides(l) ? shown.flatMap((r) => on(l, r) as number[]) : rows.flatMap((r) => on(l, r) as number[])))), beside = trackBeside(layers);
   const lo = Math.min(0, min(vals) ?? 0), hi = Math.max(0, max(vals) ?? 0) || (lo ? 0 : 1), v = (n: number) => (n - lo) / (hi - lo);
   const ids = layerKeys(layers), cols = columnsOf(catalog, layers);
   // A column after the first is ranked by its place, so the last goes first. One column of values needs no header: the view's title says what it is.
@@ -586,7 +597,9 @@ function sceneRows(catalog: Catalog, layers: Layer[], result: Result, limit: num
     nodes.push({ key: 'row:' + k, part: 'rows', kind: 'row', row: k, paint: 'ink', layer: 'data' });
     layers.forEach((l, li) => {
       const draw = TRACK_MARKS[l.mark], span = spans.get(l);
-      if (draw && divides(l)) {
+      // The range behind the marks: a part for each band, from the least. They are a guide, as a grid is, and in paints of their own.
+      if (ranged(l)) edges.slice(1).forEach((to, j) => nodes.push({ key: ids[li] + ':' + k + ':' + (j + 1), part: 'rows', kind: 'rect', v: v(to), ...(v(edges[j]!) && { v0: v(edges[j]!) }), row: k, paint: 'band.' + (j + 1), layer: 'guide', role: roleOf(l) }));
+      else if (draw && divides(l)) {
         // A mark for each of the row's pairs, in the series' order: a stacked bar's share, from where the one before it ends.
         // By detail it is a mark at each pair's own value, all in the layer's paint.
         series.forEach((s, j) => pairs.forEach((p) => {

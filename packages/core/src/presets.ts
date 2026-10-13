@@ -63,7 +63,8 @@ export const PRESETS: PresetLibrary = {
     { mark: 'area', encode: { x: '$by', y: '$metric@lower', y2: '$metric@upper' }, role: 'context' },
     { mark: 'line', encode: { x: '$by', y: '$metric' } } ] },
   // Rows whose track is read by position. A dumbbell sets this period against the one before; with no `compare` in
-  // the query it is a dot for each row. A bullet's tick stands at the metric's catalog `target`.
+  // the query it is a dot for each row. A bullet's tick stands at the metric's catalog `target`, and the bar with
+  // nothing on x is the metric's catalog `domain` behind them, divided at its `bands`.
   'dumbbell': { layers: [
     { mark: 'rule', encode: { y: '$by', x: '$metric@previous', x2: '$metric' }, role: 'context' },
     { mark: 'dot',  encode: { y: '$by', x: '$metric' }, series: 'previous', role: 'comparison' },
@@ -71,6 +72,7 @@ export const PRESETS: PresetLibrary = {
     { mark: 'text', encode: { y: '$by', text: '$by' } },
     { mark: 'text', encode: { y: '$by', text: '$metric' }, align: 'end' } ] },
   'bullet': { layers: [
+    { mark: 'bar',  encode: { y: '$by' }, role: 'context' },
     { mark: 'bar',  encode: { y: '$by', x: '$metric' } },
     { mark: 'tick', encode: { y: '$by', x: '$metric' }, role: 'reference' },
     { mark: 'text', encode: { y: '$by', text: '$by' } },

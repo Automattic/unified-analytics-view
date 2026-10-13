@@ -11,6 +11,7 @@ const SVG = 'http://www.w3.org/2000/svg';
 const PAINT: Record<string, string> = {
   ink: 'label', 'ink.muted': 'label-secondary', grid: 'grid', axis: 'axis-x', rule: 'annotation', compare: 'comparison',
   'delta.good': 'delta-good', 'delta.bad': 'delta-bad', delta: 'trend-neutral', live: 'live',
+  'band.1': 'band-1', 'band.2': 'band-2', 'band.3': 'band-3',
 };
 /** The custom property a paint token reads. A token the table does not know maps by name: `series.2` is `--ua-charts-color-series-2`. */
 export function paintVar(paint: string): string {

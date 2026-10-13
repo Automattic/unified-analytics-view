@@ -20,7 +20,8 @@ export interface MetricDef {
   domain?: [number, number];
   /** The value to reach. */
   target?: number;
-  /** Where the domain is divided, in ascending order: each is where one band ends and the next begins. */
+  /** Where the domain is divided, in ascending order: each is where one band ends and the next begins. Drawn behind a
+   * row's marks by a `bar` with nothing on x, in the paints `band.1` to `band.3`, the least first. */
   bands?: number[];
 }
 export interface DimensionDef {
@@ -195,6 +196,7 @@ interface NodeBase {
   note?: string;
 }
 /** A bar in the plot (`x` and `w` across, and up the plot from `v0` to `v`), a row's bar (across its track from `v0` to `v`), a band segment (`v` is its share) or a legend swatch.
+ * In `rows`, one whose `layer` is `guide` is a part of the range behind the row's marks, as tall as the row.
  * `v0` is absent where a bar starts at the bottom of the plot, or at the start of the track. A bar that hangs below its start has `v` under `v0`.
  * A bar with a second end runs from the first, `v0`, to it, `v`, and is painted by which way it goes. */
 export interface RectNode extends NodeBase {

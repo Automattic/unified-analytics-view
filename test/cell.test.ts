@@ -57,6 +57,55 @@ describe('golden scenes', () => {
   }
 });
 
+// The grids step 0 of docs/uncommon-coverage-plan.md added: a calendar, a strip of days and a square of pages.
+describe('the grids of the Uncommon types', () => {
+  const grids = Object.fromEntries(['calendar', 'stripes', 'adjacency'].map((k) => [k, moreSamples[k]!.spec]));
+  for (const [name, spec] of Object.entries(grids)) {
+    it(name + ': unique keys, no NaN, nothing taller than the container allows, ratios from 0 to 1, and every data state', () => {
+      expect(view(spec), JSON.stringify(view.errors)).toBe(true);
+      for (const sc of scenarios) for (const p of ['svg', 'dots'] as PainterName[]) for (const h of [null, 300, 160, 100, 60, 40]) for (const w of [54, 80, 120, 170, 250, 290, 346, 500, 700]) {
+        const at = [name, sc, p, w, h].join(' ');
+        const { plan, ratio, scene } = run(spec, w, h, sc, p);
+        const keys = scene.nodes.map((n) => n.key), all = ratio.nodes.map((n) => n.key);
+        expect(new Set(keys).size, 'duplicate keys: ' + at).toBe(keys.length);
+        expect(new Set(all).size, 'duplicate keys in the ratio scene: ' + at).toBe(all.length);
+        expect(JSON.stringify([scene, ratio], (_, v) => (typeof v === 'number' && isNaN(v) ? 'NaN' : v)), 'NaN: ' + at).not.toMatch(/NaN/);
+        if (h != null && plan.layout !== 'prose') expect(scene.height, 'too tall: ' + at).toBeLessThanOrEqual(h);
+        for (const n of ratio.nodes as any[]) for (const f of ['x', 'w', 'y', 'h', 't']) if (n[f] != null) expect(n[f] >= 0 && n[f] <= 1, f + ': ' + at + ' ' + n.key).toBe(true);
+        for (const n of scene.nodes as any[]) if (n.kind === 'rect') expect(n.x >= 0 && n.x + n.w <= w + 1e-9 && n.y >= 0, 'outside: ' + at + ' ' + n.key).toBe(true);
+        expect(all.filter((k) => keys.includes(k)), 'placed keys: ' + at).toEqual(keys);
+      }
+      for (const sc of scenarios) expect([346, 234, 120, 10].map((w) => run(spec, w, null, sc).plan.layout), sc).toEqual(sc === 'empty' ? ['notice', 'notice', 'none', 'prose'] : ['matrix', 'matrix', 'none', 'prose']);
+    });
+    for (const [w, h] of [[346, null], [234, null], [346, 100]] as [number, number | null][]) {
+      it(`${name} at ${w} by ${h ?? 'any'}`, () => expect(run(spec, w, h).scene).toMatchSnapshot());
+    }
+  }
+  it('a calendar is a row for each weekday and a column for each whole week, said as the Monday it starts on', () => {
+    const { ratio, plan } = run(grids.calendar!, 700);
+    expect(ratio).toMatchObject({ layout: 'matrix', ys: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], rows: ['2026-W37', '2026-W38', '2026-W39', '2026-W40'] });
+    expect(texts(ratio, 'xtick:')).toEqual(['Sep 7', 'Sep 14', 'Sep 21', 'Sep 28']);
+    expect(cells(ratio).length).toBe(28);
+    expect(cells(ratio).every((n) => n.paint !== 'seq.none')).toBe(true);
+    expect(plan.text).toMatch(/^Most visitors at \w+, Sep \d+ \(\d+\) in the last 28 days\. \w+ is the busiest weekday at \d+% of visitors, and Sep \d+ the busiest week at \d+%\.$/);
+  });
+  it('a strip of days is one row of cells, and its ramp runs from the least to the most: zero is not its middle', () => {
+    const { ratio, result } = run(grids.stripes!, 700), days = cells(ratio);
+    expect([ratio.ys, days.length, new Set(days.map((n) => n.h)).size, days[0]!.h]).toEqual([[''], 28, 1, 1]);
+    const signed = result.rows.map((r) => r.net_subscribers as number), least = Math.min(...signed), most = Math.max(...signed);
+    expect(least < 0 && most > 0 && -least !== most).toBe(true);
+    // A day of no change is painted a step of the ramp like any other, and a loss the palest: for the diverging ramp of step 5.
+    expect(texts(ratio, 'ramp:')).toEqual([String(least), String(most)]);
+    expect(days[signed.indexOf(least)]!.paint).toBe('seq.1');
+    expect(days.find((_, i) => signed[i] === 0)?.paint ?? 'seq.5').toMatch(/^seq\.[4-6]$/);
+  });
+  it('a square of pages has the same values down the side as across', () => {
+    const { ratio } = run(grids.adjacency!, 700);
+    expect(ratio.ys).toEqual(ratio.rows);
+    expect(cells(ratio).length).toBe(64);
+  });
+});
+
 describe('the fixture: visitors by weekday and hour', () => {
   it('answers with a row per pair, each dimension in its own order in totalsBy, and no count where the collector was down', () => {
     const { rows, totals, totalsBy } = runQuery(heatmap.query);

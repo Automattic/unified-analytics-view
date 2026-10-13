@@ -18,7 +18,7 @@ const view = new Ajv().compile(viewSchema);
 
 // The plots and the rows among them. Another layout has a suite of its own: test/radial.test.ts, test/cell.test.ts.
 // Ranges and ticks have one too: test/ranges.test.ts.
-const ranges = ['box', 'errors', 'waterfall', 'candlestick', 'fan', 'dumbbell', 'bullet'];
+const ranges = ['box', 'errors', 'waterfall', 'candlestick', 'fan', 'dumbbell', 'bullet', 'cleveland', 'lollipop', 'tornado', 'fans'];
 const specs = Object.fromEntries(Object.entries(moreSamples).map(([k, s]) => [k, s.spec] as const).filter(([k, s]) => !ranges.includes(k) && ['cartesian', 'rows'].includes(run(s, 700).plan.layout)));
 const painters: PainterName[] = ['svg', 'dots'];
 const heights = [null, 300, 160, 100, 60, 40];
@@ -43,11 +43,13 @@ describe('the sweep, for what the prototype does not know', () => {
     it(name + ': resolves in every data state, and steps down to the number and then the prose', () => {
       expect(view(spec), JSON.stringify(view.errors)).toBe(true);
       // A plot of points has no bare form: under the room its axes need it is the number alone (test/points.test.ts).
-      const points = ['scatter', 'bubble', 'quadrant'].includes(name);
+      const points = ['scatter', 'bubble', 'quadrant', 'embedding'].includes(name);
+      // Rows of text with no column of values ask for their label's 90 px and nothing measured, so they are still rows at 120.
+      const plain = name === 'stem';
       for (const sc of scenarios) {
         // 10 px is narrower than any number, "0" included.
         const layouts = [346, 250, 120, 10].map((w) => run(spec, w, null, sc).plan.layout), marks = run(spec, 700).plan.layout;
-        expect(layouts, sc).toEqual(sc === 'empty' ? ['notice', 'notice', 'none', 'prose'] : [marks, points ? 'none' : marks, 'none', 'prose']);
+        expect(layouts, sc).toEqual(sc === 'empty' ? ['notice', 'notice', 'none', 'prose'] : [marks, points ? 'none' : marks, plain ? marks : 'none', 'prose']);
         // What rows give up first is their own, and is held in test/coverage-rows.test.ts.
         if (marks === 'cartesian' && !points) expect(run(spec, 250, null, sc).plan.dropped[0], sc).toBe(sc === 'empty' ? undefined : 'axes and grid (added the number to make up for them)');
         // With room for everything, all that is missing is what there is no prior period to say.

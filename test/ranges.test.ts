@@ -19,6 +19,8 @@ const names = ['box', 'errors', 'waterfall', 'candlestick', 'fan', 'dumbbell', '
 const specs = Object.fromEntries(names.map((k) => [k, moreSamples[k]!.spec]));
 const { box, errors, waterfall, candlestick, fan, dumbbell, bullet } = specs as Record<string, Spec>;
 const league = moreSamples.league!.spec;
+// What step 0 of docs/uncommon-coverage-plan.md added of these: dots, rules and ranged bars in a row's track, and a fan of two bands.
+const swept: Record<string, Spec> = { ...specs, ...Object.fromEntries(['cleveland', 'lollipop', 'tornado', 'fans'].map((k) => [k, moreSamples[k]!.spec])) };
 const at = <T = any>(nodes: { key: string }[], key: string) => nodes.find((n) => n.key === key) as unknown as T;
 const marks = (nodes: any[]) => nodes.filter((n) => n.layer === 'data' && n.part !== 'number' && n.kind !== 'row' && n.kind !== 'text');
 const painters: PainterName[] = ['svg', 'dots'];
@@ -86,7 +88,7 @@ describe('companion fields, and the checks on a second end', () => {
       .toBe('Layer 1 has "x2" and no value on x to run from. Encode where it starts on x: a metric, or a companion the result returns with one.');
   });
   it('the schema takes the tick and the two channels, and the samples are valid', () => {
-    for (const [name, s] of Object.entries(specs)) expect(view(s), name + JSON.stringify(view.errors)).toBe(true);
+    for (const [name, s] of Object.entries(swept)) expect(view(s), name + JSON.stringify(view.errors)).toBe(true);
     expect(view({ spec: 'view/0', query: box!.query, layers: expand(box!).layers }), JSON.stringify(view.errors)).toBe(true);
     expect(view({ spec: 'view/0', query: dumbbell!.query, layers: expand(dumbbell!).layers }), JSON.stringify(view.errors)).toBe(true);
     expect(view({ spec: 'view/0', query: box!.query, layers: [{ mark: 'bar', encode: { x: 'page', y: 'response_time', y3: 'response_time@max' } }] })).toBe(false);
@@ -126,7 +128,7 @@ describe('presets', () => {
 });
 
 describe('the sweep', () => {
-  for (const [name, spec] of Object.entries(specs)) {
+  for (const [name, spec] of Object.entries(swept)) {
     it(name + ': unique keys, no NaN, nothing taller than the container allows, and ratios from 0 to 1', () => {
       for (const sc of scenarios) for (const p of painters) for (const h of heights) for (const w of widths) {
         const where = [name, sc, p, w, h].join(' ');
@@ -159,8 +161,8 @@ describe('the sweep', () => {
 
 describe('golden scenes', () => {
   const sizes: [number, number | null][] = [[346, null], [234, null], [346, 100]];
-  for (const name of names) for (const [w, h] of sizes) {
-    it(`${name} at ${w} by ${h ?? 'any'}`, () => expect(run(specs[name]!, w, h).scene).toMatchSnapshot());
+  for (const name of Object.keys(swept)) for (const [w, h] of sizes) {
+    it(`${name} at ${w} by ${h ?? 'any'}`, () => expect(run(swept[name]!, w, h).scene).toMatchSnapshot());
   }
 });
 

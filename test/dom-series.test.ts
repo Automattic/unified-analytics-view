@@ -113,9 +113,10 @@ describe('apart', () => {
 
 describe('hit targets of a split plot', () => {
   // A stacked area stops at the last whole day, as core draws it, so the unfinished one has no mark and no target.
+  const stacked = ['area', 'streamgraph', 'cumulative'];
   it.each(names)('tile the plot in %s, one per x that drew a mark', (sample) => {
     const { scene } = of(sample), hits = hitNodes(scene);
-    expect(hits.map((h) => h.row)).toEqual(sample === 'area' ? scene.rows!.slice(0, -1) : scene.rows);
+    expect(hits.map((h) => h.row)).toEqual(stacked.includes(sample) ? scene.rows!.slice(0, -1) : scene.rows);
     hits.forEach((h, i) => expect(h.x! + h.w!).toBeCloseTo(hits[i + 1]?.x ?? 1, 9));
   });
   it('centre on a group of bars, not on the last of them', () => {

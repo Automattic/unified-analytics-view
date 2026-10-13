@@ -418,4 +418,33 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
             layers: [{ mark: 'geo', encode: { x: 'country', size: 'pageviews' } }] } },
   unmapped: { label: 'A map with rows it has no shape for: visitors by every country seen', spec: { spec: 'view/0', title: 'Visitors by country, all of them', query: { metrics: ['visitors'], by: ['visitor_country'], range: '28d' },
             layers: [{ mark: 'geo', encode: { x: 'visitor_country', color: 'visitors' } }] } },
+  // The Uncommon types that today's marks already say (docs/uncommon-coverage-plan.md, step 0, and what it found in section 7).
+  // `dumbbell`, `bullet` and `fan` above are three of them. Each is swept, and has its golden scenes, with the samples of its layout, and what each one is is in test/uncommon.test.ts.
+  cleveland: { label: 'Cleveland dot plot: page views by page, ranked, so an ordered dot plot too', spec: { spec: 'view/0', title: 'Page views by page', use: 'dumbbell', query: { metrics: ['pageviews'], by: ['page'], range: '28d', limit: 8 } } },
+  lollipop: { label: 'Lollipop: visitors by channel, a stem from zero to each dot', spec: { spec: 'view/0', title: 'Visitors by channel', query: { metrics: ['visitors'], by: ['channel'], range: '28d' },
+            layers: [{ mark: 'rule', encode: { y: 'channel', x: 'visitors' }, role: 'context' }, { mark: 'dot', encode: { y: 'channel', x: 'visitors' } }, { mark: 'text', encode: { y: 'channel', text: 'channel' } }, { mark: 'text', encode: { y: 'channel', text: 'visitors' }, align: 'end' }] } },
+  // Each bar states its paint: one with two ends is painted by which way it goes, and both of these go to zero.
+  tornado: { label: 'Tornado: what each assumption could lose or gain of revenue, widest first', spec: { spec: 'view/0', title: 'What moves revenue', query: { metrics: ['revenue_effect'], by: ['factor'], range: '28d' },
+            layers: [{ mark: 'bar', encode: { y: 'factor', x: 'revenue_effect@low', x2: 0 }, paint: 'delta.bad' }, { mark: 'bar', encode: { y: 'factor', x: 'revenue_effect@high', x2: 0 }, paint: 'delta.good' }, { mark: 'text', encode: { y: 'factor', text: 'factor' } }] } },
+  pareto:  { label: 'Pareto: errors by cause, and the share the causes so far hold', spec: { spec: 'view/0', title: 'Errors by cause', query: { metrics: ['errors', 'errors_share'], by: ['cause'], range: '28d' },
+            layers: [{ mark: 'bar', encode: { x: 'cause', y: 'errors' } }, { mark: 'line', encode: { x: 'cause', y: 'errors_share' }, paint: 'series.2' }] } },
+  // A sparkline is not a spec's to ask for: it is what a line is where there is no room for its axes.
+  sparkline: { label: 'Sparkline: one line, which a narrow container draws bare beside the number', spec: { spec: 'view/0', title: 'Visitors', query: { metrics: ['visitors'], by: ['date.day'], range: '28d' },
+            layers: [{ mark: 'line', encode: { x: 'date.day', y: 'visitors' } }] } },
+  fans:    { label: 'Fan, two bands: response time by day, inside its quartiles, inside its least and most', spec: { spec: 'view/0', title: 'Response time, and how far it ranged', query: { metrics: ['response_time'], by: ['date.day'], range: '28d' },
+            layers: [{ mark: 'area', encode: { x: 'date.day', y: 'response_time@min', y2: 'response_time@max' }, role: 'context' }, { mark: 'area', encode: { x: 'date.day', y: 'response_time@p25', y2: 'response_time@p75' }, role: 'context' }, { mark: 'line', encode: { x: 'date.day', y: 'response_time' } }] } },
+  streamgraph: { label: 'Streamgraph: page views by day and channel, stacked about the middle', spec: { spec: 'view/0', title: 'Page views by channel', query: { metrics: ['pageviews'], by: ['date.day', 'channel'], range: '28d' },
+            layers: [{ mark: 'area', encode: { x: 'date.day', y: 'pageviews', color: 'channel' }, stack: 'center' }] } },
+  slopegraph: { label: 'Slopegraph: visitors by channel, one whole week against the next', spec: { spec: 'view/0', title: 'Visitors by channel, week on week', query: { metrics: ['visitors'], by: ['date.week', 'channel'], range: '14d' },
+            layers: [{ mark: 'line', encode: { x: 'date.week', y: 'visitors', color: 'channel' } }] } },
+  cumulative: { label: 'Cumulative flow: sign-ups so far, by day and channel', spec: { spec: 'view/0', title: 'Sign-ups so far', query: { metrics: ['signups'], by: ['date.day', 'channel'], range: '28d' },
+            layers: [{ mark: 'area', encode: { x: 'date.day', y: 'signups@running', color: 'channel' }, stack: 'zero' }] } },
+  calendar: { label: 'Calendar heatmap: visitors by weekday and week', spec: { spec: 'view/0', title: 'Visitors, day by day', use: 'heatmap', query: { metrics: ['visitors'], by: ['weekday', 'date.week'], range: '28d' } } },
+  stripes: { label: 'Stripes: net subscribers by day, one cell each. On the sequential ramp, so nothing is not neutral yet', spec: { spec: 'view/0', title: 'Net subscribers', query: { metrics: ['net_subscribers'], by: ['date.day'], range: '28d' },
+            layers: [{ mark: 'cell', encode: { x: 'date.day', color: 'net_subscribers' } }] } },
+  adjacency: { label: 'Adjacency matrix: page views by page and the page gone to next', spec: { spec: 'view/0', title: 'From page to page', use: 'heatmap', query: { metrics: ['pageviews'], by: ['page', 'next_page'], range: '28d' } } },
+  embedding: { label: 'Embedding scatter: search terms, set out in two components', spec: { spec: 'view/0', title: 'Search terms', query: { metrics: ['embed_x', 'embed_y'], by: ['term'], range: '28d' },
+            layers: [{ mark: 'dot', encode: { x: 'embed_x', y: 'embed_y' } }] } },
+  stem:    { label: 'Stem-and-leaf: load times, the seconds and the tenths under each', spec: { spec: 'view/0', title: 'Load times', query: { metrics: ['requests'], by: ['load_stem'], range: '28d' },
+            layers: [{ mark: 'text', encode: { y: 'load_stem', text: 'load_stem' } }, { mark: 'text', encode: { y: 'load_stem', text: 'load_stem@leaves' } }] } },
 };

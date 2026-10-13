@@ -92,9 +92,11 @@ interface Draw {
   step?: boolean;
 }
 type MarkFn = (l: Layer, d: Draw) => SceneNode[];
-/** A field's metric: the one a companion came with, or itself. */
-const metricOf = (catalog: Catalog, f: unknown) => (typeof f === 'string' ? catalog.metrics[f.split('@')[0]!] : undefined);
-/** The paint of a bar that runs from one value to another: good or bad by which way it goes, turned by its metric's
+/** A field's definition: its own, where the catalog has one under its whole name, and for a companion with none the
+ * one of the metric it came with. So a companion is in its metric's unit unless the catalog says otherwise
+ * (`"pageviews@rank": { "unit": "rank" }`), and core reads no suffix to know it. */
+export const metricOf = (catalog: Catalog, f: unknown): MetricDef | undefined => (typeof f !== 'string' ? undefined : Object.hasOwn(catalog.metrics, f) ? catalog.metrics[f] : catalog.metrics[f.split('@')[0]!]);
+/** The paint of a mark that runs from one value to another: good or bad by which way it goes, turned by its metric's
  * polarity. One whose metric has no better way keeps its own paint. Positions are compared as they are drawn. */
 const toned = (polarity: Polarity | undefined, from: number, to: number, paint: string) => (!polarity || polarity === 'none' ? paint : (to < from) === (polarity === 'down') ? 'delta.good' : 'delta.bad');
 
@@ -214,11 +216,12 @@ export function xDimOf(catalog: Catalog, layers: Layer[]): string | undefined {
   return layers.map((l) => l.encode && l.encode.x).find((f) => isDim(catalog, f)) as string | undefined;
 }
 /** The units a plot's layers measure in, in layer order: a y scale each. Metrics of one catalog `unit` share a scale, and
- * shares of a whole are a unit of their own. A layer with a constant on y has none, and is drawn on the first. */
+ * shares of a whole are a unit of their own. A companion is in its metric's unit, or in its own where the catalog has
+ * an entry for it (metricOf). A layer with a constant on y has none, and is drawn on the first. */
 function unitOf(catalog: Catalog, l: Layer, xField?: string): string | null {
-  const y = l.encode && l.encode.y;
-  if (typeof y !== 'string' || !(y in catalog.metrics)) return null;
-  return l.stack === 'normalize' && splitOf(catalog, l, xField) ? 'share' : catalog.metrics[y]!.unit;
+  const M = metricOf(catalog, l.encode && l.encode.y);
+  if (!M) return null;
+  return l.stack === 'normalize' && splitOf(catalog, l, xField) ? 'share' : M.unit;
 }
 export function unitsOf(catalog: Catalog, layers: Layer[]): string[] {
   const x = xDimOf(catalog, layers), units = [...new Set(layers.map((l) => unitOf(catalog, l, x)).filter((u): u is string => u != null))];
@@ -309,6 +312,13 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
       const y = l.encode && l.encode.y;
       if (typeof y === 'number') { if (!ui) vals.push(y); } else if (Math.max(0, units.indexOf(unitOf(catalog, l, xField)!)) === ui) spans[i]!.forEach((ends) => vals.push(...ends));
     });
+    // Ranks run from 1 at the top down to the last of them, with a tick for each, and for every few of them past ten.
+    // The first and the last stay on a short plot. What is no rank (the zero a bar or an area starts from) is at the foot.
+    if (u === 'rank') {
+      const last = Math.max(1, Math.ceil(max(vals) ?? 1)), every = Math.ceil(last / 10);
+      const ticks = Array.from({ length: last }, (_, i) => i + 1).filter((n) => n === 1 || n === last || (n % every === 0 && last - n >= every / 2));
+      return { v: (n: number) => (n < 1 ? 0 : last === 1 ? 1 : (last - n) / (last - 1)), ticks, coarse: [1, last], text: (t: number) => formatUnit(t, u, 'compact') };
+    }
     const share = u === 'share', lo = Math.min(0, min(vals) ?? 0), hi = share ? 1 : Math.max(0, max(vals) ?? 0) || (lo ? 0 : 1);
     const y = scaleLinear().domain([lo, hi]);
     if (guides.y) y.nice(4);

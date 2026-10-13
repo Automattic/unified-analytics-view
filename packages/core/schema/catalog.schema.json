@@ -15,7 +15,7 @@
         "additionalProperties": false,
         "properties": {
           "label": { "type": "string" },
-          "unit": { "anyOf": [{ "enum": ["count", "ratio", "percent", "ms", "s", "bytes"] }, { "type": "string", "pattern": "^[a-z]{3}$" }], "description": "What the metric is measured in, which is how its values are written. \"ratio\" is a rate from 0 to 1 and \"percent\" one from 0 to 100; \"ms\" and \"s\" are lengths of time. Money's unit is its currency's ISO 4217 code in lower case, \"usd\", and its values are in that currency's own units: dollars, not cents." },
+          "unit": { "anyOf": [{ "enum": ["count", "ratio", "percent", "ms", "s", "bytes", "rank"] }, { "type": "string", "pattern": "^[a-z]{3}$" }], "description": "What the metric is measured in, which is how its values are written. \"ratio\" is a rate from 0 to 1 and \"percent\" one from 0 to 100; \"ms\" and \"s\" are lengths of time. Money's unit is its currency's ISO 4217 code in lower case, \"usd\", and its values are in that currency's own units: dollars, not cents." },
           "definition": { "type": "string", "description": "What the number counts, caveats included, in a sentence or two. Carried with the tldr value, and shown when the number is pointed at." },
           "polarity": { "enum": ["up", "down", "none"], "description": "Whether an increase is good. Drives delta colour." },
           "rangeTotal": { "enum": ["sum", "sum of daily"], "description": "How the engine forms a total over a range." },

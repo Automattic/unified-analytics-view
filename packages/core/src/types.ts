@@ -3,11 +3,12 @@ import type { FitRule } from './fit.ts';
 /* Catalog: the slice of the semantic model the front end needs. */
 export type Polarity = 'up' | 'down' | 'none';
 /** A currency is its ISO 4217 code in lower case, `usd` or `eur`: each is a unit of its own, so two currencies never share an axis. */
-export type Unit = 'count' | 'ratio' | 'percent' | 'ms' | 's' | 'bytes' | (string & {});
+export type Unit = 'count' | 'ratio' | 'percent' | 'ms' | 's' | 'bytes' | 'rank' | (string & {});
 export interface MetricDef {
   label: string;
   /** What the metric is measured in, which is how its values are written (format.ts). `ratio` is a rate from 0 to 1 and
-   * `percent` one from 0 to 100; money is in its currency's own units, dollars and not cents; `ms` and `s` are lengths of time. */
+   * `percent` one from 0 to 100; money is in its currency's own units, dollars and not cents; `ms` and `s` are lengths of time.
+   * `rank` is a place in an order, 1 the first: its scale runs from 1 at the top, and it is written "1st". */
   unit: Unit;
   polarity: Polarity;
   /** What the number counts, caveats included, in a sentence or two. Carried on the tldr value as its `note`, so the
@@ -33,6 +34,9 @@ export interface DimensionDef {
   values?: 'country';
 }
 export interface Catalog {
+  /** By name. A companion the engine returns with a metric (`pageviews@rank`) may have an entry of its own, under its
+   * whole name, where it is not in its metric's unit: its unit, label and polarity are then read from there. One with
+   * no entry is in its metric's. */
   metrics: Record<string, MetricDef>;
   dimensions: Record<string, DimensionDef>;
 }

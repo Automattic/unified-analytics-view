@@ -195,7 +195,7 @@ describe('what a painter says with: values and dimensions in catalog format', ()
     expect(UNITS.map((u) => formatValue(null, { label: '', unit: u, polarity: 'none' }))).toEqual(UNITS.map(() => '–'));
   });
   it('a unit with no format is an error that names the units there are', () => {
-    expect(() => formatValue(1, { label: '', unit: 'sec' as Unit, polarity: 'none' })).toThrow(/The unit "sec" has no format\. Give the metric one of count, ratio, percent, ms, s, bytes in the catalog, or a currency's ISO 4217 code in lower case/);
+    expect(() => formatValue(1, { label: '', unit: 'sec' as Unit, polarity: 'none' })).toThrow(/The unit "sec" has no format\. Give the metric one of count, ratio, percent, ms, s, bytes, rank in the catalog, or a currency's ISO 4217 code in lower case/);
   });
 });
 

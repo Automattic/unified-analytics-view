@@ -1,4 +1,4 @@
-import { formatBin, formatDimension, formatValue, layerKeys, partialNote, plural, rowKeys, unitsOf, type Catalog, type Layer, type Query, type RectNode, type Result, type Row, type Scene } from '@unified-analytics/core';
+import { formatBin, formatDimension, formatValue, layerKeys, metricOf, partialNote, plural, rowKeys, unitsOf, type Catalog, type Layer, type Query, type RectNode, type Result, type Row, type Scene } from '@unified-analytics/core';
 import { attr, ensure, paintVar, prop } from './dom.ts';
 import { apart } from './measure.ts';
 import { FOCUS, HOVER, token } from './tokens.ts';
@@ -30,6 +30,12 @@ export function companions(m: string, row: Row | undefined, layers: Layer[]): st
   return Object.keys(row ?? {}).filter((f) => f.startsWith(m + '@') && f !== m + '@previous' && layers.some((l) => Object.values(l.encode || {}).includes(f)));
 }
 
+/** What a companion is called beside its metric's value: its own label where the catalog has an entry for it ("rank"),
+ * and its suffix where it has none ("p25"). Its value is written in its own unit either way (core's metricOf). */
+export function companionLabel(f: string, catalog: Catalog): string {
+  return Object.hasOwn(catalog.metrics, f) ? catalog.metrics[f]!.label.toLowerCase() : f.slice(f.indexOf('@') + 1);
+}
+
 /** What the readout says for one row of the result, in the catalog's formats: the dimension value, each metric
  * (marked when its bucket is unfinished), its comparison if the row has one, and each companion of it that a layer
  * encodes, under its suffix: what a range or a tick is drawn from is said as well as shown. */
@@ -38,7 +44,7 @@ export function readout(row: Row, q: Query, catalog: Catalog, layers: Layer[]): 
   const dims = (q.by || []).map((d) => (row[d + '@end'] == null ? formatDimension(row[d], catalog.dimensions[d]!) : formatBin(row[d], row[d + '@end']))).join(', '), partial = partialNote(row);
   const values = q.metrics.map((m) => {
     const def = catalog.metrics[m]!, prev = q.compare === 'previous' ? row[m + '@previous'] : null;
-    const more = companions(m, row, layers).filter((f) => row[f] != null).map((f) => ', ' + f.slice(m.length + 1) + ' ' + formatValue(row[f] as number, def)).join('');
+    const more = companions(m, row, layers).filter((f) => row[f] != null).map((f) => ', ' + companionLabel(f, catalog) + ' ' + formatValue(row[f] as number, metricOf(catalog, f)!)).join('');
     return def.label + ' ' + formatValue(row[m] as number | null, def) + (partial && ' ' + partial) + (prev == null ? '' : ', previous period ' + formatValue(prev as number, def)) + more;
   }).join('; ');
   return dims ? dims + ': ' + values : values;
@@ -50,7 +56,7 @@ export function readout(row: Row, q: Query, catalog: Catalog, layers: Layer[]): 
 export function written(shown: string, row: Row, q: Query, catalog: Catalog, layers: Layer[]): boolean {
   return q.metrics.every((m) => {
     const def = catalog.metrics[m]!, also = q.compare === 'previous' && row[m + '@previous'] != null ? [m + '@previous'] : [];
-    return [m, ...also, ...companions(m, row, layers).filter((f) => row[f] != null)].every((f) => shown.includes(formatValue(row[f] as number | null, def)));
+    return [m, ...also, ...companions(m, row, layers).filter((f) => row[f] != null)].every((f) => shown.includes(formatValue(row[f] as number | null, metricOf(catalog, f) ?? def)));
   });
 }
 
@@ -95,7 +101,7 @@ export function crossMarks(scene: Scene, layers: Layer[], rows: Row[][], catalog
   if (scene.layout !== 'cartesian') return out;
   const ids = layerKeys(layers), units = unitsOf(catalog, layers), seen = new Set<string>();
   layers.forEach((l, li) => {
-    const y = l.encode?.y, def = typeof y === 'string' ? catalog.metrics[y.split('@')[0]!] : undefined;
+    const y = l.encode?.y, def = metricOf(catalog, y);
     if (l.mark !== 'line' || typeof y !== 'string' || !def) return;
     const prev = l.series === 'previous', field = prev ? y + '@previous' : y, side = units.indexOf(unitsOf(catalog, [l])[0]!) > 0 ? 1 : 0;
     for (const n of scene.nodes) {

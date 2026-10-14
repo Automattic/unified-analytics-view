@@ -282,7 +282,7 @@ Found while building `docs/chart-coverage-plan.md` on October 8, by the agents t
 
 **Hit targets, readout and keyboard**
 
-14. **A stacked area has no hit target on the unfinished day.** Core draws the stack only to the last whole day.
+14. **A stacked area has no hit target on the unfinished day.** Core draws the stack only to the last whole day. Fixed in `0f4a8a7`: the unfinished day is drawn as a bar of one is, a piece of its own faded to 40% on the same edges (`:partial`, and `:partial:lead` for a leading one), so it has a mark, a hit target and a readout. A series label stands where the band ends, as a split line's does at the end of its tail.
 15. **A companion the view did not ask for is in the readout and the table.** The dumbbell says "rank 2", because both list every companion the result carries. Fixed in `6aff38c`.
 16. **A bin's readout and table say its start, not its range** ("0: Page views 317"). Fixed in `4bae55f`.
 17. **`aria-orientation` on the listbox of points in two dimensions is `horizontal`.**

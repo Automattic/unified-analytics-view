@@ -18,9 +18,9 @@ describe('token output', () => {
     expect(light).toContain('--ua-color-muted: var(--ua-color-neutral-300);');
     expect(dark).toContain('--ua-color-muted: var(--ua-color-neutral-500);');
     // A surface is one name in the common tier; the surface set holds its value per theme.
-    expect(light).toContain('--ua-color-surface-card: var(--ua-color-neutral-100);');
-    expect(dark).toContain('--ua-color-surface-card: var(--ua-color-neutral-300);');
-    expect(dark).toContain('--ua-color-card: var(--ua-color-surface-card);');
+    expect(light).toContain('--ua-surface-card: var(--ua-color-neutral-100);');
+    expect(dark).toContain('--ua-surface-card: var(--ua-color-neutral-300);');
+    expect(dark).toContain('--ua-color-card: var(--ua-surface-card);');
     // The sequential ramp is named by step number; no data is a neutral of its own, not the lowest step.
     // A chart's colours name one step in both themes: the primitives are what differ.
     for (const theme of [light, dark]) {
@@ -51,7 +51,7 @@ describe('token output', () => {
 
   // A mark is its hue's constant wherever that holds the contrast, and the ramp's step where it does not.
   it('paints a mark with its constant where that clears 3 to 1 on every surface, and its text where that clears 4.5', () => {
-    const [light, dark] = ['light', 'dark'].map((theme) => JSON.parse(generated(`color.${theme}.tokens.json`)).color.mark);
+    const [light, dark] = ['light', 'dark'].map((theme) => JSON.parse(generated(`color.${theme}.tokens.json`)).mark);
     const of = (mark: Record<string, { $value: string }>, name: string) => mark[name]!.$value;
     // Chartreuse is too light for a light page and steel too dark for a dark one. Rose holds a mark's contrast in both, and text's in neither.
     expect([of(light, 'chartreuse'), of(dark, 'chartreuse'), of(dark, 'chartreuse-text')]).toEqual(['{color.qual-chartreuse.200}', '{color.constant.chartreuse}', '{color.constant.chartreuse}']);

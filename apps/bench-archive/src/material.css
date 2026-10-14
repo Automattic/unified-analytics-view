@@ -97,8 +97,8 @@
  * darker than the page, and grain over it. What is on it stands just off the backing, as an LCD's segments do, so
  * each child casts a small shadow away from the light. No extra elements; the grain is a pseudo-element under the content.
  * --ua-screen-grain is how much grain shows, and --ua-screen-shadow how dark the contents' shadow is. */
-.ua-screen { position: relative; isolation: isolate; border-radius: var(--ua-radius-lg); background: var(--ua-color-surface-screen); box-shadow: var(--ua-elevation-inset);
-  --ua-charts-color-background: var(--ua-color-surface-screen); }
+.ua-screen { position: relative; isolation: isolate; border-radius: var(--ua-radius-lg); background: var(--ua-surface-screen); box-shadow: var(--ua-elevation-inset);
+  --ua-charts-color-background: var(--ua-surface-screen); }
 .ua-screen::after { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
   background: var(--ua-grain-image); mix-blend-mode: overlay; opacity: var(--ua-screen-grain, .35); }
 .ua-screen > * { filter: drop-shadow(calc(var(--ua-light-x) * -1.5px) calc(var(--ua-light-y) * -1.5px) .5px color-mix(in srgb, var(--ua-color-black) var(--ua-screen-shadow, 22%), transparent)); }

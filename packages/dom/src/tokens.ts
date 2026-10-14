@@ -43,6 +43,9 @@ export const TOKENS: Record<string, string> = {
   // The readout stands above the view. Unthemed, a plain shadow straight down.
   'elevation-tooltip': '0 1px 3px color-mix(in srgb, CanvasText 25%, transparent)',
 
+  // How much of a series not chosen shows while one is (keys.ts).
+  'opacity-dim': '50%',
+
   'stroke-width-line': '1px',
   'stroke-width-rule': '1px',
   'stroke-width-focus': '2px',

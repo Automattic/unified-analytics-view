@@ -3,7 +3,7 @@
 .editor, .output { display: grid; gap: var(--ua-space-xs); min-inline-size: 0; }
 .editor label { color: var(--ua-color-muted-foreground); }
 #spec { box-sizing: border-box; inline-size: 100%; min-block-size: 24em; resize: vertical; padding: var(--ua-space-xs); font: 12px/1.5 ui-monospace, monospace; tab-size: 2;
-  color: inherit; background: var(--ua-color-surface-card); border: 1px solid var(--ua-color-border); border-radius: var(--ua-radius-sm); }
+  color: inherit; background: var(--ua-surface-card); border: 1px solid var(--ua-color-border); border-radius: var(--ua-radius-sm); }
 #spec[aria-invalid="true"] { border-color: var(--ua-color-destructive-text); }
 .output .frame { inline-size: 100%; outline: 1px dashed var(--ua-color-border); }
 .output .meta { inline-size: auto; min-inline-size: 0; margin: 0; }

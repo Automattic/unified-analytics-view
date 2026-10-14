@@ -344,12 +344,19 @@ describe('stacking, and bars side by side', () => {
     expect(overlay.every((n) => n.points.every((p) => p.v0 == null) && n.opacity === 0.14)).toBe(true);
   });
   it('stacked areas share their edges, are the mark itself and not a tint, and are labelled half way up', () => {
-    const { ratio } = plot(specs.area!), areas = ratio.nodes.filter((n) => n.kind === 'path');
+    const { ratio } = plot(specs.area!), paths = ratio.nodes.filter((n) => n.kind === 'path'), areas = paths.filter((n) => !n.note);
     expect(areas.map((n) => n.key)).toEqual(['primary:area:Search', 'primary:area:Direct', 'primary:area:Social', 'primary:area:AI assistants', 'primary:area:Email', 'primary:area:Other']);
     expect(areas[1]!.points.map((p) => p.v0)).toEqual(areas[0]!.points.map((p) => p.v));
     expect(areas.map((n) => n.opacity)).toEqual(Array(6).fill(undefined));
-    const end = areas[1]!.points[areas[1]!.points.length - 1]!;
+    // The unfinished day is drawn too, as a bar of one is: faded, out from the last whole day, on the same edges.
+    const tails = paths.filter((n) => n.note === 'incomplete bucket');
+    // A label stands where its band ends, at the plot's edge, as a split line's does at the end of its tail.
+    const end = tails[1]!.points[tails[1]!.points.length - 1]!;
     expect((ratio.nodes.find((n) => n.key === 'label:Direct') as { t: number }).t).toBe((end.v0! + end.v) / 2);
+    expect(tails.map((n) => n.key)).toEqual(areas.map((n) => n.key + ':partial'));
+    expect(tails.every((n) => n.opacity === 0.4 && n.fill)).toBe(true);
+    tails.forEach((t, i) => expect(t.points[0]).toEqual(areas[i]!.points[areas[i]!.points.length - 1]));
+    expect(tails[1]!.points.map((p) => p.v0)).toEqual(tails[0]!.points.map((p) => p.v));
   });
   it('place() reads v0: a stacked bar starts where the one under it ends, in pixels too', () => {
     const { scene } = plot(stacked, 346), at = (k: string) => scene.nodes.find((n) => n.key === k) as { x: number; y: number; w: number; h: number };

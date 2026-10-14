@@ -50,7 +50,8 @@ export async function primitives(root = ROOT): Promise<Record<string, Tree>> {
     // Chosen by hand, and given to each theme in its own direction: step 100 is the end nearest the page.
     const steps = theme === 'dark' ? seq.steps : seq.steps.slice().reverse();
     ramps.seq = { $description: seq.description, ...Object.fromEntries(steps.map((hex, i) => [String((i + 1) * 100), { $value: hexToDTCGColor(hex) }])) };
-    ramps.surface = { $description: s.description, ...Object.fromEntries(Object.entries(s.set).map(([name, value]) => [name, { $value: value[theme] }])) };
+    // The surface set and the marks stand beside the ramps, not among them: `surface.page`, `mark.teal`.
+    leonardo[theme].surface = { $type: 'color', $description: s.description, ...Object.fromEntries(Object.entries(s.set).map(([name, value]) => [name, { $value: value[theme] }])) };
   }
   // What a chart paints a hue with, per theme: the hue's constant, its brightest, wherever that holds the contrast the
   // element needs against every surface of the theme, and the ramp's step for that contrast where it does not. A tint
@@ -58,15 +59,16 @@ export async function primitives(root = ROOT): Promise<Record<string, Tree>> {
   const base = JSON.parse(readFileSync(join(root, 'config/base.tokens.json'), 'utf-8')).color as Tree;
   for (const theme of ['light', 'dark'] as const) {
     const ramps = leonardo[theme].color as Record<string, Tree>;
-    const hex = (ref: string): string => { const v = (ref.slice(1, -1).split('.').slice(1).reduce((node, key) => (node as Tree)[key], { ...base, ...ramps } as unknown) as { $value: string | { hex: string } }).$value; return typeof v === 'string' ? hex(v) : v.hex; };
-    const surfaces = Object.keys(s.set).map((name) => hex(`{color.surface.${name}}`));
+    const tree = { color: { ...base, ...ramps }, surface: leonardo[theme].surface };
+    const hex = (ref: string): string => { const v = (ref.slice(1, -1).split('.').reduce((node, key) => (node as Tree)[key], tree as unknown) as { $value: string | { hex: string } }).$value; return typeof v === 'string' ? hex(v) : v.hex; };
+    const surfaces = Object.keys(s.set).map((name) => hex(`{surface.${name}}`));
     const clears = (ref: string, needs: number) => surfaces.every((surface) => contrastRatio(hex(ref), surface) >= needs);
-    const mark: Tree = { $description: MARK_DESCRIPTION };
+    const mark: Tree = { $type: 'color', $description: MARK_DESCRIPTION };
     for (const hue of Object.keys(ramps).filter((name) => name.startsWith('qual-')).map((name) => name.slice(5))) {
       const constant = `{color.constant.${hue}}`;
       for (const [part, needs, step] of MARK_PARTS) mark[hue + part] = { $value: needs != null && clears(constant, needs) ? constant : `{color.qual-${hue}.${step}}` };
     }
-    ramps.mark = mark;
+    leonardo[theme].mark = mark;
   }
   return { 'color.light': leonardo.light, 'color.dark': leonardo.dark, 'scale.fluid': utopia.fluid, 'scale.min': utopia.min, 'scale.max': utopia.max };
 }

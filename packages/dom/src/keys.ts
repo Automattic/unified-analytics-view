@@ -200,7 +200,7 @@ svg[data-hits] path[data-active="keys"] { ${FOCUS.stroke} }
 .uav-row[data-active="pointer"] { ${HOVER.row} }
 :is(.uav-bars, .uav-dots, .uav-points, .uav-band, .uav-cells) [data-active="pointer"] { ${HOVER.around} }
 svg[data-hits] path[data-active="pointer"] { ${HOVER.stroke} }
-.uav-readout { position: absolute; z-index: 1; left: 0; top: 0; box-sizing: border-box; inline-size: max-content; max-inline-size: 100%; padding: 2px 6px; border-radius: ${token('border-radius-tooltip')};
+.uav-readout { position: absolute; z-index: 1; left: 0; top: 0; box-sizing: border-box; inline-size: max-content; max-inline-size: min(320px, 100%); padding: 2px 6px; border-radius: ${token('border-radius-tooltip')};
   pointer-events: none; font-family: ${token('font-family-tick')}; font-size: var(--uav-font-tick); font-optical-sizing: none; font-variant-numeric: tabular-nums;
   color: ${token('color-label-inverse')}; background: ${token('color-tooltip-surface')}; box-shadow: ${token('elevation-tooltip')}; }
 /* In the top layer it is placed on the screen, over whatever holds the view, and is as wide as its words up to a width of its own. */
@@ -243,11 +243,11 @@ svg[data-hits] path[data-active="pointer"] { ${HOVER.stroke} }
 .uav-plot:has(:is(.uav-bars, .uav-dots) > [data-active]) .uav-hits [data-active]::before { display: none; }
 .uav-legend span[data-active] { text-decoration: underline; }
 /* A series chosen at a point: the rest of the plot stands back, and its name is marked wherever it is written. */
-.uav-plot:has([data-chosen]) :is(.uav-bars i, path):not([data-chosen]) { opacity: 0.3 !important; }
+.uav-plot:has([data-chosen]) :is(.uav-bars i, path):not([data-chosen]) { opacity: ${token('opacity-dim')} !important; }
 /* In a plot split by detail every line is drawn light, so that many together read darker. The one chosen is drawn whole. */
 .uav-body[data-mass] .uav-plot path[data-chosen] { opacity: 1 !important; }
 /* A series chosen in a row of a list: the rest of that row's stand back, and a dot of many is drawn whole. */
-.uav-row:has(> [data-chosen]) > i[data-series]:not([data-chosen]) { opacity: 0.3 !important; }
+.uav-row:has(> [data-chosen]) > i[data-series]:not([data-chosen]) { opacity: ${token('opacity-dim')} !important; }
 .uav-row > i[data-chosen] { opacity: 1 !important; }
 :is(.uav-legend, .uav-legend-top) span[data-chosen] { text-decoration: underline; }
 :is(.uav-legend, .uav-labels) span[data-chosen] { text-decoration: underline; }`;
@@ -269,7 +269,7 @@ export function hideReadout(tip: HTMLElement): void {
 const watching = new WeakMap<HTMLElement, AbortController>();
 /** Show the readout, with the words it already has, at a point: over the point's middle, `--uav-c` along it where
  * the point says, and above it, or below where there is no room above.
- * ponytail: placed once, when chosen. It does not follow a resize, and a scroll takes it away. */
+ * ponytail: placed once, when chosen. A scroll or a resize of the window takes it away; a view resized alone leaves it. */
 export function placeReadout(tip: HTMLElement, fig: HTMLElement, point: HTMLElement): void {
   tip.hidden = false;
   const floats = tip.hasAttribute('popover') && tip.isConnected;
@@ -284,6 +284,8 @@ export function placeReadout(tip: HTMLElement, fig: HTMLElement, point: HTMLElem
       node.addEventListener('scroll', () => hideReadout(tip), heard);
     }
     addEventListener('scroll', () => hideReadout(tip), heard);
+    // A resize moves the point out from under it as surely.
+    addEventListener('resize', () => hideReadout(tip), heard);
   }
   const f = fig.getBoundingClientRect(), r = point.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
   const c = parseFloat(point.style.getPropertyValue('--uav-c')), mid = r.left + r.width * (Number.isFinite(c) ? c : 0.5);

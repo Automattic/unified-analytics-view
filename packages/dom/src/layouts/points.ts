@@ -37,6 +37,7 @@ export const POINTS_CSS = `
 .uav-line[data-upright] { inset-block: 0; inset-inline: calc(var(--uav-x) * 100%) auto; inline-size: var(--uav-stroke, ${token('stroke-width-rule')}); block-size: auto; translate: -50%; }
 .uav-line[data-upright][data-dash] { background: repeating-linear-gradient(0deg, var(--uav-paint) 0 var(--uav-dash), transparent 0 calc(var(--uav-dash) + var(--uav-gap))); }
 .uav-refs span[data-upright] { inset-inline: calc(var(--uav-x) * 100%) auto; translate: 4px 0; padding: 0; }
+.uav-refs span[data-upright][data-anchor="end"] { translate: calc(-100% - 4px) 0; }
 /* The key to sizes takes a row of its own under whatever else the body holds, and the view is that much taller for it. */
 .uav[data-layout="cartesian"][data-parts~="size"] { --uav-body-block: calc(var(--uav-axes-height, 184px) + 28px); }
 .uav[data-layout="cartesian"] .uav-size { grid-column: 1 / -1; }`;
@@ -118,9 +119,9 @@ export function paintPoints(plot: HTMLElement, scene: Scene): void {
   });
 
   // The layout painted every rule as a line across the plot. One at a value on x is stood up, and its label with it.
-  const upright = new Map(nodes.filter((n: SceneNode) => n.part === 'plot' && (n.kind === 'line' || n.kind === 'text') && n.x != null).map((n) => [n.key, (n as TextNode).x]));
+  const upright = new Map(nodes.filter((n: SceneNode) => n.part === 'plot' && (n.kind === 'line' || n.kind === 'text') && n.x != null).map((n) => [n.key, n as TextNode]));
   for (const el of plot.querySelectorAll<HTMLElement>('.uav-refs > [data-key]')) {
-    const x = upright.get(el.dataset.key!);
-    el.toggleAttribute('data-upright', x != null); prop(el, '--uav-x', x);
+    const n = upright.get(el.dataset.key!);
+    el.toggleAttribute('data-upright', n != null); prop(el, '--uav-x', n?.x); attr(el, 'data-anchor', n?.kind === 'text' ? n.anchor : null);
   }
 }

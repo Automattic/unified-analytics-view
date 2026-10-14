@@ -3,22 +3,22 @@
     "$type": "color",
     "$description": "Spacefast's colour variables, by their names, as aliases into our ramps. Values here are the light theme; common.dark.tokens.json holds only the tokens that sit on a different step in dark. Translucent tokens are a color-mix() of another token, a deliberate deviation from the DTCG colour type so the alpha survives aliasing. The seq-* names are ours, not Spacefast's: the sequential ramp by step number, lowest value first, and seq-none for a cell with no data, which is not a step. So are the band-* names: three neutral steps for the parts a metric's range is divided into behind a mark, the strongest first. The neutral ramp flips with the theme, so they need no dark values.",
     "background": {
-      "$value": "{color.surface.page}"
+      "$value": "{surface.page}"
     },
     "foreground": {
       "$value": "{color.neutral.1000}"
     },
     "card": {
-      "$value": "{color.surface.card}"
+      "$value": "{surface.card}"
     },
     "card-foreground": {
       "$value": "{color.neutral.1000}"
     },
     "card-raised": {
-      "$value": "{color.surface.raised}"
+      "$value": "{surface.raised}"
     },
     "popover": {
-      "$value": "{color.surface.raised}"
+      "$value": "{surface.raised}"
     },
     "popover-foreground": {
       "$value": "{color.neutral.1000}"
@@ -180,7 +180,7 @@
       "$value": "{color.neutral.200}"
     },
     "sidebar": {
-      "$value": "{color.surface.page}"
+      "$value": "{surface.page}"
     },
     "sidebar-foreground": {
       "$value": "{color.neutral.1000}"
@@ -213,58 +213,59 @@
       "$value": "{color.white}"
     },
     "foreground-70": {
-      "$value": "color-mix(in srgb, {color.foreground} 70%, transparent)"
+      "$value": "{color.muted-foreground}"
     },
     "foreground-60": {
-      "$value": "color-mix(in srgb, {color.foreground} 60%, transparent)"
+      "$value": "{color.muted-foreground}"
     },
     "foreground-50": {
-      "$value": "color-mix(in srgb, {color.foreground} 50%, transparent)"
+      "$value": "{color.neutral.700}"
     },
     "foreground-8": {
-      "$value": "color-mix(in srgb, {color.foreground} 8%, transparent)"
+      "$value": "{color.neutral.400}"
     },
     "sidebar-foreground-70": {
-      "$value": "color-mix(in srgb, {color.sidebar-foreground} 70%, transparent)"
+      "$value": "{color.sidebar-foreground-muted}"
     },
     "separator-soft": {
-      "$value": "color-mix(in srgb, {color.foreground} 5%, transparent)"
+      "$value": "{color.neutral.300}"
     },
     "tint": {
-      "$value": "color-mix(in srgb, {color.muted-foreground} 6%, transparent)"
+      "$value": "{color.neutral.300}"
     },
     "tint-hover": {
-      "$value": "color-mix(in srgb, {color.muted-foreground} 10%, transparent)"
+      "$value": "{color.neutral.400}"
     },
     "well": {
-      "$value": "color-mix(in srgb, {color.muted-foreground} 3%, transparent)"
+      "$value": "{surface.screen}"
     },
     "muted-50": {
-      "$value": "color-mix(in srgb, {color.muted} 50%, transparent)"
+      "$value": "{color.neutral.200}"
     },
     "row-hover": {
-      "$value": "color-mix(in srgb, {color.muted} 40%, transparent)"
+      "$value": "color-mix(in srgb, {color.muted} {opacity.muted}, transparent)",
+      "$description": "Translucent on purpose: it lies behind a row of marks on whatever surface the view stands on, page, card or screen, so no one solid step is right."
     },
     "input-soft": {
-      "$value": "color-mix(in srgb, {color.input} 50%, transparent)"
+      "$value": "{color.neutral.500}"
     },
     "card-raised-90": {
-      "$value": "color-mix(in srgb, {color.card-raised} 90%, transparent)"
+      "$value": "color-mix(in srgb, {color.card-raised} {opacity.scrim}, transparent)"
     },
     "marker-soft": {
-      "$value": "color-mix(in srgb, {color.marker} 25%, transparent)"
+      "$value": "{color.lime.100}"
     },
     "destructive-tint": {
-      "$value": "color-mix(in srgb, {color.destructive} 10%, transparent)"
+      "$value": "{color.red.400}"
     },
     "ring": {
-      "$value": "color-mix(in srgb, {color.primary} 50%, transparent)"
+      "$value": "{color.muted-foreground}"
     },
     "overlay": {
-      "$value": "color-mix(in srgb, {color.neutral.1000} 50%, transparent)"
+      "$value": "color-mix(in srgb, {color.neutral.1000} {opacity.muted}, transparent)"
     },
     "kbd-on-inverse": {
-      "$value": "color-mix(in srgb, {color.background} 20%, transparent)"
+      "$value": "{color.neutral.900}"
     }
   },
   "spacing": {
@@ -320,7 +321,7 @@
     "$type": "shadow",
     "$description": "How far a container stands from the surface it is on, as a box-shadow. 0 is flat, and the default. inset is level -1: sunk into the surface, as a screen sits behind its bezel. 1, 2 and 3 stand above it, each further. Shadows fall away from the one light a page has (--ua-light-x and -y, a unit vector toward it), and straight down where a page sets none. A raised level also has a lit edge facing the light, which is what lifts it in dark, where a shadow has nothing to darken.",
     "inset": {
-      "$value": "inset calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 2px color-mix(in srgb, {color.black} 20%, transparent), inset calc(var(--ua-light-x, 0) * -3px) calc(var(--ua-light-y, -1) * -3px) 8px color-mix(in srgb, {color.black} 10%, transparent), calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 0 {color.surface.raised}"
+      "$value": "inset calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 2px color-mix(in srgb, {color.black} 20%, transparent), inset calc(var(--ua-light-x, 0) * -3px) calc(var(--ua-light-y, -1) * -3px) 8px color-mix(in srgb, {color.black} 10%, transparent), calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 0 {surface.raised}"
     },
     "0": {
       "$value": "none"
@@ -333,6 +334,18 @@
     },
     "3": {
       "$value": "calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 1px color-mix(in srgb, {color.black} 8%, transparent), calc(var(--ua-light-x, 0) * -4px) calc(var(--ua-light-y, -1) * -4px) 8px color-mix(in srgb, {color.black} 8%, transparent), calc(var(--ua-light-x, 0) * -18px) calc(var(--ua-light-y, -1) * -18px) 36px color-mix(in srgb, {color.black} 14%, transparent), inset calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 0 color-mix(in srgb, {color.white} calc(16% * var(--ua-light-hi, 1)), transparent)"
+    }
+  },
+  "opacity": {
+    "$type": "number",
+    "$description": "How much of a colour shows, in percent, for where a solid step cannot do the job: a colour assigned at runtime, as a chart mark's is, a layer over content it must not hide, or a change that transitions. Hierarchy is not one of them: a quieter text, line or fill is a solid step of the ramps. A component names its own token and aliases one of these.",
+    "muted": {
+      "$value": 50,
+      "$description": "A mark or a wash standing back: a series not chosen, the hover behind a row, the scrim in light."
+    },
+    "scrim": {
+      "$value": 90,
+      "$description": "Covers what is under it and lets a little through: raised glass, the scrim in dark."
     }
   }
 }

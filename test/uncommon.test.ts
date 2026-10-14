@@ -189,7 +189,7 @@ describe('lines and areas: Pareto, sparkline, fan, streamgraph, slopegraph, cumu
     expect(run(S('fans'), 234).plan.dropped).toEqual(['axes and grid (added the number to make up for them)', 'context fill']);
   });
   it('a streamgraph is areas stacked about the middle, read by how thick each is: it has no value axis and no grid', () => {
-    const { ratio } = run(S('streamgraph'), 346), areas = paths(ratio.nodes), first = areas[0]!, last = areas[areas.length - 1]!;
+    const { ratio } = run(S('streamgraph'), 346), areas = paths(ratio.nodes).filter((n) => !n.note), first = areas[0]!, last = areas[areas.length - 1]!;
     expect(areas.map((n) => n.series)).toEqual(['Search', 'Direct', 'Social', 'AI assistants', 'Email', 'Other']);
     first.points.forEach((p, i) => expect(((p.v0 ?? 0) + last.points[i]!.v) / 2).toBeCloseTo(0.5, 12));
     areas.slice(1).forEach((a, j) => expect(a.points.map((p) => p.v0)).toEqual(areas[j]!.points.map((p) => p.v)));
@@ -216,10 +216,10 @@ describe('lines and areas: Pareto, sparkline, fan, streamgraph, slopegraph, cumu
     expect(paths(run(days, 346).ratio.nodes).slice(0, 2).map((n) => [n.key, n.points.length, n.dash])).toEqual([['primary:line:Search', 1, null], ['primary:line:Search:partial', 2, '2 4']]);
   });
   it('a cumulative flow is areas stacked on a running total, so every edge only rises', () => {
-    const { ratio, result } = run(S('cumulative'), 346), areas = paths(ratio.nodes);
+    const { ratio, result } = run(S('cumulative'), 346), areas = paths(ratio.nodes).filter((n) => !n.note);
     expect(areas.length).toBe(6);
     for (const a of areas) a.points.slice(1).forEach((p, i) => expect(p.v, a.key + ' ' + p.row).toBeGreaterThanOrEqual(a.points[i]!.v));
-    // The top edge is everything so far. A stacked area stops at the last whole day.
+    // The top edge is everything so far. A stacked area's whole stops at the last whole day; the unfinished one is a piece of its own.
     const top = areas[5]!.points, whole = result.totalsBy!['date.day']!.slice(0, -1).reduce((s, r) => s + (r.signups as number), 0), ticks = of<{ text: string }>(ratio.nodes, 'ytick:');
     expect(top.length).toBe(27);
     expect(top[26]!.v).toBeCloseTo(whole / Number(ticks[ticks.length - 1]!.text), 12);

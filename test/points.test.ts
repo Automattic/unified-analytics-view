@@ -183,6 +183,12 @@ describe('a rule at a constant on x', () => {
     expect(px('reference:rule#2')).toMatchObject({ x1: 36, x2: 340, y1: 86, y2: 86 });
     expect(px('reference:rule:label')).toMatchObject({ x: 36 + 304 / 3 + 4, y: 19 });
   });
+  it('sets its label on the side with more room, so one near the far edge stays in the plot', () => {
+    const late: Spec = { ...quadrant!, query: { ...quadrant!.query, range: '7d' } };
+    const { ratio, scene } = run(late, 346), label = ratio.nodes.find((n) => n.key === 'reference:rule:label') as any;
+    expect(label).toMatchObject({ x: 1, anchor: 'end' });
+    expect(scene.nodes.find((n) => n.key === 'reference:rule:label')).toMatchObject({ x: 340 - 4, anchor: 'end' });
+  });
   it('is held by the scale, as one on y is', () => {
     const far: Spec = { ...quadrant!, layers: [{ mark: 'rule', encode: { x: 5000 } }, { mark: 'rule', encode: { y: 9 } }, quadrant!.layers![2]!] };
     const { ratio } = run(far, 700);

@@ -72,7 +72,7 @@ h2 small { display: inline; }
 /* On the tokens page: a container at each level, on the page. What is sunk is a well; what stands is a card. */
 .elevations { display: flex; flex-wrap: wrap; gap: var(--ua-space-xl); padding: var(--ua-space-l) var(--ua-space-m); }
 .elevations figure { margin: 0; display: grid; gap: var(--ua-space-4xs); }
-.elevation { inline-size: 140px; block-size: 88px; margin-block-end: var(--ua-space-xs); display: grid; place-items: center; border-radius: var(--ua-radius-lg); background: var(--ua-color-surface-card); font-size: var(--ua-font-size-lg); }
+.elevation { inline-size: 140px; block-size: 88px; margin-block-end: var(--ua-space-xs); display: grid; place-items: center; border-radius: var(--ua-radius-lg); background: var(--ua-surface-card); font-size: var(--ua-font-size-lg); }
 .elevation.sunk { background: var(--ua-color-well); }
 /* Something for glass to be over: the grid, and three discs of series colour. */
 .backdrop { padding: var(--ua-space-xl); border-radius: var(--ua-radius-lg);

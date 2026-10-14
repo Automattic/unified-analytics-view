@@ -429,12 +429,38 @@ As of October 14, 2026. The marks and the chart chrome were rebuilt as component
 6. **The key to sizes can never wrap.** `.uav-size` has `flex-wrap: wrap` but a fixed `block-size: 24px` and `overflow: hidden`, so a second line is cut off. Either the wrap is dead or the height is.
 7. **The readout's width cap holds only in the top layer.** `min(320px, 100vw - 8px)` is on `[popover]`; elsewhere the cap is the figure's width.
 8. **120 px, the plot height under which ranked y ticks go,** is still the `ponytail` in `cartesian.ts`, with no rule carrying it (Bugs, 2).
+9. **The number in a donut's hole overruns the ring.** `place()` measures the number against the hole and leaves it out where it does not fit; the element applies only the `hole` rule, a plot narrower than 120 px. In dots "10.5k" is 108 px wide, and the hole is 96 px across in a view 160 px tall and 72 px in one 120 px tall, so on the donut, the half circle and the parliament the element draws the number across the ring. Either the element measures the number against the hole, as `place()` does, or the hole sets its number in a smaller cell. The views in Figma draw what the element does, and say so.
+10. **`place()` and the element thin the x axis differently.** The element's `thinAxis` gives up a label that runs past the plot's far edge; `place()` keeps it (the adjacency matrix's longest page name). Neither checks the near edge, so the stripes' first label hangs off the left of the view in both.
+11. **A country with no name.** In the unmapped sample's list, row 17 is named "–" (82 visitors): an empty country value, seeded on purpose in the fixtures, which `formatDimension` writes as a dash. Whether an empty value should read "Unknown" is the question.
+12. **A bar is at least 3 px wide in the element and not in `place()`.** `.uav-row > i` has `max(3px, …)`; `place()` floors a list's own bar at 3 px too, but not a series segment or a band range, so a pixel painter shows those near zero as nothing.
+13. **`place()` sets the number shorter than the element does in dots.** Its number heights run 36 to 70 px where the element's screen, with a cell of padding round it and a row between the value and the words, comes to 56 to 76. So a bare plot beside the number, and the number alone, are taller in a browser than the plan made room for. This is the older gap in Findings, step 4, item 5, now in the dot face.
+14. **`place()` sets every label on a band x axis,** and the element's measured pass (`thin` in `measure.ts`) gives up the ones that meet. A pixel painter shows them overlapping: the box plot, the error bars, the Pareto and the grouped bars.
 
 ### To decide
 
 1. **Ans Mono 1.5 can draw the screen.** The face now has unlit cells (`ss01`), a `█` that fills the whole 6 by 8 cell, spaces at whole-dot widths, and cell graphics in eighths. `packages/tokens/fonts` still holds 1.4. With 1.5, the unlit grid could be the face's own, which settles item 3 above; the three-per-em space is the three-cell space `NARROW` makes by hand. Still to come from the face: a point and a comma four cells wide, without which a number cannot be one run of type.
 2. **The cell graphics fit the dot painter.** The lower fills are bars and sparklines in eighths, the shades are the prototype's dither patterns, and the left fills are a loading bar, which the element does not have. For `packages/dots`, when it starts.
 3. **A rim label is never on a donut.** The scene makes rim labels only for a radial view whose slices are equal and whose value sets each one's reach. To confirm that a donut or pie is meant to have none.
+4. **The prose rung is tall in a narrow view.** At 80 px wide the tldr sentence runs 240 to 320 px tall for the scatter, bubble, quadrant, box and error-bar samples. A shorter sentence for that rung, or the number alone below some width, would fit better.
+5. **The second and third series colours are hard to tell apart:** grass and teal, side by side in the series, stacked and grouped samples.
+
+### Open in the Figma file
+
+What building the views from the code's placed scenes found in the components themselves. To fix in the file, not the code.
+
+- **The metric display's change and note lines are in Ans Mono with no text style,** so a script cannot set their words; the view agents put `charts/value` and `charts/tick` on each instance to get past it. Give the two layers their styles in the component.
+- **The point, comma and space glyphs are wider than the code's:** 24, 24 and 20 px, where `NARROW` makes them 16, 16 and 12. A number with a point runs a cell long. Waits on the face's narrow point and comma.
+- **The glyph set has no `m`.** The face has it, so "436ms" shows as "436s" in the cartesian views (box, error bars, candlestick, fan). Add it.
+- **Units were narrowed by hand in the cartesian views.** The view agent set k, % and s to 16 px; in code a unit is a slot six cells wide, like a figure (`.uav-glyph-run sup`). Those numbers read a little short.
+- **`View / Beside`'s placeholder body is at 40% opacity** in the main component; every view resets it.
+- **The metric display does not widen with its glyphs,** so each instance is fixed to its room, rounded down to a whole cell.
+- **An `Arc` instance does not resize its ellipses;** the views rescale it and put the stroke back.
+- **A treemap box's label has no text style;** the code sets it in the tick face.
+- **The choropleth example's United States is 2.8 px short** at its western edge against the scene.
+- **The bullet's background ranges have no component;** they are rectangles bound to the band colours.
+- **The key to sizes paints its dots in the series colour** in one place and `ink.muted` in another; the scene says `ink.muted`.
+- **A Sankey's target nodes are muted at 70%** in `Link / Node`; the scene paints them `ink.muted` at full strength.
+- **Soft fills:** treemap parents and list bars use the `*-soft` colour variables where the scene asks for a series colour at 14% or 20% opacity. The element's `nodePaint` does the same for the soft tone, so this is likely right; to confirm for the treemap.
 
 ### What Figma cannot say
 

@@ -409,3 +409,100 @@ What the real answers showed, not fixed:
 - The bench after the merge was checked by reading its DOM in headless Chrome: 30 frames, no errors. Nobody has looked at it.
 - Nothing has been checked in Safari itself or in Firefox. Open `/spike.html` in each and read the seven badges.
 - After the merge the spike page was re-read in headless Chrome under virtual time: six items pass and item 3 reads fail, with no transition found. Virtual time fast-forwards transitions, so this is most likely the check and not the page, but it has not been re-run in real time here. Item 3 is the one to look at first when the page is opened by hand.
+
+## Findings: the marks and chrome in Figma
+
+As of October 14, 2026. The marks and the chart chrome were rebuilt as components in the Figma file *Unified Analytics Charts*, read from the code. Building them read the code closely, and these are what that turned up: possible faults in the code, questions to decide, and what Figma cannot say. Nothing in the code was changed.
+
+### Decided October 14
+
+1. **The data table and the words inside a plot stay in the mono face for now.** In code both take the page's face: `.uav-table` sets no family, and `.uav-plot :is(.uav-f-tick, .uav-f-value)` resets it to `inherit`, which reaches point labels and reference-line labels. In Figma each has a style of its own (`charts/table`, `charts/table-heading`, `charts/plot-label`), so the face can change there without touching the rest.
+2. **A split point's readout is a line per series, with its swatch.** Today `readoutAt` writes one sentence, "Sep 8: Visitors (Search 177, Direct 123, Social 54, …)", with nothing tying a name to its line. The readout becomes the point and the metric on its first line, then a line for each series in the plot's order: its swatch, its name, its value at the end, the values in a column. It is taller, a line a series. In Figma it is `Readout / Split`, of `Readout / Series line`s. Not built in code: `readoutAt` returns a string, so the readout needs the rows and their paints, and the option's accessible name can stay the sentence. The swatches are on the tooltip surface, the constant lime, where some series colours are weak; that is still to look at.
+
+### Possibly wrong in the code
+
+1. **A dot in a plot never recedes.** `keys.ts` recedes the other series of a bar, line or area when one is chosen, but no rule reaches a dot. To check whether that is meant.
+2. **A treemap's children have a radius of 2 in `place()` and 1 in the painter.** One of the two is wrong.
+3. **Lit and unlit dots do not line up.** At optical size 72 the face draws a lit dot 3.375 px square, centred in its 4 px cell. `DOTS_CSS` draws an unlit one 3 px square at the cell's top left, so the two sit about a third of a pixel apart. The grid's dot should be worked out from the optical size the face is set at, or drawn by the face itself (below).
+4. **An axis tick's paint is ignored.** The scene gives a tick `ink.muted`; `AXES_CSS` colours it with `color-label-axis` whatever the scene says.
+5. **The keyboard's rule reads by its width alone.** `color-focus` resolves to the ring colour at 50%, so a crosshair the keys drive is told from the pointer's mostly by being 2 px wide.
+6. **The key to sizes can never wrap.** `.uav-size` has `flex-wrap: wrap` but a fixed `block-size: 24px` and `overflow: hidden`, so a second line is cut off. Either the wrap is dead or the height is.
+7. **The readout's width cap holds only in the top layer.** `min(320px, 100vw - 8px)` is on `[popover]`; elsewhere the cap is the figure's width.
+8. **120 px, the plot height under which ranked y ticks go,** is still the `ponytail` in `cartesian.ts`, with no rule carrying it (Bugs, 2).
+
+### To decide
+
+1. **Ans Mono 1.5 can draw the screen.** The face now has unlit cells (`ss01`), a `█` that fills the whole 6 by 8 cell, spaces at whole-dot widths, and cell graphics in eighths. `packages/tokens/fonts` still holds 1.4. With 1.5, the unlit grid could be the face's own, which settles item 3 above; the three-per-em space is the three-cell space `NARROW` makes by hand. Still to come from the face: a point and a comma four cells wide, without which a number cannot be one run of type.
+2. **The cell graphics fit the dot painter.** The lower fills are bars and sparklines in eighths, the shades are the prototype's dither patterns, and the left fills are a loading bar, which the element does not have. For `packages/dots`, when it starts.
+3. **A rim label is never on a donut.** The scene makes rim labels only for a radial view whose slices are equal and whose value sets each one's reach. To confirm that a donut or pie is meant to have none.
+
+### What Figma cannot say
+
+Recorded so the Figma file is not taken for the code where they differ.
+
+- **Placing by value.** Axis labels, end labels, point labels, rim labels and the crosshair's chips are placed by hand in each example. Figma cannot stand a box at a point by its middle or its end, measure collisions, or give up a label that does not fit (`data-thin`).
+- **Lining up across rows.** The table's columns, a list's value columns and the shares legend's values are fixed widths where the code uses a grid or a subgrid.
+- **A squarified layout.** A treemap resized in Figma scales its boxes and is not laid out again.
+- **Motion.** The roll of a number in dots, the run under the pointer, the readout's delay and a line drawing in are not shown.
+- **Exposing what is in a slot.** Figma will not expose a nested instance's properties from inside a slot, so the crosshair's hover or keys state is set on each rule.
+- **The face in scripts.** The scripts that build the file cannot load Ans Mono, so the mono styles are set by hand after a script has made them.
+
+## Findings: the review of October 12 and its fixes
+
+As of October 14, 2026. A review of the system as it shipped in Spacefast found eleven bugs, and each was fixed on `map-zoom`, from `0e8e067` to `175e23e`, by agents working in parallel. These are what the review raised and the fixes did not take on, and what the agents flagged while fixing. Recorded at `175e23e`; the tree has moved on since and not every item has been checked against it. None of the fixes are copied to the Spacefast monorepo.
+
+### Before a second host
+
+The review's list of what would bite a host other than Spacefast. None of it is started.
+
+1. **One language, locale and time zone.** `en-US`, UTC and English sentences are hard-coded in core and `packages/dom`. Strings, locale and zone as inputs is the large one.
+2. **Two copies on one page fail silently.** `defineUaView()` returns if any version is already defined, and the mark and painter registries are module state. Several plugins bundling their own copy is normal on wp-admin.
+3. **A thin host contract.** There is no loading state and no `ua-error` event, missing inputs show a red error to end users, and there are no element or event typings and no React binding. `view.inputs` (bug 6) is the atomic setter the rest would hang on.
+4. **Layout and style leaks.** The view is 0 px wide in a shrink-to-fit parent such as a flex row or a table cell, and the page's `text-transform`, `letter-spacing` and `font-weight` reach the tick labels.
+5. **Accessibility.** A metric's definition is a pointer-only `title`, series differ by colour alone, and the data table appears only if the host sets `table`.
+6. **Cost at size.** A 2,000-row list takes 187 ms to paint and 301 ms to update in Chromium (305 and 675 in WebKit). Hover on a 3,650-point line costs 12.7 ms per pointer move, with quadratic loops in `keys.ts` and `scene.ts`.
+7. **Packaging.** Nothing is built for release, and no default theme or face ships.
+
+### What Spacefast worked around
+
+Each is a gap in what the packages offer, seen from the host that shipped.
+
+1. **Tokens:** 57 `--ua-charts-*` declarations written by hand, since no default theme ships.
+2. **Fonts:** two faces embedded as base64 and adopted into the document, because the package names the face and ships neither it nor a switch to turn the dots off.
+3. **React wrapper:** it sets the three properties in a layout effect only to stop the red "no spec" error flashing. `view.inputs` can replace that.
+4. **Map pre-check:** the host checks for a known country first, because the geo mark throws when none match.
+5. **Titles and truncation:** the host draws every title and its own "+N more", since `spec.title` is only an `aria-label` and a result has nowhere to carry `truncated` or `other` (the adapter's open item 6).
+6. **Query surgery:** it slices `query.metrics` and strips `compare` to steer which number and delta show.
+7. **Unused by the host:** `ua-activate`, `table`, `rules`, the JSON `<script>` inputs and `keep`.
+
+### Left by the fixes
+
+1. **The element and core word an unknown metric differently.** `view.ts` checks first and ends "Pass the catalog the query was run against."; `resolve()` ends "Add it to the catalog passed in, or correct the name in query.metrics." The element's is the one a host sees.
+2. **A refused input's message is hidden in a fixed-height box.** The last good view stays drawn (bug 6) and the message sits under it, past the box's edge. Seen in Chromium and WebKit on the samples page: the old chart, and no message. Accepted for now in the bug 6 round.
+3. **A share view with no total paints nothing in place of its band or circle,** only a legend of values, with nothing to say why. Whether it should show a notice is **to decide.**
+4. **A null time value on an x axis is refused** with the error for an unreadable time, naming "null", where a row label for the same value shows a dash. It printed "Invalid Date" before bug 2. A small change in `scene.ts`.
+5. **A null bin start on a linear x is drawn at 0,** not skipped, and the numeric-dimension prose can say "at a size of null".
+6. **A row that lacks a metric's key is not refused,** where one with the key set to `undefined` is. It reads as a dash or a gap in most views, and "NaN%" in the band.
+7. **A previous figure of 0 gives the prose "with no prior period to compare",** though there is one. The delta says "New"; and 0 to −5 is "New" too, as the prototype has it.
+8. **`rangeLabel`, a public export of core, now throws** on a form it cannot say, where it used to return the form as written. Nothing outside `prose.ts` calls it.
+9. **A face declared after the first paint** reaches the number only at the view's next paint (bug 8). Check the order in Spacefast's wrapper before copying the fix across.
+10. **Two rows of the same name trade identities** when their order in the result swaps (bug 5). Only a host passing ids, not labels, avoids it.
+11. **Duplicates in a matrix and on a map.** A matrix merges two rows of one cell, the last winning; geo assumes its rows run in step with the result.
+12. **Right-to-left, still:** a row label or legend shows "/pricing" as "pricing/"; the dot-matrix number reads correctly but sits at the left of its screen; a page that flips direction with no new data keeps the legend's old direction until the next paint; and in two of about ten WebKit runs a few views fitted differently just after a flip, not seen again in six more. The matrix ramp follows the page, low end at the right; a one-line removal in `matrix.ts` makes it read like an axis. **To decide.**
+13. **Words core still writes without the catalog's say:** labels are lower-cased inside sentences, so an acronym loses its capitals; the heatmap prose says "the busiest" of revenue too; matrix ticks and a categorical x tick print "null" and bare country codes; `matrix.ts` has a literal ": No data"; and error examples in `plan.ts` and `view.ts` name fixture fields ("page", "visitors").
+14. **The live wording changed for want of a noun:** "7 people are on the site right now" reads "Present now: 7 right now". A per-metric noun is raised in the reference's Open 11; the old wording can come back with one.
+15. **The empty notice wraps to two lines in narrow frames** (166 to 274 px) since the colon form, and `place()` clips it sooner: the Visitors notice needs 238 px to show whole, where it needed 198.
+16. **Bug 10 has no test;** it is one line in a lifecycle callback, checked in a browser only.
+
+### To decide, with recommendations
+
+1. **Ranges other than a count of days** (the reference's `range`, Open). Until settled, any other form is refused by name. Recommended: the engine sends the words itself, a `meta.rangeLabel` such as "September 2026", which core says as written, so calendars and locales stay out of core as totals and statistics do.
+2. **Site time zones** (the reference's Open 17). Recommended: the adapter rewrites each instant as the site's clock time, so core never takes a zone.
+3. **A week reads as its Monday,** "Aug 31", which on an axis cannot be told from a day. Refusing weeks until a result states its grain is one line.
+
+### Not verified
+
+- Firefox, for every fix in this round, and a screen reader.
+- In a browser, after the last round: the two-dimension and grid sentences with no total, the number dimension's refusal, and the `live` page. The rest of the last round was read on live views in headless Chromium and WebKit, with the whole bench swept for errors and stray words.
+- Two real bundles on one page, a strict content security policy, bundle size, and the geo zoom.
+- Nothing runs the element in the test suite. The review recommended a Playwright smoke file against the bench first: every sample across widths with no tokens loaded, and four behavioural checks.

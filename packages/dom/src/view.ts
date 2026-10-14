@@ -248,7 +248,8 @@ function paintNumber(el: HTMLElement, nodes: SceneNode[]): void {
   });
 }
 
-/** Milliseconds of painting in a turn before the page is handed a frame (UaView.#flush). */
+/** Milliseconds a slice of painting and measuring aims at, before the page is handed a frame (UaView.#flush). Left room
+ * in a frame, the lines drawing in on screen keep near the display's rate while the views below are still coming. */
 const SLICE = 10;
 
 /** An input the view has not been handed yet: it loads, where any other refusal is an error. */
@@ -345,21 +346,25 @@ export class UaView extends Base {
   // so a page of many views was styled and laid out once for each, which was most of the time they took to come.
   // And a turn takes about a slice, then hands the page a frame: the views still due show their placeholder, and come
   // in the frames after, in the order they were queued. Each slice paints before it measures, so none is shown unfitted.
+  // The measuring cannot stop halfway, so a slice is not timed as it goes: it takes as many views as the slices before
+  // it found fit, painting and measuring together. Every slice also pays for one layout of the page whatever it holds,
+  // so the count is steered, not worked out per view: more after a slice under the mark, fewer after one over it.
   static #due = new Set<UaView>();
   static #next = 0;
+  static #take = 4;
   static #flush(): void {
     UaView.#next = 0;
-    const until = performance.now() + SLICE;
-    // A view painted here can queue another, as one that gives way does its fallback: it is painted in the same slice.
+    // A view painted here can queue another, as one that gives way does its fallback: it is painted in the next slice.
     while (UaView.#due.size) {
-      const painted: UaView[] = [];
-      for (const v of UaView.#due) {
+      const start = performance.now(), slice = [...UaView.#due].slice(0, Math.round(UaView.#take)), painted: UaView[] = [];
+      for (const v of slice) {
         UaView.#due.delete(v); v.#queued = false;
         if (v.isConnected && v.#render()) painted.push(v);
-        if (performance.now() > until) break;
       }
       for (const v of painted) v.#finish();
-      if (UaView.#due.size && performance.now() > until && typeof requestAnimationFrame === 'function') { UaView.#next = requestAnimationFrame(() => UaView.#flush()); return; }
+      const took = performance.now() - start;
+      UaView.#take = Math.max(1, Math.min(256, UaView.#take * (took < SLICE ? 1.5 : SLICE / took)));
+      if (UaView.#due.size && typeof requestAnimationFrame === 'function') { UaView.#next = requestAnimationFrame(() => UaView.#flush()); return; }
     }
   }
   #queue(): void {

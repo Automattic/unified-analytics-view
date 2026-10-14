@@ -163,9 +163,13 @@ export function declared(faces: Iterable<{ family: string }>): boolean {
  * beside the dots, out of sight. An element that says the same already is not touched. One that said another number
  * in the face rolls to this one: a character that stays keeps its element, and one that changes has a new one, which
  * is what starts its roll. */
+// The documents whose face has come. Their fonts are asked once: walking them gathers every @font-face on the page,
+// which lays the page's style out again, and a page of many views has a number in each.
+// ponytail: a face taken off the page after it came is not noticed; the numbers stay in dots of no face.
+const ready = new WeakSet<FontFaceSet>();
 export function dots(el: Element, s: string): void {
   const chars = dotted(s), had = el.getAttribute('data-dots'), fonts = el.ownerDocument.fonts as FontFaceSet | undefined;
-  const face = `32px "${FAMILY}"`, here = () => !!fonts && declared(fonts) && fonts.check(face);
+  const face = `32px "${FAMILY}"`, here = () => !!fonts && (ready.has(fonts) || (declared(fonts) && fonts.check(face) && !!ready.add(fonts)));
   if (!chars || !here()) {
     // Without the face there is no screen: the words stand as they are, and are set again when the face has come.
     el.removeAttribute('data-dots'); el.textContent = s;

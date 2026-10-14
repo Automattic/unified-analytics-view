@@ -1,4 +1,4 @@
-import { resolve, unboundedContainer, type Spec } from '@unified-analytics/core';
+import { expand, resolve, unboundedContainer, type Spec } from '@unified-analytics/core';
 import { UaView, defineUaView, registerPainter, surfaceSheet } from '@unified-analytics/dom';
 import { catalog, moreSamples, runQuery, samples as known, type Scenario } from '@unified-analytics/fixtures';
 import { linkPainter } from '@unified-analytics/flow/dom';
@@ -18,6 +18,8 @@ const samples = { ...known, ...moreSamples };
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 const controls = $<HTMLFormElement>('#controls'), editor = $<HTMLTextAreaElement>('#spec'), status = $('#status');
 const frame = $('#frame'), plan = $('#plan'), rows = $('#rows'), picker = controls.querySelector('select')!;
+const expanded = $<HTMLDetailsElement>('#expanded');
+let written: Spec | undefined;
 const view = frame.appendChild(new UaView());
 view.catalog = catalog;
 
@@ -50,6 +52,10 @@ function apply() {
     // Planned here first, so a spec the core refuses says why in the status line, and the last good view stays up.
     const p = resolve(spec, result, unboundedContainer(), catalog);
     view.spec = spec; view.result = result;
+    // A preset is shorthand for layers: core's expand() writes them out, as the plan does before it reads them.
+    written = spec.use ? expand(spec) : undefined;
+    expanded.hidden = !written;
+    if (written) expanded.querySelector('pre')!.textContent = JSON.stringify(written.layers, null, 2);
     editor.removeAttribute('aria-invalid'); status.className = 'meta'; status.textContent = 'OK';
     plan.textContent = 'planned with no limits: ' + p.layout + ' · ' + p.text;
     rows.textContent = JSON.stringify(result.rows, null, 1);
@@ -62,5 +68,6 @@ function fail(message: string) {
 let timer = 0;
 editor.addEventListener('input', () => { picker.value = ''; clearTimeout(timer); timer = window.setTimeout(apply, 250); });
 picker.addEventListener('change', () => { if (picker.value) editor.value = pretty(samples[picker.value]!.spec); });
+expanded.querySelector('button')!.addEventListener('click', () => { editor.value = pretty(written!); picker.value = ''; apply(); });
 controls.addEventListener('change', apply);
 apply();

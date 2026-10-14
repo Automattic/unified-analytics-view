@@ -374,8 +374,8 @@ export class Keys {
       attr(box, 'role', 'listbox'); attr(box, 'aria-label', catalog.dimensions[x!]?.label);
       // Points in two dimensions have no one orientation, and the attribute has no value for both.
       attr(box, 'aria-orientation', box.dataset.hits === 'y' ? 'vertical' : box.dataset.hits === 'xy' ? null : 'horizontal');
-      this.name();
     }
+    // The options are named by name(), which reads what shows, so the view calls it once every view queued with it has painted.
     // Held by the keyboard, or by a mouse still over the view: no pointerover follows for an element that was kept, so a
     // point let go here would take the readout, and the next click, with it.
     const at = this.#at, held = at != null && this.#keys.includes(at) && !!box && (box.matches(':focus') || this.#body.matches(':hover'));

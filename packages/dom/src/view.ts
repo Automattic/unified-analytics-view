@@ -318,11 +318,24 @@ export class UaView extends Base {
   attributeChangedCallback(): void { this.#queue(); }
 
   #set(name: Input, v: unknown): void { this.#given[name] = v ?? undefined; this.#changed = true; this.#queue(); }
-  // Inputs set one after another paint once.
+  // Inputs set one after another paint once. And the views queued in one turn paint together: every one paints, and
+  // then every one is measured. A view measured as it paints has the page laid out again before the next has written,
+  // so a page of many views was styled and laid out once for each, which was most of the time they took to come.
+  static #due = new Set<UaView>();
+  static #flush(): void {
+    // A view painted here can queue another, as one that gives way does its fallback: that one comes in the next round.
+    while (UaView.#due.size) {
+      const views = [...UaView.#due];
+      UaView.#due.clear();
+      const painted = views.filter((v) => { v.#queued = false; return v.isConnected && v.#render(); });
+      for (const v of painted) v.#finish();
+    }
+  }
   #queue(): void {
     if (this.#queued || !this.isConnected) return;
     this.#queued = true;
-    queueMicrotask(() => { this.#queued = false; if (this.isConnected) this.#render(); });
+    if (!UaView.#due.size) queueMicrotask(() => UaView.#flush());
+    UaView.#due.add(this);
   }
 
   #input(name: Input, required: boolean): unknown {
@@ -338,7 +351,8 @@ export class UaView extends Base {
     return v;
   }
 
-  #render(): void {
+  /** Write what the inputs make, reading no size: whether it painted, and so is to be measured. */
+  #render(): boolean {
     const changed = this.#changed;
     this.#changed = false;
     let painting = false;
@@ -366,7 +380,6 @@ export class UaView extends Base {
       if (this.#layout !== scene.layout) { this.#body.replaceChildren(); this.#body.removeAttribute('data-scale'); this.#layout = scene.layout; }
       const painter = painterOf(scene.layout), data = { layers: plan.layers, query: expand(spec).query, result, catalog };
       painter?.paint(this.#body, scene, rules, data);
-      pixels(fig);
       // Only while it shows: nothing reads a hidden table, and it is a row per row of the result.
       if (!this.hasAttribute('table')) this.#table.replaceChildren();
       else if (painter?.table) painter.table(this.#table, spec.title, scene, data); else paintTable(this.#table, spec.title, data.query, result, catalog, plan.layers);
@@ -380,21 +393,31 @@ export class UaView extends Base {
       }
       else { this.#fallback?.remove(); this.#fallback = null; }
       fig.hidden = false; this.#error.hidden = true;
-      settle(fig);
+      return true;
+    } catch (e) { this.#fail(e, painting); return false; }
+  }
+
+  /** After every view queued with this one has painted: what reads sizes. */
+  #finish(): void {
+    try {
+      settle(this.#fig);
       // At once, not a frame later: new data is never shown unfitted. This is not an observer's callback, so nothing
       // it writes is reported as a loop. A frame already asked for reads the same sizes after it and writes nothing.
-      if (this.#sizes) this.#measure(true);
-    } catch (e) {
-      // A parser still on the page has not handed over every child, so a missing or half-written one is not yet a mistake.
-      const doc = this.ownerDocument;
-      if (doc.readyState === 'loading') { doc.addEventListener('DOMContentLoaded', () => this.#queue(), { once: true }); return; }
-      // Never out of a lifecycle callback: the view says what is wrong where it would have drawn.
-      // Inputs refused before anything was written leave the last view whole: it stays drawn, with what is wrong under it.
-      const kept = !painting && this.#layout != null && !this.#fig.hidden;
-      if (!kept) { this.#root.adoptedStyleSheets = [sheet(doc, BASE_CSS)]; this.#fallback?.remove(); this.#fallback = null; }
-      this.#error.textContent = e instanceof Error ? e.message : String(e);
-      this.#fig.hidden = !kept; this.#error.hidden = false;
-    }
+      // The measured pass sets the plot on whole pixels and names the options; with no observer that is done here.
+      if (this.#sizes) this.#measure(true); else { pixels(this.#fig); this.#keys.name(); }
+    } catch (e) { this.#fail(e, true); }
+  }
+
+  #fail(e: unknown, painting: boolean): void {
+    // A parser still on the page has not handed over every child, so a missing or half-written one is not yet a mistake.
+    const doc = this.ownerDocument;
+    if (doc.readyState === 'loading') { doc.addEventListener('DOMContentLoaded', () => this.#queue(), { once: true }); return; }
+    // Never out of a lifecycle callback: the view says what is wrong where it would have drawn.
+    // Inputs refused before anything was written leave the last view whole: it stays drawn, with what is wrong under it.
+    const kept = !painting && this.#layout != null && !this.#fig.hidden;
+    if (!kept) { this.#root.adoptedStyleSheets = [sheet(doc, BASE_CSS)]; this.#fallback?.remove(); this.#fallback = null; }
+    this.#error.textContent = e instanceof Error ? e.message : String(e);
+    this.#fig.hidden = !kept; this.#error.hidden = false;
   }
 
   /* The measured pass: after each paint, and in the frame after the room or the ruler changes size. It reads sizes

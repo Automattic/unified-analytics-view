@@ -38,6 +38,15 @@ export const BASE_CSS = `@layer uav {
 .uav-prose { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .uav-body { grid-area: body; box-sizing: border-box; min-inline-size: 0; block-size: var(--uav-body-block, auto); }
 .uav-error { margin: 0; font-size: var(--uav-font-label); overflow-wrap: anywhere; color: ${paintVar('delta.bad')}; }
+/* Loading: until the view has an input it has not been handed, or until its turn to paint has come. A plot's natural
+ * height in a stack, and the whole of a box it is handed. It comes in only after a moment, so a view that paints at
+ * once never shows it, and then breathes on its opacity alone, which asks nothing of the page's style. */
+.uav-loading { block-size: ${CONTAINER_RULES.axes.height}px; border-radius: ${token('border-radius-bar')}; background: ${token('color-grid')};
+  animation: uav-loading-in .2s .15s both, uav-loading 1.2s .35s ease-in-out infinite alternate; }
+@container uav-view (block-size >= 0px) { .uav-loading { block-size: 100%; } }
+@keyframes uav-loading-in { from { opacity: 0; } }
+@keyframes uav-loading { to { opacity: .5; } }
+@media (prefers-reduced-motion: reduce) { .uav-loading { animation: uav-loading-in .2s .15s both; } }
 
 /* A line's height is a ratio of its face, so it follows a face that a token has moved. */
 .uav-f-tick { font-size: var(--uav-font-tick); font-family: ${token('font-family-tick')}; }
@@ -239,6 +248,12 @@ function paintNumber(el: HTMLElement, nodes: SceneNode[]): void {
   });
 }
 
+/** Milliseconds of painting in a turn before the page is handed a frame (UaView.#flush). */
+const SLICE = 10;
+
+/** An input the view has not been handed yet: it loads, where any other refusal is an error. */
+class Missing extends Error {}
+
 // Importing this where there is no document, as a test or a server template does, must not throw.
 const Base = (globalThis.HTMLElement ?? class {}) as typeof HTMLElement;
 
@@ -250,7 +265,9 @@ export class UaView extends Base {
   // Whether an input changed since the last paint. A view that is only moved in the page paints again, and nothing in it moves.
   #changed = false;
   #layout: Layout | null = null;
-  #root: ShadowRoot; #fig: HTMLElement; #prose: HTMLElement; #number: HTMLElement; #body: HTMLElement; #table: HTMLTableElement; #error: HTMLElement;
+  #root: ShadowRoot; #fig: HTMLElement; #prose: HTMLElement; #number: HTMLElement; #body: HTMLElement; #table: HTMLTableElement; #error: HTMLElement; #loading: HTMLElement;
+  // The timer that says, in the console, which input a view still waits for when it has waited long.
+  #late = 0;
   #room: HTMLElement; #ruler: HTMLElement[]; #seen = '';
   #keys: Keys;
   #fallback: UaView | null = null;
@@ -278,6 +295,11 @@ export class UaView extends Base {
     this.#keys = new Keys(this, this.#fig, this.#body);
     this.#error = ensure(this.#root as unknown as Element, 'p', 'uav-error');
     this.#error.setAttribute('role', 'alert'); this.#error.hidden = true;
+    // Loading until the first paint: the base sheet is adopted now so the placeholder is drawn before the view is.
+    this.#loading = ensure(this.#root as unknown as Element, 'div', 'uav-loading');
+    this.#loading.setAttribute('role', 'status'); this.#loading.setAttribute('aria-label', 'Loading');
+    this.#fig.hidden = true;
+    this.#root.adoptedStyleSheets = [sheet(this.ownerDocument, BASE_CSS)];
     this.#room = ensure(this.#fig, 'div', 'uav-room');
     const ruler = ensure(this.#root as unknown as Element, 'div', 'uav-ruler');
     ruler.setAttribute('aria-hidden', 'true');
@@ -309,7 +331,7 @@ export class UaView extends Base {
     this.#queue();
   }
   disconnectedCallback(): void {
-    this.#children.disconnect(); this.#sizes?.disconnect();
+    this.#children.disconnect(); this.#sizes?.disconnect(); clearTimeout(this.#late);
     if (this.#frame) { cancelAnimationFrame(this.#frame); this.#frame = 0; }
     // A readout left showing listens for a scroll on the window, and would hold the view there until one came.
     hideReadout(readoutOf(this.#fig));
@@ -321,20 +343,29 @@ export class UaView extends Base {
   // Inputs set one after another paint once. And the views queued in one turn paint together: every one paints, and
   // then every one is measured. A view measured as it paints has the page laid out again before the next has written,
   // so a page of many views was styled and laid out once for each, which was most of the time they took to come.
+  // And a turn takes about a slice, then hands the page a frame: the views still due show their placeholder, and come
+  // in the frames after, in the order they were queued. Each slice paints before it measures, so none is shown unfitted.
   static #due = new Set<UaView>();
+  static #next = 0;
   static #flush(): void {
-    // A view painted here can queue another, as one that gives way does its fallback: that one comes in the next round.
+    UaView.#next = 0;
+    const until = performance.now() + SLICE;
+    // A view painted here can queue another, as one that gives way does its fallback: it is painted in the same slice.
     while (UaView.#due.size) {
-      const views = [...UaView.#due];
-      UaView.#due.clear();
-      const painted = views.filter((v) => { v.#queued = false; return v.isConnected && v.#render(); });
+      const painted: UaView[] = [];
+      for (const v of UaView.#due) {
+        UaView.#due.delete(v); v.#queued = false;
+        if (v.isConnected && v.#render()) painted.push(v);
+        if (performance.now() > until) break;
+      }
       for (const v of painted) v.#finish();
+      if (UaView.#due.size && performance.now() > until && typeof requestAnimationFrame === 'function') { UaView.#next = requestAnimationFrame(() => UaView.#flush()); return; }
     }
   }
   #queue(): void {
     if (this.#queued || !this.isConnected) return;
     this.#queued = true;
-    if (!UaView.#due.size) queueMicrotask(() => UaView.#flush());
+    if (!UaView.#due.size && !UaView.#next) queueMicrotask(() => UaView.#flush());
     UaView.#due.add(this);
   }
 
@@ -346,7 +377,7 @@ export class UaView extends Base {
         throw new Error('The JSON in <script data-for="' + name + '"> does not parse (' + (e as Error).message + '). Correct it, or set the ' + name + ' property.');
       }
     }
-    if (v === undefined) { if (required) throw new Error('This view has no ' + name + '. ' + how(name)); return undefined; }
+    if (v === undefined) { if (required) throw new Missing('This view has no ' + name + '. ' + how(name)); return undefined; }
     if (!isObject(v)) throw new Error('The ' + name + ' must be ' + SHAPE[name] + '. ' + how(name));
     return v;
   }
@@ -392,7 +423,7 @@ export class UaView extends Base {
         Object.assign(beside, { via: this.via.concat(gaveWay(swap)), spec: { ...rest, use: swap.fallback }, result, catalog, rules });
       }
       else { this.#fallback?.remove(); this.#fallback = null; }
-      fig.hidden = false; this.#error.hidden = true;
+      fig.hidden = false; this.#error.hidden = true; this.#loading.hidden = true; clearTimeout(this.#late);
       return true;
     } catch (e) { this.#fail(e, painting); return false; }
   }
@@ -412,6 +443,16 @@ export class UaView extends Base {
     // A parser still on the page has not handed over every child, so a missing or half-written one is not yet a mistake.
     const doc = this.ownerDocument;
     if (doc.readyState === 'loading') { doc.addEventListener('DOMContentLoaded', () => this.#queue(), { once: true }); return; }
+    // An input that has not come is one on its way, as a result is while its query runs: the view is loading, and a
+    // view already drawn stays drawn until it comes. One that never comes is said in the console, with its fix.
+    // ponytail: "long" is ten seconds, fixed; a host whose queries take longer is warned about a fetch still running.
+    if (e instanceof Missing) {
+      this.#loading.hidden = this.#layout != null && !this.#fig.hidden; this.#error.hidden = true;
+      clearTimeout(this.#late);
+      this.#late = window.setTimeout(() => console.warn('<ua-view> is still waiting. ' + e.message, this), 10000);
+      return;
+    }
+    this.#loading.hidden = true;
     // Never out of a lifecycle callback: the view says what is wrong where it would have drawn.
     // Inputs refused before anything was written leave the last view whole: it stays drawn, with what is wrong under it.
     const kept = !painting && this.#layout != null && !this.#fig.hidden;

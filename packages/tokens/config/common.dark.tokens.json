@@ -80,20 +80,17 @@
     "on-ink": {
       "$value": "{color.neutral.200}"
     },
-    "well": {
-      "$value": "color-mix(in srgb, {color.foreground} 6%, transparent)"
-    },
-    "destructive-tint": {
-      "$value": "color-mix(in srgb, {color.destructive} 20%, transparent)"
-    },
-    "ring": {
-      "$value": "color-mix(in srgb, {color.primary} 60%, transparent)"
-    },
     "overlay": {
-      "$value": "color-mix(in srgb, {color.black} 80%, transparent)"
+      "$value": "color-mix(in srgb, {color.black} {opacity.scrim}, transparent)"
+    },
+    "muted-50": {
+      "$value": "{color.neutral.400}"
+    },
+    "marker-soft": {
+      "$value": "{color.lime.600}"
     },
     "kbd-on-inverse": {
-      "$value": "color-mix(in srgb, {color.background} 10%, transparent)"
+      "$value": "{color.neutral.1000}"
     }
   }
 }

@@ -9,7 +9,7 @@
 #panel button { font: inherit; font-size: var(--ua-font-size-sm); color: var(--ua-color-muted-foreground); background: transparent; border: 0; border-radius: var(--ua-radius-sm);
   padding: var(--ua-space-5xs) var(--ua-space-2xs); cursor: pointer; }
 #panel button[aria-pressed="true"] { color: var(--ua-color-foreground); background: var(--ua-color-tint-hover); font-weight: 600; }
-#panel button:disabled { cursor: not-allowed; opacity: .6; }
+#panel button:disabled { cursor: not-allowed; color: var(--ua-color-neutral-600); }
 #panel button:disabled::after { content: ' 🔒'; }
 .segmented { display: flex; padding: var(--ua-space-7xs); background: var(--ua-color-well); border-radius: var(--ua-radius-md); }
 .tabs, .chips { display: flex; gap: var(--ua-space-5xs); }

@@ -379,6 +379,14 @@
       "tooltip": {
         "$value": "{elevation.2}"
       }
+    },
+    "opacity": {
+      "$type": "number",
+      "$description": "How much of a part shows where it stands back.",
+      "dim": {
+        "$value": "{opacity.muted}",
+        "$description": "The series not chosen, while one is: in a plot, in a row of a list, and the links of a Sankey not under the pointer."
+      }
     }
   }
 }

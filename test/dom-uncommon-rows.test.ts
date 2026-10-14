@@ -38,7 +38,7 @@ describe('a list whose rows are divided into series', () => {
     expect([stepSeries('ArrowUp', -1, 3), stepSeries('ArrowRight', 0, 3)]).toEqual([0, null]);
   });
   it('draws the chosen series whole and stands the rest of its row back', () => {
-    expect(KEYS_CSS).toContain('.uav-row:has(> [data-chosen]) > i[data-series]:not([data-chosen]) { opacity: 0.3 !important; }');
+    expect(KEYS_CSS).toContain('.uav-row:has(> [data-chosen]) > i[data-series]:not([data-chosen]) { opacity: var(--ua-charts-opacity-dim, 50%) !important; }');
     expect(KEYS_CSS).toContain('.uav-row > i[data-chosen] { opacity: 1 !important; }');
   });
   it('sets a stack\'s parts end to end with no least length, the range behind the marks as tall as the row, and half a tick in its half', () => {

@@ -1,5 +1,5 @@
 import type { PathNode, RectNode, TextNode } from '@unified-analytics/core';
-import { ensure, keyed, prop, text, type LayoutPainter } from '@unified-analytics/dom';
+import { ensure, keyed, prop, text, token, type LayoutPainter } from '@unified-analytics/dom';
 import { LABEL, LINK_RULES, NODE, standing } from './index.ts';
 
 /* The `link` mark's half for the DOM: the painter of its layout, for registerPainter().
@@ -27,7 +27,7 @@ const css = `
 .uav[data-layout="link"] .uav-plot svg { inset-inline: ${NODE}px; inline-size: calc(100% - ${2 * NODE}px); }
 /* Ribbons lie over one another, and an SVG has no order but its children's, which is the list's. So the chosen one is
  * told by the rest standing back, as a chosen series is in a plot, as well as by its edge. */
-.uav[data-layout="link"] svg:has(path[data-active]) path:not([data-active]) { opacity: 0.3; }
+.uav[data-layout="link"] svg:has(path[data-active]) path:not([data-active]) { opacity: ${token('opacity-dim')}; }
 .uav-nodes i { position: absolute; inset-block-start: calc(var(--uav-y) * 100%); block-size: calc(var(--uav-h) * 100%); inset-inline-start: calc(var(--uav-x) * (100% - ${NODE}px)); inline-size: ${NODE}px; background: var(--uav-paint); }
 /* The labels are set from the left whichever way the page reads, as the plot they lie over is. One near the top or the
  * foot stays inside the part, and one the measured pass found no room for keeps its box and is not seen. */

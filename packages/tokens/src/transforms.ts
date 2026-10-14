@@ -32,4 +32,11 @@ StyleDictionary.registerTransform({
   transform: (token: Token) => `cubic-bezier(${(valueOf(token) as number[]).join(', ')})`,
 });
 
-export const transforms = ['attribute/cti', 'name/kebab', 'value/clamp', 'dimension/css', 'cubic-bezier/css', 'color/dtcg-css'];
+// An opacity is written in percent, as Figma writes it, so the one value serves color-mix() and opacity alike.
+StyleDictionary.registerTransform({
+  name: 'opacity/percent', type: 'value', transitive: true,
+  filter: (token: Token & { path?: string[] }) => token.$type === 'number' && !!token.path?.includes('opacity') && typeof valueOf(token) === 'number',
+  transform: (token: Token) => `${valueOf(token)}%`,
+});
+
+export const transforms = ['attribute/cti', 'name/kebab', 'value/clamp', 'dimension/css', 'cubic-bezier/css', 'color/dtcg-css', 'opacity/percent'];

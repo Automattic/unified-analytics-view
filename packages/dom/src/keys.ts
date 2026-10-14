@@ -243,11 +243,11 @@ svg[data-hits] path[data-active="pointer"] { ${HOVER.stroke} }
 .uav-plot:has(:is(.uav-bars, .uav-dots) > [data-active]) .uav-hits [data-active]::before { display: none; }
 .uav-legend span[data-active] { text-decoration: underline; }
 /* A series chosen at a point: the rest of the plot stands back, and its name is marked wherever it is written. */
-.uav-plot:has([data-chosen]) :is(.uav-bars i, path):not([data-chosen]) { opacity: 0.3 !important; }
+.uav-plot:has([data-chosen]) :is(.uav-bars i, path):not([data-chosen]) { opacity: ${token('opacity-dim')} !important; }
 /* In a plot split by detail every line is drawn light, so that many together read darker. The one chosen is drawn whole. */
 .uav-body[data-mass] .uav-plot path[data-chosen] { opacity: 1 !important; }
 /* A series chosen in a row of a list: the rest of that row's stand back, and a dot of many is drawn whole. */
-.uav-row:has(> [data-chosen]) > i[data-series]:not([data-chosen]) { opacity: 0.3 !important; }
+.uav-row:has(> [data-chosen]) > i[data-series]:not([data-chosen]) { opacity: ${token('opacity-dim')} !important; }
 .uav-row > i[data-chosen] { opacity: 1 !important; }
 :is(.uav-legend, .uav-legend-top) span[data-chosen] { text-decoration: underline; }
 :is(.uav-legend, .uav-labels) span[data-chosen] { text-decoration: underline; }`;

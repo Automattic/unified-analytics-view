@@ -430,6 +430,8 @@ export class UaView extends Base {
     // The run's own box, and not what scrolls: the last slot's spare column hangs past the run and is no part of the number.
     for (const screen of number.querySelectorAll('.uav-glyphs')) screen.toggleAttribute('data-over', (screen.firstElementChild?.getBoundingClientRect().width ?? 0) > screen.getBoundingClientRect().width + 0.5);
     if (prose) fig.setAttribute('data-fit', 'prose'); else if (this.#layout) LAYOUTS[this.#layout]?.measure?.(body, room);
+    // What the pass took away is no longer an option.
+    this.#keys.name();
   }
 }
 

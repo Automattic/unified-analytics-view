@@ -371,21 +371,30 @@ export class Keys {
     this.#says = this.#keys.map((k, i) => (split == null ? readout(rows[i]![0] ?? {}, q, catalog, layers) : readoutAt(rows[i]!, totals.find((t) => String(t[x!]) === k), q, catalog, x!, split, !scene.series)));
     const box = this.#box();
     if (box) {
-      attr(box, 'role', 'listbox'); attr(box, 'tabindex', this.#keys.length ? 0 : null);
-      attr(box, 'aria-label', catalog.dimensions[x!]?.label); attr(box, 'aria-orientation', box.dataset.hits === 'y' ? 'vertical' : 'horizontal');
-      // A point is an option. Where a group of glyphs share a row, a unit's cells or its seats, the first of them is
-      // the group's option and the rest are its picture, as are the glyphs that are no row's: the rest past a limit.
-      const named = new Set<string>();
-      for (const el of Array.from(box.children)) {
-        const row = el.getAttribute('data-row'), i = this.#keys.indexOf(row ?? ''), first = row != null && !named.has(row);
-        if (row != null) named.add(row);
-        attr(el, 'role', first ? 'option' : 'presentation'); attr(el, 'id', first ? 'hit-' + i : null); attr(el, 'aria-label', first ? this.#says[i] : null);
-      }
+      attr(box, 'role', 'listbox'); attr(box, 'aria-label', catalog.dimensions[x!]?.label);
+      // Points in two dimensions have no one orientation, and the attribute has no value for both.
+      attr(box, 'aria-orientation', box.dataset.hits === 'y' ? 'vertical' : box.dataset.hits === 'xy' ? null : 'horizontal');
+      this.name();
     }
     // Held by the keyboard, or by a mouse still over the view: no pointerover follows for an element that was kept, so a
     // point let go here would take the readout, and the next click, with it.
     const at = this.#at, held = at != null && this.#keys.includes(at) && !!box && (box.matches(':focus') || this.#body.matches(':hover'));
     this.#show(held ? at : null, held && this.#series != null && this.#order.includes(this.#series) ? this.#series : null);
+  }
+
+  /** Name the options: after each paint, and after the measured pass, which can take points away. A point is an option
+   * only while it is on show (#points), so a list cut by a height limit counts the rows it shows, one leaving is no
+   * option, and a list with none on show is no tab stop. Where a group of glyphs share a row, a unit's cells or its
+   * seats, the first of them is the group's option and the rest are its picture, as are the glyphs that are no row's. */
+  name(): void {
+    const box = this.#box();
+    if (!box) return;
+    const shown = new Set(this.#points(box));
+    attr(box, 'tabindex', shown.size ? 0 : null);
+    for (const el of Array.from(box.children)) {
+      const on = shown.has(el as HTMLElement), i = on ? this.#keys.indexOf(el.getAttribute('data-row')!) : -1;
+      attr(el, 'role', on ? 'option' : 'presentation'); attr(el, 'id', on ? 'hit-' + i : null); attr(el, 'aria-label', on ? this.#says[i] : null);
+    }
   }
 
   #box(): HTMLElement | null { return this.#body.querySelector<HTMLElement>('[data-hits]'); }

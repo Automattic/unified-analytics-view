@@ -210,7 +210,7 @@ describe('the mouse leaving', () => {
     paint();
     let activated = 0; host.addEventListener('ua-activate', () => activated++);
     const send = (type: string, init: object) => body.dispatchEvent(Object.assign(new Event(type, { cancelable: true }), init));
-    return { tip, send, paint, activated: () => activated, chosen: () => points.filter((p) => p.hasAttribute('data-active')).map((p) => p.getAttribute('data-row')) };
+    return { tip, send, paint, keys, body, points, activated: () => activated, chosen: () => points.filter((p) => p.hasAttribute('data-active')).map((p) => p.getAttribute('data-row')) };
   };
 
   it.each([false, true])('clears the chosen point and the readout, as version 4 does (view focused: %s)', (focused) => {
@@ -260,5 +260,16 @@ describe('the mouse leaving', () => {
     expect(press.chosen()).toEqual(['b']);
     press.send('click', {});
     expect(press.activated()).toBe(0);                                    // the first press only chose it
+  });
+  it('makes options of the points on show alone, and no tab stop of a list with none', () => {
+    const v = view(false), past = { left: 0, top: 120, right: 100, bottom: 140, width: 100, height: 20 };
+    v.points[2]!.getBoundingClientRect = () => past;                   // cut off by a height limit
+    v.keys.name();
+    expect(v.points.map((p) => p.getAttribute('role'))).toEqual(['option', 'option', 'presentation']);
+    expect(v.points[2]!.getAttribute('id')).toBe(null);
+    expect(v.body.getAttribute('tabindex')).toBe('0');
+    for (const p of v.points) p.getBoundingClientRect = () => past;
+    v.keys.name();
+    expect(v.body.getAttribute('tabindex')).toBe(null);
   });
 });

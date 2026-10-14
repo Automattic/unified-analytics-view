@@ -633,7 +633,7 @@ Related visual directions not yet built: segmented display type for large numera
 | No prior period | Comparison layer dropped and reported; delta reads "No prior period" | Proven |
 | Partial bucket (today) | Dashed tail on a line, faded bar, excluded from the area | Proven |
 | Instant metric at zero | "0" with "right now", and no pulse. The prototype says "Nobody is here right now" | Proven |
-| Loading | — | To do |
+| Loading | — | Built in `<ua-view>`: a placeholder until an input it has not been handed comes, and until its turn to paint on a page of many views. A plot's natural height in a stack, the whole box in a row. It fades in after 150 ms, so a view that paints at once never shows it. A view already drawn stays drawn while new inputs are awaited. An input still missing after ten seconds is reported in the console with its fix, not shown as an error |
 | Stale or late data | — | To do. Freshness should be a visible state |
 | Filtered (bots, consent) | — | To do |
 | Metric unavailable here | — | To do |

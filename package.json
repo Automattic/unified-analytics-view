@@ -5,7 +5,8 @@
   "scripts": {
     "test": "vitest run --dir test",
     "bench": "pnpm --filter @unified-analytics/bench dev",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "bench:archive": "pnpm --filter @unified-analytics/bench-archive dev"
   },
   "devDependencies": {
     "@adobe/leonardo-contrast-colors": "1.0.0",

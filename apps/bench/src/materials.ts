@@ -1,8 +1,7 @@
 /* The materials, on the tokens page: each material over the page and over each surface it has to sit on, at the sizes it has
- * to hold up at, under one light the controls move. The same light is the one elevation's shadows fall away from. The material's surface is material.css; this file builds
+ * to hold up at, under one light. The same light is the one elevation's shadows fall away from. The material's surface is material.css; this file builds
  * the stage and the lens filter. */
 const root = document.documentElement;
-const controls = document.querySelector<HTMLFormElement>('#controls')!;
 const main = document.querySelector<HTMLElement>('#materials')!;
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
@@ -137,28 +136,15 @@ heading('Screen', 'a surface sunk into the page, as an LCD is: the inset elevati
   main.append(row);
 }
 
-const params = new URLSearchParams(location.search);
-for (const [k, v] of params) {
-  const input = controls.querySelector<HTMLInputElement>(`[name="${k}"]`);
-  if (input?.type === 'range') input.value = v;
-  else if (input?.type === 'checkbox') input.checked = v === 'on';
-  else { const pick = controls.querySelector<HTMLInputElement>(`[name="${k}"][value="${v}"]`); if (pick) pick.checked = true; }
-}
-function apply() {
-  const s = Object.fromEntries(new FormData(controls)) as Record<'theme' | 'light' | 'bevel' | 'thick' | 'disp' | 'blur' | 'saturate' | 'tint' | 'grain', string> & { crystal?: string };
-  if (s.theme) root.dataset.theme = s.theme; else delete root.dataset.theme;
-  root.style.setProperty('--ua-light', s.light + 'deg');
-  main.style.setProperty('--ua-crystal-flat', 100 - +s.bevel + '%');
-  main.style.setProperty('--ua-frost-blur', s.blur + 'px');
-  main.style.setProperty('--ua-frost-saturate', s.saturate + '%');
-  main.style.setProperty('--ua-frost-tint', s.tint + '%');
-  main.style.setProperty('--ua-grain', s.grain);
-  main.dataset.crystal = s.crystal ?? 'off';
-  lens(1 - +s.bevel / 100, +s.thick, +s.disp);
-  for (const range of controls.querySelectorAll<HTMLInputElement>('input[type=range]')) controls[range.name + 'Out'].value = range.value + (range.dataset.unit ?? '');
-  history.replaceState(null, '', '?' + new URLSearchParams({ ...s, crystal: s.crystal ?? 'off' }));
-}
-controls.addEventListener('input', apply);
-apply();
+// The light and the material, as they were settled when the page had controls to move them.
+const s = { light: 322, bevel: 20, thick: 0.44, disp: 0.6, blur: 18, saturate: 180, tint: 45, grain: 0.55 };
+root.style.setProperty('--ua-light', s.light + 'deg');
+main.style.setProperty('--ua-crystal-flat', 100 - s.bevel + '%');
+main.style.setProperty('--ua-frost-blur', s.blur + 'px');
+main.style.setProperty('--ua-frost-saturate', s.saturate + '%');
+main.style.setProperty('--ua-frost-tint', s.tint + '%');
+main.style.setProperty('--ua-grain', String(s.grain));
+main.dataset.crystal = 'on';
+lens(1 - s.bevel / 100, s.thick, s.disp);
 
 export {};

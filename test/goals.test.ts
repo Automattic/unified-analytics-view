@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { buildScene, resolve, unboundedContainer } from '@unified-analytics/core';
 import { scenarios } from '@unified-analytics/fixtures';   // registers the geo mark, as the page's import does
-import { SITES, catalog, runQuery } from '../apps/bench/src/goals-data.ts';
-import { GOALS, METRICS } from '../apps/bench/src/goals-views.ts';
+import { SITES, catalog, runQuery } from '../apps/bench-archive/src/goals-data.ts';
+import { GOALS, METRICS } from '../apps/bench-archive/src/goals-views.ts';
 
 /* The goals page is specs and an engine, so it is swept with no DOM: every view of every goal's dashboard is planned
  * and built into a scene, in each data state and range. A spec the grammar refuses fails here with the error it gives. */

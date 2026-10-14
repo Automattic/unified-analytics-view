@@ -92,6 +92,34 @@ importers:
       '@unified-analytics/partition':
         specifier: workspace:*
         version: link:../../packages/partition
+      '@unified-analytics/tokens':
+        specifier: workspace:*
+        version: link:../../packages/tokens
+    devDependencies:
+      vite:
+        specifier: ^8.3.3
+        version: 8.3.3(@types/node@26.6.4)(yaml@2.9.1)
+
+  apps/bench-archive:
+    dependencies:
+      '@unified-analytics/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@unified-analytics/dom':
+        specifier: workspace:*
+        version: link:../../packages/dom
+      '@unified-analytics/fixtures':
+        specifier: workspace:*
+        version: link:../../packages/fixtures
+      '@unified-analytics/flow':
+        specifier: workspace:*
+        version: link:../../packages/flow
+      '@unified-analytics/geo':
+        specifier: workspace:*
+        version: link:../../packages/geo
+      '@unified-analytics/partition':
+        specifier: workspace:*
+        version: link:../../packages/partition
       '@unified-analytics/spacefast':
         specifier: workspace:*
         version: link:../../packages/spacefast

@@ -24,17 +24,18 @@ const short = '(100cqi - var(--uav-need) + 0.01px) * 999999';
 
 /** The room each column takes, as core reckons it (columnRooms), at the width a character has in this view. Core's is
  * for the faces a view has with no tokens, and a page's may be wider, as a pixel face is: a column that is kept past
- * the room it really takes leaves the label none. Where a width cannot be read, core's stands. */
+ * the room it really takes leaves the label none. Where a width cannot be read, core's stands. It is read in the measured
+ * pass, once every view queued with this one has painted: read as it paints, a page of lists was laid out once for each. */
 function roomsHere(body: HTMLElement, scene: Scene): number[] {
-  const advance = (face: string) => {
+  // Both faces are put in before either is read, so the page is laid out once for the two.
+  const probes = ['tick', 'value'].map((face) => {
     const probe = body.appendChild(document.createElement('span'));
     probe.className = 'uav-f-' + face; probe.textContent = '0'.repeat(10);
     probe.style.position = 'absolute'; probe.style.visibility = 'hidden'; probe.style.whiteSpace = 'nowrap';
-    const width = probe.getBoundingClientRect().width / 10;
-    probe.remove();
-    return width;
-  };
-  const tick = advance('tick'), value = advance('value'), room: number[] = [];
+    return probe;
+  });
+  const [tick, value] = probes.map((probe) => probe.getBoundingClientRect().width / 10), room: number[] = [];
+  for (const probe of probes) probe.remove();
   if (!tick || !value) return columnRooms(scene);
   for (const n of scene.nodes) {
     if (n.kind !== 'text' || !((n.part === 'columns' && n.anchor !== 'start') || (n.part === 'rows' && n.font === 'value'))) continue;
@@ -62,6 +63,11 @@ const css = `
   .uav-rows { max-block-size: calc(round(down, 100% + var(--uav-row-gap), var(--uav-row-block) + var(--uav-row-gap)) - var(--uav-row-gap)); }
 }`;
 
+/** What the measured pass needs to set each column's room again from the widths it reads: the scene, the label's room,
+ * and the cells that hold a room, by the rank of their column. */
+const painted = new WeakMap<HTMLElement, { scene: Scene; label: number; cells: [HTMLElement | SVGElement, number | undefined][] }>();
+const needOf = (label: number, rooms: number[], rank?: number) => (rank ? label + rooms.slice(0, rank + 1).reduce((s, w) => s + w, 0) + 'px' : null);
+
 export const rows: LayoutPainter = {
   layout: 'rows',
   css: css + TRACK_CSS,
@@ -77,14 +83,16 @@ export const rows: LayoutPainter = {
   paint(body, scene, rules) {
     const head = ensure(body, 'div', 'uav-columns'), list = ensure(body, 'div', 'uav-rows'), by = new Map<string, SceneNode[]>();
     const beside = scene.track === 'beside', room = (id: string) => rules.fit.find((r) => r.layout === 'rows' && r.id === id)?.needs.inline;
-    const rooms = roomsHere(body, scene), label = (beside ? room('track') : undefined) ?? room('marks') ?? 0;
+    // Core's rooms until the measured pass reads the faces (measure, below).
+    const rooms = columnRooms(scene), label = (beside ? room('track') : undefined) ?? room('marks') ?? 0, cells: [HTMLElement | SVGElement, number | undefined][] = [];
+    painted.set(body, { scene, label, cells });
     // A row's labels stand side by side in the order they come, each before the last in a column as wide as its text.
     // Beside its label the track is a column too. `first` is the column of the first value.
     const col = new Map<string, number>(), count = new Map<string, number>();
     for (const n of scene.nodes) if (n.part === 'rows' && n.kind === 'text' && n.font === 'label') { col.set(n.key, (count.get(n.row!) ?? 0) + 1); count.set(n.row!, col.get(n.key)!); }
     const lead = Math.max(1, ...count.values()) - 1, first = lead + (beside ? 3 : 2);
     // The room a view needs to show the column of this rank: the label's, by the `marks` rule, and each column's up to it.
-    const need = (rank?: number) => (rank ? label + rooms.slice(0, rank + 1).reduce((s, w) => s + w, 0) + 'px' : null);
+    const need = (rank?: number) => needOf(label, rooms, rank);
     list.setAttribute('data-hits', 'y');                                     // each row is its own hit target
     prop(body, '--uav-tracks', 'auto '.repeat(lead) + (beside ? 'minmax(0, auto) ' : '') + 'minmax(0, 1fr)' + ' auto'.repeat(rooms.length));
     prop(body, '--uav-track', beside ? first - 1 + ' / ' + first : lead ? '1 / ' + (first + 1) : null); attr(body, 'data-track', scene.track);
@@ -94,11 +102,11 @@ export const rows: LayoutPainter = {
       text(c, n); c.setAttribute('data-anchor', n.anchor);
       // The header over the labels stands in their column, the first, and is never given up for room.
       if (n.part === 'columns' && n.anchor === 'start') prop(c, '--uav-col', 1);
-      else if (n.font !== 'label') { prop(c, '--uav-col', (n.rank || 0) + first); prop(c, '--uav-need', need(n.rank)); }
+      else if (n.font !== 'label') { prop(c, '--uav-col', (n.rank || 0) + first); prop(c, '--uav-need', need(n.rank)); cells.push([c, n.rank]); }
       else prop(c, '--uav-col', lead ? col.get(n.key) : null);
     };
     // Headers stand over more than one column, so they go with the second.
-    prop(head, '--uav-need', need(1));
+    prop(head, '--uav-need', need(1)); cells.push([head, 1]);
     keyed(head, scene.nodes.filter((n): n is TextNode => n.part === 'columns' && n.kind === 'text'), () => 'span', cell);
     for (const n of scene.nodes) if (n.part === 'rows' && n.kind !== 'row' && n.row != null) by.set(n.row, (by.get(n.row) ?? []).concat(n));
     keyed(list, scene.nodes.filter((n): n is RowNode => n.kind === 'row'), () => 'div', (el, r) => {
@@ -113,5 +121,14 @@ export const rows: LayoutPainter = {
     paintUnitKey(body, scene);
     // The key to a divided row's series, and the one line that stands in for it.
     paintLegend(body, scene);
+  },
+
+  // The columns' rooms at the width a character has here. The tracks stay as painted: they count the columns, and
+  // the faces change no count.
+  measure(body) {
+    const p = painted.get(body);
+    if (!p) return;
+    const rooms = roomsHere(body, p.scene);
+    for (const [el, rank] of p.cells) prop(el, '--uav-need', needOf(p.label, rooms, rank));
   },
 };

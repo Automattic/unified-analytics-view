@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bench</title>
+  <link rel="stylesheet" href="/src/bench.css">
+</head>
+<body>
+  <nav><a href="demo.html">Demo</a> <a href="./" aria-current="page">Views</a> <a href="marks.html">Marks</a> <a href="sidebar.html">Sidebar</a> <a href="goals.html">Goals</a> <a href="live.html">Live</a> <a href="tokens.html">Tokens</a> <a href="spike.html">Spike</a></nav>
+  <form id="controls">
+    <fieldset><legend>Data</legend>
+      <label><input type="radio" name="scenario" value="typical" checked> typical</label>
+      <label><input type="radio" name="scenario" value="no-prior"> no prior</label>
+      <label><input type="radio" name="scenario" value="empty"> empty</label>
+    </fieldset>
+    <fieldset><legend>Range</legend>
+      <label><input type="radio" name="range" value="28d" checked> 28 days</label>
+      <label><input type="radio" name="range" value="14d"> 14</label>
+      <label><input type="radio" name="range" value="7d"> 7</label>
+    </fieldset>
+    <fieldset><legend>Height</legend>
+      <label><input type="radio" name="height" value="" checked> natural</label>
+      <label><input type="radio" name="height" value="160"> 160</label>
+      <label><input type="radio" name="height" value="100"> 100</label>
+      <label><input type="radio" name="height" value="60"> 60</label>
+      <label><input type="radio" name="height" value="40"> 40</label>
+    </fieldset>
+    <fieldset><legend>Theme</legend>
+      <label><input type="radio" name="theme" value="" checked> system</label>
+      <label><input type="radio" name="theme" value="light"> light</label>
+      <label><input type="radio" name="theme" value="dark"> dark</label>
+    </fieldset>
+  </form>
+  <main id="views"></main>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

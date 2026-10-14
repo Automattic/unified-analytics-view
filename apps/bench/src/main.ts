@@ -4,6 +4,8 @@ import { catalog, moreSamples, runQuery, samples as known, type Scenario } from 
 import { linkPainter } from '@unified-analytics/flow/dom';
 import { geoPainter, geoPainterAs } from '@unified-analytics/geo/dom';
 import { partitionPainter } from '@unified-analytics/partition/dom';
+import { resizable } from './resizer.ts';
+import './theme.ts';
 
 /* The bench: every sample, in frames that stand in for containers.
  * Controls live in the URL, so a reload or a shared link keeps them. */
@@ -14,7 +16,7 @@ const views = document.querySelector('#views')!;
 
 const params = new URLSearchParams(location.search);
 for (const [k, v] of params) { const input = controls.querySelector<HTMLInputElement>(`[name="${k}"][value="${v}"]`); if (input) input.checked = true; }
-const state = () => Object.fromEntries(new FormData(controls)) as { scenario: Scenario; range: string; height: string; theme: string };
+const state = () => Object.fromEntries(new FormData(controls)) as { scenario: Scenario; range: string; height: string };
 
 // The surface layouts are the surface's to adopt. Here the page is the surface, and each frame a stack or a row of one.
 defineUaView();
@@ -39,7 +41,7 @@ function paint(frame: HTMLElement) {
     const result = runQuery(spec.query, scenario);
     caption.className = 'meta';
     // Planned once, with no limits. Nothing here runs when the frame is resized, so the caption says only what the plan holds.
-    const view = (frame.firstElementChild as UaView | null) ?? frame.appendChild(new UaView());
+    const view = frame.querySelector<UaView>('ua-view') ?? frame.appendChild(new UaView());
     view.spec = spec; view.result = result; view.catalog = catalog;
     const plan = resolve(spec, result, unboundedContainer(), catalog), scene = buildScene(plan, spec.query, result, catalog);
     caption.textContent = 'planned with no limits: ' + plan.layout + ', parts ' + scene.parts.join(', ') + ' · CSS decides what shows at this size · ' + plan.text;
@@ -57,6 +59,7 @@ for (const [name, sample] of Object.entries(samples)) {
     // The frame is the container and holds nothing but the view. What the bench says about it sits outside.
     const cell = document.createElement('div'), frame = document.createElement('div');
     cell.className = 'cell'; frame.className = 'frame'; frame.dataset.sample = name; frame.style.inlineSize = w + 'px';
+    resizable(frame);
     cell.append(frame, document.createElement('p'));
     sizes.append(cell);
   }
@@ -65,7 +68,6 @@ for (const [name, sample] of Object.entries(samples)) {
 
 function apply() {
   const s = state();
-  if (s.theme) document.documentElement.dataset.theme = s.theme; else delete document.documentElement.dataset.theme;
   history.replaceState(null, '', '?' + new URLSearchParams(s));
   document.querySelectorAll<HTMLElement>('.frame').forEach(paint);
 }

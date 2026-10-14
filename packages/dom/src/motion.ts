@@ -138,10 +138,28 @@ export function settle(fig: HTMLElement): void {
 export function once(el: Element, attrs: string[]): void {
   const done = () => { for (const a of attrs) el.removeAttribute(a); };
   if (typeof requestAnimationFrame !== 'function') { done(); return; }
-  requestAnimationFrame(() => {
-    const playing = el.getAnimations({ subtree: true }).filter((a) => a instanceof CSSAnimation);
-    if (playing.length) over(playing).then(done); else done();
+  if (!onces.length) requestAnimationFrame(playOnce);
+  onces.push([el, done]);
+}
+/** End now what once() was asked to play inside `root`, before a frame has started it: for a view painted where no one
+ * sees it. A page of views coming in had a line drawing and a number rolling in every one, and each frame redrew them all. */
+export function still(root: Node): void {
+  for (let i = onces.length - 1; i >= 0; i--) if (root.contains(onces[i]![0])) onces.splice(i, 1)[0]![1]();
+}
+// Every element asked about in a frame is read before any is written: a removal between two reads lays the page out
+// again for each, and on a page of many views that is a layout of the whole page for every number and every line.
+const onces: [Element, () => void][] = [];
+// And the animations are asked for once for each view's root, not once for each element: each asking goes through every
+// animation on the page, and while a page of views comes in, each has a line drawing and a number rolling.
+function playOnce(): void {
+  const batch = onces.splice(0), roots = new Map<Node, CSSAnimation[]>();
+  const playing = batch.map(([el]) => {
+    const root = el.getRootNode();
+    let all = roots.get(root);
+    if (!all) roots.set(root, all = (root instanceof ShadowRoot || root instanceof Document ? root.getAnimations() : []).filter((a): a is CSSAnimation => a instanceof CSSAnimation));
+    return all.filter((a) => { const t = (a.effect as KeyframeEffect | null)?.target; return !!t && el.contains(t); });
   });
+  batch.forEach(([, done], i) => { if (playing[i]!.length) over(playing[i]!).then(done); else done(); });
 }
 
 interface Morph { now: XV[]; from: XV[]; to: PathNode; frame: number; clock?: Animation | null | undefined }

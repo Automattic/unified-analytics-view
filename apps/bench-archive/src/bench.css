@@ -1,0 +1,112 @@
+@import '@unified-analytics/tokens/generated/tokens.css';
+@import '@unified-analytics/tokens/fonts/ans-mono.css';
+@import '@unified-analytics/tokens/fonts/ans-mono-scroll.css';
+
+/* What a view paints with is the token package's charts tier (config/charts.tokens.json). */
+:root { color-scheme: light dark; }
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+
+body { margin: 0; padding: var(--ua-space-m); font: 13px/1.4 system-ui, sans-serif; background: var(--ua-color-background); color: var(--ua-color-foreground); }
+#controls { display: flex; flex-wrap: wrap; gap: var(--ua-space-s); position: sticky; top: 0; z-index: 1; padding-block: var(--ua-space-2xs); background: var(--ua-color-background); }
+fieldset { display: flex; gap: var(--ua-space-xs); margin: 0; border: 1px solid var(--ua-color-border); border-radius: var(--ua-radius-sm); }
+legend, h2 small { color: var(--ua-color-muted-foreground); }
+h2 { font-size: 13px; margin: var(--ua-space-l) 0 var(--ua-space-xs); }
+h2 small { font-weight: 400; }
+.sizes { display: flex; flex-wrap: wrap; align-items: start; gap: var(--ua-space-m); }
+
+/* A frame stands in for a container and adds nothing of its own: no fill, no edge, no padding,
+ * so a view looks here as it will where it is inserted. Its extent shows on hover; drag its corner. */
+.frame { min-inline-size: 40px; max-inline-size: 100%; resize: horizontal; overflow: hidden; }
+.cell:hover > .frame { outline: 1px dashed var(--ua-color-border); }
+.meta { inline-size: 0; min-inline-size: 100%; margin: var(--ua-space-xs) 0 0; font-size: 11px; color: var(--ua-color-muted-foreground); overflow-wrap: anywhere; }
+.meta.error { color: var(--ua-color-destructive-text); }
+
+nav { display: flex; gap: var(--ua-space-s); margin-block-end: var(--ua-space-xs); }
+nav a { color: var(--ua-color-muted-foreground); text-decoration: none; }
+nav a[aria-current] { color: var(--ua-color-foreground); font-weight: 600; }
+
+/* The tokens page. */
+small { display: block; font-size: 11px; color: var(--ua-color-muted-foreground); overflow-wrap: anywhere; }
+h2 small { display: inline; }
+.swatch { display: block; border-radius: var(--ua-radius-sm); border: 1px solid var(--ua-color-border);
+  background: linear-gradient(var(--c), var(--c)), repeating-conic-gradient(#8884 0 25%, transparent 0 50%) 0 0 / 12px 12px; }
+.ramps { display: grid; grid-template-columns: 5em repeat(var(--steps), minmax(0, 1fr)); gap: var(--ua-space-2xs); align-items: start; max-inline-size: 1100px; }
+/* A ramp's name starts its row, however many steps the ramp before it had. */
+.ramps > b { grid-column: 1; }
+.step .swatch { block-size: 40px; }
+.chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--ua-space-xs); }
+.chip { display: flex; gap: var(--ua-space-xs); align-items: center; min-inline-size: 0; }
+.chip .swatch, .radius { flex: none; inline-size: 36px; block-size: 36px; }
+.radius { background: var(--ua-color-foreground-50); }
+.fluid { container-type: inline-size; inline-size: 720px; padding: var(--ua-space-xs); border: 1px solid var(--ua-color-border); border-radius: var(--ua-radius-md); display: grid; gap: var(--ua-space-2xs); }
+.type span { display: block; line-height: 1.2; }
+.bar { display: grid; grid-template-columns: 9em auto 1fr; gap: var(--ua-space-xs); align-items: center; }
+.bar i { display: block; block-size: 12px; background: var(--ua-charts-color-series-1); border-radius: 2px; }
+
+/* The spike page (docs/dom-painter-plan.md, section 7). Throwaway.
+ * The two surface layouts, as section 4.2 writes them, on the spike's element. */
+.ua-stack { display: grid; gap: var(--ua-space-s); }
+.ua-row   { display: flex; gap: var(--ua-space-s); }
+.ua-row > ua-spike-view { flex: 1 1 0; min-inline-size: 0; block-size: 100%; container-type: size; }
+.frame.ua-row { resize: both; }
+/* A frame holding one <ua-view>: a stack, or a row when the height control hands it a box. The gap is between views, and there is one. */
+.frame:is(.ua-stack, .ua-row) { gap: 0; }
+
+.spike > p, .spike section > p { max-inline-size: 76ch; }
+.spike section { margin-block-start: var(--ua-space-l); border-block-start: 1px solid var(--ua-color-border); }
+.spike h3 { font-size: 11px; font-weight: 400; color: var(--ua-color-muted-foreground); margin: var(--ua-space-s) 0 var(--ua-space-2xs); }
+.spike .meta { inline-size: auto; min-inline-size: 0; }
+.spike .cell > .meta { inline-size: 0; min-inline-size: 100%; }
+.verdict { display: inline-block; padding: 0 var(--ua-space-2xs); border: 1px solid; border-radius: var(--ua-radius-sm); font-size: 11px; text-transform: uppercase; color: var(--ua-color-muted-foreground); }
+.verdict[data-state="pass"] { color: var(--ua-color-success-text); }
+.verdict[data-state="fail"] { color: var(--ua-color-destructive-text); }
+/* Item 1's rulers: 10 px on, 10 px off, beside each dashed path. */
+.dash { position: relative; }
+.dash svg { display: block; overflow: visible; }
+.dash::before, .dash::after { content: ''; position: absolute; }
+.dash::before { inset-inline-start: 0; inset-block-start: calc(20% + 4px); inline-size: 60%; block-size: 4px; background: repeating-linear-gradient(90deg, var(--ua-color-marker) 0 10px, transparent 10px 20px); }
+.dash::after { inset-inline-start: calc(90% + 4px); inset-block-start: 0; inline-size: 4px; block-size: 100%; background: repeating-linear-gradient(180deg, var(--ua-color-marker) 0 10px, transparent 10px 20px); }
+
+/* A grid to see a material against: 16 px lines, heavier every 80. */
+.gridded { background-image: linear-gradient(var(--ua-color-foreground-8) 1px, transparent 1px), linear-gradient(90deg, var(--ua-color-foreground-8) 1px, transparent 1px),
+    linear-gradient(var(--ua-color-foreground-8) 1px, transparent 1px), linear-gradient(90deg, var(--ua-color-foreground-8) 1px, transparent 1px);
+  background-size: 80px 80px, 80px 80px, 16px 16px, 16px 16px; }
+.defs { position: absolute; inline-size: 0; block-size: 0; }
+
+/* Elevation, for any container: flat unless it says otherwise. -1 is sunk into its surface, and 1 to 3 stand above it. */
+[data-elevation="-1"] { box-shadow: var(--ua-elevation-inset); }
+[data-elevation="1"] { box-shadow: var(--ua-elevation-1); }
+[data-elevation="2"] { box-shadow: var(--ua-elevation-2); }
+[data-elevation="3"] { box-shadow: var(--ua-elevation-3); }
+/* On the tokens page: a container at each level, on the page. What is sunk is a well; what stands is a card. */
+.elevations { display: flex; flex-wrap: wrap; gap: var(--ua-space-xl); padding: var(--ua-space-l) var(--ua-space-m); }
+.elevations figure { margin: 0; display: grid; gap: var(--ua-space-4xs); }
+.elevation { inline-size: 140px; block-size: 88px; margin-block-end: var(--ua-space-xs); display: grid; place-items: center; border-radius: var(--ua-radius-lg); background: var(--ua-surface-card); font-size: var(--ua-font-size-lg); }
+.elevation.sunk { background: var(--ua-color-well); }
+/* Something for glass to be over: the grid, and three discs of series colour. */
+.backdrop { padding: var(--ua-space-xl); border-radius: var(--ua-radius-lg);
+  background: radial-gradient(circle at 18% 30%, var(--ua-color-constant-rose) 0 44px, transparent 45px), radial-gradient(circle at 82% 28%, var(--ua-color-constant-lime) 0 36px, transparent 37px),
+    radial-gradient(circle at 62% 84%, var(--ua-color-constant-teal) 0 52px, transparent 53px); }
+.panels :is(.ua-frost, .ua-crystal-surface) { box-sizing: border-box; inline-size: 260px; display: grid; gap: var(--ua-space-5xs); padding: var(--ua-space-s) var(--ua-space-m); }
+.panels :is(.ua-frost, .ua-crystal-surface) b { font-size: 36px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.panels :is(.ua-frost, .ua-crystal-surface) span { font-size: var(--ua-font-size-xs); color: var(--ua-color-muted-foreground); }
+/* A container on the marker's lime is the same lime in both themes, so what is on it is black in both. */
+.panels .ua-crystal-surface[style*="marker"] :is(b, span) { color: var(--ua-color-black); }
+/* A screen as a specimen: a number and what it is. */
+.screens .ua-screen { box-sizing: border-box; display: grid; gap: var(--ua-space-5xs); padding: var(--ua-space-s) var(--ua-space-m); container-type: inline-size; }
+.screens .ua-screen b { font-size: clamp(20px, 16cqi, 44px); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.screens .ua-screen span { font-size: var(--ua-font-size-xs); color: var(--ua-color-muted-foreground); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+#materials { margin-block-start: var(--ua-space-xl); padding: var(--ua-space-m); border-radius: var(--ua-radius-lg); }
+
+/* The materials, on the tokens page. A stage is a square with room around it for the light's dot; the plate is the surface under the material. */
+.stages { display: flex; flex-wrap: wrap; align-items: end; gap: var(--ua-space-xl); margin-block-end: var(--ua-space-l); }
+.stages figure { margin: 0; display: grid; justify-items: center; gap: var(--ua-space-s); }
+.stages .stage { position: relative; aspect-ratio: 1; margin: var(--ua-space-m); }
+.plate { position: absolute; inset: 0; border-radius: 50%; display: grid; place-items: center; container-type: inline-size; }
+.plate b { font-size: 22cqi; }
+.sun { position: absolute; inline-size: 6px; block-size: 6px; margin: -3px; border-radius: 50%; background: var(--ua-color-foreground);
+  inset-inline-start: calc(50% + var(--ua-light-x) * 56%); inset-block-start: calc(50% + var(--ua-light-y) * 56%); }
+[data-crystal="off"] .ua-crystal { display: none; }
+/* Frost as a swatch: a disc over the plate, like the crystal. */
+.plate .ua-frost { position: absolute; inset: 0; border-radius: 50%; }

@@ -5,9 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Bench</title>
   <link rel="stylesheet" href="/src/bench.css">
+  <script>/* The theme the bench keeps (src/theme.ts), set before the page paints. */ try { const p = new URLSearchParams(location.search), t = p.has('embed') ? p.get('theme') : localStorage.getItem('ua-bench-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch {}</script>
 </head>
 <body>
-  <nav><a href="demo.html">Demo</a> <a href="./" aria-current="page">Views</a> <a href="marks.html">Marks</a> <a href="sidebar.html">Sidebar</a> <a href="goals.html">Goals</a> <a href="live.html">Live</a> <a href="tokens.html">Tokens</a> <a href="spike.html">Spike</a></nav>
+  <nav><a href="playground.html">Playground</a> <a href="./" aria-current="page">Views</a> <a href="marks.html">Marks</a> <a href="tokens.html">Tokens</a></nav>
   <form id="controls">
     <fieldset><legend>Data</legend>
       <label><input type="radio" name="scenario" value="typical" checked> typical</label>
@@ -25,11 +26,6 @@
       <label><input type="radio" name="height" value="100"> 100</label>
       <label><input type="radio" name="height" value="60"> 60</label>
       <label><input type="radio" name="height" value="40"> 40</label>
-    </fieldset>
-    <fieldset><legend>Theme</legend>
-      <label><input type="radio" name="theme" value="" checked> system</label>
-      <label><input type="radio" name="theme" value="light"> light</label>
-      <label><input type="radio" name="theme" value="dark"> dark</label>
     </fieldset>
   </form>
   <main id="views"></main>

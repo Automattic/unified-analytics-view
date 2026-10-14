@@ -67,13 +67,26 @@ describe('the dot-matrix face', () => {
     expect(DOTS_CSS).toMatch(/\.uav-glyph-run sup \{[^}]*font: normal 400 calc\(var\(--uav-u\) \* 8\)[^}]*font-variant-caps: all-small-caps;/);
   });
   it('shares a view\'s screen with the change and the note under the number, each line a whole number of cells', () => {
-    expect(DOTS_CSS).toContain('.uav-number:has(> b .uav-glyphs)::before { content: ""; position: absolute; z-index: -1;');
-    expect(DOTS_CSS).toContain('inline-size: round(down, 100%, var(--uav-u)); block-size: round(down, 100%, var(--uav-u)); background: var(--uav-cells); }');
+    expect(DOTS_CSS).toContain('.uav-glyphs::before, .uav-number:has(> b .uav-glyphs)::before { content: "█');
+    expect(DOTS_CSS).toContain('inline-size: round(down, 100%, var(--uav-u)); block-size: round(down, 100%, var(--uav-u)); overflow: hidden;');
     // The value's own screen draws no cells there, or they would be drawn twice.
-    expect(DOTS_CSS).toContain('.uav-number .uav-glyphs { background: none; }');
+    expect(DOTS_CSS).toContain('.uav-number .uav-glyphs::before { content: none; }');
     expect(DOTS_CSS).toContain('.uav-number:has(> b .uav-glyphs) > span { line-height: calc(var(--uav-u) * 5); }');
     expect(DOTS_CSS).toContain('.uav-number:has(> b .uav-glyphs) > .uav-f-tick { line-height: calc(var(--uav-u) * 4); }');
     expect(DOTS_CSS).toContain('.uav-number:has(> b .uav-glyphs) > b + span { margin-block-start: var(--uav-u); }');
+  });
+  it('draws the unlit cells in the face itself, its full cell at the lit characters\' size and optical size, in rows no screen outruns', () => {
+    const field = /\.uav-glyphs::before, [^{]*\{([^}]*)\}/.exec(DOTS_CSS)![1]!;
+    // The same em and optical size as a lit character, so an unlit dot is drawn by the outline a lit one is.
+    expect(field).toContain('font: normal 400 calc(var(--uav-u) * 8) / calc(var(--uav-u) * 8) "Ans Mono", monospace; font-optical-sizing: none; font-variation-settings: "opsz" ');
+    expect(DOTS_CSS).toMatch(/\.uav-glyph-run i \{[^}]*font: normal 400 calc\(var\(--uav-u\) \* 8\)/);
+    // Rows of whole cells, each wider than any screen, cut by the screen at a whole cell: none wraps short of the edge.
+    const rows = /content: "([^"]*)";/.exec(field)![1]!.split('\\A ');
+    expect(rows.length).toBeGreaterThanOrEqual(4);
+    for (const row of rows) expect(row).toMatch(/^█{80}$/);
+    expect(field).toContain('white-space: pre;');
+    // Read by no one: the screen's words are in the document already.
+    expect(field).toContain(`content: "${rows.join('\\A ')}" / "";`);
   });
   it('runs a number too wide for its screen past under the pointer, right to left and round again, and shows its end at once with reduced motion', () => {
     expect(DOTS_CSS).toContain('left: round(to-zero, calc(var(--uav-e, 0) * 100%), var(--uav-u)); translate: round(to-zero, calc(var(--uav-s, 0) * -100%), var(--uav-u)) 0; }');

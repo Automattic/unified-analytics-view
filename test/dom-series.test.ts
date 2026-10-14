@@ -37,7 +37,7 @@ describe('bars', () => {
 });
 
 describe('a split path', () => {
-  const areas = (range: string) => of('area', 'typical', range).scene.nodes.filter((n): n is PathNode => n.kind === 'path');
+  const areas = (range: string) => of('area', 'typical', range).scene.nodes.filter((n): n is PathNode => n.kind === 'path' && !n.note);
 
   it.each(names)('has a key of its own in %s, so a morph holds to its series', (sample) => {
     const keys = of(sample).scene.nodes.map((n) => n.key);
@@ -113,11 +113,10 @@ describe('apart', () => {
 });
 
 describe('hit targets of a split plot', () => {
-  // A stacked area stops at the last whole day, as core draws it, so the unfinished one has no mark and no target.
-  const stacked = ['area', 'streamgraph', 'cumulative'];
+  // Every row drew a mark, the unfinished day of a stacked area among them, so every row has a target.
   it.each(names)('tile the plot in %s, one per x that drew a mark', (sample) => {
     const { scene } = of(sample), hits = hitNodes(scene);
-    expect(hits.map((h) => h.row)).toEqual(stacked.includes(sample) ? scene.rows!.slice(0, -1) : scene.rows);
+    expect(hits.map((h) => h.row)).toEqual(scene.rows);
     hits.forEach((h, i) => expect(h.x! + h.w!).toBeCloseTo(hits[i + 1]?.x ?? 1, 9));
   });
   it('centre on a group of bars, not on the last of them', () => {

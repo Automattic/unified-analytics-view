@@ -142,14 +142,18 @@ const path: MarkFn = (l, { id: layer, series, mass, role: role0, paint, prev, ro
     const area = (key: string, ps: Pt[], paint: string): SceneNode => ({ key, part, kind: 'path', d: pathD(ps, curve, true), points: ps, ...bent, fill: true, paint, ...(!(l.stack && series != null) && { opacity: 0.14, tone: 'soft' as const }), layer: 'data', ...role });
     // Painted by direction, it is cut where its two ends cross, and each piece is a gain or a loss. A piece is keyed by the row it starts at.
     if (polarity && polarity !== 'none') return cut(points(whole)).map((piece) => area(id + ':' + piece.pts.find((p) => p.row != null)!.row, piece.pts, toned(polarity, 0, piece.up ? 1 : -1, paint)));
-    return [area(id, points(whole), paint)];
+    // Stacked, an incomplete bucket is drawn too, as a bar of one is: a piece of its own in from the first and out to the last, faded.
+    if (!(l.stack && series != null) || prev) return [area(id, points(whole), paint)];
+    return [area(id, points(whole), paint), ...partials().map(([key, rs]): SceneNode => ({ ...area(id + key, points(rs), paint), opacity: 0.4, note: 'incomplete bucket' }))];
   }
   const nodes: SceneNode[] = [{ key: id, part, kind: 'path', d: pathD(points(whole), curve), points: points(whole), ...bent, paint, width: prev ? 1.5 : 2, dash: prev ? '3 3' : null, ...(mass && { opacity: MASS }), layer: 'data', ...role }];
-  // A range that starts or ends inside a bucket leaves that one incomplete: dashed in from the first, and out to the last.
-  const from = pts.indexOf(whole[0]!), lead = pts.slice(0, from).concat(whole[0]!), tail = [whole[whole.length - 1]!].concat(pts.slice(from).filter((r) => r.partial));
-  for (const [key, rs] of [[':partial:lead', lead], [':partial', tail]] as const)
-    if (!prev && rs.length > 1) nodes.push({ key: id + key, part, kind: 'path', d: pathD(points(rs)), points: points(rs), paint, width: 2, dash: '2 4', opacity: mass ? MASS : 0.75, layer: 'data', ...role, note: 'incomplete bucket' });
+  if (!prev) for (const [key, rs] of partials()) nodes.push({ key: id + key, part, kind: 'path', d: pathD(points(rs)), points: points(rs), paint, width: 2, dash: '2 4', opacity: mass ? MASS : 0.75, layer: 'data', ...role, note: 'incomplete bucket' });
   return nodes;
+  // A range that starts or ends inside a bucket leaves that one incomplete: dashed in from the first, and out to the last.
+  function partials(): [string, Row[]][] {
+    const from = pts.indexOf(whole[0]!), lead = pts.slice(0, from).concat(whole[0]!), tail = [whole[whole.length - 1]!].concat(pts.slice(from).filter((r) => r.partial));
+    return ([[':partial:lead', lead], [':partial', tail]] as [string, Row[]][]).filter(([, rs]) => rs.length > 1);
+  }
 };
 const bar: MarkFn = (_l, { id, series, role, paint, prev, rows, k, unit, ends, polarity, slot: [j, n] = [0, 1] }) => rows.map((r) => {
   const [v0, v] = ends(r), w = (unit.span ? unit.span(k(r)) : unit.w) / n;

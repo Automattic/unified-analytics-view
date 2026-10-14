@@ -144,8 +144,16 @@ export function once(el: Element, attrs: string[]): void {
 // Every element asked about in a frame is read before any is written: a removal between two reads lays the page out
 // again for each, and on a page of many views that is a layout of the whole page for every number and every line.
 const onces: [Element, () => void][] = [];
+// And the animations are asked for once for each view's root, not once for each element: each asking goes through every
+// animation on the page, and while a page of views comes in, each has a line drawing and a number rolling.
 function playOnce(): void {
-  const batch = onces.splice(0), playing = batch.map(([el]) => el.getAnimations({ subtree: true }).filter((a) => a instanceof CSSAnimation));
+  const batch = onces.splice(0), roots = new Map<Node, CSSAnimation[]>();
+  const playing = batch.map(([el]) => {
+    const root = el.getRootNode();
+    let all = roots.get(root);
+    if (!all) roots.set(root, all = (root instanceof ShadowRoot || root instanceof Document ? root.getAnimations() : []).filter((a): a is CSSAnimation => a instanceof CSSAnimation));
+    return all.filter((a) => { const t = (a.effect as KeyframeEffect | null)?.target; return !!t && el.contains(t); });
+  });
   batch.forEach(([, done], i) => { if (playing[i]!.length) over(playing[i]!).then(done); else done(); });
 }
 

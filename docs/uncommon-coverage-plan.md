@@ -300,7 +300,7 @@ Samples added to `moreSamples`: `cleveland`, `lollipop`, `tornado`, `pareto`, `s
 | Fan chart | `fan`, `fans` | `fan` was there, with one band. `fans` has two, one inside the other, and a golden scene | |
 | Streamgraph | `streamgraph` | Golden scene. `area` with `stack: "center"`. Its y axis counts away from the middle: -1k, -500, 0, 500, 1k | Step 3, to look at |
 | Slopegraph | `slopegraph` | Golden scene, by week. By day it is not one: a range of two days ends on the unfinished day, so each line is one point and a dashed stroke. Names stand at the line ends, not values, and only at the far end | Step 3, to look at |
-| Cumulative flow | `cumulative` | Golden scene. A stacked `area` on `signups@running`. It stops at the last whole day, as every stacked area does | |
+| Cumulative flow | `cumulative` | Golden scene. A stacked `area` on `signups@running`. Its unfinished day is a faded piece of its own, as every stacked area's is (`0f4a8a7`) | |
 | Calendar heatmap | `calendar` | Golden scene. `heatmap` by `weekday` and `date.week`: seven rows, a column a week, each named by its Monday | |
 | Climate stripes | `stripes` | **Not climate stripes.** A golden scene of what is drawn: a `cell` with only `x`, one cell a day, on the sequential ramp. The ramp runs from -18 to 20, so the worst loss is the palest step and a day near no change is a middle one | Step 5 |
 | Adjacency matrix | `adjacency` | Golden scene. `heatmap` of `page` by `next_page`, which share their values | |

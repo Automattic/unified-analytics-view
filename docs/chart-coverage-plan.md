@@ -444,7 +444,7 @@ Merged. 263 tests pass and the typecheck is clean. All of it is inside `packages
 8. **Three additions to the layout's fit map** that core's rules could not say: `legend` shows the labels as a grid; `axes` also hides the second axis, because `axis-2` has no block need; `y-ticks` thins the second axis too. The second is a block need missing in core.
 9. **Labels are kept a line apart** by `apart()` in `measure.ts`, following `place()`.
 10. **The pivoted table** puts the first dimension down the side and the second across, with the engine's totals in the last column and the footer.
-11. **A stacked area has no hit target on the unfinished day.** Core draws the stack only to the last whole day. To look at.
+11. **A stacked area has no hit target on the unfinished day.** Core draws the stack only to the last whole day. Fixed in `0f4a8a7`: the day is drawn faded, in a piece of its own, and has a target.
 12. **Leaving labels and second-axis ticks go at once;** they are not in the motion sheet's fade list.
 13. **Not done:** choosing one series with the pointer; the three-line legend gap from the core findings.
 

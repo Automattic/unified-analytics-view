@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CHROME_CSS } from '../packages/dom/src/chrome/index.ts';
 import { AXES_CSS } from '../packages/dom/src/chrome/axes.ts';
-import { LEGEND_CSS } from '../packages/dom/src/chrome/legend.ts';
+import { LEGEND_CSS, hideCutLegends } from '../packages/dom/src/chrome/legend.ts';
 import { RAMP_CSS } from '../packages/dom/src/chrome/ramp.ts';
 import { SIZE_CSS } from '../packages/dom/src/chrome/size.ts';
 import { LAYOUTS } from '../packages/dom/src/layouts/index.ts';
@@ -42,5 +42,21 @@ describe('chrome', () => {
     for (const p of Object.values(LAYOUTS)) expect(p.css).not.toMatch(/(^|\n)\.uav-size\b/);
     expect(LAYOUTS.cartesian!.css).toContain('.uav[data-layout="cartesian"] .uav-size { grid-column: 1 / -1; }');
     expect(LAYOUTS.matrix!.css).toContain('.uav[data-layout="matrix"] .uav-size { grid-area: size; }');
+  });
+});
+
+describe('the legends a box clips', () => {
+  it('are taken from assistive technology while they have no height, and given back when they have', () => {
+    const legend = (height: number) => {
+      const a = new Map<string, string>();
+      const el = { height, getBoundingClientRect: () => ({ height: el.height }), getAttribute: (k: string) => a.get(k) ?? null, setAttribute: (k: string, v: string) => void a.set(k, v), removeAttribute: (k: string) => void a.delete(k) };
+      return el;
+    };
+    const full = legend(0), top = legend(20), body = { querySelectorAll: () => [full, top] } as unknown as HTMLElement;
+    hideCutLegends(body);
+    expect([full.getAttribute('aria-hidden'), top.getAttribute('aria-hidden')]).toEqual(['true', null]);
+    full.height = 60; top.height = 0;
+    hideCutLegends(body);
+    expect([full.getAttribute('aria-hidden'), top.getAttribute('aria-hidden')]).toEqual([null, 'true']);
   });
 });

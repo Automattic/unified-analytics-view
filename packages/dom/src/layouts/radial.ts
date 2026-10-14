@@ -1,5 +1,5 @@
 import { arcD, declutter, type ArcNode, type CircleNode, type TextNode } from '@unified-analytics/core';
-import { paintLegend } from '../chrome/legend.ts';
+import { hideCutLegends, paintLegend } from '../chrome/legend.ts';
 import { attr, ensure, keyed, paintVar, prop, text } from '../dom.ts';
 import type { LayoutPainter } from '../layout.ts';
 import { FOCUS, HOVER, token } from '../tokens.ts';
@@ -148,5 +148,6 @@ export const radial: LayoutPainter = {
     const labels = Array.from(body.querySelectorAll<HTMLElement>('.uav-rim > span:not([data-exit])')).filter((el) => el.getClientRects().length);
     const gone = declutter(labels.map((el) => { const r = el.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height, rank: Number(el.dataset.rank) || 0 }; }));
     labels.forEach((el, i) => el.toggleAttribute('data-thin', gone[i]));
+    hideCutLegends(body);
   },
 };

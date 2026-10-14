@@ -1,5 +1,5 @@
 import type { RectNode } from '@unified-analytics/core';
-import { paintLegend } from '../chrome/legend.ts';
+import { hideCutLegends, paintLegend } from '../chrome/legend.ts';
 import { attr, ensure, keyed, prop } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
@@ -61,4 +61,5 @@ export const band: LayoutPainter = {
     paintUnitKey(body, scene);
     paintLegend(body, scene);
   },
+  measure: hideCutLegends,
 };

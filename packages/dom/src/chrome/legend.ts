@@ -42,3 +42,9 @@ export function paintLegend(body: HTMLElement, scene: Scene): void {
   });
   keyed(top, scene.nodes.filter((n): n is TextNode => n.part === 'legend-top' && n.kind === 'text'), () => 'span', text);
 }
+
+/** For the measured pass of a layout whose legends a box clips to nothing rather than hides (band, radial): the one
+ * with no height left is taken from assistive technology too, so a reader hears the legend that shows, and only it. */
+export function hideCutLegends(body: HTMLElement): void {
+  for (const el of body.querySelectorAll<HTMLElement>(':scope > :is(.uav-legend, .uav-legend-top)')) attr(el, 'aria-hidden', el.getBoundingClientRect().height < 1 ? 'true' : null);
+}

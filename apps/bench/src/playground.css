@@ -1,0 +1,15 @@
+/* The playground: the spec on one side, the view it makes on the other. Side by side where there is room, one above the other where there is not. */
+.playground { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: var(--ua-space-l); align-items: start; margin-block-start: var(--ua-space-s); }
+.editor, .output { display: grid; gap: var(--ua-space-xs); min-inline-size: 0; }
+.editor label { color: var(--ua-color-muted-foreground); }
+#spec { box-sizing: border-box; inline-size: 100%; min-block-size: 24em; resize: vertical; padding: var(--ua-space-xs); font: 12px/1.5 ui-monospace, monospace; tab-size: 2;
+  color: inherit; background: var(--ua-color-surface-card); border: 1px solid var(--ua-color-border); border-radius: var(--ua-radius-sm); }
+#spec[aria-invalid="true"] { border-color: var(--ua-color-destructive-text); }
+.output .frame { inline-size: 100%; outline: 1px dashed var(--ua-color-border); }
+.output .meta { inline-size: auto; min-inline-size: 0; margin: 0; }
+#rows { max-block-size: 24em; overflow: auto; margin: var(--ua-space-2xs) 0 0; font: 11px/1.4 ui-monospace, monospace; }
+#catalog { columns: 2 14em; font-size: 12px; }
+#catalog h3 { font-size: 11px; font-weight: 600; margin: var(--ua-space-xs) 0 var(--ua-space-3xs); }
+#catalog p { margin: 0; break-inside: avoid; }
+#catalog code { font-size: 11px; }
+summary { cursor: pointer; color: var(--ua-color-muted-foreground); }

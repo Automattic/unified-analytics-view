@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Playground</title>
+  <link rel="stylesheet" href="/src/bench.css">
+  <link rel="stylesheet" href="/src/playground.css">
+</head>
+<body>
+  <nav><a href="playground.html" aria-current="page">Playground</a> <a href="./">Views</a> <a href="marks.html">Marks</a> <a href="tokens.html">Tokens</a></nav>
+  <form id="controls">
+    <fieldset><legend>Start from</legend>
+      <select name="sample" aria-label="Start from a sample"><option value="">your own</option></select>
+    </fieldset>
+    <fieldset><legend>Data</legend>
+      <label><input type="radio" name="scenario" value="typical" checked> typical</label>
+      <label><input type="radio" name="scenario" value="no-prior"> no prior</label>
+      <label><input type="radio" name="scenario" value="empty"> empty</label>
+    </fieldset>
+    <fieldset><legend>Height</legend>
+      <label><input type="radio" name="height" value="" checked> natural</label>
+      <label><input type="radio" name="height" value="160"> 160</label>
+      <label><input type="radio" name="height" value="100"> 100</label>
+      <label><input type="radio" name="height" value="60"> 60</label>
+    </fieldset>
+    <fieldset><legend>Theme</legend>
+      <label><input type="radio" name="theme" value="" checked> system</label>
+      <label><input type="radio" name="theme" value="light"> light</label>
+      <label><input type="radio" name="theme" value="dark"> dark</label>
+    </fieldset>
+  </form>
+  <main class="playground">
+    <section class="editor">
+      <label for="spec">The view, as JSON: a <code>query</code> to the fixture engine, and <code>layers</code> or a preset in <code>use</code></label>
+      <textarea id="spec" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+      <p id="status" class="meta" role="status"></p>
+      <details><summary>What the catalog knows</summary><div id="catalog"></div></details>
+    </section>
+    <section class="output">
+      <div class="frame ua-stack" id="frame"></div>
+      <p class="meta">Drag the frame's corner to see what the view gives up as it narrows.</p>
+      <p id="plan" class="meta"></p>
+      <details><summary>Rows the engine returned</summary><pre id="rows"></pre></details>
+    </section>
+  </main>
+  <script type="module" src="/src/playground.ts"></script>
+</body>
+</html>

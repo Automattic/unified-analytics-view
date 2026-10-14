@@ -21,7 +21,8 @@ export function paintVar(paint: string): string {
 
 /** The child of `parent` with this class, made on first use. Children stay in the order they were first asked for. */
 export function ensure<K extends keyof HTMLElementTagNameMap>(parent: Element, tag: K, cls: string): HTMLElementTagNameMap[K] {
-  let el = parent.querySelector<HTMLElementTagNameMap[K]>(':scope > .' + cls);
+  // Not `:scope >`: on a shadow root it matches nothing in Chromium, and every call would add another child.
+  let el = Array.from(parent.children).find((c) => c.classList.contains(cls)) as HTMLElementTagNameMap[K] | undefined;
   if (!el) { el = document.createElement(tag); el.className = cls; parent.appendChild(el); }
   return el;
 }

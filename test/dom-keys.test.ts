@@ -201,7 +201,7 @@ describe('the mouse leaving', () => {
   afterEach(() => { direction = 'ltr'; vi.unstubAllGlobals(); });
   const view = (focused: boolean, hovered = false) => {
     vi.stubGlobal('getComputedStyle', () => ({ direction }));
-    const tip = el(), fig = el({ querySelector: () => tip }), host = el();
+    const tip = el({ classList: { contains: () => true } }), fig = el({ querySelector: () => tip, children: [tip] }), host = el();
     // The body stands in for the holder of the points as well, so an event sent to it is one on the holder.
     const points: ReturnType<typeof el>[] = [], body = el({ dataset: { hits: 'x' }, children: points, matches: (sel: string) => (sel === ':hover' ? hovered : focused), querySelector: () => body, querySelectorAll: () => points, closest: () => points[1] });
     for (const row of ['a', 'b', 'c']) { const p = el({ parentElement: body }); p.setAttribute('data-row', row); points.push(p); }

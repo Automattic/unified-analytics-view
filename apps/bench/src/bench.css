@@ -29,6 +29,10 @@ h2 small { font-weight: 400; }
 nav { display: flex; gap: var(--ua-space-s); margin-block-end: var(--ua-space-xs); }
 nav a { color: var(--ua-color-muted-foreground); text-decoration: none; }
 nav a[aria-current] { color: var(--ua-color-foreground); font-weight: 600; }
+/* The theme, at the nav's far end on every page (theme.ts). Its legend is for a screen reader; the choices say what they are. */
+nav .theme { margin-inline-start: auto; padding: 0; border: 0; gap: var(--ua-space-xs); color: var(--ua-color-muted-foreground); }
+nav .theme legend { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+nav .theme label:has(:checked) { color: var(--ua-color-foreground); }
 
 /* The tokens page. */
 small { display: block; font-size: 11px; color: var(--ua-color-muted-foreground); overflow-wrap: anywhere; }

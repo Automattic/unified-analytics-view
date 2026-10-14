@@ -1,5 +1,6 @@
 /* Every custom property the token stylesheet declares, read from the page's own
  * stylesheets, so this page cannot drift from what ships. Values follow the theme. */
+import './theme.ts';
 const root = document.documentElement;
 const main = document.querySelector('#tokens')!;
 
@@ -151,6 +152,7 @@ function render() {
   measures.forEach((m) => m());
 }
 
-// The page follows the system's theme, and reads the tokens again when it turns.
+// The tokens are read again when the theme turns: the bench's control (theme.ts), or the system's under "system".
+addEventListener('benchtheme', render);
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', render);
 render();

@@ -5,6 +5,7 @@ import { linkPainter } from '@unified-analytics/flow/dom';
 import { geoPainter, geoPainterAs } from '@unified-analytics/geo/dom';
 import { partitionPainter } from '@unified-analytics/partition/dom';
 import { resizable } from './resizer.ts';
+import './theme.ts';
 
 /* The bench: every sample, in frames that stand in for containers.
  * Controls live in the URL, so a reload or a shared link keeps them. */
@@ -15,7 +16,7 @@ const views = document.querySelector('#views')!;
 
 const params = new URLSearchParams(location.search);
 for (const [k, v] of params) { const input = controls.querySelector<HTMLInputElement>(`[name="${k}"][value="${v}"]`); if (input) input.checked = true; }
-const state = () => Object.fromEntries(new FormData(controls)) as { scenario: Scenario; range: string; height: string; theme: string };
+const state = () => Object.fromEntries(new FormData(controls)) as { scenario: Scenario; range: string; height: string };
 
 // The surface layouts are the surface's to adopt. Here the page is the surface, and each frame a stack or a row of one.
 defineUaView();
@@ -67,7 +68,6 @@ for (const [name, sample] of Object.entries(samples)) {
 
 function apply() {
   const s = state();
-  if (s.theme) document.documentElement.dataset.theme = s.theme; else delete document.documentElement.dataset.theme;
   history.replaceState(null, '', '?' + new URLSearchParams(s));
   document.querySelectorAll<HTMLElement>('.frame').forEach(paint);
 }

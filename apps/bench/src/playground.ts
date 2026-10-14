@@ -5,6 +5,7 @@ import { linkPainter } from '@unified-analytics/flow/dom';
 import { geoPainter, geoPainterAs } from '@unified-analytics/geo/dom';
 import { partitionPainter } from '@unified-analytics/partition/dom';
 import { resizable } from './resizer.ts';
+import './theme.ts';
 
 /* The playground: write a spec, see the view it makes on the fixture engine. The spec and the controls live in the
  * URL's hash, so a reload or a shared link keeps them. */
@@ -38,12 +39,11 @@ picker.value = hash.get('sample') ?? (hash.has('spec') ? '' : 'trend');
 editor.value = hash.get('spec') ?? pretty(samples[picker.value]!.spec);
 
 function apply() {
-  const { scenario, height, theme } = Object.fromEntries(new FormData(controls)) as { scenario: Scenario; height: string; theme: string };
-  if (theme) document.documentElement.dataset.theme = theme; else delete document.documentElement.dataset.theme;
+  const { scenario, height } = Object.fromEntries(new FormData(controls)) as { scenario: Scenario; height: string };
   // With a height the view is handed a box, as a row or a tile would hand it one.
   frame.classList.toggle('ua-row', !!height); frame.classList.toggle('ua-stack', !height);
   frame.style.blockSize = height ? height + 'px' : '';
-  const keep = new URLSearchParams({ scenario, height, theme });
+  const keep = new URLSearchParams({ scenario, height });
   // A sample unedited is kept by its name, so the link stays short; anything else by its text.
   if (picker.value) keep.set('sample', picker.value); else keep.set('spec', editor.value);
   history.replaceState(null, '', '#' + keep);

@@ -6,6 +6,7 @@
   <title>Playground</title>
   <link rel="stylesheet" href="/src/bench.css">
   <link rel="stylesheet" href="/src/playground.css">
+  <script>/* The theme the bench keeps (src/theme.ts), set before the page paints. */ try { const p = new URLSearchParams(location.search), t = p.has('embed') ? p.get('theme') : localStorage.getItem('ua-bench-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch {}</script>
 </head>
 <body>
   <nav><a href="playground.html" aria-current="page">Playground</a> <a href="./">Views</a> <a href="marks.html">Marks</a> <a href="tokens.html">Tokens</a></nav>
@@ -23,11 +24,6 @@
       <label><input type="radio" name="height" value="160"> 160</label>
       <label><input type="radio" name="height" value="100"> 100</label>
       <label><input type="radio" name="height" value="60"> 60</label>
-    </fieldset>
-    <fieldset><legend>Theme</legend>
-      <label><input type="radio" name="theme" value="" checked> system</label>
-      <label><input type="radio" name="theme" value="light"> light</label>
-      <label><input type="radio" name="theme" value="dark"> dark</label>
     </fieldset>
   </form>
   <main class="playground">

@@ -4,10 +4,11 @@ import { catalog, moreSamples, runQuery, samples, type Scenario } from '@unified
 import { linkPainter } from '@unified-analytics/flow/dom';
 import { geoPainter, geoPainterAs } from '@unified-analytics/geo/dom';
 import { partitionPainter } from '@unified-analytics/partition/dom';
+import './theme.ts';
 
 /* The marks: each one on its own, at a size where nothing has been given up, for tuning how it looks. A mark is
  * shown in each of the six series colours, on each of the three surfaces, and in the states it has. Every specimen
- * is a <ua-view> on the fixtures, so what is here is the real painter. Theme "both" sets the page beside itself. */
+ * is a <ua-view> on the fixtures, so what is here is the real painter. "Both" sets the page beside itself, in each theme. */
 defineUaView();
 registerPainter(geoPainter);
 for (const name of ['geo-tiles', 'geo-hexes']) registerPainter(geoPainterAs(name));
@@ -15,7 +16,8 @@ registerPainter(linkPainter);
 registerPainter(partitionPainter);
 document.adoptedStyleSheets.push(surfaceSheet());
 
-const params = new URLSearchParams(location.search), theme = params.get('theme') ?? '';
+// Both themes side by side is this page's own; the theme itself is the bench's (theme.ts).
+const params = new URLSearchParams(location.search), both = params.has('both');
 const controls = document.querySelector<HTMLFormElement>('#controls')!, main = document.querySelector('main')!;
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);
@@ -90,7 +92,7 @@ function specimen(parent: Element, label: string, state: Omit<State, 'label'>, s
   if (state.active) setTimeout(() => { const hits = view.shadowRoot!.querySelectorAll('.uav-body [data-row]'); hits[Math.floor(hits.length / 2)]?.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerType: 'mouse' })); }, 200);
 }
 
-if (theme === 'both') {
+if (both) {
   // The page beside itself: each half is this page with one theme, and no chrome of its own. A half is as tall as
   // what it holds, so neither scrolls and this page scrolls them together.
   main.className = 'both';
@@ -101,7 +103,6 @@ if (theme === 'both') {
     main.append(frame);
   }
 } else {
-  if (theme) document.documentElement.dataset.theme = theme;
   for (const m of MARKS) {
     const section = el('section');
     section.append(el('h2', '', m.name + ' '), el('p', 'note', m.note));
@@ -114,6 +115,5 @@ if (theme === 'both') {
   }
 }
 if (params.has('embed')) document.body.classList.add('embed');
-const input = controls.querySelector<HTMLInputElement>(`[name="theme"][value="${theme}"]`);
-if (input) input.checked = true;
-controls.addEventListener('change', () => { location.search = '?theme=' + new FormData(controls).get('theme'); });
+controls.querySelector<HTMLInputElement>('[name="both"]')!.checked = both;
+controls.addEventListener('change', () => { location.search = new FormData(controls).has('both') ? '?both' : ''; });

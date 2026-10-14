@@ -130,7 +130,7 @@ function placePlot(scene: Scene, W: number, H: number, narrow: boolean): PlacedN
     } else if (n.kind === 'text') {
       out.push(n.part === 'y-axis' ? text(n, ml - 6, y(n.t!)) : n.part === 'x-axis' ? text(n, at(n), H - 5)
         : n.part === 'y-axis-2' ? text(n, W - mr + 6, y(n.t!)) : n.part === 'labels' ? text(n, W - lw, labelY.get(n.key)!, clip(n.text, LABEL))
-        : n.x != null ? text(n, px(n.x) + 4, y(n.t!) + 9) : text(n, W - mr, y(n.t!) - 5));       // beside a rule that stands, or above one that lies
+        : n.x != null ? text(n, px(n.x) + (n.anchor === 'end' ? -4 : 4), y(n.t!) + 9) : text(n, W - mr, y(n.t!) - 5));       // beside a rule that stands, or above one that lies
     }
   });
   return out;

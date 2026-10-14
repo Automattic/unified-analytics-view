@@ -1,7 +1,6 @@
 /* Every custom property the token stylesheet declares, read from the page's own
  * stylesheets, so this page cannot drift from what ships. Values follow the theme. */
 const root = document.documentElement;
-const controls = document.querySelector<HTMLFormElement>('#controls')!;
 const main = document.querySelector('#tokens')!;
 
 /** Name to declared value, in source order, as the cascade leaves it for the current theme. */
@@ -152,16 +151,6 @@ function render() {
   measures.forEach((m) => m());
 }
 
-const params = new URLSearchParams(location.search);
-for (const [k, v] of params) { const input = controls.querySelector<HTMLInputElement>(`[name="${k}"][value="${v}"]`); if (input) input.checked = true; }
-function apply() {
-  const theme = String(new FormData(controls).get('theme'));
-  if (theme) root.dataset.theme = theme; else delete root.dataset.theme;
-  // The materials below share this page's controls and keep theirs in the URL too.
-  const kept = new URLSearchParams(location.search); kept.set('theme', theme);
-  history.replaceState(null, '', '?' + kept);
-  render();
-}
-controls.addEventListener('change', apply);
+// The page follows the system's theme, and reads the tokens again when it turns.
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', render);
-apply();
+render();

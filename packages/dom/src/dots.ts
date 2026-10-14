@@ -8,7 +8,7 @@
  *
  * It is set in type: Ans Mono Scroll, the numerals of a pixel face of five cells by seven in an em of eight, at eight
  * cells to the em, so one of its pixels is one cell. A character is one element in a slot of its own, and the unlit
- * cells are one background. The face has two axes. Its optical size is forced up, which draws each pixel smaller in
+ * cells are the face's too, a field of its full cell behind them. The face has two axes. Its optical size is forced up, which draws each pixel smaller in
  * its cell, so the pitch of the screen shows; and its scroll sets a character some rows up or down, which is the roll.
  * A page loads the face (packages/tokens/fonts/ans-mono-scroll.css). Where it has not, a number is set in the page's
  * own face, as a value the face has no character for is, and is set in the face when it arrives.
@@ -79,8 +79,15 @@ export function dotted(s: string): string[] | null {
 const ROLL = token('motion-duration-roll');
 const U = 'var(--uav-u)', OPSZ = token('font-optical-size-display'), at = (scroll: number) => `font-variation-settings: "opsz" ${OPSZ}, "SCRL" ${scroll};`;
 
-/** It joins the base sheet inside `@layer uav`. `--uav-u` is a cell, `--uav-d` the dot in it (a cell less a px, or
- * less two from eight px up, as the prototype's are) and `--uav-g` the gap.
+/** The unlit cells: rows of the face's full cell, █, each longer than any screen is wide, and more of them than any
+ * screen is tall. A screen is a whole number of cells each way and cuts them there, so the last of a row shows the
+ * cells that are left, whole. */
+const FIELD = Array.from({ length: 4 }, () => '█'.repeat(80)).join('\\A ');
+
+/** It joins the base sheet inside `@layer uav`. `--uav-u` is a cell.
+ * The unlit cells are the face's own: its full cell, at the size and optical size the lit characters are set at, so an
+ * unlit dot is drawn by the outline a lit one is and lies exactly under it. They are set in "Ans Mono", which a page
+ * loads beside the scroll face (packages/tokens/fonts): the numerals' subset has no full cell, and the field never rolls.
  * A number wider than its screen (`data-over`, which the view's measured pass sets) runs past under the pointer, right
  * to left and round again: `--uav-s` is how far it has gone off the left, in its own widths, and `--uav-e` how far in
  * from the right it stands, in the screen's (both registered in motion.ts, which is what lets them move). It leaves
@@ -92,19 +99,20 @@ const U = 'var(--uav-u)', OPSZ = token('font-optical-size-display'), at = (scrol
  * The words stay in the document for a screen reader and for a copy, and are what shows where a shadow is not
  * drawn: under forced colours. */
 export const DOTS_CSS = `
-.uav-glyphs, .uav-number { --uav-u: ${CELL}px; --uav-d: calc(var(--uav-u) - max(1px, round(down, var(--uav-u) / 4, 1px))); --uav-g: calc(var(--uav-u) - var(--uav-d));
-  --uav-cells: conic-gradient(at var(--uav-d) var(--uav-d), transparent 75%, color-mix(in srgb, ${token('color-label-screen')} 9%, transparent) 0) 0 0 / var(--uav-u) var(--uav-u); }
-.uav-glyphs { display: flex; direction: ltr; box-sizing: border-box; overflow: hidden; vertical-align: middle; color: ${token('color-label-screen')};
-  inline-size: round(down, 100%, var(--uav-u)); background: var(--uav-cells); }
+.uav-glyphs, .uav-number { --uav-u: ${CELL}px; }
+.uav-glyphs { position: relative; isolation: isolate; display: flex; direction: ltr; box-sizing: border-box; overflow: hidden; vertical-align: middle; color: ${token('color-label-screen')};
+  inline-size: round(down, 100%, var(--uav-u)); }
 .uav-hole .uav-glyphs { display: inline-flex; inline-size: auto; }
+.uav-glyphs::before, .uav-number:has(> b .uav-glyphs)::before { content: "${FIELD}"; content: "${FIELD}" / ""; position: absolute; z-index: -1; inset-block-start: 0; inset-inline-start: 0;
+  inline-size: round(down, 100%, var(--uav-u)); block-size: round(down, 100%, var(--uav-u)); overflow: hidden; direction: ltr; text-align: left; white-space: pre;
+  font: normal 400 calc(${U} * 8) / calc(${U} * 8) "Ans Mono", monospace; font-optical-sizing: none; font-variation-settings: "opsz" ${OPSZ}; letter-spacing: 0;
+  color: color-mix(in srgb, ${token('color-label-screen')} 9%, transparent); pointer-events: none; user-select: none; }
 /* A view's number is on one screen with what is said under it: the unlit cells run under the value, its change and
  * its note, a row past the last of them, to a whole cell each way. Every line there is a whole number of cells, a
  * row parts the value from the words, and so the words sit on the screen's rows as the value's cells do. */
 /* A cell of the screen is left clear on every side of what is set on it, so nothing is hard against its edge. */
 .uav-number:has(> b .uav-glyphs) { position: relative; isolation: isolate; padding: var(--uav-u); }
-.uav-number:has(> b .uav-glyphs)::before { content: ""; position: absolute; z-index: -1; inset-block-start: 0; inset-inline-start: 0;
-  inline-size: round(down, 100%, var(--uav-u)); block-size: round(down, 100%, var(--uav-u)); background: var(--uav-cells); }
-.uav-number .uav-glyphs { background: none; }
+.uav-number .uav-glyphs::before { content: none; }
 .uav-number:has(> b .uav-glyphs) > span { line-height: calc(var(--uav-u) * 5); }
 .uav-number:has(> b .uav-glyphs) > .uav-f-tick { line-height: calc(var(--uav-u) * 4); }
 .uav-number:has(> b .uav-glyphs) > b + span { margin-block-start: var(--uav-u); }

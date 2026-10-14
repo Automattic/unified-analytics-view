@@ -40,6 +40,10 @@ export async function primitives(root = ROOT): Promise<Record<string, Tree>> {
   const leonardo = await generateLeonardoTokens(join(root, 'config/leonardo.json'));
   const utopia = await generateUtopiaTokens(join(root, 'config/utopia.json'));
   const s = JSON.parse(readFileSync(join(root, 'config/surface.json'), 'utf-8')) as { description: string; set: Record<string, { light: string; dark: string }> };
+  for (const [name, v] of Object.entries(s.set ?? {})) {
+    if (typeof v?.light !== 'string' || typeof v?.dark !== 'string') throw new Error(`config/surface.json: surface "${name}" needs a "light" and a "dark" value, each a colour or an alias such as "{color.neutral.200}".`);
+  }
+  if (!s.set || !Object.keys(s.set).length) throw new Error('config/surface.json: "set" is empty. Name at least the page surface, with a "light" and a "dark" value.');
   const seq = JSON.parse(readFileSync(join(root, 'config/sequential.json'), 'utf-8')) as { description: string; steps: string[] };
   for (const theme of ['light', 'dark'] as const) {
     const ramps = leonardo[theme].color as Tree;

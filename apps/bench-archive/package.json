@@ -1,0 +1,25 @@
+{
+  "name": "@unified-analytics/bench-archive",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@unified-analytics/core": "workspace:*",
+    "@unified-analytics/dom": "workspace:*",
+    "@unified-analytics/fixtures": "workspace:*",
+    "@unified-analytics/flow": "workspace:*",
+    "@unified-analytics/geo": "workspace:*",
+    "@unified-analytics/partition": "workspace:*",
+    "@unified-analytics/spacefast": "workspace:*",
+    "@unified-analytics/tokens": "workspace:*",
+    "d3-scale": "^4.0.2",
+    "d3-shape": "^3.2.0"
+  },
+  "devDependencies": {
+    "vite": "^8.3.3"
+  }
+}

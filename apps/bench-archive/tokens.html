@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tokens · Bench</title>
+  <link rel="stylesheet" href="/src/bench.css">
+  <link rel="stylesheet" href="/src/material.css">
+</head>
+<body>
+  <nav><a href="demo.html">Demo</a> <a href="./">Views</a> <a href="marks.html">Marks</a> <a href="sidebar.html">Sidebar</a> <a href="goals.html">Goals</a> <a href="live.html">Live</a> <a href="tokens.html" aria-current="page">Tokens</a> <a href="spike.html">Spike</a></nav>
+  <form id="controls">
+    <fieldset><legend>Theme</legend>
+      <label><input type="radio" name="theme" value="" checked> system</label>
+      <label><input type="radio" name="theme" value="light"> light</label>
+      <label><input type="radio" name="theme" value="dark"> dark</label>
+    </fieldset>
+    <fieldset><legend>Light</legend>
+      <label><input type="range" name="light" min="0" max="360" step="1" value="322" data-unit="°"> <output name="lightOut"></output></label>
+    </fieldset>
+    <fieldset><legend>Bevel</legend>
+      <label><input type="range" name="bevel" min="4" max="45" step="0.5" value="20" data-unit="%"> <output name="bevelOut"></output></label>
+    </fieldset>
+    <fieldset><legend>Thickness</legend>
+      <label><input type="range" name="thick" min="0" max="1.6" step="0.02" value="0.44"> <output name="thickOut"></output></label>
+    </fieldset>
+    <fieldset><legend>Dispersion</legend>
+      <label><input type="range" name="disp" min="0" max="1" step="0.02" value="0.6"> <output name="dispOut"></output></label>
+    </fieldset>
+    <fieldset><legend>Crystal</legend>
+      <label><input type="checkbox" name="crystal" value="on" checked> on</label>
+    </fieldset>
+    <fieldset><legend>Frost blur</legend>
+      <label><input type="range" name="blur" min="0" max="40" step="1" value="18" data-unit=" px"> <output name="blurOut"></output></label>
+    </fieldset>
+    <fieldset><legend>Vibrancy</legend>
+      <label><input type="range" name="saturate" min="100" max="260" step="5" value="180" data-unit="%"> <output name="saturateOut"></output></label>
+    </fieldset>
+    <fieldset><legend>Tint</legend>
+      <label><input type="range" name="tint" min="0" max="100" step="1" value="45" data-unit="%"> <output name="tintOut"></output></label>
+    </fieldset>
+    <fieldset><legend>Grain</legend>
+      <label><input type="range" name="grain" min="0" max="1" step="0.05" value="0.55"> <output name="grainOut"></output></label>
+    </fieldset>
+  </form>
+  <main id="tokens"></main>
+  <main id="materials" class="gridded"></main>
+  <script type="module" src="/src/tokens.ts"></script>
+  <script type="module" src="/src/materials.ts"></script>
+</body>
+</html>

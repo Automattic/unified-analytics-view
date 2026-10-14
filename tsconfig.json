@@ -9,7 +9,8 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "allowImportingTsExtensions": true,
-    "types": ["node"]
+    "types": ["node"],
+    "moduleDetection": "force"
   },
   "include": ["packages/*/src", "apps/*/src", "test"]
 }

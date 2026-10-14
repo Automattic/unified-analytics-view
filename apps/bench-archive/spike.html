@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <!-- Item 7. No inline styles, no <style> elements, no eval. img-src is for item 1's canvas measurement; connect-src is Vite's dev socket. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src blob:; connect-src 'self'">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spike · Bench</title>
+  <link rel="stylesheet" href="/src/bench.css">
+</head>
+<body class="spike">
+  <nav><a href="demo.html">Demo</a> <a href="./">Views</a> <a href="marks.html">Marks</a> <a href="sidebar.html">Sidebar</a> <a href="goals.html">Goals</a> <a href="live.html">Live</a> <a href="tokens.html">Tokens</a> <a href="spike.html" aria-current="page">Spike</a></nav>
+  <p>The seven things <code>docs/dom-painter-plan.md</code> section 7 asks to be proved before the DOM painter is built. The trend view below is a throwaway custom element, built by hand. Every verdict is computed in <strong>this</strong> browser when the page loads: open it in Safari and Firefox and read them again.</p>
+  <p class="meta" id="ua"></p>
+  <p><button id="rerun" type="button">Run the checks again</button> <span class="verdict" id="overall" data-state="look">running</span></p>
+
+  <section>
+    <h2><span class="verdict" id="v1">…</span> 1. Dashes on a stretched path keep their screen length</h2>
+    <p>Each box is one SVG, <code>viewBox="0 0 100 100"</code>, stretched to a different size, holding a horizontal and a vertical path dashed <code>10 10</code> with <code>vector-effect: non-scaling-stroke</code>. The coloured rulers beside them are plain CSS, 10 px on and 10 px off. <strong>Look:</strong> every dash should sit on a ruler mark at every size. The numbers are the same SVG drawn to a canvas by this browser and read back, in px. Also look at the dashed comparison line and the dashed tail in the views further down: the dashes should be the same length at every width.</p>
+    <div class="sizes" id="dashes"></div>
+    <p class="meta" id="d1"></p>
+  </section>
+
+  <section>
+    <h2><span class="verdict" id="v2">…</span> 2. The nested chain: a view query changes the grid, the plot narrows, a plot query drops the comparison</h2>
+    <p>The frame is a box 130 px tall holding one view. The check sets every width from 420 down to 120 px and, after each, compares what is showing with what the fit rules say for the sizes the browser reports. It does the same on a view at its natural height. No script runs in the view on resize. <strong>Look:</strong> drag the corner, or play the sweep, and watch for a frame where the comparison shows in a plot too narrow for it.</p>
+    <p><button id="play" type="button">Play the sweep</button></p>
+    <div class="sizes" id="chain"></div>
+    <p class="meta" id="d2"></p>
+  </section>
+
+  <section>
+    <h2><span class="verdict" id="v3">…</span> 3. <code>CSS.registerProperty</code> animates custom properties used inside a shadow root</h2>
+    <p>A data change moves a y tick that both results share. Its <code>--uav-t</code> is written with <code>style.setProperty</code> and the shadow sheet carries <code>transition: --uav-t 600ms linear</code>. The check reads the computed value and the grid line's position 300 ms in. <strong>Look:</strong> press the button and the grid lines should slide, not jump.</p>
+    <p><button id="change" type="button">Change the data</button></p>
+    <p class="meta" id="d3"></p>
+  </section>
+
+  <section>
+    <h2><span class="verdict" id="v4">…</span> 4. <code>container-type: size</code> on the plot behaves inside a grid</h2>
+    <p>For every view on this page: the plot is as tall as the rule set says (184 px with axes, 46 px bare) or as tall as the room left in a box; it takes the width the axis column leaves; the SVG fills it; each y label sits on its grid line; and a plot wide enough but too short drops the comparison on its <code>block-size</code> query alone.</p>
+    <p class="meta" id="d4"></p>
+  </section>
+
+  <section>
+    <h2><span class="verdict" id="v5">…</span> 5. The stretched monotone path matches a path computed at pixel size</h2>
+    <p>For every plot on this page, the line and the comparison are computed again with <code>d3-shape</code> at the plot's pixel size. 200 points along each are compared with the stretched path as the browser places it on screen (<code>getScreenCTM</code>). The number is the greatest distance found.</p>
+    <p class="meta" id="d5"></p>
+  </section>
+
+  <section>
+    <h2><span class="verdict" id="v6">…</span> 6. One stylesheet serves both sizings</h2>
+    <p>The same element, with the same adopted sheet and no attributes, in a stack (fills the width, natural height) and in rows (fills the box it is handed). Only the layout's CSS differs, and it is the three rules of section 4.2 as written. Drag any corner.</p>
+    <p class="meta" id="d6"></p>
+    <h3>Stack</h3>
+    <div class="sizes" id="stack"></div>
+    <h3>Row</h3>
+    <div class="sizes" id="rows"></div>
+  </section>
+
+  <section>
+    <h2><span class="verdict" id="v7">…</span> 7. The painter runs clean under a strict content security policy</h2>
+    <p>This page's policy is <code id="policy"></code>. The check first proves the policy is live, by trying a <code>&lt;style&gt;</code> element, a <code>style</code> attribute and <code>new Function</code> and seeing all three refused. It then counts every other violation the browser reported while the views were built, painted, resized and animated.</p>
+    <p class="meta" id="d7"></p>
+  </section>
+
+  <pre id="results" hidden></pre>
+  <script type="module" src="/src/spike.ts"></script>
+</body>
+</html>

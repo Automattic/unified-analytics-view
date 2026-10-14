@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sidebar · Bench</title>
+  <link rel="stylesheet" href="/src/bench.css">
+  <link rel="stylesheet" href="/src/sidebar.css">
+</head>
+<body>
+  <nav><a href="demo.html">Demo</a> <a href="./">Views</a> <a href="marks.html">Marks</a> <a href="sidebar.html" aria-current="page">Sidebar</a> <a href="goals.html">Goals</a> <a href="live.html">Live</a> <a href="tokens.html">Tokens</a> <a href="spike.html">Spike</a></nav>
+  <form id="controls">
+    <fieldset><legend>Data</legend>
+      <label><input type="radio" name="scenario" value="typical" checked> typical</label>
+      <label><input type="radio" name="scenario" value="no-prior"> no prior</label>
+      <label><input type="radio" name="scenario" value="empty"> empty</label>
+    </fieldset>
+    <fieldset><legend>Theme</legend>
+      <label><input type="radio" name="theme" value=""> system</label>
+      <label><input type="radio" name="theme" value="light"> light</label>
+      <label><input type="radio" name="theme" value="dark" checked> dark</label>
+    </fieldset>
+  </form>
+  <h2>A browser's sidebar, for one page <small>from the mock-up. Drag its right edge.</small></h2>
+  <div class="frame sidebar"><aside id="panel"></aside></div>
+  <script type="module" src="/src/sidebar.ts"></script>
+</body>
+</html>

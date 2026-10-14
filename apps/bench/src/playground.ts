@@ -4,6 +4,7 @@ import { catalog, moreSamples, runQuery, samples as known, type Scenario } from 
 import { linkPainter } from '@unified-analytics/flow/dom';
 import { geoPainter, geoPainterAs } from '@unified-analytics/geo/dom';
 import { partitionPainter } from '@unified-analytics/partition/dom';
+import { resizable } from './resizer.ts';
 
 /* The playground: write a spec, see the view it makes on the fixture engine. The spec and the controls live in the
  * URL's hash, so a reload or a shared link keeps them. */
@@ -21,6 +22,7 @@ const frame = $('#frame'), plan = $('#plan'), rows = $('#rows'), picker = contro
 const expanded = $<HTMLDetailsElement>('#expanded');
 let written: Spec | undefined;
 const view = frame.appendChild(new UaView());
+resizable(frame);
 view.catalog = catalog;
 
 for (const [name, s] of Object.entries(samples)) picker.add(new Option(s.label, name));

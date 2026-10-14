@@ -17,7 +17,11 @@ h2 small { font-weight: 400; }
 
 /* A frame stands in for a container and adds nothing of its own: no fill, no edge, no padding,
  * so a view looks here as it will where it is inserted. Its extent shows on hover; drag its corner. */
-.frame { min-inline-size: 40px; max-inline-size: 100%; resize: horizontal; overflow: hidden; }
+.frame { position: relative; min-inline-size: 40px; max-inline-size: 100%; overflow: hidden; }
+/* The corner to drag it by (resizer.ts), drawn as the browser draws its own: two short diagonals. */
+.grip { position: absolute; inset-block-end: 0; inset-inline-end: 0; z-index: 1; inline-size: 12px; block-size: 12px; cursor: ew-resize; touch-action: none;
+  background: linear-gradient(135deg, transparent 45%, var(--ua-color-muted-foreground) 45% 52%, transparent 52% 68%, var(--ua-color-muted-foreground) 68% 75%, transparent 75%); }
+.frame.ua-row > .grip { cursor: nwse-resize; }
 .cell:hover > .frame { outline: 1px dashed var(--ua-color-border); }
 .meta { inline-size: 0; min-inline-size: 100%; margin: var(--ua-space-xs) 0 0; font-size: 11px; color: var(--ua-color-muted-foreground); overflow-wrap: anywhere; }
 .meta.error { color: var(--ua-color-destructive-text); }
@@ -47,7 +51,6 @@ h2 small { display: inline; }
 /* The two surface layouts, as docs/dom-painter-plan.md section 4.2 writes them. */
 .ua-stack { display: grid; gap: var(--ua-space-s); }
 .ua-row   { display: flex; gap: var(--ua-space-s); }
-.frame.ua-row { resize: both; }
 /* A frame holding one <ua-view>: a stack, or a row when the height control hands it a box. The gap is between views, and there is one. */
 .frame:is(.ua-stack, .ua-row) { gap: 0; }
 

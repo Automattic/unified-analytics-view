@@ -1270,78 +1270,80 @@
         }
       },
       "$description": "The sequential ramp, for a value quantized to colour (a heatmap cell, a region of a map). Ten steps chosen by hand, from indigo through teal to chartreuse, each lighter than the last. A primitive with a value per theme, as a generated ramp is: step 100 is the end nearest the page, the chartreuse end in light and the indigo end in dark, so the common tier names one step in both."
+    }
+  },
+  "surface": {
+    "$type": "color",
+    "$description": "The surface set: the page and the two levels that rise from it, with a value per theme. Spacefast raises a surface by making it lighter than the page in both themes, which no single ramp step can say, so the pairing is made here and the common tier aliases one name. The screen is the one that sinks, for a container set into its surface as an LCD is. It is one primitive in both themes, the step after the page: a little darker than the page in light, and a little lighter than it in dark, where its inset shadow is what sinks it.",
+    "page": {
+      "$value": "{color.neutral.200}"
     },
-    "surface": {
-      "$description": "The surface set: the page and the two levels that rise from it, with a value per theme. Spacefast raises a surface by making it lighter than the page in both themes, which no single ramp step can say, so the pairing is made here and the common tier aliases one name. The screen is the one that sinks, for a container set into its surface as an LCD is. It is one primitive in both themes, the step after the page: a little darker than the page in light, and a little lighter than it in dark, where its inset shadow is what sinks it.",
-      "page": {
-        "$value": "{color.neutral.200}"
-      },
-      "card": {
-        "$value": "{color.neutral.100}"
-      },
-      "raised": {
-        "$value": "{color.white}"
-      },
-      "screen": {
-        "$value": "{color.neutral.300}"
-      }
+    "card": {
+      "$value": "{color.neutral.100}"
     },
-    "mark": {
-      "$description": "What a chart paints each hue with: a mark, text in its colour, and a tint. A mark and its text are the hue's constant where that holds the contrast needed (3 to 1, and 4.5 to 1) against the page, the card and the raised surface of this theme, and the step of its ramp where it does not. A tint is the ramp's.",
-      "steel": {
-        "$value": "{color.constant.steel}"
-      },
-      "steel-text": {
-        "$value": "{color.constant.steel}"
-      },
-      "steel-soft": {
-        "$value": "{color.qual-steel.100}"
-      },
-      "teal": {
-        "$value": "{color.qual-teal.200}"
-      },
-      "teal-text": {
-        "$value": "{color.qual-teal.300}"
-      },
-      "teal-soft": {
-        "$value": "{color.qual-teal.100}"
-      },
-      "grass": {
-        "$value": "{color.qual-grass.200}"
-      },
-      "grass-text": {
-        "$value": "{color.qual-grass.300}"
-      },
-      "grass-soft": {
-        "$value": "{color.qual-grass.100}"
-      },
-      "chartreuse": {
-        "$value": "{color.qual-chartreuse.200}"
-      },
-      "chartreuse-text": {
-        "$value": "{color.qual-chartreuse.300}"
-      },
-      "chartreuse-soft": {
-        "$value": "{color.qual-chartreuse.100}"
-      },
-      "orange": {
-        "$value": "{color.qual-orange.200}"
-      },
-      "orange-text": {
-        "$value": "{color.qual-orange.300}"
-      },
-      "orange-soft": {
-        "$value": "{color.qual-orange.100}"
-      },
-      "rose": {
-        "$value": "{color.constant.rose}"
-      },
-      "rose-text": {
-        "$value": "{color.qual-rose.300}"
-      },
-      "rose-soft": {
-        "$value": "{color.qual-rose.100}"
-      }
+    "raised": {
+      "$value": "{color.white}"
+    },
+    "screen": {
+      "$value": "{color.neutral.300}"
+    }
+  },
+  "mark": {
+    "$type": "color",
+    "$description": "What a chart paints each hue with: a mark, text in its colour, and a tint. A mark and its text are the hue's constant where that holds the contrast needed (3 to 1, and 4.5 to 1) against the page, the card and the raised surface of this theme, and the step of its ramp where it does not. A tint is the ramp's.",
+    "steel": {
+      "$value": "{color.constant.steel}"
+    },
+    "steel-text": {
+      "$value": "{color.constant.steel}"
+    },
+    "steel-soft": {
+      "$value": "{color.qual-steel.100}"
+    },
+    "teal": {
+      "$value": "{color.qual-teal.200}"
+    },
+    "teal-text": {
+      "$value": "{color.qual-teal.300}"
+    },
+    "teal-soft": {
+      "$value": "{color.qual-teal.100}"
+    },
+    "grass": {
+      "$value": "{color.qual-grass.200}"
+    },
+    "grass-text": {
+      "$value": "{color.qual-grass.300}"
+    },
+    "grass-soft": {
+      "$value": "{color.qual-grass.100}"
+    },
+    "chartreuse": {
+      "$value": "{color.qual-chartreuse.200}"
+    },
+    "chartreuse-text": {
+      "$value": "{color.qual-chartreuse.300}"
+    },
+    "chartreuse-soft": {
+      "$value": "{color.qual-chartreuse.100}"
+    },
+    "orange": {
+      "$value": "{color.qual-orange.200}"
+    },
+    "orange-text": {
+      "$value": "{color.qual-orange.300}"
+    },
+    "orange-soft": {
+      "$value": "{color.qual-orange.100}"
+    },
+    "rose": {
+      "$value": "{color.constant.rose}"
+    },
+    "rose-text": {
+      "$value": "{color.qual-rose.300}"
+    },
+    "rose-soft": {
+      "$value": "{color.qual-rose.100}"
     }
   }
 }

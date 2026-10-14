@@ -3,22 +3,22 @@
     "$type": "color",
     "$description": "Spacefast's colour variables, by their names, as aliases into our ramps. Values here are the light theme; common.dark.tokens.json holds only the tokens that sit on a different step in dark. Translucent tokens are a color-mix() of another token, a deliberate deviation from the DTCG colour type so the alpha survives aliasing. The seq-* names are ours, not Spacefast's: the sequential ramp by step number, lowest value first, and seq-none for a cell with no data, which is not a step. So are the band-* names: three neutral steps for the parts a metric's range is divided into behind a mark, the strongest first. The neutral ramp flips with the theme, so they need no dark values.",
     "background": {
-      "$value": "{color.surface.page}"
+      "$value": "{surface.page}"
     },
     "foreground": {
       "$value": "{color.neutral.1000}"
     },
     "card": {
-      "$value": "{color.surface.card}"
+      "$value": "{surface.card}"
     },
     "card-foreground": {
       "$value": "{color.neutral.1000}"
     },
     "card-raised": {
-      "$value": "{color.surface.raised}"
+      "$value": "{surface.raised}"
     },
     "popover": {
-      "$value": "{color.surface.raised}"
+      "$value": "{surface.raised}"
     },
     "popover-foreground": {
       "$value": "{color.neutral.1000}"
@@ -180,7 +180,7 @@
       "$value": "{color.neutral.200}"
     },
     "sidebar": {
-      "$value": "{color.surface.page}"
+      "$value": "{surface.page}"
     },
     "sidebar-foreground": {
       "$value": "{color.neutral.1000}"
@@ -320,7 +320,7 @@
     "$type": "shadow",
     "$description": "How far a container stands from the surface it is on, as a box-shadow. 0 is flat, and the default. inset is level -1: sunk into the surface, as a screen sits behind its bezel. 1, 2 and 3 stand above it, each further. Shadows fall away from the one light a page has (--ua-light-x and -y, a unit vector toward it), and straight down where a page sets none. A raised level also has a lit edge facing the light, which is what lifts it in dark, where a shadow has nothing to darken.",
     "inset": {
-      "$value": "inset calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 2px color-mix(in srgb, {color.black} 20%, transparent), inset calc(var(--ua-light-x, 0) * -3px) calc(var(--ua-light-y, -1) * -3px) 8px color-mix(in srgb, {color.black} 10%, transparent), calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 0 {color.surface.raised}"
+      "$value": "inset calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 2px color-mix(in srgb, {color.black} 20%, transparent), inset calc(var(--ua-light-x, 0) * -3px) calc(var(--ua-light-y, -1) * -3px) 8px color-mix(in srgb, {color.black} 10%, transparent), calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 0 {surface.raised}"
     },
     "0": {
       "$value": "none"

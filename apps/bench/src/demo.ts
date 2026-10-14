@@ -104,7 +104,7 @@ for (const name of ['trend', 'pages', 'mix', 'live']) {
 
 for (const [metric, def] of Object.entries(catalog.metrics)) {
   const chip = el('span', 'hue', def.label + (HUE[metric] ? '' : ' (the default)'));
-  chip.style.setProperty('--c', HUE[metric] ? `var(--ua-color-mark-${HUE[metric]})` : 'var(--ua-charts-color-series-1)');
+  chip.style.setProperty('--c', HUE[metric] ? `var(--ua-mark-${HUE[metric]})` : 'var(--ua-charts-color-series-1)');
   $('hues').append(chip);
 }
 
@@ -142,7 +142,7 @@ function update() {
     // A spec the editor has broken is still handed over: the view says what is wrong with it.
     try {
       const spec = ranged(m.spec(), s.range), h = hue(spec);
-      for (const part of ['', '-text', '-soft']) { const name = '--ua-charts-color-series-1' + part; if (h) m.view.style.setProperty(name, `var(--ua-color-mark-${h}${part})`); else m.view.style.removeProperty(name); }
+      for (const part of ['', '-text', '-soft']) { const name = '--ua-charts-color-series-1' + part; if (h) m.view.style.setProperty(name, `var(--ua-mark-${h}${part})`); else m.view.style.removeProperty(name); }
       m.view.spec = spec; m.view.result = runQuery(spec.query, s.scenario);
     } catch { /* the note below says why */ }
   }

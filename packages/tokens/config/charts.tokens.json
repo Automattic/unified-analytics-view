@@ -17,58 +17,58 @@
         "$value": "{color.foreground-50}"
       },
       "series-1": {
-        "$value": "{color.mark.chartreuse}"
+        "$value": "{mark.chartreuse}"
       },
       "series-1-text": {
-        "$value": "{color.mark.chartreuse-text}"
+        "$value": "{mark.chartreuse-text}"
       },
       "series-1-soft": {
-        "$value": "{color.mark.chartreuse-soft}"
+        "$value": "{mark.chartreuse-soft}"
       },
       "series-2": {
-        "$value": "{color.mark.grass}"
+        "$value": "{mark.grass}"
       },
       "series-2-text": {
-        "$value": "{color.mark.grass-text}"
+        "$value": "{mark.grass-text}"
       },
       "series-2-soft": {
-        "$value": "{color.mark.grass-soft}"
+        "$value": "{mark.grass-soft}"
       },
       "series-3": {
-        "$value": "{color.mark.teal}"
+        "$value": "{mark.teal}"
       },
       "series-3-text": {
-        "$value": "{color.mark.teal-text}"
+        "$value": "{mark.teal-text}"
       },
       "series-3-soft": {
-        "$value": "{color.mark.teal-soft}"
+        "$value": "{mark.teal-soft}"
       },
       "series-4": {
-        "$value": "{color.mark.steel}"
+        "$value": "{mark.steel}"
       },
       "series-4-text": {
-        "$value": "{color.mark.steel-text}"
+        "$value": "{mark.steel-text}"
       },
       "series-4-soft": {
-        "$value": "{color.mark.steel-soft}"
+        "$value": "{mark.steel-soft}"
       },
       "series-5": {
-        "$value": "{color.mark.rose}"
+        "$value": "{mark.rose}"
       },
       "series-5-text": {
-        "$value": "{color.mark.rose-text}"
+        "$value": "{mark.rose-text}"
       },
       "series-5-soft": {
-        "$value": "{color.mark.rose-soft}"
+        "$value": "{mark.rose-soft}"
       },
       "series-6": {
-        "$value": "{color.mark.orange}"
+        "$value": "{mark.orange}"
       },
       "series-6-text": {
-        "$value": "{color.mark.orange-text}"
+        "$value": "{mark.orange-text}"
       },
       "series-6-soft": {
-        "$value": "{color.mark.orange-soft}"
+        "$value": "{mark.orange-soft}"
       },
       "seq-1": {
         "$value": "{color.seq-1}"

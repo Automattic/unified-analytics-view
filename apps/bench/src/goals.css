@@ -8,8 +8,8 @@
 .goals .board { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--ua-space-s); align-items: start; grid-auto-flow: dense; }
 .goals .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: var(--ua-space-s); margin-block-start: var(--ua-space-m); }
 .goals .tiles .ua-row { block-size: 96px; }
-.goals .card { box-sizing: border-box; min-inline-size: 0; padding: var(--ua-space-xs) var(--ua-space-s) var(--ua-space-s); background: var(--ua-color-surface-card); border: 1px solid var(--ua-color-border);
-  border-radius: var(--ua-radius-lg); --ua-charts-color-background: var(--ua-color-surface-card); }
+.goals .card { box-sizing: border-box; min-inline-size: 0; padding: var(--ua-space-xs) var(--ua-space-s) var(--ua-space-s); background: var(--ua-surface-card); border: 1px solid var(--ua-color-border);
+  border-radius: var(--ua-radius-lg); --ua-charts-color-background: var(--ua-surface-card); }
 @media (min-width: 640px) { .goals .wide { grid-column: span 2; } }
 .goals .card h3 { margin: 0 0 var(--ua-space-2xs); font-size: var(--ua-font-size-sm); font-weight: 600; }
 /* The metric a card is for, as the goal's table names it, and whether it is built. */

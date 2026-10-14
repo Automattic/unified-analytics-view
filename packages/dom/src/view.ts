@@ -8,7 +8,7 @@ import { PIXELS_CSS, pixels } from './pixels.ts';
 import { KEYS_CSS, Keys, companionLabel, companions, hideReadout, readoutOf } from './keys.ts';
 import { LAYOUTS, painterOf } from './layouts/index.ts';
 import { NUMBER_FITS, fitNumber, readNumber } from './measure.ts';
-import { MOTION_CSS, begin, register, settle } from './motion.ts';
+import { MOTION_CSS, begin, register, settle, still } from './motion.ts';
 import { FACES, token } from './tokens.ts';
 
 /* <ua-view>: one view, in whatever room it is handed. It plans once per data change, for a container with no
@@ -436,6 +436,11 @@ export class UaView extends Base {
       // it writes is reported as a loop. A frame already asked for reads the same sizes after it and writes nothing.
       // The measured pass sets the plot on whole pixels and names the options; with no observer that is done here.
       if (this.#sizes) this.#measure(true); else { pixels(this.#fig); this.#keys.name(); }
+      // What would play as it loads is ended before a frame starts it where no one sees it: always in the ruler, whose
+      // copies of the number are never shown, and everywhere in a view painted out of sight, which comes in drawn.
+      const box = this.getBoundingClientRect(), win = this.ownerDocument.defaultView;
+      if (win && (box.bottom < 0 || box.top > win.innerHeight || box.right < 0 || box.left > win.innerWidth)) still(this.#root);
+      else for (const copy of this.#ruler) still(copy);
     } catch (e) { this.#fail(e, true); }
   }
 

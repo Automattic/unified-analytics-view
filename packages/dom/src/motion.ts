@@ -141,6 +141,11 @@ export function once(el: Element, attrs: string[]): void {
   if (!onces.length) requestAnimationFrame(playOnce);
   onces.push([el, done]);
 }
+/** End now what once() was asked to play inside `root`, before a frame has started it: for a view painted where no one
+ * sees it. A page of views coming in had a line drawing and a number rolling in every one, and each frame redrew them all. */
+export function still(root: Node): void {
+  for (let i = onces.length - 1; i >= 0; i--) if (root.contains(onces[i]![0])) onces.splice(i, 1)[0]![1]();
+}
 // Every element asked about in a frame is read before any is written: a removal between two reads lays the page out
 // again for each, and on a page of many views that is a layout of the whole page for every number and every line.
 const onces: [Element, () => void][] = [];

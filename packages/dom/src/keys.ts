@@ -85,6 +85,19 @@ export function readoutAt(rows: Row[], total: Row | undefined, q: Query, catalog
   }).join('; ');
 }
 
+/** The readout of a point of a split plot as it is drawn: a head that says the x and each metric with the engine's
+ * total there, and a line to each series, its name and its value, which the readout sets beside a swatch of the
+ * series' paint. readoutAt() says the same in words, for the point's name. More than one metric: each line has
+ * their values in the head's order. */
+export function readoutLines(rows: Row[], total: Row | undefined, q: Query, catalog: Catalog, x: string, split: string): { head: string; lines: { series: string; name: string; value: string }[] } {
+  const first = rows[0] ?? {}, partial = partialNote(first), of = catalog.dimensions[split]!;
+  const head = formatDimension(first[x], catalog.dimensions[x]!) + ': ' + q.metrics.map((m) => {
+    const def = catalog.metrics[m]!;
+    return def.label + (total ? ' ' + formatValue(total[m] as number | null, def) + (partial && ' ' + partial) : '');
+  }).join('; ');
+  return { head, lines: rows.map((r) => ({ series: String(r[split]), name: formatDimension(r[split], of), value: q.metrics.map((m) => formatValue(r[m] as number | null, catalog.metrics[m]!)).join(', ') })) };
+}
+
 /** The rows of the result at each point of the scene. One each, in step, unless the plot is split into series:
  * then `x` and `split` name the two dimensions, and a point has a row per series, in the series' order, whether they
  * are painted apart (`scene.series`) or not (`scene.detail`). A point is
@@ -203,6 +216,11 @@ svg[data-hits] path[data-active="pointer"] { ${HOVER.stroke} }
 .uav-readout { position: absolute; z-index: 1; left: 0; top: 0; box-sizing: border-box; inline-size: max-content; max-inline-size: min(320px, 100%); padding: 2px 6px; border-radius: ${token('border-radius-tooltip')};
   pointer-events: none; font-family: ${token('font-family-tick')}; font-size: var(--uav-font-tick); font-optical-sizing: none; font-variant-numeric: tabular-nums;
   color: ${token('color-label-inverse')}; background: ${token('color-tooltip-surface')}; box-shadow: ${token('elevation-tooltip')}; }
+/* At a point of a split plot it is a head and a line to each series: a swatch of its paint, its name, and its value at the end. */
+.uav-readout[data-lines] { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; column-gap: 4px; align-items: center; min-inline-size: min(160px, 100%); }
+.uav-readout[data-lines] > b { grid-column: 1 / -1; font-weight: inherit; }
+.uav-readout[data-lines] > i { block-size: 8px; border-radius: ${token('border-radius-swatch')}; background: var(--uav-paint); }
+.uav-readout[data-lines] > span:nth-of-type(2n) { text-align: end; }
 /* In the top layer it is placed on the screen, over whatever holds the view, and is as wide as its words up to a width of its own. */
 .uav-readout[popover] { position: fixed; inset: auto; margin: 0; border: 0; overflow: visible; max-inline-size: min(320px, 100vw - 8px); }
 /* A line is read against the axes, so at a point of one the readout is a crosshair: the rule that stands at the point,
@@ -259,6 +277,8 @@ export function readoutOf(fig: HTMLElement): HTMLElement {
   if (typeof tip.showPopover === 'function') tip.setAttribute('popover', 'manual');
   return tip;
 }
+/** An element of the readout's, with its words. */
+function el(tag: string, words: string): HTMLElement { const e = document.createElement(tag); e.textContent = words; return e; }
 /** Take the readout away. */
 export function hideReadout(tip: HTMLElement): void {
   tip.hidden = true;
@@ -309,6 +329,8 @@ export function placeReadout(tip: HTMLElement, fig: HTMLElement, point: HTMLElem
 export class Keys {
   #host: HTMLElement; #fig: HTMLElement; #body: HTMLElement; #tip: HTMLElement;
   #keys: string[] = []; #rows: Row[][] = []; #says: string[] = [];
+  // At each point of a plot split into series painted apart, the readout's lines, and the paint of each series.
+  #lines: (ReturnType<typeof readoutLines> | null)[] = []; #paints = new Map<string, string>();
   #at: string | null = null;
   // The series of a split plot, the one chosen at the point, and what a readout of one needs.
   #order: string[] = []; #series: string | null = null; #split: string | undefined; #q: Query | null = null; #catalog: Catalog | null = null; #layers: Layer[] = [];
@@ -371,6 +393,9 @@ export class Keys {
     this.#keys = scene.rows ?? []; this.#rows = rows; this.#order = split == null ? [] : scene.series ?? scene.detail ?? []; this.#split = split; this.#q = q; this.#catalog = catalog; this.#layers = layers;
     this.#x = x; this.#cross = crossMarks(scene, layers, rows, catalog, split);
     this.#says = this.#keys.map((k, i) => (split == null ? readout(rows[i]![0] ?? {}, q, catalog, layers) : readoutAt(rows[i]!, totals.find((t) => String(t[x!]) === k), q, catalog, x!, split, !scene.series)));
+    // A mass is in one paint, so it is said in words alone (readoutAt). Series painted apart each have a line and a swatch.
+    this.#lines = this.#keys.map((k, i) => (split == null || !scene.series ? null : readoutLines(rows[i]!, totals.find((t) => String(t[x!]) === k), q, catalog, x!, split)));
+    this.#paints = split == null || !scene.series ? new Map() : new Map(scene.nodes.filter((n) => n.series != null && n.layer === 'data').reverse().map((n) => [n.series!, n.paint]));
     const box = this.#box();
     if (box) {
       attr(box, 'role', 'listbox'); attr(box, 'aria-label', catalog.dimensions[x!]?.label);
@@ -434,7 +459,14 @@ export class Keys {
     // A row that has every value in writing is its own readout. The option's name above still says it to a screen reader.
     const row = pair ?? (this.#order.length ? undefined : this.#rows[i]?.[0]);
     if (row && (point as Element).classList?.contains('uav-row') && written((point as Element).textContent ?? '', row, this.#q!, this.#catalog!, this.#layers)) { hideReadout(tip); return; }
-    tip.textContent = says;
+    const lines = pair ? null : this.#lines[i];
+    tip.toggleAttribute('data-lines', !!lines);
+    if (!lines) tip.textContent = says;
+    else tip.replaceChildren(el('b', lines.head), ...lines.lines.flatMap((l) => {
+      const swatch = document.createElement('i');
+      prop(swatch, '--uav-paint', paintVar(this.#paints.get(l.series) ?? 'series.1'));
+      return [swatch, el('span', l.name), el('span', l.value)];
+    }));
     // Over the arc of a second ring where one is chosen, and else over the row's point.
     placeReadout(tip, this.#fig, (series != null && this.#body.querySelector<HTMLElement>('.uav-under [data-chosen]')) || (point as HTMLElement));
   }

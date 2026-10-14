@@ -138,10 +138,15 @@ export function settle(fig: HTMLElement): void {
 export function once(el: Element, attrs: string[]): void {
   const done = () => { for (const a of attrs) el.removeAttribute(a); };
   if (typeof requestAnimationFrame !== 'function') { done(); return; }
-  requestAnimationFrame(() => {
-    const playing = el.getAnimations({ subtree: true }).filter((a) => a instanceof CSSAnimation);
-    if (playing.length) over(playing).then(done); else done();
-  });
+  if (!onces.length) requestAnimationFrame(playOnce);
+  onces.push([el, done]);
+}
+// Every element asked about in a frame is read before any is written: a removal between two reads lays the page out
+// again for each, and on a page of many views that is a layout of the whole page for every number and every line.
+const onces: [Element, () => void][] = [];
+function playOnce(): void {
+  const batch = onces.splice(0), playing = batch.map(([el]) => el.getAnimations({ subtree: true }).filter((a) => a instanceof CSSAnimation));
+  batch.forEach(([, done], i) => { if (playing[i]!.length) over(playing[i]!).then(done); else done(); });
 }
 
 interface Morph { now: XV[]; from: XV[]; to: PathNode; frame: number; clock?: Animation | null | undefined }

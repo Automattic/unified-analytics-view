@@ -4,7 +4,7 @@ import { catalog, moreSamples, runQuery, type Scenario } from '@unified-analytic
 import { compileFitRules } from '../packages/dom/src/compile.ts';
 import { LEGEND_CSS } from '../packages/dom/src/chrome/legend.ts';
 import { cartesian } from '../packages/dom/src/layouts/cartesian.ts';
-import { KEYS_CSS, hitNodes, readout, readoutAt, rowsAt, stepSeries } from '../packages/dom/src/keys.ts';
+import { KEYS_CSS, hitNodes, readout, readoutAt, readoutLines, rowsAt, stepSeries } from '../packages/dom/src/keys.ts';
 import { apart } from '../packages/dom/src/measure.ts';
 import { mix, resample } from '../packages/dom/src/motion.ts';
 import { pivot } from '../packages/dom/src/view.ts';
@@ -147,6 +147,14 @@ describe('the readout of a split plot', () => {
     expect(readoutAt(rows[0]!, total, q, catalog, x!, split!)).toBe('Sep 8: Visitors 416 (Desktop 217, Mobile 173, Tablet 26)');
     expect(readoutAt(rows[27]!, result.totalsBy![x!]![27], q, catalog, x!, split!)).toMatch(/^Oct 5: Visitors \d+ so far \(Desktop \d+, Mobile \d+, Tablet \d+\)$/);
     expect(readoutAt(rows[0]!, undefined, q, catalog, x!, split!)).toBe('Sep 8: Visitors (Desktop 217, Mobile 173, Tablet 26)');
+  });
+  it('sets the same out as a head and a line to each series, for the readout that draws a swatch beside each', () => {
+    const { rows, x, split, q, result } = at('stacked'), total = result.totalsBy![x!]![0];
+    expect(readoutLines(rows[0]!, total, q, catalog, x!, split!)).toEqual({ head: 'Sep 8: Visitors 416', lines: [
+      { series: 'Desktop', name: 'Desktop', value: '217' }, { series: 'Mobile', name: 'Mobile', value: '173' }, { series: 'Tablet', name: 'Tablet', value: '26' }] });
+    expect(readoutLines(rows[27]!, result.totalsBy![x!]![27], q, catalog, x!, split!).head).toMatch(/^Oct 5: Visitors \d+ so far$/);
+    expect(readoutLines(rows[0]!, undefined, q, catalog, x!, split!).head).toBe('Sep 8: Visitors');
+    expect(KEYS_CSS).toContain('.uav-readout[data-lines] { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto;');
   });
   it('finds the rows of a plot split by detail the same way, in the order of scene.detail', () => {
     const { rows, x, split, scene } = at('spaghetti');

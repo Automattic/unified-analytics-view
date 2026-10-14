@@ -455,7 +455,6 @@ What building the views from the code's placed scenes found in the components th
 - **`View / Beside`'s placeholder body is at 40% opacity** in the main component; every view resets it.
 - **The metric display does not widen with its glyphs,** so each instance is fixed to its room, rounded down to a whole cell.
 - **An `Arc` instance does not resize its ellipses;** the views rescale it and put the stroke back.
-- **A treemap box's label has no text style;** the code sets it in the tick face.
 - **The choropleth example's United States is 2.8 px short** at its western edge against the scene.
 - **The bullet's background ranges have no component;** they are rectangles bound to the band colours.
 - **The key to sizes paints its dots in the series colour** in one place and `ink.muted` in another; the scene says `ink.muted`.

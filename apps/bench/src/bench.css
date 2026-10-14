@@ -102,7 +102,7 @@ h2 small { display: inline; }
 /* The materials, on the tokens page. A stage is a square with room around it for the light's dot; the plate is the surface under the material. */
 .stages { display: flex; flex-wrap: wrap; align-items: end; gap: var(--ua-space-xl); margin-block-end: var(--ua-space-l); }
 .stages figure { margin: 0; display: grid; justify-items: center; gap: var(--ua-space-s); }
-.stage { position: relative; aspect-ratio: 1; margin: var(--ua-space-m); }
+.stages .stage { position: relative; aspect-ratio: 1; margin: var(--ua-space-m); }
 .plate { position: absolute; inset: 0; border-radius: 50%; display: grid; place-items: center; container-type: inline-size; }
 .plate b { font-size: 22cqi; }
 .sun { position: absolute; inline-size: 6px; block-size: 6px; margin: -3px; border-radius: 50%; background: var(--ua-color-foreground);

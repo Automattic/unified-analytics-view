@@ -44,29 +44,12 @@ h2 small { display: inline; }
 .bar { display: grid; grid-template-columns: 9em auto 1fr; gap: var(--ua-space-xs); align-items: center; }
 .bar i { display: block; block-size: 12px; background: var(--ua-charts-color-series-1); border-radius: 2px; }
 
-/* The spike page (docs/dom-painter-plan.md, section 7). Throwaway.
- * The two surface layouts, as section 4.2 writes them, on the spike's element. */
+/* The two surface layouts, as docs/dom-painter-plan.md section 4.2 writes them. */
 .ua-stack { display: grid; gap: var(--ua-space-s); }
 .ua-row   { display: flex; gap: var(--ua-space-s); }
-.ua-row > ua-spike-view { flex: 1 1 0; min-inline-size: 0; block-size: 100%; container-type: size; }
 .frame.ua-row { resize: both; }
 /* A frame holding one <ua-view>: a stack, or a row when the height control hands it a box. The gap is between views, and there is one. */
 .frame:is(.ua-stack, .ua-row) { gap: 0; }
-
-.spike > p, .spike section > p { max-inline-size: 76ch; }
-.spike section { margin-block-start: var(--ua-space-l); border-block-start: 1px solid var(--ua-color-border); }
-.spike h3 { font-size: 11px; font-weight: 400; color: var(--ua-color-muted-foreground); margin: var(--ua-space-s) 0 var(--ua-space-2xs); }
-.spike .meta { inline-size: auto; min-inline-size: 0; }
-.spike .cell > .meta { inline-size: 0; min-inline-size: 100%; }
-.verdict { display: inline-block; padding: 0 var(--ua-space-2xs); border: 1px solid; border-radius: var(--ua-radius-sm); font-size: 11px; text-transform: uppercase; color: var(--ua-color-muted-foreground); }
-.verdict[data-state="pass"] { color: var(--ua-color-success-text); }
-.verdict[data-state="fail"] { color: var(--ua-color-destructive-text); }
-/* Item 1's rulers: 10 px on, 10 px off, beside each dashed path. */
-.dash { position: relative; }
-.dash svg { display: block; overflow: visible; }
-.dash::before, .dash::after { content: ''; position: absolute; }
-.dash::before { inset-inline-start: 0; inset-block-start: calc(20% + 4px); inline-size: 60%; block-size: 4px; background: repeating-linear-gradient(90deg, var(--ua-color-marker) 0 10px, transparent 10px 20px); }
-.dash::after { inset-inline-start: calc(90% + 4px); inset-block-start: 0; inline-size: 4px; block-size: 100%; background: repeating-linear-gradient(180deg, var(--ua-color-marker) 0 10px, transparent 10px 20px); }
 
 /* A grid to see a material against: 16 px lines, heavier every 80. */
 .gridded { background-image: linear-gradient(var(--ua-color-foreground-8) 1px, transparent 1px), linear-gradient(90deg, var(--ua-color-foreground-8) 1px, transparent 1px),

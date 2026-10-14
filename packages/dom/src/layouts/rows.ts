@@ -26,15 +26,15 @@ const short = '(100cqi - var(--uav-need) + 0.01px) * 999999';
  * for the faces a view has with no tokens, and a page's may be wider, as a pixel face is: a column that is kept past
  * the room it really takes leaves the label none. Where a width cannot be read, core's stands. */
 function roomsHere(body: HTMLElement, scene: Scene): number[] {
-  const advance = (face: string) => {
+  // Both faces are put in before either is read, so the page is laid out once for the two.
+  const probes = ['tick', 'value'].map((face) => {
     const probe = body.appendChild(document.createElement('span'));
     probe.className = 'uav-f-' + face; probe.textContent = '0'.repeat(10);
     probe.style.position = 'absolute'; probe.style.visibility = 'hidden'; probe.style.whiteSpace = 'nowrap';
-    const width = probe.getBoundingClientRect().width / 10;
-    probe.remove();
-    return width;
-  };
-  const tick = advance('tick'), value = advance('value'), room: number[] = [];
+    return probe;
+  });
+  const [tick, value] = probes.map((probe) => probe.getBoundingClientRect().width / 10), room: number[] = [];
+  for (const probe of probes) probe.remove();
   if (!tick || !value) return columnRooms(scene);
   for (const n of scene.nodes) {
     if (n.kind !== 'text' || !((n.part === 'columns' && n.anchor !== 'start') || (n.part === 'rows' && n.font === 'value'))) continue;

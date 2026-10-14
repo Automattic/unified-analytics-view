@@ -76,9 +76,11 @@ export function attr(el: Element, name: string, v: string | number | null | unde
 }
 /** Hand a part the page's direction back, inside a body that is set from the left (cartesian.ts): a legend reads
  * the way the page does, under a plot that does not turn. The figure the body is in has the page's.
+ * The way is the page's `dir`, read by `:dir()`: computed style would lay the page out again in the middle of every
+ * paint, and on a page of many views that is most of the time they take. A page turned by CSS `direction` alone is not followed.
  * ponytail: read at each paint, so a page that turns with no new data keeps the old way until the next. */
 export function pageWay(el: Element, body: HTMLElement): void {
-  attr(el, 'dir', getComputedStyle(body.parentElement!).direction === 'rtl' ? 'rtl' : null);
+  attr(el, 'dir', body.parentElement!.matches(':dir(rtl)') ? 'rtl' : null);
 }
 /** Set or clear one style property. Positions go in as the prefixed ratios: --uav-x, --uav-w, --uav-v, --uav-t. */
 export function prop(el: HTMLElement | SVGElement, name: string, v: string | number | null | undefined): void {

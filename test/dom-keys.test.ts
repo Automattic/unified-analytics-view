@@ -251,4 +251,14 @@ describe('the mouse leaving', () => {
     v.send('pointerover', { pointerType: 'touch' }); v.send('pointerleave', { pointerType: 'touch' });
     expect(v.chosen()).toEqual(['b']);
   });
+  it('lets a hovering pen go as a mouse, and keeps a pressed one for its click, as a touch', () => {
+    const hover = view(false);
+    hover.send('pointerover', { pointerType: 'pen', buttons: 0 }); hover.send('pointerleave', { pointerType: 'pen' });
+    expect(hover.chosen()).toEqual([]);
+    const press = view(false);
+    press.send('pointerover', { pointerType: 'pen', buttons: 1 }); press.send('pointerleave', { pointerType: 'pen' });
+    expect(press.chosen()).toEqual(['b']);
+    press.send('click', {});
+    expect(press.activated()).toBe(0);                                    // the first press only chose it
+  });
 });

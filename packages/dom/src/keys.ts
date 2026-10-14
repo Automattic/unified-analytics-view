@@ -150,6 +150,13 @@ export function step(key: string, at: number, count: number, vertical = false, r
   return d && count ? Math.min(Math.max(at + d, 0), count - 1) : null;
 }
 
+/** Whether a pointer chose by pressing, a touch or a pen on the glass, so the press that follows activates. A mouse,
+ * or a pen held over the glass, chooses by hovering. */
+export function pressed(e: PointerEvent): boolean { return e.pointerType === 'touch' || (e.pointerType === 'pen' && e.buttons > 0); }
+/** Whether a pointer leaving lets its point go: a mouse, or a pen that was hovering. A touch, or a pen whose press has
+ * not yet clicked, leaves as it lifts, before the click it chose for. */
+export function hovers(e: PointerEvent, fresh: boolean): boolean { return e.pointerType === 'mouse' || (e.pointerType === 'pen' && !fresh); }
+
 /** The hit targets of a plot: one per row that drew a mark, tiling the plot from edge to edge, each reaching half
  * way to its neighbours. `c` is where the row's own x falls inside its target, for the rule that marks it: the
  * middle of its bars taken together, since a group has several side by side. */
@@ -320,12 +327,12 @@ export class Keys {
       if (k == null) return;
       // An arc of a circle's second ring is a target of its own: the pointer chooses it there, as up and down do (layouts/radial.ts).
       const of = (e.target as Element).closest?.('.uav-under [data-series]')?.getAttribute('data-series'), series = of != null && this.#order.includes(of) ? of : null;
-      this.#fresh = e.pointerType !== 'mouse' && (k !== this.#at || series !== this.#series);
+      this.#fresh = pressed(e) && (k !== this.#at || series !== this.#series);
       this.#show(k, series, 'pointer');
     });
     // As version 4: the point goes with the mouse, focus or none, and the next arrow starts from nothing. A touch has
     // no leaving to speak of.
-    body.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') this.#show(null); });
+    body.addEventListener('pointerleave', (e) => { if (hovers(e, this.#fresh)) this.#show(null); });
     body.addEventListener('focusout', () => this.#show(null));
     // A touch that turns into a scroll chose its point on the way down. The browser cancels it, and it lets go.
     body.addEventListener('pointercancel', () => this.#show(null));

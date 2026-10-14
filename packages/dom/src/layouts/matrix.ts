@@ -1,7 +1,7 @@
 import { formatBin, formatDimension, formatValue, type CircleNode, type RectNode, type Row } from '@unified-analytics/core';
 import { attr, ensure, keyed, nodePaint, prop } from '../dom.ts';
 import { token } from '../tokens.ts';
-import { hideReadout, placeReadout, readout, readoutOf } from '../keys.ts';
+import { hideReadout, hovers, placeReadout, pressed, readout, readoutOf } from '../keys.ts';
 import type { LayoutPainter } from '../layout.ts';
 import { paintAxes, thinAxis } from '../chrome/axes.ts';
 import { paintRamp } from '../chrome/ramp.ts';
@@ -81,10 +81,10 @@ function bind(cells: HTMLElement): void {
     const el = cell(e);
     if (!el) return;
     // A touch that has only just chosen a cell shows its readout. The next one activates it.
-    grids.get(cells)!.fresh = e.pointerType !== 'mouse' && !el.hasAttribute('data-active');
+    grids.get(cells)!.fresh = pressed(e) && !el.hasAttribute('data-active');
     choose(cells, el);
   });
-  cells.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') choose(cells, null); });
+  cells.addEventListener('pointerleave', (e) => { if (hovers(e, grids.get(cells)!.fresh)) choose(cells, null); });
   cells.addEventListener('focusout', () => choose(cells, null));
   cells.addEventListener('click', (e) => {
     const el = cell(e), g = grids.get(cells)!;

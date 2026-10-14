@@ -10,13 +10,13 @@ import catalogSchema from '@unified-analytics/core/schema/catalog.schema.json';
 import viewSchema from '@unified-analytics/core/schema/view.schema.json';
 import { catalog, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
 import { CHAR_W, clip, delta } from '../packages/core/src/format.ts';
+import { ALWAYS, heights, painters, run, specs, trend, widths } from './sweep.ts';
 
 // The prototype, loaded as the reference the port is held to.
 (globalThis as any).d3 = { ...d3array, ...d3scale, ...d3shape };
 vm.runInThisContext(readFileSync(new URL('../prototype/prototype-bench.js', import.meta.url), 'utf8'));
 const proto = (globalThis as any).VGB;
 // A context that always sets the tldr value above the marks.
-const ALWAYS = { ...CONTAINER_RULES, tldrValue: { above: 'always' as const } };
 // The prototype is read-only and keeps its own names. The deliberate differences are mapped here and nowhere else:
 // it calls the `line` preset `trend`; its spec asks for the number with `headline`, which is now a container rule;
 // and its plan says `headline` and `sentence` where ours says `tldrValue` and `prose`.
@@ -78,20 +78,11 @@ const protoScene = (plan0: any, q: Spec['query'], res0: unknown, host0: unknown)
 // leaving it out, here and nowhere else.
 const lessRows = <S extends { nodes: { kind: string }[] }>(scene: S): S => ({ ...scene, nodes: scene.nodes.filter((n) => n.kind !== 'row') });
 
-const trend = samples.trend!.spec;
-const specs: Record<string, Spec> = {
-  ...Object.fromEntries(Object.entries(samples).map(([k, s]) => [k, s.spec])),
-  headed: trend,                         // swept in the ALWAYS context
-  kept: { ...trend, keep: ['guides'] },
-};
 const invalid: Record<string, Spec> = {
   'unknown preset': { spec: 'view/0', use: 'no-such-preset', query: { metrics: ['visitors'], by: ['channel'] } },
   'dimension, no layers': { spec: 'view/0', query: { metrics: ['visitors'], by: ['channel'] } },
   'preset, no dimension': { spec: 'view/0', use: 'line', query: { metrics: ['visitors'] } },
 };
-const painters: PainterName[] = ['svg', 'dots'];
-const heights = [null, 300, 160, 100, 60, 40];
-const widths = [54, 80, 120, 170, 250, 290, 346, 500, 700];
 const plain = (v: unknown) => JSON.parse(JSON.stringify(v));
 // The note is given up before prose: a deliberate departure from the prototype (feedback, decision 6 of October 7).
 // These are the swept cases it changes, and all of them: the prototype falls to prose, and ours keeps the number alone
@@ -101,13 +92,6 @@ const NOTE_FIRST = new Set((<[string[], PainterName, number[], number][]>[
   [['kept'], 'svg', [120, 170, 250, 290, 346, 500, 700], 60], [['kept'], 'dots', [120, 170], 60],
   [['pages'], 'dots', [120], 40], [['mix'], 'dots', [120, 170], 40],
 ]).flatMap(([names, p, ws, h]) => names.flatMap((name) => ['typical', 'no-prior'].flatMap((sc) => ws.map((w) => [name, sc, p, w, h].join(' '))))));
-const run = (spec: Spec, w: number, h: number | null = null, scenario: (typeof scenarios)[number] = 'typical', painter: PainterName = 'svg', rules = CONTAINER_RULES) => {
-  const container = { ...makeContainer(w, h, painter, 8), rules }, result = runQuery(spec.query, scenario);
-  const plan = resolve(spec, result, container, catalog);
-  const ratio = buildScene(plan, spec.query, result, catalog);
-  return { plan, ratio, scene: place(ratio, container), result };
-};
-
 describe('the sweep', () => {
   for (const [name, spec] of Object.entries(specs)) {
     it(name + ': matches the prototype, with unique keys, no NaN and nothing taller than the container allows', () => {

@@ -1,23 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, FIT_RULES, applies, buildScene, makeContainer, place, resolve, unboundedContainer, type FitRule, type PainterName, type Plan, type Spec } from '@unified-analytics/core';
-import { catalog, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
+import { CONTAINER_RULES, FIT_RULES, applies, place, resolve, unboundedContainer, type FitRule, type Plan, type Spec } from '@unified-analytics/core';
+import { catalog, runQuery, scenarios } from '@unified-analytics/fixtures';
+import { ALWAYS, heights, painters, run, specs, trend, widths } from './sweep.ts';
 
-// The sweep of core.test.ts, run again to hold the fit rules to what resolve() does.
-const ALWAYS = { ...CONTAINER_RULES, tldrValue: { above: 'always' as const } };
-const trend = samples.trend!.spec;
-const specs: Record<string, Spec> = {
-  ...Object.fromEntries(Object.entries(samples).map(([k, s]) => [k, s.spec])),
-  headed: trend,                         // swept in the ALWAYS context
-  kept: { ...trend, keep: ['guides'] },
-};
-const painters: PainterName[] = ['svg', 'dots'];
-const heights = [300, 160, 100, 60, 40];
-const widths = [54, 80, 120, 170, 250, 290, 346, 500, 700];
-const run = (spec: Spec, w: number, h: number | null = null, sc: (typeof scenarios)[number] = 'typical', painter: PainterName = 'svg', rules = CONTAINER_RULES) => {
-  const container = { ...makeContainer(w, h, painter, 8), rules }, result = runQuery(spec.query, sc);
-  const plan = resolve(spec, result, container, catalog);
-  return { plan, scene: place(buildScene(plan, spec.query, result, catalog), container) };
-};
 const rule = (layout: string, id: string) => FIT_RULES.find((r) => r.layout === layout && r.id === id)!;
 
 /** Whether resolve() gave up what the rule hides. `null` where the plan cannot say: the part was already gone with its parent. */
@@ -56,7 +41,7 @@ function sweep(each: (c: Case) => void): void {
     const timeAxis = catalog.dimensions[(spec.query.by || [])[0]!]?.type === 'time';
     for (const r of FIT_RULES.filter((r) => r.layout === unbounded.layout && (r.id !== 'mid-tick' || timeAxis))) for (const w of widths) {
       const wide = gaveUp(r, run(spec, w, null, sc, p, rules).plan, unbounded);
-      for (const h of [null, ...heights]) {
+      for (const h of heights) {
         const { plan, scene } = run(spec, w, h, sc, p, rules), did = gaveUp(r, plan, unbounded);
         if (did == null || wide == null) continue;
         const kept = !!r.keep && (spec.keep || []).includes(r.keep);

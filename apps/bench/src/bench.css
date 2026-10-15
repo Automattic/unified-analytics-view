@@ -7,11 +7,11 @@
 :root[data-theme="light"] { color-scheme: light; }
 :root[data-theme="dark"] { color-scheme: dark; }
 
-body { margin: 0; padding: var(--ua-space-m); font: 13px/1.4 system-ui, sans-serif; background: var(--ua-color-background); color: var(--ua-color-foreground); }
+body { margin: 0; padding: var(--ua-space-m); font: var(--ua-font-size-sm)/1.4 system-ui, sans-serif; background: var(--ua-color-background); color: var(--ua-color-foreground); }
 #controls { display: flex; flex-wrap: wrap; gap: var(--ua-space-s); position: sticky; top: 0; z-index: 1; padding-block: var(--ua-space-2xs); background: var(--ua-color-background); }
 fieldset { display: flex; gap: var(--ua-space-xs); margin: 0; border: 1px solid var(--ua-color-border); border-radius: var(--ua-radius-sm); }
 legend, h2 small { color: var(--ua-color-muted-foreground); }
-h2 { font-size: 13px; margin: var(--ua-space-l) 0 var(--ua-space-xs); }
+h2 { font-size: var(--ua-font-size-sm); margin: var(--ua-space-l) 0 var(--ua-space-xs); }
 h2 small { font-weight: 400; }
 .sizes { display: flex; flex-wrap: wrap; align-items: start; gap: var(--ua-space-m); }
 
@@ -23,7 +23,7 @@ h2 small { font-weight: 400; }
   background: linear-gradient(135deg, transparent 45%, var(--ua-color-muted-foreground) 45% 52%, transparent 52% 68%, var(--ua-color-muted-foreground) 68% 75%, transparent 75%); }
 .frame.ua-row > .grip { cursor: nwse-resize; }
 .cell:hover > .frame { outline: 1px dashed var(--ua-color-border); }
-.meta { inline-size: 0; min-inline-size: 100%; margin: var(--ua-space-xs) 0 0; font-size: 11px; color: var(--ua-color-muted-foreground); overflow-wrap: anywhere; }
+.meta { inline-size: 0; min-inline-size: 100%; margin: var(--ua-space-xs) 0 0; font-size: var(--ua-font-size-xs); color: var(--ua-color-muted-foreground); overflow-wrap: anywhere; }
 .meta.error { color: var(--ua-color-destructive-text); }
 
 nav { display: flex; gap: var(--ua-space-s); margin-block-end: var(--ua-space-xs); }
@@ -35,7 +35,7 @@ nav .theme legend { position: absolute; inline-size: 1px; block-size: 1px; overf
 nav .theme label:has(:checked) { color: var(--ua-color-foreground); }
 
 /* The tokens page. */
-small { display: block; font-size: 11px; color: var(--ua-color-muted-foreground); overflow-wrap: anywhere; }
+small { display: block; font-size: var(--ua-font-size-xs); color: var(--ua-color-muted-foreground); overflow-wrap: anywhere; }
 h2 small { display: inline; }
 .swatch { display: block; border-radius: var(--ua-radius-sm); border: 1px solid var(--ua-color-border);
   background: linear-gradient(var(--c), var(--c)), repeating-conic-gradient(#8884 0 25%, transparent 0 50%) 0 0 / 12px 12px; }
@@ -50,7 +50,7 @@ h2 small { display: inline; }
 .fluid { container-type: inline-size; inline-size: 720px; padding: var(--ua-space-xs); border: 1px solid var(--ua-color-border); border-radius: var(--ua-radius-md); display: grid; gap: var(--ua-space-2xs); }
 .type span { display: block; line-height: 1.2; }
 .bar { display: grid; grid-template-columns: 9em auto 1fr; gap: var(--ua-space-xs); align-items: center; }
-.bar i { display: block; block-size: 12px; background: var(--ua-charts-color-series-1); border-radius: 2px; }
+.bar i { display: block; block-size: 12px; background: var(--ua-charts-color-series-1); border-radius: var(--ua-radius-xs); }
 
 /* The two surface layouts are packages/dom's (surfaceSheet(), adopted by each page). A frame holding one <ua-view>: a stack, or a row when the height control hands it a box. The gap is between views, and there is one. */
 .frame:is(.ua-stack, .ua-row) { gap: 0; }

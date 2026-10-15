@@ -1,7 +1,7 @@
 import type { Catalog, Spec } from '@unified-analytics/core';
 import { UaView } from '@unified-analytics/dom';
 import { catalog, runQuery, type Scenario } from '@unified-analytics/fixtures';
-import { el, register, samples } from './setup.ts';
+import { declared, el, register, samples } from './setup.ts';
 
 /* The marks: each one on its own, at a size where nothing has been given up, for tuning how it looks. A mark is
  * shown in each of the six series colours, on each of the three surfaces, and in the states it has. Every specimen
@@ -12,7 +12,9 @@ register();
 const params = new URLSearchParams(location.search), both = params.has('both');
 const controls = document.querySelector<HTMLFormElement>('#controls')!, main = document.querySelector('main')!;
 
-const SERIES = ['chartreuse', 'grass', 'teal', 'steel', 'rose', 'orange'], SURFACES = ['page', 'card', 'raised', 'screen', 'frost', 'crystal'];
+// The series colours, in order, by the hue each is aliased to in the token stylesheet.
+const SERIES = [...declared()].filter(([name]) => /^--ua-charts-color-series-\d+$/.test(name)).map(([, value]) => value.replace(/^var\(--ua-mark-(.+)\)$/, '$1'));
+const SURFACES = ['page', 'card', 'raised', 'screen', 'frost', 'crystal'];
 const by = (metric: string, dim: string, compare = false) => ({ metrics: [metric], by: [dim], range: '28d', ...(compare && { compare: 'previous' as const }) });
 const S = (name: string) => samples[name]!.spec;
 /** A metric that fell where a fall is bad: the fixtures' visitors, read the other way. */

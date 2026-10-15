@@ -22,6 +22,22 @@ export function register(): void {
   document.adoptedStyleSheets.push(surfaceSheet());
 }
 
+/** Every custom property the page's stylesheets declare on the root, name to declared value, in source order, as the
+ * cascade leaves it for the current theme. */
+export function declared(): Map<string, string> {
+  const out = new Map<string, string>();
+  const walk = (rules: CSSRuleList) => {
+    for (const r of rules) {
+      if (r instanceof CSSMediaRule) { if (matchMedia(r.conditionText).matches) walk(r.cssRules); }
+      else if (r instanceof CSSStyleRule && document.documentElement.matches(r.selectorText)) {
+        for (const name of r.style) if (/^--(ua|a8c)-/.test(name)) out.set(name, r.style.getPropertyValue(name).trim());
+      }
+    }
+  };
+  for (const sheet of document.styleSheets) walk(sheet.cssRules);
+  return out;
+}
+
 export function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);
   if (cls) e.className = cls;

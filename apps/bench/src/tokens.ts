@@ -1,23 +1,7 @@
 /* Every custom property the token stylesheet declares, read from the page's own
  * stylesheets, so this page cannot drift from what ships. Values follow the theme. */
-import { el, heading } from './setup.ts';
-const root = document.documentElement;
+import { declared, el, heading } from './setup.ts';
 const main = document.querySelector('#tokens')!;
-
-/** Name to declared value, in source order, as the cascade leaves it for the current theme. */
-function declared(): Map<string, string> {
-  const out = new Map<string, string>();
-  const walk = (rules: CSSRuleList) => {
-    for (const r of rules) {
-      if (r instanceof CSSMediaRule) { if (matchMedia(r.conditionText).matches) walk(r.cssRules); }
-      else if (r instanceof CSSStyleRule && root.matches(r.selectorText)) {
-        for (const name of r.style) if (/^--(ua|a8c)-/.test(name)) out.set(name, r.style.getPropertyValue(name).trim());
-      }
-    }
-  };
-  for (const sheet of document.styleSheets) walk(sheet.cssRules);
-  return out;
-}
 
 /** `var(--ua-color-neutral-300)` reads as `neutral-300`. */
 const short = (v: string) => v.replace(/var\(--ua-(?:color-)?([a-z0-9-]+)\)/g, '$1');
@@ -120,9 +104,8 @@ function render() {
   section('Radius', '', radii);
 
   // Elevation is seen as a container on a surface: sunk into it, flat, or standing above it. The light is the materials' below.
-  const ORDER = ['inset', '0', '1', '2', '3'];
-  const levels = el('div', 'elevations');
-  for (const [name, value] of take(/^--ua-elevation-/).sort(([a], [b]) => ORDER.indexOf(a.slice(15)) - ORDER.indexOf(b.slice(15)))) {
+  const levels = el('div', 'elevations'), rank = (name: string) => (name.endsWith('inset') ? -1 : Number(name.slice(15)));
+  for (const [name, value] of take(/^--ua-elevation-/).sort(([a], [b]) => rank(a) - rank(b))) {
     const fig = el('figure'), box = el('div', 'elevation'), level = name.slice(15);
     box.style.boxShadow = `var(${name})`;
     if (level === 'inset') box.classList.add('sunk');

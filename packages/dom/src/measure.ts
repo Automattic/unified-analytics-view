@@ -1,4 +1,5 @@
 import type { Room } from '@unified-analytics/core';
+import { CELL, SLOT } from './dots.ts';
 
 /* The measured pass: what a container query cannot ask, because the need is the size of the content itself.
  * It reads sizes and writes attributes, and the stylesheet does the hiding. It never rebuilds the scene.
@@ -23,8 +24,8 @@ export interface NumberSizes {
 
 /** The ways the number is set, as `data-fit` tokens on it, fullest first. The ruler holds one of each. */
 export const NUMBER_FITS = ['', 'short', 'small short'];
-/** The least room a number in dots is cut to, in px: two glyphs. */
-export const SCREEN_LEAST = 44;
+/** The least room a number in dots is cut to, in px: two slots, less the column after the last. */
+export const SCREEN_LEAST = (2 * SLOT - 1) * CELL;
 
 /** The number's `data-fit` for this room: the first form whose value fits, the delta's short form when the long
  * one does not fit, and no note when it would be cut or would make the number taller than the box. The note is
@@ -52,6 +53,14 @@ export function thin(spans: Span[], gap = 6): boolean[] {
     if (kept.some((k) => s.lo < k.hi + gap && k.lo < s.hi + gap)) gone[i] = true; else kept.push(s);
   }
   return gone;
+}
+
+/** What a label the measured pass may give up goes through, but the crosshair's chips (keys.ts) and a treemap's names, which keep loops of their own: the labels `selector` finds under `root` that have a
+ * box (a fit rule may have hidden some), handed to `gone`, which says of each whether it goes, and may set where the
+ * rest stand. Those that go take data-thin and keep their box (chrome/label.ts). */
+export function thinLabels(root: ParentNode, selector: string, gone: (labels: HTMLElement[]) => boolean[]): void {
+  const labels = Array.from(root.querySelectorAll<HTMLElement>(selector)).filter((el) => el.getClientRects().length);
+  if (labels.length) gone(labels).forEach((g, i) => labels[i]!.toggleAttribute('data-thin', g));
 }
 
 /** Where to set labels so that each stands at least `line` from the next: every one as near its own place as that

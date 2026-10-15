@@ -1,34 +1,23 @@
 import type { Catalog, Spec } from '@unified-analytics/core';
-import { UaView, defineUaView, registerPainter, surfaceSheet } from '@unified-analytics/dom';
-import { catalog, moreSamples, runQuery, samples, type Scenario } from '@unified-analytics/fixtures';
-import { linkPainter } from '@unified-analytics/flow/dom';
-import { geoPainter, geoPainterAs } from '@unified-analytics/geo/dom';
-import { partitionPainter } from '@unified-analytics/partition/dom';
-import './theme.ts';
+import { UaView } from '@unified-analytics/dom';
+import { catalog, runQuery, type Scenario } from '@unified-analytics/fixtures';
+import { declared, el } from './page.ts';
+import { register, samples } from './setup.ts';
 
 /* The marks: each one on its own, at a size where nothing has been given up, for tuning how it looks. A mark is
  * shown in each of the six series colours, on each of the three surfaces, and in the states it has. Every specimen
  * is a <ua-view> on the fixtures, so what is here is the real painter. "Both" sets the page beside itself, in each theme. */
-defineUaView();
-registerPainter(geoPainter);
-for (const name of ['geo-tiles', 'geo-hexes']) registerPainter(geoPainterAs(name));
-registerPainter(linkPainter);
-registerPainter(partitionPainter);
-document.adoptedStyleSheets.push(surfaceSheet());
+register();
 
 // Both themes side by side is this page's own; the theme itself is the bench's (theme.ts).
 const params = new URLSearchParams(location.search), both = params.has('both');
 const controls = document.querySelector<HTMLFormElement>('#controls')!, main = document.querySelector('main')!;
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
-  const e = document.createElement(tag);
-  if (cls) e.className = cls;
-  if (text != null) e.textContent = text;
-  return e;
-}
 
-const SERIES = ['chartreuse', 'grass', 'teal', 'steel', 'rose', 'orange'], SURFACES = ['page', 'card', 'raised', 'screen', 'frost', 'crystal'];
+// The series colours, in order, by the hue each is aliased to in the token stylesheet.
+const SERIES = [...declared()].filter(([name]) => /^--ua-charts-color-series-\d+$/.test(name)).map(([, value]) => value.replace(/^var\(--ua-mark-(.+)\)$/, '$1'));
+const SURFACES = ['page', 'card', 'raised', 'screen', 'frost', 'crystal'];
 const by = (metric: string, dim: string, compare = false) => ({ metrics: [metric], by: [dim], range: '28d', ...(compare && { compare: 'previous' as const }) });
-const S = (name: string) => (samples[name] ?? moreSamples[name])!.spec;
+const S = (name: string) => samples[name]!.spec;
 /** A metric that fell where a fall is bad: the fixtures' visitors, read the other way. */
 const worse: Catalog = { ...catalog, metrics: { ...catalog.metrics, visitors: { ...catalog.metrics.visitors!, polarity: 'down' } } };
 
@@ -82,7 +71,7 @@ function specimen(parent: Element, label: string, state: Omit<State, 'label'>, s
   // A screen and frosted glass are more than a colour: material.css. Glass has no colour of its own, and is set over something to blur.
   if (surface === 'screen') box.classList.add('ua-screen');
   if (surface === 'crystal') { box.classList.add('ua-crystal-surface'); box.style.setProperty('--surface', 'var(--ua-surface-card)'); }   // crystal goes over any fill: the card's here
-  if (surface === 'frost') { box.classList.add('ua-frost'); box.style.setProperty('--surface', 'color-mix(in srgb, var(--ua-color-card) var(--ua-frost-tint, 45%), transparent)'); cell.classList.add('backdrop'); }
+  if (surface === 'frost') { box.classList.add('ua-frost'); box.style.setProperty('--surface', 'var(--ua-frost-fill)'); cell.classList.add('backdrop'); }
   if (series > 1) for (const part of ['', '-text', '-soft']) view.style.setProperty('--ua-charts-color-series-1' + part, `var(--ua-charts-color-series-${series}${part})`);
   view.catalog = state.catalog ?? catalog; view.spec = state.spec;
   try { view.result = runQuery(state.spec.query, state.scenario); } catch (e) { box.append(el('p', 'meta error', (e as Error).message)); }

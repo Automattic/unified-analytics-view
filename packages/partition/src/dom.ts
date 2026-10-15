@@ -1,6 +1,6 @@
-import { formatDimension, formatValue, type RectNode, type Result, type Row, type TextNode } from '@unified-analytics/core';
-import { FOCUS, HOVER, attr, ensure, hideReadout, keyed, nodePaint, paintRamp, placeReadout, prop, readoutOf, text, token, type LayoutPainter } from '@unified-analytics/dom';
-import { PARTITION_RULES, boxNames } from './index.ts';
+import { formatDimension, type MarkView, type RectNode, type Row, type TextNode } from '@unified-analytics/core';
+import { FOCUS, FROM_TOP, HOVER, IN_BOX, attr, chooseItem, emptyTable, ensure, fieldLabel, holdShape, keyed, label, lineOf, nodePaint, paintRamp, prop, readout, registerPainter, roveItems, tableRow, text, token, valueText, type Cell, type LayoutPainter } from '@unified-analytics/dom';
+import { ASPECT, GAP, HEAD, HEAD_MOST, KID_GAP, LINE, MAX, boxesOf } from './index.ts';
 
 /* The `partition` mark's half for the DOM: the painter of its layout, for registerPainter().
  *
@@ -32,22 +32,20 @@ import { PARTITION_RULES, boxNames } from './index.ts';
  * by where a box lies, so an arrow does not always move the way it points.
  * Below the room a treemap needs, the `marks` rule's `fallback` shows the same query as a list in its place. That is
  * the element's doing (view.ts), and nothing here knows of it. */
-const at = (gap: number, off: number) => `inset-inline-start: calc(var(--uav-x) * 100% + ${off}px); inset-block-start: calc((1 - var(--uav-t)) * 100% + ${off}px); inline-size: calc(var(--uav-w) * 100% - ${gap}px); block-size: calc(var(--uav-v) * 100% - ${gap}px);`;
+const at = (gap: number, off: number) => `inset-inline-start: calc(var(--uav-x) * 100% + ${off}px); inset-block-start: calc(${FROM_TOP} + ${off}px); inline-size: calc(var(--uav-w) * 100% - ${gap}px); block-size: calc(var(--uav-v) * 100% - ${gap}px);`;
+const shape = holdShape(MAX + 'px', 'var(--uav-aspect, ' + ASPECT + ')');
 const css = `
 .uav[data-layout="partition"] .uav-body { display: flex; flex-direction: column; }
-.uav[data-layout="partition"] .uav-plot { flex: none; align-self: center; inline-size: min(100%, 480px); aspect-ratio: var(--uav-aspect, 1.6); container-type: inline-size; }
-/* Parents are 2 px apart, a pixel in from the part's edge all round, and children 1 px: the gap is what tells one box
+.uav[data-layout="partition"] .uav-plot { ${shape.part} container-type: inline-size; }
+/* Parents are ${GAP} px apart, ${GAP / 2} px in from the part's edge all round, and children ${KID_GAP} px (index.ts): the gap is what tells one box
  * from the next, and a parent's is the wider. A child gives up its gap at its far edges, and the room that holds the
  * children is that much larger, so the last of them end where their parent does. */
-.uav[data-layout="partition"] .uav-plot > div { position: absolute; ${at(2, 1)} display: flex; flex-direction: column; overflow: hidden; border-radius: ${token('border-radius-bar')}; background: var(--uav-paint); }
+.uav[data-layout="partition"] .uav-plot > div { position: absolute; ${at(GAP, GAP / 2)} display: flex; flex-direction: column; overflow: hidden; border-radius: ${token('border-radius-bar')}; background: var(--uav-paint); }
 .uav[data-layout="partition"] .uav-head { position: absolute; inset: 0; overflow: hidden; }
-.uav[data-layout="partition"] .uav-plot[data-divided] .uav-head { position: relative; inset: auto; flex: none; block-size: 16px; max-block-size: 30%; }
-.uav[data-layout="partition"] .uav-kids { position: relative; flex: 1; min-block-size: 0; margin-inline-end: -1px; margin-block-end: -1px; }
-.uav[data-layout="partition"] .uav-kids i { position: absolute; ${at(1, 0)} overflow: hidden; border-radius: ${token('border-radius-cell')}; background: var(--uav-paint); }
-.uav[data-layout="partition"] .uav-label { position: absolute; inset-inline-start: 0; inset-block-start: 0; inline-size: max-content; padding: 1px 4px; line-height: calc(14 / 11); white-space: nowrap; color: var(--uav-paint); pointer-events: none; }
-.uav[data-layout="partition"] .uav-label[data-halo] { -webkit-text-stroke: 3px ${token('color-background')}; paint-order: stroke fill; }
-/* A name the measured pass gave up keeps its box, so the next measurement reads the same. */
-.uav[data-layout="partition"] .uav-label[data-thin] { visibility: hidden; }
+.uav[data-layout="partition"] .uav-plot[data-divided] .uav-head { position: relative; inset: auto; flex: none; block-size: ${HEAD}px; max-block-size: ${Math.round(HEAD_MOST * 100)}%; }
+.uav[data-layout="partition"] .uav-kids { position: relative; flex: 1; min-block-size: 0; margin-inline-end: -${KID_GAP}px; margin-block-end: -${KID_GAP}px; }
+.uav[data-layout="partition"] .uav-kids i { position: absolute; ${at(KID_GAP, 0)} overflow: hidden; border-radius: ${token('border-radius-cell')}; background: var(--uav-paint); }
+.uav[data-layout="partition"] .uav-label { position: absolute; inset-inline-start: 0; inset-block-start: 0; inline-size: max-content; padding: 1px 4px; line-height: ${lineOf('tick', LINE)}; pointer-events: none; ${label()} }
 /* Boxes lie edge to edge and a parent cuts off what leaves it, so the chosen one is outlined inside its own edge. */
 .uav[data-layout="partition"] .uav-plot { outline: none; }
 .uav[data-layout="partition"] .uav-plot:focus-visible::after { content: ""; position: absolute; inset: 0; pointer-events: none; ${FOCUS.around} }
@@ -55,14 +53,14 @@ const css = `
 .uav[data-layout="partition"] .uav-plot [data-active="pointer"] { ${HOVER.around} outline-offset: -1px; }
 .uav[data-layout="partition"] .uav-ramp:empty { display: none; }
 /* In a box the part gives way to the height and its width follows, as a map does. */
-@container uav-view (block-size >= 0px) {
+${IN_BOX} {
   .uav[data-layout="partition"] .uav-body { container-type: size; overflow: hidden; }
-  .uav[data-layout="partition"] .uav-plot { flex: 0 1 calc(min(100cqi, 480px) / var(--uav-aspect, 1.6)); min-block-size: 0; inline-size: auto; max-inline-size: 100%; }
+  .uav[data-layout="partition"] .uav-plot { ${shape.box} }
   .uav[data-layout="partition"] .uav-ramp { flex: none; }
 }`;
 
 /* What the listeners read. They are bound once to the part, which outlives every paint, and this is set by each. */
-interface Tree { rows: Map<string, { row: Row; rows: Row[] }>; fresh: boolean }
+interface Tree { rows: Map<string, { row: Row; rows: Row[] }> }
 const trees = new WeakMap<HTMLElement, Tree>();
 const ITEM = '[role="treeitem"]:not([data-exit])';
 
@@ -78,53 +76,28 @@ export function stepBox(key: string, chosen: { at: number; count: number; depth:
   return chosen.depth === 1 ? { to: 'parent', at: 0 } : null;
 }
 
-/** Choose a box, or none, and say how: by the keys or by the pointer, as keys.ts does. The readout is the box's own
- * name, and is the view's one readout, shown and placed as keys.ts shows it. */
-function choose(plot: HTMLElement, el: HTMLElement | null, how: 'keys' | 'pointer' = 'pointer'): void {
-  plot.querySelector('[data-active]')?.removeAttribute('data-active');
-  el?.setAttribute('data-active', how);
-  attr(plot, 'aria-activedescendant', el?.id);
-  const fig = plot.closest<HTMLElement>('.uav')!, tip = readoutOf(fig);
-  if (!el) { hideReadout(tip); return; }
-  tip.textContent = el.getAttribute('aria-label');
-  placeReadout(tip, fig, el);
-}
-
+/* The interaction is the element's own, for a holder of elements (roveItems). A box's is the step through the tree. */
 function bind(plot: HTMLElement): void {
-  const box = (e: Event) => (e.target as Element).closest?.<HTMLElement>(ITEM) ?? null;
   const items = (of: Element) => Array.from(of.querySelectorAll<HTMLElement>(':scope > ' + ITEM)).filter((el) => el.getClientRects().length > 0);
-  const activate = (el: HTMLElement) => {
-    const detail = trees.get(plot)!.rows.get(el.dataset.key!);
-    if (detail) (plot.getRootNode() as ShadowRoot).host.dispatchEvent(new CustomEvent('ua-activate', { bubbles: true, composed: true, detail }));
-  };
-  plot.addEventListener('pointerover', (e) => {
-    const el = box(e);
-    if (!el) return;
-    // A touch that has only just chosen a box shows its readout. The next one activates it.
-    trees.get(plot)!.fresh = e.pointerType !== 'mouse' && !el.hasAttribute('data-active');
-    choose(plot, el);
-  });
-  plot.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') choose(plot, null); });
-  plot.addEventListener('pointercancel', () => choose(plot, null));
-  plot.addEventListener('focusout', () => choose(plot, null));
-  plot.addEventListener('click', (e) => {
-    const el = box(e), tree = trees.get(plot)!;
-    if (!el?.hasAttribute('data-active')) return;
-    if (tree.fresh) tree.fresh = false; else activate(el);
-  });
-  plot.addEventListener('keydown', (e) => {
-    if (e.target !== plot) return;
-    const on = plot.querySelector<HTMLElement>(ITEM + '[data-active]');
-    if (e.key === 'Escape') { if (on) { e.preventDefault(); choose(plot, null); } return; }
-    if (e.key === 'Enter' || e.key === ' ') { if (on) { e.preventDefault(); activate(on); } return; }
+  roveItems(plot, ITEM, (e, on) => {
     const beside = on ? items(on.parentElement!) : [], kids = on?.querySelector('.uav-kids');
     const to = stepBox(e.key, on ? { at: beside.indexOf(on), count: beside.length, depth: on.parentElement === plot ? 0 : 1, kids: kids ? items(kids).length : 0 } : null);
     // An arrow with nowhere to go is still the tree's: the page behind it does not scroll, and take the readout with it.
     if (to || (on && e.key.startsWith('Arrow'))) e.preventDefault();
-    if (!to) return;
-    const el = to.to === 'first' ? items(plot)[0] : to.to === 'sibling' ? beside[to.at] : to.to === 'child' ? items(kids!)[0] : on!.parentElement!.closest<HTMLElement>(ITEM);
-    if (el) choose(plot, el, 'keys');
-  });
+    if (!to) return null;
+    return (to.to === 'first' ? items(plot)[0] : to.to === 'sibling' ? beside[to.at] : to.to === 'child' ? items(kids!)[0] : on!.parentElement!.closest<HTMLElement>(ITEM)) ?? null;
+  }, (el) => trees.get(plot)!.rows.get(el.dataset.key!));
+}
+
+/** What each box says, by its node's key: the readout every mark's row has (dom's readout), of the row it came from,
+ * named by its parent's value and then its own. A parent's values are the engine's totals for it. This is a box's
+ * accessible name and its readout, so no value is said by area or colour alone. `rows` are the rows inside it. */
+export function boxNames(view: Omit<MarkView, 'guides'>): Map<string, { says: string; row: Row; rows: Row[] }> {
+  const { query, catalog, layers } = view, [dim, detail] = [layers[0]!.encode!.x as string, layers[0]!.encode!.detail as string];
+  const says = (r: Row, by: string[]) => readout(r, { ...query, by }, catalog, layers);
+  type Said = [string, { says: string; row: Row; rows: Row[] }];
+  return new Map(boxesOf(view).flatMap((g): Said[] => [[g.key, { says: says(g.row, [dim]), row: g.row, rows: g.rows }],
+    ...g.kids.map((c): Said => [c.key, { says: says(c.row, [dim, detail]), row: c.row, rows: [c.row] }])]));
 }
 
 /** A name fits where the box it stands in is as wide and as tall as it is, to half a pixel. */
@@ -133,11 +106,10 @@ export const nameFits = (name: { width: number; height: number }, box: { width: 
 export const partitionPainter: LayoutPainter = {
   layout: 'partition',
   css,
-  rules: () => PARTITION_RULES,
 
   paint(body, scene, _rules, data) {
     const plot = ensure(body, 'div', 'uav-plot'), names = boxNames(data);
-    prop(plot, '--uav-aspect', scene.aspect ?? 1.6);
+    prop(plot, '--uav-aspect', scene.aspect ?? ASPECT);
     // The scene's order says what is whose: a parent's box, its name, then each child's box with its name after it.
     const parents: RectNode[] = [], kids = new Map<string, RectNode[]>(), labels = new Map<string, TextNode>();
     let last: RectNode | undefined;
@@ -173,13 +145,13 @@ export const partitionPainter: LayoutPainter = {
       keyed(group, mine, () => 'i', (c, k) => { box(c, k, 2); name(c, labels.get(k.key)); });
     });
     if (!trees.has(plot)) bind(plot);
-    trees.set(plot, { rows: new Map([...names].map(([k, v]) => [k, { row: v.row, rows: v.rows }])), fresh: false });
+    trees.set(plot, { rows: new Map([...names].map(([k, v]) => [k, { row: v.row, rows: v.rows }])) });
     attr(plot, 'role', 'tree'); attr(plot, 'tabindex', parents.length ? 0 : null);
     attr(plot, 'aria-label', data.catalog.dimensions[(data.layers[0]?.encode?.x ?? '') as string]?.label);
     // A box that a data change took away takes the choice with it. One that is still here keeps it.
     const on = plot.querySelector<HTMLElement>('[data-active]');
-    if (on && (on.hasAttribute('data-exit') || !(plot.matches(':focus') || plot.matches(':hover')))) choose(plot, null);
-    else if (on) choose(plot, on, on.getAttribute('data-active') as 'keys' | 'pointer');
+    if (on && (on.hasAttribute('data-exit') || !(plot.matches(':focus') || plot.matches(':hover')))) chooseItem(plot, null);
+    else if (on) chooseItem(plot, on, on.getAttribute('data-active') as 'keys' | 'pointer');
 
     paintRamp(body, scene);
   },
@@ -188,18 +160,10 @@ export const partitionPainter: LayoutPainter = {
    * total for the whole at the foot. Nothing is summed. With one dimension it is the table every view has. */
   table(table, title, _scene, { query: q, result, catalog }) {
     const by = q.by || [], [a, b] = by, fields = q.metrics.flatMap((m) => (q.compare === 'previous' ? [m, m + '@previous'] : [m]));
-    const row = (parent: HTMLElement, heads: string[], from: Row | Result['totals']) => {
-      const tr = parent.appendChild(document.createElement('tr'));
-      heads.forEach((s) => { const th = tr.appendChild(document.createElement('th')); th.textContent = s; th.scope = 'row'; });
-      for (const f of fields) { const td = tr.appendChild(document.createElement('td')); td.textContent = formatValue(from[f] as number | null, catalog.metrics[f.split('@')[0]!]!, 'exact'); td.setAttribute('data-num', ''); }
-    };
+    const row = (parent: HTMLElement, heads: string[], from: Row) => tableRow(parent, [...heads.map((s): Cell => [s, 'th']), ...fields.map((f): Cell => [valueText(from[f], f, catalog), 'td', true])]);
     const say = (d: string, r: Row) => formatDimension(r[d], catalog.dimensions[d]!);
-    table.replaceChildren();
-    if (title) table.createCaption().textContent = title;
-    const head = table.createTHead().appendChild(document.createElement('tr'));
-    for (const [s, num] of [...by.map((d) => [catalog.dimensions[d]!.label, false] as const), ...fields.map((f) => [catalog.metrics[f.split('@')[0]!]!.label + (f.includes('@') ? ', previous period' : ''), true] as const)]) {
-      const th = head.appendChild(document.createElement('th')); th.textContent = s; th.scope = 'col'; if (num) th.setAttribute('data-num', '');
-    }
+    emptyTable(table, title);
+    tableRow(table.createTHead(), [...by.map((d): Cell => [catalog.dimensions[d]!.label, 'th']), ...fields.map((f): Cell => [fieldLabel(f, catalog), 'th', true])]);
     const body = table.createTBody();
     if (b == null) for (const r of result.rows) row(body, [say(a!, r)], r);
     else for (const top of result.totalsBy?.[a!] ?? []) {
@@ -220,3 +184,6 @@ export const partitionPainter: LayoutPainter = {
     }
   },
 };
+
+/** Register the `partition` mark's painter. */
+export const registerPartitionPainter = (): void => registerPainter(partitionPainter);

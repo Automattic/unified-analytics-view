@@ -1,5 +1,5 @@
 import type { FitRule } from './fit.ts';
-import { BUILT_IN_MARKS } from './scene.ts';
+import { LAYOUTS, MARKS } from './types.ts';
 import type { Catalog, Container, Guides, Layer, Part, PlacedNode, Query, Result, Scene } from './types.ts';
 
 /* Custom marks: the escape hatch for what the grammar cannot express (reference, section 7). One is registered in
@@ -29,17 +29,19 @@ export interface CustomMark {
   place(scene: Scene, width: number, room: number | null, container: Container): { nodes: PlacedNode[]; height: number; plot?: { w: number; h: number } };
 }
 
-const MARKS = new Map<string, CustomMark>();
-// The layouts core builds. A custom mark's name is its layout's, so it cannot be one of them.
-const TAKEN = ['cartesian', 'rows', 'band', 'radial', 'matrix', 'none', 'notice', 'prose'];
+const REGISTERED = new Map<string, CustomMark>();
 
 /** Register a custom mark under a name, or replace the one that has it. */
 export function registerMark(name: string, mark: CustomMark): void {
   if (!/^[\w-]+$/.test(name)) throw new Error('A custom mark cannot be named ' + JSON.stringify(name) + ': the name is written into specs and selectors. Use letters, digits, "_" and "-" only.');
-  if (BUILT_IN_MARKS.concat(TAKEN).includes(name)) throw new Error('A custom mark cannot be named "' + name + '", which core has already. Register it under another name.');
-  MARKS.set(name, mark);
+  // A custom mark's name is its layout's, so it cannot be one of core's layouts either.
+  if (([...MARKS, ...LAYOUTS] as string[]).includes(name)) throw new Error('A custom mark cannot be named "' + name + '", which core has already. Register it under another name.');
+  // Its rules are compiled for the layout they name, so rules made for another name would fit nothing here, silently.
+  const other = mark.rules.find((r) => r.layout !== name);
+  if (other) throw new Error('The mark registered as "' + name + '" has fit rules for the "' + other.layout + '" layout, and a custom mark\'s layout is its name. Make the mark under the name "' + name + '", as its package\'s maker lets you, or set "layout" to "' + name + '" in each of its rules.');
+  REGISTERED.set(name, mark);
 }
 /** The marks registered, by name. */
 export function customMarks(): ReadonlyMap<string, CustomMark> {
-  return MARKS;
+  return REGISTERED;
 }

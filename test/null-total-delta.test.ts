@@ -2,12 +2,13 @@
 // "–" and the change "▼ 100% on the previous period": `delta` took the missing figure for zero. With no current figure
 // there is nothing to compare, so no change is claimed: no delta node, no clause in the prose, a dash in a table's cell.
 import { describe, expect, it } from 'vitest';
-import { buildScene, resolve, unboundedContainer, type Catalog, type Result, type Spec } from '@unified-analytics/core';
+import { type Catalog, type Result, type Spec } from '@unified-analytics/core';
+import { ofUnbounded } from './helpers.ts';
 
 const catalog: Catalog = { metrics: { revenue: { label: 'Revenue', unit: 'usd', polarity: 'up' } }, dimensions: { sku: { label: 'SKU', type: 'categorical' } } };
 const result = (total: number | null, rows: Result['rows'] = [{ revenue: total }]): Result =>
   ({ rows, totals: { revenue: total, 'revenue@previous': 200 }, meta: { range: '28d', compare: 'previous', notes: [], empty: false } });
-const view = (spec: Spec, res: Result) => { const plan = resolve(spec, res, unboundedContainer(), catalog); return { text: plan.text, nodes: buildScene(plan, spec.query, res, catalog).nodes }; };
+const view = (spec: Spec, res: Result) => { const { plan, scene } = ofUnbounded(spec, res, spec.query, catalog); return { text: plan.text, nodes: scene.nodes }; };
 const number: Spec = { spec: 'view/0', query: { metrics: ['revenue'], compare: 'previous' } };
 const table: Spec = { spec: 'view/0', layers: [{ mark: 'text', encode: { y: 'sku', text: 'sku' } }, { mark: 'text', encode: { y: 'sku', text: 'revenue' }, series: 'delta' }], query: { metrics: ['revenue'], by: ['sku'], compare: 'previous' } };
 

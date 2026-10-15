@@ -2,9 +2,9 @@
  * where the page sets none. The names are @automattic/charts' own, with our prefix for its `--a8c-charts-`
  * (docs/dom-painter-plan.md, 4.1), and more of the same shape where it has none.
  *
- * A page that loads no tokens still gets a legible view: a colour falls back to a system colour, so it follows
- * light and dark, and a size to the fixed one the view was drawn at before it had tokens.
- * packages/tokens declares the same names as its charts tier, and test/dom-tokens.test.ts holds the two together.
+ * packages/tokens declares the same names as its charts tier, and its config is the authority for every value: a
+ * fallback here is what that config resolves to (a fluid size, the widest end of its clamp), but for the ones in
+ * UNTHEMED. test/dom-tokens.test.ts holds the names and the values to it.
  *
  * What is not here is structure: the gaps, gutters and heights that the fit rules' needs are worked out from. A
  * theme that moved those would move what fits. */
@@ -55,10 +55,10 @@ export const TOKENS: Record<string, string> = {
   'font-family-value': 'inherit',
   // The four faces of a scene's text, and the smaller one the number takes where the larger does not fit.
   'font-size-tick': '11px',
-  'font-size-label': '13px',
+  'font-size-label': '13.33px',
   'font-size-value': '13px',
-  'font-size-display': '37px',
-  'font-size-display-small': '26px',
+  'font-size-display': '39.81px',
+  'font-size-display-small': '27.65px',
   'font-weight-value': '500',
   'font-weight-display': '600',
   'font-weight-heading': '600',
@@ -79,6 +79,17 @@ export const TOKENS: Record<string, string> = {
   'motion-duration-roll': '384ms',
   // How long the readout waits where it says nothing a reader cannot already see (keys.ts).
   'motion-delay-tooltip': '500ms',
+};
+
+/** The fallbacks that differ from the token package on purpose, by the start of their names, each with why. A page
+ * that loads no tokens still gets a legible view. */
+export const UNTHEMED: Record<string, string> = {
+  'color-': 'a system colour or the text\'s own, so an unthemed view follows light and dark',
+  'elevation-tooltip': 'the theme\'s shadow is lit by --ua-light, which an unthemed page does not have',
+  'font-family-tick': 'the page\'s own face, as Ans Mono is not loaded without the token package',
+  'font-family-value': 'the page\'s own face, as Ans Mono is not loaded without the token package',
+  'font-size-tick': 'sized for the page\'s own face, which it falls back to; the theme\'s 8px is Ans Mono\'s pixel grid',
+  'font-size-value': 'sized for the page\'s own face, which it falls back to; the theme\'s 12px is Ans Mono\'s pixel grid',
 };
 
 /** A colour a scene names that the table does not: `series.2` is `color-series-2`, a sequential step `color-seq-4`

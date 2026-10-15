@@ -1,3 +1,5 @@
+import { FROM_TOP } from './layout.ts';
+import { ANCHOR } from './chrome/label.ts';
 /* Guides on whole px. A view's small type is a pixel face where a page gives it one, and a face like that is sharp
  * only where it sits on the screen's own px, as a hairline is. So a grid line, the axis and a rule sit on a whole px
  * and a grid line is 1 px, and a tick's label is moved by whole px. The marks are vector, and are left as they are.
@@ -9,12 +11,12 @@ const whole = (length: string) => `round(${length}, 1px)`;
 
 /** It joins the base sheet inside `@layer uav`. `--uav-nx` and `--uav-ny` are what the plot is moved by, set on the figure. */
 export const PIXELS_CSS = `
-.uav-line { inset-block-start: ${whole('calc((1 - var(--uav-t)) * 100%)')}; }
+.uav-line { inset-block-start: ${whole(FROM_TOP)}; }
 .uav-grid .uav-line { block-size: 1px; }
-:is(.uav-y-axis, .uav-y-axis-2) span { inset-block-start: ${whole('calc((1 - var(--uav-t)) * 100%)')}; translate: 0 round(-50%, 1px); }
-.uav-x-axis span { inset-inline-start: ${whole('calc(var(--uav-x) * 100%)')}; translate: round(-50%, 1px); }
-.uav-x-axis [data-anchor="start"] { translate: 0; }
-.uav-x-axis [data-anchor="end"] { translate: -100%; }
+:is(.uav-y-axis, .uav-y-axis-2) span { inset-block-start: ${whole(FROM_TOP)}; translate: 0 ${whole(ANCHOR.middle)}; }
+.uav-x-axis span { inset-inline-start: ${whole('calc(var(--uav-x) * 100%)')}; translate: ${whole(ANCHOR.middle)}; }
+.uav-x-axis [data-anchor="start"] { translate: ${ANCHOR.start}; }
+.uav-x-axis [data-anchor="end"] { translate: ${ANCHOR.end}; }
 :is(.uav-plot, .uav-y-axis, .uav-y-axis-2, .uav-x-axis, .uav-labels) { translate: var(--uav-nx, 0px) var(--uav-ny, 0px); }`;
 
 /** Set a view's plot on whole device px of the screen: the plot and its axes are moved together, which changes no

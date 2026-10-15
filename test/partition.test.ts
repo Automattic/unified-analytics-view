@@ -1,25 +1,16 @@
-import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, PRESETS, buildScene, customMarks, customPresets, expand, fallbackRule, fills, makeContainer, place, resolve, type PainterName, type RectNode, type Result, type Spec, type TextNode } from '@unified-analytics/core';
-import viewSchema from '@unified-analytics/core/schema/view.schema.json';
+import { CONTAINER_RULES, PRESETS, customMarks, customPresets, expand, fallbackRule, fills, type PainterName, type Spec, type TextNode } from '@unified-analytics/core';
 import { compileFitRules } from '@unified-analytics/dom';
 import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
-import { PARTITION_RULES, boxNames, squarify, type Box } from '@unified-analytics/partition';
-import { nameFits, partitionPainter, stepBox } from '@unified-analytics/partition/dom';
+import { PARTITION_RULES, squarify, type Box } from '@unified-analytics/partition';
+import { boxNames, nameFits, partitionPainter, stepBox } from '@unified-analytics/partition/dom';
+import { errOf as err, rects, run, validView as view } from './helpers.ts';
 
 // Step 9 of docs/uncommon-coverage-plan.md: the `partition` mark, a custom mark that draws a treemap. No prototype
 // knows it, so it is held to a sweep, facts and golden scenes of its own.
 const treemap = moreSamples.treemap!.spec, tiles = moreSamples.treemap1!.spec;
 const limited: Spec = { ...treemap, query: { ...treemap.query, limit: 3 } };
 const ramped: Spec = { spec: 'view/0', query: { metrics: ['pageviews', 'visitors'], by: ['section', 'page'], range: '28d' }, layers: [{ mark: 'partition', encode: { x: 'section', detail: 'page', size: 'pageviews', color: 'visitors' } }] };
-const run = (spec: Spec, w: number, h: number | null = null, scenario: (typeof scenarios)[number] = 'typical', painter: PainterName = 'svg', result: Result = runQuery(spec.query, scenario)) => {
-  const container = makeContainer(w, h, painter, 8), plan = resolve(spec, result, container, catalog);
-  const ratio = buildScene(plan, spec.query, result, catalog);
-  return { plan, ratio, scene: place(ratio, container), result };
-};
-const err = (f: () => unknown) => { try { f(); } catch (e) { return (e as Error).message; } };
-const view = new Ajv().compile(viewSchema);
-const rects = (s: { nodes: unknown[] }) => (s.nodes as RectNode[]).filter((n) => n.part === 'plot' && n.kind === 'rect');
 const parents = (s: { nodes: unknown[] }) => rects(s).filter((n) => !n.pair), kids = (s: { nodes: unknown[] }, of?: string) => rects(s).filter((n) => n.pair && (of == null || n.pair[0] === of));
 const names = (s: { nodes: unknown[] }) => (s.nodes as TextNode[]).filter((n) => n.part === 'plot' && n.kind === 'text');
 const ASPECT = 1.6, area = (b: Box) => b.w * b.h;
@@ -189,12 +180,12 @@ describe('partition, two levels', () => {
   it('draws no box for a value that is null or zero, and none at all where the engine gives no total', () => {
     const holed = { ...result, rows: result.rows.map((r) => (r.page === '/pricing' ? { ...r, pageviews: null } : r.page === '/about' ? { ...r, pageviews: 0 } : r)),
       totalsBy: { ...result.totalsBy, section: result.totalsBy!.section!.map((r) => (r.section === 'Docs' ? { ...r, pageviews: 0 } : r)) } };
-    const scene = run(treemap, 346, null, 'typical', 'svg', holed).ratio;
+    const scene = run(treemap, 346, null, 'typical', 'svg', { result: holed }).ratio;
     expect(parents(scene).map((n) => n.key)).toEqual(['primary:partition:Marketing', 'primary:partition:Blog', 'primary:partition:Changelog']);
     expect(parents(scene).map((n) => n.paint)).toEqual(['series.1', 'series.2', 'series.3']);
     expect(kids(scene, 'Marketing').map((n) => n.pair![1])).toEqual(['/', '/customers', '/contact']);
     expect(kids(scene, 'Docs')).toEqual([]);
-    for (const none of [null, 0]) expect(rects(run(treemap, 346, null, 'typical', 'svg', { ...result, totals: { pageviews: none } }).ratio)).toEqual([]);
+    for (const none of [null, 0]) expect(rects(run(treemap, 346, null, 'typical', 'svg', { result: { ...result, totals: { pageviews: none } } }).ratio)).toEqual([]);
   });
   it('with a limit the boxes stop short: the parents left out leave the end of the box unpainted, and the children left out the end of their parent\'s', () => {
     const { ratio: short, result: r } = run(limited, 346);
@@ -208,13 +199,13 @@ describe('partition, two levels', () => {
   });
   it('two dimensions with no totalsBy is an error, and so is a row whose parent has no total', () => {
     const { totalsBy: _totalsBy, ...bare } = result;
-    expect(err(() => run(treemap, 346, null, 'typical', 'svg', bare))).toBe('A "partition" layer divided by "section" and then "page" sizes each "section" by the engine\'s total for it, and this result has no totalsBy["section"]. Return totalsBy from the query layer, or remove "page" from detail and from query.by, for one level.');
+    expect(err(() => run(treemap, 346, null, 'typical', 'svg', { result: bare }))).toBe('A "partition" layer divided by "section" and then "page" sizes each "section" by the engine\'s total for it, and this result has no totalsBy["section"]. Return totalsBy from the query layer, or remove "page" from detail and from query.by, for one level.');
     const orphan = { ...result, rows: [...result.rows, { section: 'Shop', page: '/shop', pageviews: 9 }] };
-    expect(err(() => run(treemap, 346, null, 'typical', 'svg', orphan))).toBe('The result has a row for the "section" "Shop", and totalsBy["section"] has no total for it, so there is no box to put it in. Return a total for every "section" the rows hold.');
+    expect(err(() => run(treemap, 346, null, 'typical', 'svg', { result: orphan }))).toBe('The result has a row for the "section" "Shop", and totalsBy["section"] has no total for it, so there is no box to put it in. Return a total for every "section" the rows hold.');
   });
   it('keys stay unique where two rows say one value, or a value holds the separator', () => {
     const odd = { ...result, rows: [...result.rows, { section: 'Blog', page: '/blog', pageviews: 5 }, { section: 'Blog', page: '/blog:label', pageviews: 5 }] };
-    const all = run(treemap, 346, null, 'typical', 'svg', odd).ratio.nodes.map((n) => n.key);
+    const all = run(treemap, 346, null, 'typical', 'svg', { result: odd }).ratio.nodes.map((n) => n.key);
     expect(new Set(all).size).toBe(all.length);
     expect(all).toContain('primary:partition:Blog:/blog#2');
   });
@@ -258,7 +249,7 @@ describe('partition, painted by a second metric', () => {
   });
   it('takes the diverging ramp where the metric on color crosses zero, as a grid does, with zero said in its middle', () => {
     const mid = result.rows.map((r) => r.visitors as number).sort((a, b) => a - b)[result.rows.length >> 1]!;
-    const signed = run(ramped, 346, null, 'typical', 'svg', { ...result, rows: result.rows.map((r) => ({ ...r, visitors: (r.visitors as number) - mid })) });
+    const signed = run(ramped, 346, null, 'typical', 'svg', { result: { ...result, rows: result.rows.map((r) => ({ ...r, visitors: (r.visitors as number) - mid })) } });
     expect(kids(signed.ratio).every((n) => /^div\.[1-9]$/.test(n.paint))).toBe(true);
     expect(signed.ratio.nodes.filter((n) => n.part === 'ramp').map((n) => n.key)).toEqual(['ramp:low', 'ramp:1', 'ramp:2', 'ramp:3', 'ramp:4', 'ramp:5', 'ramp:zero', 'ramp:6', 'ramp:7', 'ramp:8', 'ramp:9', 'ramp:high']);
     expect(signed.scene.nodes.some((n) => n.key === 'ramp:zero')).toBe(true);
@@ -291,7 +282,7 @@ describe('place()', () => {
     const narrow = { ...runQuery(treemap.query) };
     narrow.totalsBy = { ...narrow.totalsBy, section: narrow.totalsBy!.section!.map((r) => (r.section === 'Marketing' ? { ...r, section: 'Marketing and everything else on the site' } : r)) };
     narrow.rows = narrow.rows.map((r) => (r.section === 'Marketing' ? { ...r, section: 'Marketing and everything else on the site' } : r));
-    const texts = run(treemap, 346, null, 'typical', 'svg', narrow).scene.nodes.filter((n) => n.kind === 'text').map((n) => (n as { text: string }).text);
+    const texts = run(treemap, 346, null, 'typical', 'svg', { result: narrow }).scene.nodes.filter((n) => n.kind === 'text').map((n) => (n as { text: string }).text);
     expect(texts).toEqual(['Blog', '/blog', 'Docs', '/docs/api', 'Changelog']);
     expect(shown(346, null, tiles)).toEqual(['Search', 'Direct', 'Social', 'Email', 'Other']);
   });
@@ -307,6 +298,9 @@ describe('names, prose and errors', () => {
     const both = runQuery(ramped.query);
     expect(boxNames({ layers: ramped.layers!, query: ramped.query, result: both, catalog }).get('primary:partition:Docs:/docs/api')!.says).toMatch(/^Docs, \/docs\/api: Page views [\d,]+; Visitors [\d,]+$/);
     expect(boxNames({ layers: tiles.layers!, query: tiles.query, result: runQuery(tiles.query), catalog }).get('primary:partition:Search')!.says).toBe('Search: Visitors 4,318');
+    // A box says what every other mark's readout says of its row: the period before, where the query compares, among it.
+    const compared = { ...tiles.query, compare: 'previous' as const }, prior = runQuery(compared);
+    expect(boxNames({ layers: tiles.layers!, query: compared, result: prior, catalog }).get('primary:partition:Search')!.says).toMatch(/^Search: Visitors 4,318, previous period [\d,]+$/);
   });
   it('the prose names the largest parent and its share of the engine\'s total, and with one dimension it is the ranked sentence', () => {
     expect(run(treemap, 346).plan.text).toBe('Marketing is the largest section at 42% of page views, and / the largest page at 21%.');
@@ -355,10 +349,9 @@ describe('a layout with a fallback for each shape of query', () => {
 });
 
 describe('the painter\'s half, as strings and plain functions', () => {
-  it('is the layout of the mark\'s name, with the mark\'s own rules, and its part holds the scene\'s aspect', () => {
-    expect([partitionPainter.layout, partitionPainter.rules!(CONTAINER_RULES)]).toEqual(['partition', PARTITION_RULES]);
+  it('is the layout of the mark\'s name, whose rules are the mark\'s alone, and its part holds the scene\'s aspect', () => {
+    expect([partitionPainter.layout, partitionPainter.rules]).toEqual(['partition', undefined]);
     expect(partitionPainter.css).toContain('.uav[data-layout="partition"] .uav-plot { flex: none; align-self: center; inline-size: min(100%, 480px); aspect-ratio: var(--uav-aspect, 1.6);');
-    expect(partitionPainter.css).toContain('.uav[data-layout="partition"] .uav-label[data-thin] { visibility: hidden; }');
     expect(partitionPainter.css).not.toMatch(/#[0-9a-f]{3,6}\b|rgb\(/i);
   });
   it('its rules compile to the ramp going, and then to the swap for the list, by width and by height', () => {

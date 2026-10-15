@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CONTAINER_RULES, FIT_RULES, applies, place, resolve, unboundedContainer, type FitRule, type Plan, type Spec } from '@unified-analytics/core';
 import { catalog, runQuery, scenarios } from '@unified-analytics/fixtures';
-import { ALWAYS, heights, painters, run, specs, trend, widths } from './sweep.ts';
+import { ALWAYS, heights, painters, run, specs, trend, widths } from './helpers.ts';
 
 const rule = (layout: string, id: string) => FIT_RULES.find((r) => r.layout === layout && r.id === id)!;
 
@@ -40,9 +40,9 @@ function sweep(each: (c: Case) => void): void {
     const unbounded = resolve(spec, runQuery(spec.query, sc), { ...unboundedContainer(p, 8), rules }, catalog);
     const timeAxis = catalog.dimensions[(spec.query.by || [])[0]!]?.type === 'time';
     for (const r of FIT_RULES.filter((r) => r.layout === unbounded.layout && (r.id !== 'mid-tick' || timeAxis))) for (const w of widths) {
-      const wide = gaveUp(r, run(spec, w, null, sc, p, rules).plan, unbounded);
+      const wide = gaveUp(r, run(spec, w, null, sc, p, { rules }).plan, unbounded);
       for (const h of heights) {
-        const { plan, scene } = run(spec, w, h, sc, p, rules), did = gaveUp(r, plan, unbounded);
+        const { plan, scene } = run(spec, w, h, sc, p, { rules }), did = gaveUp(r, plan, unbounded);
         if (did == null || wide == null) continue;
         const kept = !!r.keep && (spec.keep || []).includes(r.keep);
         const says = !kept && applies(r, { view: { inline: w, block: h }, plot: scene.plot && { inline: scene.plot.w, block: scene.plot.h } });
@@ -79,9 +79,9 @@ describe('the rule set', () => {
   it('is the container\'s to replace', () => {
     const fit = FIT_RULES.map((r) => (r.layout === 'cartesian' && r.id === 'axes' ? { ...r, needs: { inline: 200 } } : r));
     expect(run(trend, 250).plan.guides.x).toBe(false);
-    expect(run(trend, 250, null, 'typical', 'svg', { ...CONTAINER_RULES, fit }).plan.guides.x).toBe(true);
+    expect(run(trend, 250, null, 'typical', 'svg', { rules: { ...CONTAINER_RULES, fit } }).plan.guides.x).toBe(true);
     // A part with no rule needs no room, so it is never given up for width.
-    const none = run(trend, 250, null, 'typical', 'svg', { ...CONTAINER_RULES, fit: [] }).plan;
+    const none = run(trend, 250, null, 'typical', 'svg', { rules: { ...CONTAINER_RULES, fit: [] } }).plan;
     expect(none).toMatchObject({ layout: 'cartesian', side: false, dropped: [] });
   });
 });
@@ -89,23 +89,23 @@ describe('the rule set', () => {
 describe('the rules are what place() builds to', () => {
   const swap = (id: string, needs: FitRule['needs']) => ({ ...CONTAINER_RULES, fit: FIT_RULES.map((r) => (r.id === id ? { ...r, needs } : r)) });
   it('a context that moves the mid-tick rule moves what is drawn, as well as what is reported', () => {
-    const mid = (rules = CONTAINER_RULES) => { const { plan, scene } = run(trend, 346, null, 'typical', 'svg', rules); return [scene.nodes.some((n) => n.key === 'xtick:2026-09-21'), plan.dropped]; };
+    const mid = (rules = CONTAINER_RULES) => { const { plan, scene } = run(trend, 346, null, 'typical', 'svg', { rules }); return [scene.nodes.some((n) => n.key === 'xtick:2026-09-21'), plan.dropped]; };
     expect(mid()).toEqual([false, ['the middle date label']]);
     expect(mid(swap('mid-tick', { inline: 300 }))).toEqual([true, []]);
   });
   it('the notice is as short as its rule allows', () => {
-    const at30 = (rules = CONTAINER_RULES) => { const { plan, scene } = run(trend, 346, 30, 'empty', 'svg', rules); return [plan.layout, scene.height]; };
+    const at30 = (rules = CONTAINER_RULES) => { const { plan, scene } = run(trend, 346, 30, 'empty', 'svg', { rules }); return [plan.layout, scene.height]; };
     expect(at30()[0]).toBe('prose');                                   // under 40 px the notice goes, and the number is too tall as well
     expect(at30(swap('notice', { inline: 150, block: 20 }))).toEqual(['notice', 30]);
   });
   it('rows are as tall as the context says, so what resolve() trims to is what fits', () => {
-    const pages = (h: number | null) => run(specs.pages!, 346, h, 'typical', 'svg', { ...CONTAINER_RULES, rows: { rowHeight: 20, gap: 2 } });
+    const pages = (h: number | null) => run(specs.pages!, 346, h, 'typical', 'svg', { rules: { ...CONTAINER_RULES, rows: { rowHeight: 20, gap: 2 } } });
     expect(pages(null).scene.height).toBe(8 * 22 - 2);
     expect(pages(100).plan).toMatchObject({ layout: 'rows', rowLimit: 4, dropped: ['rows 5 to 8'] });
     expect(pages(200).plan).toMatchObject({ layout: 'rows', rowLimit: null, dropped: [] });
   });
   it('the number beside a bare plot is as narrow as the context says', () => {
-    const plot = (numberWidth: number) => run(trend, 170, null, 'typical', 'svg', { ...CONTAINER_RULES, bare: { ...CONTAINER_RULES.bare, numberWidth } }).scene.plot;
+    const plot = (numberWidth: number) => run(trend, 170, null, 'typical', 'svg', { rules: { ...CONTAINER_RULES, bare: { ...CONTAINER_RULES.bare, numberWidth } } }).scene.plot;
     expect(plot(76)).toEqual({ w: 82, h: 50 });
     expect(plot(100)).toEqual({ w: 58, h: 50 });
   });

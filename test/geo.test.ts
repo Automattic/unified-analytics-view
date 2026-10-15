@@ -1,26 +1,17 @@
-import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
 import { CONTAINER_RULES, PRESETS, buildScene, customMarks, customPresets, expand, makeContainer, notShownNote, place, registerMark, resolve, type CircleNode, type PainterName, type PathNode, type Result, type Spec } from '@unified-analytics/core';
-import viewSchema from '@unified-analytics/core/schema/view.schema.json';
 import { compileFitRules } from '@unified-analytics/dom';
 import { catalog, countries, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
 import { GEO_RULES, geoMark, type Shapes } from '@unified-analytics/geo';
 import { geoPainter, zoomBox } from '@unified-analytics/geo/dom';
 import world from '@unified-analytics/geo/countries-110m.json';
+import { errOf as err, run, shapes, validView as view } from './helpers.ts';
 
 // Step 8 of docs/chart-coverage-plan.md: the `geo` mark, which is a custom mark, registered by the fixtures with their
 // boundary shapes. No prototype knows it, so it is held to a sweep, facts and golden scenes of its own. The registry
 // and `fallback` are in test/registry.test.ts.
 const map = moreSamples.map!.spec, symbols = moreSamples.symbols!.spec, unmapped = moreSamples.unmapped!.spec;
 const both: Spec = { ...map, query: { ...map.query, metrics: ['visitors', 'pageviews'] }, layers: [{ mark: 'geo', encode: { x: 'country', color: 'visitors', size: 'pageviews' } }] };
-const run = (spec: Spec, w: number, h: number | null = null, scenario: (typeof scenarios)[number] = 'typical', painter: PainterName = 'svg', result: Result = runQuery(spec.query, scenario)) => {
-  const container = makeContainer(w, h, painter, 8), plan = resolve(spec, result, container, catalog);
-  const ratio = buildScene(plan, spec.query, result, catalog);
-  return { plan, ratio, scene: place(ratio, container), result };
-};
-const err = (f: () => unknown) => { try { f(); } catch (e) { return (e as Error).message; } };
-const view = new Ajv().compile(viewSchema);
-const shapes = (ratio: { nodes: unknown[] }) => (ratio.nodes as PathNode[]).filter((n) => n.part === 'plot' && n.kind === 'path');
 const dots = (ratio: { nodes: unknown[] }) => (ratio.nodes as CircleNode[]).filter((n) => n.part === 'points' && n.kind === 'circle');
 const ASPECT = 2.029;   // Equal Earth, fitted to the fixture's shapes
 
@@ -134,7 +125,7 @@ describe('geo, filled by a metric', () => {
     expect([Math.min(...xs), Math.max(...xs), Math.min(...ys)]).toEqual([0, 100, 0]);
     expect(Math.max(...ys)).toBeCloseTo(100 / ASPECT, 1);
     const turned = { ...result, rows: result.rows.slice().reverse() };
-    expect(shapes(run(map, 346, null, 'typical', 'svg', turned).ratio)).toEqual(shapes(ratio));
+    expect(shapes(run(map, 346, null, 'typical', 'svg', { result: turned }).ratio)).toEqual(shapes(ratio));
   });
   it('quantizes each region to the ten steps of the ramp, between the least and the most of the regions drawn, and never carries a colour', () => {
     const value = (n: PathNode) => result.rows.find((r) => r.country === n.row)!.visitors as number, drawn = shapes(ratio).filter((n) => n.row != null);
@@ -148,12 +139,12 @@ describe('geo, filled by a metric', () => {
     expect(none.length).toBe(123 - 15);
     expect(none.every((n) => n.row == null)).toBe(true);
     const nulled = { ...result, rows: result.rows.map((r) => (r.country === 'IN' ? { ...r, visitors: null } : r)) };
-    expect(shapes(run(map, 346, null, 'typical', 'svg', nulled).ratio).find((n) => n.key === 'primary:geo:IN')).toMatchObject({ paint: 'seq.none', row: 'IN' });
+    expect(shapes(run(map, 346, null, 'typical', 'svg', { result: nulled }).ratio).find((n) => n.key === 'primary:geo:IN')).toMatchObject({ paint: 'seq.none', row: 'IN' });
   });
   it('its rows are the result\'s, in the result\'s order, which is the list a reader steps through', () => {
     expect(ratio.rows).toEqual(result.rows.map((r) => r.country));
     // A value no shape has is still a row, and in the table. It is not on the map.
-    const more = { ...result, rows: [...result.rows, { country: 'Atlantis', visitors: 12 }] }, scene = run(map, 346, null, 'typical', 'svg', more).ratio;
+    const more = { ...result, rows: [...result.rows, { country: 'Atlantis', visitors: 12 }] }, scene = run(map, 346, null, 'typical', 'svg', { result: more }).ratio;
     expect(scene.rows!.slice(-1)).toEqual(['Atlantis']);
     expect(scene.nodes.some((n) => n.key.includes('Atlantis'))).toBe(false);
   });
@@ -167,7 +158,7 @@ describe('geo, filled by a metric', () => {
   it('fills regions whose values cross zero on the diverging ramp, with zero the neutral step, and a region with no row still seq.none', () => {
     const typical = runQuery(map.query), mid = typical.rows[7]!.visitors as number;
     const signed: Result = { ...typical, rows: typical.rows.map((r) => ({ ...r, visitors: (r.visitors as number) - mid })) }, at = (r: Result['rows'][number]) => r.visitors as number;
-    const scene = run(map, 346, null, 'typical', 'svg', signed).ratio, far = Math.max(...signed.rows.map((r) => Math.abs(at(r))));
+    const scene = run(map, 346, null, 'typical', 'svg', { result: signed }).ratio, far = Math.max(...signed.rows.map((r) => Math.abs(at(r))));
     const fill = (id: string) => shapes(scene).find((n) => n.key === 'primary:geo:' + id)!.paint;
     for (const r of signed.rows) expect(fill(r.country as string), r.country as string).toBe('div.' + Math.min(9, 1 + Math.floor(((at(r) + far) / (2 * far)) * 9)));
     expect([fill(typical.rows[0]!.country as string), fill(typical.rows[7]!.country as string)]).toEqual(['div.9', 'div.5']);
@@ -218,13 +209,15 @@ describe('geo, with a symbol for each region', () => {
     expect(ratio.parts).toEqual(['plot', 'points', 'ramp', 'size']);
     expect([shapes(ratio).filter((n) => /seq\.\d+/.test(n.paint)).length, dots(ratio).length]).toEqual([15, 15]);
     expect(plan.dropped).toEqual([]);
-    expect(run(both, 300).ratio.parts).toEqual(['plot', 'points']);
+    const narrow = run(both, 300);
+    expect(narrow.ratio.parts).toEqual(['plot', 'points']);
+    expect(narrow.plan.dropped).toEqual(['the colour ramp and the key to sizes']);
   });
 });
 
 describe('rows the map has no shape for', () => {
   const note = (s: { nodes: { key: string }[] }) => (s.nodes.find((n) => n.key === 'note:not-shown') as { text: string } | undefined)?.text;
-  const withRows = (rows: Result['rows']) => { const result = runQuery(map.query); return run(map, 346, null, 'typical', 'svg', { ...result, rows: [...result.rows, ...rows] }); };
+  const withRows = (rows: Result['rows']) => { const result = runQuery(map.query); return run(map, 346, null, 'typical', 'svg', { result: { ...result, rows: [...result.rows, ...rows] } }); };
   it('the wording is core\'s, by the dimension\'s label: one, several, and nothing to say of none', () => {
     expect([notShownNote(1, 'Country'), notShownNote(12, 'Country'), notShownNote(3, 'Page'), notShownNote(0, 'Country')]).toEqual(['1 country not shown', '12 countries not shown', '3 pages not shown', '']);
   });
@@ -265,7 +258,7 @@ describe('rows the map has no shape for', () => {
     expect([run(sym, 346).ratio.parts, note(run(sym, 346).scene)]).toEqual([['plot', 'points', 'note', 'size'], '4 countries not shown']);
   });
   it('a result of rows with no value alone is a map with a note, and not the error for shapes that are the wrong ones', () => {
-    const result = runQuery(map.query), { ratio } = run(map, 346, null, 'typical', 'svg', { ...result, rows: [{ country: '', visitors: 40 }] });
+    const result = runQuery(map.query), { ratio } = run(map, 346, null, 'typical', 'svg', { result: { ...result, rows: [{ country: '', visitors: 40 }] } });
     expect([note(ratio), shapes(ratio).every((n) => n.paint === 'seq.none' && n.row == null)]).toEqual(['1 country not shown', true]);
   });
 });
@@ -282,6 +275,9 @@ describe('prose, the number and errors', () => {
     expect(of([{ mark: 'geo', encode: { color: 'visitors' } }])).toBe('A "geo" layer needs the dimension whose values are region keys on x, and this one has undefined there. Encode one of the query\'s dimensions on x: country.');
     expect(of([{ mark: 'geo', encode: { x: 'country' } }])).toBe('A "geo" layer needs a metric on color, to fill each region by, or on size, for a symbol on each, and this one has undefined on color and undefined on size. Encode one of the query\'s metrics: visitors.');
     expect(of([{ mark: 'geo', encode: { x: 'country', color: 'country' } }])).toMatch(/^A "geo" layer needs a metric on color/);
+    // A companion is a metric to the map, as it is to the treemap: one filled by a share the engine sends with visitors.
+    const shared = geoMark(countries).scene({ layers: [{ mark: 'geo', encode: { x: 'country', color: 'visitors@share' } }], guides: {}, query: q, result: { rows: [{ country: 'FR', visitors: 3, 'visitors@share': 0.5 }], totals: { visitors: 3 }, meta: runQuery(q).meta }, catalog });
+    expect(shared.nodes.find((n) => n.key === 'primary:geo:FR')!.paint).not.toBe('seq.none');
     expect(of([{ mark: 'geo', encode: { x: 'country', size: 'country' } }])).toMatch(/^Layer 1 encodes "country" on size, and a size is a quantity\./);
     expect(of([...drawn, ...drawn])).toBe('A map draws one "geo" layer, and this view has 2. Put the metric to fill by on color and the metric for symbols on size, in one layer.');
     expect(of([...drawn, { mark: 'bar', encode: { x: 'country', y: 'visitors' } }])).toBe('The "geo" mark is laid out by its own code, and layer 2 is a "bar". Keep the "geo" layers alone, and draw the others as a view of their own.');
@@ -290,7 +286,7 @@ describe('prose, the number and errors', () => {
   });
   it('the shapes are an input: a mark made from other shapes draws those, and shapes that are not shapes are an error', () => {
     const two: Shapes = { type: 'FeatureCollection', features: countries.features.filter((f) => f.id === 'BR' || f.id === 'AR') };
-    registerMark('south', geoMark(two));
+    registerMark('south', geoMark(two, { name: 'south' }));
     const spec: Spec = { ...map, layers: [{ mark: 'south', encode: { x: 'country', color: 'visitors' } }] }, result = runQuery(spec.query);
     const scene = buildScene(resolve(spec, result, makeContainer(700), catalog), spec.query, result, catalog);
     expect(shapes(scene).map((n) => [n.key, n.paint])).toEqual([['primary:south:AR', 'seq.none'], ['primary:south:BR', 'seq.10']]);
@@ -302,8 +298,8 @@ describe('prose, the number and errors', () => {
 });
 
 describe('the painter\'s half, as strings', () => {
-  it('is the layout of the mark\'s name, with the mark\'s own rules, and its part holds the scene\'s aspect', () => {
-    expect([geoPainter.layout, geoPainter.rules!(CONTAINER_RULES)]).toEqual(['geo', GEO_RULES]);
+  it('is the layout of the mark\'s name, whose rules are the mark\'s alone, and its part holds the scene\'s aspect', () => {
+    expect([geoPainter.layout, geoPainter.rules]).toEqual(['geo', undefined]);
     expect(geoPainter.css).toContain('.uav[data-layout="geo"] .uav-plot { flex: none; align-self: center; inline-size: min(100%, 480px); aspect-ratio: var(--uav-aspect, 2);');
   });
   it('its rules compile to the keys going, and then to the swap for the ranked list, by width and by height', () => {
@@ -353,7 +349,7 @@ describe('the shapes of every country (countries-110m)', () => {
     expect(JSON.stringify(world).length).toBeLessThan(145000);
   });
   it('draws: a row for each of its codes is on the map, with nothing left out', () => {
-    registerMark('world', geoMark(shapes));
+    registerMark('world', geoMark(shapes, { name: 'world' }));
     const spec: Spec = { ...map, layers: [{ mark: 'world', encode: { x: 'country', color: 'visitors' } }] }, was = runQuery(spec.query);
     const result = { ...was, rows: ids.map((country, i) => ({ country, visitors: i + 1 })) };
     const scene = buildScene(resolve(spec, result, makeContainer(700), catalog), spec.query, result, catalog);

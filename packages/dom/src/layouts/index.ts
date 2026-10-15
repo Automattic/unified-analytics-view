@@ -1,4 +1,4 @@
-import type { TextNode } from '@unified-analytics/core';
+import { NOTICE_HEIGHT, type TextNode } from '@unified-analytics/core';
 import { keyed, text } from '../dom.ts';
 import type { LayoutPainter } from '../layout.ts';
 import { band } from './band.ts';
@@ -11,7 +11,7 @@ import { rows } from './rows.ts';
 const notice: LayoutPainter = {
   layout: 'notice',
   css: `
-.uav[data-layout="notice"] { --uav-body-block: 120px; }
+.uav[data-layout="notice"] { --uav-body-block: ${NOTICE_HEIGHT}px; }
 .uav[data-layout="notice"] .uav-body { display: grid; }
 .uav-notice { place-self: center; text-align: center; color: var(--uav-paint); }`,
   fit: { notice: { '.uav-body': 'display: none;' } },      // the room goes with the line
@@ -26,8 +26,10 @@ export const LAYOUTS: Record<string, LayoutPainter> = { cartesian, rows, band, r
 /** Register the painter of a custom mark: the DOM's half of it. A custom mark is a layout of its own under its own
  * name (core's marks.ts), so `painter.layout` is the name the mark was registered under there. */
 export function registerPainter(painter: LayoutPainter): void {
-  LAYOUTS[painter.layout] = painter;
+  LAYOUTS[painter.layout] = painter; registered++;
 }
+/** How many painters have been registered, so the element works its stylesheet out again only when one is. */
+export let registered = 0;
 
 /** The painter of a layout, or none for the two that have no body. Any other with none is a custom mark whose DOM
  * half was never registered: it would paint nothing and say nothing, so it is an error. */

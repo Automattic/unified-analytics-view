@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { buildScene, makeContainer, resolve } from '@unified-analytics/core';
 import type { Result, Row } from '@unified-analytics/core';
 import { catalog, moreSamples, runQuery, samples } from '@unified-analytics/fixtures';
+import { errOf as err } from './helpers.ts';
 
 // A metric's value is a finite number or null. Anything else used to reach a line's `d`, a bar's ratios and the tldr
 // value as "NaN"; it is refused once, in buildScene (checkValues in packages/core/src/scene.ts), which resolve() goes through.
 const c = makeContainer(600, null), spec = samples.trend!.spec, q = spec.query;
 const fresh = (): Result => structuredClone(runQuery(q, 'typical'));
-const err = (f: () => unknown) => { try { f(); } catch (e) { return (e as Error).message; } };
 const rest = ', and a metric\'s value is a finite number or null. Send null from the query layer where there is no figure: it is drawn as a gap and written as a dash.';
 const scene = (result: Result) => { const plan = resolve(spec, result, c, catalog); return { plan, scene: buildScene(plan, q, result, catalog) }; };
 // JSON writes NaN as null, so the numbers are looked at themselves.

@@ -4,6 +4,7 @@ import { catalog as fixtures, runQuery } from '@unified-analytics/fixtures';
 import { crossMarks, hitNodes, readout, rowsAt, step } from '../packages/dom/src/keys.ts';
 import { pathTargets } from '../packages/dom/src/layouts/points.ts';
 import { mix, pairUp } from '../packages/dom/src/motion.ts';
+import { errOf } from './helpers.ts';
 
 // Step 3 of docs/uncommon-coverage-plan.md: what a line and an area take that they refused. Here, on a catalog and
 // results of its own, is what a companion's unit is and how a scale of ranks runs. The samples that use them, and what
@@ -30,7 +31,7 @@ const bySource: Result = {
   totals: { hits: 1940 }, meta: { range: '3d', compare: null, notes: [] },
 };
 const scene = (spec: Spec, result: Result, cat = catalog, w = 500) => { const plan = resolve(spec, result, makeContainer(w), cat); return { plan, scene: buildScene(plan, spec.query, result, cat) }; };
-const err = (spec: Spec, result: Result) => { try { scene(spec, result); } catch (e) { return (e as Error).message; } };
+const err = (spec: Spec, result: Result) => errOf(() => scene(spec, result));
 const ticks = (s: ReturnType<typeof scene>, part = 'y-axis') => s.scene.nodes.filter((n) => n.part === part && n.kind === 'text').map((n) => (n as { text: string }).text);
 const paths = (s: ReturnType<typeof scene>) => s.scene.nodes.filter((n): n is PathNode => n.kind === 'path');
 
@@ -149,7 +150,7 @@ describe('a line in a plot of points', () => {
     expect(mix(pairUp(from, to), to, 1, true).map((p) => [+p.x.toFixed(9), +p.v.toFixed(9)])).toEqual(to.map((p) => [p.x, p.v]));
   });
   it('an area there is refused: there is no one way along x to fill under', () => {
-    expect((() => { try { of({ ...joined, layers: [{ mark: 'area', encode: at }] }); } catch (e) { return (e as Error).message; } })())
+    expect(errOf(() => of({ ...joined, layers: [{ mark: 'area', encode: at }] })))
       .toBe('Layer 1 is an area with the metric "visitors" on x, and an area fills under a line that runs one way along x, which the points of two metrics do not. Use "line" to join the points in the order of their rows, or put a dimension on x.');
   });
 });

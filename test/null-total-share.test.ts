@@ -2,7 +2,8 @@
 // used to divide by one: "Search is the largest channel at 431800% of visitors". With no total, or one of zero, no
 // percentage is said and no segment has a length: the value is said in its place. The rows are never summed.
 import { describe, expect, it } from 'vitest';
-import { buildScene, resolve, unboundedContainer, type Catalog, type Result, type Row, type Spec } from '@unified-analytics/core';
+import { type Catalog, type Result, type Row, type Spec } from '@unified-analytics/core';
+import { ofUnbounded } from './helpers.ts';
 
 const catalog: Catalog = {
   metrics: { visitors: { label: 'Visitors', unit: 'count', polarity: 'up' } },
@@ -13,7 +14,7 @@ const pairs = [{ channel: 'Search', hour: '9', visitors: 4318 }, { channel: 'Dir
 const days = [{ day: '2026-10-01', channel: 'Search', visitors: 4318 }, { day: '2026-10-01', channel: 'Direct', visitors: 2000 }];
 const totalsBy = { channel: rows, hour: [{ hour: '9', visitors: 4318 }, { hour: '10', visitors: 2000 }], day: [{ day: '2026-10-01', visitors: null }] };
 const result = (rows: Row[], total: number | null, more: Partial<Result> = {}): Result => ({ rows, totals: { visitors: total }, meta: { range: '28d', compare: null, notes: [], empty: false }, ...more });
-const view = (spec: Spec, res: Result) => { const plan = resolve(spec, res, unboundedContainer(), catalog); return { text: plan.text, nodes: buildScene(plan, spec.query, res, catalog).nodes }; };
+const view = (spec: Spec, res: Result) => { const { plan, scene } = ofUnbounded(spec, res, spec.query, catalog); return { text: plan.text, nodes: scene.nodes }; };
 const q = { metrics: ['visitors'], by: ['channel'] };
 const specs: Record<string, [Spec, Result['rows'], Partial<Result>]> = {
   band: [{ spec: 'view/0', use: 'share-bar', query: q }, rows, {}],
@@ -27,7 +28,7 @@ const ranking = 'Top channels by visitors, last 28 days: Search (4,318), Direct 
 const prose: Record<string, string> = {
   band: ranking, pie: ranking,
   two: 'Search is the largest channel (4,318), and 9 the largest hour (4,318).',
-  time: 'Search is the largest channel (4,318) in the last 28 days, and leads on all 1 days.',
+  time: 'Search is the largest channel (4,318) in the last 28 days, and leads on all 1 day.',
   grid: 'Most visitors at 9, Search (4,318) in the last 28 days. 9 is the busiest hour (4,318), and Search the busiest channel (4,318).',
 };
 

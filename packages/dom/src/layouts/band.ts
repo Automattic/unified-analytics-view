@@ -1,19 +1,20 @@
-import type { RectNode } from '@unified-analytics/core';
-import { hideCutLegends, paintLegend } from '../chrome/legend.ts';
-import { attr, ensure, keyed, prop } from '../dom.ts';
+import { BAND_BAR, GRID_LEAST, type RectNode } from '@unified-analytics/core';
+import { LEGEND_FIT, LEGEND_SWAP, hideCutLegends, legendBlock, legendTop, paintLegend } from '../chrome/legend.ts';
+import { attr, ensure, hits, keyed, prop } from '../dom.ts';
 import { token } from '../tokens.ts';
-import { NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
+import { IN_BOX, NUMBER_ALONE, holdShape, type LayoutPainter } from '../layout.ts';
 import { paintUnitKey } from '../chrome/unit.ts';
 
 /* One band, split by colour, and its legend. Segments are flex items that grow by their share, so the band needs no
  * width. The scene holds both legends: the full one is a grid of swatch, label and share, the one-line one a line of
  * text (chrome/legend.ts). The stylesheet here shows one of them. Sizes are the pixel painter's: a 24 px bar and 24 px
  * to a legend row, of which 20 are the line's where a label is 13 px. */
+const shape = holdShape('160px', 1);
 const css = `
-.uav-band { display: flex; gap: 2px; block-size: 24px; }
+.uav-band { display: flex; gap: 2px; block-size: ${BAND_BAR}px; }
 .uav-band i { flex: var(--uav-v) 1 0px; min-inline-size: 0; background: var(--uav-paint); border-radius: ${token('border-radius-bar')}; }
 /* The plan names one legend, and with no limits it is the full one. */
-.uav[data-layout="band"][data-parts~="legend-top"] .uav-legend-top { display: block; }
+${legendTop('band')}
 /* In a box the body is a size container, so cqb is the room the band and its legend have. The full legend needs the
  * bar, 10 px and a line and its 4 px gap for each row, less the last gap: a height that depends on the data, which a container query cannot
  * hold, so paint() states the row count and a clamp does the swap. The legend that goes gives up its gap as well, or
@@ -21,17 +22,16 @@ const css = `
 /* A unit's grid in the band's place: a hundred cells, ten to a line, set in the order they come, which is reading
  * order, so nothing here places one. The part holds its shape, as a circle of arcs does: a square as wide as the view
  * up to 160 px, in the middle of the width, with a hairline between cells. */
-.uav-band[data-unit] { display: grid; grid-template: repeat(10, minmax(0, 1fr)) / repeat(10, minmax(0, 1fr)); gap: 1px; block-size: auto; inline-size: min(100%, 160px); aspect-ratio: 1; margin-inline: auto; }
-.uav-band[data-unit] i { border-radius: 1px; }
-@container uav-view (block-size >= 0px) {
-  .uav[data-layout="band"] .uav-body { container-type: size; overflow: hidden; --uav-legend-block: calc(30px + var(--uav-rows, 1) * (var(--uav-legend-line) + 4px)); }
-  .uav[data-layout="band"]:not([data-keep~="guides"]) .uav-legend { overflow: hidden; max-block-size: max(0px, (100cqb - var(--uav-legend-block) + 0.01px) * 999999);
-    margin-block-start: clamp(0px, (100cqb - var(--uav-legend-block) + 0.01px) * 999999, 10px); }
-  .uav[data-layout="band"]:not([data-keep~="guides"]) .uav-legend-top { display: block; overflow: hidden; max-block-size: max(0px, (var(--uav-legend-block) - 100cqb) * 999999); }
+.uav-band[data-unit] { display: grid; grid-template: repeat(10, minmax(0, 1fr)) / repeat(10, minmax(0, 1fr)); gap: 1px; block-size: auto; ${shape.part} margin-inline: auto; }
+.uav-band[data-unit] i { border-radius: ${token('border-radius-cell')}; }
+${IN_BOX} {
+  .uav[data-layout="band"] .uav-body { container-type: size; overflow: hidden; --uav-legend-block: ${legendBlock(BAND_BAR)}; }
+  .uav[data-layout="band"]:not([data-keep~="guides"]) .uav-legend { ${LEGEND_SWAP.full} }
+  .uav[data-layout="band"]:not([data-keep~="guides"]) .uav-legend-top { ${LEGEND_SWAP.top} }
   /* In a box the grid gives way to the height, down to nothing, and its width follows, as a circle of arcs does. The
    * full legend stays while the grid has 100 px under it, which is the least place() builds it to. */
-  .uav[data-layout="band"] .uav-body:has(> .uav-band[data-unit]) { display: flex; flex-direction: column; --uav-legend-block: calc(106px + var(--uav-rows, 1) * (var(--uav-legend-line) + 4px)); }
-  .uav-band[data-unit] { flex: 0 1 160px; align-self: center; min-block-size: 0; max-block-size: 100cqi; inline-size: auto; max-inline-size: 100%; margin-inline: 0; }
+  .uav[data-layout="band"] .uav-body:has(> .uav-band[data-unit]) { display: flex; flex-direction: column; --uav-legend-block: ${legendBlock(GRID_LEAST)}; }
+  .uav-band[data-unit] { ${shape.box} margin-inline: 0; }
   .uav[data-layout="band"] .uav-body:has(> .uav-band[data-unit]) > :is(.uav-legend, .uav-legend-top) { flex: none; }
 }`;
 
@@ -40,7 +40,7 @@ export const band: LayoutPainter = {
   css,
   fit: {
     // The rule's data only sets a switch. This is the swap, whatever the box's height says.
-    legend: { '.uav-legend': 'display: none;', '.uav-legend-top': 'display: block; max-block-size: none;' },
+    legend: LEGEND_FIT,
     // The number alone. The body goes whole, the one-line legend with it, and so does its grid row.
     marks: NUMBER_ALONE,
     'marks-block': NUMBER_ALONE,
@@ -54,7 +54,7 @@ export const band: LayoutPainter = {
     const segs = ensure(body, 'div', 'uav-band');
     // Each segment is its own hit target, and a unit's cells are their group's (keys.ts). A grid that reads one value
     // against a range has no row to step to.
-    if (rows.length) { segs.setAttribute('data-hits', 'x'); segs.removeAttribute('aria-hidden'); } else { segs.removeAttribute('data-hits'); segs.setAttribute('aria-hidden', 'true'); }
+    hits(segs, rows.length ? 'x' : null);
     attr(segs, 'data-unit', scene.aspect ? '' : null);
     prop(body, '--uav-rows', rows.length);
     keyed(segs, nodes('band').filter((n): n is RectNode => n.kind === 'rect'), () => 'i', (el, n) => prop(el, '--uav-v', n.v));

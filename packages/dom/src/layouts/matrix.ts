@@ -1,12 +1,14 @@
-import { formatBin, formatDimension, formatValue, type CircleNode, type RectNode, type Row } from '@unified-analytics/core';
+import { SIZES, SIZE_KEY_BLOCK, type CircleNode, type RectNode, type Row } from '@unified-analytics/core';
 import { attr, ensure, keyed, nodePaint, prop } from '../dom.ts';
 import { token } from '../tokens.ts';
-import { hideReadout, hovers, placeReadout, pressed, readout, readoutOf } from '../keys.ts';
-import type { LayoutPainter } from '../layout.ts';
+import { chooseItem, dimName, readout, roveItems } from '../keys.ts';
+import { emptyTable, fieldLabel, tableRow, valueText, type Cell } from '../table.ts';
+import { ARROWS } from '../rove.ts';
+import { AXES_HEIGHT, NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
 import { paintAxes, thinAxis } from '../chrome/axes.ts';
 import { paintRamp } from '../chrome/ramp.ts';
 import { paintSize } from '../chrome/size.ts';
-import { DOT } from './points.ts';
+import { DOT, NO_SIZE } from '../chrome/swatch.ts';
 
 /* A dimension on x, another on y, a metric on colour: a grid of cells. The cells are a CSS grid, each set in its
  * track by two custom properties, so nothing here runs on resize. The axes are a plot's (chrome/axes.ts): the row labels are a
@@ -23,11 +25,11 @@ import { DOT } from './points.ts';
  * activate, Escape to let go. To assistive technology it is a grid of rows of cells, each named by its readout.
  * ponytail: version 4 has no model for two dimensions, so this one is a proposal (chart-coverage-plan, section 6). */
 const css = `
-.uav[data-layout="matrix"] { --uav-body-block: var(--uav-axes-height, 184px); }
+.uav[data-layout="matrix"] { --uav-body-block: ${AXES_HEIGHT}; }
 /* The frame is set from the left whichever way the page reads, as a plot's is (cartesian.ts): the row labels stay on
  * the left of the cells. The ramp is a legend, and follows the page. */
 .uav[data-layout="matrix"] .uav-body { display: grid; grid-template: "y plot" minmax(0, 1fr) ". x" auto "ramp ramp" auto "size size" auto / auto minmax(0, 1fr); direction: ltr; }
-.uav[data-layout="matrix"][data-parts~="size"] { --uav-body-block: calc(var(--uav-axes-height, 184px) + 28px); }
+.uav[data-layout="matrix"][data-parts~="size"] { --uav-body-block: calc(${AXES_HEIGHT} + ${SIZE_KEY_BLOCK}px); }
 .uav[data-layout="matrix"] .uav-y-axis { grid-area: y; }
 .uav[data-layout="matrix"] .uav-x-axis { grid-area: x; }
 .uav[data-layout="matrix"] .uav-size { grid-area: size; }
@@ -41,7 +43,7 @@ const css = `
 .uav-cells i[data-dot] { display: grid; place-items: center; }
 .uav-cells i[data-dot="alone"] { background: none; --uav-dot: var(--uav-paint); }
 .uav-cells i[data-dot]::before { content: ""; border-radius: 50%; background: var(--uav-dot);
-  inline-size: min(${DOT}, (min(100cqw / var(--uav-nx), 100cqh / var(--uav-ny)) - 1px) * var(--uav-size, 0.4) / 4); aspect-ratio: 1; }
+  inline-size: min(${DOT}, (min(100cqw / var(--uav-nx), 100cqh / var(--uav-ny)) - 1px) * var(--uav-size, ${NO_SIZE}) / ${SIZES}); aspect-ratio: 1; }
 .uav-cells [data-active] { z-index: 1; }
 .uav[data-layout="matrix"] .uav-ramp { grid-area: ramp; }`;
 
@@ -49,67 +51,30 @@ const css = `
  * right along x, up and down along y, stopping at the edges. From nothing, any arrow is the first cell. Null when
  * the key is not a step. */
 export function stepCell(key: string, at: [x: number, y: number] | null, nx: number, ny: number): [x: number, y: number] | null {
-  const d = ({ ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowDown: [0, 1], ArrowUp: [0, -1] } as Record<string, [number, number]>)[key];
+  const d = ARROWS[key];
   if (!d || !nx || !ny) return null;
   return at ? [Math.min(Math.max(at[0] + d[0], 0), nx - 1), Math.min(Math.max(at[1] + d[1], 0), ny - 1)] : [0, 0];
 }
 
 /* What the listeners read. They are bound once to the grid, which outlives every paint, and this is set by each. */
-interface Grid { nx: number; ny: number; rows: Map<string, Row>; fresh: boolean }
+interface Grid { nx: number; ny: number; rows: Map<string, Row> }
 const grids = new WeakMap<HTMLElement, Grid>();
 const id = (x: number, y: number) => 'cell-' + x + '-' + y;
 
-/** Choose a cell, or none, and say how: by the keys or by the pointer, as keys.ts does. The readout is the cell's own
- * name, and is the view's one readout, shown and placed as keys.ts shows it. */
-function choose(cells: HTMLElement, el: HTMLElement | null, how: 'keys' | 'pointer' = 'pointer'): void {
-  cells.querySelector('[data-active]')?.removeAttribute('data-active');
-  el?.setAttribute('data-active', how);
-  attr(cells, 'aria-activedescendant', el?.id);
-  const fig = cells.closest<HTMLElement>('.uav')!, tip = readoutOf(fig);
-  if (!el) { hideReadout(tip); return; }
-  tip.textContent = el.getAttribute('aria-label');
-  placeReadout(tip, fig, el);
-}
-
+/* The interaction is the one every holder has (rove.ts, roveItems in keys.ts). A cell's is the step from its place. */
 function bind(cells: HTMLElement): void {
-  const cell = (e: Event) => (e.target as Element).closest?.<HTMLElement>('[role="gridcell"]:not([data-exit])') ?? null;
-  const activate = (el: HTMLElement) => {
-    const row = grids.get(cells)!.rows.get(el.id);
-    if (row) (cells.getRootNode() as ShadowRoot).host.dispatchEvent(new CustomEvent('ua-activate', { bubbles: true, composed: true, detail: { row } }));
-  };
-  cells.addEventListener('pointerover', (e) => {
-    const el = cell(e);
-    if (!el) return;
-    // A touch that has only just chosen a cell shows its readout. The next one activates it.
-    grids.get(cells)!.fresh = pressed(e) && !el.hasAttribute('data-active');
-    choose(cells, el);
-  });
-  cells.addEventListener('pointerleave', (e) => { if (hovers(e, grids.get(cells)!.fresh)) choose(cells, null); });
-  cells.addEventListener('focusout', () => choose(cells, null));
-  cells.addEventListener('click', (e) => {
-    const el = cell(e), g = grids.get(cells)!;
-    if (!el?.hasAttribute('data-active')) return;
-    if (g.fresh) g.fresh = false; else activate(el);
-  });
-  cells.addEventListener('keydown', (e) => {
-    const g = grids.get(cells)!, on = cells.querySelector<HTMLElement>('[data-active]');
-    // Escape is taken only when a cell is chosen, so the first Escape of a dialog around the view is not swallowed.
-    if (e.key === 'Escape') { if (on) { e.preventDefault(); choose(cells, null); } return; }
-    if (e.key === 'Enter' || e.key === ' ') { if (on) { e.preventDefault(); activate(on); } return; }
-    const to = stepCell(e.key, on ? (on.id.split('-').slice(1).map(Number) as [number, number]) : null, g.nx, g.ny);
-    if (!to) return;
-    e.preventDefault();
-    choose(cells, cells.querySelector<HTMLElement>('#' + id(...to)), 'keys');
-  });
+  roveItems(cells, '[role="gridcell"]:not([data-exit])', (e, on) => {
+    const g = grids.get(cells)!, to = stepCell(e.key, on ? (on.id.split('-').slice(1).map(Number) as [number, number]) : null, g.nx, g.ny);
+    if (to) e.preventDefault();
+    return to && cells.querySelector<HTMLElement>('#' + id(...to));
+  }, (el) => { const row = grids.get(cells)!.rows.get(el.id); return row && { row }; });
 }
-
-// The number alone. The body goes whole, so kept axes do not stand with no grid between them.
-const alone = { '': 'grid-template: "number" auto / minmax(0, 1fr);', '.uav-body': 'display: none;', '.uav-number': 'align-self: start; margin: 0;' };
 
 export const matrix: LayoutPainter = {
   layout: 'matrix',
   css,
-  fit: { marks: alone },
+  // The number alone. The body goes whole, so kept axes do not stand with no grid between them.
+  fit: { marks: NUMBER_ALONE },
 
   // Labels that would meet, by their real sizes, along each axis (chrome/axes.ts). A grid's are not anchored to stay inside
   // it, so one that would run past the far edge goes first, and down the side they may stand line on line.
@@ -126,7 +91,7 @@ export const matrix: LayoutPainter = {
 
     if (!grids.has(cells)) bind(cells);
     const at = new Map(data.result.rows.map((r) => [(xf ? r[xf] : '') + '\n' + (yf ? r[yf] : ''), r])), rows = new Map<string, Row>();
-    grids.set(cells, { nx: xs.length, ny: ys.length, rows, fresh: false });
+    grids.set(cells, { nx: xs.length, ny: ys.length, rows });
     prop(cells, '--uav-nx', xs.length); prop(cells, '--uav-ny', ys.length);
     attr(cells, 'role', 'grid'); attr(cells, 'tabindex', xs.length && ys.length ? 0 : null);
     attr(cells, 'aria-label', [yf, xf].filter(Boolean).map((f) => dims[f!]!.label).join(' by '));
@@ -147,54 +112,41 @@ export const matrix: LayoutPainter = {
         attr(c, 'data-dot', dot ? (dot === n ? 'alone' : 'over') : null); prop(c, '--uav-size', dot?.size); prop(c, '--uav-dot', dot && dot !== n ? nodePaint(dot) : null);
         attr(c, 'role', 'gridcell'); attr(c, 'id', id(cx, cy));
         // Never colour alone: the value is in the cell's name, which is also its readout. No value says so in words.
-        attr(c, 'aria-label', row && data.query.metrics.some((f) => row[f] != null) ? readout(row, data.query, data.catalog, data.layers)
-          : (data.query.by || []).map((d) => formatDimension(d === xf ? x : y, dims[d]!)).join(', ') + ': No data');
+        attr(c, 'aria-label', readout(row ?? Object.fromEntries((data.query.by || []).map((d) => [d, d === xf ? x : y])), data.query, data.catalog, data.layers));
         if (row) rows.set(c.id, row);
       });
     });
     // ponytail: a chosen cell is let go on every paint, where keys.ts keeps a point that is still there.
-    choose(cells, null);
+    chooseItem(cells, null);
   },
 
   // The same query pivoted: a row for each value on y, a column for each on x, and the engine's totals at the edges.
   // ponytail: the cells' metric alone. A second metric or a comparison has no place in a pivot of one value yet.
   table(table, title, scene, { layers, result, catalog }) {
     // ponytail: the first layer's metric, on color or else on size. Dots over cells of another metric are in the readout and not in the pivot.
-    const { x: xf, y: yf, color, size } = layers[0]!.encode as Record<string, string>, m = color ?? size, M = catalog.metrics[m!]!;
-    const at = new Map(result.rows.map((r) => [(xf ? r[xf] : '') + '\n' + (yf ? r[yf] : ''), r[m!]]));
-    const value = (v: Row[string]) => formatValue(v as number | null, M, 'exact');
+    // Not pivot() (table.ts): the grid's columns are the scene's, in its order, and named as its axis names them.
+    const { x: xf, y: yf, color, size } = layers[0]!.encode as Record<string, string>, m = (color ?? size)!;
+    const at = new Map(result.rows.map((r) => [(xf ? r[xf] : '') + '\n' + (yf ? r[yf] : ''), r[m]]));
+    const value = (v: Row[string] | undefined): Cell => [valueText(v, m, catalog), 'td', true];
     // A value is a key here, and so a string: a bin's start is a number in the result. A bin is named by both its ends.
     const of = (f: string, k: string) => (result.totalsBy?.[f] ?? result.rows).find((r) => String(r[f]) === k);
-    const total = (f: string, k: string) => value(result.totalsBy?.[f]?.find((r) => String(r[f]) === k)?.[m!]);
-    const name = (f: string, k: string) => (of(f, k)?.[f + '@end'] == null ? formatDimension(k, catalog.dimensions[f]!) : formatBin(k, of(f, k)![f + '@end']));
-    const cell = (tr: HTMLTableRowElement, s: string, scope?: 'col' | 'row', num = !scope) => {
-      const c = tr.appendChild(document.createElement(scope ? 'th' : 'td'));
-      c.textContent = s; if (scope) c.scope = scope; if (num) c.setAttribute('data-num', '');
-    };
-    table.replaceChildren();
-    if (title) table.createCaption().textContent = title;
-    const head = table.createTHead().insertRow(), body = table.createTBody(), xs = scene.rows ?? [];
-    const foot = table.createTFoot().insertRow();
-    cell(foot, 'Total', 'row');
+    const total = (f: string, k: string) => value(result.totalsBy?.[f]?.find((r) => String(r[f]) === k)?.[m]);
+    const name = (f: string, k: string) => dimName({ ...of(f, k), [f]: k }, f, catalog), xs = scene.rows ?? [];
+    emptyTable(table, title);
+    const head = table.createTHead(), body = table.createTBody(), foot = table.createTFoot();
     // A strip is a list: its one dimension down the side, and the metric's own column, with no total beside it to repeat it.
     if (!xf || !yf) {
       const f = (yf || xf)!;
-      cell(head, catalog.dimensions[f]!.label, 'col'); cell(head, M.label, 'col', true);
-      for (const k of (yf ? scene.ys : xs) ?? []) { const tr = body.insertRow(); cell(tr, formatDimension(k, catalog.dimensions[f]!), 'row'); cell(tr, value(at.get(yf ? '\n' + k : k + '\n'))); }
-      cell(foot, value(result.totals[m!]));
+      tableRow(head, [[catalog.dimensions[f]!.label, 'th'], [fieldLabel(m, catalog), 'th', true]]);
+      for (const k of (yf ? scene.ys : xs) ?? []) tableRow(body, [[name(f, k), 'th'], value(at.get(yf ? '\n' + k : k + '\n'))]);
+      tableRow(foot, [['Total', 'th'], value(result.totals[m])]);
       return;
     }
-    cell(head, catalog.dimensions[yf]!.label, 'col');
-    for (const x of xs) cell(head, name(xf, x), 'col', true);
-    cell(head, 'Total', 'col', true);
+    tableRow(head, [[catalog.dimensions[yf]!.label, 'th'], ...xs.map((x): Cell => [name(xf, x), 'th', true]), ['Total', 'th', true]]);
     // A quantity down the side is drawn from the foot, as a plot is, and listed from its least, as a table is.
     for (const y of catalog.dimensions[yf]!.type === 'number' ? (scene.ys ?? []).slice().reverse() : scene.ys ?? []) {
-      const tr = body.insertRow();
-      cell(tr, name(yf, y), 'row');
-      for (const x of xs) cell(tr, value(at.get(x + '\n' + y)));
-      cell(tr, total(yf, y));
+      tableRow(body, [[name(yf, y), 'th'], ...xs.map((x) => value(at.get(x + '\n' + y))), total(yf, y)]);
     }
-    for (const x of xs) cell(foot, total(xf, x));
-    cell(foot, value(result.totals[m!]));
+    tableRow(foot, [['Total', 'th'], ...xs.map((x) => total(xf, x)), value(result.totals[m])]);
   },
 };

@@ -1,20 +1,11 @@
-import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { buildScene, expand, makeContainer, place, resolve, type PainterName, type Spec } from '@unified-analytics/core';
-import viewSchema from '@unified-analytics/core/schema/view.schema.json';
+import { buildScene, expand, makeContainer, place, resolve, type Catalog, type PainterName, type Result, type Spec } from '@unified-analytics/core';
 import { catalog, moreSamples, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
+import { err, ofUnbounded, run, validView as view } from './helpers.ts';
 
 // What the grammar draws beyond the prototype's six samples (docs/chart-coverage-plan.md). Nothing here has a
 // prototype to match, so it is held to its own sweep, facts and golden scenes.
-const run = (spec: Spec, w: number, h: number | null = null, scenario: (typeof scenarios)[number] = 'typical', painter: PainterName = 'svg') => {
-  const container = makeContainer(w, h, painter, 8), result = runQuery(spec.query, scenario);
-  const plan = resolve(spec, result, container, catalog);
-  const ratio = buildScene(plan, spec.query, result, catalog);
-  return { plan, ratio, scene: place(ratio, container), result };
-};
 // The engine refuses some queries itself. `q` is one it answers, for an error that is resolve()'s to make.
-const err = (s: Spec, q = s.query) => { try { resolve(s, runQuery(q), makeContainer(346), catalog); } catch (e) { return (e as Error).message; } };
-const view = new Ajv().compile(viewSchema);
 
 // The plots and the rows among them. Another layout has a suite of its own: test/radial.test.ts, test/cell.test.ts.
 // Ranges and ticks have one too: test/ranges.test.ts.
@@ -121,7 +112,7 @@ describe('two dimensions', () => {
   });
   it('errors name the fix: a third dimension, a field the query lacks, and a dimension nothing encodes', () => {
     const bar = (encode: Record<string, string>, by: string[]): Spec => ({ query: { metrics: ['visitors'], by }, layers: [{ mark: 'bar', encode }] });
-    expect(err(bar({ x: 'date.day', y: 'visitors' }, ['date.day', 'channel', 'device']), { metrics: ['visitors'] })).toBe('A view is by one dimension or by two different ones, and query.by has: date.day, channel, device. Remove all but two.');
+    expect(err(bar({ x: 'date.day', y: 'visitors' }, ['date.day', 'channel', 'device']), runQuery({ metrics: ['visitors'] }))).toBe('A view is by one dimension or by two different ones, and query.by has: date.day, channel, device. Remove all but two.');
     expect(err(bar({ x: 'date.day', y: 'visitors', color: 'device' }, ['date.day', 'channel']))).toBe('Layer 1 encodes "device" on color, which the query does not return. It returns: date.day, channel, visitors.');
     expect(err(bar({ x: 'date.day', y: 'visitors' }, ['date.day', 'channel']))).toBe('The query is by "channel", and no layer encodes it, so its rows would be drawn over each other. Encode it on color, for a colour and a legend entry each, or on detail, for a series each in one paint, or remove it from query.by.');
     expect(() => runQuery({ metrics: ['visitors'], by: ['channel', 'channel'] })).toThrow('A query is by one dimension or by two different ones. This one is by: channel, channel.');
@@ -493,4 +484,27 @@ describe('presets with a second dimension', () => {
     expect(err({ use: 'stacked-bar', query: { metrics: ['visitors'], by: ['date.day'] } })).toBe('The "stacked-bar" preset needs two dimensions in query.by: the one on the axis, then the one to split by.');
     expect(err({ use: 'line', query: { metrics: ['visitors'], by: ['date.day', 'device'] } })).toBe('The query is by "device", and no layer encodes it, so its rows would be drawn over each other. Encode it on color, for a colour and a legend entry each, or on detail, for a series each in one paint, or remove it from query.by.');
   });
+});
+
+// A dimension may hold numbers. Its series are keys all the same, strings as a painter reads them back from an attribute.
+describe('a split by a dimension of numbers', () => {
+  const cat = { metrics: { revenue: { label: 'Revenue', unit: 'usd', polarity: 'up' } }, dimensions: { day: { label: 'Day', type: 'time' }, tier: { label: 'Tier', type: 'number' } } } as const;
+  const rows = ['2026-10-01', '2026-10-02'].flatMap((day) => [1, 2].map((tier) => ({ day, tier, revenue: tier * 100 })));
+  const res = { rows, totals: { revenue: 600 }, totalsBy: { tier: [{ tier: 1, revenue: 200 }, { tier: 2, revenue: 400 }], day: [{ day: '2026-10-01', revenue: 300 }, { day: '2026-10-02', revenue: 300 }] }, meta: { compare: null, notes: [], empty: false } } as unknown as Result;
+  const query = { metrics: ['revenue'], by: ['day', 'tier'] };
+  it.each([['line', 'x', 'y'], ['bar', 'y', 'x']] as const)('names its series as strings, and draws each, in a %s', (mark, dim, metric) => {
+    const spec: Spec = { spec: 'view/0', layers: [{ mark, encode: { [dim]: 'day', [metric]: 'revenue', color: 'tier' }, ...(mark === 'bar' && { stack: 'zero' }) }], query } as Spec;
+    const { scene } = ofUnbounded(spec, res, query, cat as unknown as Catalog);
+    expect(scene.series).toEqual(['1', '2']);
+    expect(scene.nodes.filter((n) => n.series === '2' && n.layer !== 'guide').length).toBeGreaterThan(0);
+  });
+});
+
+// A metric on x holds zero, as one on y does: with nothing above zero, its axis ends there.
+it('a metric on x with nothing above zero ends at zero', () => {
+  const cat = { metrics: { a: { label: 'A', unit: 'count', polarity: 'up' }, b: { label: 'B', unit: 'count', polarity: 'up' } }, dimensions: { sku: { label: 'SKU', type: 'categorical' } } } as unknown as Catalog;
+  const res = { rows: [{ sku: 'p', a: -1000, b: 1 }, { sku: 'q', a: -10, b: 2 }], totals: {}, meta: { compare: null, notes: [], empty: false } } as unknown as Result;
+  const query = { metrics: ['a', 'b'], by: ['sku'] }, spec = { spec: 'view/0', layers: [{ mark: 'dot', encode: { x: 'a', y: 'b' } }], query } as Spec;
+  const ticks = ofUnbounded(spec, res, query, cat).scene.nodes.filter((n) => n.key.startsWith('xtick:')).map((n) => (n as { text: string }).text);
+  expect(ticks.at(-1)).toBe('0');
 });

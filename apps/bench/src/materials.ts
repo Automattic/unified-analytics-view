@@ -1,15 +1,8 @@
 /* The materials, on the tokens page: each material over the page and over each surface it has to sit on, at the sizes it has
  * to hold up at, under one light. The same light is the one elevation's shadows fall away from. The material's surface is material.css; this file builds
  * the stage and the lens filter. */
-const root = document.documentElement;
+import { el, heading } from './page.ts';
 const main = document.querySelector<HTMLElement>('#materials')!;
-
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
-  const e = document.createElement(tag);
-  if (cls) e.className = cls;
-  if (text != null) e.textContent = text;
-  return e;
-}
 
 /** The crystal's four layers, bottom to top. */
 function crystal() {
@@ -62,12 +55,6 @@ function lens(flat: number, thick: number, disp: number) {
   for (const k of crystals) k.el.style.setProperty('--ua-crystal-lens', `url(#${id(k.size)})`);
 }
 
-function heading(title: string, note: string) {
-  const h2 = el('h2', '', title + ' ');
-  h2.append(el('small', '', note));
-  main.append(h2);
-}
-
 const SIZES = [320, 150, 96], SURFACES = ['', 'card', 'muted', 'marker'];
 /** A material as swatches: over the page and over each surface, at each size. */
 function swatches(material: (size: number) => HTMLElement) {
@@ -86,7 +73,7 @@ function swatches(material: (size: number) => HTMLElement) {
   }
 }
 
-heading('Crystal', 'clear glass over the page and over three surfaces; the dot outside each is where the light is. Then as a surface: a container of any fill under a sheet of it');
+main.append(heading('Crystal', 'clear glass over the page and over three surfaces; the dot outside each is where the light is. Then as a surface: a container of any fill under a sheet of it'));
 swatches((size) => {
   const glass = crystal();
   crystals.push({ size, el: glass });
@@ -106,7 +93,7 @@ swatches((size) => {
   main.append(row);
 }
 
-heading('Frost', 'frosted glass: the light model, blur and vibrancy on what is behind, grain, and an elevation; as a disc over each surface, then as a panel');
+main.append(heading('Frost', 'frosted glass: the light model, blur and vibrancy on what is behind, grain, and an elevation; as a disc over each surface, then as a panel'));
 swatches(() => el('div', 'ua-frost'));
 
 // The same glass as a surface: a panel at each elevation it can stand at, over something for it to blur.
@@ -123,7 +110,7 @@ swatches(() => el('div', 'ua-frost'));
   main.append(row);
 }
 
-heading('Screen', 'a surface sunk into the page, as an LCD is: the inset elevation, a darker fill, grain, and a small shadow under what is on it');
+main.append(heading('Screen', 'a surface sunk into the page, as an LCD is: the inset elevation, a darker fill, grain, and a small shadow under what is on it'));
 {
   const row = el('div', 'stages screens');
   for (const [w, text] of [[320, '10.5k'], [200, '3m 48s'], [120, '38%']] as const) {
@@ -136,15 +123,6 @@ heading('Screen', 'a surface sunk into the page, as an LCD is: the inset elevati
   main.append(row);
 }
 
-// The light and the material, as they were settled when the page had controls to move them.
-const s = { light: 322, bevel: 20, thick: 0.44, disp: 0.6, blur: 18, saturate: 180, tint: 45, grain: 0.55 };
-root.style.setProperty('--ua-light', s.light + 'deg');
-main.style.setProperty('--ua-crystal-flat', 100 - s.bevel + '%');
-main.style.setProperty('--ua-frost-blur', s.blur + 'px');
-main.style.setProperty('--ua-frost-saturate', s.saturate + '%');
-main.style.setProperty('--ua-frost-tint', s.tint + '%');
-main.style.setProperty('--ua-grain', String(s.grain));
-main.dataset.crystal = 'on';
-lens(1 - s.bevel / 100, s.thick, s.disp);
-
-export {};
+// The light and the material are material.css's. The lens is built for the bevel it sets; how thick the glass is and how
+// much it disperses are the lens's alone, as they were settled when the page had controls to move them.
+lens(parseFloat(getComputedStyle(crystals[0]!.el).getPropertyValue('--flat')) / 100, 0.44, 0.6);

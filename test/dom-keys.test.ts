@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildScene, makeContainer, place, resolve, rowKeys, unboundedContainer, type Catalog, type Spec } from '@unified-analytics/core';
 import { catalog, runQuery, samples, type Scenario } from '@unified-analytics/fixtures';
+import { TIP_CSS, centred } from '../packages/dom/src/chrome/tip.ts';
 import { Keys, crossMarks, hitNodes, readout, rowsAt, step, written } from '../packages/dom/src/keys.ts';
+import { ofUnbounded } from './helpers.ts';
 
 // Which point a key moves to, what the readout says and where a plot's hit targets lie are plain functions, held
 // here with no DOM. Focus, hover and the event are checked in a browser on the bench. What the mouse leaving does
@@ -9,7 +11,7 @@ import { Keys, crossMarks, hitNodes, readout, rowsAt, step, written } from '../p
 
 const of = (sample: string, scenario: Scenario = 'typical') => {
   const spec = samples[sample]!.spec, result = runQuery(spec.query, scenario), q = spec.query;
-  const plan = resolve(spec, result, unboundedContainer(), catalog), scene = buildScene(plan, spec.query, result, catalog);
+  const { plan, scene } = ofUnbounded(spec, result);
   return { result, scene, says: result.rows.map((r) => readout(r, q, catalog, plan.layers)) };
 };
 
@@ -162,6 +164,10 @@ describe('two rows of one value', () => {
     const at = rowsAt(scene, spec.query, result);
     expect(at.rows).toEqual(result.rows.map((r) => [r]));
     expect(at.rows.map((rs) => readout(rs[0]!, spec.query, sources, plan.layers))).toEqual(['Google: Visitors 50', 'Google: Visitors 30', 'Bing: Visitors 20', 'Duck: Visitors 10']);
+    // A row with no value says so in words, as a grid's empty cell does.
+    expect(readout({ ...result.rows[0]!, v: null }, spec.query, sources, plan.layers)).toBe('Google: No data');
+    // One with no value now and one before still says the period before.
+    expect(readout({ ...result.rows[0]!, v: null, 'v@previous': 40 }, { ...spec.query, compare: 'previous' }, sources, plan.layers)).toBe('Google: Visitors –, previous period 40');
     // Each has its own mark, and nothing written says the key.
     for (const row of scene.rows!) expect(scene.nodes.some((n) => n.row === row && n.kind !== 'text' && n.layer === 'data') || scene.nodes.some((n) => n.kind === 'path' && n.points.some((p) => p.row === row)), row).toBe(true);
     expect(scene.nodes.filter((n) => n.kind === 'text' && n.text.includes('#'))).toEqual([]);
@@ -201,7 +207,7 @@ describe('the mouse leaving', () => {
   afterEach(() => { direction = 'ltr'; vi.unstubAllGlobals(); });
   const view = (focused: boolean, hovered = false) => {
     vi.stubGlobal('getComputedStyle', () => ({ direction }));
-    const tip = el({ classList: { contains: () => true } }), fig = el({ querySelector: () => tip, children: [tip] }), host = el();
+    const tip = el({ classList: { contains: () => true, add: () => {} } }), fig = el({ querySelector: () => tip, children: [tip] }), host = el();
     // The body stands in for the holder of the points as well, so an event sent to it is one on the holder.
     const points: ReturnType<typeof el>[] = [], body = el({ dataset: { hits: 'x' }, children: points, matches: (sel: string) => (sel === ':hover' ? hovered : focused), querySelector: () => body, querySelectorAll: () => points, closest: () => points[1] });
     for (const row of ['a', 'b', 'c']) { const p = el({ parentElement: body }); p.setAttribute('data-row', row); points.push(p); }
@@ -234,6 +240,23 @@ describe('the mouse leaving', () => {
     const gone = view(false, false);
     gone.send('pointerover', { pointerType: 'mouse' }); gone.paint();
     expect(gone.chosen()).toEqual([]);
+  });
+  it('activates the chosen row on a click whether or not it has a point on show, and by a key only where it has', () => {
+    // A legend's entry or a map's region is the row's as well, and a row with no cell or symbol on show has one.
+    const v = view(true, true);
+    v.points[1]!.getClientRects = () => [];
+    v.send('pointerover', { pointerType: 'mouse' }); v.send('click', {});
+    expect(v.activated()).toBe(1);
+    v.send('keydown', { key: 'Enter' });
+    expect(v.activated()).toBe(1);
+  });
+  it('leaves the readout to a view with no points of its own, as a treemap that keeps its box shows it', () => {
+    const tip = el({ classList: { contains: () => true, add: () => {} } }), fig = el({ querySelector: () => tip, children: [tip] });
+    const body = el({ matches: () => false, querySelector: () => null, querySelectorAll: () => [] });
+    const keys = new Keys(el() as unknown as HTMLElement, fig as unknown as HTMLElement, body as unknown as HTMLElement);
+    tip.hidden = false;
+    keys.paint({ rows: [] } as never, { metrics: [], by: [] } as never, { rows: [] } as never, { metrics: {}, dimensions: {} } as never, []);
+    expect(tip.hidden).toBe(false);
   });
   it('steps the way the arrow points where the holder reads from the right, as a band does on such a page', () => {
     const v = view(true);
@@ -271,5 +294,18 @@ describe('the mouse leaving', () => {
     for (const p of v.points) p.getBoundingClientRect = () => past;
     v.keys.name();
     expect(v.body.getAttribute('tabindex')).toBe(null);
+  });
+});
+
+describe('the tooltip chip', () => {
+  it('is centred on its point, inside its room, and at its start where it is wider', () => {
+    expect(centred(50, 20, 0, 100)).toBe(40);
+    expect(centred(5, 20, 0, 100)).toBe(0);
+    expect(centred(95, 20, 0, 100)).toBe(80);
+    expect(centred(50, 200, -10, 100)).toBe(-10);
+  });
+  it('is set closer and kept to one line on an axis, and on the secondary surface in that tone', () => {
+    expect(TIP_CSS).toContain('.uav-tip[data-anchor="axis"] { padding: 1px 5px; white-space: nowrap; }');
+    expect(TIP_CSS).toContain('.uav-tip[data-tone="secondary"] { background: var(--ua-charts-color-tooltip-surface-secondary');
   });
 });

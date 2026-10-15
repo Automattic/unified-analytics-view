@@ -1,21 +1,12 @@
-import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { buildScene, columnRooms, expand, formatValue, makeContainer, place, resolve, unboundedContainer, type Result, type Spec } from '@unified-analytics/core';
-import viewSchema from '@unified-analytics/core/schema/view.schema.json';
+import { buildScene, columnRooms, expand, formatValue, makeContainer, resolve, type Spec } from '@unified-analytics/core';
 import { catalog, moreSamples, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
+import { at, err, ofUnbounded, run, validView as view } from './helpers.ts';
 
 // Rows as tracks (docs/chart-coverage-plan.md, step 2): columns of values, a change per row, a signed track and the
 // funnel. The sweep and the golden scenes of these samples are in test/coverage.test.ts, with the rest of `moreSamples`.
-const run = (spec: Spec, w: number, h: number | null = null, scenario: (typeof scenarios)[number] = 'typical', result: Result = runQuery(spec.query, scenario)) => {
-  const container = makeContainer(w, h), plan = resolve(spec, result, container, catalog);
-  const ratio = buildScene(plan, spec.query, result, catalog);
-  return { plan, ratio, scene: place(ratio, container), result };
-};
-const err = (s: Spec, q = s.query) => { try { resolve(s, runQuery(q), makeContainer(346), catalog); } catch (e) { return (e as Error).message; } };
-const view = new Ajv().compile(viewSchema);
 const conversions = moreSamples.conversions!.spec, league = moreSamples.league!.spec, funnel = moreSamples.funnel!.spec;
 const texts = (nodes: { key: string }[], key: RegExp) => nodes.filter((n) => key.test(n.key)).map((n) => (n as unknown as { text: string }).text);
-const at = <T,>(nodes: { key: string }[], key: string) => nodes.find((n) => n.key === key) as unknown as T;
 
 describe('the fixture: events and steps', () => {
   it('a rate comes from the engine, row by row and over the whole, and is not the sum of its rows', () => {
@@ -165,7 +156,7 @@ describe('the track', () => {
   });
   it('covers what is below zero: every bar starts at zero, and one below it lies to the left of there', () => {
     const result = runQuery(bars.query), signed = { ...result, rows: result.rows.map((r, i) => ({ ...r, net_subscribers: [60, 30, -20, -40, 10, 0][i]! })) };
-    const { ratio, scene } = run(bars, 346, null, 'typical', signed), rects = ratio.nodes.filter((n) => n.kind === 'rect') as { v: number; v0: number }[];
+    const { ratio, scene } = run(bars, 346, null, 'typical', 'svg', { result: signed }), rects = ratio.nodes.filter((n) => n.kind === 'rect') as { v: number; v0: number }[];
     expect(rects.map((n) => n.v0)).toEqual(Array(6).fill(0.4));
     expect(rects.map((n) => n.v)).toEqual([1, 0.7, 0.2, 0, 0.5, 0.4]);
     // In pixels zero is 40% of the way along a track 346 px wide. A bar is never under 3 px.
@@ -173,12 +164,12 @@ describe('the track', () => {
     [[138.4, 207.6], [138.4, 103.8], [69.2, 69.2], [0, 138.4], [138.4, 34.6], [138.4, 3]].forEach(([x, w], i) => { expect(px[i]!.x).toBeCloseTo(x!, 9); expect(px[i]!.w).toBeCloseTo(w!, 9); });
     // Nothing but values below zero, and the scale ends there.
     const down = { ...result, rows: result.rows.map((r, i) => ({ ...r, net_subscribers: -10 * (i + 1) })) };
-    expect((run(bars, 346, null, 'typical', down).ratio.nodes.filter((n) => n.kind === 'rect') as { v0: number }[]).every((n) => n.v0 === 1)).toBe(true);
+    expect((run(bars, 346, null, 'typical', 'svg', { result: down }).ratio.nodes.filter((n) => n.kind === 'rect') as { v0: number }[]).every((n) => n.v0 === 1)).toBe(true);
   });
   it('errors name the fix: marks in two units, and a mark the track has no rule for', () => {
     const two: Spec = { query: conversions.query, layers: [...conversions.layers!, { mark: 'bar', encode: { y: 'event', x: 'conversion_value' } }] };
     expect(err(two)).toBe('These rows have marks that measure in 2 units (count, usd), and a row has one track. Keep the marks of one unit, and show the other metric as a text layer.');
-    expect(err({ query: conversions.query, layers: [{ mark: 'line', encode: { y: 'event', x: 'conversions' } }] })).toBe('The "line" mark has no rule for rows yet. Use bar, text, rule, tick, dot or unit.');
+    expect(err({ query: conversions.query, layers: [{ mark: 'line', encode: { y: 'event', x: 'conversions' } }] })).toBe('The "line" mark has no rule for rows yet. Use bar, rule, tick, dot, unit or text.');
   });
 });
 
@@ -194,7 +185,7 @@ describe('the funnel preset', () => {
     expect(texts(ratio.nodes, /^primary:text#3:/)).toEqual(['100%', '16%', '6.2%', '3.9%']);
     // The rate shown is the row's own field. Nothing here divides one count by another.
     const told = { ...result, rows: result.rows.map((r) => ({ ...r, conversion_rate: 0.5 })) };
-    expect(texts(run(funnel, 346, null, 'typical', told).ratio.nodes, /^primary:text#3:/)).toEqual(['50%', '50%', '50%', '50%']);
+    expect(texts(run(funnel, 346, null, 'typical', 'svg', { result: told }).ratio.nodes, /^primary:text#3:/)).toEqual(['50%', '50%', '50%', '50%']);
     expect((ratio.nodes.filter((n) => n.kind === 'rect') as { v: number }[]).map((n) => +n.v.toFixed(3))).toEqual([1, 0.162, 0.062, 0.039]);
   });
   it('needs a second metric, and says so', () => {
@@ -216,7 +207,7 @@ describe('tldr prose for several metrics by one dimension', () => {
 describe('with no size', () => {
   it('a plan for a container with no limits drops nothing, and its scene has every column', () => {
     for (const spec of [conversions, league, funnel]) {
-      const result = runQuery(spec.query), plan = resolve(spec, result, unboundedContainer(), catalog), ratio = buildScene(plan, spec.query, result, catalog);
+      const { plan, scene: ratio } = ofUnbounded(spec);
       expect(plan.dropped).toEqual([]);
       expect(ratio.parts).toEqual(['columns', 'rows']);
       expect(ratio.nodes.filter((n) => n.kind === 'row').map((n) => n.row)).toEqual(ratio.rows);

@@ -1,27 +1,18 @@
-import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { buildScene, expand, makeContainer, place, resolve, unboundedContainer, type Catalog, type PainterName, type Result, type Spec } from '@unified-analytics/core';
-import viewSchema from '@unified-analytics/core/schema/view.schema.json';
+import { expand, place, resolve, unboundedContainer, type Catalog, type PainterName, type Spec } from '@unified-analytics/core';
 import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
 import { hitNodes } from '../packages/dom/src/keys.ts';
+import { at, err, run, validView as view } from './helpers.ts';
 
 // Ranges and `tick` (docs/chart-coverage-plan.md, step 3): companion fields, a second end on a bar, a rule and an
 // area, a rule with fields, the tick, dots in a row's track, and paint by direction. Nothing here has a prototype to
 // match, so it is held to its own sweep, facts and golden scenes.
-const run = (spec: Spec, w: number, h: number | null = null, scenario: (typeof scenarios)[number] = 'typical', painter: PainterName = 'svg', cat: Catalog = catalog, result: Result = runQuery(spec.query, scenario)) => {
-  const container = makeContainer(w, h, painter, 8), plan = resolve(spec, result, container, cat);
-  const ratio = buildScene(plan, spec.query, result, cat);
-  return { plan, ratio, scene: place(ratio, container), result };
-};
-const err = (s: Spec, q = s.query) => { try { resolve(s, runQuery(q), makeContainer(346), catalog); } catch (e) { return (e as Error).message; } };
-const view = new Ajv().compile(viewSchema);
 const names = ['box', 'errors', 'waterfall', 'candlestick', 'fan', 'dumbbell', 'bullet'];
 const specs = Object.fromEntries(names.map((k) => [k, moreSamples[k]!.spec]));
 const { box, errors, waterfall, candlestick, fan, dumbbell, bullet } = specs as Record<string, Spec>;
 const league = moreSamples.league!.spec;
 // What step 0 of docs/uncommon-coverage-plan.md added of these: dots, rules and ranged bars in a row's track, and a fan of two bands.
 const swept: Record<string, Spec> = { ...specs, ...Object.fromEntries(['cleveland', 'lollipop', 'tornado', 'fans'].map((k) => [k, moreSamples[k]!.spec])) };
-const at = <T = any>(nodes: { key: string }[], key: string) => nodes.find((n) => n.key === key) as unknown as T;
 const marks = (nodes: any[]) => nodes.filter((n) => n.layer === 'data' && n.part !== 'number' && n.kind !== 'row' && n.kind !== 'text');
 const painters: PainterName[] = ['svg', 'dots'];
 const heights = [null, 300, 160, 100, 60, 40];
@@ -200,7 +191,7 @@ describe('a second end in the plot', () => {
   });
   it('a row with either end missing has no mark', () => {
     const result = runQuery(box!.query), holed = { ...result, rows: result.rows.map((r, i) => (i === 1 ? { ...r, 'response_time@max': null } : i === 2 ? { ...r, 'response_time@p25': null } : r)) };
-    const { ratio } = run(box!, 346, null, 'typical', 'svg', catalog, holed);
+    const { ratio } = run(box!, 346, null, 'typical', 'svg', { result: holed });
     expect(ratio.nodes.filter((n) => n.key.startsWith('context:rule:')).length).toBe(7);
     expect(ratio.nodes.filter((n) => n.key.startsWith('context:bar:')).length).toBe(7);
     expect(ratio.nodes.filter((n) => n.key.startsWith('primary:tick:')).length).toBe(8);
@@ -225,7 +216,7 @@ describe('tick', () => {
 });
 
 describe('paint by direction and polarity', () => {
-  const paints = (spec: Spec, cat: Catalog = catalog) => { const { ratio, result } = run(spec, 700, null, 'typical', 'svg', cat); return { result, paints: ratio.nodes.filter((n) => n.kind === 'rect' && n.part === 'plot').map((n) => n.paint) }; };
+  const paints = (spec: Spec, cat: Catalog = catalog) => { const { ratio, result } = run(spec, 700, null, 'typical', 'svg', { catalog: cat }); return { result, paints: ratio.nodes.filter((n) => n.kind === 'rect' && n.part === 'plot').map((n) => n.paint) }; };
   const turned = (m: string, polarity: 'up' | 'down' | 'none'): Catalog => ({ ...catalog, metrics: { ...catalog.metrics, [m]: { ...catalog.metrics[m]!, polarity } } });
   it('a bar whose end is below its start is bad and any other good, for a metric that is better when it rises', () => {
     const { result, paints: got } = paints(waterfall!);
@@ -279,8 +270,8 @@ describe('paint by direction and polarity', () => {
     });
     expect(new Set(ratio.nodes.map((n) => n.key)).size).toBe(ratio.nodes.length);
     // A metric that is better when it falls turns every piece, and one with no better way has one area in the layer's own paint.
-    expect(run(spec, 700, null, 'typical', 'svg', turned('revenue', 'down')).ratio.nodes.filter((n) => n.kind === 'path' && n.fill).map((n) => n.paint)).toEqual(pieces.map((n) => (n.paint === 'delta.good' ? 'delta.bad' : 'delta.good')));
-    expect(run(spec, 700, null, 'typical', 'svg', turned('revenue', 'none')).ratio.nodes.filter((n) => n.kind === 'path' && n.fill).map((n) => [n.key, n.paint])).toEqual([['context:area', 'series.1']]);
+    expect(run(spec, 700, null, 'typical', 'svg', { catalog: turned('revenue', 'down') }).ratio.nodes.filter((n) => n.kind === 'path' && n.fill).map((n) => n.paint)).toEqual(pieces.map((n) => (n.paint === 'delta.good' ? 'delta.bad' : 'delta.good')));
+    expect(run(spec, 700, null, 'typical', 'svg', { catalog: turned('revenue', 'none') }).ratio.nodes.filter((n) => n.kind === 'path' && n.fill).map((n) => [n.key, n.paint])).toEqual([['context:area', 'series.1']]);
     // With no paint it is the fan's band, whole. With no period before there is nothing to run from, and the layer goes.
     expect(run({ ...spec, layers: [{ ...spec.layers![0]!, paint: undefined }, spec.layers![1]!] }, 700).ratio.nodes.filter((n) => n.kind === 'path' && n.fill).map((n) => [n.key, n.paint])).toEqual([['context:area', 'series.1']]);
     expect(run(spec, 700, null, 'no-prior').plan.dropped).toEqual([]);
@@ -345,8 +336,8 @@ describe('a row\'s track', () => {
     expect(at(ratio.nodes, 'primary:dot:/blog/launch-notes')).toMatchObject({ x: 2105 / top, paint: 'series.1', role: 'primary' });
     // The scale holds the second end and the previous period, not only the first metric: a row that fell from further out is inside it.
     const far = { ...result, rows: result.rows.map((row, i) => (i === 7 ? { ...row, 'pageviews@previous': 9640 } : row)) };
-    expect(at(run(dumbbell!, 346, null, 'typical', 'svg', catalog, far).ratio.nodes, 'comparison:dot:/contact').x).toBe(1);
-    expect(at(run(dumbbell!, 346, null, 'typical', 'svg', catalog, far).ratio.nodes, 'primary:dot:/').x).toBe(0.5);
+    expect(at(run(dumbbell!, 346, null, 'typical', 'svg', { result: far }).ratio.nodes, 'comparison:dot:/contact').x).toBe(1);
+    expect(at(run(dumbbell!, 346, null, 'typical', 'svg', { result: far }).ratio.nodes, 'primary:dot:/').x).toBe(0.5);
   });
   it('a row with no value before has its dot alone, and with no prior period every row has', () => {
     const { ratio } = run(dumbbell!, 346);
@@ -396,7 +387,7 @@ describe('a row\'s track', () => {
     const own: Spec = { query: bullet!.query, layers: [{ mark: 'tick', encode: { y: 'device', x: 'signups' } }, { mark: 'text', encode: { y: 'device', text: 'device' } }] };
     expect(marks(run(own, 346).ratio.nodes).map((n) => n.x)).toEqual([1, 124 / 158, 21 / 158]);
     const bare: Catalog = { ...catalog, metrics: { ...catalog.metrics, signups: { label: 'Sign-ups', unit: 'count', polarity: 'up' } } };
-    expect(marks(run(bullet!, 346, null, 'typical', 'svg', bare).ratio.nodes).map((n) => n.kind)).toEqual(['rect', 'rect', 'rect']);
+    expect(marks(run(bullet!, 346, null, 'typical', 'svg', { catalog: bare }).ratio.nodes).map((n) => n.kind)).toEqual(['rect', 'rect', 'rect']);
   });
   it('the catalog\'s bands are drawn behind the marks, as a guide: the marks are the bar and the tick, as they were', () => {
     expect(catalog.metrics.signups!.bands).toEqual([200, 400]);

@@ -1,6 +1,8 @@
-import type { CircleNode, LineNode } from '@unified-analytics/core';
+import { dotRadius, type CircleNode, type LineNode } from '@unified-analytics/core';
 import { attr, prop } from '../dom.ts';
 import { token } from '../tokens.ts';
+import { RULE } from '../chrome/rule.ts';
+import { glyph } from '../chrome/unit.ts';
 
 /* What a row's track gains with a rule, a tick and a dot, and with a bar that has two ends. It is the rows layout's,
  * kept in a file of its own: rows.ts adds TRACK_CSS to its own, and calls trackMark for a mark that is not a bar.
@@ -23,17 +25,19 @@ import { token } from '../tokens.ts';
  * `data-track`, so a list of bars behind their labels is not touched. */
 const along = '(100% - 2 * var(--uav-row-gap))';
 const at = (x: string) => `calc(var(--uav-row-gap) + ${x} * ${along})`;
-const glyph = `max(1px, calc(min(var(--uav-w) * ${along}, var(--uav-row-block) - 8px) - 1px))`;
+/** What a unit's glyph keeps clear of its row's top and foot, in px, as place() does. */
+const GLYPH_INSET = 4;
+const dot = glyph(`min(var(--uav-w) * ${along}, var(--uav-row-block) - ${2 * GLYPH_INSET}px)`);
 export const TRACK_CSS = `
 .uav-body[data-track] .uav-row > .uav-f-label { max-inline-size: 40cqi; }
 .uav-body[data-track] .uav-row > i { inset-block: 8px; inset-inline-start: ${at('var(--uav-x, 0)')}; inline-size: max(3px, calc(var(--uav-v) * ${along})); }
 .uav-body[data-track] .uav-row > i[data-mark] { border-radius: 0; inset-inline-start: ${at('min(var(--uav-x), var(--uav-x2))')}; }
-.uav-body[data-track] .uav-row > i[data-mark="rule"] { inset-block: calc(50% - 0.5px); inline-size: max(1px, calc(max(var(--uav-x2) - var(--uav-x), var(--uav-x) - var(--uav-x2)) * ${along})); }
+.uav-body[data-track] .uav-row > i[data-mark="rule"] { inset-block: calc(50% - ${RULE} / 2); inline-size: max(${RULE}, calc(max(var(--uav-x2) - var(--uav-x), var(--uav-x) - var(--uav-x2)) * ${along})); }
 .uav-body[data-track] .uav-row > i[data-series]:not([data-mark]) { border-radius: 0; inline-size: max(0px, calc(var(--uav-v) * ${along} - ${token('stroke-width-rule')})); }
 .uav-body[data-track] .uav-row > i[data-mark="band"] { inset-block: 0; inset-inline-start: ${at('var(--uav-x, 0)')}; inline-size: calc(var(--uav-v) * ${along}); }
-.uav-body[data-track] .uav-row > i[data-mark="tick"] { inset-block: calc((1 - var(--uav-t2)) * 100%) calc(var(--uav-t) * 100%); inline-size: var(--uav-stroke, ${token('stroke-width-rule')}); inset-inline-start: calc(${at('var(--uav-x)')} - var(--uav-stroke, ${token('stroke-width-rule')}) / 2); }
-.uav-body[data-track] .uav-row > i[data-mark="dot"] { inset-block: calc(50% - 3px); inline-size: 6px; border-radius: 50%; inset-inline-start: calc(${at('var(--uav-x)')} - 3px); }
-.uav-body[data-track] .uav-row > i[data-mark="unit"] { inset-block: 0; margin-block: auto; inline-size: ${glyph}; block-size: auto; aspect-ratio: 1; border-radius: 50%; inset-inline-start: calc(${at('var(--uav-x)')} - ${glyph} / 2); }`;
+.uav-body[data-track] .uav-row > i[data-mark="tick"] { inset-block: calc((1 - var(--uav-t2)) * 100%) calc(var(--uav-t) * 100%); inline-size: ${RULE}; inset-inline-start: calc(${at('var(--uav-x)')} - ${RULE} / 2); }
+.uav-body[data-track] .uav-row > i[data-mark="dot"] { inset-block: calc(50% - ${dotRadius()}px); inline-size: ${2 * dotRadius()}px; border-radius: 50%; inset-inline-start: calc(${at('var(--uav-x)')} - ${dotRadius()}px); }
+.uav-body[data-track] .uav-row > i[data-mark="unit"] { inset-block: 0; margin-block: auto; inline-size: ${dot}; block-size: auto; aspect-ratio: 1; border-radius: 50%; inset-inline-start: calc(${at('var(--uav-x)')} - ${dot} / 2); }`;
 
 export const TRACK_FIT: Record<string, Record<string, string>> = {
   track: { '.uav-body[data-track]': 'display: none;', '.uav-number:has(~ .uav-body[data-track])': 'display: block; margin: 0;' },

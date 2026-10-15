@@ -1,20 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, buildScene, expand, pathD, resolve, unboundedContainer, type PathNode, type RectNode } from '@unified-analytics/core';
+import { CONTAINER_RULES, expand, pathD, type PathNode, type RectNode } from '@unified-analytics/core';
 import { catalog, moreSamples, runQuery, type Scenario } from '@unified-analytics/fixtures';
 import { compileFitRules } from '../packages/dom/src/compile.ts';
 import { LEGEND_CSS } from '../packages/dom/src/chrome/legend.ts';
 import { cartesian } from '../packages/dom/src/layouts/cartesian.ts';
 import { KEYS_CSS, hitNodes, readout, readoutAt, readoutLines, rowsAt, stepSeries } from '../packages/dom/src/keys.ts';
-import { apart } from '../packages/dom/src/measure.ts';
+import { apart, thinLabels } from '../packages/dom/src/measure.ts';
 import { mix, resample } from '../packages/dom/src/motion.ts';
-import { pivot } from '../packages/dom/src/view.ts';
+import { pivot } from '../packages/dom/src/table.ts';
+import { ofUnbounded } from './helpers.ts';
 
 // What <ua-view> adds for a plot split into series, a stack, a signed scale and a second unit, where it is a plain
 // function or a string. That they draw, fit and move is checked in a browser on the bench.
 
 const of = (sample: string, scenario: Scenario = 'typical', range = '28d') => {
   const spec = { ...moreSamples[sample]!.spec, query: { ...moreSamples[sample]!.spec.query, range } }, result = runQuery(spec.query, scenario);
-  return { spec, result, scene: buildScene(resolve(spec, result, unboundedContainer(), catalog), spec.query, result, catalog) };
+  return { spec, result, scene: ofUnbounded(spec, result).scene };
 };
 const names = Object.keys(moreSamples).filter((k) => of(k).scene.layout === 'cartesian' && of(k).scene.scale !== 'linear');   // the plots that share x among rows; points and other layouts have their own tests
 
@@ -88,6 +89,16 @@ describe('the cartesian layout\'s guides', () => {
   });
 });
 
+describe('thinLabels', () => {
+  it('hands on only labels with a box, and marks the ones given up, keeping the rest', () => {
+    const el = (rects: number) => ({ rects, thin: false, getClientRects: () => ({ length: rects }), toggleAttribute(_: string, on: boolean) { this.thin = on; } });
+    const els = [el(1), el(0), el(1)], root = { querySelectorAll: () => els } as unknown as ParentNode;
+    let seen = 0;
+    thinLabels(root, 'span', (labels) => { seen = labels.length; return [false, true]; });
+    expect([seen, els.map((e) => e.thin)]).toEqual([2, [false, false, true]]);
+  });
+});
+
 describe('apart', () => {
   it('leaves labels that are clear of each other where they are', () => {
     expect(apart([10, 60, 110], 14, 150)).toEqual([10, 60, 110]);
@@ -155,6 +166,12 @@ describe('the readout of a split plot', () => {
     expect(readoutLines(rows[27]!, result.totalsBy![x!]![27], q, catalog, x!, split!).head).toMatch(/^Oct 5: Visitors \d+ so far$/);
     expect(readoutLines(rows[0]!, undefined, q, catalog, x!, split!).head).toBe('Sep 8: Visitors');
     expect(KEYS_CSS).toContain('.uav-readout[data-lines] { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto;');
+  });
+  it('says a series with no value at a point in words, as the readout of that series alone does', () => {
+    const { rows, x, split, q, result } = at('stacked'), total = result.totalsBy![x!]![0], none = rows[0]!.map((r, i) => (i ? r : { ...r, visitors: null }));
+    expect(readoutAt(none, total, q, catalog, x!, split!)).toBe('Sep 8: Visitors 416 (Desktop no data, Mobile 173, Tablet 26)');
+    expect(readoutLines(none, total, q, catalog, x!, split!).lines[0]!.value).toBe('No data');
+    expect(readout(none[0]!, q, catalog, [])).toBe('Sep 8, Desktop: No data');
   });
   it('finds the rows of a plot split by detail the same way, in the order of scene.detail', () => {
     const { rows, x, split, scene } = at('spaghetti');

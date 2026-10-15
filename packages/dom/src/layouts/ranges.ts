@@ -1,6 +1,7 @@
-import type { LineNode, Scene } from '@unified-analytics/core';
+import { POINT_INSET, type LineNode, type Scene } from '@unified-analytics/core';
 import { ensure, keyed, prop } from '../dom.ts';
 import { token } from '../tokens.ts';
+import { RULE } from '../chrome/rule.ts';
 
 /* What a plot gains with a second end and with `tick`: a segment for each row. A rule from one of the row's values
  * to another stands at its x, and a tick lies across its band. It is the cartesian layout's, kept in a file of its
@@ -13,14 +14,13 @@ import { token } from '../tokens.ts';
  *
  * A segment is HTML, so its stroke stays true at any size. It runs from (x, t) to (x2, t2), is never thinner than
  * its stroke, and is centred on its line. */
-const STROKE = `var(--uav-stroke, ${token('stroke-width-rule')})`;
 const span = (a: string, b: string) => `calc(max(var(${a}) - var(${b}), var(${b}) - var(${a})) * 100%)`;
 export const RANGES_CSS = `
 .uav-ranges { position: absolute; inset: 0; pointer-events: none; }
-.uav-body[data-scale="point"] .uav-ranges { inset-inline: 2px; }
+.uav-body[data-scale="point"] .uav-ranges { inset-inline: ${POINT_INSET}px; }
 .uav-ranges i { position: absolute; background: var(--uav-paint);
-  inset-inline-start: calc(min(var(--uav-x), var(--uav-x2)) * 100%); inline-size: max(${STROKE}, ${span('--uav-x2', '--uav-x')});
-  inset-block-end: calc(min(var(--uav-t), var(--uav-t2)) * 100%); block-size: max(${STROKE}, ${span('--uav-t2', '--uav-t')}); }
+  inset-inline-start: calc(min(var(--uav-x), var(--uav-x2)) * 100%); inline-size: max(${RULE}, ${span('--uav-x2', '--uav-x')});
+  inset-block-end: calc(min(var(--uav-t), var(--uav-t2)) * 100%); block-size: max(${RULE}, ${span('--uav-t2', '--uav-t')}); }
 .uav-ranges i[data-upright] { translate: -50%; }
 .uav-ranges i:not([data-upright]) { translate: 0 50%; }
 /* A stroke of a rug is drawn light, so that many together read darker. The one whose point is chosen is drawn whole. */

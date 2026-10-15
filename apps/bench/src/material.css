@@ -4,24 +4,13 @@
  * filter on the backdrop, which only Chromium runs; elsewhere the crystal is the same, without the bending.
  * Lives in the bench until the look is settled. */
 
-/* ───────── The light model ─────────
- * One light for everything on the page. --ua-light is where it comes from, clockwise from the top;
- * the vector is the same direction for anything that has to move toward or away from it.
- * hi and lo are how strong every highlight and every shade is, per theme. In dark a material only
- * catches light, it casts no shade on itself. */
-:root {
-  --ua-light: 322deg;
-  --ua-light-x: sin(var(--ua-light));
-  --ua-light-y: calc(-1 * cos(var(--ua-light)));
-  --ua-light-hi: 1; --ua-light-lo: 1;
-
-  /* The strength of the crystal's body tint and sheen. */
-  --ua-crystal-body: .34; --ua-crystal-sheen: .16;
-}
+/* The light model (--ua-light, its vector, and how strong highlights and shades are per theme) comes from
+ * the token package's common tier. The crystal's strengths are the bench's own. */
+:root { --ua-crystal-body: .34; --ua-crystal-sheen: .16; }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) { --ua-light-hi: .8; --ua-light-lo: 0; --ua-crystal-body: .13; --ua-crystal-sheen: .085; }
+  :root:not([data-theme="light"]) { --ua-crystal-body: .13; --ua-crystal-sheen: .085; }
 }
-:root[data-theme="dark"] { --ua-light-hi: .8; --ua-light-lo: 0; --ua-crystal-body: .13; --ua-crystal-sheen: .085; }
+:root[data-theme="dark"] { --ua-crystal-body: .13; --ua-crystal-sheen: .085; }
 
 /* ───────── Grain ─────────
  * A tile of grey noise, laid over a surface in overlay so it lightens and darkens without tinting.
@@ -31,6 +20,19 @@
   --ua-grain-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
+/* ───────── What the glass shares ─────────
+ * The crystal, as a disc and as a surface, is lit by the same four values and ringed by the same rim: a conic
+ * gradient bright toward the light. The rim of the surface, and the frost's lit edge, are drawn as a 1px ring. */
+.ua-crystal, .ua-crystal-surface {
+  --w: var(--ua-color-white); --k: var(--ua-color-black); --hi: var(--ua-light-hi); --lo: var(--ua-light-lo);
+  --rim: conic-gradient(from var(--ua-light),
+    color-mix(in srgb, var(--w) 96%, transparent) 0deg, color-mix(in srgb, var(--w) 30%, transparent) 34deg, color-mix(in srgb, var(--k) calc(8% + 20% * var(--lo)), transparent) 104deg,
+    color-mix(in srgb, var(--w) 46%, transparent) 168deg, color-mix(in srgb, var(--w) 72%, transparent) 180deg, color-mix(in srgb, var(--w) 46%, transparent) 192deg,
+    color-mix(in srgb, var(--k) calc(8% + 20% * var(--lo)), transparent) 256deg, color-mix(in srgb, var(--w) 30%, transparent) 326deg, color-mix(in srgb, var(--w) 96%, transparent) 360deg); }
+.ua-frost::before, .ua-crystal-surface::before { padding: 1px;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; }
+
 /* ───────── Crystal ─────────
  * A round piece of clear glass with a smooth bevel, laid over a positioned host. Four layers, each an <i>:
  * body tint, bevel, top-surface sheen, rim.
@@ -39,7 +41,7 @@
  * crystal's size and bevel and hand over as --ua-crystal-lens (see lens() in materials.ts). */
 .ua-crystal { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; pointer-events: none; container-type: size;
   -webkit-backdrop-filter: var(--ua-crystal-lens, none); backdrop-filter: var(--ua-crystal-lens, none);
-  --w: var(--ua-color-white); --k: var(--ua-color-black); --hi: var(--ua-light-hi); --lo: var(--ua-light-lo); --flat: var(--ua-crystal-flat, 80%);
+  --flat: var(--ua-crystal-flat, 80%);
   /* The bevel has no edge: every layer on it fades in from the flat along this curve. */
   --bevel: radial-gradient(closest-side, transparent var(--flat), rgb(0 0 0 / .08) calc(var(--flat) + (100% - var(--flat)) * .3),
     rgb(0 0 0 / .4) calc(var(--flat) + (100% - var(--flat)) * .65), #000 100%); }
@@ -59,11 +61,7 @@
     color-mix(in srgb, var(--w) calc(100% * var(--ua-crystal-sheen)), transparent) 126cqi,
     color-mix(in srgb, var(--w) calc(20% * var(--ua-crystal-sheen)), transparent) 158cqi);
   mask: radial-gradient(closest-side, #000 calc(var(--flat) - 12%), transparent var(--flat)); }
-.ua-crystal .rim {
-  background: conic-gradient(from var(--ua-light),
-    color-mix(in srgb, var(--w) 96%, transparent) 0deg, color-mix(in srgb, var(--w) 30%, transparent) 34deg, color-mix(in srgb, var(--k) calc(8% + 20% * var(--lo)), transparent) 104deg,
-    color-mix(in srgb, var(--w) 46%, transparent) 168deg, color-mix(in srgb, var(--w) 72%, transparent) 180deg, color-mix(in srgb, var(--w) 46%, transparent) 192deg,
-    color-mix(in srgb, var(--k) calc(8% + 20% * var(--lo)), transparent) 256deg, color-mix(in srgb, var(--w) 30%, transparent) 326deg, color-mix(in srgb, var(--w) 96%, transparent) 360deg);
+.ua-crystal .rim { background: var(--rim);
   mask: radial-gradient(closest-side, transparent 96.4%, #000 98.4%, #000 99.4%, transparent 100%); }
 
 /* ───────── Frost ─────────
@@ -74,7 +72,7 @@
  * --ua-frost-blur, --ua-frost-saturate and --ua-frost-tint set how much of each, and --ua-grain the grain. */
 .ua-frost { position: relative; border-radius: var(--ua-radius-2xl);
   --w: var(--ua-color-white); --k: var(--ua-color-black); --ax: calc(-1 * var(--ua-light-x)); --ay: calc(-1 * var(--ua-light-y));
-  background: color-mix(in srgb, var(--ua-color-card) var(--ua-frost-tint, 45%), transparent);
+  --ua-frost-fill: color-mix(in srgb, var(--ua-color-card) var(--ua-frost-tint, 45%), transparent); background: var(--ua-frost-fill);
   -webkit-backdrop-filter: blur(var(--ua-frost-blur, 18px)) saturate(var(--ua-frost-saturate, 180%));
           backdrop-filter: blur(var(--ua-frost-blur, 18px)) saturate(var(--ua-frost-saturate, 180%));
   --ua-frost-elevation: var(--ua-elevation-3); --ua-charts-color-background: var(--ua-color-card);
@@ -85,11 +83,9 @@
 .ua-frost[data-elevation="2"] { --ua-frost-elevation: var(--ua-elevation-2); }
 .ua-frost::before, .ua-frost::after { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none; }
 /* The lit edge: a 1px ring, bright toward the light and shaded away from it. */
-.ua-frost::before { padding: 1px;
+.ua-frost::before {
   background: linear-gradient(calc(var(--ua-light) + 180deg), color-mix(in srgb, var(--w) calc(70% * var(--ua-light-hi)), transparent),
-    color-mix(in srgb, var(--w) calc(8% * var(--ua-light-hi)), transparent) 45%, color-mix(in srgb, var(--k) calc(18% * var(--ua-light-lo)), transparent));
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
-          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; }
+    color-mix(in srgb, var(--w) calc(8% * var(--ua-light-hi)), transparent) 45%, color-mix(in srgb, var(--k) calc(18% * var(--ua-light-lo)), transparent)); }
 .ua-frost::after { background: var(--ua-grain-image); mix-blend-mode: overlay; opacity: var(--ua-grain); }
 
 /* ───────── Screen ─────────
@@ -112,16 +108,10 @@
  * across the side the light is on. --ua-crystal-edge is how wide the bevel is.
  * There is no lens here: the disc's bends the backdrop with a map made for its size, and this would have to bend its own content. */
 .ua-crystal-surface { position: relative; isolation: isolate; border-radius: var(--ua-radius-lg); box-shadow: var(--ua-elevation-1);
-  --w: var(--ua-color-white); --k: var(--ua-color-black); --hi: var(--ua-light-hi); --lo: var(--ua-light-lo); --e: var(--ua-crystal-edge, 10px);
+  --e: var(--ua-crystal-edge, 10px);
   --ax: calc(-1 * var(--ua-light-x)); --ay: calc(-1 * var(--ua-light-y)); }
 .ua-crystal-surface::before, .ua-crystal-surface::after { content: ''; position: absolute; inset: 0; z-index: 1; border-radius: inherit; pointer-events: none; }
-.ua-crystal-surface::before { padding: 1px;
-  background: conic-gradient(from var(--ua-light),
-    color-mix(in srgb, var(--w) 96%, transparent) 0deg, color-mix(in srgb, var(--w) 30%, transparent) 34deg, color-mix(in srgb, var(--k) calc(8% + 20% * var(--lo)), transparent) 104deg,
-    color-mix(in srgb, var(--w) 46%, transparent) 168deg, color-mix(in srgb, var(--w) 72%, transparent) 180deg, color-mix(in srgb, var(--w) 46%, transparent) 192deg,
-    color-mix(in srgb, var(--k) calc(8% + 20% * var(--lo)), transparent) 256deg, color-mix(in srgb, var(--w) 30%, transparent) 326deg, color-mix(in srgb, var(--w) 96%, transparent) 360deg);
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
-          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; }
+.ua-crystal-surface::before { background: var(--rim); }
 .ua-crystal-surface::after {
   background: linear-gradient(calc(var(--ua-light) + 180deg), color-mix(in srgb, var(--w) calc(20% * var(--ua-crystal-sheen)), transparent),
     color-mix(in srgb, var(--w) calc(100% * var(--ua-crystal-sheen)), transparent) 34%, transparent 36%);

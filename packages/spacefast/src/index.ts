@@ -1,4 +1,4 @@
-import type { Catalog, MetricDef, Polarity, Query, Result, Row, Unit } from '@unified-analytics/core';
+import { inProgressNote, type Catalog, type MetricDef, type Polarity, type Query, type Result, type Row, type Unit } from '@unified-analytics/core';
 
 /* Spacefast's analytics query API, as its contract has it (spacefast/monorepo, packages/common/src/contracts/analytics-query.ts,
  * read at b1e28cc). One answer of `POST /v1/spaces/{spaceId}/analytics/query` becomes what a view takes: a query, a
@@ -72,6 +72,8 @@ export function adapt(api: ApiResult, options: AdaptOptions = {}): Adapted {
   for (const c of metrics) {
     const def: MetricDef = { label: c.label, unit: c.currency || UNITS[c.unit]!, polarity: POLARITY[c.polarity]!, ...(c.definition ? { definition: c.definition } : {}) };
     if (c.currency) def.rangeTotal = 'sum';
+    // ponytail: the one metric name in the adapter. The API's column does not yet say how its values total over a range;
+    // when it does, map that here as UNITS and POLARITY are mapped, and this line goes (issue #30).
     if (c.id === 'visitor_days') def.rangeTotal = 'sum of daily';
     catalog.metrics[c.id] = def;
   }
@@ -111,7 +113,7 @@ export function adapt(api: ApiResult, options: AdaptOptions = {}): Adapted {
   const days = Math.max(1, Math.round((Date.parse(api.until) - Date.parse(api.since)) / DAY));
   const empty = [...api.rows, api.totals].every((r) => metrics.every((c) => !value(r, c)));
   const notes = [...bare.map((c) => c.label + ' has no amount in any currency over this range.'), ...typos.map((c) => c.name + ' in "' + c.currency + '" is left out: that is not a currency.')];
-  if (time && api.rows.at(-1)?.complete === false) notes.push((api.granularity === 'hour' ? 'This hour' : 'Today') + ' is still in progress.');
+  if (time && api.rows.at(-1)?.complete === false) notes.push(inProgressNote(api.granularity));
   const query: Query = { metrics: metrics.map((c) => c.id), range: days + 'd' };
   const by = [...(time ? ['bucket'] : []), ...(dim ? [dim.id] : [])];
   if (by.length) query.by = by;

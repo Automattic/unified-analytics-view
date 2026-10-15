@@ -1,23 +1,16 @@
-import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { buildScene, customMarks, customPresets, expand, makeContainer, place, resolve, type CircleNode, type PainterName, type PathNode, type Spec } from '@unified-analytics/core';
-import viewSchema from '@unified-analytics/core/schema/view.schema.json';
+import { customMarks, customPresets, expand, place, type CircleNode, type PainterName, type Spec } from '@unified-analytics/core';
 import { compileFitRules } from '@unified-analytics/dom';
-import { catalog, countries, moreSamples, runQuery, scenarios, tiles } from '@unified-analytics/fixtures';
-import { GEO_RULES, geoMark, geoRules, registerGeo } from '@unified-analytics/geo';
-import { geoPainter, geoPainterAs } from '@unified-analytics/geo/dom';
+import { countries, moreSamples, scenarios, tiles } from '@unified-analytics/fixtures';
+import { GEO_RULES, geoMark, geoNames, geoRules, registerGeo } from '@unified-analytics/geo';
+import { geoPainter, geoPainterAs, registerGeoPainters } from '@unified-analytics/geo/dom';
+import { painterOf } from '../packages/dom/src/layouts/index.ts';
+import { run, shapes, validView as view } from './helpers.ts';
 
 // Step 10 of docs/uncommon-coverage-plan.md: tile maps. No new mark: the `geo` mark, registered again by the fixtures
 // under a name for each of two files of tiles. The mark itself is held in test/geo.test.ts, and what is held here is
 // what tiles add: shapes on a flat sheet, a mark under another name, and the two samples.
 const grid = moreSamples.tiles!.spec, hex = moreSamples.hexes!.spec, map = moreSamples.map!.spec;
-const run = (spec: Spec, w: number, h: number | null = null, scenario: (typeof scenarios)[number] = 'typical', painter: PainterName = 'svg') => {
-  const result = runQuery(spec.query, scenario), container = makeContainer(w, h, painter, 8), plan = resolve(spec, result, container, catalog);
-  const ratio = buildScene(plan, spec.query, result, catalog);
-  return { plan, ratio, scene: place(ratio, container), result };
-};
-const view = new Ajv().compile(viewSchema);
-const shapes = (ratio: { nodes: unknown[] }) => (ratio.nodes as PathNode[]).filter((n) => n.part === 'plot' && n.kind === 'path');
 /** The corners of a path of moves and lines. It is closed by a Z, so the first is not said again. */
 const corners = (d: string) => { const n = d.match(/-?[\d.]+/g)!.map(Number); return Array.from({ length: n.length / 2 }, (_, i) => [n[i * 2]!, n[i * 2 + 1]!] as const); };
 const sides = (d: string) => corners(d).map(([x, y], i, all) => Math.hypot(x - all[(i + 1) % all.length]![0], y - all[(i + 1) % all.length]![1]));
@@ -173,14 +166,24 @@ describe('the same mark under another name', () => {
     expect(of([{ mark: 'geo-tiles', encode: { x: 'country' } }])).toMatch(/^A "geo-tiles" layer needs a metric on color/);
     expect(of([...expand(grid).layers!, ...expand(grid).layers!])).toMatch(/^A map draws one "geo-tiles" layer, and this view has 2\./);
   });
-  it('the painter is the map\'s, as the layout of that name: its sheet and its rules say the name, and nothing of `geo`', () => {
+  it('the painter is the map\'s, as the layout of that name, one for each name the fixtures registered: its sheet says the name, and nothing of `geo`', () => {
     const painter = geoPainterAs('geo-tiles');
-    expect([painter.layout, painter.paint, painter.rules!({} as never)]).toEqual(['geo-tiles', geoPainter.paint, geoRules('geo-tiles')]);
+    expect([painter.layout, painter.paint, painter.rules]).toEqual(['geo-tiles', geoPainter.paint, undefined]);
+    expect([...geoNames()].slice(0, 3)).toEqual(['geo', 'geo-tiles', 'geo-hexes']);
     expect(painter.css).toBe(geoPainter.css.split('[data-layout="geo"]').join('[data-layout="geo-tiles"]'));
     expect(painter.css).not.toContain('"geo"');
     expect(geoPainterAs('geo').css).toBe(geoPainter.css);
     const css = compileFitRules(geoRules('geo-tiles'), { 'geo-tiles': painter.fit ?? {} }), fig = '.uav[data-layout="geo-tiles"]:not([data-keep~="marks"])';
     expect(css).toContain('@container uav-view (inline-size < 279.5px) {\n  ' + fig + ':has(~ .uav-fallback[data-rule="marks"]) { display: none; }\n  ' + fig + ' ~ .uav-fallback[data-rule="marks"] { display: block; }\n}');
+  });
+});
+
+describe('the painters of the names', () => {
+  it('come with the name, for shapes registered after registerGeoPainters() as before it', () => {
+    registerGeoPainters();
+    expect(painterOf('geo-tiles')!.css).toBe(geoPainterAs('geo-tiles').css);
+    registerGeo(tiles.square, { name: 'geo-later' });
+    expect(painterOf('geo-later')!.css).toBe(geoPainterAs('geo-later').css);
   });
 });
 

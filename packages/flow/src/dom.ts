@@ -1,6 +1,6 @@
-import type { PathNode, RectNode, TextNode } from '@unified-analytics/core';
-import { ensure, keyed, prop, text, token, type LayoutPainter } from '@unified-analytics/dom';
-import { LABEL, LINK_RULES, NODE, standing } from './index.ts';
+import { declutter, type PathNode, type RectNode, type TextNode } from '@unified-analytics/core';
+import { AXES_HEIGHT, ensure, ensureSvg, hits, keyed, prop, registerPainter, text, thinLabels, token, type LayoutPainter } from '@unified-analytics/dom';
+import { LABEL, NODE } from './index.ts';
 
 /* The `link` mark's half for the DOM: the painter of its layout, for registerPainter().
  *
@@ -22,7 +22,7 @@ import { LABEL, LINK_RULES, NODE, standing } from './index.ts';
  * Below the room a Sankey needs, the `marks` rule's `fallback` shows the same query as a grid in its place. That is
  * the element's doing (view.ts), and nothing here knows of it. */
 const css = `
-.uav[data-layout="link"] { --uav-body-block: var(--uav-axes-height, 184px); }
+.uav[data-layout="link"] { --uav-body-block: ${AXES_HEIGHT}; }
 .uav[data-layout="link"] .uav-body { display: grid; grid-template: "plot" minmax(0, 1fr) / minmax(0, 1fr); }
 .uav[data-layout="link"] .uav-plot svg { inset-inline: ${NODE}px; inline-size: calc(100% - ${2 * NODE}px); }
 /* Ribbons lie over one another, and an SVG has no order but its children's, which is the list's. So the chosen one is
@@ -38,24 +38,19 @@ const css = `
 export const linkPainter: LayoutPainter = {
   layout: 'link',
   css,
-  rules: () => LINK_RULES,
 
-  // Labels that would meet, by their real sizes, in each column: the larger node's stands (standing()).
+  // Labels that would meet, by their real sizes, in each column: the larger node's stands, as place() decides it by a line.
   measure(body) {
     for (const side of ['start', 'end']) {
-      const els = Array.from(body.querySelectorAll<HTMLElement>('.uav-labels > span[data-anchor="' + side + '"]:not([data-exit])')).filter((el) => el.getClientRects().length);
-      const boxes = els.map((el) => el.getBoundingClientRect());
-      standing(boxes.map((b, i) => ({ at: b.top + b.height / 2, rank: Number(els[i]!.dataset.rank) })), boxes[0]?.height ?? 0).forEach((on, i) => els[i]!.toggleAttribute('data-thin', !on));
+      thinLabels(body, '.uav-labels > span[data-anchor="' + side + '"]:not([data-exit])', (els) =>
+        declutter(els.map((el) => { const b = el.getBoundingClientRect(); return { x: 0, w: 1, y: b.top, h: b.height, rank: Number(el.dataset.rank) }; }), 0));
     }
   },
 
   paint(body, scene) {
     const plot = ensure(body, 'div', 'uav-plot');
-    let svg = plot.querySelector<SVGSVGElement>(':scope > svg');
-    if (!svg) {
-      svg = plot.appendChild(document.createElementNS('http://www.w3.org/2000/svg', 'svg'));
-      svg.setAttribute('viewBox', '0 0 100 100'); svg.setAttribute('preserveAspectRatio', 'none'); svg.setAttribute('data-hits', 'y');
-    }
+    const svg = ensureSvg(plot);
+    hits(svg, 'y');
     keyed(svg, scene.nodes.filter((n): n is PathNode => n.part === 'plot' && n.kind === 'path'), () => 'path', (el, n) => { el.setAttribute('d', n.d ?? ''); el.setAttribute('data-fill', ''); });
     // The nodes and their names say again what each ribbon's name says whole.
     const nodes = ensure(plot, 'div', 'uav-nodes'), labels = ensure(body, 'div', 'uav-labels');
@@ -64,3 +59,6 @@ export const linkPainter: LayoutPainter = {
     keyed(labels, scene.nodes.filter((n): n is TextNode => n.part === 'labels' && n.kind === 'text'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-y', 1 - n.t!); el.setAttribute('data-anchor', n.anchor); });
   },
 };
+
+/** Register the `link` mark's painter. */
+export const registerLinkPainter = (): void => registerPainter(linkPainter);

@@ -7,10 +7,9 @@
   <link rel="stylesheet" href="/src/bench.css">
   <link rel="stylesheet" href="/src/material.css">
   <link rel="stylesheet" href="/src/marks.css">
-  <script>/* The theme the bench keeps (src/theme.ts), set before the page paints. */ try { const p = new URLSearchParams(location.search), t = p.has('embed') ? p.get('theme') : localStorage.getItem('ua-bench-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch {}</script>
 </head>
 <body>
-  <nav><a href="playground.html">Playground</a> <a href="./">Views</a> <a href="marks.html" aria-current="page">Marks</a> <a href="tokens.html">Tokens</a></nav>
+  <!-- bench:nav -->
   <form id="controls">
     <fieldset><legend>Themes</legend>
       <label><input type="checkbox" name="both"> both, side by side</label>

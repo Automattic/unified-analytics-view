@@ -26,14 +26,20 @@ export function ensure<K extends keyof HTMLElementTagNameMap>(parent: Element, t
   if (!el) { el = document.createElement(tag); el.className = cls; parent.appendChild(el); }
   return el;
 }
-/** The one stretched SVG of a plot: paths are drawn in a 100 by 100 box. */
+/** A new SVG element. */
+export function svg<K extends keyof SVGElementTagNameMap>(tag: K): SVGElementTagNameMap[K] {
+  return document.createElementNS(SVG, tag);
+}
+/** The one stretched SVG of a plot: paths are drawn in a 100 by 100 box. It is a picture, hidden from assistive
+ * technology, unless hits() makes it the holder of the points. */
 export function ensureSvg(parent: Element): SVGSVGElement {
-  let svg = parent.querySelector<SVGSVGElement>(':scope > svg');
-  if (!svg) {
-    svg = parent.appendChild(document.createElementNS(SVG, 'svg'));
-    svg.setAttribute('viewBox', '0 0 100 100'); svg.setAttribute('preserveAspectRatio', 'none'); svg.setAttribute('aria-hidden', 'true');
+  let el = parent.querySelector<SVGSVGElement>(':scope > svg');
+  if (!el) {
+    el = parent.appendChild(svg('svg'));
+    el.setAttribute('viewBox', '0 0 100 100'); el.setAttribute('preserveAspectRatio', 'none');
+    el.setAttribute('aria-hidden', 'true');
   }
-  return svg;
+  return el;
 }
 
 /** Reconcile the children of `parent` with scene nodes, by data-key: new keys enter, missing keys leave (motion.ts
@@ -73,6 +79,13 @@ function move(parent: Element, el: Element, before: Element | null): void {
 export function attr(el: Element, name: string, v: string | number | null | undefined): void {
   if (el.getAttribute(name) === (v == null ? null : String(v))) return;
   if (v == null) el.removeAttribute(name); else el.setAttribute(name, String(v));
+}
+/** Make an element the holder of a layout's points, its points running `way` ("x" across, "y" down), or, with none,
+ * a picture that says again what the readout says, and so hidden from assistive technology. */
+export function hits(el: Element, way: string | null): void {
+  attr(el, 'data-hits', way); attr(el, 'aria-hidden', way ? null : 'true');
+  // A holder that stands down drops what the keyboard set on it (Keys.paint and name()), or it stays a tab stop with nothing in it.
+  if (!way) for (const name of ['role', 'tabindex', 'aria-label', 'aria-orientation', 'aria-activedescendant']) el.removeAttribute(name);
 }
 /** Hand a part the page's direction back, inside a body that is set from the left (cartesian.ts): a legend reads
  * the way the page does, under a plot that does not turn. The figure the body is in has the page's.

@@ -1,4 +1,4 @@
-import { applies, formatDimension, registerMark, registerPreset, roleOf, rowKeys } from '@unified-analytics/core';
+import { SERIES, applies, declutter, formatDimension, isDim, isMetric, layerKeys, registerMark, registerPreset, roleOf, rowKeys, ruleFor, tooManySeries } from '@unified-analytics/core';
 import type { CustomMark, FitRule, Part, PathNode, PlacedNode, RectNode, Row, SceneNode, TextNode } from '@unified-analytics/core';
 
 /* The `link` mark: a ribbon from a value of one dimension to a value of another, as a custom mark (core's marks.ts).
@@ -16,7 +16,6 @@ import type { CustomMark, FitRule, Part, PathNode, PlacedNode, RectNode, Row, Sc
  *
  * It depends on core alone, and on the DOM package for its painter. One step is two stacks and a curve between them. */
 
-const SERIES = 6;       // the series colours there are: a source takes one
 const GAP = 0.02;       // of the plot's height, between one node and the next
 /** px across a node. A scene has no pixels, so this is each painter's, as a dot's radius is. */
 export const NODE = 8;
@@ -33,14 +32,6 @@ export const LINK_RULES: FitRule[] = [
     hide: [], fallback: 'heatmap', keep: 'marks' },
 ];
 
-/** Which of one column's labels stand, where each takes `line` of the column: the larger node's first, and one that
- * would meet a label that stands does not. `at` is where a label's middle is and `rank` its node's place by size. */
-export function standing(labels: { at: number; rank: number }[], line: number): boolean[] {
-  const kept: number[] = [], on = labels.map(() => false);
-  labels.map((l, i) => [l, i] as const).sort((a, b) => a[0].rank - b[0].rank).forEach(([l, i]) => { if (kept.every((k) => Math.abs(k - l.at) >= line)) { kept.push(l.at); on[i] = true; } });
-  return on;
-}
-
 const round = (n: number) => Math.round(n * 100) / 100;
 /** A ribbon in a box 100 by 100: from `y0`, `w0` deep, on the left edge to `y1`, `w1` deep, on the right, all in ratios of the box. */
 const ribbon = (y0: number, w0: number, y1: number, w1: number) => { const [a, b, c, d] = [y0, y0 + w0, y1, y1 + w1].map((y) => round(y * 100)); return 'M0,' + a + 'C50,' + a + ' 50,' + c + ' 100,' + c + 'L100,' + d + 'C50,' + d + ' 50,' + b + ' 0,' + b + 'Z'; };
@@ -53,15 +44,14 @@ export const linkMark: CustomMark = {
   scene({ layers, guides, query, result, catalog }) {
     const l = layers[0]!, { x: src, y: tgt, size: m } = l.encode || {}, by = query.by || [];
     if (layers.length > 1) throw new Error('A Sankey draws one "' + l.mark + '" layer, and this view has ' + layers.length + '. Keep one, with the source on x, the target on y and the metric on size.');
-    const dim = (f: unknown): f is string => typeof f === 'string' && f in catalog.dimensions;
-    if (!dim(src) || !dim(tgt) || src === tgt) throw new Error('A "' + l.mark + '" layer runs from the values of one dimension to the values of another, the source on x and the target on y, and this one has ' + JSON.stringify(src) + ' on x and ' + JSON.stringify(tgt) + ' on y. '
+    if (!isDim(catalog, src) || !isDim(catalog, tgt) || src === tgt) throw new Error('A "' + l.mark + '" layer runs from the values of one dimension to the values of another, the source on x and the target on y, and this one has ' + JSON.stringify(src) + ' on x and ' + JSON.stringify(tgt) + ' on y. '
       + (by.length === 2 ? 'Encode "' + by[0] + '" on x and "' + by[1] + '" on y.' : 'Make query.by two dimensions, the source and then the target, and encode the first on x and the second on y.'));
-    if (typeof m !== 'string') throw new Error('A "' + l.mark + '" layer needs the metric each ribbon is as wide as on size, and this one has ' + JSON.stringify(m) + ' there. Encode one of the query\'s metrics: ' + query.metrics.join(', ') + '.');
+    if (!isMetric(catalog, m)) throw new Error('A "' + l.mark + '" layer needs the metric each ribbon is as wide as on size, and this one has ' + JSON.stringify(m) + ' there. Encode one of the query\'s metrics: ' + query.metrics.join(', ') + '.');
     // A node is as tall as the engine's total for its value. The rows are one per pair, and are never summed to make one.
     const none = [src, tgt].find((d) => !Array.isArray(result.totalsBy?.[d]));
     if (none) throw new Error('A "' + l.mark + '" layer makes each node as tall as the engine\'s total for its value, and this result has no totalsBy for "' + none + '". Return it from the query layer: a row for each value of "' + none + '", holding its total of "' + m + '".');
     const sources = result.totalsBy![src]!.length;
-    if (sources > SERIES) throw new Error('Running from "' + src + '" makes ' + sources + ' sources, and there are ' + SERIES + ' series colours. Add "limit": ' + SERIES + ' to the query, or less.');
+    if (sources > SERIES) throw new Error(tooManySeries('Running from "' + src + '"', sources, 'sources'));
 
     // Each column in the engine's order. A value with no total, or one of zero, has no node: there is nothing to be as tall as.
     const cols = [src, tgt].map((d) => { const rows = result.totalsBy![d]!, keys = rowKeys(rows, d); return rows.map((r, i): Node => ({ key: keys.get(r)!, value: r[d], v: r[m] as number, i, y: 0, h: 0 })).filter((n) => n.v > 0); });
@@ -84,7 +74,7 @@ export const linkMark: CustomMark = {
 
     // Paint follows the source: a series colour for each, by its place in the engine's order, and its ribbons in that
     // colour's soft tone. A target is where several sources meet, so it is no one's colour.
-    const id = roleOf(l) + ':' + l.mark, role = roleOf(l), paint = (n: Node) => 'series.' + (n.i + 1);
+    const id = layerKeys(layers)[0]!, role = roleOf(l), paint = (n: Node) => 'series.' + (n.i + 1);
     const nodes: SceneNode[] = flows.map((f): PathNode => ({ key: id + ':' + key(f.r), part: 'plot', kind: 'path', d: ribbon(f.y0, ends(f)[0], f.y1, ends(f)[1]), points: [], fill: true,
       paint: paint(f.s), opacity: 0.35, tone: 'soft', row: key(f.r), layer: 'data', role }));
     const dims = [src, tgt];
@@ -103,7 +93,7 @@ export const linkMark: CustomMark = {
   // A box as wide as the view and as tall as a plot with axes is, or as the room where that is less. The nodes stand at
   // its edges, the ribbons run between them, and each label is inside its column, over the ribbons.
   place(scene, W, room, container) {
-    const rule = (id: string) => container.rules.fit.concat(LINK_RULES).find((r) => r.layout === scene.layout && r.id === id);
+    const rule = (id: string) => ruleFor(container.rules.fit.concat(LINK_RULES), scene.layout, id);
     const h = room == null ? container.rules.axes.height : Math.max(rule('marks')?.needs.block ?? 0, Math.min(container.rules.axes.height, room));
     // Core asks a custom mark's `guides` rule only for a ramp or a key to sizes, so the labels' room is asked here.
     const guides = rule('guides'), labelled = scene.parts.includes('labels') && !(guides && applies(guides, { view: { inline: W, block: room } }));
@@ -116,8 +106,9 @@ export const linkMark: CustomMark = {
     // A label stays inside the box, and gives way to the label of a larger node it would meet.
     const at = (n: TextNode) => Math.min(Math.max((1 - n.t!) * h, LINE / 2), h - LINE / 2);
     for (const side of [0, 1]) {
-      const col = labels.filter((n) => n.x === side), on = standing(col.map((n) => ({ at: at(n), rank: n.rank! })), LINE);
-      nodes.push(...col.filter((_, i) => on[i]).map((n): PlacedNode => ({ key: n.key, kind: 'text', x: side ? W - NODE - LABEL : NODE + LABEL, y: round(at(n)), text: n.text, anchor: n.anchor, baseline: 'middle', font: n.font, paint: n.paint, layer: n.layer })));
+      // One column's labels, each a line tall about its middle: the larger node's first, and one that would meet a label that stands goes.
+      const col = labels.filter((n) => n.x === side), gone = declutter(col.map((n) => ({ x: 0, w: 1, y: at(n) - LINE / 2, h: LINE, rank: n.rank })), 0);
+      nodes.push(...col.filter((_, i) => !gone[i]).map((n): PlacedNode => ({ key: n.key, kind: 'text', x: side ? W - NODE - LABEL : NODE + LABEL, y: round(at(n)), text: n.text, anchor: n.anchor, baseline: 'middle', font: n.font, paint: n.paint, layer: n.layer })));
     }
     return { nodes, height: h, plot: { w: W, h } };
   },

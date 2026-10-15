@@ -1,9 +1,8 @@
-import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { PRESETS, buildScene, customMarks, customPresets, expand, makeContainer, place, registerMark, registerPreset, resolve, seqScale } from '@unified-analytics/core';
+import { PRESETS, customMarks, customPresets, expand, makeContainer, place, registerMark, registerPreset, resolve, seqScale } from '@unified-analytics/core';
 import type { CustomMark, FitRule, Part, PresetLibrary, RectNode, Spec } from '@unified-analytics/core';
-import viewSchema from '@unified-analytics/core/schema/view.schema.json';
 import { catalog, runQuery, samples } from '@unified-analytics/fixtures';
+import { errOf as err, run, validView as view } from './helpers.ts';
 
 // Step 8 of docs/chart-coverage-plan.md, part 1: the registry of custom marks. Held here with a mark made for the
 // test, so nothing in it depends on a map. The `geo` mark is in test/geo.test.ts, and `fallback` in test/fallback.test.ts.
@@ -25,12 +24,6 @@ const toy: CustomMark = {
 registerMark('toy', toy);
 
 const tiles: Spec = { spec: 'view/0', title: 'Tiles', query: { metrics: ['pageviews'], by: ['page'], range: '28d', limit: 8 }, layers: [{ mark: 'toy', encode: { x: 'page', color: 'pageviews' } }] };
-const run = (spec: Spec, w: number, h: number | null = null) => {
-  const container = makeContainer(w, h), result = runQuery(spec.query), plan = resolve(spec, result, container, catalog), ratio = buildScene(plan, spec.query, result, catalog);
-  return { plan, ratio, scene: place(ratio, container) };
-};
-const err = (f: () => unknown) => { try { f(); } catch (e) { return (e as Error).message; } };
-const view = new Ajv().compile(viewSchema);
 
 describe('the registry', () => {
   it('is a map and two functions: a mark is registered under a name, and found by it', () => {
@@ -40,6 +33,7 @@ describe('the registry', () => {
   it('refuses a name core has, as a mark or as a layout, and one that is not a name', () => {
     expect(err(() => registerMark('bar', toy))).toBe('A custom mark cannot be named "bar", which core has already. Register it under another name.');
     expect(err(() => registerMark('rows', toy))).toBe('A custom mark cannot be named "rows", which core has already. Register it under another name.');
+    expect(err(() => registerMark('toy-x', toy))).toBe('The mark registered as "toy-x" has fit rules for the "toy" layout, and a custom mark\'s layout is its name. Make the mark under the name "toy-x", as its package\'s maker lets you, or set "layout" to "toy-x" in each of its rules.');
     expect(err(() => registerMark('my mark', toy))).toBe('A custom mark cannot be named "my mark": the name is written into specs and selectors. Use letters, digits, "_" and "-" only.');
     expect(customMarks().has('bar')).toBe(false);
   });
@@ -48,7 +42,7 @@ describe('the registry', () => {
     expect(view({ ...tiles, layers: [{ mark: 'nope' }] })).toBe(true);
     expect(view({ ...tiles, layers: [{ mark: 'not a name' }] })).toBe(false);
     const says = err(() => run({ ...tiles, layers: [{ mark: 'nope', encode: { x: 'page' } }] }, 346))!;
-    expect(says).toMatch(/^Layer 1 has the mark "nope", which is not built in and is not registered\. Built in: line, area, bar, rule, dot, text, .*arc, cell\. Registered: .*toy.*\. Use one of those, or register it with registerMark\("nope", …\) before the view is resolved\.$/);
+    expect(says).toMatch(/^Layer 1 has the mark "nope", which is not built in and is not registered\. Built in: line, area, bar, rule, text, arc, cell, dot, tick, unit\. Registered: .*toy.*\. Use one of those, or register it with registerMark\("nope", …\) before the view is resolved\.$/);
   });
 });
 

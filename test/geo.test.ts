@@ -1,26 +1,17 @@
-import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
 import { CONTAINER_RULES, PRESETS, buildScene, customMarks, customPresets, expand, makeContainer, notShownNote, place, registerMark, resolve, type CircleNode, type PainterName, type PathNode, type Result, type Spec } from '@unified-analytics/core';
-import viewSchema from '@unified-analytics/core/schema/view.schema.json';
 import { compileFitRules } from '@unified-analytics/dom';
 import { catalog, countries, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
 import { GEO_RULES, geoMark, type Shapes } from '@unified-analytics/geo';
 import { geoPainter, zoomBox } from '@unified-analytics/geo/dom';
 import world from '@unified-analytics/geo/countries-110m.json';
+import { errOf as err, run, shapes, validView as view } from './helpers.ts';
 
 // Step 8 of docs/chart-coverage-plan.md: the `geo` mark, which is a custom mark, registered by the fixtures with their
 // boundary shapes. No prototype knows it, so it is held to a sweep, facts and golden scenes of its own. The registry
 // and `fallback` are in test/registry.test.ts.
 const map = moreSamples.map!.spec, symbols = moreSamples.symbols!.spec, unmapped = moreSamples.unmapped!.spec;
 const both: Spec = { ...map, query: { ...map.query, metrics: ['visitors', 'pageviews'] }, layers: [{ mark: 'geo', encode: { x: 'country', color: 'visitors', size: 'pageviews' } }] };
-const run = (spec: Spec, w: number, h: number | null = null, scenario: (typeof scenarios)[number] = 'typical', painter: PainterName = 'svg', result: Result = runQuery(spec.query, scenario)) => {
-  const container = makeContainer(w, h, painter, 8), plan = resolve(spec, result, container, catalog);
-  const ratio = buildScene(plan, spec.query, result, catalog);
-  return { plan, ratio, scene: place(ratio, container), result };
-};
-const err = (f: () => unknown) => { try { f(); } catch (e) { return (e as Error).message; } };
-const view = new Ajv().compile(viewSchema);
-const shapes = (ratio: { nodes: unknown[] }) => (ratio.nodes as PathNode[]).filter((n) => n.part === 'plot' && n.kind === 'path');
 const dots = (ratio: { nodes: unknown[] }) => (ratio.nodes as CircleNode[]).filter((n) => n.part === 'points' && n.kind === 'circle');
 const ASPECT = 2.029;   // Equal Earth, fitted to the fixture's shapes
 

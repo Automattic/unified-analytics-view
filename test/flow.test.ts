@@ -1,24 +1,15 @@
-import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { PRESETS, buildScene, customMarks, customPresets, expand, makeContainer, place, resolve, type PainterName, type PathNode, type RectNode, type Result, type Spec, type TextNode } from '@unified-analytics/core';
-import viewSchema from '@unified-analytics/core/schema/view.schema.json';
+import { PRESETS, customMarks, customPresets, expand, makeContainer, place, resolve, type PainterName, type PathNode, type Result, type Spec, type TextNode } from '@unified-analytics/core';
 import { compileFitRules } from '@unified-analytics/dom';
 import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
 import { LINK_RULES, NODE, standing } from '@unified-analytics/flow';
 import { linkPainter } from '@unified-analytics/flow/dom';
+import { errOf as err, rects, run, validView as view } from './helpers.ts';
 
 // Step 8 of docs/uncommon-coverage-plan.md: the `link` mark, a custom mark the fixtures register, and the Sankey of one
 // step it draws. No prototype knows it, so it is held to a sweep, facts and golden scenes of its own.
 const sankey = moreSamples.sankey!.spec;
-const run = (spec: Spec, w: number, h: number | null = null, scenario: (typeof scenarios)[number] = 'typical', painter: PainterName = 'svg', result: Result = runQuery(spec.query, scenario)) => {
-  const container = makeContainer(w, h, painter, 8), plan = resolve(spec, result, container, catalog);
-  const ratio = buildScene(plan, spec.query, result, catalog);
-  return { plan, ratio, scene: place(ratio, container), result };
-};
-const err = (f: () => unknown) => { try { f(); } catch (e) { return (e as Error).message; } };
-const view = new Ajv().compile(viewSchema);
 const ribbons = (ratio: { nodes: unknown[] }) => (ratio.nodes as PathNode[]).filter((n) => n.part === 'plot' && n.kind === 'path');
-const rects = (ratio: { nodes: unknown[] }) => (ratio.nodes as RectNode[]).filter((n) => n.part === 'plot' && n.kind === 'rect');
 const labels = (ratio: { nodes: unknown[] }) => (ratio.nodes as TextNode[]).filter((n) => n.part === 'labels');
 const layered = (encode: Record<string, string | number>, query = sankey.query): Spec => ({ query, layers: [{ mark: 'link', encode }] });
 const GAP = 0.02, ROOM = 1 - GAP * 5;      // six sources, so five gaps: what is left of the plot's height is the nodes'

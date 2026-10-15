@@ -1,25 +1,16 @@
-import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, PRESETS, buildScene, customMarks, customPresets, expand, fallbackRule, fills, makeContainer, place, resolve, type PainterName, type RectNode, type Result, type Spec, type TextNode } from '@unified-analytics/core';
-import viewSchema from '@unified-analytics/core/schema/view.schema.json';
+import { CONTAINER_RULES, PRESETS, customMarks, customPresets, expand, fallbackRule, fills, type PainterName, type Spec, type TextNode } from '@unified-analytics/core';
 import { compileFitRules } from '@unified-analytics/dom';
 import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
 import { PARTITION_RULES, boxNames, squarify, type Box } from '@unified-analytics/partition';
 import { nameFits, partitionPainter, stepBox } from '@unified-analytics/partition/dom';
+import { errOf as err, rects, run, validView as view } from './helpers.ts';
 
 // Step 9 of docs/uncommon-coverage-plan.md: the `partition` mark, a custom mark that draws a treemap. No prototype
 // knows it, so it is held to a sweep, facts and golden scenes of its own.
 const treemap = moreSamples.treemap!.spec, tiles = moreSamples.treemap1!.spec;
 const limited: Spec = { ...treemap, query: { ...treemap.query, limit: 3 } };
 const ramped: Spec = { spec: 'view/0', query: { metrics: ['pageviews', 'visitors'], by: ['section', 'page'], range: '28d' }, layers: [{ mark: 'partition', encode: { x: 'section', detail: 'page', size: 'pageviews', color: 'visitors' } }] };
-const run = (spec: Spec, w: number, h: number | null = null, scenario: (typeof scenarios)[number] = 'typical', painter: PainterName = 'svg', result: Result = runQuery(spec.query, scenario)) => {
-  const container = makeContainer(w, h, painter, 8), plan = resolve(spec, result, container, catalog);
-  const ratio = buildScene(plan, spec.query, result, catalog);
-  return { plan, ratio, scene: place(ratio, container), result };
-};
-const err = (f: () => unknown) => { try { f(); } catch (e) { return (e as Error).message; } };
-const view = new Ajv().compile(viewSchema);
-const rects = (s: { nodes: unknown[] }) => (s.nodes as RectNode[]).filter((n) => n.part === 'plot' && n.kind === 'rect');
 const parents = (s: { nodes: unknown[] }) => rects(s).filter((n) => !n.pair), kids = (s: { nodes: unknown[] }, of?: string) => rects(s).filter((n) => n.pair && (of == null || n.pair[0] === of));
 const names = (s: { nodes: unknown[] }) => (s.nodes as TextNode[]).filter((n) => n.part === 'plot' && n.kind === 'text');
 const ASPECT = 1.6, area = (b: Box) => b.w * b.h;

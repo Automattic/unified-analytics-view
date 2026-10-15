@@ -1,23 +1,15 @@
-import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { buildScene, customMarks, customPresets, expand, makeContainer, place, resolve, type CircleNode, type PainterName, type PathNode, type Spec } from '@unified-analytics/core';
-import viewSchema from '@unified-analytics/core/schema/view.schema.json';
+import { customMarks, customPresets, expand, place, type CircleNode, type PainterName, type Spec } from '@unified-analytics/core';
 import { compileFitRules } from '@unified-analytics/dom';
-import { catalog, countries, moreSamples, runQuery, scenarios, tiles } from '@unified-analytics/fixtures';
+import { countries, moreSamples, scenarios, tiles } from '@unified-analytics/fixtures';
 import { GEO_RULES, geoMark, geoRules, registerGeo } from '@unified-analytics/geo';
 import { geoPainter, geoPainterAs } from '@unified-analytics/geo/dom';
+import { run, shapes, validView as view } from './helpers.ts';
 
 // Step 10 of docs/uncommon-coverage-plan.md: tile maps. No new mark: the `geo` mark, registered again by the fixtures
 // under a name for each of two files of tiles. The mark itself is held in test/geo.test.ts, and what is held here is
 // what tiles add: shapes on a flat sheet, a mark under another name, and the two samples.
 const grid = moreSamples.tiles!.spec, hex = moreSamples.hexes!.spec, map = moreSamples.map!.spec;
-const run = (spec: Spec, w: number, h: number | null = null, scenario: (typeof scenarios)[number] = 'typical', painter: PainterName = 'svg') => {
-  const result = runQuery(spec.query, scenario), container = makeContainer(w, h, painter, 8), plan = resolve(spec, result, container, catalog);
-  const ratio = buildScene(plan, spec.query, result, catalog);
-  return { plan, ratio, scene: place(ratio, container), result };
-};
-const view = new Ajv().compile(viewSchema);
-const shapes = (ratio: { nodes: unknown[] }) => (ratio.nodes as PathNode[]).filter((n) => n.part === 'plot' && n.kind === 'path');
 /** The corners of a path of moves and lines. It is closed by a Z, so the first is not said again. */
 const corners = (d: string) => { const n = d.match(/-?[\d.]+/g)!.map(Number); return Array.from({ length: n.length / 2 }, (_, i) => [n[i * 2]!, n[i * 2 + 1]!] as const); };
 const sides = (d: string) => corners(d).map(([x, y], i, all) => Math.hypot(x - all[(i + 1) % all.length]![0], y - all[(i + 1) % all.length]![1]));

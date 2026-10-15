@@ -12,6 +12,8 @@ import type { Catalog, Container, Layer, Layout, Plan, PlanShape, PresetLibrary,
 /* Start from everything the spec asks for, then apply the container's reductions
  * in order until the view fits. Layers carry a role; reductions act on roles. */
 const ROLE_NAMES: Partial<Record<Role, string>> = { comparison: 'comparison series', reference: 'reference lines', context: 'context fill' };
+/** What a grid's or a custom mark's two keys are called where they are given up. */
+const KEY_NAMES = { ramp: 'the colour ramp', size: 'the key to sizes' } as const;
 
 /* The layout a layer's fields ask for: what is on x, on y and on color, first match first. `any` asks nothing of its channel. */
 type FieldKind = 'dimension' | 'metric' | 'any';
@@ -265,11 +267,11 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
       if (p.layout === 'radial' && p.guides.rim) { p.guides = {}; return 'the labels round the rim'; }
       // A grid's two keys go together: the ramp, and the key to sizes where it has dots.
       if (p.layout === 'matrix' && (p.guides.ramp || p.guides.size)) {
-        const shown = buildScene(p, q, result, catalog).parts, said = (['ramp', 'size'] as const).filter((g) => shown.includes(g)).map((g) => (g === 'ramp' ? 'the colour ramp' : 'the key to sizes')).join(' and ');
+        const shown = buildScene(p, q, result, catalog).parts, said = (['ramp', 'size'] as const).filter((g) => shown.includes(g)).map((g) => KEY_NAMES[g]).join(' and ');
         p.guides = { ...p.guides, ramp: false, ...(p.guides.size != null && { size: false }) };
         return said || null;
       }
-      if (customMarks().has(p.layout)) { const key = keyed(); p.guides = {}; return key ? (key === 'ramp' ? 'the colour ramp' : 'the key to sizes') : null; }
+      if (customMarks().has(p.layout)) { const key = keyed(); p.guides = {}; return key ? KEY_NAMES[key] : null; }
       return null;
     },
     'drop-secondary': () => {
@@ -314,7 +316,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   // place() leaves the number out of a hole too small for it, by the `hole` rule and by the number's own width.
   if (p.layout === 'radial' && buildScene(p, q, result, catalog).parts.includes('hole') && !scene.nodes.some((n) => n.key === 'hole')) dropped.push('the number in the hole');
   if (p.layout === 'cartesian' && p.guides.x && labelled && !p.guides.pointLabels) dropped.push('the labels on the points');
-  if (p.layout === 'cartesian' && p.guides.x && sized && !p.guides.size) dropped.push('the key to sizes');
+  if (p.layout === 'cartesian' && p.guides.x && sized && !p.guides.size) dropped.push(KEY_NAMES.size);
   if (p.layout === 'rows' && columnsOf(catalog, p.layers).length > 1 && !p.guides.columns) dropped.push('the column headers');
   // The key a rule took before any reduction ran. One that went with the axes, or in `drop-guides`, is said there.
   if (noKey && (p.layout !== 'cartesian' || p.guides.x) && buildScene({ ...p, guides: { ...p.guides, unitKey: true } }, q, result, catalog).parts.includes('unit-key')) dropped.push('the key to what a glyph is worth');

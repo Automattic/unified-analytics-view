@@ -870,6 +870,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
   };
   layers.forEach((l, i) => {
     const enc = l.encode || {}, angle = enc.angle, r0 = enc.radius ?? 0, n = 'Layer ' + (i + 1), split = detailOf(catalog, l);
+    const twice = n + ' is a second layer split by color, and a circle is divided once. Remove one of them.';
     // A `unit` about a centre: seats round the half circle, in rings, a wedge of them and a series colour for each row.
     // A seat is one of the metric while the engine's total is a hundred or fewer, and beyond that the round number at
     // which the total is a hundred seats or fewer. Each row's seats are its own value in whole glyphs, so they need not
@@ -878,7 +879,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
       const m = angle, dim = enc.color, M = metricOf(catalog, m), rows = result.rows, total = M && result.totals[m as string];
       if (typeof m !== 'string' || !M || !isDim(catalog, dim)) throw new Error(n + ' is a "unit" about a centre, which is seats round a half circle, and has ' + held(m) + ' on angle and ' + held(dim) + ' on color. Put a metric on angle and a dimension on color. For a grid read against the metric\'s range, put the metric on x and nothing on angle.');
       if (l.sweep !== 'half') throw new Error(n + ' is a "unit" with a metric on angle and no "sweep", and its seats sit round a half circle. Add "sweep": "half" to the layer.');
-      if (keys) throw new Error(n + ' is a second layer split by color, and a circle is divided once. Remove one of them.');
+      if (keys) throw new Error(twice);
       if (rows.length > SERIES) throw new Error(tooManySeries('Splitting by "' + dim + '"', rows.length, 'groups of seats'));
       const own = rowKeys(rows, dim), k = (r: Row) => own.get(r)!, whole = M.unit === 'count';
       // With no total to read, the largest row is ten seats or fewer, as a stack's largest is ten glyphs.
@@ -942,7 +943,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
     if (isDim(catalog, enc.color)) {
       const m = angle as string, dim = enc.color, total = result.totals[m] || Infinity, inner = r0 as number;
       if (!(m in catalog.metrics)) throw new Error(n + ' splits by "' + dim + '" with ' + JSON.stringify(angle) + ' on angle. Put a metric on angle: each segment is its share of that metric\'s total.');
-      if (keys) throw new Error(n + ' is a second layer split by color, and a circle is divided once. Remove one of them.');
+      if (keys) throw new Error(twice);
       // With a second ring a row is a pair, so the segments are the engine's own rows for the first dimension.
       const whole = split ? result.totalsBy && result.totalsBy[dim] : result.rows;
       if (!whole) throw new Error(n + ' divides each "' + dim + '" by "' + split + '", and a segment\'s span is the engine\'s total for it: this result has no totalsBy. Return it from the query layer, or remove "detail".');
@@ -1113,6 +1114,8 @@ function checkValues(result: Result, catalog: Catalog): void {
   for (const d in result.totalsBy) result.totalsBy[d]!.forEach((r, i) => check(r, 'row ' + (i + 1) + ' of totalsBy["' + d + '"]'));
 }
 
+/** Which of a whole's two legends the plan shows: all of it, or the one line. */
+const legendPart = (legend: Guides['legend']): Part => (legend === 'top' ? 'legend-top' : 'legend');
 /** The scene for a plan, in ratios. It takes no size: plan for a container with no limits and this is everything the spec asks for. */
 export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Catalog): Scene {
   checkValues(result, catalog);
@@ -1153,14 +1156,14 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
     body = sceneRows(catalog, p.layers, result, p.rowLimit);
     unitKeyed();
     // The key to a divided row's series, under the rows: all of it, or the one line.
-    if (body.series && p.guides.legend) parts.push(p.guides.legend === 'top' ? 'legend-top' : 'legend');
+    if (body.series && p.guides.legend) parts.push(legendPart(p.guides.legend));
   } else if (p.layout === 'band') {
     // A unit there is a grid of cells in the band's part, where a bar is the band itself.
     const unit = p.layers.findIndex((l) => l.mark === 'unit');
     body = unit < 0 ? sceneBand(catalog, p.layers[0]!, result.rows, result.totals) : sceneGrid(catalog, p.layers[unit]!, layerKeys(p.layers)[unit]!, result);
     parts.push('band');
     unitKeyed();
-    if (p.guides.legend) parts.push(p.guides.legend === 'top' ? 'legend-top' : 'legend');
+    if (p.guides.legend) parts.push(legendPart(p.guides.legend));
   } else if (p.layout === 'radial') {
     body = sceneRadial(catalog, p.layers, q, result);
     parts.push('radial');
@@ -1168,7 +1171,7 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
     if (!parts.includes('number') && body.nodes.some((n) => n.part === 'hole')) parts.push('hole');
     if (p.guides.rim && body.nodes.some((n) => n.part === 'rim')) parts.push('rim');
     unitKeyed();
-    if (p.guides.legend) parts.push(p.guides.legend === 'top' ? 'legend-top' : 'legend');
+    if (p.guides.legend) parts.push(legendPart(p.guides.legend));
   } else if (customMarks().has(p.layout)) {
     // A custom mark builds its own scene, and says which of its parts the plan shows.
     const { parts: own, ...rest } = customMarks().get(p.layout)!.scene({ layers: p.layers, guides: p.guides, query: q, result, catalog });

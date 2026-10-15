@@ -1,22 +1,13 @@
 import { expand, resolve, unboundedContainer, type Spec } from '@unified-analytics/core';
-import { UaView, defineUaView, registerPainter, surfaceSheet } from '@unified-analytics/dom';
-import { catalog, moreSamples, runQuery, samples as known, type Scenario } from '@unified-analytics/fixtures';
-import { linkPainter } from '@unified-analytics/flow/dom';
-import { geoPainter, geoPainterAs } from '@unified-analytics/geo/dom';
-import { partitionPainter } from '@unified-analytics/partition/dom';
+import { UaView } from '@unified-analytics/dom';
+import { catalog, runQuery, type Scenario } from '@unified-analytics/fixtures';
 import { resizable } from './resizer.ts';
-import './theme.ts';
+import { boxIn, register, samples } from './setup.ts';
 
 /* The playground: write a spec, see the view it makes on the fixture engine. The spec and the controls live in the
  * URL's hash, so a reload or a shared link keeps them. */
-defineUaView();
-registerPainter(geoPainter);
-for (const name of ['geo-tiles', 'geo-hexes']) registerPainter(geoPainterAs(name));
-registerPainter(linkPainter);
-registerPainter(partitionPainter);
-document.adoptedStyleSheets.push(surfaceSheet());
+register();
 
-const samples = { ...known, ...moreSamples };
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 const controls = $<HTMLFormElement>('#controls'), editor = $<HTMLTextAreaElement>('#spec'), status = $('#status');
 const frame = $('#frame'), plan = $('#plan'), rows = $('#rows'), picker = controls.querySelector('select')!;
@@ -40,9 +31,7 @@ editor.value = hash.get('spec') ?? pretty(samples[picker.value]!.spec);
 
 function apply() {
   const { scenario, height } = Object.fromEntries(new FormData(controls)) as { scenario: Scenario; height: string };
-  // With a height the view is handed a box, as a row or a tile would hand it one.
-  frame.classList.toggle('ua-row', !!height); frame.classList.toggle('ua-stack', !height);
-  frame.style.blockSize = height ? height + 'px' : '';
+  boxIn(frame, height);
   const keep = new URLSearchParams({ scenario, height });
   // A sample unedited is kept by its name, so the link stays short; anything else by its text.
   if (picker.value) keep.set('sample', picker.value); else keep.set('spec', editor.value);

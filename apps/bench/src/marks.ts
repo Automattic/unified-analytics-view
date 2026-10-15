@@ -1,34 +1,20 @@
 import type { Catalog, Spec } from '@unified-analytics/core';
-import { UaView, defineUaView, registerPainter, surfaceSheet } from '@unified-analytics/dom';
-import { catalog, moreSamples, runQuery, samples, type Scenario } from '@unified-analytics/fixtures';
-import { linkPainter } from '@unified-analytics/flow/dom';
-import { geoPainter, geoPainterAs } from '@unified-analytics/geo/dom';
-import { partitionPainter } from '@unified-analytics/partition/dom';
-import './theme.ts';
+import { UaView } from '@unified-analytics/dom';
+import { catalog, runQuery, type Scenario } from '@unified-analytics/fixtures';
+import { el, register, samples } from './setup.ts';
 
 /* The marks: each one on its own, at a size where nothing has been given up, for tuning how it looks. A mark is
  * shown in each of the six series colours, on each of the three surfaces, and in the states it has. Every specimen
  * is a <ua-view> on the fixtures, so what is here is the real painter. "Both" sets the page beside itself, in each theme. */
-defineUaView();
-registerPainter(geoPainter);
-for (const name of ['geo-tiles', 'geo-hexes']) registerPainter(geoPainterAs(name));
-registerPainter(linkPainter);
-registerPainter(partitionPainter);
-document.adoptedStyleSheets.push(surfaceSheet());
+register();
 
 // Both themes side by side is this page's own; the theme itself is the bench's (theme.ts).
 const params = new URLSearchParams(location.search), both = params.has('both');
 const controls = document.querySelector<HTMLFormElement>('#controls')!, main = document.querySelector('main')!;
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
-  const e = document.createElement(tag);
-  if (cls) e.className = cls;
-  if (text != null) e.textContent = text;
-  return e;
-}
 
 const SERIES = ['chartreuse', 'grass', 'teal', 'steel', 'rose', 'orange'], SURFACES = ['page', 'card', 'raised', 'screen', 'frost', 'crystal'];
 const by = (metric: string, dim: string, compare = false) => ({ metrics: [metric], by: [dim], range: '28d', ...(compare && { compare: 'previous' as const }) });
-const S = (name: string) => (samples[name] ?? moreSamples[name])!.spec;
+const S = (name: string) => samples[name]!.spec;
 /** A metric that fell where a fall is bad: the fixtures' visitors, read the other way. */
 const worse: Catalog = { ...catalog, metrics: { ...catalog.metrics, visitors: { ...catalog.metrics.visitors!, polarity: 'down' } } };
 

@@ -1,6 +1,6 @@
 /* Every custom property the token stylesheet declares, read from the page's own
  * stylesheets, so this page cannot drift from what ships. Values follow the theme. */
-import './theme.ts';
+import { el, heading } from './setup.ts';
 const root = document.documentElement;
 const main = document.querySelector('#tokens')!;
 
@@ -19,12 +19,6 @@ function declared(): Map<string, string> {
   return out;
 }
 
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
-  const e = document.createElement(tag);
-  if (cls) e.className = cls;
-  if (text != null) e.textContent = text;
-  return e;
-}
 /** `var(--ua-color-neutral-300)` reads as `neutral-300`. */
 const short = (v: string) => v.replace(/var\(--ua-(?:color-)?([a-z0-9-]+)\)/g, '$1');
 const px = (n: number) => (Math.round(n * 10) / 10) + ' px';
@@ -38,9 +32,7 @@ function swatch(name: string) {
   return s;
 }
 function section(title: string, note: string, body: HTMLElement) {
-  const h2 = el('h2', '', title + ' ');
-  h2.append(el('small', '', note));
-  main.append(h2, body);
+  main.append(heading(title, note), body);
 }
 /** A frame with a width of its own. The fluid scales are sized in cqi, so they follow it. */
 function fluid() {

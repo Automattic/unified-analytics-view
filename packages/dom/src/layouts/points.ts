@@ -7,6 +7,7 @@ import { RULE } from '../chrome/rule.ts';
 import { thinLabels } from '../measure.ts';
 import { ANCHOR, label } from '../chrome/label.ts';
 import { DOT } from '../chrome/swatch.ts';
+import { centred } from '../chrome/tip.ts';
 import { unitDot } from '../chrome/unit.ts';
 import { ARROWS } from '../rove.ts';
 
@@ -85,7 +86,7 @@ export function measurePoints(body: HTMLElement): void {
   thinLabels(holder, ':scope > span:not([data-exit])', (labels) => {
     const room = holder.getBoundingClientRect();
     return declutter(labels.map((el) => {
-      const r = el.getBoundingClientRect(), mid = num(el, '--uav-x') * room.width - r.width / 2, x = Math.max(0, Math.min(mid, room.width - r.width));
+      const r = el.getBoundingClientRect(), c = num(el, '--uav-x') * room.width, mid = c - r.width / 2, x = centred(c, r.width, 0, room.width);
       prop(el, '--uav-nudge', x - mid + 'px');
       return { x, y: (1 - num(el, '--uav-t')) * room.height - CLEAR - dotRadius(num(el, '--uav-size') || undefined) - r.height, w: r.width, h: r.height, rank: Number(el.dataset.rank) || 0 };
     }));

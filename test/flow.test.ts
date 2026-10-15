@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PRESETS, buildScene, declutter, customMarks, customPresets, expand, makeContainer, place, resolve, type PainterName, type PathNode, type RectNode, type Result, type Spec, type TextNode } from '@unified-analytics/core';
+import { PRESETS, declutter, customMarks, customPresets, expand, makeContainer, place, resolve, type PainterName, type PathNode, type Result, type Spec, type TextNode } from '@unified-analytics/core';
 import { compileFitRules } from '@unified-analytics/dom';
 import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
 import { LINK_RULES, NODE } from '@unified-analytics/flow';

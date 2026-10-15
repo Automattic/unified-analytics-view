@@ -1,5 +1,5 @@
-import { CONTAINER_RULES, DELTA_FULL, NOTE_LEAST, NUMBER_SHORT, buildScene, expand, fallbackRule, fills, formatDimension, formatValue, gaveWay, metricOf, resolve, unboundedContainer } from '@unified-analytics/core';
-import type { Catalog, ContainerRules, Layer, Layout, Query, Result, Row, SceneNode, Spec } from '@unified-analytics/core';
+import { CONTAINER_RULES, DELTA_FULL, NOTE_LEAST, NUMBER_SHORT, buildScene, expand, fallbackRule, fills, gaveWay, resolve, unboundedContainer } from '@unified-analytics/core';
+import type { Catalog, ContainerRules, Layout, Result, SceneNode, Spec } from '@unified-analytics/core';
 import { compileFitRules, type FitExtras } from './compile.ts';
 import { LEGEND_LINE } from './chrome/legend.ts';
 import { CHROME_CSS, swatch } from './chrome/index.ts';
@@ -8,7 +8,8 @@ import { X_AXIS_FACE } from './chrome/axes.ts';
 import { attr, ensure, keyed, paintVar, text } from './dom.ts';
 import { DOTS_CSS } from './dots.ts';
 import { PIXELS_CSS, pixels } from './pixels.ts';
-import { KEYS_CSS, Keys, companionLabel, companions, hideReadout, readoutOf } from './keys.ts';
+import { paintTable } from './table.ts';
+import { KEYS_CSS, Keys, hideReadout, readoutOf } from './keys.ts';
 import { LAYOUTS, painterOf } from './layouts/index.ts';
 import { NUMBER_FITS, fitNumber, readNumber } from './measure.ts';
 import { MOTION_CSS, begin, register, settle, still } from './motion.ts';
@@ -197,54 +198,6 @@ export function check(spec: Spec, result: Result, catalog: Catalog): void {
 export function rulesOver(given: Partial<ContainerRules> = {}): ContainerRules {
   const d = CONTAINER_RULES;
   return { ...d, ...given, axes: { ...d.axes, ...given.axes }, bare: { ...d.bare, ...given.bare }, rows: { ...d.rows, ...given.rows }, tldrValue: { ...d.tldrValue, ...given.tldrValue } };
-}
-
-/** A result by two dimensions as a pivot: a row per value of the first, a column per value of the second for each
- * field, then the field over all of them. Totals are the engine's, per value of each dimension, so a cell is empty
- * where the result has none. The columns run in the engine's order, as the series of a plot do. */
-export function pivot(q: Query, result: Result, fields: string[]): { cols: Row[string][]; rows: { key: Row[string]; cells: Row[string][] }[]; foot: Row[string][] } {
-  const [a, b] = q.by as [string, string], uniq = (rows: Row[], d: string) => [...new Set(rows.map((r) => r[d]))];
-  const of = (d: string, v: Row[string]) => result.totalsBy?.[d]?.find((t) => t[d] === v);
-  const cols = uniq(result.totalsBy?.[b] ?? result.rows, b);
-  return {
-    cols,
-    rows: uniq(result.rows, a).map((key) => {
-      const at = result.rows.filter((r) => r[a] === key);
-      return { key, cells: [...cols.flatMap((c) => fields.map((f) => at.find((r) => r[b] === c)?.[f])), ...fields.map((f) => of(a, key)?.[f])] };
-    }),
-    foot: [...cols.flatMap((c) => fields.map((f) => of(b, c)?.[f])), ...fields.map((f) => result.totals[f])],
-  };
-}
-
-/* The table is rebuilt whole: nothing in it moves, so there is nothing to keep. Totals are the engine's, never a sum of the rows. */
-function paintTable(table: HTMLTableElement, title: string | undefined, q: Query, result: Result, catalog: Catalog, layers: Layer[]): void {
-  const by = q.by || [], prev = q.compare === 'previous';
-  // A companion of a metric that a layer encodes has a column after it, under its suffix, or its own label where the catalog has an entry for it, as the readout says it, and in its own unit. With two dimensions the table is a pivot, and has none.
-  const more = (m: string) => (by.length === 2 ? [] : companions(m, result.rows[0], layers));
-  const fields = q.metrics.flatMap((m) => [m, ...(prev ? [m + '@previous'] : []), ...more(m)]);
-  const label = (f: string) => { const [m, of] = f.split('@'); return catalog.metrics[m!]!.label + (of == null ? '' : ', ' + (of === 'previous' ? 'previous period' : companionLabel(f, catalog))); };
-  const row = (parent: HTMLElement, cells: [text: string, tag: 'th' | 'td', num?: boolean][]) => {
-    const tr = parent.appendChild(document.createElement('tr'));
-    for (const [s, tag, num] of cells) { const c = tr.appendChild(document.createElement(tag)); c.textContent = s; if (num) c.setAttribute('data-num', ''); if (tag === 'th') c.scope = parent.tagName === 'THEAD' ? 'col' : 'row'; }
-  };
-  table.replaceChildren();
-  if (title) table.createCaption().textContent = title;
-  if (by.length === 2) {
-    // Two dimensions: the first down the side, the second across, and each field once more for the whole row.
-    const p = pivot(q, result, fields), per = (v: Row[string][]) => v.map((x, i): [string, 'td', boolean] => [x === undefined ? '' : cell(x, fields[i % fields.length]!), 'td', true]);
-    const cell = (v: Row[string], f: string) => formatValue(v as number | null, catalog.metrics[f.replace('@previous', '')]!, 'exact'), dim = (i: number, v: Row[string]) => formatDimension(v, catalog.dimensions[by[i]!]!);
-    row(table.createTHead(), [[catalog.dimensions[by[0]!]!.label, 'th'], ...p.cols.flatMap((c) => fields.map((f): [string, 'th', boolean] => [dim(1, c) + (fields.length > 1 ? ', ' + label(f) : ''), 'th', true])), ...fields.map((f): [string, 'th', boolean] => [label(f), 'th', true])]);
-    const tbody = table.createTBody();
-    for (const r of p.rows) row(tbody, [[dim(0, r.key), 'th'], ...per(r.cells)]);
-    row(table.createTFoot(), [['Total', 'th'], ...per(p.foot)]);
-    return;
-  }
-  row(table.createTHead(), [...by.map((d): [string, 'th'] => [catalog.dimensions[d]!.label, 'th']), ...fields.map((f): [string, 'th', boolean] => [label(f), 'th', true])]);
-  const value = (v: Row[string], f: string) => formatValue(v as number | null, metricOf(catalog, f)!, 'exact');
-  const body = table.createTBody(), totals = fields.map((f): [string, 'td', boolean] => [value(result.totals[f], f), 'td', true]);
-  for (const r of result.rows) row(body, [...by.map((d): [string, 'th'] => [formatDimension(r[d], catalog.dimensions[d]!), 'th']), ...fields.map((f): [string, 'td', boolean] => [value(r[f], f), 'td', true])]);
-  if (!by.length) row(body, totals);
-  else row(table.createTFoot(), [['Total', 'th'], ...by.slice(1).map((): [string, 'td'] => ['', 'td']), ...totals]);
 }
 
 function paintNumber(el: HTMLElement, nodes: SceneNode[]): void {

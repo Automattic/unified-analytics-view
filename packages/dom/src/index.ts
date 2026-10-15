@@ -9,3 +9,4 @@ export { ANCHOR, label, paintAxes, paintLegend, paintRamp, paintSize, paintUnitK
 export { chooseItem, hideReadout, placeReadout, readoutOf, roveItems, unlist } from './keys.ts';
 export { ARROWS, hovers, pressed, rove, type How, type Roving } from './rove.ts';
 export { thinLabels } from './measure.ts';
+export { emptyTable, fieldLabel, tableRow, valueText, type Cell } from './table.ts';

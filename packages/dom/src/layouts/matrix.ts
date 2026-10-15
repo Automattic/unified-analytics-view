@@ -1,7 +1,8 @@
-import { SIZES, formatDimension, formatValue, type CircleNode, type RectNode, type Row } from '@unified-analytics/core';
+import { SIZES, formatDimension, type CircleNode, type RectNode, type Row } from '@unified-analytics/core';
 import { attr, ensure, keyed, nodePaint, prop } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { chooseItem, dimName, readout, roveItems } from '../keys.ts';
+import { emptyTable, fieldLabel, tableRow, valueText, type Cell } from '../table.ts';
 import { ARROWS } from '../rove.ts';
 import { AXES_HEIGHT, NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
 import { paintAxes, thinAxis } from '../chrome/axes.ts';
@@ -123,41 +124,29 @@ export const matrix: LayoutPainter = {
   // ponytail: the cells' metric alone. A second metric or a comparison has no place in a pivot of one value yet.
   table(table, title, scene, { layers, result, catalog }) {
     // ponytail: the first layer's metric, on color or else on size. Dots over cells of another metric are in the readout and not in the pivot.
-    const { x: xf, y: yf, color, size } = layers[0]!.encode as Record<string, string>, m = color ?? size, M = catalog.metrics[m!]!;
-    const at = new Map(result.rows.map((r) => [(xf ? r[xf] : '') + '\n' + (yf ? r[yf] : ''), r[m!]]));
-    const value = (v: Row[string]) => formatValue(v as number | null, M, 'exact');
+    // Not pivot() (table.ts): the grid's columns are the scene's, in its order, and named as its axis names them.
+    const { x: xf, y: yf, color, size } = layers[0]!.encode as Record<string, string>, m = (color ?? size)!;
+    const at = new Map(result.rows.map((r) => [(xf ? r[xf] : '') + '\n' + (yf ? r[yf] : ''), r[m]]));
+    const value = (v: Row[string] | undefined): Cell => [valueText(v, m, catalog), 'td', true];
     // A value is a key here, and so a string: a bin's start is a number in the result. A bin is named by both its ends.
     const of = (f: string, k: string) => (result.totalsBy?.[f] ?? result.rows).find((r) => String(r[f]) === k);
-    const total = (f: string, k: string) => value(result.totalsBy?.[f]?.find((r) => String(r[f]) === k)?.[m!]);
-    const name = (f: string, k: string) => dimName({ ...of(f, k), [f]: k }, f, catalog);
-    const cell = (tr: HTMLTableRowElement, s: string, scope?: 'col' | 'row', num = !scope) => {
-      const c = tr.appendChild(document.createElement(scope ? 'th' : 'td'));
-      c.textContent = s; if (scope) c.scope = scope; if (num) c.setAttribute('data-num', '');
-    };
-    table.replaceChildren();
-    if (title) table.createCaption().textContent = title;
-    const head = table.createTHead().insertRow(), body = table.createTBody(), xs = scene.rows ?? [];
-    const foot = table.createTFoot().insertRow();
-    cell(foot, 'Total', 'row');
+    const total = (f: string, k: string) => value(result.totalsBy?.[f]?.find((r) => String(r[f]) === k)?.[m]);
+    const name = (f: string, k: string) => dimName({ ...of(f, k), [f]: k }, f, catalog), xs = scene.rows ?? [];
+    emptyTable(table, title);
+    const head = table.createTHead(), body = table.createTBody(), foot = table.createTFoot();
     // A strip is a list: its one dimension down the side, and the metric's own column, with no total beside it to repeat it.
     if (!xf || !yf) {
       const f = (yf || xf)!;
-      cell(head, catalog.dimensions[f]!.label, 'col'); cell(head, M.label, 'col', true);
-      for (const k of (yf ? scene.ys : xs) ?? []) { const tr = body.insertRow(); cell(tr, formatDimension(k, catalog.dimensions[f]!), 'row'); cell(tr, value(at.get(yf ? '\n' + k : k + '\n'))); }
-      cell(foot, value(result.totals[m!]));
+      tableRow(head, [[catalog.dimensions[f]!.label, 'th'], [fieldLabel(m, catalog), 'th', true]]);
+      for (const k of (yf ? scene.ys : xs) ?? []) tableRow(body, [[formatDimension(k, catalog.dimensions[f]!), 'th'], value(at.get(yf ? '\n' + k : k + '\n'))]);
+      tableRow(foot, [['Total', 'th'], value(result.totals[m])]);
       return;
     }
-    cell(head, catalog.dimensions[yf]!.label, 'col');
-    for (const x of xs) cell(head, name(xf, x), 'col', true);
-    cell(head, 'Total', 'col', true);
+    tableRow(head, [[catalog.dimensions[yf]!.label, 'th'], ...xs.map((x): Cell => [name(xf, x), 'th', true]), ['Total', 'th', true]]);
     // A quantity down the side is drawn from the foot, as a plot is, and listed from its least, as a table is.
     for (const y of catalog.dimensions[yf]!.type === 'number' ? (scene.ys ?? []).slice().reverse() : scene.ys ?? []) {
-      const tr = body.insertRow();
-      cell(tr, name(yf, y), 'row');
-      for (const x of xs) cell(tr, value(at.get(x + '\n' + y)));
-      cell(tr, total(yf, y));
+      tableRow(body, [[name(yf, y), 'th'], ...xs.map((x) => value(at.get(x + '\n' + y))), total(yf, y)]);
     }
-    for (const x of xs) cell(foot, total(xf, x));
-    cell(foot, value(result.totals[m!]));
+    tableRow(foot, [['Total', 'th'], ...xs.map((x) => total(xf, x)), value(result.totals[m])]);
   },
 };

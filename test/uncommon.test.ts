@@ -9,7 +9,7 @@ import { errOf, run as runAt, startingWith as of } from './helpers.ts';
 // and where the grammar stops short of it. A fact marked "for step N" is a hole that step is to close, held so that
 // closing it is a change made on purpose.
 const S = (name: string) => moreSamples[name]!.spec;
-const run = (spec: Spec, w = 700, result?: Result) => runAt(spec, w, null, 'typical', 'svg', result);
+const run = (spec: Spec, w = 700, result?: Result) => runAt(spec, w, null, 'typical', 'svg', { result });
 const err = (spec: Spec, result?: Result) => errOf(() => run(spec, 700, result));
 const paths = (nodes: { kind: string }[]) => nodes.filter((n): n is PathNode => n.kind === 'path');
 

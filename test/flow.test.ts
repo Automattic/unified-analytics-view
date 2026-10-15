@@ -108,8 +108,8 @@ describe('link: two columns of nodes and a ribbon for each row', () => {
     }
     // The rows a view receives may stop short of the whole. The nodes do not change with them.
     const fewer = { ...result, rows: result.rows.slice(0, 7) };
-    expect(rects(run(sankey, 346, null, 'typical', 'svg', fewer).ratio)).toEqual(nodes);
-    expect(ribbons(run(sankey, 346, null, 'typical', 'svg', fewer).ratio).length).toBe(7);
+    expect(rects(run(sankey, 346, null, 'typical', 'svg', { result: fewer }).ratio)).toEqual(nodes);
+    expect(ribbons(run(sankey, 346, null, 'typical', 'svg', { result: fewer }).ratio).length).toBe(7);
   });
   it('a ribbon for each row, as wide at each end as the row\'s share of the node it meets, lying in the other column\'s order', () => {
     const paths = ribbons(ratio), nodes = rects(ratio);
@@ -130,14 +130,14 @@ describe('link: two columns of nodes and a ribbon for each row', () => {
     expect(first[4]!.y0 + first[4]!.w0).toBeCloseTo(nodes[0]!.h! * 100, 1);
   });
   it('a pair with no value, or a value of zero, draws no ribbon, and is still a row of the result', () => {
-    const holed = { ...result, rows: result.rows.map((r, i) => (i === 1 ? { ...r, visitors: null } : i === 2 ? { ...r, visitors: 0 } : r)) }, scene = run(sankey, 346, null, 'typical', 'svg', holed).ratio;
+    const holed = { ...result, rows: result.rows.map((r, i) => (i === 1 ? { ...r, visitors: null } : i === 2 ? { ...r, visitors: 0 } : r)) }, scene = run(sankey, 346, null, 'typical', 'svg', { result: holed }).ratio;
     expect(ribbons(scene).length).toBe(28);
     expect(scene.nodes.some((n) => n.key === 'primary:link:Search:Blog' || n.key === 'primary:link:Search:Docs')).toBe(false);
     expect(scene.rows!.slice(0, 3)).toEqual(['Search:Home', 'Search:Blog', 'Search:Docs']);
     expect(rects(scene)).toEqual(rects(ratio));
   });
   it('a pair the result says twice has a key and a ribbon for each', () => {
-    const twice = { ...result, rows: [...result.rows, { ...result.rows[0]!, visitors: 5 }] }, scene = run(sankey, 346, null, 'typical', 'svg', twice).ratio;
+    const twice = { ...result, rows: [...result.rows, { ...result.rows[0]!, visitors: 5 }] }, scene = run(sankey, 346, null, 'typical', 'svg', { result: twice }).ratio;
     expect(scene.rows!.slice(-1)).toEqual(['Search#2:Home']);
     expect(new Set(scene.nodes.map((n) => n.key)).size).toBe(scene.nodes.length);
   });
@@ -156,7 +156,7 @@ describe('link: two columns of nodes and a ribbon for each row', () => {
     expect(rects(cut).find((n) => n.key === 'node:channel:Search')!.h).toBeCloseTo((r.totalsBy!.channel![0]!.visitors as number) / r.totals.visitors! * (1 - GAP * 2), 9);
   });
   it('where the engine gives no total the plot is as tall as the taller column, and no value is made of that', () => {
-    const none = { ...result, totals: { visitors: null } }, scene = run(sankey, 346, null, 'typical', 'svg', none).ratio, left = rects(scene).filter((n) => n.x === 0);
+    const none = { ...result, totals: { visitors: null } }, scene = run(sankey, 346, null, 'typical', 'svg', { result: none }).ratio, left = rects(scene).filter((n) => n.x === 0);
     expect(left.reduce((s, n) => s + n.h!, 0)).toBeCloseTo(ROOM, 9);
     expect(ribbons(scene).length).toBe(30);
   });

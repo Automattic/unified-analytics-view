@@ -156,7 +156,7 @@ describe('the track', () => {
   });
   it('covers what is below zero: every bar starts at zero, and one below it lies to the left of there', () => {
     const result = runQuery(bars.query), signed = { ...result, rows: result.rows.map((r, i) => ({ ...r, net_subscribers: [60, 30, -20, -40, 10, 0][i]! })) };
-    const { ratio, scene } = run(bars, 346, null, 'typical', 'svg', signed), rects = ratio.nodes.filter((n) => n.kind === 'rect') as { v: number; v0: number }[];
+    const { ratio, scene } = run(bars, 346, null, 'typical', 'svg', { result: signed }), rects = ratio.nodes.filter((n) => n.kind === 'rect') as { v: number; v0: number }[];
     expect(rects.map((n) => n.v0)).toEqual(Array(6).fill(0.4));
     expect(rects.map((n) => n.v)).toEqual([1, 0.7, 0.2, 0, 0.5, 0.4]);
     // In pixels zero is 40% of the way along a track 346 px wide. A bar is never under 3 px.
@@ -164,7 +164,7 @@ describe('the track', () => {
     [[138.4, 207.6], [138.4, 103.8], [69.2, 69.2], [0, 138.4], [138.4, 34.6], [138.4, 3]].forEach(([x, w], i) => { expect(px[i]!.x).toBeCloseTo(x!, 9); expect(px[i]!.w).toBeCloseTo(w!, 9); });
     // Nothing but values below zero, and the scale ends there.
     const down = { ...result, rows: result.rows.map((r, i) => ({ ...r, net_subscribers: -10 * (i + 1) })) };
-    expect((run(bars, 346, null, 'typical', 'svg', down).ratio.nodes.filter((n) => n.kind === 'rect') as { v0: number }[]).every((n) => n.v0 === 1)).toBe(true);
+    expect((run(bars, 346, null, 'typical', 'svg', { result: down }).ratio.nodes.filter((n) => n.kind === 'rect') as { v0: number }[]).every((n) => n.v0 === 1)).toBe(true);
   });
   it('errors name the fix: marks in two units, and a mark the track has no rule for', () => {
     const two: Spec = { query: conversions.query, layers: [...conversions.layers!, { mark: 'bar', encode: { y: 'event', x: 'conversion_value' } }] };
@@ -185,7 +185,7 @@ describe('the funnel preset', () => {
     expect(texts(ratio.nodes, /^primary:text#3:/)).toEqual(['100%', '16%', '6.2%', '3.9%']);
     // The rate shown is the row's own field. Nothing here divides one count by another.
     const told = { ...result, rows: result.rows.map((r) => ({ ...r, conversion_rate: 0.5 })) };
-    expect(texts(run(funnel, 346, null, 'typical', 'svg', told).ratio.nodes, /^primary:text#3:/)).toEqual(['50%', '50%', '50%', '50%']);
+    expect(texts(run(funnel, 346, null, 'typical', 'svg', { result: told }).ratio.nodes, /^primary:text#3:/)).toEqual(['50%', '50%', '50%', '50%']);
     expect((ratio.nodes.filter((n) => n.kind === 'rect') as { v: number }[]).map((n) => +n.v.toFixed(3))).toEqual([1, 0.162, 0.062, 0.039]);
   });
   it('needs a second metric, and says so', () => {

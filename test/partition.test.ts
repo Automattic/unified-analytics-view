@@ -180,12 +180,12 @@ describe('partition, two levels', () => {
   it('draws no box for a value that is null or zero, and none at all where the engine gives no total', () => {
     const holed = { ...result, rows: result.rows.map((r) => (r.page === '/pricing' ? { ...r, pageviews: null } : r.page === '/about' ? { ...r, pageviews: 0 } : r)),
       totalsBy: { ...result.totalsBy, section: result.totalsBy!.section!.map((r) => (r.section === 'Docs' ? { ...r, pageviews: 0 } : r)) } };
-    const scene = run(treemap, 346, null, 'typical', 'svg', holed).ratio;
+    const scene = run(treemap, 346, null, 'typical', 'svg', { result: holed }).ratio;
     expect(parents(scene).map((n) => n.key)).toEqual(['primary:partition:Marketing', 'primary:partition:Blog', 'primary:partition:Changelog']);
     expect(parents(scene).map((n) => n.paint)).toEqual(['series.1', 'series.2', 'series.3']);
     expect(kids(scene, 'Marketing').map((n) => n.pair![1])).toEqual(['/', '/customers', '/contact']);
     expect(kids(scene, 'Docs')).toEqual([]);
-    for (const none of [null, 0]) expect(rects(run(treemap, 346, null, 'typical', 'svg', { ...result, totals: { pageviews: none } }).ratio)).toEqual([]);
+    for (const none of [null, 0]) expect(rects(run(treemap, 346, null, 'typical', 'svg', { result: { ...result, totals: { pageviews: none } } }).ratio)).toEqual([]);
   });
   it('with a limit the boxes stop short: the parents left out leave the end of the box unpainted, and the children left out the end of their parent\'s', () => {
     const { ratio: short, result: r } = run(limited, 346);
@@ -199,13 +199,13 @@ describe('partition, two levels', () => {
   });
   it('two dimensions with no totalsBy is an error, and so is a row whose parent has no total', () => {
     const { totalsBy: _totalsBy, ...bare } = result;
-    expect(err(() => run(treemap, 346, null, 'typical', 'svg', bare))).toBe('A "partition" layer divided by "section" and then "page" sizes each "section" by the engine\'s total for it, and this result has no totalsBy["section"]. Return totalsBy from the query layer, or remove "page" from detail and from query.by, for one level.');
+    expect(err(() => run(treemap, 346, null, 'typical', 'svg', { result: bare }))).toBe('A "partition" layer divided by "section" and then "page" sizes each "section" by the engine\'s total for it, and this result has no totalsBy["section"]. Return totalsBy from the query layer, or remove "page" from detail and from query.by, for one level.');
     const orphan = { ...result, rows: [...result.rows, { section: 'Shop', page: '/shop', pageviews: 9 }] };
-    expect(err(() => run(treemap, 346, null, 'typical', 'svg', orphan))).toBe('The result has a row for the "section" "Shop", and totalsBy["section"] has no total for it, so there is no box to put it in. Return a total for every "section" the rows hold.');
+    expect(err(() => run(treemap, 346, null, 'typical', 'svg', { result: orphan }))).toBe('The result has a row for the "section" "Shop", and totalsBy["section"] has no total for it, so there is no box to put it in. Return a total for every "section" the rows hold.');
   });
   it('keys stay unique where two rows say one value, or a value holds the separator', () => {
     const odd = { ...result, rows: [...result.rows, { section: 'Blog', page: '/blog', pageviews: 5 }, { section: 'Blog', page: '/blog:label', pageviews: 5 }] };
-    const all = run(treemap, 346, null, 'typical', 'svg', odd).ratio.nodes.map((n) => n.key);
+    const all = run(treemap, 346, null, 'typical', 'svg', { result: odd }).ratio.nodes.map((n) => n.key);
     expect(new Set(all).size).toBe(all.length);
     expect(all).toContain('primary:partition:Blog:/blog#2');
   });
@@ -249,7 +249,7 @@ describe('partition, painted by a second metric', () => {
   });
   it('takes the diverging ramp where the metric on color crosses zero, as a grid does, with zero said in its middle', () => {
     const mid = result.rows.map((r) => r.visitors as number).sort((a, b) => a - b)[result.rows.length >> 1]!;
-    const signed = run(ramped, 346, null, 'typical', 'svg', { ...result, rows: result.rows.map((r) => ({ ...r, visitors: (r.visitors as number) - mid })) });
+    const signed = run(ramped, 346, null, 'typical', 'svg', { result: { ...result, rows: result.rows.map((r) => ({ ...r, visitors: (r.visitors as number) - mid })) } });
     expect(kids(signed.ratio).every((n) => /^div\.[1-9]$/.test(n.paint))).toBe(true);
     expect(signed.ratio.nodes.filter((n) => n.part === 'ramp').map((n) => n.key)).toEqual(['ramp:low', 'ramp:1', 'ramp:2', 'ramp:3', 'ramp:4', 'ramp:5', 'ramp:zero', 'ramp:6', 'ramp:7', 'ramp:8', 'ramp:9', 'ramp:high']);
     expect(signed.scene.nodes.some((n) => n.key === 'ramp:zero')).toBe(true);
@@ -282,7 +282,7 @@ describe('place()', () => {
     const narrow = { ...runQuery(treemap.query) };
     narrow.totalsBy = { ...narrow.totalsBy, section: narrow.totalsBy!.section!.map((r) => (r.section === 'Marketing' ? { ...r, section: 'Marketing and everything else on the site' } : r)) };
     narrow.rows = narrow.rows.map((r) => (r.section === 'Marketing' ? { ...r, section: 'Marketing and everything else on the site' } : r));
-    const texts = run(treemap, 346, null, 'typical', 'svg', narrow).scene.nodes.filter((n) => n.kind === 'text').map((n) => (n as { text: string }).text);
+    const texts = run(treemap, 346, null, 'typical', 'svg', { result: narrow }).scene.nodes.filter((n) => n.kind === 'text').map((n) => (n as { text: string }).text);
     expect(texts).toEqual(['Blog', '/blog', 'Docs', '/docs/api', 'Changelog']);
     expect(shown(346, null, tiles)).toEqual(['Search', 'Direct', 'Social', 'Email', 'Other']);
   });

@@ -125,7 +125,7 @@ describe('geo, filled by a metric', () => {
     expect([Math.min(...xs), Math.max(...xs), Math.min(...ys)]).toEqual([0, 100, 0]);
     expect(Math.max(...ys)).toBeCloseTo(100 / ASPECT, 1);
     const turned = { ...result, rows: result.rows.slice().reverse() };
-    expect(shapes(run(map, 346, null, 'typical', 'svg', turned).ratio)).toEqual(shapes(ratio));
+    expect(shapes(run(map, 346, null, 'typical', 'svg', { result: turned }).ratio)).toEqual(shapes(ratio));
   });
   it('quantizes each region to the ten steps of the ramp, between the least and the most of the regions drawn, and never carries a colour', () => {
     const value = (n: PathNode) => result.rows.find((r) => r.country === n.row)!.visitors as number, drawn = shapes(ratio).filter((n) => n.row != null);
@@ -139,12 +139,12 @@ describe('geo, filled by a metric', () => {
     expect(none.length).toBe(123 - 15);
     expect(none.every((n) => n.row == null)).toBe(true);
     const nulled = { ...result, rows: result.rows.map((r) => (r.country === 'IN' ? { ...r, visitors: null } : r)) };
-    expect(shapes(run(map, 346, null, 'typical', 'svg', nulled).ratio).find((n) => n.key === 'primary:geo:IN')).toMatchObject({ paint: 'seq.none', row: 'IN' });
+    expect(shapes(run(map, 346, null, 'typical', 'svg', { result: nulled }).ratio).find((n) => n.key === 'primary:geo:IN')).toMatchObject({ paint: 'seq.none', row: 'IN' });
   });
   it('its rows are the result\'s, in the result\'s order, which is the list a reader steps through', () => {
     expect(ratio.rows).toEqual(result.rows.map((r) => r.country));
     // A value no shape has is still a row, and in the table. It is not on the map.
-    const more = { ...result, rows: [...result.rows, { country: 'Atlantis', visitors: 12 }] }, scene = run(map, 346, null, 'typical', 'svg', more).ratio;
+    const more = { ...result, rows: [...result.rows, { country: 'Atlantis', visitors: 12 }] }, scene = run(map, 346, null, 'typical', 'svg', { result: more }).ratio;
     expect(scene.rows!.slice(-1)).toEqual(['Atlantis']);
     expect(scene.nodes.some((n) => n.key.includes('Atlantis'))).toBe(false);
   });
@@ -158,7 +158,7 @@ describe('geo, filled by a metric', () => {
   it('fills regions whose values cross zero on the diverging ramp, with zero the neutral step, and a region with no row still seq.none', () => {
     const typical = runQuery(map.query), mid = typical.rows[7]!.visitors as number;
     const signed: Result = { ...typical, rows: typical.rows.map((r) => ({ ...r, visitors: (r.visitors as number) - mid })) }, at = (r: Result['rows'][number]) => r.visitors as number;
-    const scene = run(map, 346, null, 'typical', 'svg', signed).ratio, far = Math.max(...signed.rows.map((r) => Math.abs(at(r))));
+    const scene = run(map, 346, null, 'typical', 'svg', { result: signed }).ratio, far = Math.max(...signed.rows.map((r) => Math.abs(at(r))));
     const fill = (id: string) => shapes(scene).find((n) => n.key === 'primary:geo:' + id)!.paint;
     for (const r of signed.rows) expect(fill(r.country as string), r.country as string).toBe('div.' + Math.min(9, 1 + Math.floor(((at(r) + far) / (2 * far)) * 9)));
     expect([fill(typical.rows[0]!.country as string), fill(typical.rows[7]!.country as string)]).toEqual(['div.9', 'div.5']);
@@ -217,7 +217,7 @@ describe('geo, with a symbol for each region', () => {
 
 describe('rows the map has no shape for', () => {
   const note = (s: { nodes: { key: string }[] }) => (s.nodes.find((n) => n.key === 'note:not-shown') as { text: string } | undefined)?.text;
-  const withRows = (rows: Result['rows']) => { const result = runQuery(map.query); return run(map, 346, null, 'typical', 'svg', { ...result, rows: [...result.rows, ...rows] }); };
+  const withRows = (rows: Result['rows']) => { const result = runQuery(map.query); return run(map, 346, null, 'typical', 'svg', { result: { ...result, rows: [...result.rows, ...rows] } }); };
   it('the wording is core\'s, by the dimension\'s label: one, several, and nothing to say of none', () => {
     expect([notShownNote(1, 'Country'), notShownNote(12, 'Country'), notShownNote(3, 'Page'), notShownNote(0, 'Country')]).toEqual(['1 country not shown', '12 countries not shown', '3 pages not shown', '']);
   });
@@ -258,7 +258,7 @@ describe('rows the map has no shape for', () => {
     expect([run(sym, 346).ratio.parts, note(run(sym, 346).scene)]).toEqual([['plot', 'points', 'note', 'size'], '4 countries not shown']);
   });
   it('a result of rows with no value alone is a map with a note, and not the error for shapes that are the wrong ones', () => {
-    const result = runQuery(map.query), { ratio } = run(map, 346, null, 'typical', 'svg', { ...result, rows: [{ country: '', visitors: 40 }] });
+    const result = runQuery(map.query), { ratio } = run(map, 346, null, 'typical', 'svg', { result: { ...result, rows: [{ country: '', visitors: 40 }] } });
     expect([note(ratio), shapes(ratio).every((n) => n.paint === 'seq.none' && n.row == null)]).toEqual(['1 country not shown', true]);
   });
 });

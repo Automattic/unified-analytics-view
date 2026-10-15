@@ -17,9 +17,10 @@ export const painters: PainterName[] = ['svg', 'dots'];
 export const heights = [null, 300, 160, 100, 60, 40];
 export const widths = [54, 80, 120, 170, 250, 290, 346, 500, 700];
 
-/** One view planned, scened and placed in a container `w` by `h`, on the fixture engine's answer unless `result` is given.
- *  The cell is 8 px, which only the dots painter reads. */
-export const run = (spec: Spec, w: number, h: number | null = null, scenario: (typeof scenarios)[number] = 'typical', painter: PainterName = 'svg', result: Result = runQuery(spec.query, scenario), cat: Catalog = catalog, rules: ContainerRules = CONTAINER_RULES) => {
+/** One view planned, scened and placed in a container `w` by `h`, on the fixture engine's answer unless `result` is given,
+ *  in the fixtures' catalog and the default rules unless others are. The cell is 8 px, which only the dots painter reads. */
+export const run = (spec: Spec, w: number, h: number | null = null, scenario: (typeof scenarios)[number] = 'typical', painter: PainterName = 'svg',
+  { result = runQuery(spec.query, scenario), catalog: cat = catalog, rules = CONTAINER_RULES }: { result?: Result; catalog?: Catalog; rules?: ContainerRules } = {}) => {
   const container = { ...makeContainer(w, h, painter, 8), rules };
   const plan = resolve(spec, result, container, cat);
   const ratio = buildScene(plan, spec.query, result, cat);

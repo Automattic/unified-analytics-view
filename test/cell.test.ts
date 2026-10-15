@@ -140,7 +140,7 @@ describe('the grids of the Uncommon types', () => {
     // The bottom left cell is the least of both, and the engine's order does not move it.
     const corner = cells(ratio).find((n) => n.pair![0] === '0' && n.pair![1] === '0')!;
     expect(corner).toMatchObject({ key: 'primary:cell:0:0', x: 0, y: 7 / 8 });
-    expect(cells(run(grids.bins2d!, 700, null, 'typical', 'svg', { ...result, rows: result.rows.slice().reverse() }).ratio)).toEqual(cells(ratio));
+    expect(cells(run(grids.bins2d!, 700, null, 'typical', 'svg', { result: { ...result, rows: result.rows.slice().reverse() } }).ratio)).toEqual(cells(ratio));
     // A pair nothing fell in is a count of none, a step of the ramp, and not no value.
     expect(result.rows.some((r) => r.pageviews === 0)).toBe(true);
     expect(cells(ratio).every((n) => /^seq\.\d+$/.test(n.paint))).toBe(true);
@@ -216,9 +216,9 @@ describe('cell', () => {
     expect(cells(ratio)[25]).toMatchObject({ key: 'primary:cell:1am:Tue', pair: ['1am', 'Tue'], x: 1 / 24, w: 1 / 24, y: 1 / 7, h: 1 / 7, layer: 'data', role: 'primary' });
     expect(cells(ratio).every((n) => n.row == null)).toBe(true);
     const turned = { ...result, rows: result.rows.slice().reverse() };
-    expect(cells(run(heatmap, 700, null, 'typical', 'svg', turned).ratio)).toEqual(cells(ratio));
+    expect(cells(run(heatmap, 700, null, 'typical', 'svg', { result: turned }).ratio)).toEqual(cells(ratio));
     // An engine that sends no totals by dimension leaves only the rows to order by, and it ranks them: Saturday is the quietest.
-    expect(run(heatmap, 700, null, 'typical', 'svg', { ...turned, totalsBy: undefined }).ratio.ys![0]).toBe('Sat');
+    expect(run(heatmap, 700, null, 'typical', 'svg', { result: { ...turned, totalsBy: undefined } }).ratio.ys![0]).toBe('Sat');
   });
   it('quantizes its value to the ten steps of the ramp, between the least and the most of the cells drawn', () => {
     const value = (n: RectNode) => result.rows.find((r) => r.hour === n.pair![0] && r.weekday === n.pair![1])!.visitors as number | null;
@@ -233,10 +233,10 @@ describe('cell', () => {
     const none = cells(ratio).filter((n) => n.paint === 'seq.none').map((n) => n.key);
     expect(none).toEqual(['primary:cell:3am:Wed', 'primary:cell:4am:Wed', 'primary:cell:5am:Wed']);
     const holed = { ...result, rows: result.rows.filter((r) => !(r.weekday === 'Mon' && r.hour === '12am')) };
-    expect(cells(run(heatmap, 700, null, 'typical', 'svg', holed).ratio)[0]).toMatchObject({ key: 'primary:cell:12am:Mon', paint: 'seq.none' });
+    expect(cells(run(heatmap, 700, null, 'typical', 'svg', { result: holed }).ratio)[0]).toMatchObject({ key: 'primary:cell:12am:Mon', paint: 'seq.none' });
   });
   it('measures from zero where every cell holds one value, and takes a domain the catalog states', () => {
-    const flat = (v: number) => run(heatmap, 700, null, 'typical', 'svg', { ...result, rows: result.rows.map((r) => ({ ...r, visitors: v })) }).ratio;
+    const flat = (v: number) => run(heatmap, 700, null, 'typical', 'svg', { result: { ...result, rows: result.rows.map((r) => ({ ...r, visitors: v })) } }).ratio;
     expect([new Set(cells(flat(40)).map((n) => n.paint)), texts(flat(40), 'ramp:')]).toEqual([new Set(['seq.10']), ['0', '40']]);
     expect([new Set(cells(flat(0)).map((n) => n.paint)), texts(flat(0), 'ramp:')]).toEqual([new Set(['seq.1']), ['0', '1']]);
     const stated = { ...catalog, metrics: { ...catalog.metrics, visitors: { ...catalog.metrics.visitors!, domain: [0, 1000] as [number, number] } } };
@@ -253,7 +253,7 @@ describe('the ramp, and the labels', () => {
     expect(ramp.filter((n) => n.kind === 'rect').map((n) => n.paint)).toEqual([...Array.from({ length: 10 }, (_, i) => 'seq.' + (i + 1)), 'seq.none']);
     expect(texts(ratio, 'ramp:')).toEqual(['10', '158', 'No data']);
     const whole = { ...result, rows: result.rows.map((r) => ({ ...r, visitors: r.visitors ?? 12 })) };
-    expect(run(heatmap, 700, null, 'typical', 'svg', whole).ratio.nodes.some((n) => n.key.startsWith('ramp:none'))).toBe(false);
+    expect(run(heatmap, 700, null, 'typical', 'svg', { result: whole }).ratio.nodes.some((n) => n.key.startsWith('ramp:none'))).toBe(false);
   });
   it('the scene holds the ramp whether or not the plan shows it, and place() draws it under the grid only when it does', () => {
     const wide = run(heatmap, 346), narrow = run(heatmap, 234);

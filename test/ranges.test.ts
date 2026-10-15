@@ -191,7 +191,7 @@ describe('a second end in the plot', () => {
   });
   it('a row with either end missing has no mark', () => {
     const result = runQuery(box!.query), holed = { ...result, rows: result.rows.map((r, i) => (i === 1 ? { ...r, 'response_time@max': null } : i === 2 ? { ...r, 'response_time@p25': null } : r)) };
-    const { ratio } = run(box!, 346, null, 'typical', 'svg', holed);
+    const { ratio } = run(box!, 346, null, 'typical', 'svg', { result: holed });
     expect(ratio.nodes.filter((n) => n.key.startsWith('context:rule:')).length).toBe(7);
     expect(ratio.nodes.filter((n) => n.key.startsWith('context:bar:')).length).toBe(7);
     expect(ratio.nodes.filter((n) => n.key.startsWith('primary:tick:')).length).toBe(8);
@@ -216,7 +216,7 @@ describe('tick', () => {
 });
 
 describe('paint by direction and polarity', () => {
-  const paints = (spec: Spec, cat: Catalog = catalog) => { const { ratio, result } = run(spec, 700, null, 'typical', 'svg', undefined, cat); return { result, paints: ratio.nodes.filter((n) => n.kind === 'rect' && n.part === 'plot').map((n) => n.paint) }; };
+  const paints = (spec: Spec, cat: Catalog = catalog) => { const { ratio, result } = run(spec, 700, null, 'typical', 'svg', { catalog: cat }); return { result, paints: ratio.nodes.filter((n) => n.kind === 'rect' && n.part === 'plot').map((n) => n.paint) }; };
   const turned = (m: string, polarity: 'up' | 'down' | 'none'): Catalog => ({ ...catalog, metrics: { ...catalog.metrics, [m]: { ...catalog.metrics[m]!, polarity } } });
   it('a bar whose end is below its start is bad and any other good, for a metric that is better when it rises', () => {
     const { result, paints: got } = paints(waterfall!);
@@ -270,8 +270,8 @@ describe('paint by direction and polarity', () => {
     });
     expect(new Set(ratio.nodes.map((n) => n.key)).size).toBe(ratio.nodes.length);
     // A metric that is better when it falls turns every piece, and one with no better way has one area in the layer's own paint.
-    expect(run(spec, 700, null, 'typical', 'svg', undefined, turned('revenue', 'down')).ratio.nodes.filter((n) => n.kind === 'path' && n.fill).map((n) => n.paint)).toEqual(pieces.map((n) => (n.paint === 'delta.good' ? 'delta.bad' : 'delta.good')));
-    expect(run(spec, 700, null, 'typical', 'svg', undefined, turned('revenue', 'none')).ratio.nodes.filter((n) => n.kind === 'path' && n.fill).map((n) => [n.key, n.paint])).toEqual([['context:area', 'series.1']]);
+    expect(run(spec, 700, null, 'typical', 'svg', { catalog: turned('revenue', 'down') }).ratio.nodes.filter((n) => n.kind === 'path' && n.fill).map((n) => n.paint)).toEqual(pieces.map((n) => (n.paint === 'delta.good' ? 'delta.bad' : 'delta.good')));
+    expect(run(spec, 700, null, 'typical', 'svg', { catalog: turned('revenue', 'none') }).ratio.nodes.filter((n) => n.kind === 'path' && n.fill).map((n) => [n.key, n.paint])).toEqual([['context:area', 'series.1']]);
     // With no paint it is the fan's band, whole. With no period before there is nothing to run from, and the layer goes.
     expect(run({ ...spec, layers: [{ ...spec.layers![0]!, paint: undefined }, spec.layers![1]!] }, 700).ratio.nodes.filter((n) => n.kind === 'path' && n.fill).map((n) => [n.key, n.paint])).toEqual([['context:area', 'series.1']]);
     expect(run(spec, 700, null, 'no-prior').plan.dropped).toEqual([]);
@@ -336,8 +336,8 @@ describe('a row\'s track', () => {
     expect(at(ratio.nodes, 'primary:dot:/blog/launch-notes')).toMatchObject({ x: 2105 / top, paint: 'series.1', role: 'primary' });
     // The scale holds the second end and the previous period, not only the first metric: a row that fell from further out is inside it.
     const far = { ...result, rows: result.rows.map((row, i) => (i === 7 ? { ...row, 'pageviews@previous': 9640 } : row)) };
-    expect(at(run(dumbbell!, 346, null, 'typical', 'svg', far).ratio.nodes, 'comparison:dot:/contact').x).toBe(1);
-    expect(at(run(dumbbell!, 346, null, 'typical', 'svg', far).ratio.nodes, 'primary:dot:/').x).toBe(0.5);
+    expect(at(run(dumbbell!, 346, null, 'typical', 'svg', { result: far }).ratio.nodes, 'comparison:dot:/contact').x).toBe(1);
+    expect(at(run(dumbbell!, 346, null, 'typical', 'svg', { result: far }).ratio.nodes, 'primary:dot:/').x).toBe(0.5);
   });
   it('a row with no value before has its dot alone, and with no prior period every row has', () => {
     const { ratio } = run(dumbbell!, 346);
@@ -387,7 +387,7 @@ describe('a row\'s track', () => {
     const own: Spec = { query: bullet!.query, layers: [{ mark: 'tick', encode: { y: 'device', x: 'signups' } }, { mark: 'text', encode: { y: 'device', text: 'device' } }] };
     expect(marks(run(own, 346).ratio.nodes).map((n) => n.x)).toEqual([1, 124 / 158, 21 / 158]);
     const bare: Catalog = { ...catalog, metrics: { ...catalog.metrics, signups: { label: 'Sign-ups', unit: 'count', polarity: 'up' } } };
-    expect(marks(run(bullet!, 346, null, 'typical', 'svg', undefined, bare).ratio.nodes).map((n) => n.kind)).toEqual(['rect', 'rect', 'rect']);
+    expect(marks(run(bullet!, 346, null, 'typical', 'svg', { catalog: bare }).ratio.nodes).map((n) => n.kind)).toEqual(['rect', 'rect', 'rect']);
   });
   it('the catalog\'s bands are drawn behind the marks, as a guide: the marks are the bar and the tick, as they were', () => {
     expect(catalog.metrics.signups!.bands).toEqual([200, 400]);

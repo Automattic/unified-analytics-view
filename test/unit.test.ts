@@ -112,7 +112,7 @@ describe('a stack up from the axis', () => {
   });
   it('a value above nothing has one glyph at least, a value of nothing has none, and a row with no value has no mark', () => {
     const spec = by('visitors', 'device', [{ mark: 'unit', encode: { x: 'device', y: 'visitors' } }]);
-    const { ratio } = run(spec, 346, null, 'typical', 'svg', answer([{ device: 'Desktop', visitors: 4820 }, { device: 'Mobile', visitors: 3 }, { device: 'Tablet', visitors: 0 }, { device: 'Watch', visitors: null }], { visitors: 4823 }));
+    const { ratio } = run(spec, 346, null, 'typical', 'svg', { result: answer([{ device: 'Desktop', visitors: 4820 }, { device: 'Mobile', visitors: 3 }, { device: 'Tablet', visitors: 0 }, { device: 'Watch', visitors: null }], { visitors: 4823 }) });
     expect([...count((glyphs(ratio.nodes) as CircleNode[]).map((n) => n.row))]).toEqual([['Desktop', 10], ['Mobile', 1]]);
     expect(keyOf(ratio)).toEqual(['Each is 500']);
   });
@@ -185,19 +185,19 @@ describe('a grid of a hundred, divided by share', () => {
     expect([...count(cells.map((n) => (n.row ?? 'no row') + ' ' + n.paint))]).toEqual([['Search series.1', 41], ['Direct series.2', 28], ['no row seq.none', 31]]);
     expect(cells.slice(69, 71).map((n) => n.key)).toEqual(['primary:unit#rest:1', 'primary:unit#rest:2']);
     // The same rows against a total twice as large hold half the cells: nothing is worked out from their sum.
-    const twice = run(top2, 346, null, 'typical', 'svg', { ...result, totals: { visitors: result.totals.visitors! * 2 } }).ratio;
+    const twice = run(top2, 346, null, 'typical', 'svg', { result: { ...result, totals: { visitors: result.totals.visitors! * 2 } } }).ratio;
     expect([...count((glyphs(twice.nodes) as RectNode[]).map((n) => n.row ?? 'no row'))]).toEqual([['Search', 21], ['Direct', 14], ['no row', 65]]);
   });
   it('with no total, or one of zero, no cell is any value\'s: the legend says each value, and the rows are never summed', () => {
     const { result } = run(waffle!, 346);
     for (const total of [null, 0]) {
-      const { ratio } = run(waffle!, 346, null, 'typical', 'svg', { ...result, totals: { visitors: total } });
+      const { ratio } = run(waffle!, 346, null, 'typical', 'svg', { result: { ...result, totals: { visitors: total } } });
       expect([...count((glyphs(ratio.nodes) as RectNode[]).map((n) => n.paint))], String(total)).toEqual([['seq.none', 100]]);
       expect(ratio.nodes.filter((n) => n.part === 'legend' && n.kind === 'text' && n.font === 'value').map((n) => (n as TextNode).text), String(total)).toEqual(result.rows.map((r) => (r.visitors as number).toLocaleString('en-US')));
     }
   });
   it('rows that hold more than the total fill the grid and no more: a hundred cells, whatever is sent', () => {
-    const { ratio } = run(waffle!, 346, null, 'typical', 'svg', answer([{ device: 'Desktop', visitors: 80 }, { device: 'Mobile', visitors: 70 }], { visitors: 100 }));
+    const { ratio } = run(waffle!, 346, null, 'typical', 'svg', { result: answer([{ device: 'Desktop', visitors: 80 }, { device: 'Mobile', visitors: 70 }], { visitors: 100 }) });
     expect([...count((glyphs(ratio.nodes) as RectNode[]).map((n) => n.row))]).toEqual([['Desktop', 80], ['Mobile', 20]]);
   });
   it('holds its shape: a square of square cells, in the middle of the width, and smaller in a box that is short', () => {
@@ -231,7 +231,7 @@ describe('a grid with no dimension, read against the metric\'s range', () => {
     expect(plan).toMatchObject({ preset: 'icon-array', tldrValue: true, share: false, guides: { unitKey: true } });
   });
   it('a cell that stays lit keeps its key when the value moves, and the grid is full at the top of the range and empty at the foot of it', () => {
-    const lit = (signups: number | null) => (glyphs(run(icons!, 346, null, 'typical', 'svg', answer([], { signups })).ratio.nodes) as RectNode[]).filter((n) => n.tone == null).map((n) => n.key);
+    const lit = (signups: number | null) => (glyphs(run(icons!, 346, null, 'typical', 'svg', { result: answer([], { signups }) }).ratio.nodes) as RectNode[]).filter((n) => n.tone == null).map((n) => n.key);
     expect(lit(100)).toEqual(lit(303).slice(0, 20));
     expect([lit(0), lit(null), lit(-20)].map((k) => k.length)).toEqual([0, 0, 0]);
     expect([lit(1), lit(2), lit(8), lit(500), lit(9000)].map((k) => k.length)).toEqual([1, 1, 2, 100, 100]);
@@ -259,12 +259,12 @@ describe('seats round a half circle', () => {
   });
   it('a seat is one of the metric while the total is a hundred or fewer, and then there is no key', () => {
     const house = by('signups', 'device', [{ mark: 'unit', encode: { angle: 'signups', color: 'device' }, sweep: 'half' }]);
-    const { ratio } = run(house, 346, null, 'typical', 'svg', answer([{ device: 'Desktop', signups: 48 }, { device: 'Mobile', signups: 37 }, { device: 'Tablet', signups: 15 }], { signups: 100 }));
+    const { ratio } = run(house, 346, null, 'typical', 'svg', { result: answer([{ device: 'Desktop', signups: 48 }, { device: 'Mobile', signups: 37 }, { device: 'Tablet', signups: 15 }], { signups: 100 }) });
     expect([...count((glyphs(ratio.nodes) as CircleNode[]).map((n) => n.row))]).toEqual([['Desktop', 48], ['Mobile', 37], ['Tablet', 15]]);
     expect(keyOf(ratio)).toEqual([]);
     expect(ratio.parts).toEqual(['radial', 'legend']);
     // One more, and a seat is two.
-    const more = run(house, 346, null, 'typical', 'svg', answer([{ device: 'Desktop', signups: 49 }, { device: 'Mobile', signups: 37 }, { device: 'Tablet', signups: 15 }], { signups: 101 })).ratio;
+    const more = run(house, 346, null, 'typical', 'svg', { result: answer([{ device: 'Desktop', signups: 49 }, { device: 'Mobile', signups: 37 }, { device: 'Tablet', signups: 15 }], { signups: 101 }) }).ratio;
     expect([keyOf(more), [...count((glyphs(more.nodes) as CircleNode[]).map((n) => n.row))]]).toEqual([['Each is 2'], [['Desktop', 25], ['Mobile', 19], ['Tablet', 8]]]);
   });
   it('with a limit, the seats of the rows past it are there and are no value\'s; with no total a seat\'s worth is the largest row\'s', () => {
@@ -272,7 +272,7 @@ describe('seats round a half circle', () => {
     const { ratio, result } = run(top2, 346), seats = glyphs(ratio.nodes) as CircleNode[];
     expect([...count(seats.map((n) => (n.row ?? 'no row') + ' ' + n.paint))]).toEqual([['Search series.1', 22], ['Direct series.2', 15], ['no row seq.none', 16]]);
     expect(seats[37]!.key).toBe('primary:unit#rest:1');
-    const none = run(top2, 346, null, 'typical', 'svg', { ...result, totals: { visitors: null } }).ratio;
+    const none = run(top2, 346, null, 'typical', 'svg', { result: { ...result, totals: { visitors: null } } }).ratio;
     expect([keyOf(none), [...count((glyphs(none.nodes) as CircleNode[]).map((n) => n.row))]]).toEqual([['Each is 500'], [['Search', 9], ['Direct', 6]]]);
   });
   it('placed, the seats are round, of one size, inside the half circle, and no two overlap', () => {
@@ -297,7 +297,7 @@ describe('the key to what a glyph is worth', () => {
     expect(key).toEqual({ key: 'unit-key:primary:unit', part: 'unit-key', kind: 'text', text: 'Each is 200', anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' });
     const money = run(by('revenue', 'device', [{ mark: 'unit', encode: { x: 'device', y: 'revenue' } }]), 346).ratio;
     expect(keyOf(money)).toEqual(['Each is $5,000']);
-    const few = run(by('visitors', 'device', [{ mark: 'unit', encode: { x: 'device', y: 'visitors' } }]), 346, null, 'typical', 'svg', answer([{ device: 'Desktop', visitors: 9 }, { device: 'Mobile', visitors: 4 }], { visitors: 13 }));
+    const few = run(by('visitors', 'device', [{ mark: 'unit', encode: { x: 'device', y: 'visitors' } }]), 346, null, 'typical', 'svg', { result: answer([{ device: 'Desktop', visitors: 9 }, { device: 'Mobile', visitors: 4 }], { visitors: 13 }) });
     expect([keyOf(few.ratio), few.ratio.parts, few.plan.guides.unitKey, few.plan.dropped]).toEqual([[], ['y-axis', 'plot', 'x-axis'], true, []]);
   });
   it('is placed in a line under the glyphs, and the view is that much taller for it', () => {

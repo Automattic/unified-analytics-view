@@ -5,7 +5,7 @@ import { errOf, run as runAt, startingWith as of, validView as view } from './he
 
 // Step 4 of docs/uncommon-coverage-plan.md: what rows, bars, ticks and rules take that they refused. Each part of the
 // step has its facts here. The samples are swept, and have their golden scenes, at the foot of this file.
-const run = (spec: Spec, w = 346, h: number | null = null, result?: Result) => runAt(spec, w, h, 'typical', 'svg', result);
+const run = (spec: Spec, w = 346, h: number | null = null, result?: Result) => runAt(spec, w, h, 'typical', 'svg', { result });
 const err = (spec: Spec, result?: Result) => errOf(() => run(spec, 346, null, result));
 const label = (y: string): Layer => ({ mark: 'text', encode: { y, text: y } });
 const S = (name: string) => moreSamples[name]!.spec;

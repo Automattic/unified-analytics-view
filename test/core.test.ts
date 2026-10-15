@@ -98,7 +98,7 @@ describe('the sweep', () => {
     const rules = name === 'headed' ? ALWAYS : CONTAINER_RULES;
       for (const sc of scenarios) for (const p of painters) for (const h of heights) for (const w of widths) {
         const at = [name, sc, p, w, h].join(' ');
-        const { plan, scene } = run(spec, w, h, sc, p, undefined, undefined, rules);
+        const { plan, scene } = run(spec, w, h, sc, p, { rules });
         const keys = scene.nodes.map((n) => n.key);
         expect(new Set(keys).size, 'duplicate keys: ' + at).toBe(keys.length);
         expect(JSON.stringify(scene, (_, v) => (typeof v === 'number' && isNaN(v) ? 'NaN' : v)), 'NaN: ' + at).not.toMatch(/NaN/);
@@ -246,7 +246,7 @@ describe('fitting the container (reference section 10.1)', () => {
   it('the tldr value sits above the marks for an instant metric, or wherever the context says always', () => {
     expect(applied('live', 346)).toMatchObject({ layout: 'rows', tldrValue: true });
     expect(applied('pages', 346).tldrValue).toBe(false);
-    expect(run(trend, 346, null, 'typical', 'svg', undefined, undefined, ALWAYS).plan).toMatchObject({ layout: 'cartesian', side: false, tldrValue: true });
+    expect(run(trend, 346, null, 'typical', 'svg', { rules: ALWAYS }).plan).toMatchObject({ layout: 'cartesian', side: false, tldrValue: true });
   });
   it('reports a comparison it could not draw', () => {
     expect(run(trend, 346, null, 'no-prior').plan.dropped).toContain('comparison series (no prior data)');
@@ -408,7 +408,7 @@ describe('the note is given up before prose: a deliberate departure from the pro
     let held = 0;
     for (const at of NOTE_FIRST) {
       const [name, sc, p, w, h] = at.split(' ') as [string, (typeof scenarios)[number], PainterName, string, string];
-      const spec = specs[name!]!, rules = name === 'headed' ? ALWAYS : CONTAINER_RULES, { plan, scene } = run(spec, +w, +h, sc, p, undefined, undefined, rules);
+      const spec = specs[name!]!, rules = name === 'headed' ? ALWAYS : CONTAINER_RULES, { plan, scene } = run(spec, +w, +h, sc, p, { rules });
       const res0 = proto.runQuery(spec.query, sc), at0 = (height: number) => { const host0 = proto.makeHost(+w, height, p, 8), plan0 = proto.resolve(toProto(spec, rules), res0, host0); return { plan0, scene0: protoScene(plan0, spec.query, res0, host0) }; };
       expect(at0(+h).plan0.layout, at).toBe('sentence');
       expect(plan, at).toMatchObject({ layout: 'none', tldrValue: true });
@@ -443,7 +443,7 @@ describe('y ticks: a deliberate departure from the prototype (dom-painter-plan s
   const rules = { ...CONTAINER_RULES, fit: CONTAINER_RULES.fit.map((r) => (r.layout === 'cartesian' && r.id === 'axes' ? { ...r, needs: { ...r.needs, block: 80 } } : r)) };
   const ticks = (scene: { nodes: { key: string }[] }) => scene.nodes.map((n) => n.key).filter((k) => /^(ytick|grid):/.test(k));
   const short = (spec: Spec) => {
-    const ours = run(spec, 346, 100, 'typical', 'svg', undefined, undefined, rules);
+    const ours = run(spec, 346, 100, 'typical', 'svg', { rules });
     const host0 = { ...proto.makeHost(346, 100, 'svg', 8), rules: { ...proto.HOST_RULES, axes: { ...proto.HOST_RULES.axes, minHeight: 80 } } }, res0 = proto.runQuery(spec.query, 'typical');
     const plan0 = proto.resolve(toProto(spec), res0, host0);
     expect(ours.scene.plot).toEqual({ w: 346, h: 100 });

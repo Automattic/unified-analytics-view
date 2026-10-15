@@ -14,3 +14,7 @@ export { fallbackRule, gaveWay } from './fit.ts';
 export { customMarks, registerMark, type CustomMark, type MarkView } from './marks.ts';
 export { UNIT_CELLS, UNIT_MOST, UNIT_SEATS, unitCount, unitSeats, unitShares, unitWorth } from './unit.ts';
 export { UNIT_KEY_BLOCK, glyphRadius } from './place.ts';
+export { COLUMN_PAD, columnRoom } from './place.ts';
+export { DELTA_FULL, GRID_LEAST, NOTE_LEAST, NOTICE_HEIGHT, NUMBER_SHORT, POINT_INSET, SEATS_LEAST, SHORT_PLOT, heldBox } from './place.ts';
+export { ruleFor } from './fit.ts';
+export { inProgressNote } from './prose.ts';

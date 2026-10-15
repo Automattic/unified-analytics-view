@@ -30,8 +30,12 @@ export const crossesZero = ([lo, hi]: [number, number]) => lo < 0 && hi > 0;
  * result has them, and otherwise from its rows, the first of equals. An engine that ranks its rows sends that one first;
  * one that answers in the dimension's own order, an hour or a weekday, does not. A comparison of the engine's numbers, never a sum. */
 export function leader(result: Result, dim: string, m: string): Row | undefined {
-  return ((result.totalsBy && result.totalsBy[dim]) || result.rows).reduce<Row | undefined>((top, r) => (!top || (r[m] as number) > (top[m] as number) ? r : top), undefined);
+  return most((result.totalsBy && result.totalsBy[dim]) || result.rows, m);
 }
+/** The metric a companion field came with: "visitors" for "visitors@rank". Its own name for a field that is no companion. */
+const companionOf = (catalog: Catalog, f: string): MetricDef | undefined => catalog.metrics[f.split('@')[0]!];
+/** The row with the most of a field, the first of equals. A comparison, never a sum. */
+const most = (rows: Row[], f: string): Row | undefined => rows.reduce<Row | undefined>((top, r) => (!top || (r[f] as number) > (top[f] as number) ? r : top), undefined);
 /** Rows from the most of a metric to the least. Rows the engine ranked stay as they are; rows in a dimension's own order are ranked here, by comparing them. */
 const ranked = (rows: Row[], m: string) => rows.slice().sort((a, b) => ((b[m] as number) || 0) - ((a[m] as number) || 0));
 
@@ -43,6 +47,12 @@ const at = (v: number, total: number | null | undefined, metric: MetricDef, of =
 
 /** More than one of a dimension's values, by its label: "pages", "countries". */
 export const plural = (label: string) => label.replace(/([^aeiou])y$/, '$1ie') + 's';
+/** A label for `n` of a thing: itself for one, its plural for any other number. */
+const many = (n: number, label: string) => (n === 1 ? label : plural(label));
+/** How many of a whole: "all 5" where it is all of them, "3 of 5" where it is not. */
+const allOrSome = (n: number, of: number) => (n === of ? 'all ' + n : n + ' of ' + of);
+/** Which value is highest on each of two metrics, by their labels: one sentence for both where it is the same value. */
+const highest = (top: string[], on: string[]) => (top[0] === top[1] ? top[0] + ' is highest on both.' : top[0] + ' is highest on ' + on[0] + ' and ' + top[1] + ' on ' + on[1] + '.');
 
 /** The tldr prose: the text sibling of a view, derived from the query and the transforms, not from a named chart type.
  * `points` says the view sets one metric against another, a point for each value of a dimension: that dimension's name,
@@ -61,15 +71,15 @@ export function tldrProse(q: Query, result: Result, share: boolean, catalog: Cat
     // furthest out on each. ponytail: "outliers" here are the two extremes, found by comparing rows. A test of how far
     // out a point is would be a statistic, and those are the engine's.
     const of = typeof points === 'string' ? points : by, two = q.metrics.slice(0, 2), label = (f: string) => catalog.metrics[f]!.label.toLowerCase(), vals = (f: string) => rows.map((r) => r[f] as number);
-    const top = two.map((f) => say(catalog, of, rows.reduce((a, r) => ((r[f] as number) > (a[f] as number) ? r : a))));
+    const top = two.map((f) => say(catalog, of, most(rows, f)!)), tops = highest(top, two.map(label));
     // Joined through time, the points are a path: where it set out and where it has got to, by the first and the last
     // finished bucket, since the unfinished one is not yet anywhere.
     const whole = rows.filter((r) => !r.partial), [a, b] = [whole[0], whole[whole.length - 1]];
     if (path && catalog.dimensions[of]!.type === 'time' && a && b && a !== b)
       return 'From ' + say(catalog, of, a) + ' to ' + say(catalog, of, b) + ', ' + two.map((f, i) => label(f) + (i ? ' from ' : ' went from ') + formatValue(a[f] as number, catalog.metrics[f]!) + ' to ' + formatValue(b[f] as number, catalog.metrics[f]!)).join(' and ') + '. '
-        + (top[0] === top[1] ? top[0] + ' is highest on both.' : top[0] + ' is highest on ' + label(two[0]!) + ' and ' + top[1] + ' on ' + label(two[1]!) + '.');
+        + tops;
     return 'Across ' + rows.length + ' ' + plural(catalog.dimensions[of]!.label.toLowerCase()) + range + ', ' + 'the range of ' + two.map((f) => label(f) + ' is ' + formatValue(Math.min(...vals(f)), catalog.metrics[f]!) + ' to ' + formatValue(Math.max(...vals(f)), catalog.metrics[f]!)).join(' and of ') + '. '
-      + (top[0] === top[1] ? top[0] + ' is highest on both.' : top[0] + ' is highest on ' + label(two[0]!) + ' and ' + top[1] + ' on ' + label(two[1]!) + '.');
+      + tops;
   }
   if (dims.length === 2 && result.totalsBy && rows.length) {
     // Two dimensions: who leads each, as a share of the engine's total. Over time, also on how many of the days.
@@ -78,11 +88,11 @@ export function tldrProse(q: Query, result: Result, share: boolean, catalog: Cat
     if (!time) return largest(by!, ' of ' + name).replace(' the ', ' is the ') + ', and ' + largest(dims[1]!) + '.';
     const split = dims.find((d) => d !== time)!, top = leader(result, split, m)![split], days = [...new Set(rows.map((r) => r[time]))];
     const led = days.filter((d) => { const at = rows.filter((r) => r[time] === d), mine = at.find((r) => r[split] === top); return !!mine && at.every((r) => r === mine || (r[m] as number) < (mine[m] as number)); }).length;
-    return largest(split, ' of ' + name).replace(' the ', ' is the ') + range + ', and leads on ' + (led === days.length ? 'all ' + led : led + ' of ' + days.length) + ' ' + label(time) + 's.';
+    return largest(split, ' of ' + name).replace(' the ', ' is the ') + range + ', and leads on ' + allOrSome(led, days.length) + ' ' + plural(label(time)) + '.';
   }
   if (by && catalog.dimensions[by]!.type === 'number' && rows.length) {
     // A numeric dimension: the total, and the bin that holds the most of it.
-    const top = rows.reduce((a, r) => ((r[m] as number) > (a[m] as number) ? r : a)), end = top[by + '@end'];
+    const top = most(rows, m)!, end = top[by + '@end'];
     return M.label + ': ' + formatValue(t[m], M) + range + '. The most, ' + formatValue(top[m] as number, M) + ', at a ' + catalog.dimensions[by]!.label.toLowerCase() + ' of ' + top[by] + (end == null ? '' : ' to ' + end) + '.';
   }
   if (by && catalog.dimensions[by]!.type !== 'time' && rows.length) {
@@ -118,8 +128,8 @@ export function tldrProse(q: Query, result: Result, share: boolean, catalog: Cat
 export function rangeProse(q: Query, result: Result, catalog: Catalog, ends: [string, string]): string {
   const by = (q.by || [])[0], rows = result.rows, vals = rows.flatMap((r) => ends.map((f) => r[f])).filter((v): v is number => typeof v === 'number');
   if (!by || !vals.length) return '';
-  const M = catalog.metrics[ends[0].split('@')[0]!] || catalog.metrics[q.metrics[0]!]!;      // the metric the ends are companions of
-  return ' Between ' + formatValue(Math.min(...vals), M) + ' and ' + formatValue(Math.max(...vals), M) + ' across ' + rows.length + ' ' + catalog.dimensions[by]!.label.toLowerCase() + (rows.length === 1 ? '' : 's') + '.';
+  const M = companionOf(catalog, ends[0]) || catalog.metrics[q.metrics[0]!]!;      // the metric the ends are companions of
+  return ' Between ' + formatValue(Math.min(...vals), M) + ' and ' + formatValue(Math.max(...vals), M) + ' across ' + rows.length + ' ' + many(rows.length, catalog.dimensions[by]!.label.toLowerCase()) + '.';
 }
 
 /** What a view of ranks says: which value of the split is first, and on how many of the values along x, and then who
@@ -133,9 +143,9 @@ export function rankProse(q: Query, result: Result, catalog: Catalog, field: str
   const of = (name: Row[string]) => rows.filter((r) => r[split] === name), firsts = (name: Row[string]) => of(name).filter((r) => rank(r) === 1).length;
   const top = names.reduce((a, n) => (firsts(n) > firsts(a) ? n : a)), n = firsts(top), dim = catalog.dimensions[x]!.label.toLowerCase(), what = catalog.dimensions[split]!.label.toLowerCase();
   // A companion's rank is by the metric it came with. A metric that is itself a rank is by nothing else.
-  const by = field.includes('@') && catalog.metrics[field.split('@')[0]!] ? ' by ' + catalog.metrics[field.split('@')[0]!]!.label.toLowerCase() : '';
+  const of_ = field.includes('@') ? companionOf(catalog, field) : undefined, by = of_ ? ' by ' + of_.label.toLowerCase() : '';
   const said = (name: Row[string]) => say(catalog, split, { [split]: name });
-  let s = (result.meta.range ? 'In the ' + rangeLabel(result.meta.range) + ', ' : '') + said(top) + ' is first' + by + ' on ' + (n === xs.length ? 'all ' + n : n + ' of ' + xs.length) + ' ' + (xs.length === 1 ? dim : plural(dim)) + '.';
+  let s = (result.meta.range ? 'In the ' + rangeLabel(result.meta.range) + ', ' : '') + said(top) + ' is first' + by + ' on ' + allOrSome(n, xs.length) + ' ' + many(xs.length, dim) + '.';
   if (xs.length < 2) return s;
   // From the first value along x to the last: the furthest rise, the furthest fall. A lower rank is a rise.
   const moved = names.map((name) => { const at = of(name); return { name, from: rank(at[0]!), to: rank(at[at.length - 1]!) }; }).filter((m) => m.from !== m.to);
@@ -156,7 +166,7 @@ export function differenceProse(q: Query, result: Result, catalog: Catalog, ends
   const above = rows.filter((r) => at(r, to)! > at(r, from)!).length, below = rows.filter((r) => at(r, to)! < at(r, from)!).length, dim = catalog.dimensions[by]!.label.toLowerCase();
   // What the first end is called: the period before, a companion by its own label or its suffix, a metric by its label.
   const M = catalog.metrics[from], name = from.endsWith('@previous') ? 'the previous period' : M ? M.label.toLowerCase() : from.slice(from.indexOf('@') + 1);
-  return ' Above ' + name + ' on ' + above + ' of ' + rows.length + ' ' + (rows.length === 1 ? dim : plural(dim)) + (below ? ', and below it on ' + below : '') + '.';
+  return ' Above ' + name + ' on ' + above + ' of ' + rows.length + ' ' + many(rows.length, dim) + (below ? ', and below it on ' + below : '') + '.';
 }
 
 /** The tldr prose for a metric by two dimensions on a grid: the cell that holds the most, and the busiest value of each
@@ -165,7 +175,7 @@ export function differenceProse(q: Query, result: Result, catalog: Catalog, ends
 export function gridProse(q: Query, result: Result, catalog: Catalog): string | null {
   const m = q.metrics[0]!, [a, b] = q.by || [], rows = result.rows.filter((r) => r[m] != null);
   if (result.meta.empty || !a || !b || !result.totalsBy || !rows.length) return null;
-  const peak = rows.reduce((top, r) => ((r[m] as number) > (top[m] as number) ? r : top)), name = catalog.metrics[m]!.label.toLowerCase();
+  const peak = most(rows, m)!, name = catalog.metrics[m]!.label.toLowerCase();
   // A bin is said by both its ends, as its row label is, and in a pair by its dimension too: two bare ranges do not say which is which.
   const say = (_: Catalog, d: string, r: Row, pair = false) => (r[d + '@end'] == null ? formatDimension(r[d], catalog.dimensions[d]!) : (pair ? catalog.dimensions[d]!.label.toLowerCase() + ' ' : '') + formatBin(r[d], r[d + '@end']));
   // Signed values have no busiest and no share: what is said is how far they run each way, and where. A value set
@@ -184,10 +194,14 @@ export function gridProse(q: Query, result: Result, catalog: Catalog): string | 
 export function partialNote(row: Row): string {
   return row.partial ? 'so far' : '';
 }
+/** The note an answer carries where its last bucket is unfinished, by the granularity of its buckets: "Today is still in progress." */
+export function inProgressNote(granularity: string): string {
+  return (granularity === 'hour' ? 'This hour' : 'Today') + ' is still in progress.';
+}
 
 /** What a view says of the rows it has no place to draw, by the label of their dimension: "12 countries not shown".
  * The table still lists them. Empty when there are none, so it also answers whether there is anything to say. */
 export function notShownNote(count: number, label: string): string {
   const name = label.toLowerCase();
-  return count ? count + ' ' + (count === 1 ? name : plural(name)) + ' not shown' : '';
+  return count ? count + ' ' + many(count, name) + ' not shown' : '';
 }

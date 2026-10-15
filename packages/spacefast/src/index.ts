@@ -72,6 +72,8 @@ export function adapt(api: ApiResult, options: AdaptOptions = {}): Adapted {
   for (const c of metrics) {
     const def: MetricDef = { label: c.label, unit: c.currency || UNITS[c.unit]!, polarity: POLARITY[c.polarity]!, ...(c.definition ? { definition: c.definition } : {}) };
     if (c.currency) def.rangeTotal = 'sum';
+    // ponytail: the one metric name in the adapter. The API's column does not yet say how its values total over a range;
+    // when it does, map that here as UNITS and POLARITY are mapped, and this line goes (issue #30).
     if (c.id === 'visitor_days') def.rangeTotal = 'sum of daily';
     catalog.metrics[c.id] = def;
   }

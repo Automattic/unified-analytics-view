@@ -1,6 +1,13 @@
+import { dotRadius } from '@unified-analytics/core';
 import { attr } from '../dom.ts';
-import { DOT } from '../layouts/points.ts';
 import { token } from '../tokens.ts';
+
+/* A plot's dot, across, by its size step: core's dotRadius() is a base and a step for each size, and a dot with no
+ * size is NO_SIZE steps. Read back from it, so the stylesheet's dot is core's. Here and not in points.ts, which
+ * re-exports it, so that the swatch reads it without an import cycle (points.ts -> chrome/size.ts -> here). */
+const STEP = dotRadius(2) - dotRadius(1), BASE = dotRadius(1) - STEP;
+export const NO_SIZE = (dotRadius() - BASE) / STEP;
+export const DOT = `calc(${2 * BASE}px + var(--uav-size, ${NO_SIZE}) * ${2 * STEP}px)`;
 
 /* The swatch: a colour said as a small shape of it, wherever a key names a colour. One rule set for all of them: an
  * entry of the legend, a line of the readout, a step of the ramp, a dot of the key to sizes and the pulse beside the

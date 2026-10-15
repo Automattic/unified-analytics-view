@@ -1,5 +1,5 @@
 import { geoEqualEarth, geoIdentity, geoPath, type ExtendedFeatureCollection, type GeoProjection } from 'd3-geo';
-import { dotRadius, heldBox, notShownNote, registerMark, registerPreset, roleOf, ruleFor, seqScale, sizeKey, sizeStep } from '@unified-analytics/core';
+import { dotRadius, heldBox, layerKeys, notShownNote, registerMark, registerPreset, roleOf, ruleFor, seqScale, sizeKey, sizeStep } from '@unified-analytics/core';
 import type { CircleNode, CustomMark, FitRule, Part, PathNode, PlacedNode, Row, SceneNode, TextNode } from '@unified-analytics/core';
 
 /* The `geo` mark: a map of regions, as a custom mark (core's marks.ts). This is its half for core: a scene in ratios
@@ -91,7 +91,7 @@ export function geoMark(shapes: Shapes, { name = 'geo', projection }: GeoOptions
       const values = (f: unknown) => drawn.map((s) => of(s.id, f)).filter((v): v is number => v != null);
       // The colour scale runs over the regions drawn, as a grid's runs over its cells: geometry, read from the rows.
       const fill = typeof color === 'string' ? seqScale(values(color), catalog.metrics[color]!) : null;
-      const top = Math.max(0, ...values(size)) || 1, id = roleOf(l) + ':' + l.mark, role = roleOf(l);
+      const top = Math.max(0, ...values(size)) || 1, id = layerKeys(layers)[0]!, role = roleOf(l);
       // Every shape handed in is drawn, in the shapes' own order, so the map does not change with the ranking. One the
       // result has a row for carries it. Under symbols the regions are the ground they stand on, in the tone of no value.
       const nodes: SceneNode[] = regions.map((s): PathNode => ({ key: id + ':' + s.key, part: 'plot', kind: 'path', d: s.d, points: [], fill: true,

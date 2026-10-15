@@ -1,4 +1,4 @@
-import { applies, formatDimension, registerMark, registerPreset, roleOf, rowKeys, ruleFor } from '@unified-analytics/core';
+import { applies, formatDimension, layerKeys, registerMark, registerPreset, roleOf, rowKeys, ruleFor } from '@unified-analytics/core';
 import type { CustomMark, FitRule, Part, PathNode, PlacedNode, RectNode, Row, SceneNode, TextNode } from '@unified-analytics/core';
 
 /* The `link` mark: a ribbon from a value of one dimension to a value of another, as a custom mark (core's marks.ts).
@@ -84,7 +84,7 @@ export const linkMark: CustomMark = {
 
     // Paint follows the source: a series colour for each, by its place in the engine's order, and its ribbons in that
     // colour's soft tone. A target is where several sources meet, so it is no one's colour.
-    const id = roleOf(l) + ':' + l.mark, role = roleOf(l), paint = (n: Node) => 'series.' + (n.i + 1);
+    const id = layerKeys(layers)[0]!, role = roleOf(l), paint = (n: Node) => 'series.' + (n.i + 1);
     const nodes: SceneNode[] = flows.map((f): PathNode => ({ key: id + ':' + key(f.r), part: 'plot', kind: 'path', d: ribbon(f.y0, ends(f)[0], f.y1, ends(f)[1]), points: [], fill: true,
       paint: paint(f.s), opacity: 0.35, tone: 'soft', row: key(f.r), layer: 'data', role }));
     const dims = [src, tgt];

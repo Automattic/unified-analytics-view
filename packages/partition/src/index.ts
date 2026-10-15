@@ -1,4 +1,4 @@
-import { formatDimension, formatValue, heldBox, registerMark, registerPreset, roleOf, ruleFor, seqScale } from '@unified-analytics/core';
+import { formatDimension, formatValue, heldBox, layerKeys, registerMark, registerPreset, roleOf, ruleFor, seqScale, uniqueKeys } from '@unified-analytics/core';
 import type { CustomMark, FitRule, MarkView, Part, PlacedNode, RectNode, Row, SceneNode, TextNode } from '@unified-analytics/core';
 
 /* The `partition` mark: a box divided by area, nested once, which is a treemap. A custom mark (core's marks.ts). This
@@ -100,8 +100,7 @@ function read({ layers, query, result, catalog }: Omit<MarkView, 'guides'>) {
   const fill = typeof color === 'string' ? seqScale(drawn.map((r) => r[color]).filter((v): v is number => typeof v === 'number'), catalog.metrics[color.split('@')[0]!]) : null;
   if (!fill && shown.length > SERIES) throw new Error('Dividing by "' + dim + '" makes ' + shown.length + ' boxes, and there are ' + SERIES + ' series colours. Add "limit": ' + SERIES + ' to the query, or less, or encode a metric on color to paint every box by the ramp.');
   // A key is made unique as it is given out: two rows of one value, or a value with the separator in it.
-  const id = roleOf(l) + ':' + l.mark, taken = new Set<string>();
-  const key = (k: string) => { let u = k; for (let n = 2; taken.has(u); n++) u = k + '#' + n; taken.add(u); return u; };
+  const id = layerKeys(layers)[0]!, key = uniqueKeys();
   const paint = (r: Row, i: number) => (fill ? fill.paint(r[color as string] as number | null | undefined) : 'series.' + (i + 1));
   const groups = squarify(shown.map((r) => r[size] as number), ASPECT, 1, total || 0).map((b, i): Group => {
     const top = shown[i]!, k = key(id + ':' + of(top)), rows = two ? result.rows.filter((r) => of(r) === of(top)) : [top], inside = rows.filter((r) => two && is(r[size]));

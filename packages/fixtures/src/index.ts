@@ -222,32 +222,36 @@ const INTENTS: [string, number, number, string[]][] = [
 ];
 const spread = seeded(71), near = (c: number) => Math.round((c + (spread() - 0.5) * 0.5) * 100) / 100;
 const TERMS = INTENTS.flatMap(([intent, x, y, terms]) => terms.map((term) => ({ term, intent, x: near(x), y: near(y) })));
+// Conversions by event, now and before: their count, their rate and their value.
+const EVENTS: [string, ...Cell[]][] = [
+  ['Add to cart',       [1310, 1180], [0.124, 0.125], [48200, 43100]],
+  ['Newsletter signup', [842, 610],   [0.08, 0.065],  [4210, 3050]],
+  ['Checkout started',  [655, 690],   [0.062, 0.073], [39800, 41900]],
+  ['Purchase',          [412, 371],   [0.039, 0.039], [31650, 27900]],
+  ['Trial started',     [198, null],  [0.019, null],  [9900, null]],
+  ['Contact form',      [96, 104],    [0.009, 0.011], [960, 1040]],
+];
+/** A step of the funnel that is an event: the visitors who reached it are the event's conversions, at the event's rate. */
+const reached = (event: string): Cell[] => EVENTS.find(([name]) => name === event)!.slice(1, 3) as Cell[];
+const pricing = PAGES.find((p) => p.page === '/pricing')!;
+// Errors by cause, now and before, and the share of them all that the causes down to each one hold.
+const CAUSES: [cause: string, now: number, before: number, share: number][] = [
+  ['Timeout', 412, 380, 0.38], ['Not found', 268, 301, 0.627], ['Server error', 171, 164, 0.785], ['Bad gateway', 98, 120, 0.875],
+  ['Forbidden', 61, 70, 0.932], ['Rate limited', 40, 52, 0.969], ['Other', 34, 33, 1],
+];
 const TABLES: Record<string, { fields: string[]; ranked: boolean; rows: [string, ...Cell[]][]; totals: Record<string, Cell>; also?: Record<string, Row>; split?: [dim: string, of: Record<string, string>] }> = {
-  event: { fields: ['conversions', 'conversion_rate', 'conversion_value'], ranked: true, rows: [
-    ['Add to cart',       [1310, 1180], [0.124, 0.125], [48200, 43100]],
-    ['Newsletter signup', [842, 610],   [0.08, 0.065],  [4210, 3050]],
-    ['Checkout started',  [655, 690],   [0.062, 0.073], [39800, 41900]],
-    ['Purchase',          [412, 371],   [0.039, 0.039], [31650, 27900]],
-    ['Trial started',     [198, null],  [0.019, null],  [9900, null]],
-    ['Contact form',      [96, 104],    [0.009, 0.011], [960, 1040]],
-  ], totals: { conversions: [3513, 2955], conversion_rate: [0.212, 0.198], conversion_value: [134720, 116990] } },
+  event: { fields: ['conversions', 'conversion_rate', 'conversion_value'], ranked: true, rows: EVENTS, totals: { conversions: [3513, 2955], conversion_rate: [0.212, 0.198], conversion_value: [134720, 116990] } },
   step: { fields: ['visitors', 'conversion_rate'], ranked: false, rows: [
     ['Visited the site',  [10531, 9437], [1, 1]],
-    ['Viewed pricing',    [1705, 1390],  [0.162, 0.147]],
-    ['Started checkout',  [655, 690],    [0.062, 0.073]],
-    ['Purchased',         [412, 371],    [0.039, 0.039]],
+    ['Viewed pricing',    [pricing.visitors, pricing.prev!.visitors], [0.162, 0.147]],
+    ['Started checkout',  ...reached('Checkout started')],
+    ['Purchased',         ...reached('Purchase')],
   ], totals: { conversion_rate: [0.039, 0.039] } },
   // Errors from the most to the fewest, and the share of them all that the rows down to each one hold. The engine adds it up.
   // The same share comes as a companion of the errors too, `errors@share`: the two ways an engine may send it.
-  cause: { fields: ['errors', 'errors_share'], ranked: false, also: Object.fromEntries([['Timeout', 0.38], ['Not found', 0.627], ['Server error', 0.785], ['Bad gateway', 0.875], ['Forbidden', 0.932], ['Rate limited', 0.969], ['Other', 1]].map(([cause, share]) => [cause, { 'errors@share': share }])), rows: [
-    ['Timeout',      [412, 380], [0.38, null]],
-    ['Not found',    [268, 301], [0.627, null]],
-    ['Server error', [171, 164], [0.785, null]],
-    ['Bad gateway',  [98, 120],  [0.875, null]],
-    ['Forbidden',    [61, 70],   [0.932, null]],
-    ['Rate limited', [40, 52],   [0.969, null]],
-    ['Other',        [34, 33],   [1, null]],
-  ], totals: { errors: [1084, 1120], errors_share: [1, 1] } },
+  cause: { fields: ['errors', 'errors_share'], ranked: false, also: Object.fromEntries(CAUSES.map(([cause, , , share]) => [cause, { 'errors@share': share }])),
+    rows: CAUSES.map(([cause, now, before, share]) => [cause, [now, before], [share, null]]),
+    totals: { errors: [1, 2].map((at) => CAUSES.reduce((s, c) => s + (c[at] as number), 0)) as Cell, errors_share: [1, 1] } },
   // What revenue would gain or lose were each assumption at the low or the high end of its range, from the widest swing
   // to the narrowest. Signed, from the forecast as it stands. There is no total of them to give.
   factor: { fields: ['revenue_effect'], ranked: false, rows: [

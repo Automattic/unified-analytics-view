@@ -3,7 +3,8 @@ import { customMarks, customPresets, expand, place, type CircleNode, type Painte
 import { compileFitRules } from '@unified-analytics/dom';
 import { countries, moreSamples, scenarios, tiles } from '@unified-analytics/fixtures';
 import { GEO_RULES, geoMark, geoNames, geoRules, registerGeo } from '@unified-analytics/geo';
-import { geoPainter, geoPainterAs } from '@unified-analytics/geo/dom';
+import { geoPainter, geoPainterAs, registerGeoPainters } from '@unified-analytics/geo/dom';
+import { painterOf } from '../packages/dom/src/layouts/index.ts';
 import { run, shapes, validView as view } from './helpers.ts';
 
 // Step 10 of docs/uncommon-coverage-plan.md: tile maps. No new mark: the `geo` mark, registered again by the fixtures
@@ -174,6 +175,15 @@ describe('the same mark under another name', () => {
     expect(geoPainterAs('geo').css).toBe(geoPainter.css);
     const css = compileFitRules(geoRules('geo-tiles'), { 'geo-tiles': painter.fit ?? {} }), fig = '.uav[data-layout="geo-tiles"]:not([data-keep~="marks"])';
     expect(css).toContain('@container uav-view (inline-size < 279.5px) {\n  ' + fig + ':has(~ .uav-fallback[data-rule="marks"]) { display: none; }\n  ' + fig + ' ~ .uav-fallback[data-rule="marks"] { display: block; }\n}');
+  });
+});
+
+describe('the painters of the names', () => {
+  it('come with the name, for shapes registered after registerGeoPainters() as before it', () => {
+    registerGeoPainters();
+    expect(painterOf('geo-tiles')!.css).toBe(geoPainterAs('geo-tiles').css);
+    registerGeo(tiles.square, { name: 'geo-later' });
+    expect(painterOf('geo-later')!.css).toBe(geoPainterAs('geo-later').css);
   });
 });
 

@@ -1,6 +1,6 @@
 import type { CircleNode, PathNode, TextNode } from '@unified-analytics/core';
 import { FOCUS, HOVER, attr, ensure, holdShape, keyed, paintRamp, paintSize, prop, registerPainter, svg as svgOf, text, token, unlist, type LayoutPainter } from '@unified-analytics/dom';
-import { MAP, NOTE, geoNames } from './index.ts';
+import { MAP, NOTE, eachGeoName } from './index.ts';
 
 /* The `geo` mark's half for the DOM: the painter of its layout, for registerPainter().
  *
@@ -168,7 +168,7 @@ export const geoPainter: LayoutPainter = {
  * ponytail: the stylesheet is written out again for each name. One sheet with a list of names if a page has many. */
 export const geoPainterAs = (name: string): LayoutPainter => ({ ...geoPainter, layout: name, css: css.replaceAll('[data-layout="geo"]', '[data-layout="' + name + '"]') });
 
-/** Register a painter for every name the mark has been registered under so far (`registerGeo`). */
+/** Register a painter for every name the mark is registered under (`registerGeo`): those so far, and each one after. */
 export function registerGeoPainters(): void {
-  for (const name of geoNames()) registerPainter(name === 'geo' ? geoPainter : geoPainterAs(name));
+  eachGeoName((name) => registerPainter(name === 'geo' ? geoPainter : geoPainterAs(name)));
 }

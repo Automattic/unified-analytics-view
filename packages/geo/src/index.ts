@@ -131,9 +131,11 @@ export function geoMark(shapes: Shapes, { name = 'geo', projection }: GeoOptions
   };
 }
 
-const NAMES = new Set<string>();
+const NAMES = new Set<string>(), HEARD: ((name: string) => void)[] = [];
 /** Every name registerGeo() has registered the mark under, in order: each needs a painter of that name (dom.ts's registerGeoPainters). */
 export const geoNames = (): ReadonlySet<string> => NAMES;
+/** Call `f` with each name the mark is registered under: those so far, and each one registerGeo() adds after, as shapes loaded later are. */
+export function eachGeoName(f: (name: string) => void): void { NAMES.forEach((n) => f(n)); HEARD.push(f); }
 
 /** Register the `geo` mark with its boundary shapes, and the presets that draw it. A spec then names the mark in
  * `mark`, or a preset in `use`.
@@ -145,7 +147,7 @@ export const geoNames = (): ReadonlySet<string> => NAMES;
 export function registerGeo(shapes: Shapes, { presets, ...options }: GeoOptions & { presets?: { color?: string; size?: string } } = {}): void {
   const name = options.name ?? 'geo';
   registerMark(name, geoMark(shapes, options));
-  NAMES.add(name);
+  if (!NAMES.has(name)) { NAMES.add(name); HEARD.forEach((f) => f(name)); }
   // Core cannot name this mark, so its presets are registered here. Working names: check each against @automattic/charts before it ships.
   const { color, size } = presets ?? (name === 'geo' ? { color: 'choropleth', size: 'symbol-map' } : {});
   if (color) registerPreset(color, { layers: [{ mark: name, encode: { x: '$by', color: '$metric' } }] });

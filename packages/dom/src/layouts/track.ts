@@ -2,6 +2,7 @@ import { dotRadius, type CircleNode, type LineNode } from '@unified-analytics/co
 import { attr, prop } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { RULE } from '../chrome/rule.ts';
+import { glyph } from '../chrome/unit.ts';
 
 /* What a row's track gains with a rule, a tick and a dot, and with a bar that has two ends. It is the rows layout's,
  * kept in a file of its own: rows.ts adds TRACK_CSS to its own, and calls trackMark for a mark that is not a bar.
@@ -24,7 +25,9 @@ import { RULE } from '../chrome/rule.ts';
  * `data-track`, so a list of bars behind their labels is not touched. */
 const along = '(100% - 2 * var(--uav-row-gap))';
 const at = (x: string) => `calc(var(--uav-row-gap) + ${x} * ${along})`;
-const glyph = `max(1px, calc(min(var(--uav-w) * ${along}, var(--uav-row-block) - 8px) - 1px))`;
+/** What a unit's glyph keeps clear of its row's top and foot, in px, as place() does. */
+const GLYPH_INSET = 4;
+const dot = glyph(`min(var(--uav-w) * ${along}, var(--uav-row-block) - ${2 * GLYPH_INSET}px)`);
 export const TRACK_CSS = `
 .uav-body[data-track] .uav-row > .uav-f-label { max-inline-size: 40cqi; }
 .uav-body[data-track] .uav-row > i { inset-block: 8px; inset-inline-start: ${at('var(--uav-x, 0)')}; inline-size: max(3px, calc(var(--uav-v) * ${along})); }
@@ -34,7 +37,7 @@ export const TRACK_CSS = `
 .uav-body[data-track] .uav-row > i[data-mark="band"] { inset-block: 0; inset-inline-start: ${at('var(--uav-x, 0)')}; inline-size: calc(var(--uav-v) * ${along}); }
 .uav-body[data-track] .uav-row > i[data-mark="tick"] { inset-block: calc((1 - var(--uav-t2)) * 100%) calc(var(--uav-t) * 100%); inline-size: ${RULE}; inset-inline-start: calc(${at('var(--uav-x)')} - ${RULE} / 2); }
 .uav-body[data-track] .uav-row > i[data-mark="dot"] { inset-block: calc(50% - ${dotRadius()}px); inline-size: ${2 * dotRadius()}px; border-radius: 50%; inset-inline-start: calc(${at('var(--uav-x)')} - ${dotRadius()}px); }
-.uav-body[data-track] .uav-row > i[data-mark="unit"] { inset-block: 0; margin-block: auto; inline-size: ${glyph}; block-size: auto; aspect-ratio: 1; border-radius: 50%; inset-inline-start: calc(${at('var(--uav-x)')} - ${glyph} / 2); }`;
+.uav-body[data-track] .uav-row > i[data-mark="unit"] { inset-block: 0; margin-block: auto; inline-size: ${dot}; block-size: auto; aspect-ratio: 1; border-radius: 50%; inset-inline-start: calc(${at('var(--uav-x)')} - ${dot} / 2); }`;
 
 export const TRACK_FIT: Record<string, Record<string, string>> = {
   track: { '.uav-body[data-track]': 'display: none;', '.uav-number:has(~ .uav-body[data-track])': 'display: block; margin: 0;' },

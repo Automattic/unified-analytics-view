@@ -1,5 +1,5 @@
 import type { PathNode, RectNode, TextNode } from '@unified-analytics/core';
-import { ensure, keyed, prop, text, token, type LayoutPainter } from '@unified-analytics/dom';
+import { ensure, keyed, prop, text, thinLabels, token, type LayoutPainter } from '@unified-analytics/dom';
 import { LABEL, LINK_RULES, NODE, standing } from './index.ts';
 
 /* The `link` mark's half for the DOM: the painter of its layout, for registerPainter().
@@ -43,9 +43,10 @@ export const linkPainter: LayoutPainter = {
   // Labels that would meet, by their real sizes, in each column: the larger node's stands (standing()).
   measure(body) {
     for (const side of ['start', 'end']) {
-      const els = Array.from(body.querySelectorAll<HTMLElement>('.uav-labels > span[data-anchor="' + side + '"]:not([data-exit])')).filter((el) => el.getClientRects().length);
-      const boxes = els.map((el) => el.getBoundingClientRect());
-      standing(boxes.map((b, i) => ({ at: b.top + b.height / 2, rank: Number(els[i]!.dataset.rank) })), boxes[0]?.height ?? 0).forEach((on, i) => els[i]!.toggleAttribute('data-thin', !on));
+      thinLabels(body, '.uav-labels > span[data-anchor="' + side + '"]:not([data-exit])', (els) => {
+        const boxes = els.map((el) => el.getBoundingClientRect());
+        return standing(boxes.map((b, i) => ({ at: b.top + b.height / 2, rank: Number(els[i]!.dataset.rank) })), boxes[0]!.height).map((on) => !on);
+      });
     }
   },
 

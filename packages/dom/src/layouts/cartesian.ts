@@ -7,7 +7,7 @@ import { token } from '../tokens.ts';
 import { label } from '../chrome/label.ts';
 import { hitNodes } from '../keys.ts';
 import { NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
-import { apart } from '../measure.ts';
+import { apart, thinLabels } from '../measure.ts';
 import { morph, once } from '../motion.ts';
 import { POINTS_CSS, POINTS_FIT, measurePoints, paintPoints } from './points.ts';
 import { RANGES_CSS, paintRanges } from './ranges.ts';
@@ -112,12 +112,12 @@ export const cartesian: LayoutPainter = {
     thinAxis(body, 'x');
     measurePoints(body);
     // Labels at the line ends, set a line apart. They are moved by a translate, which changes no size that is read.
-    const ends = Array.from(body.querySelectorAll<HTMLElement>('.uav-labels > span')).filter((el) => el.getClientRects().length);
-    if (!ends.length) return;
-    const block = body.querySelector('.uav-labels')!.getBoundingClientRect().height, own = ends.map((el) => (1 - Number(el.style.getPropertyValue('--uav-t'))) * block);
-    apart(own, ends[0]!.getBoundingClientRect().height, block).forEach((y, i) => {
-      ends[i]!.toggleAttribute('data-thin', y == null);
-      prop(ends[i]!, '--uav-dy', y == null ? null : y - own[i]! + 'px');
+    thinLabels(body, '.uav-labels > span', (ends) => {
+      const block = body.querySelector('.uav-labels')!.getBoundingClientRect().height, own = ends.map((el) => (1 - Number(el.style.getPropertyValue('--uav-t'))) * block);
+      return apart(own, ends[0]!.getBoundingClientRect().height, block).map((y, i) => {
+        prop(ends[i]!, '--uav-dy', y == null ? null : y - own[i]! + 'px');
+        return y == null;
+      });
     });
   },
 

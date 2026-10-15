@@ -1,6 +1,7 @@
 import { declutter, type CircleNode, type PathNode, type Scene, type SceneNode, type TextNode } from '@unified-analytics/core';
 import { attr, ensure, keyed, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
+import { thinLabels } from '../measure.ts';
 import { ANCHOR, label } from '../chrome/label.ts';
 import { unitDot } from '../chrome/unit.ts';
 
@@ -76,14 +77,14 @@ const num = (el: HTMLElement, name: string) => Number(el.style.getPropertyValue(
 export function measurePoints(body: HTMLElement): void {
   const holder = body.querySelector<HTMLElement>('.uav-point-labels');
   if (!holder) return;
-  const labels = Array.from(holder.querySelectorAll<HTMLElement>(':scope > span:not([data-exit])')).filter((el) => el.getClientRects().length);
-  const room = holder.getBoundingClientRect();
-  const gone = declutter(labels.map((el) => {
-    const r = el.getBoundingClientRect(), mid = num(el, '--uav-x') * room.width - r.width / 2, x = Math.max(0, Math.min(mid, room.width - r.width));
-    prop(el, '--uav-nudge', x - mid + 'px');
-    return { x, y: (1 - num(el, '--uav-t')) * room.height - 2 - (4 + (num(el, '--uav-size') || 0.4) * 5) / 2 - r.height, w: r.width, h: r.height, rank: Number(el.dataset.rank) || 0 };
-  }));
-  labels.forEach((el, i) => el.toggleAttribute('data-thin', gone[i]));
+  thinLabels(holder, ':scope > span:not([data-exit])', (labels) => {
+    const room = holder.getBoundingClientRect();
+    return declutter(labels.map((el) => {
+      const r = el.getBoundingClientRect(), mid = num(el, '--uav-x') * room.width - r.width / 2, x = Math.max(0, Math.min(mid, room.width - r.width));
+      prop(el, '--uav-nudge', x - mid + 'px');
+      return { x, y: (1 - num(el, '--uav-t')) * room.height - 2 - (4 + (num(el, '--uav-size') || 0.4) * 5) / 2 - r.height, w: r.width, h: r.height, rank: Number(el.dataset.rank) || 0 };
+    }));
+  });
 }
 
 /** A target for each row a joining line passes through, once, where it has a row: what stands in for dots that no layer drew. */

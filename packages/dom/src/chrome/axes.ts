@@ -1,6 +1,6 @@
 import type { Scene, TextNode } from '@unified-analytics/core';
 import { attr, ensure, keyed, prop, text } from '../dom.ts';
-import { thin } from '../measure.ts';
+import { thin, thinLabels } from '../measure.ts';
 import { ANCHOR, label } from './label.ts';
 
 /* The axes about a plot: the labels down its near side, along its foot, and down its far side for a second unit. A
@@ -51,12 +51,14 @@ export function thinAxis(body: HTMLElement, axis: 'x' | 'y', { gap = 6, inside =
   const box = body.querySelector<HTMLElement>(axis === 'x' ? '.uav-x-axis' : '.uav-y-axis');
   if (!box) return;
   const at = axis === 'x' ? '--uav-x' : '--uav-t', size = axis === 'x' ? 'width' : 'height';
-  const all = Array.from(box.querySelectorAll<HTMLElement>(':scope > span:not([data-exit])')).filter((el) => el.getClientRects().length), room = box.getBoundingClientRect()[size];
-  const spans = all.map((el) => {
-    // A label stands about its ratio, or from it or up to it where it is anchored at an end.
-    const s = el.getBoundingClientRect()[size], lo = Number(el.style.getPropertyValue(at)) * room - s * ({ start: 0, end: 1 }[el.dataset.anchor ?? ''] ?? 0.5);
-    return { lo, hi: lo + s, rank: Number(el.dataset.rank ?? el.dataset.order) || 0 };
+  thinLabels(box, ':scope > span:not([data-exit])', (all) => {
+    const room = box.getBoundingClientRect()[size];
+    const spans = all.map((el) => {
+      // A label stands about its ratio, or from it or up to it where it is anchored at an end.
+      const s = el.getBoundingClientRect()[size], lo = Number(el.style.getPropertyValue(at)) * room - s * ({ start: 0, end: 1 }[el.dataset.anchor ?? ''] ?? 0.5);
+      return { lo, hi: lo + s, rank: Number(el.dataset.rank ?? el.dataset.order) || 0 };
+    });
+    const fits = spans.map((s) => !inside || s.hi <= room + 1), gone = thin(spans.filter((_, i) => fits[i]), gap);
+    return all.map((_, i) => !fits[i] || !!gone[fits.slice(0, i).filter(Boolean).length]);
   });
-  const fits = spans.map((s) => !inside || s.hi <= room + 1), gone = thin(spans.filter((_, i) => fits[i]), gap);
-  all.forEach((el, i) => el.toggleAttribute('data-thin', !fits[i] || gone[fits.slice(0, i).filter(Boolean).length]));
 }

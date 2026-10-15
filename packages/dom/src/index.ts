@@ -7,3 +7,4 @@ export { attr, ensure, keyed, prop, text } from './dom.ts';
 export { registerPainter } from './layouts/index.ts';
 export { ANCHOR, label, paintAxes, paintLegend, paintRamp, paintSize, paintUnitKey, thinAxis, type Anchor, type LabelOptions } from './chrome/index.ts';
 export { hideReadout, placeReadout, readoutOf } from './keys.ts';
+export { thinLabels } from './measure.ts';

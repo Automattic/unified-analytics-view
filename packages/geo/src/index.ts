@@ -32,8 +32,10 @@ import type { CircleNode, CustomMark, FitRule, Part, PathNode, PlacedNode, Row, 
 export interface Shapes { type: string; keys?: string; planar?: boolean; features: { type: string; id?: string | number; properties?: { name?: string } | null; geometry: { type: string; coordinates: unknown[] } | null }[] }
 
 const BOX = 100;      // the width of the box paths are drawn in. Its height follows from the shapes
-const MAP = 480;      // px across a map that has room to spare
-const NOTE = 18;      // px the line of the note takes under the map
+/** px across a map that has room to spare. The painter's part holds to it too. */
+export const MAP = 480;
+/** px the line of the note takes under the map, here and in the painter. */
+export const NOTE = 18;
 
 /* Below the room a map needs it is not a smaller map: the view becomes the ranked list of the same query. The note goes
  * with the keys, before that, so it never takes the room of a small map, and is never beside the list, which has every row. */

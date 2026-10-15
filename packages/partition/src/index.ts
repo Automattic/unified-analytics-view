@@ -54,10 +54,17 @@ export function squarify(values: number[], w: number, h: number, total = 0): Box
   return out;
 }
 
-const ASPECT = 1.6;   // the part's width over its height
-const MAX = 480;      // px across a treemap that has room to spare
-const HEAD = 16;      // px a parent's name takes at the top of its box, over its children
-const LINE = 14;      // px a label's line takes
+/* What the scene sets and the painter's stylesheet sets again, so both are read from here. */
+/** The part's width over its height. */
+export const ASPECT = 1.6;
+/** px across a treemap that has room to spare. */
+export const MAX = 480;
+/** px a parent's name takes at the top of its box, over its children, and the most of the box's height it takes. */
+export const HEAD = 16, HEAD_MOST = 0.3;
+/** px a label's line takes. */
+export const LINE = 14;
+/** px between two parents, and between two children: a parent stands half its gap in from the part's edge all round. */
+export const GAP = 2, KID_GAP = 1;
 const CHAR = 6;       // px a character of a label takes, near enough, where nothing can be measured
 
 /* Below the room a treemap needs it is not a smaller treemap: the view becomes a list of the same query. Which list
@@ -174,14 +181,14 @@ export const partitionMark: CustomMark = {
     for (const n of scene.nodes) {
       if (n.part !== 'plot') continue;
       if (n.kind === 'rect') {
-        const child = !!n.pair, of = child ? inner : { x: left + 1, y: 1, w, h }, gap = child ? 1 : 2;
+        const child = !!n.pair, of = child ? inner : { x: left + GAP / 2, y: GAP / 2, w, h }, gap = child ? KID_GAP : GAP;
         last = { x: of.x + n.x! * of.w, y: of.y + n.y! * of.h, w: Math.max(0, n.w! * of.w - gap), h: Math.max(0, n.h! * of.h - gap) };
         nodes.push({ key: n.key, kind: 'rect', ...last, rx: 2, paint: n.paint, layer: n.layer, ...(n.opacity != null && { opacity: n.opacity }) });
         if (!child) parent = last;
       } else if (n.kind === 'text') {
-        const child = last !== parent, divided = !child && two, head = divided ? Math.min(HEAD, parent.h * 0.3) : 0;
+        const child = last !== parent, divided = !child && two, head = divided ? Math.min(HEAD, parent.h * HEAD_MOST) : 0;
         const shows: boolean = child ? named && fits(n, last) : fits(n, divided ? { ...parent, h: head } : parent);
-        if (!child) { named = shows; inner = { x: parent.x, y: parent.y + head, w: parent.w + 1, h: parent.h - head + 1 }; }
+        if (!child) { named = shows; inner = { x: parent.x, y: parent.y + head, w: parent.w + KID_GAP, h: parent.h - head + KID_GAP }; }
         if (shows) nodes.push({ key: n.key, kind: 'text', x: last.x + 4, y: last.y + (divided ? head / 2 : LINE / 2 + 2), text: n.text, anchor: 'start', baseline: 'middle', font: n.font, paint: n.paint, layer: n.layer, ...(n.halo && { halo: true }) });
       }
     }

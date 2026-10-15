@@ -1,6 +1,6 @@
 import { formatDimension, formatValue, type RectNode, type Result, type Row, type TextNode } from '@unified-analytics/core';
 import { FOCUS, HOVER, attr, chooseItem, ensure, holdShape, keyed, label, nodePaint, paintRamp, prop, registerPainter, roveItems, text, token, type LayoutPainter } from '@unified-analytics/dom';
-import { boxNames } from './index.ts';
+import { ASPECT, GAP, HEAD, HEAD_MOST, KID_GAP, LINE, MAX, boxNames } from './index.ts';
 
 /* The `partition` mark's half for the DOM: the painter of its layout, for registerPainter().
  *
@@ -33,19 +33,19 @@ import { boxNames } from './index.ts';
  * Below the room a treemap needs, the `marks` rule's `fallback` shows the same query as a list in its place. That is
  * the element's doing (view.ts), and nothing here knows of it. */
 const at = (gap: number, off: number) => `inset-inline-start: calc(var(--uav-x) * 100% + ${off}px); inset-block-start: calc((1 - var(--uav-t)) * 100% + ${off}px); inline-size: calc(var(--uav-w) * 100% - ${gap}px); block-size: calc(var(--uav-v) * 100% - ${gap}px);`;
-const shape = holdShape('480px', 'var(--uav-aspect, 1.6)');
+const shape = holdShape(MAX + 'px', 'var(--uav-aspect, ' + ASPECT + ')');
 const css = `
 .uav[data-layout="partition"] .uav-body { display: flex; flex-direction: column; }
 .uav[data-layout="partition"] .uav-plot { ${shape.part} container-type: inline-size; }
-/* Parents are 2 px apart, a pixel in from the part's edge all round, and children 1 px: the gap is what tells one box
+/* Parents are ${GAP} px apart, ${GAP / 2} px in from the part's edge all round, and children ${KID_GAP} px (index.ts): the gap is what tells one box
  * from the next, and a parent's is the wider. A child gives up its gap at its far edges, and the room that holds the
  * children is that much larger, so the last of them end where their parent does. */
-.uav[data-layout="partition"] .uav-plot > div { position: absolute; ${at(2, 1)} display: flex; flex-direction: column; overflow: hidden; border-radius: ${token('border-radius-bar')}; background: var(--uav-paint); }
+.uav[data-layout="partition"] .uav-plot > div { position: absolute; ${at(GAP, GAP / 2)} display: flex; flex-direction: column; overflow: hidden; border-radius: ${token('border-radius-bar')}; background: var(--uav-paint); }
 .uav[data-layout="partition"] .uav-head { position: absolute; inset: 0; overflow: hidden; }
-.uav[data-layout="partition"] .uav-plot[data-divided] .uav-head { position: relative; inset: auto; flex: none; block-size: 16px; max-block-size: 30%; }
-.uav[data-layout="partition"] .uav-kids { position: relative; flex: 1; min-block-size: 0; margin-inline-end: -1px; margin-block-end: -1px; }
-.uav[data-layout="partition"] .uav-kids i { position: absolute; ${at(1, 0)} overflow: hidden; border-radius: ${token('border-radius-cell')}; background: var(--uav-paint); }
-.uav[data-layout="partition"] .uav-label { position: absolute; inset-inline-start: 0; inset-block-start: 0; inline-size: max-content; padding: 1px 4px; line-height: calc(14 / 11); pointer-events: none; ${label()} }
+.uav[data-layout="partition"] .uav-plot[data-divided] .uav-head { position: relative; inset: auto; flex: none; block-size: ${HEAD}px; max-block-size: ${Math.round(HEAD_MOST * 100)}%; }
+.uav[data-layout="partition"] .uav-kids { position: relative; flex: 1; min-block-size: 0; margin-inline-end: -${KID_GAP}px; margin-block-end: -${KID_GAP}px; }
+.uav[data-layout="partition"] .uav-kids i { position: absolute; ${at(KID_GAP, 0)} overflow: hidden; border-radius: ${token('border-radius-cell')}; background: var(--uav-paint); }
+.uav[data-layout="partition"] .uav-label { position: absolute; inset-inline-start: 0; inset-block-start: 0; inline-size: max-content; padding: 1px 4px; line-height: calc(${LINE} / 11); pointer-events: none; ${label()} }
 /* Boxes lie edge to edge and a parent cuts off what leaves it, so the chosen one is outlined inside its own edge. */
 .uav[data-layout="partition"] .uav-plot { outline: none; }
 .uav[data-layout="partition"] .uav-plot:focus-visible::after { content: ""; position: absolute; inset: 0; pointer-events: none; ${FOCUS.around} }
@@ -98,7 +98,7 @@ export const partitionPainter: LayoutPainter = {
 
   paint(body, scene, _rules, data) {
     const plot = ensure(body, 'div', 'uav-plot'), names = boxNames(data);
-    prop(plot, '--uav-aspect', scene.aspect ?? 1.6);
+    prop(plot, '--uav-aspect', scene.aspect ?? ASPECT);
     // The scene's order says what is whose: a parent's box, its name, then each child's box with its name after it.
     const parents: RectNode[] = [], kids = new Map<string, RectNode[]>(), labels = new Map<string, TextNode>();
     let last: RectNode | undefined;

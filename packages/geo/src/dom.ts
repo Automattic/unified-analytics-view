@@ -1,6 +1,6 @@
 import type { CircleNode, PathNode, TextNode } from '@unified-analytics/core';
 import { FOCUS, HOVER, attr, ensure, holdShape, keyed, paintRamp, paintSize, prop, registerPainter, svg as svgOf, text, token, unlist, type LayoutPainter } from '@unified-analytics/dom';
-import { geoNames } from './index.ts';
+import { MAP, NOTE, geoNames } from './index.ts';
 
 /* The `geo` mark's half for the DOM: the painter of its layout, for registerPainter().
  *
@@ -22,7 +22,7 @@ import { geoNames } from './index.ts';
  * the map by direction.
  * Below the room a map needs, the `marks` rule's `fallback` shows the same query as a ranked list in its place. That
  * is the element's doing (view.ts), and nothing here knows of it. */
-const shape = holdShape('480px', 'var(--uav-aspect, 2)');
+const shape = holdShape(MAP + 'px', 'var(--uav-aspect, 2)');
 const css = `
 .uav[data-layout="geo"] .uav-body { display: flex; flex-direction: column; }
 .uav[data-layout="geo"] .uav-plot { ${shape.part} container-type: inline-size; }
@@ -47,7 +47,7 @@ const css = `
 .uav[data-layout="geo"] .uav-points { pointer-events: none; }
 .uav[data-layout="geo"] .uav-points i { pointer-events: auto; }
 .uav[data-layout="geo"] .uav-ramp:empty { display: none; }
-.uav[data-layout="geo"] .uav-note { block-size: calc(var(--uav-font-tick) * 18 / 11); line-height: calc(18 / 11); overflow: hidden; white-space: nowrap; }
+.uav[data-layout="geo"] .uav-note { block-size: calc(var(--uav-font-tick) * ${NOTE} / 11); line-height: calc(${NOTE} / 11); overflow: hidden; white-space: nowrap; }
 .uav[data-layout="geo"] .uav-note span { color: var(--uav-paint); }
 .uav[data-layout="geo"] .uav-note:empty { display: none; }
 /* In a box the part gives way to the height and its width follows, as a circle of arcs does. */

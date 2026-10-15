@@ -68,7 +68,7 @@ function placeNumber(nodes: SceneNode[], W: number, container: Container, small:
     yy += 18;
   }
   if (sub && note && W >= 120 && !(small && sub.rank)) {
-    out.push(text(sub, 0, yy, clip(sub.text, Math.floor(W / (CHAR_W - 0.8)))));
+    out.push(text(sub, 0, yy, clip(sub.text, Math.floor(W / TICK_W))));
     yy += 16;
   }
   return { nodes: out, height: yy - 10 };
@@ -218,17 +218,22 @@ function placeSize(scene: Scene): Block {
 }
 
 // The ranked bar list: rows of a fixed height, labels clipped by character width.
-/** The room each of a row's columns takes, the first of them first: its widest text, a header among them, and 14 px.
+/** The px a column of values gives up beyond its widest text. */
+export const COLUMN_PAD = 14;
+/** The room one column takes: its widest value in characters, or its header's, set in the tick face, where that is wider, and COLUMN_PAD. */
+export const columnRoom = (valueChars: number, headerChars = 0): number => Math.max(valueChars * CHAR_W, headerChars * TICK_W) + COLUMN_PAD;
+/** The room each of a row's columns takes, the first of them first: its widest text, a header among them, and COLUMN_PAD.
  * The DOM sets a column by its content. It asks this only for when to give one up, so that it agrees with resolve(). */
 export function columnRooms(scene: Scene): number[] {
-  const room: number[] = [];
+  const values: number[] = [], headers: number[] = [];
   scene.nodes.forEach((n) => {
     // The header over the labels is no column of values: it starts where they do and takes no room of its own.
     if (n.kind !== 'text' || !((n.part === 'columns' && n.anchor !== 'start') || (n.part === 'rows' && n.font === 'value'))) return;
-    const i = n.rank || 0;
-    room[i] = Math.max(room[i] || 0, n.text.length * (n.part === 'columns' ? TICK_W : CHAR_W) + 14);
+    const i = n.rank || 0, of = n.part === 'columns' ? headers : values;
+    of[i] = Math.max(of[i] || 0, n.text.length);
+    values[i] ??= 0;
   });
-  return room;
+  return values.map((v, i) => columnRoom(v, headers[i]));
 }
 export const COLUMNS_BLOCK = 20;   // px the headers take over the rows
 

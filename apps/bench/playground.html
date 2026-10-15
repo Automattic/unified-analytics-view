@@ -8,22 +8,13 @@
   <link rel="stylesheet" href="/src/playground.css">
 </head>
 <body>
-  <nav><a href="playground.html" aria-current="page">Playground</a> <a href="./">Views</a> <a href="marks.html">Marks</a> <a href="tokens.html">Tokens</a></nav>
+  <!-- bench:nav -->
   <form id="controls">
     <fieldset><legend>Start from</legend>
       <select name="sample" aria-label="Start from a sample"><option value="">your own</option></select>
     </fieldset>
-    <fieldset><legend>Data</legend>
-      <label><input type="radio" name="scenario" value="typical" checked> typical</label>
-      <label><input type="radio" name="scenario" value="no-prior"> no prior</label>
-      <label><input type="radio" name="scenario" value="empty"> empty</label>
-    </fieldset>
-    <fieldset><legend>Height</legend>
-      <label><input type="radio" name="height" value="" checked> natural</label>
-      <label><input type="radio" name="height" value="160"> 160</label>
-      <label><input type="radio" name="height" value="100"> 100</label>
-      <label><input type="radio" name="height" value="60"> 60</label>
-    </fieldset>
+    <!-- bench:data -->
+    <!-- bench:height -->
   </form>
   <main class="playground">
     <section class="editor">

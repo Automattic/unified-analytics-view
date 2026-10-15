@@ -54,9 +54,9 @@ export const TOKENS: Record<string, string> = {
   'font-family-tick': 'inherit',
   'font-family-value': 'inherit',
   // The four faces of a scene's text, and the smaller one the number takes where the larger does not fit.
-  'font-size-tick': '8px',
+  'font-size-tick': '11px',
   'font-size-label': '13.33px',
-  'font-size-value': '12px',
+  'font-size-value': '13px',
   'font-size-display': '39.81px',
   'font-size-display-small': '27.65px',
   'font-weight-value': '500',
@@ -88,6 +88,8 @@ export const UNTHEMED: Record<string, string> = {
   'elevation-tooltip': 'the theme\'s shadow is lit by --ua-light, which an unthemed page does not have',
   'font-family-tick': 'the page\'s own face, as Ans Mono is not loaded without the token package',
   'font-family-value': 'the page\'s own face, as Ans Mono is not loaded without the token package',
+  'font-size-tick': 'sized for the page\'s own face, which it falls back to; the theme\'s 8px is Ans Mono\'s pixel grid',
+  'font-size-value': 'sized for the page\'s own face, which it falls back to; the theme\'s 12px is Ans Mono\'s pixel grid',
 };
 
 /** A colour a scene names that the table does not: `series.2` is `color-series-2`, a sequential step `color-seq-4`

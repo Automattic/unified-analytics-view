@@ -55,7 +55,7 @@ export function thin(spans: Span[], gap = 6): boolean[] {
   return gone;
 }
 
-/** What every label the measured pass may give up goes through: the labels `selector` finds under `root` that have a
+/** What a label the measured pass may give up goes through, but the crosshair's chips (keys.ts) and a treemap's names, which keep loops of their own: the labels `selector` finds under `root` that have a
  * box (a fit rule may have hidden some), handed to `gone`, which says of each whether it goes, and may set where the
  * rest stand. Those that go take data-thin and keep their box (chrome/label.ts). */
 export function thinLabels(root: ParentNode, selector: string, gone: (labels: HTMLElement[]) => boolean[]): void {

@@ -265,7 +265,12 @@ function paintOf(l: Layer, catalog: Catalog, result: Result): string | undefined
 /* The marks a plot draws, by name. A new mark is a function here. */
 const PLOT_MARKS: Partial<Record<Mark, MarkFn>> = { line: path, area: path, bar, rule, dot, text: label, tick, unit: unitStack };
 
-const SERIES = 6;   // paint tokens run from series.1 to series.6
+/** Paint tokens run from series.1 to series.SERIES: a layer split into more series than that is refused (tooManySeries). */
+export const SERIES = 6;
+/** The error for a split into more series than there are colours: `lead` says what splits (`Splitting by "page"`),
+ * `what` what it makes of each value, and `more` another fix, where there is one. A custom mark throws it too. */
+export const tooManySeries = (lead: string, n: number, what: string, more = '') =>
+  lead + ' makes ' + n + ' ' + what + ', and there are ' + SERIES + ' series colours. Add "limit": ' + SERIES + ' to the query, or less' + more + '.';
 const BANDS = 3;    // and from band.1 to band.3: the parts a metric's catalog `bands` divide its range into, the least first
 
 /** The dimension a plot's layers put on x. */
@@ -357,7 +362,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   const series = split ? [...new Set(((result.totalsBy && result.totalsBy[split]) || rows).map((r) => r[split] as string))] : [];
   // Whether any layer paints its series apart. Only that spends the series colours, so only that is held to their count, and has a legend.
   const painted = layers.some((l) => paintedOf(catalog, l, xField));
-  if (painted && series.length > SERIES) throw new Error('Splitting by "' + split + '" makes ' + series.length + ' series, and there are ' + SERIES + ' series colours. Add "limit": ' + SERIES + ' to the query, or less.');
+  if (painted && series.length > SERIES) throw new Error(tooManySeries('Splitting by "' + split + '"', series.length, 'series'));
   const isTime = catalog.dimensions[xField]!.type === 'time';
   // A bar with a metric on size is a column as wide as its x's share of the engine's total of that metric. The columns
   // then stand edge to edge at widths of their own, so x is no band: every node carries its own place, as on a linear x.
@@ -689,7 +694,7 @@ function sceneRows(catalog: Catalog, layers: Layer[], result: Result, limit: num
   // engine's total for the row.
   const series = split ? [...new Set(((result.totalsBy && result.totalsBy[split]) || result.rows).map((r) => r[split] as string))] : [];
   const divides = (l: Layer) => !!split && splitOf(catalog, l, dim) === split, painted = layers.some((l) => paintedOf(catalog, l, dim));
-  if (painted && series.length > SERIES) throw new Error('Splitting by "' + split + '" makes ' + series.length + ' series, and there are ' + SERIES + ' series colours. Add "limit": ' + SERIES + ' to the query, or less.');
+  if (painted && series.length > SERIES) throw new Error(tooManySeries('Splitting by "' + split + '"', series.length, 'series'));
   // By detail a row has a mark for each pair where the marks can lie over each other and still be read: a dot or a tick.
   const lost = layers.findIndex((l) => divides(l) && !l.stack && l.mark !== 'dot' && l.mark !== 'tick');
   if (lost >= 0) throw new Error('Layer ' + (lost + 1) + ' is a "' + layers[lost]!.mark + '" in rows with "' + split + '" on detail, which would lay one over another in each row, all in one paint. Use "dot" or "tick" for a mark at each value' + (layers[lost]!.mark === 'bar' ? ', or encode "' + split + '" on color and give the bar "stack"' : '') + ', or remove "detail".');
@@ -757,9 +762,9 @@ function sceneBand(catalog: Catalog, layer: Layer, rows: Row[], totals: Result['
   const nodes: SceneNode[] = [], m = layer.encode!.x as string, dim = layer.encode!.color as string;
   const total = totals[m] || Infinity, own = rowKeys(rows, dim), k = (r: Row) => own.get(r)!;
   rows.forEach((r, i) => {
-    nodes.push({ key: 'seg:' + k(r), part: 'band', kind: 'rect', v: num(r, m) / total, row: k(r), paint: 'series.' + ((i % 6) + 1), layer: 'data', role: roleOf(layer) });
+    nodes.push({ key: 'seg:' + k(r), part: 'band', kind: 'rect', v: num(r, m) / total, row: k(r), paint: 'series.' + ((i % SERIES) + 1), layer: 'data', role: roleOf(layer) });
   });
-  return { nodes: nodes.concat(shareLegend(rows, k, dim, catalog.dimensions[dim]!, m, catalog.metrics[m]!, totals[m], (i) => 'series.' + ((i % 6) + 1))), rows: rows.map(k) };
+  return { nodes: nodes.concat(shareLegend(rows, k, dim, catalog.dimensions[dim]!, m, catalog.metrics[m]!, totals[m], (i) => 'series.' + ((i % SERIES) + 1))), rows: rows.map(k) };
 }
 // A `unit` where a bar would make the band: a grid of a hundred cells, ten rows of ten, in reading order. The part
 // holds its shape, as a circle of arcs does. With a dimension on color the cells are shared out among its values by
@@ -853,7 +858,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
       if (typeof m !== 'string' || !M || !isDim(catalog, dim)) throw new Error(n + ' is a "unit" about a centre, which is seats round a half circle, and has ' + held(m) + ' on angle and ' + held(dim) + ' on color. Put a metric on angle and a dimension on color. For a grid read against the metric\'s range, put the metric on x and nothing on angle.');
       if (l.sweep !== 'half') throw new Error(n + ' is a "unit" with a metric on angle and no "sweep", and its seats sit round a half circle. Add "sweep": "half" to the layer.');
       if (keys) throw new Error(n + ' is a second layer split by color, and a circle is divided once. Remove one of them.');
-      if (rows.length > SERIES) throw new Error('Splitting by "' + dim + '" makes ' + rows.length + ' groups of seats, and there are ' + SERIES + ' series colours. Add "limit": ' + SERIES + ' to the query, or less.');
+      if (rows.length > SERIES) throw new Error(tooManySeries('Splitting by "' + dim + '"', rows.length, 'groups of seats'));
       const own = rowKeys(rows, dim), k = (r: Row) => own.get(r)!, whole = M.unit === 'count';
       // With no total to read, the largest row is ten seats or fewer, as a stack's largest is ten glyphs.
       const worth = total ? unitWorth(total, UNIT_SEATS, whole) : worthOf(catalog, m, rows);
@@ -921,7 +926,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
       const whole = split ? result.totalsBy && result.totalsBy[dim] : result.rows;
       if (!whole) throw new Error(n + ' divides each "' + dim + '" by "' + split + '", and a segment\'s span is the engine\'s total for it: this result has no totalsBy. Return it from the query layer, or remove "detail".');
       const rows = whole, own = rowKeys(rows, dim), k = (r: Row) => own.get(r)!, edge = split ? inner + (1 - inner) * SPLIT : 1;
-      if (rows.length > SERIES) throw new Error('Splitting by "' + dim + '" makes ' + rows.length + ' segments, and there are ' + SERIES + ' series colours. Add "limit": ' + SERIES + ' to the query, or less.');
+      if (rows.length > SERIES) throw new Error(tooManySeries('Splitting by "' + dim + '"', rows.length, 'segments'));
       // The second ring's values in the engine's order, which each segment's arcs run in.
       const kids = split ? [...new Set(((result.totalsBy && result.totalsBy[split]) || result.rows).map((r) => str(r, split)))] : [];
       // Each segment starts where the one before it ends, a hair apart.

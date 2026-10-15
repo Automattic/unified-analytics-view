@@ -4,7 +4,7 @@ import { fmtTime, rangeLabel } from './format.ts';
 import { customMarks } from './marks.ts';
 import { PRESETS, expand, fills, presetNames, usesPrevious } from './presets.ts';
 import { COLUMNS_BLOCK, UNIT_KEY_BLOCK, legendBlock, place } from './place.ts';
-import { BUILT_IN_MARKS, DETAIL_LAYOUTS, buildScene, columnLabel, columnsOf, tldrValueText, isDim, listRows, metricOf, pointDimOf, roleOf, seriesOf, trackBeside, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
+import { BUILT_IN_MARKS, DETAIL_LAYOUTS, SERIES, buildScene, columnLabel, columnsOf, tldrValueText, isDim, listRows, metricOf, pointDimOf, roleOf, seriesOf, trackBeside, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
 import { differenceProse, gridProse, rangeProse, rankProse, tldrProse } from './prose.ts';
 import type { Catalog, Container, Layer, Layout, Plan, PlanShape, PresetLibrary, Query, Reduction, ReductionId, Result, Role, PlacedScene, Spec } from './types.ts';
 
@@ -73,7 +73,7 @@ function checkLayers(layers: Layer[], q: Query, catalog: Catalog, result: Result
     // Painted by direction, a mark is a gain or a loss by which of its two ends is the higher. So it has two, and no colours of a split to give up for it.
     if (l.paint === 'direction') {
       const end = (['x2', 'y2'] as const).find((e) => l.encode?.[e] != null);
-      if (!end || (l.mark !== 'bar' && l.mark !== 'area')) throw new Error('Layer ' + (i + 1) + ' is a "' + l.mark + '" with paint: "direction"' + (end ? '' : ' and one end') + ', and that paints a bar or an area by which way it runs from one value to another. Give a bar or an area its second end on x2 or y2, or name a paint token: series.1 to series.6, delta.good, delta.bad.');
+      if (!end || (l.mark !== 'bar' && l.mark !== 'area')) throw new Error('Layer ' + (i + 1) + ' is a "' + l.mark + '" with paint: "direction"' + (end ? '' : ' and one end') + ', and that paints a bar or an area by which way it runs from one value to another. Give a bar or an area its second end on x2 or y2, or name a paint token: series.1 to series.' + SERIES + ', delta.good, delta.bad.');
       if (l.encode!.color != null) throw new Error('Layer ' + (i + 1) + ' has paint: "direction" and encodes "' + l.encode!.color + '" on color, and a mark has one paint: its series\' colour, or a gain\'s or a loss\'s. Remove one of the two.');
     }
     if (l.series === 'delta' && !(l.mark === 'text' && isDim(catalog, l.encode && l.encode.y) && typeof (l.encode && l.encode.text) === 'string' && (l.encode!.text as string) in catalog.metrics))

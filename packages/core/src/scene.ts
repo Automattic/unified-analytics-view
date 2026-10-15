@@ -33,14 +33,20 @@ const along = ([least, most]: [number, number], v: number) => Math.min(1, Math.m
  * and only a value said again within one series is a repeat.
  * ponytail: which of two such rows is the second is the result's order, so when the ranking turns they change places. */
 export function rowKeys(rows: Row[], dim: string, split?: string | null): Map<Row, string> {
-  const keys = new Map<Row, string>(), taken = new Set<string>();
-  for (const r of rows) {
-    const of = split ? '\n' + r[split] : '';
-    let k = str(r, dim);
-    for (let n = 2; taken.has(k + of); n++) k = str(r, dim) + '#' + n;
-    taken.add(k + of); keys.set(r, k);
-  }
+  const keys = new Map<Row, string>(), unique = uniqueKeys();
+  for (const r of rows) keys.set(r, unique(str(r, dim), split ? '\n' + r[split] : ''));
   return keys;
+}
+/** A maker of keys that no two things share: each call returns its key as it is the first time, and with which time it
+ * is after that (`Google#2`). Keys are counted apart `within` a group, where they need be unique only there. */
+export function uniqueKeys(): (k: string, within?: string) => string {
+  const taken = new Set<string>();
+  return (k, within = '') => {
+    let u = k;
+    for (let n = 2; taken.has(u + within); n++) u = k + '#' + n;
+    taken.add(u + within);
+    return u;
+  };
 }
 /** The role a layer plays: the one it states, or the one its mark and series imply. */
 export function roleOf(l: Layer): Role {

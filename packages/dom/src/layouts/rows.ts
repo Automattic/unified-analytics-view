@@ -20,6 +20,9 @@ import { paintUnitKey } from '../chrome/unit.ts';
  * A row divided into series has their key under the rows, in a grid row of its own: a swatch and a name for each, in a
  * line that wraps, as a split plot's is (chrome/legend.ts), or the one line that names the series with the most, in its colour. The plan
  * names the first, and a fit rule swaps them. Either comes out of the rows' room in a box. */
+/** A cell's padding at each side, in px. A column's room as read here is its text and both: what it takes on the page, where
+ * core's columnRooms() estimates 14 for it from no face. */
+const PAD = 8;
 const short = '(100cqi - var(--uav-need) + 0.01px) * 999999';
 
 /** The room each column takes, as core reckons it (columnRooms), at the width a character has in this view. Core's is
@@ -40,7 +43,7 @@ function roomsHere(body: HTMLElement, scene: Scene): number[] {
   for (const n of scene.nodes) {
     if (n.kind !== 'text' || !((n.part === 'columns' && n.anchor !== 'start') || (n.part === 'rows' && n.font === 'value'))) continue;
     const i = n.rank || 0;
-    room[i] = Math.max(room[i] || 0, Math.ceil(n.text.length * (n.part === 'columns' ? tick : value)) + 16);
+    room[i] = Math.max(room[i] || 0, Math.ceil(n.text.length * (n.part === 'columns' ? tick : value)) + 2 * PAD);
   }
   return room;
 }
@@ -53,11 +56,11 @@ const css = `
 .uav-row { position: relative; align-items: center; block-size: var(--uav-row-block); }
 .uav-row > i { position: absolute; grid-column: var(--uav-track, 1 / 3); inset-block: 0; inset-inline-start: calc(var(--uav-x, 0) * 100%); inline-size: max(3px, calc(var(--uav-v) * 100%));
   background: var(--uav-paint); border-radius: ${token('border-radius-bar', '3px')}; }
-:is(.uav-row, .uav-columns) > span { position: relative; grid-row: 1; padding-inline: 8px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--uav-paint); }
+:is(.uav-row, .uav-columns) > span { position: relative; grid-row: 1; padding-inline: ${PAD}px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--uav-paint); }
 .uav-row > .uav-f-label { grid-column: var(--uav-col, 1); padding-inline-end: 0; }
 :is(.uav-row, .uav-columns) > span:not(.uav-f-label) { grid-column: var(--uav-col); }
 :is(.uav-row, .uav-columns) > [data-anchor="end"] { text-align: end; }
-:is(.uav-row, .uav-columns) > [data-rank] { max-inline-size: max(0px, ${short}); padding-inline: min(8px, max(0px, ${short})); }
+:is(.uav-row, .uav-columns) > [data-rank] { max-inline-size: max(0px, ${short}); padding-inline: min(${PAD}px, max(0px, ${short})); }
 .uav[data-layout="rows"] :is(.uav-legend, .uav-legend-top) { grid-column: 1 / -1; grid-row: 3; }
 ${IN_BOX} {
   .uav-rows { max-block-size: calc(round(down, 100% + var(--uav-row-gap), var(--uav-row-block) + var(--uav-row-gap)) - var(--uav-row-gap)); }

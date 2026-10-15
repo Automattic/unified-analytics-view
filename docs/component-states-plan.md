@@ -140,3 +140,27 @@ These were open, and were settled on October 15 so the build could go on. Each c
 - **One selection at a time.** Activating a selected datum again clears it.
 - **Escape lets go of Hover and Focus only.** Selected outlives it, as it outlives a re-render.
 - **The look of Active, Selected and Highlighted** where none is drawn yet is design's to set. Until then each state is present and looks the same as Default; the looks code already draws are kept.
+
+## 9. What building it found
+
+Steps 1–5 were built on October 15: #32 (Plot label and its parents), #33 (the states in code), #34 (Selected), and this, the marks and the chrome atoms in Figma, with the audit of step 6.
+
+**The audit.** I checked the atom sets against section 3.
+- **Complete, 22 of 24.** Each has Interaction × Selected × Emphasis and a `Focus` boolean, crossed with what it keeps: 18 variants, or 72 for _Rule (Orientation × Dash) and Swatch (Size × Shape), and 108 for Table / Cell. Rest, Receded, Chosen and the rug's Active are gone.
+- **_Legend value has 2 of 18, and Cell has 40 of 108.** Adding the missing variants needs Ans Mono, which the remote agent can't load. Both are annotated in Figma, to be finished by hand.
+- **Cell still has `Anchor`.** Rule 2 puts that in its parent, the table row. It is left for a later pass.
+
+**In code, steps 4 and 5 needed nothing more.** The relay of #33 already writes the states on every mark, rug tick and legend entry, and #34 writes Selected. Two gaps remain:
+- the table the view offers in place of the plot takes no states;
+- a holder of things that are no rows (a grid's cells, a treemap's boxes) is selected by its own key, not by the row's.
+
+**Where the plan did not hold up in Figma.**
+- **Focus sits on top of a stroked shape, not underneath.** An arc, a region or a hex draws its gap as a stroke in the background colour, which would hide a layer underneath. On top, the focus layer has no fill, so it draws only the ring, as code's `FOCUS.stroke` does. Rule 6 holds for boxes. For these shapes it reads "a focus stroke along the path, drawn over it".
+- **The focus layer takes the atom's opacity.** In Figma a Dimmed atom's focus is dimmed too, and so is a rug tick at rest. Code draws it at full strength. That is for design to settle.
+- **_Path shape gets its path through a slot.** Its focus stroke is a second slot, `Focus path`, which each parent fills with a stroked copy of the path: Line, Area, Rule. A new parent has to fill it too.
+- **Mass was already on the parents.** Line, Dot and Tick / Row set it as an opacity override, which is rule 3. Nothing changed there.
+- **_Row state was not folded into a row.** Most of its instances sit straight in view frames, so it took the set as its own atom.
+- **Parents that have to gain a nested label can't be built remotely.** Rule (35:544) and Link / Column (39:475) still need their Plot labels. Paint × End will be drawn there, so for now it is still missing. The labels placed straight into views still need swapping for Line ends and Point labels. All are annotated.
+- **The underline of a highlighted label was never in Figma.** It still has to be drawn by hand.
+
+**Not yet done.** The snapshot in Figma that step 6 ends with waits for two things: the hand edits above and the earlier font items, and #31–#35 merging. Then it is taken named after the last PR, as the baseline for the next sync.

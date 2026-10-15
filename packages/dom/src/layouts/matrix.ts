@@ -1,6 +1,7 @@
 import { formatBin, formatDimension, formatValue, type CircleNode, type RectNode, type Row } from '@unified-analytics/core';
 import { attr, ensure, keyed, nodePaint, prop } from '../dom.ts';
 import { token } from '../tokens.ts';
+import { say } from '../chrome/tip.ts';
 import { hideReadout, hovers, placeReadout, pressed, readout, readoutOf } from '../keys.ts';
 import type { LayoutPainter } from '../layout.ts';
 import { paintAxes, thinAxis } from '../chrome/axes.ts';
@@ -67,7 +68,7 @@ function choose(cells: HTMLElement, el: HTMLElement | null, how: 'keys' | 'point
   attr(cells, 'aria-activedescendant', el?.id);
   const fig = cells.closest<HTMLElement>('.uav')!, tip = readoutOf(fig);
   if (!el) { hideReadout(tip); return; }
-  tip.textContent = el.getAttribute('aria-label');
+  say(tip, el.getAttribute('aria-label') ?? '');
   placeReadout(tip, fig, el);
 }
 

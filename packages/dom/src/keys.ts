@@ -1,5 +1,6 @@
 import { formatBin, formatDimension, formatValue, layerKeys, metricOf, partialNote, plural, rowKeys, unitsOf, type Catalog, type Layer, type Query, type RectNode, type Result, type Row, type Scene } from '@unified-analytics/core';
 import { attr, ensure, paintVar, prop } from './dom.ts';
+import { centred, say, tip as chip } from './chrome/tip.ts';
 import { apart } from './measure.ts';
 import { FOCUS, HOVER, token } from './tokens.ts';
 import { nearest } from './layouts/points.ts';
@@ -213,9 +214,8 @@ svg[data-hits] path[data-active="keys"] { ${FOCUS.stroke} }
 .uav-row[data-active="pointer"] { ${HOVER.row} }
 :is(.uav-bars, .uav-dots, .uav-points, .uav-band, .uav-cells) [data-active="pointer"] { ${HOVER.around} }
 svg[data-hits] path[data-active="pointer"] { ${HOVER.stroke} }
-.uav-readout { position: absolute; z-index: 1; left: 0; top: 0; box-sizing: border-box; inline-size: max-content; max-inline-size: min(320px, 100%); padding: 2px 6px; border-radius: ${token('border-radius-tooltip')};
-  pointer-events: none; font-family: ${token('font-family-tick')}; font-size: var(--uav-font-tick); font-optical-sizing: none; font-variant-numeric: tabular-nums;
-  color: ${token('color-label-inverse')}; background: ${token('color-tooltip-surface')}; box-shadow: ${token('elevation-tooltip')}; }
+/* The readout is a tooltip chip at a point (chrome/tip.ts), as wide as its words up to a width of its own. */
+.uav-readout { z-index: 1; left: 0; top: 0; inline-size: max-content; max-inline-size: min(320px, 100%); }
 /* At a point of a split plot it is a head and a line to each series: a swatch of its paint, its name, and its value at the end. */
 .uav-readout[data-lines] { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; column-gap: 4px; align-items: center; min-inline-size: min(160px, 100%); }
 .uav-readout[data-lines] > b { grid-column: 1 / -1; font-weight: inherit; }
@@ -227,19 +227,16 @@ svg[data-hits] path[data-active="pointer"] { ${HOVER.stroke} }
  * one that lies at each line's value there, and that value said on the axis it is read from, with the point's own
  * name on the x axis. It is drawn in the plot's box and its words stand over the tick labels they are among. A value
  * wider than its axis's gutter grows into the plot and never out of the view. The second line of a comparison is
- * said more quietly, on the secondary surface. */
+ * said more quietly, on the secondary surface. Each of its words is a tooltip chip on an axis (chrome/tip.ts). */
 /* The crosshair's words hang past the plot, over the axes. The plot is a layer of its own, so it is the plot that is
  * raised while it has a crosshair, or the axis labels after it would be drawn over them. */
 .uav-plot:has(> .uav-cross) { z-index: 2; }
 .uav-cross { position: absolute; inset: 0; z-index: 1; pointer-events: none; --uav-rule: ${HOVER.width}; --uav-rule-paint: ${paintVar('rule')}; }
 .uav-cross[data-active="keys"] { --uav-rule: ${FOCUS.width}; --uav-rule-paint: ${FOCUS.color}; }
 .uav-cross i { position: absolute; inset-inline: 0; inset-block-start: calc((1 - var(--uav-t)) * 100% - var(--uav-rule) / 2); block-size: var(--uav-rule); background: var(--uav-rule-paint); }
-.uav-cross span { position: absolute; box-sizing: border-box; padding: 1px 5px; border-radius: ${token('border-radius-tooltip')}; white-space: nowrap;
-  font-family: ${token('font-family-tick')}; font-size: var(--uav-font-tick); font-optical-sizing: none; font-variant-numeric: tabular-nums; color: ${token('color-label-inverse')}; background: ${token('color-tooltip-surface')}; box-shadow: ${token('elevation-tooltip')}; }
 .uav-cross-x { inset-block-start: calc(100% + 3px); unicode-bidi: plaintext; }
 .uav-cross-y { translate: 0 -50%; text-align: end; }
 .uav-cross-y[data-side="1"] { text-align: start; }
-.uav-cross-y[data-role="comparison"] { background: ${token('color-tooltip-surface-secondary')}; }
 .uav-cross [data-thin] { visibility: hidden; }
 /* A row that says its own value has told the reader what the readout would, so there the readout waits, as a tooltip
  * does, and is not in the way of the list. A mark that is read against an axis, a ramp or a legend says no number, so
@@ -273,7 +270,7 @@ svg[data-hits] path[data-active="pointer"] { ${HOVER.stroke} }
 /** A view's readout: one element, the figure's own, which every layout that says what is under the pointer sets.
  * In the top layer where there is one, so nothing that holds the view can clip it: a card, a scrolling panel. */
 export function readoutOf(fig: HTMLElement): HTMLElement {
-  const tip = ensure(fig, 'div', 'uav-readout');
+  const tip = chip(ensure(fig, 'div', 'uav-readout'), 'point');
   if (typeof tip.showPopover === 'function') tip.setAttribute('popover', 'manual');
   return tip;
 }
@@ -312,7 +309,7 @@ export function placeReadout(tip: HTMLElement, fig: HTMLElement, point: HTMLElem
   if (floats) {
     // On the screen, a little in from its edge.
     const above = r.top - h - 2;
-    tip.style.setProperty('left', Math.max(4, Math.min(mid - w / 2, document.documentElement.clientWidth - w - 4)) + 'px');
+    tip.style.setProperty('left', centred(mid, w, 4, document.documentElement.clientWidth - 4) + 'px');
     tip.style.setProperty('top', (above >= 4 ? above : r.bottom + 2) + 'px');
     return;
   }
@@ -320,8 +317,8 @@ export function placeReadout(tip: HTMLElement, fig: HTMLElement, point: HTMLElem
   // holds a view may clip at its edge. Rects are in the page's px and the readout is placed in the figure's own: under a
   // transform the two differ, by kx and ky.
   const W = fig.offsetWidth, H = fig.offsetHeight, kx = W > 0 && f.width > 0 ? W / f.width : 1, ky = H > 0 && f.height > 0 ? H / f.height : 1;
-  const x = (mid - f.left) * kx - w / 2, above = (r.top - f.top) * ky - h - 2, below = (r.bottom - f.top) * ky + 2;
-  tip.style.setProperty('left', Math.max(0, Math.min(x, f.width * kx - w)) + 'px');
+  const above = (r.top - f.top) * ky - h - 2, below = (r.bottom - f.top) * ky + 2;
+  tip.style.setProperty('left', centred((mid - f.left) * kx, w, 0, f.width * kx) + 'px');
   tip.style.setProperty('top', (above >= 0 ? above : below + h <= f.height * ky ? below : 0) + 'px');
 }
 
@@ -460,13 +457,11 @@ export class Keys {
     const row = pair ?? (this.#order.length ? undefined : this.#rows[i]?.[0]);
     if (row && (point as Element).classList?.contains('uav-row') && written((point as Element).textContent ?? '', row, this.#q!, this.#catalog!, this.#layers)) { hideReadout(tip); return; }
     const lines = pair ? null : this.#lines[i];
-    tip.toggleAttribute('data-lines', !!lines);
-    if (!lines) tip.textContent = says;
-    else tip.replaceChildren(el('b', lines.head), ...lines.lines.flatMap((l) => {
+    say(tip, !lines ? says : [el('b', lines.head), ...lines.lines.flatMap((l) => {
       const swatch = document.createElement('i');
       prop(swatch, '--uav-paint', paintVar(this.#paints.get(l.series) ?? 'series.1'));
       return [swatch, el('span', l.name), el('span', l.value)];
-    }));
+    })]);
     // Over the arc of a second ring where one is chosen, and else over the row's point.
     placeReadout(tip, this.#fig, (series != null && this.#body.querySelector<HTMLElement>('.uav-under [data-chosen]')) || (point as HTMLElement));
   }
@@ -497,14 +492,13 @@ export class Keys {
     const before = p.left - b.left, after = b.right - p.right, far = this.#body.querySelector('.uav-y-axis-2')?.getBoundingClientRect().width ?? 0;
     const row = this.#rows[this.#keys.indexOf(point.getAttribute('data-row') ?? '')]?.[0], dim = this.#x == null ? undefined : this.#catalog!.dimensions[this.#x];
     if (row && dim) {
-      const name = add('span', 'uav-cross-x'), c = parseFloat((point as HTMLElement).style.getPropertyValue('--uav-c'));
-      name.textContent = formatDimension(row[this.#x!], dim);
-      const w = name.offsetWidth, x = r.left + r.width * (Number.isFinite(c) ? c : 0.5) - p.left;
-      prop(name, 'left', Math.max(-before, Math.min(x - w / 2, p.width + after - w)) + 'px');
+      const name = chip(add('span', 'uav-cross-x'), 'axis'), c = parseFloat((point as HTMLElement).style.getPropertyValue('--uav-c'));
+      say(name, formatDimension(row[this.#x!], dim));
+      prop(name, 'left', centred(r.left + r.width * (Number.isFinite(c) ? c : 0.5) - p.left, name.offsetWidth, -before, p.width + after) + 'px');
     }
     for (const side of [0, 1] as const) {
       const at = marks.filter((m) => m.side === side), gutter = side ? far : before;
-      const says = at.map((m) => { const el = add('span', 'uav-cross-y'); el.textContent = m.text; attr(el, 'data-role', m.role); attr(el, 'data-side', side); return el; });
+      const says = at.map((m) => { const el = chip(add('span', 'uav-cross-y'), 'axis', m.role === 'comparison' ? 'secondary' : 'primary'); say(el, m.text); attr(el, 'data-role', m.role); attr(el, 'data-side', side); return el; });
       if (!says.length) continue;
       // Over its axis from the edge of the view, at least as wide as the gutter, and into the plot where it is wider.
       for (const el of says) { prop(el, side ? 'inset-inline-end' : 'inset-inline-start', -gutter + 'px'); prop(el, 'min-inline-size', Math.max(0, gutter - 3) + 'px'); }

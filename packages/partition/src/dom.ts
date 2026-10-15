@@ -1,5 +1,5 @@
 import { formatDimension, formatValue, type RectNode, type Result, type Row, type TextNode } from '@unified-analytics/core';
-import { FOCUS, HOVER, attr, ensure, hideReadout, keyed, nodePaint, paintRamp, placeReadout, prop, readoutOf, text, token, type LayoutPainter } from '@unified-analytics/dom';
+import { FOCUS, HOVER, attr, ensure, hideReadout, keyed, nodePaint, paintRamp, placeReadout, prop, readoutOf, say, text, token, type LayoutPainter } from '@unified-analytics/dom';
 import { PARTITION_RULES, boxNames } from './index.ts';
 
 /* The `partition` mark's half for the DOM: the painter of its layout, for registerPainter().
@@ -86,7 +86,7 @@ function choose(plot: HTMLElement, el: HTMLElement | null, how: 'keys' | 'pointe
   attr(plot, 'aria-activedescendant', el?.id);
   const fig = plot.closest<HTMLElement>('.uav')!, tip = readoutOf(fig);
   if (!el) { hideReadout(tip); return; }
-  tip.textContent = el.getAttribute('aria-label');
+  say(tip, el.getAttribute('aria-label') ?? '');
   placeReadout(tip, fig, el);
 }
 

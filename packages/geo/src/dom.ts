@@ -1,6 +1,6 @@
 import type { CircleNode, PathNode, TextNode } from '@unified-analytics/core';
-import { FOCUS, HOVER, attr, ensure, holdShape, keyed, paintRamp, paintSize, prop, text, token, type LayoutPainter } from '@unified-analytics/dom';
-import { GEO_RULES, geoRules } from './index.ts';
+import { FOCUS, HOVER, attr, ensure, holdShape, keyed, paintRamp, paintSize, prop, registerPainter, text, token, type LayoutPainter } from '@unified-analytics/dom';
+import { geoNames } from './index.ts';
 
 /* The `geo` mark's half for the DOM: the painter of its layout, for registerPainter().
  *
@@ -135,7 +135,6 @@ function list(el: Element, on: boolean): void {
 export const geoPainter: LayoutPainter = {
   layout: 'geo',
   css,
-  rules: () => GEO_RULES,
 
   paint(body, scene) {
     const part = ensure(body, 'div', 'uav-plot'), aspect = scene.aspect ?? 2;
@@ -166,6 +165,11 @@ export const geoPainter: LayoutPainter = {
 };
 
 /** The painter of the mark registered under another name (`registerGeo(shapes, { name })`): the same painter, as the
- * layout of that name. Register one for each name a page registers.
+ * layout of that name. Its fit rules are the mark's, which the element compiles itself.
  * ponytail: the stylesheet is written out again for each name. One sheet with a list of names if a page has many. */
-export const geoPainterAs = (name: string): LayoutPainter => ({ ...geoPainter, layout: name, css: css.replaceAll('[data-layout="geo"]', '[data-layout="' + name + '"]'), rules: () => geoRules(name) });
+export const geoPainterAs = (name: string): LayoutPainter => ({ ...geoPainter, layout: name, css: css.replaceAll('[data-layout="geo"]', '[data-layout="' + name + '"]') });
+
+/** Register a painter for every name the mark has been registered under so far (`registerGeo`). */
+export function registerGeoPainters(): void {
+  for (const name of geoNames()) registerPainter(name === 'geo' ? geoPainter : geoPainterAs(name));
+}

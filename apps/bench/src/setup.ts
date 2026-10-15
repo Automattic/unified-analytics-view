@@ -1,8 +1,8 @@
-import { defineUaView, registerPainter, surfaceSheet } from '@unified-analytics/dom';
+import { defineUaView, surfaceSheet } from '@unified-analytics/dom';
 import { moreSamples, samples as known } from '@unified-analytics/fixtures';
-import { linkPainter } from '@unified-analytics/flow/dom';
-import { geoPainter, geoPainterAs } from '@unified-analytics/geo/dom';
-import { partitionPainter } from '@unified-analytics/partition/dom';
+import { registerLinkPainter } from '@unified-analytics/flow/dom';
+import { registerGeoPainters } from '@unified-analytics/geo/dom';
+import { registerPartitionPainter } from '@unified-analytics/partition/dom';
 import './theme.ts';
 
 /* What every page of the bench shares. */
@@ -13,12 +13,10 @@ export const samples = { ...known, ...moreSamples };
 /** `<ua-view>` and the painters of the custom marks, and the surface layouts, which the page adopts: it is the surface. */
 export function register(): void {
   defineUaView();
-  // The `geo` mark is registered in code, in two halves. The fixtures hand core's half its boundary shapes; this is the DOM's.
-  registerPainter(geoPainter);
-  // The tile maps are the same mark, registered by the fixtures under a name for each set of tiles: a painter for each name.
-  for (const name of ['geo-tiles', 'geo-hexes']) registerPainter(geoPainterAs(name));
-  registerPainter(linkPainter);
-  registerPainter(partitionPainter);
+  // Custom marks are registered in two halves. The fixtures register core's, the map once for each set of shapes; these are the DOM's.
+  registerGeoPainters();
+  registerLinkPainter();
+  registerPartitionPainter();
   document.adoptedStyleSheets.push(surfaceSheet());
 }
 

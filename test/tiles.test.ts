@@ -4,7 +4,7 @@ import { buildScene, customMarks, customPresets, expand, makeContainer, place, r
 import viewSchema from '@unified-analytics/core/schema/view.schema.json';
 import { compileFitRules } from '@unified-analytics/dom';
 import { catalog, countries, moreSamples, runQuery, scenarios, tiles } from '@unified-analytics/fixtures';
-import { GEO_RULES, geoMark, geoRules, registerGeo } from '@unified-analytics/geo';
+import { GEO_RULES, geoMark, geoNames, geoRules, registerGeo } from '@unified-analytics/geo';
 import { geoPainter, geoPainterAs } from '@unified-analytics/geo/dom';
 
 // Step 10 of docs/uncommon-coverage-plan.md: tile maps. No new mark: the `geo` mark, registered again by the fixtures
@@ -173,9 +173,10 @@ describe('the same mark under another name', () => {
     expect(of([{ mark: 'geo-tiles', encode: { x: 'country' } }])).toMatch(/^A "geo-tiles" layer needs a metric on color/);
     expect(of([...expand(grid).layers!, ...expand(grid).layers!])).toMatch(/^A map draws one "geo-tiles" layer, and this view has 2\./);
   });
-  it('the painter is the map\'s, as the layout of that name: its sheet and its rules say the name, and nothing of `geo`', () => {
+  it('the painter is the map\'s, as the layout of that name, one for each name the fixtures registered: its sheet says the name, and nothing of `geo`', () => {
     const painter = geoPainterAs('geo-tiles');
-    expect([painter.layout, painter.paint, painter.rules!({} as never)]).toEqual(['geo-tiles', geoPainter.paint, geoRules('geo-tiles')]);
+    expect([painter.layout, painter.paint, painter.rules]).toEqual(['geo-tiles', geoPainter.paint, undefined]);
+    expect([...geoNames()].slice(0, 3)).toEqual(['geo', 'geo-tiles', 'geo-hexes']);
     expect(painter.css).toBe(geoPainter.css.split('[data-layout="geo"]').join('[data-layout="geo-tiles"]'));
     expect(painter.css).not.toContain('"geo"');
     expect(geoPainterAs('geo').css).toBe(geoPainter.css);

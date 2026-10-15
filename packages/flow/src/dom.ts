@@ -1,6 +1,6 @@
 import type { PathNode, RectNode, TextNode } from '@unified-analytics/core';
-import { ensure, keyed, prop, text, thinLabels, token, type LayoutPainter } from '@unified-analytics/dom';
-import { LABEL, LINK_RULES, NODE, standing } from './index.ts';
+import { ensure, keyed, prop, registerPainter, text, thinLabels, token, type LayoutPainter } from '@unified-analytics/dom';
+import { LABEL, NODE, standing } from './index.ts';
 
 /* The `link` mark's half for the DOM: the painter of its layout, for registerPainter().
  *
@@ -38,7 +38,6 @@ const css = `
 export const linkPainter: LayoutPainter = {
   layout: 'link',
   css,
-  rules: () => LINK_RULES,
 
   // Labels that would meet, by their real sizes, in each column: the larger node's stands (standing()).
   measure(body) {
@@ -65,3 +64,6 @@ export const linkPainter: LayoutPainter = {
     keyed(labels, scene.nodes.filter((n): n is TextNode => n.part === 'labels' && n.kind === 'text'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-y', 1 - n.t!); el.setAttribute('data-anchor', n.anchor); });
   },
 };
+
+/** Register the `link` mark's painter. */
+export const registerLinkPainter = (): void => registerPainter(linkPainter);

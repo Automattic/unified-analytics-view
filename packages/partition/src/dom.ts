@@ -1,6 +1,6 @@
 import { formatDimension, formatValue, type RectNode, type Result, type Row, type TextNode } from '@unified-analytics/core';
-import { FOCUS, HOVER, attr, chooseItem, ensure, holdShape, keyed, label, nodePaint, paintRamp, prop, roveItems, text, token, type LayoutPainter } from '@unified-analytics/dom';
-import { PARTITION_RULES, boxNames } from './index.ts';
+import { FOCUS, HOVER, attr, chooseItem, ensure, holdShape, keyed, label, nodePaint, paintRamp, prop, registerPainter, roveItems, text, token, type LayoutPainter } from '@unified-analytics/dom';
+import { boxNames } from './index.ts';
 
 /* The `partition` mark's half for the DOM: the painter of its layout, for registerPainter().
  *
@@ -95,7 +95,6 @@ export const nameFits = (name: { width: number; height: number }, box: { width: 
 export const partitionPainter: LayoutPainter = {
   layout: 'partition',
   css,
-  rules: () => PARTITION_RULES,
 
   paint(body, scene, _rules, data) {
     const plot = ensure(body, 'div', 'uav-plot'), names = boxNames(data);
@@ -182,3 +181,6 @@ export const partitionPainter: LayoutPainter = {
     }
   },
 };
+
+/** Register the `partition` mark's painter. */
+export const registerPartitionPainter = (): void => registerPainter(partitionPainter);

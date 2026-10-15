@@ -302,8 +302,8 @@ describe('prose, the number and errors', () => {
 });
 
 describe('the painter\'s half, as strings', () => {
-  it('is the layout of the mark\'s name, with the mark\'s own rules, and its part holds the scene\'s aspect', () => {
-    expect([geoPainter.layout, geoPainter.rules!(CONTAINER_RULES)]).toEqual(['geo', GEO_RULES]);
+  it('is the layout of the mark\'s name, whose rules are the mark\'s alone, and its part holds the scene\'s aspect', () => {
+    expect([geoPainter.layout, geoPainter.rules]).toEqual(['geo', undefined]);
     expect(geoPainter.css).toContain('.uav[data-layout="geo"] .uav-plot { flex: none; align-self: center; inline-size: min(100%, 480px); aspect-ratio: var(--uav-aspect, 2);');
   });
   it('its rules compile to the keys going, and then to the swap for the ranked list, by width and by height', () => {

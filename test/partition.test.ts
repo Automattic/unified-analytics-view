@@ -355,8 +355,8 @@ describe('a layout with a fallback for each shape of query', () => {
 });
 
 describe('the painter\'s half, as strings and plain functions', () => {
-  it('is the layout of the mark\'s name, with the mark\'s own rules, and its part holds the scene\'s aspect', () => {
-    expect([partitionPainter.layout, partitionPainter.rules!(CONTAINER_RULES)]).toEqual(['partition', PARTITION_RULES]);
+  it('is the layout of the mark\'s name, whose rules are the mark\'s alone, and its part holds the scene\'s aspect', () => {
+    expect([partitionPainter.layout, partitionPainter.rules]).toEqual(['partition', undefined]);
     expect(partitionPainter.css).toContain('.uav[data-layout="partition"] .uav-plot { flex: none; align-self: center; inline-size: min(100%, 480px); aspect-ratio: var(--uav-aspect, 1.6);');
     expect(partitionPainter.css).not.toMatch(/#[0-9a-f]{3,6}\b|rgb\(/i);
   });

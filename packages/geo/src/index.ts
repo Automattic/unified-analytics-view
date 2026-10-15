@@ -128,6 +128,10 @@ export function geoMark(shapes: Shapes, { name = 'geo', projection }: GeoOptions
   };
 }
 
+const NAMES = new Set<string>();
+/** Every name registerGeo() has registered the mark under, in order: each needs a painter of that name (dom.ts's registerGeoPainters). */
+export const geoNames = (): ReadonlySet<string> => NAMES;
+
 /** Register the `geo` mark with its boundary shapes, and the presets that draw it. A spec then names the mark in
  * `mark`, or a preset in `use`.
  *
@@ -138,6 +142,7 @@ export function geoMark(shapes: Shapes, { name = 'geo', projection }: GeoOptions
 export function registerGeo(shapes: Shapes, { presets, ...options }: GeoOptions & { presets?: { color?: string; size?: string } } = {}): void {
   const name = options.name ?? 'geo';
   registerMark(name, geoMark(shapes, options));
+  NAMES.add(name);
   // Core cannot name this mark, so its presets are registered here. Working names: check each against @automattic/charts before it ships.
   const { color, size } = presets ?? (name === 'geo' ? { color: 'choropleth', size: 'symbol-map' } : {});
   if (color) registerPreset(color, { layers: [{ mark: name, encode: { x: '$by', color: '$metric' } }] });

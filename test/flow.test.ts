@@ -209,8 +209,8 @@ describe('prose and errors', () => {
 });
 
 describe('the painter\'s half, as strings', () => {
-  it('is the layout of the mark\'s name, with the mark\'s own rules, and reads no colour but a node\'s paint', () => {
-    expect([linkPainter.layout, linkPainter.rules!(undefined as never)]).toEqual(['link', LINK_RULES]);
+  it('is the layout of the mark\'s name, whose rules are the mark\'s alone, and reads no colour but a node\'s paint', () => {
+    expect([linkPainter.layout, linkPainter.rules]).toEqual(['link', undefined]);
     expect(linkPainter.css).toContain('.uav[data-layout="link"] .uav-plot svg { inset-inline: 8px; inline-size: calc(100% - 16px); }');
     expect(linkPainter.css).not.toMatch(/#[0-9a-f]{3,8}\b|rgb\(/i);
   });

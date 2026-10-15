@@ -10,7 +10,7 @@ import catalogSchema from '@unified-analytics/core/schema/catalog.schema.json';
 import viewSchema from '@unified-analytics/core/schema/view.schema.json';
 import { catalog, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
 import { CHAR_W, clip, delta } from '../packages/core/src/format.ts';
-import { ALWAYS, heights, painters, run, specs, trend, widths } from './sweep.ts';
+import { ALWAYS, err, heights, painters, run, specs, trend, validView, widths } from './helpers.ts';
 
 // The prototype, loaded as the reference the port is held to.
 (globalThis as any).d3 = { ...d3array, ...d3scale, ...d3shape };
@@ -98,7 +98,7 @@ describe('the sweep', () => {
     const rules = name === 'headed' ? ALWAYS : CONTAINER_RULES;
       for (const sc of scenarios) for (const p of painters) for (const h of heights) for (const w of widths) {
         const at = [name, sc, p, w, h].join(' ');
-        const { plan, scene } = run(spec, w, h, sc, p, rules);
+        const { plan, scene } = run(spec, w, h, sc, p, undefined, undefined, rules);
         const keys = scene.nodes.map((n) => n.key);
         expect(new Set(keys).size, 'duplicate keys: ' + at).toBe(keys.length);
         expect(JSON.stringify(scene, (_, v) => (typeof v === 'number' && isNaN(v) ? 'NaN' : v)), 'NaN: ' + at).not.toMatch(/NaN/);
@@ -246,7 +246,7 @@ describe('fitting the container (reference section 10.1)', () => {
   it('the tldr value sits above the marks for an instant metric, or wherever the context says always', () => {
     expect(applied('live', 346)).toMatchObject({ layout: 'rows', tldrValue: true });
     expect(applied('pages', 346).tldrValue).toBe(false);
-    expect(run(trend, 346, null, 'typical', 'svg', ALWAYS).plan).toMatchObject({ layout: 'cartesian', side: false, tldrValue: true });
+    expect(run(trend, 346, null, 'typical', 'svg', undefined, undefined, ALWAYS).plan).toMatchObject({ layout: 'cartesian', side: false, tldrValue: true });
   });
   it('reports a comparison it could not draw', () => {
     expect(run(trend, 346, null, 'no-prior').plan.dropped).toContain('comparison series (no prior data)');
@@ -255,7 +255,6 @@ describe('fitting the container (reference section 10.1)', () => {
 
 describe('validation', () => {
   it('names the fix', () => {
-    const err = (s: Spec) => { try { resolve(s, runQuery(s.query), makeContainer(346), catalog); } catch (e) { return (e as Error).message; } };
     expect(err(invalid['unknown preset']!)).toBe('Unknown preset "no-such-preset". The library has: line, bar-list, share-bar, bar, grouped-bar, stacked-bar, stacked-area, pie, donut, pie-semi-circle, gauge, rose, radial-bar, sunburst, heatmap, funnel, box-plot, error-bars, waterfall, candlestick, fan, dumbbell, bullet, waffle, unit-chart, isotype, parliament, icon-array, bump, spaghetti, difference, connected-scatter, ecdf, lollipop, pyramid, strip, marimekko, ohlc. Registered: choropleth, symbol-map, sankey, tile-grid-map, hex-tile-map, treemap, pair-list. Use one of those, or register it with registerPreset("no-such-preset", …) before the view is resolved.');
     expect(err(invalid['dimension, no layers']!)).toBe('This spec has a dimension but no layers, so there is nothing to draw it with. Add "layers", or "use" one of: line, bar-list, share-bar, bar, grouped-bar, stacked-bar, stacked-area, pie, donut, pie-semi-circle, gauge, rose, radial-bar, sunburst, heatmap, funnel, box-plot, error-bars, waterfall, candlestick, fan, dumbbell, bullet, waffle, unit-chart, isotype, parliament, icon-array, bump, spaghetti, difference, connected-scatter, ecdf, lollipop, pyramid, strip, marimekko, ohlc, choropleth, symbol-map, sankey, tile-grid-map, hex-tile-map, treemap, pair-list.');
     expect(err(invalid['preset, no dimension']!)).toBe('The "line" preset needs a dimension in query.by.');
@@ -270,8 +269,7 @@ describe('validation', () => {
 });
 
 describe('schemas', () => {
-  const ajv = new Ajv();
-  const view = ajv.compile(viewSchema), cat = ajv.compile(catalogSchema);
+  const view = validView, cat = new Ajv().compile(catalogSchema);
   it('accept the six samples and the fixture catalog', () => {
     for (const s of Object.values(samples)) expect(view(s.spec), JSON.stringify(view.errors)).toBe(true);
     expect(cat(catalog), JSON.stringify(cat.errors)).toBe(true);
@@ -413,7 +411,7 @@ describe('the note is given up before prose: a deliberate departure from the pro
     let held = 0;
     for (const at of NOTE_FIRST) {
       const [name, sc, p, w, h] = at.split(' ') as [string, (typeof scenarios)[number], PainterName, string, string];
-      const spec = specs[name!]!, rules = name === 'headed' ? ALWAYS : CONTAINER_RULES, { plan, scene } = run(spec, +w, +h, sc, p, rules);
+      const spec = specs[name!]!, rules = name === 'headed' ? ALWAYS : CONTAINER_RULES, { plan, scene } = run(spec, +w, +h, sc, p, undefined, undefined, rules);
       const res0 = proto.runQuery(spec.query, sc), at0 = (height: number) => { const host0 = proto.makeHost(+w, height, p, 8), plan0 = proto.resolve(toProto(spec, rules), res0, host0); return { plan0, scene0: protoScene(plan0, spec.query, res0, host0) }; };
       expect(at0(+h).plan0.layout, at).toBe('sentence');
       expect(plan, at).toMatchObject({ layout: 'none', tldrValue: true });
@@ -448,7 +446,7 @@ describe('y ticks: a deliberate departure from the prototype (dom-painter-plan s
   const rules = { ...CONTAINER_RULES, fit: CONTAINER_RULES.fit.map((r) => (r.layout === 'cartesian' && r.id === 'axes' ? { ...r, needs: { ...r.needs, block: 80 } } : r)) };
   const ticks = (scene: { nodes: { key: string }[] }) => scene.nodes.map((n) => n.key).filter((k) => /^(ytick|grid):/.test(k));
   const short = (spec: Spec) => {
-    const ours = run(spec, 346, 100, 'typical', 'svg', rules);
+    const ours = run(spec, 346, 100, 'typical', 'svg', undefined, undefined, rules);
     const host0 = { ...proto.makeHost(346, 100, 'svg', 8), rules: { ...proto.HOST_RULES, axes: { ...proto.HOST_RULES.axes, minHeight: 80 } } }, res0 = proto.runQuery(spec.query, 'typical');
     const plan0 = proto.resolve(toProto(spec), res0, host0);
     expect(ours.scene.plot).toEqual({ w: 346, h: 100 });

@@ -216,7 +216,7 @@ describe('the mouse leaving', () => {
     paint();
     let activated = 0; host.addEventListener('ua-activate', () => activated++);
     const send = (type: string, init: object) => body.dispatchEvent(Object.assign(new Event(type, { cancelable: true }), init));
-    return { tip, send, paint, keys, body, points, activated: () => activated, chosen: () => points.filter((p) => p.hasAttribute('data-interaction') || p.hasAttribute('data-focus')).map((p) => p.getAttribute('data-row')) };
+    return { tip, host, send, paint, keys, body, points, activated: () => activated, chosen: () => points.filter((p) => p.hasAttribute('data-interaction') || p.hasAttribute('data-focus')).map((p) => p.getAttribute('data-row')) };
   };
 
   it.each([false, true])('clears the chosen point and the readout, as version 4 does (view focused: %s)', (focused) => {
@@ -228,6 +228,21 @@ describe('the mouse leaving', () => {
     // The next arrow starts from the first point, as from nothing.
     v.send('keydown', { key: 'ArrowRight' });
     expect(v.chosen()).toEqual(['a']);
+  });
+  it('proposes the activated point as the selection, marks it Selected once the host keeps it, through a paint, and proposes letting it go on a second activation', () => {
+    const v = view(true), proposed: (string | null)[] = [];
+    v.send('keydown', { key: 'ArrowRight' });
+    const heard = (e: Event) => proposed.push((e as CustomEvent<{ key: string | null }>).detail.key);
+    v.host.addEventListener('ua-select', heard);
+    v.send('keydown', { key: 'Enter' });
+    expect(proposed).toEqual(['a']);
+    v.keys.select('a'); v.paint();
+    expect(v.points.filter((p) => p.hasAttribute('data-selected')).map((p) => p.getAttribute('data-row'))).toEqual(['a']);
+    // Escape lets go of focus, never of the selection.
+    v.send('keydown', { key: 'Escape' });
+    expect(v.points[0]!.hasAttribute('data-selected')).toBe(true);
+    v.send('keydown', { key: 'ArrowRight' }); v.send('keydown', { key: 'Enter' });
+    expect(proposed).toEqual(['a', null]);
   });
   it('keeps a point the mouse still holds through a paint, and the click that follows activates it', () => {
     // New data under a resting mouse sends no pointerover: the element under it was kept.

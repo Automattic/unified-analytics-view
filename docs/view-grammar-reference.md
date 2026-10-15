@@ -650,6 +650,16 @@ view.inputs = { spec, result };          // or { spec, result, catalog, rules };
 
 Set a task apart, the new spec meets the old result. The view checks the first row and the totals for the query's `by` fields and metrics, refuses a result that lacks one, and names it. A result with no rows is an answer, and is held to its totals alone.
 
+### Selection (Proposed)
+
+A datum the user picks stays picked: it is **Selected**, one of the states every atom has (`docs/component-states-plan.md`). The view does not keep it, because the host is what outlives a re-render. When the user activates a datum, with a click, Enter or Space, the view sends `ua-select` with the datum's key, or with `null` where that datum was already the one selected. The host keeps it and sets it back:
+
+```js
+view.addEventListener('ua-select', (e) => { view.selected = e.detail.key; });
+```
+
+The view marks every atom of the selected datum `data-selected`: its mark, its rug tick, its legend entry. A key is a row's (stable and unique), or the key of a thing that is no row, a treemap's box or a grid's cell. A selection outlives a new result where its datum does. One datum at a time. Escape lets go of hover and focus, never of the selection. A spec says nothing of it: like a size, it is the container's. Selected has no look of its own yet; that is design's to set.
+
 ---
 
 ## 14. Accessibility requirements

@@ -5,7 +5,7 @@ import { apart } from './measure.ts';
 import { FOCUS, HOVER, token } from './tokens.ts';
 import { SWATCH, swatch as swatchOf } from './chrome/swatch.ts';
 import { nearest } from './layouts/points.ts';
-import { IS, emphasise, hold, rove, type Emphasis, type How } from './rove.ts';
+import { IS, STATE, emphasise, hold, rove, type Emphasis, type How } from './rove.ts';
 import { FROM_TOP } from './layout.ts';
 
 /* Hit targets, the keyboard and the readout. A layout marks the element that holds its points with `data-hits`
@@ -332,6 +332,8 @@ export class Keys {
   // At each point of a plot split into series painted apart, the readout's lines, and the paint of each series.
   #lines: (ReturnType<typeof readoutLines> | null)[] = []; #paints = new Map<string, string>();
   #at: string | null = null;
+  // The datum the host keeps selected, by its key. The element only proposes one (#activate).
+  #selected: string | null = null;
   // The series of a split plot, the one chosen at the point, and what a readout of one needs.
   #order: string[] = []; #series: string | null = null; #split: string | undefined; #q: Query | null = null; #catalog: Catalog | null = null; #layers: Layer[] = [];
   // How the chosen point was chosen. Each has its own look, and a paint keeps the one it found.
@@ -400,6 +402,14 @@ export class Keys {
     // A view with no points of its own to choose, a treemap's, shows the one readout itself (chooseItem), and a paint
     // that keeps its choice has just shown it again: the keys leave it be.
     if (box || at != null) this.#show(held ? at : null, held && this.#series != null && this.#order.includes(this.#series) ? this.#series : null);
+    this.select(this.#selected);
+  }
+
+  /** Mark every atom of the selected datum Selected, and every other not: by its row, or, in a holder whose things are
+   * no rows (roveItems), by its own key. A selection outlives a paint where its datum does. */
+  select(key: string | null): void {
+    this.#selected = key;
+    this.#body.querySelectorAll('[data-row], [data-key]').forEach((el) => el.toggleAttribute(STATE.selected, key != null && (el.getAttribute('data-row') ?? el.getAttribute('data-key')) === key));
   }
 
   /** Name the options: after each paint, and after the measured pass, which can take points away. A point is an option
@@ -534,6 +544,7 @@ export class Keys {
     if (this.#at == null || (how === 'keys' && (!box || !this.#points(box).some((el) => el.getAttribute('data-row') === this.#at)))) return false;
     const i = this.#keys.indexOf(this.#at!), rows = this.#rows[i] ?? [], row = this.#pair(i) ?? rows[0];
     if (row) this.#host.dispatchEvent(new CustomEvent('ua-activate', { bubbles: true, composed: true, detail: { row, rows } }));
+    propose(this.#host, this.#selected === this.#at ? null : this.#at);
     return true;
   }
 }
@@ -550,6 +561,12 @@ export function chooseItem(holder: HTMLElement, el: HTMLElement | null, how: How
   placeReadout(tip, fig, el);
 }
 
+/** Propose a selection to the host: the key of the datum activated, or null where it was the one selected, which a
+ * second activation lets go. One at a time. The host keeps it, and sets it back on the view (`selected`). */
+function propose(from: Element, key: string | null): void {
+  from.dispatchEvent(new CustomEvent('ua-select', { bubbles: true, composed: true, detail: { key } }));
+}
+
 /** rove() for a holder whose things are its own elements, each named by its readout: a grid's cells, a treemap's
  * boxes, a custom mark's. `item` selects them, and `step` says where a key goes from the chosen one, or from none.
  * `detail` is what the chosen one activates with, if it has anything to. Bind it once, to a holder that outlives
@@ -564,7 +581,9 @@ export function roveItems(holder: HTMLElement, item: string, step: (e: KeyboardE
     activate: () => {
       const on = chosen(), d = on && detail(on);
       // From the view's element where the holder is in its shadow root, and from the holder where it is not.
-      if (d) ((holder.getRootNode() as Partial<ShadowRoot>).host ?? holder).dispatchEvent(new CustomEvent('ua-activate', { bubbles: true, composed: true, detail: d }));
+      const from = (holder.getRootNode() as Partial<ShadowRoot>).host ?? holder;
+      if (d) from.dispatchEvent(new CustomEvent('ua-activate', { bubbles: true, composed: true, detail: d }));
+      if (on) propose(from, on.hasAttribute(STATE.selected) ? null : on.getAttribute('data-key'));
       return !!on;
     },
     step: (e) => step(e, chosen()),

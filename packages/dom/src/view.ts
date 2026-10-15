@@ -284,11 +284,17 @@ export class UaView extends Base {
    * painted one without the other. An input left out keeps what it had. */
   get inputs(): Inputs { return { ...this.#given } as Inputs; }
   set inputs(v: Inputs) { for (const name of INPUTS) if (Object.hasOwn(v ?? {}, name)) this.#set(name, v[name]); }
+  /** The key of the datum the host keeps selected, or null. The view proposes one with `ua-select` when the user
+   * activates a datum, and marks every atom of the one set here. It is no input: setting it paints nothing again. */
+  get selected(): string | null { return this.#selected; }
+  set selected(v: string | null) { this.#selected = v ?? null; this.#keys.select(this.#selected); }
+  #selected: string | null = null;
 
   connectedCallback(): void {
     // A property set before the element was defined sits on the instance and hides the accessor.
     for (const name of INPUTS) if (Object.hasOwn(this, name)) { const v = this[name]; delete this[name]; this.#set(name, v); }
     if (Object.hasOwn(this, 'inputs')) { const v = this.inputs; delete (this as Partial<UaView>).inputs; this.inputs = v; }
+    if (Object.hasOwn(this, 'selected')) { const v = this.selected; delete (this as Partial<UaView>).selected; this.selected = v; }
     this.#children.observe(this, { childList: true, characterData: true, subtree: true });
     for (const el of [this.#room, ...this.#ruler]) this.#sizes?.observe(el);
     this.#queue();

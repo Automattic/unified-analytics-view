@@ -6,6 +6,7 @@ import { FOCUS, HOVER, token } from './tokens.ts';
 import { swatch as swatchOf } from './chrome/swatch.ts';
 import { nearest } from './layouts/points.ts';
 import { rove, type How } from './rove.ts';
+import { FROM_TOP } from './layout.ts';
 
 /* Hit targets, the keyboard and the readout. A layout marks the element that holds its points with `data-hits`
  * ("x" where they run across, "y" where they run down), and each point is a child carrying `data-row`. Bars in a
@@ -226,7 +227,7 @@ svg[data-hits] path[data-active="pointer"] { ${HOVER.stroke} }
  * raised while it has a crosshair, or the axis labels after it would be drawn over them. */
 .uav-plot:has(> .uav-cross) { z-index: 2; }
 .uav-cross { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
-.uav-cross i { position: absolute; inset-inline: 0; inset-block-start: calc((1 - var(--uav-t)) * 100% - var(--uav-rule) / 2); block-size: var(--uav-rule); background: var(--uav-rule-paint); }
+.uav-cross i { position: absolute; inset-inline: 0; inset-block-start: calc(${FROM_TOP} - var(--uav-rule) / 2); block-size: var(--uav-rule); background: var(--uav-rule-paint); }
 .uav-cross-x { inset-block-start: calc(100% + 3px); unicode-bidi: plaintext; }
 .uav-cross-y { translate: 0 -50%; text-align: end; }
 .uav-cross-y[data-side="1"] { text-align: start; }

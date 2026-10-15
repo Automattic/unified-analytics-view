@@ -2,7 +2,7 @@ import { COLUMNS_BLOCK, columnRooms, type RowNode, type Scene, type SceneNode, t
 import { paintLegend } from '../chrome/legend.ts';
 import { attr, ensure, keyed, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
-import { NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
+import { IN_BOX, NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
 import { TRACK_CSS, TRACK_FIT, trackMark } from './track.ts';
 import { paintUnitKey } from '../chrome/unit.ts';
 
@@ -59,7 +59,7 @@ const css = `
 :is(.uav-row, .uav-columns) > [data-anchor="end"] { text-align: end; }
 :is(.uav-row, .uav-columns) > [data-rank] { max-inline-size: max(0px, ${short}); padding-inline: min(8px, max(0px, ${short})); }
 .uav[data-layout="rows"] :is(.uav-legend, .uav-legend-top) { grid-column: 1 / -1; grid-row: 3; }
-@container uav-view (block-size >= 0px) {
+${IN_BOX} {
   .uav-rows { max-block-size: calc(round(down, 100% + var(--uav-row-gap), var(--uav-row-block) + var(--uav-row-gap)) - var(--uav-row-gap)); }
 }`;
 

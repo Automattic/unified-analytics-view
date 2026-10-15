@@ -1,7 +1,7 @@
 import { arcD, declutter, type ArcNode, type CircleNode, type TextNode } from '@unified-analytics/core';
 import { hideCutLegends, paintLegend } from '../chrome/legend.ts';
 import { attr, ensure, keyed, paintVar, prop, text } from '../dom.ts';
-import { LEGEND_SWAP, NUMBER_ALONE, holdShape, type LayoutPainter } from '../layout.ts';
+import { FROM_TOP, IN_BOX, LEGEND_SWAP, NUMBER_ALONE, holdShape, type LayoutPainter } from '../layout.ts';
 import { FOCUS, HOVER, token } from '../tokens.ts';
 import { paintUnitKey, unitDot } from '../chrome/unit.ts';
 import { label } from '../chrome/label.ts';
@@ -44,7 +44,7 @@ const css = `
  * one on the left, over one at the top and under one at the foot, and by degrees between. */
 .uav[data-layout="radial"][data-parts~="rim"] .uav-radial { --uav-rim: 14px; }
 .uav-rim { position: absolute; inset: calc(var(--uav-rim, 0px) - 3px); pointer-events: none; direction: ltr; }
-.uav-rim span { position: absolute; left: calc(var(--uav-x) * 100%); top: calc((1 - var(--uav-t)) * 100%); translate: calc((var(--uav-x) - 1) * 100%) calc(var(--uav-t) * -100%);
+.uav-rim span { position: absolute; left: calc(var(--uav-x) * 100%); top: ${FROM_TOP}; translate: calc((var(--uav-x) - 1) * 100%) calc(var(--uav-t) * -100%);
   line-height: 1; ${label()} }
 .uav[data-layout="radial"]:not([data-parts~="rim"]) .uav-rim { display: none; }
 /* A segment is parted from the next by a line of one width from the rim to the middle: its own edge, drawn in the
@@ -63,7 +63,7 @@ const css = `
  * width allows its shape, which cqi is here, the part being a container itself. The legends swap as a band's do:
  * the full one needs the least circle of 64 px, 10 px and a line and its 4 px gap for each row, less the last gap. Under the one-line legend's
  * need the \`legend-top\` rule takes both away. */
-@container uav-view (block-size >= 0px) {
+${IN_BOX} {
   .uav[data-layout="radial"] .uav-body { container-type: size; overflow: hidden; --uav-legend-block: calc(70px + var(--uav-rows, 1) * (var(--uav-legend-line) + 4px)); }
   .uav[data-layout="radial"] .uav-radial { ${shape.box} }
   .uav[data-layout="radial"] :is(.uav-legend, .uav-legend-top) { flex: none; }

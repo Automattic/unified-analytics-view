@@ -46,6 +46,12 @@ export interface LayoutPainter {
   measure?(body: HTMLElement, room: Room): void;
 }
 
+/** The condition that holds exactly when a layout has handed the view a box: only a size container answers a
+ * block-size query. For a stylesheet's `@container` block. */
+export const IN_BOX = '@container uav-view (block-size >= 0px)';
+/** How far down its box a thing stands that is --uav-t of the way up it: a scene's ratios run from the foot. */
+export const FROM_TOP = 'calc((1 - var(--uav-t)) * 100%)';
+
 /** What changes with a rule that leaves the number alone: the figure's grid is the number's row, the body goes whole
  * so that its row holds no gap, and the number gives up the margin that stood between them. For a layout's `fit`. */
 export const NUMBER_ALONE: Record<string, string> = { '': 'grid-template: "number" auto / minmax(0, 1fr);', '.uav-body': 'display: none;', '.uav-number': 'align-self: start; margin: 0;' };

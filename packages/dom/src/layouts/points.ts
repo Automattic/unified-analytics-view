@@ -1,3 +1,4 @@
+import { FROM_TOP } from '../layout.ts';
 import { declutter, type CircleNode, type PathNode, type Scene, type SceneNode, type TextNode } from '@unified-analytics/core';
 import { attr, ensure, keyed, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
@@ -28,10 +29,10 @@ export const POINTS_CSS = `
 .uav-points i { pointer-events: auto; }
 /* A point of a line that has no dot drawn on it: there to be pointed at and stepped to, and it wears only the outline. */
 .uav-points i[data-bare] { background: none; }
-:is(.uav-dots, .uav-points) i { position: absolute; inset-inline-start: calc(var(--uav-x) * 100%); inset-block-start: calc((1 - var(--uav-t)) * 100%); translate: -50% -50%;
+:is(.uav-dots, .uav-points) i { position: absolute; inset-inline-start: calc(var(--uav-x) * 100%); inset-block-start: ${FROM_TOP}; translate: -50% -50%;
   inline-size: ${DOT}; block-size: ${DOT}; border-radius: 50%; background: var(--uav-paint); }
 /* A label sits above its point, clear of the dot. --uav-nudge is the measured pass's: what keeps it inside the plot. */
-.uav-point-labels span { position: absolute; inset-inline-start: calc(var(--uav-x) * 100%); inset-block-start: calc((1 - var(--uav-t)) * 100%);
+.uav-point-labels span { position: absolute; inset-inline-start: calc(var(--uav-x) * 100%); inset-block-start: ${FROM_TOP};
   translate: calc(${ANCHOR.middle} + var(--uav-nudge, 0px)) calc(-100% - 2px - ${DOT} / 2); ${label({ truncate: true })} }
 /* A rule at a value on x stands the height of the plot, and its label sits beside it at the top. */
 .uav-line[data-upright] { inset-block: 0; inset-inline: calc(var(--uav-x) * 100%) auto; inline-size: ${RULE}; block-size: auto; translate: -50%; --uav-rule-way: 0deg; }

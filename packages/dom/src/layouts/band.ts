@@ -2,7 +2,7 @@ import type { RectNode } from '@unified-analytics/core';
 import { hideCutLegends, paintLegend } from '../chrome/legend.ts';
 import { attr, ensure, keyed, prop } from '../dom.ts';
 import { token } from '../tokens.ts';
-import { LEGEND_SWAP, NUMBER_ALONE, holdShape, type LayoutPainter } from '../layout.ts';
+import { IN_BOX, LEGEND_SWAP, NUMBER_ALONE, holdShape, type LayoutPainter } from '../layout.ts';
 import { paintUnitKey } from '../chrome/unit.ts';
 
 /* One band, split by colour, and its legend. Segments are flex items that grow by their share, so the band needs no
@@ -24,7 +24,7 @@ const css = `
  * up to 160 px, in the middle of the width, with a hairline between cells. */
 .uav-band[data-unit] { display: grid; grid-template: repeat(10, minmax(0, 1fr)) / repeat(10, minmax(0, 1fr)); gap: 1px; block-size: auto; ${shape.part} margin-inline: auto; }
 .uav-band[data-unit] i { border-radius: 1px; }
-@container uav-view (block-size >= 0px) {
+${IN_BOX} {
   .uav[data-layout="band"] .uav-body { container-type: size; overflow: hidden; --uav-legend-block: calc(30px + var(--uav-rows, 1) * (var(--uav-legend-line) + 4px)); }
   .uav[data-layout="band"]:not([data-keep~="guides"]) .uav-legend { ${LEGEND_SWAP.full} }
   .uav[data-layout="band"]:not([data-keep~="guides"]) .uav-legend-top { ${LEGEND_SWAP.top} }

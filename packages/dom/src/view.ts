@@ -10,6 +10,7 @@ import { LAYOUTS, painterOf } from './layouts/index.ts';
 import { NUMBER_FITS, fitNumber, readNumber } from './measure.ts';
 import { MOTION_CSS, begin, register, settle, still } from './motion.ts';
 import { FACES, token } from './tokens.ts';
+import { IN_BOX } from './layout.ts';
 
 /* <ua-view>: one view, in whatever room it is handed. It plans once per data change, for a container with no
  * limits, builds the ratio scene and paints it. The stylesheet fits it. On resize only the measured pass runs
@@ -43,7 +44,7 @@ export const BASE_CSS = `@layer uav {
  * once never shows it, and then breathes on its opacity alone, which asks nothing of the page's style. */
 .uav-loading { block-size: ${CONTAINER_RULES.axes.height}px; border-radius: ${token('border-radius-bar')}; background: ${token('color-grid')};
   animation: uav-loading-in .2s .15s both, uav-loading 1.2s .35s ease-in-out infinite alternate; }
-@container uav-view (block-size >= 0px) { .uav-loading { block-size: 100%; } }
+${IN_BOX} { .uav-loading { block-size: 100%; } }
 @keyframes uav-loading-in { from { opacity: 0; } }
 @keyframes uav-loading { to { opacity: .5; } }
 @media (prefers-reduced-motion: reduce) { .uav-loading { animation: uav-loading-in .2s .15s both; } }
@@ -92,7 +93,7 @@ export const BASE_CSS = `@layer uav {
  * box, so nothing the pass writes can resize it. The ruler holds the number set in each of its forms, clipped to
  * nothing so that it adds no overflow, and outside the figure so that no fit rule reaches it. */
 .uav-room { position: absolute; inset-inline: 0; inset-block-start: 0; block-size: 0; visibility: hidden; pointer-events: none; }
-@container uav-view (block-size >= 0px) { .uav-room { block-size: 100%; } }
+${IN_BOX} { .uav-room { block-size: 100%; } }
 .uav-ruler { position: absolute; inline-size: 0; block-size: 0; overflow: hidden; visibility: hidden; pointer-events: none; }
 .uav-ruler > .uav-number { display: block; position: absolute; inline-size: max-content; }
 .uav-ruler > .uav-number > span { inline-size: max-content; }
@@ -106,7 +107,7 @@ ${PIXELS_CSS}
 
 /* Only a size container answers a block-size query, so this matches exactly when a layout has handed the view a
  * box. The body then takes the height left over. No attribute on the view. */
-@container uav-view (block-size >= 0px) { .uav-body { block-size: auto; } }
+${IN_BOX} { .uav-body { block-size: auto; } }
 
 /* The prose alone: the last rung, set by the plan or, when the number itself does not fit, by the measured pass. */
 .uav:is([data-layout="prose"], [data-fit="prose"]) > :not(.uav-prose, .uav-room) { display: none !important; }
@@ -141,7 +142,7 @@ const EXTRAS: FitExtras = Object.fromEntries(painters.map((p) => [p.layout, p.fi
  * the same query's either way, so it is this view's. */
 export const FALLBACK_CSS = `@layer uav {
 .uav-fallback { display: none; }
-@container uav-view (block-size >= 0px) { .uav-fallback { block-size: 100%; container-type: size; } }
+${IN_BOX} { .uav-fallback { block-size: 100%; container-type: size; } }
 :host([table]) .uav { display: block !important; }
 :host([table]) .uav-fallback { display: none !important; }
 }`;

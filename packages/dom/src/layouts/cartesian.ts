@@ -7,7 +7,7 @@ import { RULE } from '../chrome/rule.ts';
 import { token } from '../tokens.ts';
 import { label } from '../chrome/label.ts';
 import { hitNodes } from '../keys.ts';
-import { NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
+import { FROM_TOP, IN_BOX, NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
 import { apart, thinLabels } from '../measure.ts';
 import { morph, once } from '../motion.ts';
 import { POINTS_CSS, POINTS_FIT, measurePoints, paintPoints } from './points.ts';
@@ -28,7 +28,7 @@ const css = `
 .uav[data-layout="cartesian"] .uav-body { display: grid; padding-block-start: 10px;
   grid-template: "y plot y2 labels" var(--uav-plot-block) ". x . ." auto "legend legend legend legend" auto / auto minmax(0, 1fr) auto auto; }
 /* On the body, where it outranks whatever a fit rule sets on the figure. */
-@container uav-view (block-size >= 0px) { .uav[data-layout="cartesian"] .uav-body { --uav-plot-block: minmax(0, 1fr); } }
+${IN_BOX} { .uav[data-layout="cartesian"] .uav-body { --uav-plot-block: minmax(0, 1fr); } }
 /* The axes are the chrome's (chrome/axes.ts). Where each stands about the plot is said here. */
 .uav[data-layout="cartesian"] .uav-y-axis { grid-area: y; }
 .uav[data-layout="cartesian"] .uav-y-axis-2 { grid-area: y2; }
@@ -37,7 +37,7 @@ const css = `
  * --uav-dy is the measured pass's: how far a label is moved to stand a line from the next. One with no room keeps its box. */
 .uav-labels { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .uav-labels { grid-area: labels; display: none; }
-.uav-labels span { grid-area: 1 / 1; align-self: start; justify-self: start; position: relative; inset-block-start: calc((1 - var(--uav-t)) * 100%); translate: 0 calc(var(--uav-dy, 0px) - 50%);
+.uav-labels span { grid-area: 1 / 1; align-self: start; justify-self: start; position: relative; inset-block-start: ${FROM_TOP}; translate: 0 calc(var(--uav-dy, 0px) - 50%);
   box-sizing: border-box; padding-inline-start: 6px; ${label({ truncate: true })} }
 /* The legend of a split plot is a swatch and a name per series, in a row that wraps (chrome/legend.ts). */
 .uav[data-layout="cartesian"] .uav-legend { grid-area: legend; }
@@ -52,7 +52,7 @@ const css = `
 .uav[data-layout="cartesian"] .uav-body, .uav-plot { direction: ltr; }
 :is(.uav-labels, .uav-refs, .uav-point-labels) > span { unicode-bidi: plaintext; }
 .uav-grid, .uav-bars, .uav-refs { position: absolute; inset: 0; }
-.uav-line { position: absolute; inset-inline: 0; inset-block-start: calc((1 - var(--uav-t)) * 100%); block-size: ${RULE}; background: var(--uav-paint); }
+.uav-line { position: absolute; inset-inline: 0; inset-block-start: ${FROM_TOP}; block-size: ${RULE}; background: var(--uav-paint); }
 /* A bar runs from where it starts to its value, whichever is the higher: a stack's segment starts on the one under
  * it, and a value below zero hangs from the zero line. With no start it rises from the bottom. */
 .uav-bars i { position: absolute; inset-inline-start: calc(var(--uav-x) * 100%); inline-size: calc(var(--uav-w) * 100% - var(--uav-gap-x, 0px));
@@ -74,7 +74,7 @@ const css = `
 @media (prefers-reduced-motion: no-preference) { .uav-plot svg[data-draw] { animation: uav-draw ${token('motion-duration-draw')} linear both; } }
 @keyframes uav-draw { from { clip-path: inset(-8px 100% -8px -8px); } to { clip-path: inset(-8px); } }
 /* ponytail: a label in the plot is set above its line at the inline end, the one anchor a scene asks for today. */
-.uav-refs span { position: absolute; inset-inline-end: 0; inset-block-start: calc((1 - var(--uav-t)) * 100%); translate: 0 -100%; padding-block-end: 2px; ${label()} }`;
+.uav-refs span { position: absolute; inset-inline-end: 0; inset-block-start: ${FROM_TOP}; translate: 0 -100%; padding-block-end: 2px; ${label()} }`;
 
 const inPlot = (n: SceneNode) => n.part === 'plot';
 

@@ -14,6 +14,9 @@ interface Block { nodes: PlacedNode[]; height: number }
 type Point = PathNode['points'][number];
 
 export const SHORT_PLOT = 120;   // px of plot height under which ranked y ticks go
+/** The margins of a plot, in px, which the DOM's stylesheet reads as well: above one with axes, the gutter under it for
+ * the x axis, and above and below a bare one. The band's bar, and the line the key to sizes takes with the space above it. */
+export const PLOT_TOP = 10, X_AXIS_BLOCK = 22, BARE_PAD = 3, BAND_BAR = 24, SIZE_KEY_BLOCK = 28;
 const LABEL = 14;         // characters a label at a line's end is given before it is clipped
 const LABEL_LINE = 12;    // px from one such label to the next
 const RADIAL = 160;       // px across a circle of arcs that has room to spare
@@ -101,7 +104,7 @@ function placePlot(scene: Scene, W: number, H: number, narrow: boolean): PlacedN
   const lw = labels.length ? Math.min(LABEL, Math.max(...labels.map((n) => n.text.length))) * CHAR_W + 6 : 0;
   // The second y axis has a gutter as the first does, between the plot and those labels.
   const g2 = scene.parts.includes('y-axis-2') ? 30 : 0;
-  const ml = gy ? 36 : 1, mr = (gy ? 6 : 1) + g2 + lw, mt = gy ? 10 : 3, mb = gx ? 22 : 3, inset = scene.scale === 'point' ? POINT_INSET : 0;
+  const ml = gy ? 36 : 1, mr = (gy ? 6 : 1) + g2 + lw, mt = gy ? PLOT_TOP : BARE_PAD, mb = gx ? X_AXIS_BLOCK : BARE_PAD, inset = scene.scale === 'point' ? POINT_INSET : 0;
   const y = scaleLinear().domain([0, 1]).range([H - mb, mt]);
   // On a linear x every node has its own ratio of the plot's width. Otherwise a node is placed by its row, on the scale the scene used.
   // A ratio of the plot's width is taken inside the inset, which is where the scale the scene used runs.
@@ -234,7 +237,7 @@ function placeSize(scene: Scene): Block {
     if (n.kind === 'circle') { const r = radius(n.size); nodes.push(circle(n, x + r, mid)); x += 2 * r + 4; }
     else if (n.kind === 'text') { nodes.push(text(n, x, mid)); x += n.text.length * CHAR_W + 10; }
   });
-  return { nodes, height: 28 };
+  return { nodes, height: SIZE_KEY_BLOCK };
 }
 
 // The ranked bar list: rows of a fixed height, labels clipped by character width.
@@ -322,7 +325,7 @@ function placeGrid(scene: Scene, W: number, room: number | null): Block & { plot
 
 // One band and its legend.
 function placeBand(scene: Scene, W: number): Block {
-  const barH = 24, gap = 2, rows = scene.rows!, usable = W - gap * (rows.length - 1);
+  const barH = BAND_BAR, gap = 2, rows = scene.rows!, usable = W - gap * (rows.length - 1);
   const nodes: PlacedNode[] = [];
   let x0 = 0;
   scene.nodes.forEach((n) => {

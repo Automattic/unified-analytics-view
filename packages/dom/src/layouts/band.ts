@@ -1,4 +1,4 @@
-import { GRID_LEAST, type RectNode } from '@unified-analytics/core';
+import { BAND_BAR, GRID_LEAST, type RectNode } from '@unified-analytics/core';
 import { LEGEND_FIT, LEGEND_SWAP, hideCutLegends, legendBlock, legendTop, paintLegend } from '../chrome/legend.ts';
 import { attr, ensure, hits, keyed, prop } from '../dom.ts';
 import { token } from '../tokens.ts';
@@ -9,11 +9,9 @@ import { paintUnitKey } from '../chrome/unit.ts';
  * width. The scene holds both legends: the full one is a grid of swatch, label and share, the one-line one a line of
  * text (chrome/legend.ts). The stylesheet here shows one of them. Sizes are the pixel painter's: a 24 px bar and 24 px
  * to a legend row, of which 20 are the line's where a label is 13 px. */
-/** The bar's height, in px: core's (place.ts). */
-const BAR = 24;
 const shape = holdShape('160px', 1);
 const css = `
-.uav-band { display: flex; gap: 2px; block-size: ${BAR}px; }
+.uav-band { display: flex; gap: 2px; block-size: ${BAND_BAR}px; }
 .uav-band i { flex: var(--uav-v) 1 0px; min-inline-size: 0; background: var(--uav-paint); border-radius: ${token('border-radius-bar')}; }
 /* The plan names one legend, and with no limits it is the full one. */
 ${legendTop('band')}
@@ -27,7 +25,7 @@ ${legendTop('band')}
 .uav-band[data-unit] { display: grid; grid-template: repeat(10, minmax(0, 1fr)) / repeat(10, minmax(0, 1fr)); gap: 1px; block-size: auto; ${shape.part} margin-inline: auto; }
 .uav-band[data-unit] i { border-radius: ${token('border-radius-cell')}; }
 ${IN_BOX} {
-  .uav[data-layout="band"] .uav-body { container-type: size; overflow: hidden; --uav-legend-block: ${legendBlock(BAR)}; }
+  .uav[data-layout="band"] .uav-body { container-type: size; overflow: hidden; --uav-legend-block: ${legendBlock(BAND_BAR)}; }
   .uav[data-layout="band"]:not([data-keep~="guides"]) .uav-legend { ${LEGEND_SWAP.full} }
   .uav[data-layout="band"]:not([data-keep~="guides"]) .uav-legend-top { ${LEGEND_SWAP.top} }
   /* In a box the grid gives way to the height, down to nothing, and its width follows, as a circle of arcs does. The

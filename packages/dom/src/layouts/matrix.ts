@@ -1,4 +1,4 @@
-import { SIZES, type CircleNode, type RectNode, type Row } from '@unified-analytics/core';
+import { SIZES, SIZE_KEY_BLOCK, type CircleNode, type RectNode, type Row } from '@unified-analytics/core';
 import { attr, ensure, keyed, nodePaint, prop } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { chooseItem, dimName, readout, roveItems } from '../keys.ts';
@@ -7,7 +7,7 @@ import { ARROWS } from '../rove.ts';
 import { AXES_HEIGHT, NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
 import { paintAxes, thinAxis } from '../chrome/axes.ts';
 import { paintRamp } from '../chrome/ramp.ts';
-import { SIZE_KEY_BLOCK, paintSize } from '../chrome/size.ts';
+import { paintSize } from '../chrome/size.ts';
 import { DOT, NO_SIZE } from '../chrome/swatch.ts';
 
 /* A dimension on x, another on y, a metric on colour: a grid of cells. The cells are a CSS grid, each set in its

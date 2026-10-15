@@ -1,6 +1,5 @@
 import { AXES_HEIGHT, FROM_TOP } from '../layout.ts';
-import { SIZE_KEY_BLOCK } from '../chrome/size.ts';
-import { POINT_INSET, declutter, dotRadius, type CircleNode, type PathNode, type Scene, type SceneNode, type TextNode } from '@unified-analytics/core';
+import { POINT_INSET, SIZE_KEY_BLOCK, declutter, dotRadius, type CircleNode, type PathNode, type Scene, type SceneNode, type TextNode } from '@unified-analytics/core';
 import { attr, ensure, keyed, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { RULE } from '../chrome/rule.ts';

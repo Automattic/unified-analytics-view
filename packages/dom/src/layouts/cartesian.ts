@@ -1,6 +1,6 @@
-import { POINT_INSET, SHORT_PLOT, type LineNode, type PathNode, type RectNode, type SceneNode, type TextNode } from '@unified-analytics/core';
+import { BARE_PAD, PLOT_TOP, POINT_INSET, SHORT_PLOT, X_AXIS_BLOCK, type LineNode, type PathNode, type RectNode, type SceneNode, type TextNode } from '@unified-analytics/core';
 import { ensure, ensureSvg, keyed, prop, text } from '../dom.ts';
-import { X_AXIS_BLOCK, paintAxes, thinAxis } from '../chrome/axes.ts';
+import { paintAxes, thinAxis } from '../chrome/axes.ts';
 import { paintLegend } from '../chrome/legend.ts';
 import { paintSize } from '../chrome/size.ts';
 import { RULE } from '../chrome/rule.ts';
@@ -23,8 +23,6 @@ import { paintUnitKey } from '../chrome/unit.ts';
  * lines to a view of natural height, as place() adds them. What comes off it is the 10 px above the plot and the x axis,
  * which is 22 px where a tick is 11 px and follows the tick's face from there (--uav-x-axis-block, view.ts).
  * In a box the plot takes what is left, and the legend's lines come out of it. */
-/** The space above a plot with axes, and above and below a bare one, in px: core's margins (place.ts). */
-const PLOT_TOP = 10, BARE_PAD = 3;
 const css = `
 .uav[data-layout="cartesian"] { --uav-plot-block: calc(${AXES_HEIGHT} - ${PLOT_TOP}px - var(--uav-x-axis-block)); }
 .uav[data-layout="cartesian"] .uav-body { display: grid; padding-block-start: ${PLOT_TOP}px;

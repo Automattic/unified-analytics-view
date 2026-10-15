@@ -152,6 +152,9 @@
   --ua-radius-2xl: 16px;
   --ua-radius-full: 9999px;
   --ua-spacing-0: 0px;
+  --ua-light: 322deg;
+  --ua-light-hi: 1;
+  --ua-light-lo: 1;
   --ua-elevation-0: none;
   --ua-opacity-muted: 50%; /** A mark or a wash standing back: a series not chosen, the hover behind a row, the scrim in light. */
   --ua-opacity-scrim: 90%; /** Covers what is under it and lets a little through: raised glass, the scrim in dark. */
@@ -288,10 +291,8 @@
   --ua-spacing-1-5: var(--ua-space-5xs);
   --ua-spacing-2-5: var(--ua-space-3xs);
   --ua-spacing-3-5: var(--ua-space-xs);
-  --ua-elevation-1: calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 2px color-mix(in srgb, var(--ua-color-black) 10%, transparent), calc(var(--ua-light-x, 0) * -2px) calc(var(--ua-light-y, -1) * -2px) 4px color-mix(in srgb, var(--ua-color-black) 6%, transparent), inset calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 0 color-mix(in srgb, var(--ua-color-white) calc(12% * var(--ua-light-hi, 1)), transparent);
-  --ua-elevation-2: calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 2px color-mix(in srgb, var(--ua-color-black) 8%, transparent), calc(var(--ua-light-x, 0) * -4px) calc(var(--ua-light-y, -1) * -4px) 10px color-mix(in srgb, var(--ua-color-black) 10%, transparent), inset calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 0 color-mix(in srgb, var(--ua-color-white) calc(14% * var(--ua-light-hi, 1)), transparent);
-  --ua-elevation-3: calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 1px color-mix(in srgb, var(--ua-color-black) 8%, transparent), calc(var(--ua-light-x, 0) * -4px) calc(var(--ua-light-y, -1) * -4px) 8px color-mix(in srgb, var(--ua-color-black) 8%, transparent), calc(var(--ua-light-x, 0) * -18px) calc(var(--ua-light-y, -1) * -18px) 36px color-mix(in srgb, var(--ua-color-black) 14%, transparent), inset calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 0 color-mix(in srgb, var(--ua-color-white) calc(16% * var(--ua-light-hi, 1)), transparent);
-  --ua-elevation-inset: inset calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 2px color-mix(in srgb, var(--ua-color-black) 20%, transparent), inset calc(var(--ua-light-x, 0) * -3px) calc(var(--ua-light-y, -1) * -3px) 8px color-mix(in srgb, var(--ua-color-black) 10%, transparent), calc(var(--ua-light-x, 0) * -1px) calc(var(--ua-light-y, -1) * -1px) 0 var(--ua-surface-raised);
+  --ua-light-x: sin(var(--ua-light));
+  --ua-light-y: calc(-1 * cos(var(--ua-light)));
   --ua-charts-color-label-inverse: var(--ua-color-black); /** Text on the tooltip surface. Black in both themes, as the surface is one colour in both. */
   --ua-charts-color-tooltip-surface: var(--ua-color-constant-lime); /** The readout and the crosshair's words: the marker colour, from the constants, so it is the same in both themes. */
   --ua-charts-color-tooltip-surface-secondary: var(--ua-color-white); /** The crosshair's word for a comparison: quieter than the surface, and the same in both themes. */
@@ -315,6 +316,10 @@
   --ua-color-well: var(--ua-surface-screen);
   --ua-color-row-hover: color-mix(in srgb, var(--ua-color-muted) var(--ua-opacity-muted), transparent); /** Translucent on purpose: it lies behind a row of marks on whatever surface the view stands on, page, card or screen, so no one solid step is right. */
   --ua-color-ring: var(--ua-color-muted-foreground);
+  --ua-elevation-1: calc(var(--ua-light-x) * -1px) calc(var(--ua-light-y) * -1px) 2px color-mix(in srgb, var(--ua-color-black) 10%, transparent), calc(var(--ua-light-x) * -2px) calc(var(--ua-light-y) * -2px) 4px color-mix(in srgb, var(--ua-color-black) 6%, transparent), inset calc(var(--ua-light-x) * -1px) calc(var(--ua-light-y) * -1px) 0 color-mix(in srgb, var(--ua-color-white) calc(12% * var(--ua-light-hi)), transparent);
+  --ua-elevation-2: calc(var(--ua-light-x) * -1px) calc(var(--ua-light-y) * -1px) 2px color-mix(in srgb, var(--ua-color-black) 8%, transparent), calc(var(--ua-light-x) * -4px) calc(var(--ua-light-y) * -4px) 10px color-mix(in srgb, var(--ua-color-black) 10%, transparent), inset calc(var(--ua-light-x) * -1px) calc(var(--ua-light-y) * -1px) 0 color-mix(in srgb, var(--ua-color-white) calc(14% * var(--ua-light-hi)), transparent);
+  --ua-elevation-3: calc(var(--ua-light-x) * -1px) calc(var(--ua-light-y) * -1px) 1px color-mix(in srgb, var(--ua-color-black) 8%, transparent), calc(var(--ua-light-x) * -4px) calc(var(--ua-light-y) * -4px) 8px color-mix(in srgb, var(--ua-color-black) 8%, transparent), calc(var(--ua-light-x) * -18px) calc(var(--ua-light-y) * -18px) 36px color-mix(in srgb, var(--ua-color-black) 14%, transparent), inset calc(var(--ua-light-x) * -1px) calc(var(--ua-light-y) * -1px) 0 color-mix(in srgb, var(--ua-color-white) calc(16% * var(--ua-light-hi)), transparent);
+  --ua-elevation-inset: inset calc(var(--ua-light-x) * -1px) calc(var(--ua-light-y) * -1px) 2px color-mix(in srgb, var(--ua-color-black) 20%, transparent), inset calc(var(--ua-light-x) * -3px) calc(var(--ua-light-y) * -3px) 8px color-mix(in srgb, var(--ua-color-black) 10%, transparent), calc(var(--ua-light-x) * -1px) calc(var(--ua-light-y) * -1px) 0 var(--ua-surface-raised);
   --ua-charts-color-label: var(--ua-color-foreground);
   --ua-charts-color-grid: var(--ua-color-border);
   --ua-charts-color-axis-x: var(--ua-color-foreground-50);
@@ -368,12 +373,12 @@
   --ua-charts-color-trend-up: var(--ua-color-success-text);
   --ua-charts-color-trend-down: var(--ua-color-destructive-text);
   --ua-charts-color-label-axis: var(--ua-color-muted-foreground);
-  --ua-charts-elevation-tooltip: var(--ua-elevation-2);
   --ua-color-card-raised-90: color-mix(in srgb, var(--ua-color-card-raised) var(--ua-opacity-scrim), transparent);
   --ua-charts-color-label-secondary: var(--ua-color-foreground-70);
   --ua-charts-color-background: var(--ua-color-background);
   --ua-charts-color-focus: var(--ua-color-ring);
   --ua-charts-color-hover: var(--ua-color-row-hover);
+  --ua-charts-elevation-tooltip: var(--ua-elevation-2);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -484,6 +489,8 @@
   --ua-color-constant-steel: #395c85;
   --ua-color-constant-rose: #f5006b;
   --ua-color-constant-orange: #ff701e;
+  --ua-light-hi: 0.8;
+  --ua-light-lo: 0;
   --ua-color-constant-chartreuse: var(--ua-color-constant-lime);
   --ua-color-foreground: var(--ua-color-neutral-1000);
   --ua-color-card-foreground: var(--ua-color-neutral-1000);
@@ -766,6 +773,8 @@
   --ua-color-constant-steel: #395c85;
   --ua-color-constant-rose: #f5006b;
   --ua-color-constant-orange: #ff701e;
+  --ua-light-hi: 0.8;
+  --ua-light-lo: 0;
   --ua-color-constant-chartreuse: var(--ua-color-constant-lime);
   --ua-color-foreground: var(--ua-color-neutral-1000);
   --ua-color-card-foreground: var(--ua-color-neutral-1000);

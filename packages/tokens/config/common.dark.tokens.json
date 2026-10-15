@@ -92,5 +92,14 @@
     "kbd-on-inverse": {
       "$value": "{color.neutral.1000}"
     }
+  },
+  "light": {
+    "$description": "In dark a highlight is weaker and nothing is shaded.",
+    "hi": {
+      "$value": 0.8
+    },
+    "lo": {
+      "$value": 0
+    }
   }
 }

@@ -1,6 +1,6 @@
 import type { Scene, TextNode } from '@unified-analytics/core';
 import { attr, ensure, keyed, pageWay, paintVar, prop, text } from '../dom.ts';
-import { token } from '../tokens.ts';
+import { swatch as asSwatch } from './swatch.ts';
 
 /* The legend: what each colour is. One component, in the two forms a scene asks for, told apart by its nodes.
  *
@@ -16,7 +16,7 @@ import { token } from '../tokens.ts';
  * A layout says where the two stand in its body, and what they do in a box. keys.ts marks the chosen entry. */
 export const LEGEND_CSS = `
 .uav-legend { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; grid-auto-rows: var(--uav-legend-line); gap: 4px 8px; align-items: center; margin-block-start: 10px; }
-.uav-legend i { grid-column: 1; block-size: 12px; border-radius: ${token('border-radius-swatch')}; background: var(--uav-paint); }
+.uav-legend i { grid-column: 1; }
 .uav-legend span, .uav-legend-top span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--uav-paint); }
 .uav-legend .uav-f-label { grid-column: 2; }
 .uav-legend .uav-f-value { grid-column: 3; justify-self: end; }
@@ -26,7 +26,7 @@ export const LEGEND_CSS = `
 .uav:not([data-parts~="legend"]) .uav-legend { display: none; }
 .uav-legend[data-names] { display: flex; flex-wrap: wrap; gap: 0 14px; margin-block-start: 6px; }
 .uav-legend[data-names] span { line-height: var(--uav-legend-line); }
-.uav-legend[data-names] span::before { content: ""; display: inline-block; inline-size: 12px; block-size: 12px; margin-inline-end: 6px; border-radius: ${token('border-radius-swatch')}; vertical-align: -1px; background: var(--uav-swatch); }`;
+.uav-legend[data-names] span::before { margin-inline-end: 6px; vertical-align: -1px; }`;
 
 /** Both legends, after whatever the body holds already: the full one in the form its nodes ask for, and the one line.
  * Each is there, empty, where the scene has none, and reads the way the page does whichever way the body is set. */
@@ -37,8 +37,8 @@ export function paintLegend(body: HTMLElement, scene: Scene): void {
   attr(legend, 'data-names', names ? '' : null);
   const swatch = new Map(nodes.filter((n) => n.kind === 'rect').map((n) => [n.series, n.paint]));
   keyed(legend, names ? nodes.filter((n) => n.kind === 'text') : nodes, (n) => (n.kind === 'text' ? 'span' : 'i'), (el, n) => {
-    if (n.kind !== 'text') return;
-    text(el, n); prop(el, '--uav-swatch', names ? paintVar(swatch.get(n.series) ?? n.paint) : null);
+    if (n.kind !== 'text') { asSwatch(el, '12'); return; }
+    asSwatch(el, names ? '12' : null, true); text(el, n); prop(el, '--uav-swatch', names ? paintVar(swatch.get(n.series) ?? n.paint) : null);
   });
   keyed(top, scene.nodes.filter((n): n is TextNode => n.part === 'legend-top' && n.kind === 'text'), () => 'span', text);
 }

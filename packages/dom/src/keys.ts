@@ -2,6 +2,7 @@ import { formatBin, formatDimension, formatValue, layerKeys, metricOf, partialNo
 import { attr, ensure, paintVar, prop } from './dom.ts';
 import { apart } from './measure.ts';
 import { FOCUS, HOVER, token } from './tokens.ts';
+import { swatch as swatchOf } from './chrome/swatch.ts';
 import { nearest } from './layouts/points.ts';
 import { rove, type How } from './rove.ts';
 
@@ -213,7 +214,6 @@ svg[data-hits] path[data-active="pointer"] { ${HOVER.stroke} }
 /* At a point of a split plot it is a head and a line to each series: a swatch of its paint, its name, and its value at the end. */
 .uav-readout[data-lines] { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; column-gap: 4px; align-items: center; min-inline-size: min(160px, 100%); }
 .uav-readout[data-lines] > b { grid-column: 1 / -1; font-weight: inherit; }
-.uav-readout[data-lines] > i { block-size: 8px; border-radius: ${token('border-radius-swatch')}; background: var(--uav-paint); }
 .uav-readout[data-lines] > span:nth-of-type(2n) { text-align: end; }
 /* In the top layer it is placed on the screen, over whatever holds the view, and is as wide as its words up to a width of its own. */
 .uav-readout[popover] { position: fixed; inset: auto; margin: 0; border: 0; overflow: visible; max-inline-size: min(320px, 100vw - 8px); }
@@ -446,7 +446,7 @@ export class Keys {
     tip.toggleAttribute('data-lines', !!lines);
     if (!lines) tip.textContent = says;
     else tip.replaceChildren(el('b', lines.head), ...lines.lines.flatMap((l) => {
-      const swatch = document.createElement('i');
+      const swatch = document.createElement('i'); swatchOf(swatch, '8');
       prop(swatch, '--uav-paint', paintVar(this.#paints.get(l.series) ?? 'series.1'));
       return [swatch, el('span', l.name), el('span', l.value)];
     }));

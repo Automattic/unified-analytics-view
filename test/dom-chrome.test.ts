@@ -4,6 +4,7 @@ import { AXES_CSS } from '../packages/dom/src/chrome/axes.ts';
 import { LEGEND_CSS, hideCutLegends } from '../packages/dom/src/chrome/legend.ts';
 import { RAMP_CSS } from '../packages/dom/src/chrome/ramp.ts';
 import { SIZE_CSS } from '../packages/dom/src/chrome/size.ts';
+import { SWATCH_CSS } from '../packages/dom/src/chrome/swatch.ts';
 import { LAYOUTS } from '../packages/dom/src/layouts/index.ts';
 import { PIXELS_CSS } from '../packages/dom/src/pixels.ts';
 import { BASE_CSS } from '../packages/dom/src/view.ts';
@@ -38,7 +39,7 @@ describe('chrome', () => {
   });
   it('styles the key to sizes in its own sheet, with a plot\'s dot, and a layout says only where it stands', () => {
     expect(CHROME_CSS).toContain(SIZE_CSS);
-    expect(SIZE_CSS).toContain('.uav-size i { flex: none; inline-size: calc(4px + var(--uav-size, 0.4) * 5px);');
+    expect(SWATCH_CSS).toContain('[data-swatch~="dot"] { --uav-swatch-i: calc(4px + var(--uav-size, 0.4) * 5px);');
     for (const p of Object.values(LAYOUTS)) expect(p.css).not.toMatch(/(^|\n)\.uav-size\b/);
     expect(LAYOUTS.cartesian!.css).toContain('.uav[data-layout="cartesian"] .uav-size { grid-column: 1 / -1; }');
     expect(LAYOUTS.matrix!.css).toContain('.uav[data-layout="matrix"] .uav-size { grid-area: size; }');

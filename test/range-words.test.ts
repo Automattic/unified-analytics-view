@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildScene, rangeLabel, resolve, unboundedContainer, type Catalog, type Result, type Row, type Spec } from '@unified-analytics/core';
+import { rangeProse, tldrProse } from '../packages/core/src/prose.ts';
 
 // query.range is optional in the schema, so an answer may name no range. A view then says nothing of one: no word is made up.
 const catalog: Catalog = {
@@ -47,5 +48,18 @@ describe('a view with no range names none', () => {
   // rather than said as written: "Revenue: $300 in the 2026-09".
   it.each(['2026-09', '24h', 'today', '0d', '2026-09-01/2026-09-30'])('a range of "%s" is refused by name, with the forms a view reads', (range) => {
     expect(() => said(cases[2]![1], result([{ revenue: 300 }], {}, range))).toThrow('The result has meta.range: "' + range + '", and a view reads a range as a count of days, "28d", or as "now". Send one of those from the query layer, or leave meta.range out and the prose names no range.');
+  });
+});
+
+// A label is made plural by one rule wherever the prose counts it, so a label ending in a consonant and "y" reads "-ies".
+describe('a count in the prose is pluralised as plural() does it', () => {
+  const ys: Catalog = { metrics: { revenue: { label: 'Revenue', unit: 'usd', polarity: 'up' } }, dimensions: { delivery: { label: 'Delivery', type: 'time' }, country: { label: 'Country', type: 'categorical' } } };
+  it('in the range a view of ranges says', () => {
+    const res = result([{ country: 'DE', 'revenue@p25': 10, 'revenue@p75': 20 }, { country: 'FR', 'revenue@p25': 5, 'revenue@p75': 30 }]);
+    expect(rangeProse({ metrics: ['revenue'], by: ['country'] }, res, ys, ['revenue@p25', 'revenue@p75'])).toBe(' Between $5 and $30 across 2 countries.');
+  });
+  it('in the days a split leads on', () => {
+    const res = result([{ delivery: '1', country: 'DE', revenue: 200 }, { delivery: '1', country: 'FR', revenue: 100 }], { totalsBy: { country: [{ country: 'DE', revenue: 200 }, { country: 'FR', revenue: 100 }] } });
+    expect(tldrProse({ metrics: ['revenue'], by: ['delivery', 'country'] }, res, false, ys)).toBe('DE is the largest country at 67% of revenue, and leads on all 1 deliveries.');
   });
 });

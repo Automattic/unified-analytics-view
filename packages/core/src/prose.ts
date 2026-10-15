@@ -88,7 +88,7 @@ export function tldrProse(q: Query, result: Result, share: boolean, catalog: Cat
     if (!time) return largest(by!, ' of ' + name).replace(' the ', ' is the ') + ', and ' + largest(dims[1]!) + '.';
     const split = dims.find((d) => d !== time)!, top = leader(result, split, m)![split], days = [...new Set(rows.map((r) => r[time]))];
     const led = days.filter((d) => { const at = rows.filter((r) => r[time] === d), mine = at.find((r) => r[split] === top); return !!mine && at.every((r) => r === mine || (r[m] as number) < (mine[m] as number)); }).length;
-    return largest(split, ' of ' + name).replace(' the ', ' is the ') + range + ', and leads on ' + allOrSome(led, days.length) + ' ' + label(time) + 's.';
+    return largest(split, ' of ' + name).replace(' the ', ' is the ') + range + ', and leads on ' + allOrSome(led, days.length) + ' ' + plural(label(time)) + '.';
   }
   if (by && catalog.dimensions[by]!.type === 'number' && rows.length) {
     // A numeric dimension: the total, and the bin that holds the most of it.
@@ -129,7 +129,7 @@ export function rangeProse(q: Query, result: Result, catalog: Catalog, ends: [st
   const by = (q.by || [])[0], rows = result.rows, vals = rows.flatMap((r) => ends.map((f) => r[f])).filter((v): v is number => typeof v === 'number');
   if (!by || !vals.length) return '';
   const M = companionOf(catalog, ends[0]) || catalog.metrics[q.metrics[0]!]!;      // the metric the ends are companions of
-  return ' Between ' + formatValue(Math.min(...vals), M) + ' and ' + formatValue(Math.max(...vals), M) + ' across ' + rows.length + ' ' + catalog.dimensions[by]!.label.toLowerCase() + (rows.length === 1 ? '' : 's') + '.';
+  return ' Between ' + formatValue(Math.min(...vals), M) + ' and ' + formatValue(Math.max(...vals), M) + ' across ' + rows.length + ' ' + many(rows.length, catalog.dimensions[by]!.label.toLowerCase()) + '.';
 }
 
 /** What a view of ranks says: which value of the split is first, and on how many of the values along x, and then who

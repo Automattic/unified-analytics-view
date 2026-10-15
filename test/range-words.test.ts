@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { rangeLabel, type Catalog, type Result, type Row, type Spec } from '@unified-analytics/core';
-import { inProgressNote, rangeProse, tldrProse } from '../packages/core/src/prose.ts';
+import { inProgressNote, most, rangeProse, tldrProse } from '../packages/core/src/prose.ts';
 import { ofUnbounded } from './helpers.ts';
 
 // query.range is optional in the schema, so an answer may name no range. A view then says nothing of one: no word is made up.
@@ -62,6 +62,19 @@ describe('a count in the prose is pluralised as plural() does it', () => {
   it('in the days a split leads on', () => {
     const res = result([{ delivery: '1', country: 'DE', revenue: 200 }, { delivery: '1', country: 'FR', revenue: 100 }], { totalsBy: { country: [{ country: 'DE', revenue: 200 }, { country: 'FR', revenue: 100 }] } });
     expect(tldrProse({ metrics: ['revenue'], by: ['delivery', 'country'] }, res, false, ys)).toBe('DE is the largest country at 67% of revenue, and leads on all 1 deliveries.');
+  });
+});
+
+// A row may have no figure, and a value may hold the very words the sentence is made of.
+describe('the prose of rows with no figure, and of values with words of its own', () => {
+  it('finds the most among the rows that have a figure', () => {
+    expect(most([{ k: 'a' }, { k: 'b', v: -3 }, { k: 'c', v: null }, { k: 'd', v: -1 }], 'v')).toEqual({ k: 'd', v: -1 });
+    expect(most([{ k: 'a', v: null }], 'v')).toEqual({ k: 'a', v: null });
+    expect(most([], 'v')).toBeUndefined();
+  });
+  it('says how far points run, and which is highest, of the points that have a figure', () => {
+    const res = result([{ sku: 'A', revenue: null, orders: -3 }, { sku: 'B', revenue: 100, orders: -1 }, { sku: 'C', revenue: 200, orders: null }]);
+    expect(tldrProse({ metrics: ['revenue', 'orders'], by: ['sku'] }, res, false, catalog, true)).toBe('Across 3 skus, the range of revenue is $100 to $200 and of orders is -3 to -1. C is highest on revenue and B on orders.');
   });
 });
 

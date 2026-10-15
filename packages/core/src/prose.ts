@@ -34,8 +34,10 @@ export function leader(result: Result, dim: string, m: string): Row | undefined 
 }
 /** The metric a companion field came with: "visitors" for "visitors@rank". Its own name for a field that is no companion. */
 const companionOf = (catalog: Catalog, f: string): MetricDef | undefined => catalog.metrics[baseOf(f)];
-/** The row with the most of a field, the first of equals. A comparison, never a sum. */
-export const most = (rows: Row[], f: string): Row | undefined => rows.reduce<Row | undefined>((top, r) => (!top || (r[f] as number) > (top[f] as number) ? r : top), undefined);
+/** The row with the most of a field, the first of equals. A row with no figure only where none has one, and none only
+ * where there are no rows. A comparison, never a sum. */
+export const most = (rows: Row[], f: string): Row | undefined =>
+  rows.reduce<Row | undefined>((top, r) => (!top || (r[f] != null && (top[f] == null || (r[f] as number) > (top[f] as number))) ? r : top), undefined);
 /** Rows from the most of a metric to the least. Rows the engine ranked stay as they are; rows in a dimension's own order are ranked here, by comparing them. */
 const ranked = (rows: Row[], m: string) => rows.slice().sort((a, b) => ((b[m] as number) || 0) - ((a[m] as number) || 0));
 
@@ -70,7 +72,7 @@ export function tldrProse(q: Query, result: Result, share: boolean, catalog: Cat
     // Two metrics set against each other, a point for each value of a dimension: how far each runs, and which point is
     // furthest out on each. ponytail: "outliers" here are the two extremes, found by comparing rows. A test of how far
     // out a point is would be a statistic, and those are the engine's.
-    const of = typeof points === 'string' ? points : by, two = q.metrics.slice(0, 2), label = (f: string) => catalog.metrics[f]!.label.toLowerCase(), vals = (f: string) => rows.map((r) => r[f] as number);
+    const of = typeof points === 'string' ? points : by, two = q.metrics.slice(0, 2), label = (f: string) => catalog.metrics[f]!.label.toLowerCase(), vals = (f: string) => endsOf(rows.flatMap((r) => (r[f] == null ? [] : [r[f] as number])));
     const top = two.map((f) => say(catalog, of, most(rows, f)!)), tops = highest(top, two.map(label));
     // Joined through time, the points are a path: where it set out and where it has got to, by the first and the last
     // finished bucket, since the unfinished one is not yet anywhere.
@@ -78,7 +80,7 @@ export function tldrProse(q: Query, result: Result, share: boolean, catalog: Cat
     if (path && catalog.dimensions[of]!.type === 'time' && a && b && a !== b)
       return 'From ' + say(catalog, of, a) + ' to ' + say(catalog, of, b) + ', ' + two.map((f, i) => label(f) + (i ? ' from ' : ' went from ') + formatValue(a[f] as number, catalog.metrics[f]!) + ' to ' + formatValue(b[f] as number, catalog.metrics[f]!)).join(' and ') + '. '
         + tops;
-    return 'Across ' + rows.length + ' ' + plural(catalog.dimensions[of]!.label.toLowerCase()) + range + ', ' + 'the range of ' + two.map((f) => label(f) + ' is ' + formatValue(Math.min(...vals(f)), catalog.metrics[f]!) + ' to ' + formatValue(Math.max(...vals(f)), catalog.metrics[f]!)).join(' and of ') + '. '
+    return 'Across ' + rows.length + ' ' + plural(catalog.dimensions[of]!.label.toLowerCase()) + range + ', ' + 'the range of ' + two.map((f) => label(f) + ' is ' + vals(f).map((v) => formatValue(v, catalog.metrics[f]!)).join(' to ')).join(' and of ') + '. '
       + tops;
   }
   if (dims.length === 2 && result.totalsBy && rows.length) {

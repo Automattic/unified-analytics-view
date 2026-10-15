@@ -90,8 +90,8 @@ export function readoutAt(rows: Row[], total: Row | undefined, q: Query, catalog
   const of = catalog.dimensions[split]!, { name, metrics } = headAt(rows, total, q, catalog, x);
   return name + ': ' + q.metrics.map((m, i) => {
     const def = catalog.metrics[m]!, said = (r: Row) => formatDimension(r[split], of) + ' ' + formatValue(r[m] as number | null, def);
-    const top = most(rows.filter((r) => r[m] != null), m);
-    return metrics[i] + ' (' + (mass ? rows.length + ' ' + many(rows.length, of.label.toLowerCase()) + (top ? ', the most ' + said(top) : '') : rows.map(said).join(', ')) + ')';
+    const top = most(rows, m);
+    return metrics[i] + ' (' + (mass ? rows.length + ' ' + many(rows.length, of.label.toLowerCase()) + (top?.[m] != null ? ', the most ' + said(top) : '') : rows.map(said).join(', ')) + ')';
   }).join('; ');
 }
 

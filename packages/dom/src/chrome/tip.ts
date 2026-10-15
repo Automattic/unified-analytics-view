@@ -5,10 +5,11 @@ import { token } from '../tokens.ts';
  * words on the axes are this one thing, with three options, each an attribute:
  *  - anchor: `point` (the readout, at a point and in the top layer where there is one) or `axis` (a chip on an axis,
  *    placed absolutely and centred on its value), which is set closer and never wraps;
- *  - tone: primary, or `secondary`, quieter, for the second line of a comparison;
+ *  - tone: primary, or `secondary`, quieter, for the second line of a comparison. Only the crosshair's chips on the
+ *    axes are ever secondary (keys.ts); the readout is always primary;
  *  - content: one line, or lines (`data-lines`): the readout of a split point, a head and a line to each series,
  *    laid out by the readout's own rules in keys.ts.
- * Figma: the `Tooltip` component set, Tone × Content × Anchor. */
+ * Figma: the `Tooltip` component set, Tone × Content × Anchor, with no Secondary at Anchor=Point, as code draws none. */
 export const TIP_CSS = `
 .uav-tip { position: absolute; box-sizing: border-box; padding: 2px 6px; border-radius: ${token('border-radius-tooltip')}; pointer-events: none;
   font-family: ${token('font-family-tick')}; font-size: var(--uav-font-tick); font-optical-sizing: none; font-variant-numeric: tabular-nums;

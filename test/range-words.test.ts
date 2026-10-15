@@ -76,6 +76,10 @@ describe('the prose of rows with no figure, and of values with words of its own'
     const res = result([{ sku: 'A', revenue: null, orders: -3 }, { sku: 'B', revenue: 100, orders: -1 }, { sku: 'C', revenue: 200, orders: null }]);
     expect(tldrProse({ metrics: ['revenue', 'orders'], by: ['sku'] }, res, false, catalog, true)).toBe('Across 3 skus, the range of revenue is $100 to $200 and of orders is -3 to -1. C is highest on revenue and B on orders.');
   });
+  it('leads with the value whole when it has "the" in it', () => {
+    const res = result([{ sku: 'About the team', hour: '9', revenue: 200 }], { totalsBy: { sku: [{ sku: 'About the team', revenue: 200 }], hour: [{ hour: '9', revenue: 200 }] } });
+    expect(tldrProse({ metrics: ['revenue'], by: ['sku', 'hour'] }, res, false, catalog)).toBe('About the team is the largest sku at 67% of revenue, and 9 the largest hour at 67%.');
+  });
 });
 
 describe('the note an unfinished bucket carries', () => {

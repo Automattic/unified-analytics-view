@@ -86,11 +86,12 @@ export function tldrProse(q: Query, result: Result, share: boolean, catalog: Cat
   if (dims.length === 2 && result.totalsBy && rows.length) {
     // Two dimensions: who leads each, as a share of the engine's total. Over time, also on how many of the days.
     const label = (d: string) => catalog.dimensions[d]!.label.toLowerCase(), time = dims.find((d) => catalog.dimensions[d]!.type === 'time');
-    const largest = (d: string, of = '') => { const top = leader(result, d, m)!; return say(catalog, d, top) + ' the largest ' + label(d) + at(top[m] as number, t[m], M, of); };
-    if (!time) return largest(by!, ' of ' + name).replace(' the ', ' is the ') + ', and ' + largest(dims[1]!) + '.';
+    // The leading clause has its verb, and the one after it shares that one: "A is the largest page …, and B the largest device …".
+    const largest = (d: string, of = '', is = '') => { const top = leader(result, d, m)!; return say(catalog, d, top) + is + ' the largest ' + label(d) + at(top[m] as number, t[m], M, of); };
+    if (!time) return largest(by!, ' of ' + name, ' is') + ', and ' + largest(dims[1]!) + '.';
     const split = dims.find((d) => d !== time)!, top = leader(result, split, m)![split], days = [...new Set(rows.map((r) => r[time]))];
     const led = days.filter((d) => { const at = rows.filter((r) => r[time] === d), mine = at.find((r) => r[split] === top); return !!mine && at.every((r) => r === mine || (r[m] as number) < (mine[m] as number)); }).length;
-    return largest(split, ' of ' + name).replace(' the ', ' is the ') + range + ', and leads on ' + allOrSome(led, days.length) + ' ' + plural(label(time)) + '.';
+    return largest(split, ' of ' + name, ' is') + range + ', and leads on ' + allOrSome(led, days.length) + ' ' + plural(label(time)) + '.';
   }
   if (by && catalog.dimensions[by]!.type === 'number' && rows.length) {
     // A numeric dimension: the total, and the bin that holds the most of it.

@@ -153,7 +153,7 @@ One custom element, `<ua-view>`, with an open shadow root. It takes `spec`, `res
 
 Names on the right were read from `src/styles/chart-scope.scss` on Jetpack trunk, where the prefix is `--a8c-charts-`. Ours is `--ua-charts-` until the two interoperate, so that nobody takes one for the other. A page that already styles `@automattic/charts` themes a view by aliasing each token across: `--ua-charts-color-label: var(--a8c-charts-color-label)`.
 
-The table of tokens this plan began with is superseded, and is not kept here, as a second list drifts from the first. Which custom property a paint token reads is `PAINT` in `packages/dom/src/dom.ts`; which tokens the element reads, with what each falls back to, is `TOKENS` in `packages/dom/src/tokens.ts`; what each is set to, and why, is the charts tier, `packages/tokens/config/charts.tokens.json`, whose descriptions say which are new beside `@automattic/charts`.
+The table of tokens this plan began with is superseded, and is not kept here, as a second list drifts from the first. Which custom property a paint token reads is `PAINT` in `packages/dom/src/dom.ts`; which tokens the element reads, with what each falls back to, is `TOKENS` in `packages/dom/src/tokens.ts`; what each is set to is the charts tier, `packages/tokens/config/charts.tokens.json`.
 
 The list the element reads from, with the value each token falls back to, is `packages/dom/src/tokens.ts`. `packages/tokens` declares the same names as its charts tier (`config/charts.tokens.json`), and `test/dom-tokens.test.ts` holds the two together: the tier declares every token the element reads and none it cannot, and each fallback is what the tier resolves to, but for the ones `UNTHEMED` lists with why.
 

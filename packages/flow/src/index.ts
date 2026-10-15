@@ -1,4 +1,4 @@
-import { applies, formatDimension, layerKeys, registerMark, registerPreset, roleOf, rowKeys, ruleFor } from '@unified-analytics/core';
+import { SERIES, applies, formatDimension, isDim, isMetric, layerKeys, registerMark, registerPreset, roleOf, rowKeys, ruleFor, tooManySeries } from '@unified-analytics/core';
 import type { CustomMark, FitRule, Part, PathNode, PlacedNode, RectNode, Row, SceneNode, TextNode } from '@unified-analytics/core';
 
 /* The `link` mark: a ribbon from a value of one dimension to a value of another, as a custom mark (core's marks.ts).
@@ -16,7 +16,6 @@ import type { CustomMark, FitRule, Part, PathNode, PlacedNode, RectNode, Row, Sc
  *
  * It depends on core alone, and on the DOM package for its painter. One step is two stacks and a curve between them. */
 
-const SERIES = 6;       // the series colours there are: a source takes one
 const GAP = 0.02;       // of the plot's height, between one node and the next
 /** px across a node. A scene has no pixels, so this is each painter's, as a dot's radius is. */
 export const NODE = 8;
@@ -53,15 +52,14 @@ export const linkMark: CustomMark = {
   scene({ layers, guides, query, result, catalog }) {
     const l = layers[0]!, { x: src, y: tgt, size: m } = l.encode || {}, by = query.by || [];
     if (layers.length > 1) throw new Error('A Sankey draws one "' + l.mark + '" layer, and this view has ' + layers.length + '. Keep one, with the source on x, the target on y and the metric on size.');
-    const dim = (f: unknown): f is string => typeof f === 'string' && f in catalog.dimensions;
-    if (!dim(src) || !dim(tgt) || src === tgt) throw new Error('A "' + l.mark + '" layer runs from the values of one dimension to the values of another, the source on x and the target on y, and this one has ' + JSON.stringify(src) + ' on x and ' + JSON.stringify(tgt) + ' on y. '
+    if (!isDim(catalog, src) || !isDim(catalog, tgt) || src === tgt) throw new Error('A "' + l.mark + '" layer runs from the values of one dimension to the values of another, the source on x and the target on y, and this one has ' + JSON.stringify(src) + ' on x and ' + JSON.stringify(tgt) + ' on y. '
       + (by.length === 2 ? 'Encode "' + by[0] + '" on x and "' + by[1] + '" on y.' : 'Make query.by two dimensions, the source and then the target, and encode the first on x and the second on y.'));
-    if (typeof m !== 'string') throw new Error('A "' + l.mark + '" layer needs the metric each ribbon is as wide as on size, and this one has ' + JSON.stringify(m) + ' there. Encode one of the query\'s metrics: ' + query.metrics.join(', ') + '.');
+    if (!isMetric(catalog, m)) throw new Error('A "' + l.mark + '" layer needs the metric each ribbon is as wide as on size, and this one has ' + JSON.stringify(m) + ' there. Encode one of the query\'s metrics: ' + query.metrics.join(', ') + '.');
     // A node is as tall as the engine's total for its value. The rows are one per pair, and are never summed to make one.
     const none = [src, tgt].find((d) => !Array.isArray(result.totalsBy?.[d]));
     if (none) throw new Error('A "' + l.mark + '" layer makes each node as tall as the engine\'s total for its value, and this result has no totalsBy for "' + none + '". Return it from the query layer: a row for each value of "' + none + '", holding its total of "' + m + '".');
     const sources = result.totalsBy![src]!.length;
-    if (sources > SERIES) throw new Error('Running from "' + src + '" makes ' + sources + ' sources, and there are ' + SERIES + ' series colours. Add "limit": ' + SERIES + ' to the query, or less.');
+    if (sources > SERIES) throw new Error(tooManySeries('Running from "' + src + '"', sources, 'sources'));
 
     // Each column in the engine's order. A value with no total, or one of zero, has no node: there is nothing to be as tall as.
     const cols = [src, tgt].map((d) => { const rows = result.totalsBy![d]!, keys = rowKeys(rows, d); return rows.map((r, i): Node => ({ key: keys.get(r)!, value: r[d], v: r[m] as number, i, y: 0, h: 0 })).filter((n) => n.v > 0); });

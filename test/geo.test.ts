@@ -282,6 +282,9 @@ describe('prose, the number and errors', () => {
     expect(of([{ mark: 'geo', encode: { color: 'visitors' } }])).toBe('A "geo" layer needs the dimension whose values are region keys on x, and this one has undefined there. Encode one of the query\'s dimensions on x: country.');
     expect(of([{ mark: 'geo', encode: { x: 'country' } }])).toBe('A "geo" layer needs a metric on color, to fill each region by, or on size, for a symbol on each, and this one has undefined on color and undefined on size. Encode one of the query\'s metrics: visitors.');
     expect(of([{ mark: 'geo', encode: { x: 'country', color: 'country' } }])).toMatch(/^A "geo" layer needs a metric on color/);
+    // A companion is a metric to the map, as it is to the treemap: one filled by a share the engine sends with visitors.
+    const shared = geoMark(countries).scene({ layers: [{ mark: 'geo', encode: { x: 'country', color: 'visitors@share' } }], guides: {}, query: q, result: { rows: [{ country: 'FR', visitors: 3, 'visitors@share': 0.5 }], totals: { visitors: 3 }, meta: runQuery(q).meta }, catalog });
+    expect(shared.nodes.find((n) => n.key === 'primary:geo:FR')!.paint).not.toBe('seq.none');
     expect(of([{ mark: 'geo', encode: { x: 'country', size: 'country' } }])).toMatch(/^Layer 1 encodes "country" on size, and a size is a quantity\./);
     expect(of([...drawn, ...drawn])).toBe('A map draws one "geo" layer, and this view has 2. Put the metric to fill by on color and the metric for symbols on size, in one layer.');
     expect(of([...drawn, { mark: 'bar', encode: { x: 'country', y: 'visitors' } }])).toBe('The "geo" mark is laid out by its own code, and layer 2 is a "bar". Keep the "geo" layers alone, and draw the others as a view of their own.');

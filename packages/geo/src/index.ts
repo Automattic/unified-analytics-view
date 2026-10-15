@@ -1,5 +1,5 @@
 import { geoEqualEarth, geoIdentity, geoPath, type ExtendedFeatureCollection, type GeoProjection } from 'd3-geo';
-import { dotRadius, heldBox, layerKeys, notShownNote, registerMark, registerPreset, roleOf, ruleFor, seqScale, sizeKey, sizeStep } from '@unified-analytics/core';
+import { dotRadius, heldBox, isDim, isMetric, layerKeys, metricOf, notShownNote, registerMark, registerPreset, roleOf, ruleFor, seqScale, sizeKey, sizeStep } from '@unified-analytics/core';
 import type { CircleNode, CustomMark, FitRule, Part, PathNode, PlacedNode, Row, SceneNode, TextNode } from '@unified-analytics/core';
 
 /* The `geo` mark: a map of regions, as a custom mark (core's marks.ts). This is its half for core: a scene in ratios
@@ -76,8 +76,9 @@ export function geoMark(shapes: Shapes, { name = 'geo', projection }: GeoOptions
     scene({ layers, guides, query, result, catalog }) {
       const l = layers[0]!, { x: dim, color, size } = l.encode || {}, rows = result.rows;
       if (layers.length > 1) throw new Error('A map draws one "' + l.mark + '" layer, and this view has ' + layers.length + '. Put the metric to fill by on color and the metric for symbols on size, in one layer.');
-      if (typeof dim !== 'string' || !(dim in catalog.dimensions)) throw new Error('A "' + l.mark + '" layer needs the dimension whose values are region keys on x, and this one has ' + JSON.stringify(dim) + ' there. Encode one of the query\'s dimensions on x: ' + ((query.by || []).join(', ') || 'it has none, so add one to query.by') + '.');
-      if (![color, size].some((f) => typeof f === 'string' && f in catalog.metrics) || (color != null && !(color in catalog.metrics))) {
+      if (!isDim(catalog, dim)) throw new Error('A "' + l.mark + '" layer needs the dimension whose values are region keys on x, and this one has ' + JSON.stringify(dim) + ' there. Encode one of the query\'s dimensions on x: ' + ((query.by || []).join(', ') || 'it has none, so add one to query.by') + '.');
+      // A metric is one of the catalog's, or a companion the engine sends with one ("visitors@share"), in its own unit where the catalog gives it one.
+      if (![color, size].some((f) => isMetric(catalog, f)) || (color != null && !isMetric(catalog, color)) || (size != null && !isMetric(catalog, size))) {
         throw new Error('A "' + l.mark + '" layer needs a metric on color, to fill each region by, or on size, for a symbol on each, and this one has ' + JSON.stringify(color) + ' on color and ' + JSON.stringify(size) + ' on size. Encode one of the query\'s metrics: ' + query.metrics.join(', ') + '.');
       }
       // A row with no value for the dimension, null or empty, has no shape, and is no sign that the shapes are the wrong ones.
@@ -90,7 +91,7 @@ export function geoMark(shapes: Shapes, { name = 'geo', projection }: GeoOptions
       const of = (id: string | null, f: unknown) => (typeof f === 'string' ? (at.get(id)?.[f] as number | null | undefined) : undefined);
       const values = (f: unknown) => drawn.map((s) => of(s.id, f)).filter((v): v is number => v != null);
       // The colour scale runs over the regions drawn, as a grid's runs over its cells: geometry, read from the rows.
-      const fill = typeof color === 'string' ? seqScale(values(color), catalog.metrics[color]!) : null;
+      const fill = isMetric(catalog, color) ? seqScale(values(color), metricOf(catalog, color)!) : null;
       const top = Math.max(0, ...values(size)) || 1, id = layerKeys(layers)[0]!, role = roleOf(l);
       // Every shape handed in is drawn, in the shapes' own order, so the map does not change with the ranking. One the
       // result has a row for carries it. Under symbols the regions are the ground they stand on, in the tone of no value.
@@ -102,7 +103,7 @@ export function geoMark(shapes: Shapes, { name = 'geo', projection }: GeoOptions
       const ids = new Set(regions.map((s) => s.id)), note = notShownNote(rows.length - named.filter((r) => ids.has(String(r[dim]))).length, catalog.dimensions[dim]!.label);
       if (note) nodes.push({ key: 'note:not-shown', part: 'note', kind: 'text', text: note, anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' });
       if (fill) nodes.push(...fill.ramp(regions.some((s) => of(s.id, color) == null)));
-      if (typeof size === 'string') nodes.push(...sizeKey(catalog.metrics[size]!, top));
+      if (typeof size === 'string') nodes.push(...sizeKey(metricOf(catalog, size)!, top));
       const sized = typeof size === 'string', parts: Part[] = ['plot'];
       if (sized) parts.push('points');
       if (note && (guides.ramp || guides.size)) parts.push('note');

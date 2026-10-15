@@ -1,4 +1,4 @@
-import { formatDimension, formatValue, heldBox, layerKeys, registerMark, registerPreset, roleOf, ruleFor, seqScale, uniqueKeys } from '@unified-analytics/core';
+import { SERIES, formatDimension, formatValue, heldBox, isDim, isMetric, layerKeys, metricOf, registerMark, registerPreset, roleOf, ruleFor, seqScale, tooManySeries, uniqueKeys } from '@unified-analytics/core';
 import type { CustomMark, FitRule, MarkView, Part, PlacedNode, RectNode, Row, SceneNode, TextNode } from '@unified-analytics/core';
 
 /* The `partition` mark: a box divided by area, nested once, which is a treemap. A custom mark (core's marks.ts). This
@@ -59,7 +59,6 @@ const MAX = 480;      // px across a treemap that has room to spare
 const HEAD = 16;      // px a parent's name takes at the top of its box, over its children
 const LINE = 14;      // px a label's line takes
 const CHAR = 6;       // px a character of a label takes, near enough, where nothing can be measured
-const SERIES = 6;     // the series colours there are
 
 /* Below the room a treemap needs it is not a smaller treemap: the view becomes a list of the same query. Which list
  * depends on the query, and a rule names one preset, so there are two rules: the first whose preset the query can
@@ -82,10 +81,10 @@ interface Group extends Leaf { kids: Leaf[]; rows: Row[]; n: number }
 function read({ layers, query, result, catalog }: Omit<MarkView, 'guides'>) {
   const l = layers[0]!, { x: dim, detail, size, color } = l.encode || {}, by = query.by || [], q = '"' + l.mark + '"';
   if (layers.length > 1) throw new Error('A treemap draws one ' + q + ' layer, and this view has ' + layers.length + '. Put the dimension to divide by on x, the one to divide each part by on detail, and the metric on size, in one layer.');
-  if (typeof dim !== 'string' || !(dim in catalog.dimensions)) throw new Error('A ' + q + ' layer needs the dimension to divide the box by on x, and this one has ' + JSON.stringify(dim) + ' there. Encode one of the query\'s dimensions on x: ' + (by.join(', ') || 'it has none, so add one to query.by') + '.');
-  if (typeof size !== 'string' || !(size.split('@')[0]! in catalog.metrics)) throw new Error('A ' + q + ' layer needs a metric on size, which each box\'s area is a share of, and this one has ' + JSON.stringify(size) + ' there. Encode one of the query\'s metrics on size: ' + query.metrics.join(', ') + '.');
+  if (!isDim(catalog, dim)) throw new Error('A ' + q + ' layer needs the dimension to divide the box by on x, and this one has ' + JSON.stringify(dim) + ' there. Encode one of the query\'s dimensions on x: ' + (by.join(', ') || 'it has none, so add one to query.by') + '.');
+  if (!isMetric(catalog, size)) throw new Error('A ' + q + ' layer needs a metric on size, which each box\'s area is a share of, and this one has ' + JSON.stringify(size) + ' there. Encode one of the query\'s metrics on size: ' + query.metrics.join(', ') + '.');
   if (detail === dim) throw new Error('A ' + q + ' layer divides by the dimension on x and then by the one on detail, and this one has "' + dim + '" on both. ' + (by.length > 1 ? 'Encode "' + by.find((d) => d !== dim) + '" on detail' : 'Remove "detail", for one level') + '.');
-  if (color != null && !(typeof color === 'string' && color.split('@')[0]! in catalog.metrics)) throw new Error('A ' + q + ' layer takes a metric on color, to paint every box by the ramp, and this one has ' + JSON.stringify(color) + ' there. Encode one of the query\'s metrics on color, or remove it: each "' + dim + '" then has a series colour.');
+  if (color != null && !isMetric(catalog, color)) throw new Error('A ' + q + ' layer takes a metric on color, to paint every box by the ramp, and this one has ' + JSON.stringify(color) + ' there. Encode one of the query\'s metrics on color, or remove it: each "' + dim + '" then has a series colour.');
   const two = typeof detail === 'string', by2 = result.totalsBy?.[dim];
   // A parent is sized by what the engine says it holds over all its children. With no such total there is no honest
   // box for it: its rows may be short of it by a `limit`, and are never summed.
@@ -97,8 +96,8 @@ function read({ layers, query, result, catalog }: Omit<MarkView, 'guides'>) {
   const total = result.totals[size], shown = total ? tops.filter((r) => is(r[size])) : [];
   const drawn = two ? result.rows.filter((r) => is(r[size]) && shown.some((t) => of(t) === of(r))) : shown;
   // The colour scale runs over the boxes that are painted by it, as a grid's runs over its cells.
-  const fill = typeof color === 'string' ? seqScale(drawn.map((r) => r[color]).filter((v): v is number => typeof v === 'number'), catalog.metrics[color.split('@')[0]!]) : null;
-  if (!fill && shown.length > SERIES) throw new Error('Dividing by "' + dim + '" makes ' + shown.length + ' boxes, and there are ' + SERIES + ' series colours. Add "limit": ' + SERIES + ' to the query, or less, or encode a metric on color to paint every box by the ramp.');
+  const fill = typeof color === 'string' ? seqScale(drawn.map((r) => r[color]).filter((v): v is number => typeof v === 'number'), metricOf(catalog, color)!) : null;
+  if (!fill && shown.length > SERIES) throw new Error(tooManySeries('Dividing by "' + dim + '"', shown.length, 'boxes', ', or encode a metric on color to paint every box by the ramp'));
   // A key is made unique as it is given out: two rows of one value, or a value with the separator in it.
   const id = layerKeys(layers)[0]!, key = uniqueKeys();
   const paint = (r: Row, i: number) => (fill ? fill.paint(r[color as string] as number | null | undefined) : 'series.' + (i + 1));

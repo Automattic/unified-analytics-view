@@ -91,7 +91,7 @@ export function tldrProse(q: Query, result: Result, share: boolean, catalog: Cat
     if (!time) return largest(by!, ' of ' + name, ' is') + ', and ' + largest(dims[1]!) + '.';
     const split = dims.find((d) => d !== time)!, top = leader(result, split, m)![split], days = [...new Set(rows.map((r) => r[time]))];
     const led = days.filter((d) => { const at = rows.filter((r) => r[time] === d), mine = at.find((r) => r[split] === top); return !!mine && at.every((r) => r === mine || (r[m] as number) < (mine[m] as number)); }).length;
-    return largest(split, ' of ' + name, ' is') + range + ', and leads on ' + allOrSome(led, days.length) + ' ' + plural(label(time)) + '.';
+    return largest(split, ' of ' + name, ' is') + range + ', and leads on ' + allOrSome(led, days.length) + ' ' + many(days.length, label(time)) + '.';
   }
   if (by && catalog.dimensions[by]!.type === 'number' && rows.length) {
     // A numeric dimension: the total, and the bin that holds the most of it.

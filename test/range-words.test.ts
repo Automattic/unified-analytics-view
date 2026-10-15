@@ -26,7 +26,7 @@ const cases: [string, Spec, Result, string][] = [
   ['a ranking', { spec: 'view/0', use: 'bar-list', query: { metrics: ['revenue'], by: ['sku'] } }, result(skus), 'Top skus by revenue: A ($200), B ($100).'],
   ['a numeric dimension', { spec: 'view/0', layers: [{ mark: 'line', encode: { x: 'size', y: 'revenue' } }], query: { metrics: ['revenue'], by: ['size'] } }, result([{ size: 1, revenue: 200 }, { size: 2, revenue: 100 }]), 'Revenue: $300. The most, $200, at a size of 1.'],
   ['two metrics as points', { spec: 'view/0', layers: [{ mark: 'dot', encode: { x: 'revenue', y: 'orders' } }], query: { metrics: ['revenue', 'orders'], by: ['sku'] } }, result(skus), 'Across 2 skus, the range of revenue is $100 to $200 and of orders is 10 to 20. A is highest on revenue and B on orders.'],
-  ['a split over time', { spec: 'view/0', layers: [{ mark: 'line', encode: { x: 'day', y: 'revenue', color: 'sku' } }], query: { metrics: ['revenue'], by: ['day', 'sku'] } }, result([{ day: '2026-10-01', sku: 'A', revenue: 200 }, { day: '2026-10-01', sku: 'B', revenue: 100 }], { totalsBy }), 'A is the largest sku at 67% of revenue, and leads on all 1 days.'],
+  ['a split over time', { spec: 'view/0', layers: [{ mark: 'line', encode: { x: 'day', y: 'revenue', color: 'sku' } }], query: { metrics: ['revenue'], by: ['day', 'sku'] } }, result([{ day: '2026-10-01', sku: 'A', revenue: 200 }, { day: '2026-10-01', sku: 'B', revenue: 100 }], { totalsBy }), 'A is the largest sku at 67% of revenue, and leads on all 1 day.'],
   ['a grid', { spec: 'view/0', layers: [{ mark: 'cell', encode: { x: 'hour', y: 'sku', color: 'revenue' } }], query: { metrics: ['revenue'], by: ['hour', 'sku'] } }, result(pairs, { totalsBy }), 'Most revenue at 9, A ($200). 9 is the busiest hour at 67% of revenue, and A the busiest sku at 67%.'],
 ];
 
@@ -61,7 +61,7 @@ describe('a count in the prose is pluralised as plural() does it', () => {
   });
   it('in the days a split leads on', () => {
     const res = result([{ delivery: '1', country: 'DE', revenue: 200 }, { delivery: '1', country: 'FR', revenue: 100 }], { totalsBy: { country: [{ country: 'DE', revenue: 200 }, { country: 'FR', revenue: 100 }] } });
-    expect(tldrProse({ metrics: ['revenue'], by: ['delivery', 'country'] }, res, false, ys)).toBe('DE is the largest country at 67% of revenue, and leads on all 1 deliveries.');
+    expect(tldrProse({ metrics: ['revenue'], by: ['delivery', 'country'] }, res, false, ys)).toBe('DE is the largest country at 67% of revenue, and leads on all 1 delivery.');
   });
 });
 

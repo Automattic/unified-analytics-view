@@ -28,7 +28,7 @@ const ranking = 'Top channels by visitors, last 28 days: Search (4,318), Direct 
 const prose: Record<string, string> = {
   band: ranking, pie: ranking,
   two: 'Search is the largest channel (4,318), and 9 the largest hour (4,318).',
-  time: 'Search is the largest channel (4,318) in the last 28 days, and leads on all 1 days.',
+  time: 'Search is the largest channel (4,318) in the last 28 days, and leads on all 1 day.',
   grid: 'Most visitors at 9, Search (4,318) in the last 28 days. 9 is the busiest hour (4,318), and Search the busiest channel (4,318).',
 };
 

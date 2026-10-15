@@ -34,7 +34,8 @@ export interface LayoutPainter {
    * figure itself), then declarations. They are written under the rule's own condition and `keep`. */
   fit?: Record<string, Record<string, string>>;
   /** Fit rules of its own, for what the context's set does not carry yet. Compiled after the context's. It is handed
-   * the context's rule set, so a need that is one of its sizes is written from it. */
+   * the context's rule set, so a need that is one of its sizes is written from it. A custom mark's painter leaves it out:
+   * the element compiles the rules the mark was registered with in core. Where one gives it, the mark's own still win. */
   rules?(context: ContainerRules): FitRule[];
   paint(body: HTMLElement, scene: Scene, rules: ContainerRules, data: ViewData): void;
   /** The table alternative, where the element's own, a row of the table per row of the result, is not this layout's. */

@@ -1,6 +1,6 @@
-import { CONTAINER_RULES, DELTA_FULL, NOTE_LEAST, NUMBER_SHORT, buildScene, expand, fallbackRule, fills, gaveWay, resolve, unboundedContainer } from '@unified-analytics/core';
+import { CONTAINER_RULES, DELTA_FULL, NOTE_LEAST, NUMBER_SHORT, buildScene, customMarks, expand, fallbackRule, fills, gaveWay, resolve, unboundedContainer } from '@unified-analytics/core';
 import type { Catalog, ContainerRules, Layout, Result, SceneNode, Spec } from '@unified-analytics/core';
-import { compileFitRules, type FitExtras } from './compile.ts';
+import { compileFitRules } from './compile.ts';
 import { LEGEND_LINE } from './chrome/legend.ts';
 import { CHROME_CSS, swatch } from './chrome/index.ts';
 import { SWATCH } from './chrome/swatch.ts';
@@ -138,8 +138,6 @@ export function surfaceSheet(): CSSStyleSheet {
   sheet.replaceSync(SURFACE_CSS);
   return sheet;
 }
-
-const EXTRAS: FitExtras = Object.fromEntries(painters.map((p) => [p.layout, p.fit ?? {}]));
 
 /* A layout whose rule names a `fallback` is painted twice: by this view, and as that preset by a view of its own
  * beside the figure, handed the same query, result, catalog and rules. That one is its own container, with its own
@@ -356,9 +354,12 @@ export class UaView extends Base {
       check(spec, result, catalog);
       if (!Array.isArray(rules.fit)) throw new Error('The rules need "fit", an array of fit rules. Leave it out to use the defaults.');
       if (!Array.isArray(rules.order)) throw new Error('The rules need "order", a list of reductions such as ["drop-guides", "prose"]. Leave it out to use the defaults.');
-      // Painters registered since this module loaded, for custom marks: their styles, extras and rules join the rest.
-      const doc = this.ownerDocument, more = Object.values(LAYOUTS).filter((p) => !painters.includes(p)), fits = [...rules.fit, ...painters.concat(more).flatMap((p) => p.rules?.(rules) ?? [])];
-      const fit = sheet(doc, compileFitRules(fits, { ...EXTRAS, ...Object.fromEntries(more.map((p) => [p.layout, p.fit ?? {}])) }));
+      // Every painter's extras and rules, the built-in ones' and those registered since this module loaded, for custom
+      // marks, whose styles join the rest as a sheet of their own. A custom mark's rules are its own, as core holds them
+      // (marks.ts); a painter's `rules` stand in where no mark of its name gives any.
+      const doc = this.ownerDocument, all = Object.values(LAYOUTS), more = all.filter((p) => !painters.includes(p));
+      const fits = [...rules.fit, ...all.flatMap((p) => customMarks().get(p.layout)?.rules ?? p.rules?.(rules) ?? [])];
+      const fit = sheet(doc, compileFitRules(fits, Object.fromEntries(all.map((p) => [p.layout, p.fit ?? {}]))));
       const plan = resolve(spec, result, { ...unboundedContainer(), rules }, catalog);
       const scene = buildScene(plan, spec.query, result, catalog), fig = this.#fig;
 

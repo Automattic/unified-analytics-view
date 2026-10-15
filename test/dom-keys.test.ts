@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildScene, makeContainer, place, resolve, rowKeys, unboundedContainer, type Catalog, type Spec } from '@unified-analytics/core';
 import { catalog, runQuery, samples, type Scenario } from '@unified-analytics/fixtures';
+import { TIP_CSS, centred } from '../packages/dom/src/chrome/tip.ts';
 import { Keys, crossMarks, hitNodes, readout, rowsAt, step, written } from '../packages/dom/src/keys.ts';
 
 // Which point a key moves to, what the readout says and where a plot's hit targets lie are plain functions, held
@@ -201,7 +202,7 @@ describe('the mouse leaving', () => {
   afterEach(() => { direction = 'ltr'; vi.unstubAllGlobals(); });
   const view = (focused: boolean, hovered = false) => {
     vi.stubGlobal('getComputedStyle', () => ({ direction }));
-    const tip = el({ classList: { contains: () => true } }), fig = el({ querySelector: () => tip, children: [tip] }), host = el();
+    const tip = el({ classList: { contains: () => true, add: () => {} } }), fig = el({ querySelector: () => tip, children: [tip] }), host = el();
     // The body stands in for the holder of the points as well, so an event sent to it is one on the holder.
     const points: ReturnType<typeof el>[] = [], body = el({ dataset: { hits: 'x' }, children: points, matches: (sel: string) => (sel === ':hover' ? hovered : focused), querySelector: () => body, querySelectorAll: () => points, closest: () => points[1] });
     for (const row of ['a', 'b', 'c']) { const p = el({ parentElement: body }); p.setAttribute('data-row', row); points.push(p); }
@@ -271,5 +272,18 @@ describe('the mouse leaving', () => {
     for (const p of v.points) p.getBoundingClientRect = () => past;
     v.keys.name();
     expect(v.body.getAttribute('tabindex')).toBe(null);
+  });
+});
+
+describe('the tooltip chip', () => {
+  it('is centred on its point, inside its room, and at its start where it is wider', () => {
+    expect(centred(50, 20, 0, 100)).toBe(40);
+    expect(centred(5, 20, 0, 100)).toBe(0);
+    expect(centred(95, 20, 0, 100)).toBe(80);
+    expect(centred(50, 200, -10, 100)).toBe(-10);
+  });
+  it('is set closer and kept to one line on an axis, and on the secondary surface in that tone', () => {
+    expect(TIP_CSS).toContain('.uav-tip[data-anchor="axis"] { padding: 1px 5px; white-space: nowrap; }');
+    expect(TIP_CSS).toContain('.uav-tip[data-tone="secondary"] { background: var(--ua-charts-color-tooltip-surface-secondary');
   });
 });

@@ -1,5 +1,5 @@
 import type { CircleNode, PathNode, TextNode } from '@unified-analytics/core';
-import { FOCUS, HOVER, attr, ensure, holdShape, keyed, paintRamp, paintSize, prop, registerPainter, svg as svgOf, text, token, unlist, type LayoutPainter } from '@unified-analytics/dom';
+import { DRAWN, FOCUS, HOVER, IN_BOX, attr, ensure, holdShape, keyed, lineOf, paintRamp, paintSize, prop, registerPainter, svg as svgOf, text, token, unlist, type LayoutPainter } from '@unified-analytics/dom';
 import { MAP, NOTE, eachGeoName } from './index.ts';
 
 /* The `geo` mark's half for the DOM: the painter of its layout, for registerPainter().
@@ -47,11 +47,11 @@ const css = `
 .uav[data-layout="geo"] .uav-points { pointer-events: none; }
 .uav[data-layout="geo"] .uav-points i { pointer-events: auto; }
 .uav[data-layout="geo"] .uav-ramp:empty { display: none; }
-.uav[data-layout="geo"] .uav-note { block-size: calc(var(--uav-font-tick) * ${NOTE} / 11); line-height: calc(${NOTE} / 11); overflow: hidden; white-space: nowrap; }
+.uav[data-layout="geo"] .uav-note { block-size: calc(var(--uav-font-tick) * ${NOTE} / ${DRAWN.tick}); line-height: ${lineOf('tick', NOTE)}; overflow: hidden; white-space: nowrap; }
 .uav[data-layout="geo"] .uav-note span { color: var(--uav-paint); }
 .uav[data-layout="geo"] .uav-note:empty { display: none; }
 /* In a box the part gives way to the height and its width follows, as a circle of arcs does. */
-@container uav-view (block-size >= 0px) {
+${IN_BOX} {
   .uav[data-layout="geo"] .uav-body { container-type: size; overflow: hidden; }
   .uav[data-layout="geo"] .uav-plot { ${shape.box} }
   .uav[data-layout="geo"] :is(.uav-note, .uav-ramp, .uav-size) { flex: none; }

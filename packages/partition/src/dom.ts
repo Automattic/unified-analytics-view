@@ -1,5 +1,5 @@
 import { formatDimension, type MarkView, type RectNode, type Row, type TextNode } from '@unified-analytics/core';
-import { FOCUS, HOVER, attr, chooseItem, emptyTable, ensure, fieldLabel, holdShape, keyed, label, nodePaint, paintRamp, prop, readout, registerPainter, roveItems, tableRow, text, token, valueText, type Cell, type LayoutPainter } from '@unified-analytics/dom';
+import { FOCUS, FROM_TOP, HOVER, IN_BOX, attr, chooseItem, emptyTable, ensure, fieldLabel, holdShape, keyed, label, lineOf, nodePaint, paintRamp, prop, readout, registerPainter, roveItems, tableRow, text, token, valueText, type Cell, type LayoutPainter } from '@unified-analytics/dom';
 import { ASPECT, GAP, HEAD, HEAD_MOST, KID_GAP, LINE, MAX, boxesOf } from './index.ts';
 
 /* The `partition` mark's half for the DOM: the painter of its layout, for registerPainter().
@@ -32,7 +32,7 @@ import { ASPECT, GAP, HEAD, HEAD_MOST, KID_GAP, LINE, MAX, boxesOf } from './ind
  * by where a box lies, so an arrow does not always move the way it points.
  * Below the room a treemap needs, the `marks` rule's `fallback` shows the same query as a list in its place. That is
  * the element's doing (view.ts), and nothing here knows of it. */
-const at = (gap: number, off: number) => `inset-inline-start: calc(var(--uav-x) * 100% + ${off}px); inset-block-start: calc((1 - var(--uav-t)) * 100% + ${off}px); inline-size: calc(var(--uav-w) * 100% - ${gap}px); block-size: calc(var(--uav-v) * 100% - ${gap}px);`;
+const at = (gap: number, off: number) => `inset-inline-start: calc(var(--uav-x) * 100% + ${off}px); inset-block-start: calc(${FROM_TOP} + ${off}px); inline-size: calc(var(--uav-w) * 100% - ${gap}px); block-size: calc(var(--uav-v) * 100% - ${gap}px);`;
 const shape = holdShape(MAX + 'px', 'var(--uav-aspect, ' + ASPECT + ')');
 const css = `
 .uav[data-layout="partition"] .uav-body { display: flex; flex-direction: column; }
@@ -45,7 +45,7 @@ const css = `
 .uav[data-layout="partition"] .uav-plot[data-divided] .uav-head { position: relative; inset: auto; flex: none; block-size: ${HEAD}px; max-block-size: ${Math.round(HEAD_MOST * 100)}%; }
 .uav[data-layout="partition"] .uav-kids { position: relative; flex: 1; min-block-size: 0; margin-inline-end: -${KID_GAP}px; margin-block-end: -${KID_GAP}px; }
 .uav[data-layout="partition"] .uav-kids i { position: absolute; ${at(KID_GAP, 0)} overflow: hidden; border-radius: ${token('border-radius-cell')}; background: var(--uav-paint); }
-.uav[data-layout="partition"] .uav-label { position: absolute; inset-inline-start: 0; inset-block-start: 0; inline-size: max-content; padding: 1px 4px; line-height: calc(${LINE} / 11); pointer-events: none; ${label()} }
+.uav[data-layout="partition"] .uav-label { position: absolute; inset-inline-start: 0; inset-block-start: 0; inline-size: max-content; padding: 1px 4px; line-height: ${lineOf('tick', LINE)}; pointer-events: none; ${label()} }
 /* Boxes lie edge to edge and a parent cuts off what leaves it, so the chosen one is outlined inside its own edge. */
 .uav[data-layout="partition"] .uav-plot { outline: none; }
 .uav[data-layout="partition"] .uav-plot:focus-visible::after { content: ""; position: absolute; inset: 0; pointer-events: none; ${FOCUS.around} }
@@ -53,7 +53,7 @@ const css = `
 .uav[data-layout="partition"] .uav-plot [data-active="pointer"] { ${HOVER.around} outline-offset: -1px; }
 .uav[data-layout="partition"] .uav-ramp:empty { display: none; }
 /* In a box the part gives way to the height and its width follows, as a map does. */
-@container uav-view (block-size >= 0px) {
+${IN_BOX} {
   .uav[data-layout="partition"] .uav-body { container-type: size; overflow: hidden; }
   .uav[data-layout="partition"] .uav-plot { ${shape.box} }
   .uav[data-layout="partition"] .uav-ramp { flex: none; }

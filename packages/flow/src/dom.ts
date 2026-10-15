@@ -1,5 +1,5 @@
 import { declutter, type PathNode, type RectNode, type TextNode } from '@unified-analytics/core';
-import { ensure, ensureSvg, hits, keyed, prop, registerPainter, text, thinLabels, token, type LayoutPainter } from '@unified-analytics/dom';
+import { AXES_HEIGHT, ensure, ensureSvg, hits, keyed, prop, registerPainter, text, thinLabels, token, type LayoutPainter } from '@unified-analytics/dom';
 import { LABEL, NODE } from './index.ts';
 
 /* The `link` mark's half for the DOM: the painter of its layout, for registerPainter().
@@ -22,7 +22,7 @@ import { LABEL, NODE } from './index.ts';
  * Below the room a Sankey needs, the `marks` rule's `fallback` shows the same query as a grid in its place. That is
  * the element's doing (view.ts), and nothing here knows of it. */
 const css = `
-.uav[data-layout="link"] { --uav-body-block: var(--uav-axes-height, 184px); }
+.uav[data-layout="link"] { --uav-body-block: ${AXES_HEIGHT}; }
 .uav[data-layout="link"] .uav-body { display: grid; grid-template: "plot" minmax(0, 1fr) / minmax(0, 1fr); }
 .uav[data-layout="link"] .uav-plot svg { inset-inline: ${NODE}px; inline-size: calc(100% - ${2 * NODE}px); }
 /* Ribbons lie over one another, and an SVG has no order but its children's, which is the list's. So the chosen one is

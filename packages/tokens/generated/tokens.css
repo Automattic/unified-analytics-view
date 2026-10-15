@@ -115,6 +115,7 @@
   --ua-font-size-base: clamp(0.875rem, 0.7955rem + 0.4545cqi, 1rem); /** 14.00px → 16.00px */
   --ua-font-size-sm: clamp(0.7778rem, 0.7424rem + 0.202cqi, 0.8333rem); /** 12.44px → 13.33px */
   --ua-font-size-xs: clamp(0.6914rem, 0.6894rem + 0.0112cqi, 0.6944rem); /** 11.06px → 11.11px */
+  --ua-font-family-mono: "Ans Mono", "Ans Mono Scroll", ui-monospace, monospace;
   --ua-space-7xs: clamp(0.125rem, 0.125rem + 0cqi, 0.125rem); /** 2.00px → 2.00px */
   --ua-space-6xs: clamp(0.25rem, 0.25rem + 0cqi, 0.25rem); /** 4.00px → 4.00px */
   --ua-space-5xs: clamp(0.3125rem, 0.2727rem + 0.2273cqi, 0.375rem); /** 5.00px → 6.00px */
@@ -159,8 +160,6 @@
   --ua-charts-stroke-width-line: 1px;
   --ua-charts-stroke-width-rule: 1px;
   --ua-charts-stroke-width-focus: 2px;
-  --ua-charts-font-family-tick: "Ans Mono", "Ans Mono Scroll", ui-monospace, monospace;
-  --ua-charts-font-family-value: "Ans Mono", "Ans Mono Scroll", ui-monospace, monospace;
   --ua-charts-font-size-tick: 8px;
   --ua-charts-font-size-value: 12px;
   --ua-charts-font-optical-size-display: 72;
@@ -299,6 +298,8 @@
   --ua-charts-color-label-screen: var(--ua-color-lime-1000); /** The lit cells of a number in dots, and at a tenth of it the unlit ones: the lime ramp's last step in both themes. */
   --ua-charts-border-radius-bar: var(--ua-radius-xs);
   --ua-charts-border-radius-swatch: var(--ua-radius-xs);
+  --ua-charts-font-family-tick: var(--ua-font-family-mono);
+  --ua-charts-font-family-value: var(--ua-font-family-mono);
   --ua-charts-font-size-label: var(--ua-font-size-sm);
   --ua-charts-font-size-display: var(--ua-font-size-4xl);
   --ua-charts-font-size-display-small: var(--ua-font-size-2xl);

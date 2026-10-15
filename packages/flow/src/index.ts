@@ -1,4 +1,4 @@
-import { applies, formatDimension, registerMark, registerPreset, roleOf, rowKeys } from '@unified-analytics/core';
+import { applies, formatDimension, registerMark, registerPreset, roleOf, rowKeys, ruleFor } from '@unified-analytics/core';
 import type { CustomMark, FitRule, Part, PathNode, PlacedNode, RectNode, Row, SceneNode, TextNode } from '@unified-analytics/core';
 
 /* The `link` mark: a ribbon from a value of one dimension to a value of another, as a custom mark (core's marks.ts).
@@ -103,7 +103,7 @@ export const linkMark: CustomMark = {
   // A box as wide as the view and as tall as a plot with axes is, or as the room where that is less. The nodes stand at
   // its edges, the ribbons run between them, and each label is inside its column, over the ribbons.
   place(scene, W, room, container) {
-    const rule = (id: string) => container.rules.fit.concat(LINK_RULES).find((r) => r.layout === scene.layout && r.id === id);
+    const rule = (id: string) => ruleFor(container.rules.fit.concat(LINK_RULES), scene.layout, id);
     const h = room == null ? container.rules.axes.height : Math.max(rule('marks')?.needs.block ?? 0, Math.min(container.rules.axes.height, room));
     // Core asks a custom mark's `guides` rule only for a ramp or a key to sizes, so the labels' room is asked here.
     const guides = rule('guides'), labelled = scene.parts.includes('labels') && !(guides && applies(guides, { view: { inline: W, block: room } }));

@@ -1,4 +1,4 @@
-import { formatDimension, formatValue, registerMark, registerPreset, roleOf, seqScale } from '@unified-analytics/core';
+import { formatDimension, formatValue, heldBox, registerMark, registerPreset, roleOf, ruleFor, seqScale } from '@unified-analytics/core';
 import type { CustomMark, FitRule, MarkView, Part, PlacedNode, RectNode, Row, SceneNode, TextNode } from '@unified-analytics/core';
 
 /* The `partition` mark: a box divided by area, nested once, which is a treemap. A custom mark (core's marks.ts). This
@@ -167,8 +167,8 @@ export const partitionMark: CustomMark = {
    * length: nothing is measured here. Where a parent's name does not fit, its children's are left out too, so a
    * child is never named without the parent it is in. */
   place(scene, W, room, container) {
-    const least = container.rules.fit.concat(PARTITION_RULES).find((r) => r.layout === scene.layout && r.id === 'marks')?.needs.block ?? 0;
-    const w = Math.min(W, MAX, room == null ? Infinity : Math.max(least, room) * scene.aspect!), h = w / scene.aspect!, left = (W - w) / 2;
+    const least = ruleFor(container.rules.fit.concat(PARTITION_RULES), scene.layout, 'marks')?.needs.block ?? 0;
+    const { w, h, left } = heldBox(W, room, scene.aspect!, MAX, least * scene.aspect!);
     const nodes: PlacedNode[] = [], fits = (n: TextNode, b: Box) => n.text.length * CHAR + 8 <= b.w && LINE <= b.h;
     let parent: Box = { x: 0, y: 0, w: 0, h: 0 }, inner = parent, named = false, last = parent;
     // A parent that is divided is a ground: a tint, or the tone of no value. Its name has a line of its own over its children.

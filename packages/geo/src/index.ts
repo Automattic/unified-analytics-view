@@ -1,5 +1,5 @@
 import { geoEqualEarth, geoIdentity, geoPath, type ExtendedFeatureCollection, type GeoProjection } from 'd3-geo';
-import { dotRadius, notShownNote, registerMark, registerPreset, roleOf, seqScale, sizeKey, sizeStep } from '@unified-analytics/core';
+import { dotRadius, heldBox, notShownNote, registerMark, registerPreset, roleOf, ruleFor, seqScale, sizeKey, sizeStep } from '@unified-analytics/core';
 import type { CircleNode, CustomMark, FitRule, Part, PathNode, PlacedNode, Row, SceneNode, TextNode } from '@unified-analytics/core';
 
 /* The `geo` mark: a map of regions, as a custom mark (core's marks.ts). This is its half for core: a scene in ratios
@@ -114,9 +114,9 @@ export function geoMark(shapes: Shapes, { name = 'geo', projection }: GeoOptions
     // A box of the shapes' own aspect: as wide as the view up to MAP, no taller than the room, and in the middle of the width.
     // The note is a line under it, at the start of the width as the keys are, and the room it takes is not the map's.
     place(scene, W, room, container) {
-      const least = container.rules.fit.concat(rules).find((r) => r.layout === scene.layout && r.id === 'marks')?.needs.block ?? 0;
+      const least = ruleFor(container.rules.fit.concat(rules), scene.layout, 'marks')?.needs.block ?? 0;
       const note = scene.parts.includes('note') ? scene.nodes.find((n): n is TextNode => n.part === 'note' && n.kind === 'text') : undefined, under = note ? NOTE : 0;
-      const w = Math.min(W, MAP, room == null ? Infinity : Math.max(least, room - under) * scene.aspect!), h = w / scene.aspect!, left = (W - w) / 2;
+      const { w, h, left } = heldBox(W, room, scene.aspect!, MAP, least * scene.aspect!, under);
       const nodes: PlacedNode[] = [];
       for (const n of scene.nodes) {
         if (n.part === 'plot' && n.kind === 'path') nodes.push({ key: n.key, kind: 'path', d: scaled(n.d!, w / BOX), fill: true, paint: n.paint, layer: n.layer, ...(left && { tx: left }) });

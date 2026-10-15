@@ -19,6 +19,10 @@ describe('chrome', () => {
   it('joins the base sheet once, so every layout has it, a custom mark\'s among them', () => {
     expect(BASE_CSS.split(CHROME_CSS)).toHaveLength(2);
   });
+  it('clips the prose rung to a box it is handed, so its words never paint past the view', () => {
+    const rung = BASE_CSS.split('\n').find((l) => l.includes('[data-fit="prose"]) > .uav-prose {'))!;
+    expect(rung.indexOf('overflow: hidden')).toBeGreaterThan(rung.indexOf('overflow: visible'));
+  });
   it('styles the axes in its own sheet, before the sheet that sets their labels on whole px, and a plot and a grid say only where each stands', () => {
     expect(CHROME_CSS).toContain(AXES_CSS);
     expect(BASE_CSS.indexOf(AXES_CSS)).toBeLessThan(BASE_CSS.indexOf(PIXELS_CSS));

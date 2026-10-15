@@ -114,9 +114,10 @@ ${PIXELS_CSS}
  * box. The body then takes the height left over. No attribute on the view. */
 ${IN_BOX} { .uav-body { block-size: auto; } }
 
-/* The prose alone: the last rung, set by the plan or, when the number itself does not fit, by the measured pass. */
+/* The prose alone: the last rung, set by the plan or, when the number itself does not fit, by the measured pass.
+ * It scrolls, unseen, in a box the view was handed, so its row is the box's and its words never paint past it. */
 .uav:is([data-layout="prose"], [data-fit="prose"]) > :not(.uav-prose, .uav-room) { display: none !important; }
-.uav:is([data-layout="prose"], [data-fit="prose"]) > .uav-prose { ${SHOWN} white-space: normal; font-size: var(--uav-font-label); }
+.uav:is([data-layout="prose"], [data-fit="prose"]) > .uav-prose { ${SHOWN} overflow: hidden; white-space: normal; font-size: var(--uav-font-label); }
 
 /* The same result as a table, in place of the marks. The switch is public: the surface that offers it is outside the shadow root. */
 .uav-table { display: none; inline-size: 100%; border-collapse: collapse; font-size: var(--uav-font-tick); font-variant-numeric: tabular-nums; }

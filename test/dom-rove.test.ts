@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hovers, pressed, rove } from '../packages/dom/src/rove.ts';
+import { IS, emphasise, heldBy, hold, hovers, pressed, rove } from '../packages/dom/src/rove.ts';
 import { roveItems, step } from '../packages/dom/src/keys.ts';
 import { hits } from '../packages/dom/src/dom.ts';
 
@@ -77,6 +77,33 @@ describe('rove', () => {
   });
 });
 
+describe('the states every atom has', () => {
+  // Just enough of an element: its attributes.
+  const atom = () => {
+    const a = new Map<string, string>();
+    return { a, getAttribute: (n: string) => a.get(n) ?? null, setAttribute: (n: string, v: string) => void a.set(n, v), removeAttribute: (n: string) => void a.delete(n),
+      hasAttribute: (n: string) => a.has(n), toggleAttribute: (n: string, on: boolean) => void (on ? a.set(n, '') : a.delete(n)) } as unknown as Element & { a: Map<string, string> };
+  };
+  it('holds by the keys as Focus and by the pointer as Hover, and lets go of both', () => {
+    const el = atom();
+    hold(el, 'keys'); expect([...el.a]).toEqual([['data-focus', '']]); expect(heldBy(el)).toBe('keys');
+    hold(el, 'pointer'); expect([...el.a]).toEqual([['data-interaction', 'hover']]); expect(heldBy(el)).toBe('pointer');
+    hold(el, null); expect([...el.a]).toEqual([]); expect(heldBy(el)).toBe(null);
+  });
+  it('brings out or sets back, one at a time', () => {
+    const el = atom();
+    emphasise(el, 'dimmed'); emphasise(el, 'highlighted'); expect([...el.a]).toEqual([['data-emphasis', 'highlighted']]);
+    emphasise(el, null); expect([...el.a]).toEqual([]);
+  });
+  it('makes what the pointer holds Active while it presses, and Hover when it lifts', () => {
+    const el = atom(), on = Object.assign(new EventTarget(), { querySelectorAll: (sel: string) => (sel === IS.hover && el.hasAttribute('data-interaction') ? [el] : []) }) as unknown as HTMLElement;
+    rove<number>(on, { hit: () => null, chosen: () => null, choose: () => {}, activate: () => false, step: () => null });
+    hold(el, 'pointer');
+    on.dispatchEvent(new Event('pointerdown')); expect(el.getAttribute('data-interaction')).toBe('active'); expect(heldBy(el)).toBe('pointer');
+    on.dispatchEvent(new Event('pointerup')); expect(el.getAttribute('data-interaction')).toBe('hover');
+  });
+});
+
 describe('roveItems', () => {
   it('finds the chosen one by any selector of a list, and activates outside a shadow root as in one', () => {
     const asked: string[] = [], on = { id: 'b' }, holder = Object.assign(new EventTarget(), { querySelector: (sel: string) => (asked.push(sel), on), getRootNode: () => ({}) }) as unknown as HTMLElement;
@@ -84,7 +111,7 @@ describe('roveItems', () => {
     holder.addEventListener('ua-activate', (e) => heard.push((e as CustomEvent).detail));
     roveItems(holder, '.a, .b', () => null, (el) => ({ id: el.id }));
     holder.dispatchEvent(Object.assign(new Event('keydown', { cancelable: true }), { key: 'Enter' }));
-    expect(asked).toEqual([':is(.a, .b)[data-active]']);
+    expect(asked).toEqual([':is(.a, .b):is([data-interaction], [data-focus])']);
     expect(heard).toEqual([{ id: 'b' }]);
   });
 });

@@ -7,6 +7,6 @@ export { attr, ensure, ensureSvg, hits, keyed, prop, svg, text } from './dom.ts'
 export { registerPainter } from './layouts/index.ts';
 export { ANCHOR, LABEL, cut, paintAxes, paintLegend, paintRamp, paintSize, paintUnitKey, say, thinAxis, type Anchor } from './chrome/index.ts';
 export { chooseItem, hideReadout, placeReadout, readout, readoutOf, roveItems } from './keys.ts';
-export { ARROWS, hovers, pressed, rove, type How, type Roving } from './rove.ts';
+export { ARROWS, IS, STATE, emphasise, heldBy, hold, hovers, pressed, rove, type Emphasis, type How, type Roving } from './rove.ts';
 export { thinLabels } from './measure.ts';
 export { emptyTable, fieldLabel, tableRow, valueText, type Cell } from './table.ts';

@@ -216,7 +216,7 @@ describe('the mouse leaving', () => {
     paint();
     let activated = 0; host.addEventListener('ua-activate', () => activated++);
     const send = (type: string, init: object) => body.dispatchEvent(Object.assign(new Event(type, { cancelable: true }), init));
-    return { tip, send, paint, keys, body, points, activated: () => activated, chosen: () => points.filter((p) => p.hasAttribute('data-active')).map((p) => p.getAttribute('data-row')) };
+    return { tip, send, paint, keys, body, points, activated: () => activated, chosen: () => points.filter((p) => p.hasAttribute('data-interaction') || p.hasAttribute('data-focus')).map((p) => p.getAttribute('data-row')) };
   };
 
   it.each([false, true])('clears the chosen point and the readout, as version 4 does (view focused: %s)', (focused) => {

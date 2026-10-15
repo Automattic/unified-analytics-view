@@ -1,5 +1,5 @@
 import type { CircleNode, PathNode, TextNode } from '@unified-analytics/core';
-import { DRAWN, FOCUS, HOVER, IN_BOX, attr, ensure, hits, holdShape, keyed, lineOf, paintRamp, paintSize, prop, registerPainter, svg as svgOf, text, token, type LayoutPainter } from '@unified-analytics/dom';
+import { DRAWN, FOCUS, HOVER, IN_BOX, IS, STATE, attr, ensure, heldBy, hits, hold, holdShape, keyed, lineOf, paintRamp, paintSize, prop, registerPainter, svg as svgOf, text, token, type LayoutPainter } from '@unified-analytics/dom';
 import { MAP, NOTE, eachGeoName } from './index.ts';
 
 /* The `geo` mark's half for the DOM: the painter of its layout, for registerPainter().
@@ -37,8 +37,8 @@ const css = `
 .uav[data-layout="geo"] svg[data-zoom] path { cursor: zoom-out; }
 /* A region is a shape, so the outline of the chosen one is its edge, the keyboard's or the pointer's. The list of regions is a group of the SVG, which
  * has no box of its own to outline, so the part wears the holder's for it. */
-.uav[data-layout="geo"] .uav-plot path[data-active="keys"] { ${FOCUS.stroke} }
-.uav[data-layout="geo"] .uav-plot path[data-active="pointer"] { ${HOVER.stroke} }
+.uav[data-layout="geo"] .uav-plot path${IS.focus} { ${FOCUS.stroke} }
+.uav[data-layout="geo"] .uav-plot path${IS.hover} { ${HOVER.stroke} }
 /* Nothing inside the SVG wears an outline of its own, the browser's ring among them: an outline there is drawn in
  * the SVG's units, which the map's box stretches, and comes out many times its width. */
 .uav[data-layout="geo"] .uav-plot svg, .uav[data-layout="geo"] .uav-plot svg * { outline: none; }
@@ -111,11 +111,11 @@ function outline(svg: SVGSVGElement, over: SVGElement): void {
   outlined.add(svg);
   const copy = over.appendChild(svgOf('path'));
   const follow = () => {
-    const on = svg.querySelector(':scope > :not(.uav-over) > path[data-active]'), d = on?.getAttribute('d') ?? null, how = on?.getAttribute('data-active') ?? null;
+    const on = svg.querySelector(':scope > :not(.uav-over) > path' + IS.held), d = on?.getAttribute('d') ?? null;
     if (copy.getAttribute('d') !== d) attr(copy, 'd', d);
-    if (copy.getAttribute('data-active') !== how) attr(copy, 'data-active', how);
+    if (heldBy(copy) !== (on && heldBy(on))) hold(copy, on && heldBy(on));
   };
-  new MutationObserver(follow).observe(svg, { subtree: true, attributes: true, attributeFilter: ['data-active', 'd'] });
+  new MutationObserver(follow).observe(svg, { subtree: true, attributes: true, attributeFilter: [STATE.interaction, STATE.focus, 'd'] });
   follow();
 }
 

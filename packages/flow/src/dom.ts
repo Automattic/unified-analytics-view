@@ -1,5 +1,5 @@
 import { declutter, type PathNode, type RectNode, type TextNode } from '@unified-analytics/core';
-import { AXES_HEIGHT, ensure, ensureSvg, hits, keyed, LABEL as PLOT_LABEL, cut, prop, registerPainter, text, thinLabels, token, type LayoutPainter } from '@unified-analytics/dom';
+import { AXES_HEIGHT, attr, ensure, ensureSvg, hits, IS, keyed, LABEL as PLOT_LABEL, cut, prop, registerPainter, text, thinLabels, token, type LayoutPainter } from '@unified-analytics/dom';
 import { LABEL, NODE } from './index.ts';
 
 /* The `link` mark's half for the DOM: the painter of its layout, for registerPainter().
@@ -26,8 +26,8 @@ const css = `
 .uav[data-layout="link"] .uav-body { display: grid; grid-template: "plot" minmax(0, 1fr) / minmax(0, 1fr); }
 .uav[data-layout="link"] .uav-plot svg { inset-inline: ${NODE}px; inline-size: calc(100% - ${2 * NODE}px); }
 /* Ribbons lie over one another, and an SVG has no order but its children's, which is the list's. So the chosen one is
- * told by the rest standing back, as a chosen series is in a plot, as well as by its edge. */
-.uav[data-layout="link"] svg:has(path[data-active]) path:not([data-active]) { opacity: ${token('opacity-dim')}; }
+ * told by the rest standing back, Dimmed (data-dims, which keys.ts reads), as a chosen series is in a plot, as well as by its edge. */
+.uav[data-layout="link"] svg path${IS.dimmed} { opacity: ${token('opacity-dim')}; }
 .uav-nodes i { position: absolute; inset-block-start: calc(var(--uav-y) * 100%); block-size: calc(var(--uav-h) * 100%); inset-inline-start: calc(var(--uav-x) * (100% - ${NODE}px)); inline-size: ${NODE}px; background: var(--uav-paint); }
 /* The labels are set from the left whichever way the page reads, as the plot they lie over is. One near the top or the
  * foot stays inside the part, and one the measured pass found no room for keeps its box and is not seen.
@@ -53,7 +53,7 @@ export const linkPainter: LayoutPainter = {
   paint(body, scene) {
     const plot = ensure(body, 'div', 'uav-plot');
     const svg = ensureSvg(plot);
-    hits(svg, 'y');
+    hits(svg, 'y'); attr(svg, 'data-dims', '');
     keyed(svg, scene.nodes.filter((n): n is PathNode => n.part === 'plot' && n.kind === 'path'), () => 'path', (el, n) => { el.setAttribute('d', n.d ?? ''); el.setAttribute('data-fill', ''); });
     // The nodes and their names say again what each ribbon's name says whole.
     const nodes = ensure(plot, 'div', 'uav-nodes'), labels = ensure(body, 'div', 'uav-labels');

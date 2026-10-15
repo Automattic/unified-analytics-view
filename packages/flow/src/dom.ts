@@ -1,5 +1,5 @@
 import { declutter, type PathNode, type RectNode, type TextNode } from '@unified-analytics/core';
-import { ensure, ensureSvg, keyed, prop, registerPainter, text, thinLabels, token, type LayoutPainter } from '@unified-analytics/dom';
+import { ensure, ensureSvg, hits, keyed, prop, registerPainter, text, thinLabels, token, type LayoutPainter } from '@unified-analytics/dom';
 import { LABEL, NODE } from './index.ts';
 
 /* The `link` mark's half for the DOM: the painter of its layout, for registerPainter().
@@ -49,7 +49,8 @@ export const linkPainter: LayoutPainter = {
 
   paint(body, scene) {
     const plot = ensure(body, 'div', 'uav-plot');
-    const svg = ensureSvg(plot, { hits: 'y' });
+    const svg = ensureSvg(plot);
+    hits(svg, 'y');
     keyed(svg, scene.nodes.filter((n): n is PathNode => n.part === 'plot' && n.kind === 'path'), () => 'path', (el, n) => { el.setAttribute('d', n.d ?? ''); el.setAttribute('data-fill', ''); });
     // The nodes and their names say again what each ribbon's name says whole.
     const nodes = ensure(plot, 'div', 'uav-nodes'), labels = ensure(body, 'div', 'uav-labels');

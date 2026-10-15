@@ -31,13 +31,13 @@ export function svg<K extends keyof SVGElementTagNameMap>(tag: K): SVGElementTag
   return document.createElementNS(SVG, tag);
 }
 /** The one stretched SVG of a plot: paths are drawn in a 100 by 100 box. It is a picture, hidden from assistive
- * technology, unless `hits` makes it the holder of the points, running that way (layout.ts). */
-export function ensureSvg(parent: Element, { hits }: { hits?: string } = {}): SVGSVGElement {
+ * technology, unless hits() makes it the holder of the points. */
+export function ensureSvg(parent: Element): SVGSVGElement {
   let el = parent.querySelector<SVGSVGElement>(':scope > svg');
   if (!el) {
     el = parent.appendChild(svg('svg'));
     el.setAttribute('viewBox', '0 0 100 100'); el.setAttribute('preserveAspectRatio', 'none');
-    if (hits) el.setAttribute('data-hits', hits); else el.setAttribute('aria-hidden', 'true');
+    el.setAttribute('aria-hidden', 'true');
   }
   return el;
 }

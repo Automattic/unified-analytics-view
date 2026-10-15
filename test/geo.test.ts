@@ -284,7 +284,7 @@ describe('prose, the number and errors', () => {
   });
   it('the shapes are an input: a mark made from other shapes draws those, and shapes that are not shapes are an error', () => {
     const two: Shapes = { type: 'FeatureCollection', features: countries.features.filter((f) => f.id === 'BR' || f.id === 'AR') };
-    registerMark('south', geoMark(two));
+    registerMark('south', geoMark(two, { name: 'south' }));
     const spec: Spec = { ...map, layers: [{ mark: 'south', encode: { x: 'country', color: 'visitors' } }] }, result = runQuery(spec.query);
     const scene = buildScene(resolve(spec, result, makeContainer(700), catalog), spec.query, result, catalog);
     expect(shapes(scene).map((n) => [n.key, n.paint])).toEqual([['primary:south:AR', 'seq.none'], ['primary:south:BR', 'seq.10']]);
@@ -347,7 +347,7 @@ describe('the shapes of every country (countries-110m)', () => {
     expect(JSON.stringify(world).length).toBeLessThan(145000);
   });
   it('draws: a row for each of its codes is on the map, with nothing left out', () => {
-    registerMark('world', geoMark(shapes));
+    registerMark('world', geoMark(shapes, { name: 'world' }));
     const spec: Spec = { ...map, layers: [{ mark: 'world', encode: { x: 'country', color: 'visitors' } }] }, was = runQuery(spec.query);
     const result = { ...was, rows: ids.map((country, i) => ({ country, visitors: i + 1 })) };
     const scene = buildScene(resolve(spec, result, makeContainer(700), catalog), spec.query, result, catalog);

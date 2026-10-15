@@ -33,6 +33,7 @@ describe('the registry', () => {
   it('refuses a name core has, as a mark or as a layout, and one that is not a name', () => {
     expect(err(() => registerMark('bar', toy))).toBe('A custom mark cannot be named "bar", which core has already. Register it under another name.');
     expect(err(() => registerMark('rows', toy))).toBe('A custom mark cannot be named "rows", which core has already. Register it under another name.');
+    expect(err(() => registerMark('toy-x', toy))).toBe('The mark registered as "toy-x" has fit rules for the "toy" layout, and a custom mark\'s layout is its name. Make the mark under the name "toy-x", as its package\'s maker lets you, or set "layout" to "toy-x" in each of its rules.');
     expect(err(() => registerMark('my mark', toy))).toBe('A custom mark cannot be named "my mark": the name is written into specs and selectors. Use letters, digits, "_" and "-" only.');
     expect(customMarks().has('bar')).toBe(false);
   });

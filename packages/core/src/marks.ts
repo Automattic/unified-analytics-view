@@ -36,6 +36,9 @@ export function registerMark(name: string, mark: CustomMark): void {
   if (!/^[\w-]+$/.test(name)) throw new Error('A custom mark cannot be named ' + JSON.stringify(name) + ': the name is written into specs and selectors. Use letters, digits, "_" and "-" only.');
   // A custom mark's name is its layout's, so it cannot be one of core's layouts either.
   if (([...MARKS, ...LAYOUTS] as string[]).includes(name)) throw new Error('A custom mark cannot be named "' + name + '", which core has already. Register it under another name.');
+  // Its rules are compiled for the layout they name, so rules made for another name would fit nothing here, silently.
+  const other = mark.rules.find((r) => r.layout !== name);
+  if (other) throw new Error('The mark registered as "' + name + '" has fit rules for the "' + other.layout + '" layout, and a custom mark\'s layout is its name. Make the mark under the name "' + name + '", as its package\'s maker lets you, or set "layout" to "' + name + '" in each of its rules.');
   REGISTERED.set(name, mark);
 }
 /** The marks registered, by name. */

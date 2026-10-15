@@ -209,7 +209,9 @@ describe('geo, with a symbol for each region', () => {
     expect(ratio.parts).toEqual(['plot', 'points', 'ramp', 'size']);
     expect([shapes(ratio).filter((n) => /seq\.\d+/.test(n.paint)).length, dots(ratio).length]).toEqual([15, 15]);
     expect(plan.dropped).toEqual([]);
-    expect(run(both, 300).ratio.parts).toEqual(['plot', 'points']);
+    const narrow = run(both, 300);
+    expect(narrow.ratio.parts).toEqual(['plot', 'points']);
+    expect(narrow.plan.dropped).toEqual(['the colour ramp and the key to sizes']);
   });
 });
 

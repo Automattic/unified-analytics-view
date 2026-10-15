@@ -219,13 +219,13 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
     if (p.layout === 'band') return { rule: rule(p.guides.legend === 'full' ? 'legend' : 'marks'), measured: 0 };
     if (p.layout === 'radial') return { rule: rule(p.guides.legend === 'full' ? 'legend' : p.guides.rim ? 'rim' : 'marks'), measured: 0 };
     if (p.layout === 'matrix') return { rule: rule((p.guides.ramp || p.guides.size) && keep.indexOf('guides') < 0 ? 'ramp' : 'marks'), measured: 0 };   // a ramp the spec keeps asks for no room of its own, nor a key to sizes
-    if (customMarks().has(p.layout)) return { rule: rule(keyed() && keep.indexOf('guides') < 0 ? 'guides' : 'marks'), measured: 0 };
+    if (customMarks().has(p.layout)) return { rule: rule(keyed().length && keep.indexOf('guides') < 0 ? 'guides' : 'marks'), measured: 0 };
     return { rule: rule('notice'), measured: 0 };
   }
   // Whether the scene shows the key to a unit's glyphs: the plan has it on, and a glyph is worth more than one.
   const unitKeyed = () => !!p.guides.unitKey && buildScene(p, q, result, catalog).parts.includes('unit-key');
   // Which of a custom mark's two keys its scene shows, if either.
-  const keyed = () => (['ramp', 'size'] as const).find((g) => p.guides[g] && buildScene(p, q, result, catalog).parts.includes(g));
+  const keyed = () => { const shown = buildScene(p, q, result, catalog).parts; return (['ramp', 'size'] as const).filter((g) => p.guides[g] && shown.includes(g)); };
   // A number that stands alone or above the marks has to fit too. No rule can say so: the need is its own width.
   const numberWidth = () => (p.layout === 'none' || (p.tldrValue && !p.side && p.layout !== 'prose') ? container.displayWidth(valueLen) : 0);
   function minWidth(): number {
@@ -271,7 +271,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
         p.guides = { ...p.guides, ramp: false, ...(p.guides.size != null && { size: false }) };
         return said || null;
       }
-      if (customMarks().has(p.layout)) { const key = keyed(); p.guides = {}; return key ? KEY_NAMES[key] : null; }
+      if (customMarks().has(p.layout)) { const said = keyed().map((g) => KEY_NAMES[g]).join(' and '); p.guides = {}; return said || null; }
       return null;
     },
     'drop-secondary': () => {

@@ -3,6 +3,7 @@ import type { Catalog, ContainerRules, Layer, Layout, Query, Result, Row, SceneN
 import { compileFitRules, type FitExtras } from './compile.ts';
 import { LEGEND_LINE } from './chrome/legend.ts';
 import { CHROME_CSS, swatch } from './chrome/index.ts';
+import { SWATCH } from './chrome/swatch.ts';
 import { X_AXIS_FACE } from './chrome/axes.ts';
 import { attr, ensure, keyed, paintVar, text } from './dom.ts';
 import { DOTS_CSS } from './dots.ts';
@@ -22,6 +23,8 @@ import { DISPLAY_LINE, DRAWN, IN_BOX, NUMBER_SMALL, SHOWN, VISUALLY_HIDDEN, line
  * layout that hands out a box makes it `container-type: size`, and the body fills what is left. */
 
 const painters = Object.values(LAYOUTS);
+/** The space before the pulse beside the number, and between it and the number, in px. */
+const PULSE_MARGIN = [2, 8] as const;
 
 /* Everything the element owns, in one layer, so a compiled fit rule beats it whatever the specificity. */
 export const BASE_CSS = `@layer uav {
@@ -72,10 +75,10 @@ ${IN_BOX} { .uav-loading { block-size: 100%; } }
 /* A number in dots is a block, so its screen has the number's whole width to fill. The ruler's is as wide as its glyphs. */
 :not(.uav-ruler) > .uav-number > b:has(.uav-glyphs) { display: block; }
 /* Beside a pulse it is what the pulse and its margins leave. */
-:not(.uav-ruler) > .uav-number > .uav-pulse + b:has(.uav-glyphs) { display: inline-block; inline-size: calc(100% - 20px); }
+:not(.uav-ruler) > .uav-number > .uav-pulse + b:has(.uav-glyphs) { display: inline-block; inline-size: calc(100% - ${SWATCH.pulse + PULSE_MARGIN[0] + PULSE_MARGIN[1]}px); }
 .uav-number > span { display: block; line-height: ${lineOf('label', 18)}; overflow: hidden; text-overflow: ellipsis; }
 .uav-number > .uav-f-tick { line-height: ${lineOf('tick', 16)}; }
-.uav-pulse { vertical-align: middle; margin-inline: 2px 8px; }
+.uav-pulse { vertical-align: middle; margin-inline: ${PULSE_MARGIN[0]}px ${PULSE_MARGIN[1]}px; }
 .uav-short { display: none; }
 /* What the measured pass found, as data-fit on the number: its size, its forms, and whether its note fits. */
 ${shortForm('.uav-number[data-fit~="short"] > .uav-f-display', '.uav-number[data-fit~="delta-short"] > .uav-f-value')}
@@ -246,7 +249,7 @@ function paintTable(table: HTMLTableElement, title: string | undefined, q: Query
 
 function paintNumber(el: HTMLElement, nodes: SceneNode[]): void {
   keyed(el, nodes, (n) => (n.kind === 'circle' ? 'i' : n.kind === 'text' && n.font === 'display' ? 'b' : 'span'), (c, n) => {
-    if (n.kind === 'text') { text(c, n); (c as HTMLElement).title = n.note ?? ''; } else { c.classList.add('uav-pulse'); swatch(c, '10 circle'); }      // what the number counts, when it is pointed at
+    if (n.kind === 'text') { text(c, n); (c as HTMLElement).title = n.note ?? ''; } else { c.classList.add('uav-pulse'); swatch(c, SWATCH.pulse + ' circle'); }      // what the number counts, when it is pointed at
   });
 }
 

@@ -1,7 +1,7 @@
 import { lineOf } from '../layout.ts';
 import type { Scene, TextNode } from '@unified-analytics/core';
 import { attr, ensure, keyed, pageWay, paintVar, prop, text } from '../dom.ts';
-import { swatch as asSwatch } from './swatch.ts';
+import { SWATCH, swatch as asSwatch } from './swatch.ts';
 
 /* The legend: what each colour is. One component, in the two forms a scene asks for, told apart by its nodes.
  *
@@ -20,7 +20,7 @@ export const LEGEND_LINE = 20;
 /** The full legend's space above it and between its lines, in px. */
 export const LEGEND_MARGIN = 10, LEGEND_GAP = 4;
 export const LEGEND_CSS = `
-.uav-legend { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; grid-auto-rows: var(--uav-legend-line); gap: ${LEGEND_GAP}px 8px; align-items: center; margin-block-start: ${LEGEND_MARGIN}px; }
+.uav-legend { display: grid; grid-template-columns: ${SWATCH.legend}px minmax(0, 1fr) auto; grid-auto-rows: var(--uav-legend-line); gap: ${LEGEND_GAP}px 8px; align-items: center; margin-block-start: ${LEGEND_MARGIN}px; }
 .uav-legend i { grid-column: 1; }
 .uav-legend span, .uav-legend-top span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--uav-paint); }
 .uav-legend .uav-f-label { grid-column: 2; }
@@ -42,8 +42,8 @@ export function paintLegend(body: HTMLElement, scene: Scene): void {
   attr(legend, 'data-names', names ? '' : null);
   const swatch = new Map(nodes.filter((n) => n.kind === 'rect').map((n) => [n.series, n.paint]));
   keyed(legend, names ? nodes.filter((n) => n.kind === 'text') : nodes, (n) => (n.kind === 'text' ? 'span' : 'i'), (el, n) => {
-    if (n.kind !== 'text') { asSwatch(el, '12'); return; }
-    asSwatch(el, names ? '12' : null, true); text(el, n); prop(el, '--uav-swatch', names ? paintVar(swatch.get(n.series) ?? n.paint) : null);
+    if (n.kind !== 'text') { asSwatch(el, String(SWATCH.legend)); return; }
+    asSwatch(el, names ? String(SWATCH.legend) : null, true); text(el, n); prop(el, '--uav-swatch', names ? paintVar(swatch.get(n.series) ?? n.paint) : null);
   });
   keyed(top, scene.nodes.filter((n): n is TextNode => n.part === 'legend-top' && n.kind === 'text'), () => 'span', text);
 }

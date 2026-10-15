@@ -3,7 +3,7 @@ import { attr, ensure, paintVar, prop } from './dom.ts';
 import { centred, say, tip as chip } from './chrome/tip.ts';
 import { apart } from './measure.ts';
 import { FOCUS, HOVER, token } from './tokens.ts';
-import { swatch as swatchOf } from './chrome/swatch.ts';
+import { SWATCH, swatch as swatchOf } from './chrome/swatch.ts';
 import { nearest } from './layouts/points.ts';
 import { rove, type How } from './rove.ts';
 import { FROM_TOP } from './layout.ts';
@@ -213,7 +213,7 @@ svg[data-hits] path[data-active="pointer"] { ${HOVER.stroke} }
 /* The readout is a tooltip chip at a point (chrome/tip.ts), as wide as its words up to a width of its own. */
 .uav-readout { z-index: 1; left: 0; top: 0; inline-size: max-content; max-inline-size: min(320px, 100%); }
 /* At a point of a split plot it is a head and a line to each series: a swatch of its paint, its name, and its value at the end. */
-.uav-readout[data-lines] { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; column-gap: 4px; align-items: center; min-inline-size: min(160px, 100%); }
+.uav-readout[data-lines] { display: grid; grid-template-columns: ${SWATCH.readout}px minmax(0, 1fr) auto; column-gap: 4px; align-items: center; min-inline-size: min(160px, 100%); }
 .uav-readout[data-lines] > b { grid-column: 1 / -1; font-weight: inherit; }
 .uav-readout[data-lines] > span:nth-of-type(2n) { text-align: end; }
 /* In the top layer it is placed on the screen, over whatever holds the view, and is as wide as its words up to a width of its own. */
@@ -438,7 +438,7 @@ export class Keys {
     if (row && (point as Element).classList?.contains('uav-row') && written((point as Element).textContent ?? '', row, this.#q!, this.#catalog!, this.#layers)) { hideReadout(tip); return; }
     const lines = pair ? null : this.#lines[i];
     say(tip, !lines ? says : [el('b', lines.head), ...lines.lines.flatMap((l) => {
-      const swatch = document.createElement('i'); swatchOf(swatch, '8');
+      const swatch = document.createElement('i'); swatchOf(swatch, String(SWATCH.readout));
       prop(swatch, '--uav-paint', paintVar(this.#paints.get(l.series) ?? 'series.1'));
       return [swatch, el('span', l.name), el('span', l.value)];
     })]);

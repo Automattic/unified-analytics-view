@@ -10,13 +10,13 @@ import { token } from '../tokens.ts';
  * (legend.ts says why). It is painted from --uav-swatch where its host is not the colour it names, and else from its
  * own paint, and keeps that paint where a printer or forced colours would leave it out.
  * Where it stands, and its margins, are the module's that has it. Figma: the Swatch component set. */
+/** The square sizes, in px: a line of the readout, the pulse beside the number, and an entry of the legend. */
+export const SWATCH = { readout: 8, pulse: 10, legend: 12 } as const;
 export const SWATCH_CSS = `
 .uav-swatch, .uav-swatch-before::before { display: inline-block; flex: none; inline-size: var(--uav-swatch-i); block-size: var(--uav-swatch-b); border-radius: var(--uav-swatch-r, ${token('border-radius-swatch')});
   background: var(--uav-swatch, var(--uav-paint)); forced-color-adjust: none; }
 .uav-swatch-before::before { content: ""; }
-[data-swatch~="8"] { --uav-swatch-i: 8px; --uav-swatch-b: 8px; }
-[data-swatch~="10"] { --uav-swatch-i: 10px; --uav-swatch-b: 10px; }
-[data-swatch~="12"] { --uav-swatch-i: 12px; --uav-swatch-b: 12px; }
+${Object.values(SWATCH).map((s) => `[data-swatch~="${s}"] { --uav-swatch-i: ${s}px; --uav-swatch-b: ${s}px; }`).join('\n')}
 [data-swatch~="dot"] { --uav-swatch-i: ${DOT}; --uav-swatch-b: ${DOT}; }
 [data-swatch~="cell"] { --uav-swatch-i: 14px; --uav-swatch-b: 10px; --uav-swatch-r: ${token('border-radius-cell')}; }
 [data-swatch~="circle"] { --uav-swatch-r: 50%; }`;

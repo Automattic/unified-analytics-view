@@ -61,8 +61,9 @@ export function readout(row: Row, q: Query, catalog: Catalog, layers: Layer[]): 
   // Two bins are each named by their dimension as well: two bare ranges do not say which is which.
   const both = (q.by || []).filter((d) => row[d + '@end'] != null).length > 1;
   const dims = (q.by || []).map((d) => (both && row[d + '@end'] != null ? catalog.dimensions[d]!.label + ' ' : '') + dimName(row, d, catalog)).join(', '), partial = partialNote(row);
-  // Never a row of dashes: a row with no value says so in words.
-  if (q.metrics.every((m) => row[m] == null)) return (dims ? dims + ': ' : '') + 'No data';
+  // Never a row of dashes: a row with nothing to say, no value, no period before and no companion, says so in words.
+  const said = (m: string) => row[m] != null || (q.compare === 'previous' && row[m + '@previous'] != null) || companions(m, row, layers).some((f) => row[f] != null);
+  if (!q.metrics.some(said)) return (dims ? dims + ': ' : '') + 'No data';
   const values = q.metrics.map((m) => {
     const def = catalog.metrics[m]!, prev = q.compare === 'previous' ? row[m + '@previous'] : null;
     const more = companions(m, row, layers).filter((f) => row[f] != null).map((f) => ', ' + companionLabel(f, catalog) + ' ' + formatValue(row[f] as number, metricOf(catalog, f)!)).join('');

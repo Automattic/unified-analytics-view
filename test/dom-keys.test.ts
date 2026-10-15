@@ -166,6 +166,8 @@ describe('two rows of one value', () => {
     expect(at.rows.map((rs) => readout(rs[0]!, spec.query, sources, plan.layers))).toEqual(['Google: Visitors 50', 'Google: Visitors 30', 'Bing: Visitors 20', 'Duck: Visitors 10']);
     // A row with no value says so in words, as a grid's empty cell does.
     expect(readout({ ...result.rows[0]!, v: null }, spec.query, sources, plan.layers)).toBe('Google: No data');
+    // One with no value now and one before still says the period before.
+    expect(readout({ ...result.rows[0]!, v: null, 'v@previous': 40 }, { ...spec.query, compare: 'previous' }, sources, plan.layers)).toBe('Google: Visitors –, previous period 40');
     // Each has its own mark, and nothing written says the key.
     for (const row of scene.rows!) expect(scene.nodes.some((n) => n.row === row && n.kind !== 'text' && n.layer === 'data') || scene.nodes.some((n) => n.kind === 'path' && n.points.some((p) => p.row === row)), row).toBe(true);
     expect(scene.nodes.filter((n) => n.kind === 'text' && n.text.includes('#'))).toEqual([]);

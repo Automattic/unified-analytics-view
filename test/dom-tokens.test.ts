@@ -28,7 +28,7 @@ const resolve = (value: string): string => {
 const tier = leaves(JSON.parse(readFileSync(join(ROOT, 'config/charts.tokens.json'), 'utf-8')).charts);
 
 const painters = [...Object.values(LAYOUTS).filter((p) => p.layout !== 'geo'), geoPainter];
-const compiled = compileFitRules([...FIT_RULES, ...GEO_RULES, ...painters.flatMap((p) => (p === geoPainter ? [] : p.rules?.(CONTAINER_RULES) ?? []))], Object.fromEntries(painters.map((p) => [p.layout, p.fit ?? {}])));
+const compiled = compileFitRules([...FIT_RULES, ...GEO_RULES, ...painters.flatMap((p) => p.rules?.(CONTAINER_RULES) ?? [])], Object.fromEntries(painters.map((p) => [p.layout, p.fit ?? {}])));
 const css = [BASE_CSS, FALLBACK_CSS, MOTION_CSS, KEYS_CSS, ...painters.map((p) => p.css), compiled].join('\n');
 
 describe('the public tokens', () => {

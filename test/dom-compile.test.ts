@@ -58,7 +58,7 @@ describe('compileFitRules', () => {
   // A page may name a container of its own "view" or "plot". Ours are `uav-view` and `uav-plot`, so its does not answer our queries.
   it('names its containers uav-view and uav-plot wherever one is declared or queried', () => {
     const painters = [...Object.values(LAYOUTS).filter((p) => p.layout !== 'geo'), geoPainter];
-    const compiled = compileFitRules([...FIT_RULES, ...GEO_RULES, ...painters.flatMap((p) => (p === geoPainter ? [] : p.rules?.(CONTAINER_RULES) ?? []))], Object.fromEntries(painters.map((p) => [p.layout, p.fit ?? {}])));
+    const compiled = compileFitRules([...FIT_RULES, ...GEO_RULES, ...painters.flatMap((p) => p.rules?.(CONTAINER_RULES) ?? [])], Object.fromEntries(painters.map((p) => [p.layout, p.fit ?? {}])));
     const css = [BASE_CSS, FALLBACK_CSS, ...painters.map((p) => p.css), compiled].join('\n');
     expect(css).toContain(':host { display: block; container: uav-view / inline-size;');
     expect(css).toContain('container: uav-plot / size;');

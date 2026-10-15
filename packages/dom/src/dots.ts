@@ -33,6 +33,7 @@
  * painter is ported (packages/dots) they move to where both can read them. */
 import { once } from './motion.ts';
 import { token } from './tokens.ts';
+import { SHOWN, VISUALLY_HIDDEN } from './layout.ts';
 
 /** A cell, in px: a dot of 3 and a gap of 1. */
 export const CELL = 4;
@@ -153,10 +154,10 @@ ${Object.entries(NARROW).map(([ch, [advance, back]]) => `.uav-glyph-run i[data-c
 @keyframes uav-roll-out-u { from { ${at(0)} } to { ${at(8)} } }
 @keyframes uav-roll-in-d { from { ${at(8)} } to { ${at(0)} } }
 @keyframes uav-roll-out-d { from { ${at(0)} } to { ${at(-8)} } }
-.uav-glyphs-text { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.uav-glyphs-text { ${VISUALLY_HIDDEN} }
 @media (forced-colors: active) {
   .uav-glyphs { display: none; }
-  .uav-glyphs-text { position: static; inline-size: auto; block-size: auto; overflow: visible; clip-path: none; }
+  .uav-glyphs-text { ${SHOWN} }
 }`;
 
 /** Whether a page has declared the face, among the faces of its document: one declared inside a shadow root is not

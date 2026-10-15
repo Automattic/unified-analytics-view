@@ -12,7 +12,7 @@ import { LAYOUTS, painterOf } from './layouts/index.ts';
 import { NUMBER_FITS, fitNumber, readNumber } from './measure.ts';
 import { MOTION_CSS, begin, register, settle, still } from './motion.ts';
 import { FACES, token } from './tokens.ts';
-import { DISPLAY_LINE, DRAWN, IN_BOX, NUMBER_SMALL, lineOf, shortForm } from './layout.ts';
+import { DISPLAY_LINE, DRAWN, IN_BOX, NUMBER_SMALL, SHOWN, VISUALLY_HIDDEN, lineOf, shortForm } from './layout.ts';
 
 /* <ua-view>: one view, in whatever room it is handed. It plans once per data change, for a container with no
  * limits, builds the ratio scene and paints it. The stylesheet fits it. On resize only the measured pass runs
@@ -38,7 +38,7 @@ export const BASE_CSS = `@layer uav {
 /* A bar, a segment, a swatch and a rule are backgrounds. A printer leaves those out unless told, and forced colours
  * repaint them as the page, so both are told to leave a mark its paint. */
 .uav-body i { forced-color-adjust: none; }
-.uav-prose { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.uav-prose { ${VISUALLY_HIDDEN} }
 .uav-body { grid-area: body; box-sizing: border-box; min-inline-size: 0; block-size: var(--uav-body-block, auto); }
 .uav-error { margin: 0; font-size: var(--uav-font-label); overflow-wrap: anywhere; color: ${paintVar('delta.bad')}; }
 /* Loading: until the view has an input it has not been handed, or until its turn to paint has come. A plot's natural
@@ -112,7 +112,7 @@ ${IN_BOX} { .uav-body { block-size: auto; } }
 
 /* The prose alone: the last rung, set by the plan or, when the number itself does not fit, by the measured pass. */
 .uav:is([data-layout="prose"], [data-fit="prose"]) > :not(.uav-prose, .uav-room) { display: none !important; }
-.uav:is([data-layout="prose"], [data-fit="prose"]) > .uav-prose { position: static; inline-size: auto; block-size: auto; clip-path: none; white-space: normal; font-size: var(--uav-font-label); }
+.uav:is([data-layout="prose"], [data-fit="prose"]) > .uav-prose { ${SHOWN} white-space: normal; font-size: var(--uav-font-label); }
 
 /* The same result as a table, in place of the marks. The switch is public: the surface that offers it is outside the shadow root. */
 .uav-table { display: none; inline-size: 100%; border-collapse: collapse; font-size: var(--uav-font-tick); font-variant-numeric: tabular-nums; }

@@ -66,6 +66,10 @@ export const NUMBER_SMALL = `font-size: var(--uav-font-display-small); line-heig
 export const shortForm = (...sel: string[]): string =>
   `${sel.map((s) => s + ' > .uav-full').join(', ')} { display: none; }\n${sel.map((s) => s + ' > .uav-short').join(', ')} { display: inline; }`;
 
+/** Words kept for assistive technology and out of sight, and the same words brought back into the flow: declarations. */
+export const VISUALLY_HIDDEN = 'position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;';
+export const SHOWN = 'position: static; inline-size: auto; block-size: auto; overflow: visible; clip-path: none;';
+
 /** A plot's natural height with its axes, and without them beside the number: the context's, which the element sets on
  * the figure, and else core's defaults. */
 export const AXES_HEIGHT = `var(--uav-axes-height, ${CONTAINER_RULES.axes.height}px)`;

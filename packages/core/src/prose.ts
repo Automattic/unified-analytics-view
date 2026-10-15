@@ -1,5 +1,5 @@
 import { delta, fmtPct, formatBin, formatDimension, formatUnit, formatValue, rangeLabel } from './format.ts';
-import type { Catalog, MetricDef, Query, Result, Row } from './types.ts';
+import { baseOf, type Catalog, type MetricDef, type Query, type Result, type Row } from './types.ts';
 
 /* What a view says of a metric with nothing to show, and of one that is read now. Each is made of the catalog's label
  * and nothing else, so it holds for a metric that counts no visits and for a host with no pages: core knows no name.
@@ -33,7 +33,7 @@ export function leader(result: Result, dim: string, m: string): Row | undefined 
   return most((result.totalsBy && result.totalsBy[dim]) || result.rows, m);
 }
 /** The metric a companion field came with: "visitors" for "visitors@rank". Its own name for a field that is no companion. */
-const companionOf = (catalog: Catalog, f: string): MetricDef | undefined => catalog.metrics[f.split('@')[0]!];
+const companionOf = (catalog: Catalog, f: string): MetricDef | undefined => catalog.metrics[baseOf(f)];
 /** The row with the most of a field, the first of equals. A comparison, never a sum. */
 const most = (rows: Row[], f: string): Row | undefined => rows.reduce<Row | undefined>((top, r) => (!top || (r[f] as number) > (top[f] as number) ? r : top), undefined);
 /** Rows from the most of a metric to the least. Rows the engine ranked stay as they are; rows in a dimension's own order are ranked here, by comparing them. */

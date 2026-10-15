@@ -3,7 +3,7 @@ import { CHAR_W, clip } from './format.ts';
 import { applies, ruleFor } from './fit.ts';
 import { customMarks } from './marks.ts';
 import { arcD, pathD } from './path.ts';
-import { SIZES, TICK_W, xScale } from './scene.ts';
+import { SIZES, TICK_W, columnRoom, xScale } from './scene.ts';
 import type { CircleNode, Container, Part, PathNode, PlacedCircle, PlacedNode, PlacedRect, PlacedScene, PlacedText, RectNode, Scene, SceneNode, TextNode } from './types.ts';
 
 /* place() turns the ratio scene into pixels, for painters with no CSS: the dot
@@ -239,9 +239,6 @@ function placeSize(scene: Scene): Block {
 
 // The ranked bar list: rows of a fixed height, labels clipped by character width.
 /** The px a column of values gives up beyond its widest text. */
-export const COLUMN_PAD = 14;
-/** The room one column takes: its widest value in characters, or its header's, set in the tick face, where that is wider, and COLUMN_PAD. */
-export const columnRoom = (valueChars: number, headerChars = 0): number => Math.max(valueChars * CHAR_W, headerChars * TICK_W) + COLUMN_PAD;
 /** The room each of a row's columns takes, the first of them first: its widest text, a header among them, and COLUMN_PAD.
  * The DOM sets a column by its content. It asks this only for when to give one up, so that it agrees with resolve(). */
 export function columnRooms(scene: Scene): number[] {

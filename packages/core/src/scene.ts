@@ -595,12 +595,16 @@ function cellOf(catalog: Catalog, l: Layer, r: Row): { text: string; paint: stri
   return { text: d.state === 'none' ? '–' : d.text, paint: d.paint };
 }
 export const TICK_W = CHAR_W - 0.8;   // rough advance of the 11px tick face, which a column's header is set in
+/** The gap after a row's column of values. */
+export const COLUMN_PAD = 14;
+/** The room a column of values takes: its widest value, or its header where it has one and that is wider, and the gap after it. Measured in characters, as place() sets them. */
+export const columnRoom = (valueChars: number, headerChars = 0) => Math.max(valueChars * CHAR_W, headerChars * TICK_W) + COLUMN_PAD;
 
 /** Room a row's columns need between them: for each, its widest value, or its header where there are headers.
  * Measured in characters, as place() sets them. */
 export function valueRoomOf(catalog: Catalog, layers: Layer[], rows: Row[]): number {
   const cols = columnsOf(catalog, layers);
-  return cols.reduce((room, l) => room + Math.max((max(rows, (r) => cellOf(catalog, l, r).text.length) || 0) * CHAR_W, cols.length > 1 ? columnLabel(catalog, l).length * TICK_W : 0) + 14, 0);
+  return cols.reduce((room, l) => room + columnRoom(max(rows, (r) => cellOf(catalog, l, r).text.length) || 0, cols.length > 1 ? columnLabel(catalog, l).length : 0), 0);
 }
 
 /* What a mark in a row's track is drawn with: its layer's key, role and paint, the row's key, its value and its second end, and the track's scale. */

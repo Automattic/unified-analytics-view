@@ -180,6 +180,10 @@
       "$description": "Ans Mono, a pixel face, where the page has loaded it (fonts/ans-mono.css), then its numerals' cut (fonts/ans-mono-scroll.css) for the signs that one has and it has not. The core face comes first, as text set in it stands still; a number in dots, which rolls, names the cut first itself.",
       "mono": {
         "$value": "\"Ans Mono\", \"Ans Mono Scroll\", ui-monospace, monospace"
+      },
+      "code": {
+        "$value": "ui-monospace, monospace",
+        "$description": "The system's own monospace face, for code and JSON a person reads and writes, where a pixel face would be hard going."
       }
     }
   }

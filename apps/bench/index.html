@@ -5,28 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Bench</title>
   <link rel="stylesheet" href="/src/bench.css">
-  <script>/* The theme the bench keeps (src/theme.ts), set before the page paints. */ try { const p = new URLSearchParams(location.search), t = p.has('embed') ? p.get('theme') : localStorage.getItem('ua-bench-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch {}</script>
 </head>
 <body>
-  <nav><a href="playground.html">Playground</a> <a href="./" aria-current="page">Views</a> <a href="marks.html">Marks</a> <a href="tokens.html">Tokens</a></nav>
+  <!-- bench:nav -->
   <form id="controls">
-    <fieldset><legend>Data</legend>
-      <label><input type="radio" name="scenario" value="typical" checked> typical</label>
-      <label><input type="radio" name="scenario" value="no-prior"> no prior</label>
-      <label><input type="radio" name="scenario" value="empty"> empty</label>
-    </fieldset>
+    <!-- bench:data -->
     <fieldset><legend>Range</legend>
       <label><input type="radio" name="range" value="28d" checked> 28 days</label>
       <label><input type="radio" name="range" value="14d"> 14</label>
       <label><input type="radio" name="range" value="7d"> 7</label>
     </fieldset>
-    <fieldset><legend>Height</legend>
-      <label><input type="radio" name="height" value="" checked> natural</label>
-      <label><input type="radio" name="height" value="160"> 160</label>
-      <label><input type="radio" name="height" value="100"> 100</label>
-      <label><input type="radio" name="height" value="60"> 60</label>
-      <label><input type="radio" name="height" value="40"> 40</label>
-    </fieldset>
+    <!-- bench:height -->
   </form>
   <main id="views"></main>
   <script type="module" src="/src/main.ts"></script>

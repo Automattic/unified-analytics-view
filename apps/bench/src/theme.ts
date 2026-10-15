@@ -1,13 +1,14 @@
 /* The bench's theme: one control at the end of the nav on every page, kept in the browser so it holds from page to
- * page and in every tab. A page embedded in another (the marks page's halves) is handed its theme in the URL, keeps
- * nothing, and has no control. Each page's head sets the kept theme before anything paints; this adds the control. */
-const KEY = 'ua-bench-theme', root = document.documentElement, params = new URLSearchParams(location.search);
-const handed = params.has('embed') ? params.get('theme') : null;
-const kept = (): string => { try { return localStorage.getItem(KEY) ?? ''; } catch { return ''; } };
+ * page and in every tab. Where it is kept, and what a page embedded in another is handed, is theme-boot.js, which each
+ * page's head runs before anything paints; this adds the control. */
+declare global {
+  var benchTheme: { key: string; handed: string | null; kept(): string; set(theme: string): void };
+}
+const { key: KEY, handed, kept } = benchTheme;
 
 /** Set the theme, and tell a page that reads its tokens for the theme to read them again. */
 function apply(theme: string): void {
-  if (theme === 'light' || theme === 'dark') root.dataset.theme = theme; else delete root.dataset.theme;
+  benchTheme.set(theme);
   dispatchEvent(new Event('benchtheme'));
 }
 

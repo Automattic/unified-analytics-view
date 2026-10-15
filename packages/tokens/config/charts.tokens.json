@@ -238,12 +238,12 @@
     },
     "font-family": {
       "$type": "fontFamily",
-      "$description": "The face of a view's axis labels and notes, and of its small numbers: Ans Mono, a pixel face, where the page has loaded it (fonts/ans-mono.css), and its numerals' cut after it for the signs that one has and it has not. The words a view is read by, a row's label and the prose, stay in the page's own face.",
+      "$description": "The face of a view's axis labels and notes, and of its small numbers: the base tier's mono face. The words a view is read by, a row's label and the prose, stay in the page's own face.",
       "tick": {
-        "$value": "\"Ans Mono\", \"Ans Mono Scroll\", ui-monospace, monospace"
+        "$value": "{font.family.mono}"
       },
       "value": {
-        "$value": "\"Ans Mono\", \"Ans Mono Scroll\", ui-monospace, monospace"
+        "$value": "{font.family.mono}"
       }
     },
     "font-size": {

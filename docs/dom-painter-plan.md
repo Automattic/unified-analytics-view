@@ -153,36 +153,9 @@ One custom element, `<ua-view>`, with an open shadow root. It takes `spec`, `res
 
 Names on the right were read from `src/styles/chart-scope.scss` on Jetpack trunk, where the prefix is `--a8c-charts-`. Ours is `--ua-charts-` until the two interoperate, so that nobody takes one for the other. A page that already styles `@automattic/charts` themes a view by aliasing each token across: `--ua-charts-color-label: var(--a8c-charts-color-label)`.
 
-| Paint token | Custom property | Note |
-|---|---|---|
-| `ink` | `--ua-charts-color-label` | |
-| `ink.muted` | `--ua-charts-color-label-secondary` | Tick labels use `--ua-charts-color-label-axis` |
-| `grid` | `--ua-charts-color-grid` | |
-| `axis` | `--ua-charts-color-axis-x`, `-axis-y` | |
-| `series.1` to `series.6` | `--ua-charts-color-series-1` to `-6` | Theirs declares only slot 1 and generates the rest in script. We declare all six |
-| `rule` | `--ua-charts-color-annotation` | |
-| `compare` | `--ua-charts-color-comparison` | **New.** Theirs dashes the series colour instead |
-| `delta.good`, `delta.bad` | `--ua-charts-color-delta-good`, `-delta-bad` | **New.** They default to `-trend-up` and `-trend-down`. Theirs names a direction; ours names a judgement, because polarity can make a rise bad |
-| flat delta | `--ua-charts-color-trend-neutral` | |
-| `live` | `--ua-charts-color-live` | **New** |
-| panel and tile surfaces | `--ua-charts-color-surface`, `-surface-secondary`, `-background` | |
-| bar track | `--ua-charts-color-track` | |
-| tooltip | `--ua-charts-color-tooltip-surface` | |
-| bar corner | `--ua-charts-border-radius-bar` | |
-| entrance motion | `--ua-charts-motion-duration-entrance`, `-motion-easing-entrance` | Update and exit motion tokens are new |
-| cell corner | `--ua-charts-border-radius-cell` | Theirs. A grid's cells and the swatches of its ramp |
-| swatch and readout corners | `--ua-charts-border-radius-swatch`, `-border-radius-tooltip` | **New** |
-| strokes | `--ua-charts-stroke-width-line`, `-rule` | **New.** A line whose layer gives no width, and a rule or grid line |
-| focus | `--ua-charts-color-focus`, `--ua-charts-stroke-width-focus` | **New.** One outline for the holder that has focus and for the mark chosen in it, in every layout (`FOCUS` in `packages/dom/src/tokens.ts`). It sits inside a holder and a row, a pixel clear of a bar, segment, cell or dot, and is the edge of an arc or a region. A plot of lines has a rule at the point, in the same width and colour |
-| crosshair | `--ua-charts-color-tooltip-surface`, `-color-label-inverse`, `-color-tooltip-surface-secondary` | At a point of a line the readout is a crosshair: a rule at the point and one at each line's value there, the value said on the axis it is read from and the point's name on the x axis. The comparison's is said on the secondary surface. Each has a stroke (`-color-tooltip-border`, `-stroke-width-rule`) and the tooltip's corner. The charts tier sets the surface to the marker colour and its text to black, from the constants, so a tooltip is the same in both themes. Where the axes are not on show, or a bar or dot is at the point, the readout stands as before (`crossMarks` in `keys.ts`) |
-| the number's cells | `--ua-charts-color-label-screen` | **New.** A view's number is set in the dot matrix (`packages/dom/src/dots.ts`), its cells on whatever the view is on, with no surface of their own. A cell is 4 px everywhere, and the cells run the width of the number's room. A number wider than that is cut to the room, and runs along it under the pointer |
-| tooltip elevation | `--ua-charts-elevation-tooltip` | **New.** The shadow under the readout and the words of a crosshair. The charts tier sets it to the second elevation level |
-| readout delay | `--ua-charts-motion-delay-tooltip` | **New.** Where a row says its own value the readout waits this long to appear, and then follows from row to row. Over a mark read against an axis, a ramp or a legend it comes at once |
-| hover | `--ua-charts-color-hover` | **New.** The tint behind a row the pointer is over. A mark under the pointer wears a hairline (`-stroke-width-rule`, `-color-label`), never the focus outline: a chosen mark says how it was chosen, `data-active="keys"` or `"pointer"` (`HOVER` in `tokens.ts`) |
-| type faces | `--ua-charts-font-size-tick`, `-label`, `-value`, `-display`, `-display-small` | **New.** Each may be fluid, in `cqi`: the element works a face out once, against the view's width, so it is one size in every part |
-| weights and tracking | `--ua-charts-font-weight-value`, `-display`, `-heading`, `--ua-charts-letter-spacing-display` | **New** |
+The table of tokens this plan began with is superseded, and is not kept here, as a second list drifts from the first. Which custom property a paint token reads is `PAINT` in `packages/dom/src/dom.ts`; which tokens the element reads, with what each falls back to, is `TOKENS` in `packages/dom/src/tokens.ts`; what each is set to, and why, is the charts tier, `packages/tokens/config/charts.tokens.json`, whose descriptions say which are new beside `@automattic/charts`.
 
-The list the element reads from, with the value each token falls back to, is `packages/dom/src/tokens.ts`. `packages/tokens` declares the same names as its charts tier (`config/charts.tokens.json`), and `test/dom-tokens.test.ts` holds the two together: the tier declares every token the element reads and none it cannot.
+The list the element reads from, with the value each token falls back to, is `packages/dom/src/tokens.ts`. `packages/tokens` declares the same names as its charts tier (`config/charts.tokens.json`), and `test/dom-tokens.test.ts` holds the two together: the tier declares every token the element reads and none it cannot, and each fallback is what the tier resolves to, but for the ones `UNTHEMED` lists with why.
 
 **Structure is not a token.** Gaps, gutters and the heights of rows, bars and axes are what the fit rules' needs are worked out from, so a theme that moved them would move what fits. What follows from a face is written from it instead: a line of a legend and the height of the x axis are ratios of the face they hold, so they follow a token that moves it. The fit rules' needs are still px, written for the faces at their least: every need across is under 380 px, where the fluid scale has hardly begun to climb, and ticks and labels are the two steps of it that hardly move at all (11.06 to 11.11 px, 12.4 to 13.3 px). The number is the face that grows, and it is measured.
 

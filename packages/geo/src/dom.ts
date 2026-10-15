@@ -1,5 +1,5 @@
 import type { CircleNode, PathNode, TextNode } from '@unified-analytics/core';
-import { DRAWN, FOCUS, HOVER, IN_BOX, attr, ensure, holdShape, keyed, lineOf, paintRamp, paintSize, prop, registerPainter, svg as svgOf, text, token, unlist, type LayoutPainter } from '@unified-analytics/dom';
+import { DRAWN, FOCUS, HOVER, IN_BOX, attr, ensure, hits, holdShape, keyed, lineOf, paintRamp, paintSize, prop, registerPainter, svg as svgOf, text, token, type LayoutPainter } from '@unified-analytics/dom';
 import { MAP, NOTE, eachGeoName } from './index.ts';
 
 /* The `geo` mark's half for the DOM: the painter of its layout, for registerPainter().
@@ -125,12 +125,6 @@ function group(svg: Element, cls: string): SVGElement {
   if (!g) { g = svg.appendChild(svgOf('g')); g.setAttribute('class', cls); }
   return g;
 }
-/** Make an element the list a reader steps through, or take that from it. What the keyboard set on it goes with it. */
-function list(el: Element, on: boolean): void {
-  attr(el, 'data-hits', on ? 'y' : null);
-  if (!on) unlist(el);
-}
-
 export const geoPainter: LayoutPainter = {
   layout: 'geo',
   css,
@@ -153,7 +147,7 @@ export const geoPainter: LayoutPainter = {
     keyed(land, shapes.filter((n) => !listed(n)), () => 'path', shape);
     keyed(regions, shapes.filter(listed), () => 'path', shape);
     keyed(points, symbols, () => 'i', (el, n) => { prop(el, '--uav-x', n.x); prop(el, '--uav-t', n.t); prop(el, '--uav-size', n.size); });
-    list(regions, shapes.some(listed)); list(points, symbols.length > 0);
+    hits(regions, shapes.some(listed) ? 'y' : null); hits(points, symbols.length ? 'y' : null);
     // The map stays where it was brought in to while its region is still in the list, and is whole otherwise.
     zoomTo(svg, zoom.at?.isConnected && zoom.at.closest('.uav-regions[data-hits]') ? zoom.at : null, true);
 

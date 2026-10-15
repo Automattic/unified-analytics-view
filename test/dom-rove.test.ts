@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { hovers, pressed, rove } from '../packages/dom/src/rove.ts';
 import { roveItems, step } from '../packages/dom/src/keys.ts';
+import { hits } from '../packages/dom/src/dom.ts';
 
 // The interaction every holder shares, against a holder of three numbered things with no DOM: the event's target
 // is the holder, and `on` the number it is on. Which thing a key moves to is the holder's, here the element's own step().
@@ -85,5 +86,15 @@ describe('roveItems', () => {
     holder.dispatchEvent(Object.assign(new Event('keydown', { cancelable: true }), { key: 'Enter' }));
     expect(asked).toEqual([':is(.a, .b)[data-active]']);
     expect(heard).toEqual([{ id: 'b' }]);
+  });
+});
+
+describe('hits', () => {
+  it('takes from a holder that stands down what the keyboard set on it, so no empty tab stop is left', () => {
+    const a = new Map<string, string>(), el = { getAttribute: (n: string) => a.get(n) ?? null, setAttribute: (n: string, v: string) => a.set(n, v), removeAttribute: (n: string) => a.delete(n) } as unknown as Element;
+    hits(el, 'x');
+    for (const [n, v] of [['role', 'listbox'], ['tabindex', '0'], ['aria-label', 'Visitors'], ['aria-orientation', 'horizontal'], ['aria-activedescendant', 'p1']]) el.setAttribute(n!, v!);
+    hits(el, null);
+    expect(Object.fromEntries(a)).toEqual({ 'aria-hidden': 'true' });
   });
 });

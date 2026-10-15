@@ -84,6 +84,8 @@ export function attr(el: Element, name: string, v: string | number | null | unde
  * a picture that says again what the readout says, and so hidden from assistive technology. */
 export function hits(el: Element, way: string | null): void {
   attr(el, 'data-hits', way); attr(el, 'aria-hidden', way ? null : 'true');
+  // A holder that stands down drops what the keyboard set on it (Keys.paint and name()), or it stays a tab stop with nothing in it.
+  if (!way) for (const name of ['role', 'tabindex', 'aria-label', 'aria-orientation', 'aria-activedescendant']) el.removeAttribute(name);
 }
 /** Hand a part the page's direction back, inside a body that is set from the left (cartesian.ts): a legend reads
  * the way the page does, under a plot that does not turn. The figure the body is in has the page's.

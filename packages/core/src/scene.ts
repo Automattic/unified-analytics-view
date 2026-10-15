@@ -95,6 +95,8 @@ interface Draw {
   step?: boolean;
 }
 type MarkFn = (l: Layer, d: Draw) => SceneNode[];
+/** A mark's key and what it came from: its layer, its row, and its series where the row has one of it for each. */
+const markOf = (id: string, k: string, series?: string) => ({ key: id + ':' + k + (series == null ? '' : ':' + series), row: k, ...(series != null && { series }) });
 /** A field's definition: its own, where the catalog has one under its whole name, and for a companion with none the
  * one of the metric it came with. So a companion is in its metric's unit unless the catalog says otherwise
  * (`"pageviews@rank": { "unit": "rank" }`), and core reads no suffix to know it. */
@@ -157,7 +159,7 @@ const path: MarkFn = (l, { id: layer, series, mass, role: role0, paint, prev, ro
 };
 const bar: MarkFn = (_l, { id, series, role, paint, prev, rows, k, unit, ends, polarity, slot: [j, n] = [0, 1] }) => rows.map((r) => {
   const [v0, v] = ends(r), w = (unit.span ? unit.span(k(r)) : unit.w) / n;
-  return { key: id + ':' + k(r) + (series == null ? '' : ':' + series), part: 'plot', kind: 'rect', x: unit.x(k(r)) + j * w, w, v, ...(v0 && { v0 }), row: k(r), ...(series != null && { series }),
+  return { ...markOf(id, k(r), series), part: 'plot', kind: 'rect', x: unit.x(k(r)) + j * w, w, v, ...(v0 && { v0 }),
     paint: toned(polarity, v0, v, paint), opacity: r.partial && !prev ? 0.4 : 1, layer: 'data', role };
 });
 /** Whether a rule runs across the plot from one place to another: it has both ends on both axes. */
@@ -182,7 +184,7 @@ const rule: MarkFn = (l, { id, series, role, rows, k, unit, ends, v, xv }) => {
   // A field on y, or on y2 from a number: a segment for each row, standing at its x from one of its values to another, or up from zero where it has one end.
   if (typeof y === 'string' || y2 != null) return rows.map((r): SceneNode => {
     const [t, t2] = ends(r), at = unit.cx(k(r));
-    return { key: id + ':' + k(r) + (series == null ? '' : ':' + series), part: 'plot', kind: 'line', x: at, x2: at, t, t2, row: k(r), ...(series != null && { series }), paint: l.paint || 'ink', layer: 'data', role };
+    return { ...markOf(id, k(r), series), part: 'plot', kind: 'line', x: at, x2: at, t, t2, paint: l.paint || 'ink', layer: 'data', role };
   });
   // A constant on x stands the height of the plot. Its label sits beside it, at the top, on the side with more room.
   if (typeof x === 'number') {
@@ -203,8 +205,8 @@ export const sizeStep = (n: number, top: number) => Math.min(SIZES, Math.max(1, 
 // A point for each row, at its values on x and y. One that is sized lets what is under it show.
 const dot: MarkFn = (l, { id, series, role, paint, rows, k, unit, ends, size, points }) => {
   const sized = l.encode!.size != null && size;
-  return rows.map((r): SceneNode => ({ key: id + ':' + k(r) + (series == null ? '' : ':' + series), part: points ? 'points' : 'plot', kind: 'circle', pulse: false, x: unit.cx(k(r)), t: ends(r)[1],
-    ...(sized && { size: sizeStep(num(r, sized.field), sized.top), opacity: 0.7 }), row: k(r), ...(series != null && { series }), paint, layer: 'data', role }));
+  return rows.map((r): SceneNode => ({ ...markOf(id, k(r), series), part: points ? 'points' : 'plot', kind: 'circle', pulse: false, x: unit.cx(k(r)), t: ends(r)[1],
+    ...(sized && { size: sizeStep(num(r, sized.field), sized.top), opacity: 0.7 }), paint, layer: 'data', role }));
 };
 // A label on each row's point, in a part of its own over the plot, so a rule can give them all up. Each has its place
 // among them, the largest point first: by the metric the dots are sized by, or else by its own y. A painter gives up
@@ -213,8 +215,8 @@ const label: MarkFn = (l, { id, series, role, rows, k, unit, ends, size, say }) 
   const { y, text: f } = l.encode || {};
   if (typeof y !== 'string' || typeof f !== 'string') throw new Error('A "text" layer in a plot needs a field on y, for where each label sits, and one on text, for what it says: for example { "x": "<a metric>", "y": "<a metric>", "text": "<the dimension>" }.');
   const by = size ? size.field : y, order = rows.slice().sort((a, b) => num(b, by) - num(a, by));
-  return rows.map((r): TextNode => ({ key: id + ':' + k(r) + (series == null ? '' : ':' + series), part: 'point-labels', kind: 'text', x: unit.cx(k(r)), t: ends(r)[1], text: say(r, f),
-    anchor: 'middle', font: 'tick', paint: 'ink', halo: true, row: k(r), ...(series != null && { series }), rank: order.indexOf(r) + 1, layer: 'guide', role }));
+  return rows.map((r): TextNode => ({ ...markOf(id, k(r), series), part: 'point-labels', kind: 'text', x: unit.cx(k(r)), t: ends(r)[1], text: say(r, f),
+    anchor: 'middle', font: 'tick', paint: 'ink', halo: true, rank: order.indexOf(r) + 1, layer: 'guide', role }));
 };
 const RUG = 0.05;    // how far up the plot a stroke of a rug stands
 // A short stroke across its row's band, at its value. With `align` it is the half of that to one side of the band's
@@ -222,7 +224,7 @@ const RUG = 0.05;    // how far up the plot a stroke of a rug stands
 // In a plot of points, with a metric on x and nothing on y, it is a stroke at the foot of the plot at each row's value
 // there: a rug. Strokes lie over each other where rows are close, so each lets the ones under it show.
 const tick: MarkFn = (l, { id, series, role, rows, k, unit, ends, xv }) => rows.map((r): SceneNode => {
-  const own = { key: id + ':' + k(r) + (series == null ? '' : ':' + series), part: 'plot' as const, kind: 'line' as const, row: k(r), ...(series != null && { series }), paint: l.paint || 'ink', layer: 'data' as const, role };
+  const own = { ...markOf(id, k(r), series), part: 'plot' as const, kind: 'line' as const, paint: l.paint || 'ink', layer: 'data' as const, role };
   if (l.encode!.y == null) { const at = xv!(num(r, l.encode!.x as string)); return { ...own, x: at, x2: at, t: 0, t2: RUG, opacity: MASS }; }
   const w = unit.span ? unit.span(k(r)) : unit.w, x = unit.x(k(r)) + (l.align === 'end' ? w / 2 : 0), t = ends(r)[1];
   return { ...own, x, x2: x + (l.align ? w / 2 : w), t, t2: t, width: 2 };
@@ -596,8 +598,7 @@ interface Track {
   /** The series are in one paint, by `detail`, and lie over each other on the track: each lets the ones under it show, as a line of a mass does. */
   mass?: boolean;
 }
-/* A mark's key and what it came from: its row, and its series where the row has one of it for each. */
-const inRow = ({ id, k, series }: Track) => ({ key: id + ':' + k + (series == null ? '' : ':' + series), row: k, ...(series != null && { series }) });
+const inRow = ({ id, k, series }: Track) => markOf(id, k, series);
 type TrackFn = (l: Layer, d: Track) => SceneNode[];
 
 // A bar runs from zero to its value, so one below zero lies to the left of where the others start. With a second end

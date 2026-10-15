@@ -1,6 +1,6 @@
 import { max, min } from 'd3-array';
 import { scaleBand, scaleLinear, scalePoint, scaleQuantize } from 'd3-scale';
-import { CHAR_W, delta, fmt, fmtPct, fmtTime, formatBin, formatDimension, formatUnit, formatValue, orList } from './format.ts';
+import { CHAR_W, delta, fmtPct, fmtTime, formatBin, formatDimension, formatMetric, formatUnit, formatValue, orList } from './format.ts';
 import { arcD, pathD } from './path.ts';
 import { customMarks } from './marks.ts';
 import { NOW, crossesZero, emptyNote, endsOf, leader, portion } from './prose.ts';
@@ -274,7 +274,7 @@ const held = (f: unknown) => (f == null ? 'nothing' : JSON.stringify(f));
 const valueOf = (f: string, key: string) => 'The value of "' + f + '" for "' + key + '"';
 /** The key to a `unit`: what one glyph is worth, in its metric's own format. A guide, under the marks. None where a glyph is worth one. */
 function unitKey(id: string, worth: number, metric: MetricDef | undefined): SceneNode[] {
-  return worth === 1 ? [] : [{ key: 'unit-key:' + id, part: 'unit-key', kind: 'text', text: 'Each is ' + (metric ? formatValue(worth, metric) : fmt(worth)), anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' }];
+  return worth === 1 ? [] : [{ key: 'unit-key:' + id, part: 'unit-key', kind: 'text', text: 'Each is ' + formatMetric(worth, metric), anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' }];
 }
 /** A layer's own paint, where it states one. `delta` is the paint of its metric's change over the range, as the tldr
  * value's delta has it: good or bad by the metric's polarity. With no change to judge, the layer has stated none. */
@@ -474,7 +474,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     const xM = xDim ? undefined : metricOf(catalog, xOn);                 // a number dimension has no unit in the catalog, so its ticks are plain numbers
     unit = { x: (key) => to(lo(key)), w: 0, cx: (key) => to((lo(key) + hi(key)) / 2), span: (key) => to(hi(key)) - to(lo(key)) };
     if (guides.x && keys.length) x.ticks(4).forEach((t, i, all) => {
-      nodes.push(axisTick('x-axis', t, to(t), xM ? formatValue(t, xM, 'compact') : fmt(t, true), { anchor: to(t) <= 0 ? 'start' : to(t) >= 1 ? 'end' : 'middle', rank: Number(i > 0 && i < all.length - 1) }));
+      nodes.push(axisTick('x-axis', t, to(t), formatMetric(t, xM, true), { anchor: to(t) <= 0 ? 'start' : to(t) >= 1 ? 'end' : 'middle', rank: Number(i > 0 && i < all.length - 1) }));
     });
   }
   // One metric sizes the dots of a plot, whichever layers name it. On a bar it is the column's width, and has no key.
@@ -506,7 +506,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   // Bars of one metric that fall below nothing as well as rise from it: each is a gain or a loss, and is painted as one.
   // A split plot's bars are painted by their series, and are not these.
   const diverges = (l: Layer) => { const y = l.encode!.y; return typeof y === 'string' && !splitOf(catalog, l, xField) && rows.some((r) => (r[y] as number) < 0); };
-  const say: Draw['say'] = (r, f) => { const M = metricOf(catalog, f); return typeof r[f] !== 'number' ? String(r[f]) : M ? formatValue(r[f] as number, M) : fmt(r[f] as number); };
+  const say: Draw['say'] = (r, f) => { const M = metricOf(catalog, f); return typeof r[f] !== 'number' ? String(r[f]) : formatMetric(r[f] as number, M); };
   layers.forEach((l, i) => {
     const draw = PLOT_MARKS[l.mark], prev = l.series === 'previous', span = spans[i]!;
     if (!draw) throw new Error('The "' + l.mark + '" mark has no rule for a time or category axis yet. Use ' + orList(Object.keys(PLOT_MARKS)) + '.');
@@ -998,7 +998,7 @@ const DIV = 9;      // and from div.1 to div.9 where the values cross zero: four
  * order: the low end, a swatch for each step, the high end, and with `none` the swatch for no value. A diverging
  * one says zero after its middle swatch, and its ends are the scale's, which are as far from zero as each other. */
 export function seqScale(vals: number[], metric?: MetricDef): { paint(v: number | null | undefined): string; ramp(none: boolean): SceneNode[] } {
-  const [lo, hi] = endsOf(vals, metric), say = (n: number) => (metric ? formatValue(n, metric, 'compact') : fmt(n, true));
+  const [lo, hi] = endsOf(vals, metric), say = (n: number) => formatMetric(n, metric, true);
   const far = Math.max(-lo, hi), div = crossesZero([lo, hi]), name = div ? 'div.' : 'seq.', n = div ? DIV : SEQ;
   // Values that are all one have no least and most. They are measured from zero.
   const ends = div ? [-far, far] : lo < hi ? [lo, hi] : [Math.min(lo, 0), Math.max(hi, lo ? 0 : 1)];

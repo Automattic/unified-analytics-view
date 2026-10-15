@@ -70,6 +70,8 @@ function bytes(v: number): string {
   while (a >= 999.95 && i < BYTES.length - 1) { a /= 1000; i++; }
   return (v < 0 ? '-' : '') + +a.toFixed(i ? 1 : 0) + ' ' + BYTES[i];
 }
+/** A number in its metric's format, and a plain number where it has no metric. */
+export const formatMetric = (v: number, metric: MetricDef | undefined, compact = false): string => (metric ? formatValue(v, metric, compact ? 'compact' : undefined) : fmt(v, compact));
 /** A list as a sentence says it: "a, b or c". */
 export const orList = (items: readonly string[]): string => (items.length < 2 ? items.join('') : items.slice(0, -1).join(', ') + ' or ' + items[items.length - 1]);
 /** The units a catalog may give a metric, beside a currency's code. The `Unit` type, the catalog schema's enum and `formatUnit` are kept in step: a new unit is added to all three. */

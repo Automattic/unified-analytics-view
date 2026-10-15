@@ -470,8 +470,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     const at = new Map(rows.map((r) => [k(r), r])), lo = (key: string) => num(at.get(key)!, xOn), hi = (key: string) => (at.get(key)![xOn + '@end'] as number | undefined) ?? lo(key);
     const vals = keys.flatMap((key) => [lo(key), hi(key)]).concat(layers.map((l) => l.encode && l.encode.x).filter((x): x is number => typeof x === 'number'))
       .concat(layers.filter(across).flatMap((l) => [l.encode!.x, l.encode!.x2].flatMap((f) => (typeof f === 'number' ? [f] : rows.map((r) => r[f!] as number).filter((n) => n != null)))));
-    // ponytail: a metric on x with nothing above zero still runs to 1, past the zero y would end at (issue #26).
-    const [lo0, hi0] = holdingZero(vals), x = scaleLinear().domain(xDim ? [min(vals) ?? 0, max(vals) ?? 1] : [lo0, hi0 || 1]);
+    const x = scaleLinear().domain(xDim ? [min(vals) ?? 0, max(vals) ?? 1] : holdingZero(vals));
     if (guides.x && !xDim) x.nice(4);
     const [left, right] = x.domain() as [number, number], to = (n: number) => (n - left) / (right - left || 1);
     xv = to;

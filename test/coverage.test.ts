@@ -499,3 +499,12 @@ describe('a split by a dimension of numbers', () => {
     expect(scene.nodes.filter((n) => n.series === '2' && n.layer !== 'guide').length).toBeGreaterThan(0);
   });
 });
+
+// A metric on x holds zero, as one on y does: with nothing above zero, its axis ends there.
+it('a metric on x with nothing above zero ends at zero', () => {
+  const cat = { metrics: { a: { label: 'A', unit: 'count', polarity: 'up' }, b: { label: 'B', unit: 'count', polarity: 'up' } }, dimensions: { sku: { label: 'SKU', type: 'categorical' } } } as unknown as Catalog;
+  const res = { rows: [{ sku: 'p', a: -1000, b: 1 }, { sku: 'q', a: -10, b: 2 }], totals: {}, meta: { compare: null, notes: [], empty: false } } as unknown as Result;
+  const query = { metrics: ['a', 'b'], by: ['sku'] }, spec = { spec: 'view/0', layers: [{ mark: 'dot', encode: { x: 'a', y: 'b' } }], query } as Spec;
+  const ticks = ofUnbounded(spec, res, query, cat).scene.nodes.filter((n) => n.key.startsWith('xtick:')).map((n) => (n as { text: string }).text);
+  expect(ticks.at(-1)).toBe('0');
+});

@@ -1,4 +1,4 @@
-import type { Catalog, Query, Result, Row, Spec } from '@unified-analytics/core';
+import { inProgressNote, type Catalog, type Query, type Result, type Row, type Spec } from '@unified-analytics/core';
 import { registerLink } from '@unified-analytics/flow';
 import { registerGeo, type Shapes } from '@unified-analytics/geo';
 import { registerPartition } from '@unified-analytics/partition';
@@ -307,6 +307,11 @@ export function apportion(total: number, weights: number[]): number[] {
   return total < 0 ? out.map((n) => (n ? -n : 0)) : out;
 }
 
+/** A bin of a binned dimension, by its place: where it starts and, as a companion, where it ends. */
+const binRow = (d: string, i: number): Row => { const w = d === 'load_time' ? LOAD.width : WEIGHT.width; return { [d]: i * w, [d + '@end']: (i + 1) * w }; };
+/** The engine's total of each field over some rows: none where no row has a value of it, which is not a total of nothing. */
+const sumBy = (rows: Row[], fields: string[]): Row => Object.fromEntries(fields.map((f) => [f, rows.some((r) => r[f] != null) ? rows.reduce((s, r) => s + ((r[f] as number) || 0), 0) : null]));
+
 export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
   const metrics = q.metrics || [], dims = q.by || [], by = dims[0] || null;
   metrics.forEach((m) => { if (!catalog.metrics[m]) throw new Error('Unknown metric "' + m + '". The catalog has: ' + Object.keys(catalog.metrics).join(', ') + '.'); });
@@ -363,12 +368,11 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
   // pairs divide the whole of the total, and a pair nothing fell in is a count of none, not no count.
   // ponytail: no period before, as a pair of any two dimensions has none of its own.
   if (binned) {
-    const bins = (d: string, i: number) => { const w = d === 'load_time' ? LOAD.width : WEIGHT.width; return { [d]: i * w, [d + '@end']: (i + 1) * w }; };
     const pairs = LOAD.weights.flatMap((l, i) => WEIGHT.weights.map((w, j) => ({ i, j, w: l * w * Math.exp(-((i / 2 - j) ** 2) / 5) * vary() })));
     const parts = metrics.map((m) => apportion(totals[m]!, pairs.map((p) => p.w)));
-    const rows = pairs.map((p, k): Row => ({ ...bins('load_time', p.i), ...bins('page_weight', p.j), ...Object.fromEntries(metrics.map((m, n) => [m, parts[n]![k]!])) }));
-    const along = (d: string, n: number, of: 'i' | 'j') => Array.from({ length: n }, (_, b): Row => ({ ...bins(d, b), ...Object.fromEntries(metrics.map((m, k) => [m, pairs.reduce((s, p, at) => s + (p[of] === b ? parts[k]![at]! : 0), 0)])) }));
-    return { rows, totals, totalsBy: { load_time: along('load_time', LOAD.weights.length, 'i'), page_weight: along('page_weight', WEIGHT.weights.length, 'j') }, meta };
+    const rows = pairs.map((p, k): Row => ({ ...binRow('load_time', p.i), ...binRow('page_weight', p.j), ...Object.fromEntries(metrics.map((m, n) => [m, parts[n]![k]!])) }));
+    const along = (d: string, n: number) => Array.from({ length: n }, (_, b): Row => { const bin = binRow(d, b); return { ...bin, ...sumBy(rows.filter((r) => r[d] === bin[d]), metrics) }; });
+    return { rows, totals, totalsBy: { load_time: along('load_time', LOAD.weights.length), page_weight: along('page_weight', WEIGHT.weights.length) }, meta };
   }
   // One row per value of a dimension, in the dimension's own order, before any sort or limit.
   function rowsBy(dim: string): Row[] {
@@ -419,7 +423,7 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
       const before = metrics.map((m) => (hasPrev ? apportion(totals[m + '@previous']!, LOAD.weights) : null));
       const held = metrics.map(() => 0);
       return weights.map((_, i) => {
-        const r: Row = { load_time: i * LOAD.width, 'load_time@end': (i + 1) * LOAD.width };
+        const r: Row = binRow('load_time', i);
         metrics.forEach((m, j) => {
           r[m] = parts[j]![i]!; r[m + '@density'] = Math.round(parts[j]![i]! / (totals[m] || 1) / LOAD.width * 1e4) / 1e4; if (wantPrev) r[m + '@previous'] = before[j] ? before[j]![i]! : null;
           if (m === 'pageviews') r[m + '@cumulative'] = Math.round((held[j]! += parts[j]![i]!) / (totals[m] || 1) * 1e4) / 1e4;
@@ -435,7 +439,7 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
       return r;
     });
   }
-  if (dims.indexOf('date.day') >= 0) meta.notes.push('Today is still in progress.');
+  if (dims.indexOf('date.day') >= 0) meta.notes.push(inProgressNote('day'));
   const m0 = metrics[0]!;
   // A categorical dimension is ranked by the first metric, and `limit` keeps its first values. Days and bins keep their own order.
   const top = (rs: Row[]) => { const ranked = rs.slice().sort((a, b) => (b[m0] as number) - (a[m0] as number)); return q.limit ? ranked.slice(0, q.limit) : ranked; };
@@ -474,11 +478,7 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
   // By week a pair has its place among its week's values too, by visitors: 1 for the most, counted before any limit.
   // ponytail: by week alone, so that no query a test already holds to the row comes back with more. Asked for, when a query can ask.
   if (outer === 'date.week' && metrics.indexOf('visitors') >= 0) pairs.forEach((p) => { p['visitors@rank'] = 1 + pairs.filter((o) => o[outer] === p[outer] && (o.visitors as number) > (p.visitors as number)).length; });
-  const innerRows = all.map(([name]) => {
-    const r: Row = { [inner]: name }, mine = pairs.filter((p) => p[inner] === name);
-    fields.forEach((f) => { r[f] = mine.some((p) => p[f] != null) ? mine.reduce((s, p) => s + ((p[f] as number) || 0), 0) : null; });
-    return r;
-  });
+  const innerRows = all.map(([name]): Row => ({ [inner]: name, ...sumBy(pairs.filter((p) => p[inner] === name), fields) }));
   // `limit` keeps the first values of each categorical dimension. A total still covers what the limit left out of the other.
   const kept = (rs: Row[], dim: string) => { const names = isTime(dim) ? null : top(rs).map((r) => r[dim]); return names ? rs.filter((r) => names.indexOf(r[dim]) >= 0) : rs; };
   const totalsBy = { [outer]: kept(outerRows, outer), [inner]: kept(innerRows, inner) };

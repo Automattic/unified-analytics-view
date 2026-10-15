@@ -18,10 +18,8 @@ const num = (r: Row, f: string) => r[f] as number;
  * what a painter wrote into an attribute, so it is a string from here on. */
 const str = (r: Row, f: string) => String(r[f]);
 /** A dimension's values in its own order, which is the engine's: its row of totals for each where it sends them, and
- * else the order its rows first have them. Said by `say`, a key's string unless a caller asks for the value as it is.
- * ponytail: a plot's and a list's series keep the value as it is (orderOf(…, raw)) and compare it with ===, though a key is a string (issue #25). */
-const orderOf = (result: Result, f: string, say: (r: Row, f: string) => string = str) => [...new Set(((result.totalsBy && result.totalsBy[f]) || result.rows).map((r) => say(r, f)))];
-const raw = (r: Row, f: string) => r[f] as string;
+ * else the order its rows first have them, each a key's string. */
+const orderOf = (result: Result, f: string) => [...new Set(((result.totalsBy && result.totalsBy[f]) || result.rows).map((r) => str(r, f)))];
 /** The ends of a linear scale that holds zero and whatever is on either side of it. With nothing to hold it is 0 to 1;
  * with nothing above zero it ends at zero. */
 const holdingZero = (vals: number[]): [number, number] => { const lo = Math.min(0, min(vals) ?? 0); return [lo, Math.max(0, max(vals) ?? 0) || (lo ? 0 : 1)]; };
@@ -359,7 +357,7 @@ export const DETAIL_LAYOUTS: string[] = ['cartesian', 'radial', 'rows'];
 function stacked(rows: Row[], series: string[], split: string, k: (r: Row) => string, f: string, mode: Layer['stack'], all: (r: Row) => number): Map<Row, [number, number]> {
   const out = new Map<Row, [number, number]>(), up: Record<string, number> = {}, down: Record<string, number> = {}, under: Record<string, number> = {}, half = series.length / 2;
   series.forEach((s, j) => rows.forEach((r) => {
-    if (r[split] !== s || r[f] == null) return;
+    if (str(r, split) !== s || r[f] == null) return;
     const n = num(r, f), run = n < 0 ? down : up, from = run[k(r)] || 0, of = all(r);
     if (mode === 'diverge' && n < 0) throw new Error('stack: "diverge" sets each series to one side of zero by its place among them, and "' + f + '" is ' + n + ' for "' + s + '" at "' + k(r) + '". Use stack: "zero", where a value below zero stacks downward.');
     run[k(r)] = from + n;
@@ -388,7 +386,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   const own = rowKeys(rows, xField, split), k = (r: Row) => own.get(r) ?? str(r, xField), keys = [...new Set(rows.map(k))];
   // What a key says on the axis: its row's value, which a repeat shares with the row it repeats.
   const said = new Map(rows.map((r) => [k(r), str(r, xField)]));
-  const series = split ? orderOf(result, split, raw) : [];
+  const series = split ? orderOf(result, split) : [];
   // Whether any layer paints its series apart. Only that spends the series colours, so only that is held to their count, and has a legend.
   const painted = layers.some((l) => paintedOf(catalog, l, xField));
   if (painted && series.length > SERIES) throw new Error(tooManySeries('Splitting by "' + split + '"', series.length, 'series'));
@@ -535,7 +533,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     const plain = !paintedOf(catalog, l, xField);
     series.forEach((s, j) => {
       // Bars of one x that are not stacked sit side by side: overlapping bars are never what was meant. Lines and areas overlay.
-      const drawn = draw(l, { ...d, series: s, paint: prev || plain ? d.paint : 'series.' + (j + 1), ...(plain && { mass: true }), rows: d.rows.filter((r) => r[split!] === s), ...(l.mark === 'bar' && !l.stack && { slot: [j, series.length] }) });
+      const drawn = draw(l, { ...d, series: s, paint: prev || plain ? d.paint : 'series.' + (j + 1), ...(plain && { mass: true }), rows: d.rows.filter((r) => str(r, split!) === s), ...(l.mark === 'bar' && !l.stack && { slot: [j, series.length] }) });
       nodes.push(...drawn);
       // Where the series' line ends, for its label: half way up its band where areas are stacked.
       const last = drawn.filter((n): n is PathNode => n.kind === 'path').map((n) => n.points[n.points.length - 1]!).pop();
@@ -723,7 +721,7 @@ function sceneRows(catalog: Catalog, layers: Layer[], result: Result, limit: num
   };
   // The series a divided row has, and where each one's share of a stacked bar starts and ends. A share is of the
   // engine's total for the row.
-  const series = split ? orderOf(result, split, raw) : [];
+  const series = split ? orderOf(result, split) : [];
   const divides = (l: Layer) => !!split && splitOf(catalog, l, dim) === split, painted = layers.some((l) => paintedOf(catalog, l, dim));
   if (painted && series.length > SERIES) throw new Error(tooManySeries('Splitting by "' + split + '"', series.length, 'series'));
   // By detail a row has a mark for each pair where the marks can lie over each other and still be read: a dot or a tick.
@@ -755,7 +753,7 @@ function sceneRows(catalog: Catalog, layers: Layer[], result: Result, limit: num
         // A mark for each of the row's pairs, in the series' order: a stacked bar's share, from where the one before it ends.
         // By detail it is a mark at each pair's own value, all in the layer's paint.
         series.forEach((s, j) => pairs.forEach((p) => {
-          if (p[split!] !== s) return;
+          if (str(p, split!) !== s) return;
           const ends = span ? span.get(p) : on(l, p), d = { id: ids[li]!, role: roleOf(l), k, series: s, v, beside };
           if (!ends || ends[0] == null) return;
           nodes.push(...draw(l, span ? { ...d, paint: 'series.' + (j + 1), at: ends[0], to: ends[1]! } : { ...d, paint: paintOf(l, catalog, result) || shade(l, r) || 'series.1', at: ends[0], mass: true }));
@@ -781,7 +779,7 @@ function sceneRows(catalog: Catalog, layers: Layer[], result: Result, limit: num
     const name = (s: unknown) => formatDimension(s as string, catalog.dimensions[split!]!), f = layers.find((l) => spans.has(l))!.encode!.x as string, by = result.totalsBy && result.totalsBy[split!];
     nodes.push(...seriesLegend(series, name));
     const top = by && leader(result, split!, f);
-    if (top) nodes.push({ key: 'legend-top', part: 'legend-top', kind: 'text', series: top[split!] as string, text: name(top[split!]) + ' ' + portion(num(top, f), result.totals[f], metricOf(catalog, f)!), anchor: 'start', font: 'label', paint: 'series.' + (series.indexOf(top[split!] as string) + 1), layer: 'guide' });
+    if (top) nodes.push({ key: 'legend-top', part: 'legend-top', kind: 'text', series: str(top, split!), text: name(top[split!]) + ' ' + portion(num(top, f), result.totals[f], metricOf(catalog, f)!), anchor: 'start', font: 'label', paint: 'series.' + (series.indexOf(str(top, split!)) + 1), layer: 'guide' });
   }
   return { nodes, rows: items.map((i) => i.k), ...(split && (painted ? { series } : { detail: series })), ...(beside && { track: 'beside' as const }) };
 }

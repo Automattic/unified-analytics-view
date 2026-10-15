@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { buildScene, expand, makeContainer, place, resolve, type PainterName, type Spec } from '@unified-analytics/core';
+import { buildScene, expand, makeContainer, place, resolve, type Catalog, type PainterName, type Result, type Spec } from '@unified-analytics/core';
 import { catalog, moreSamples, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
-import { err, run, validView as view } from './helpers.ts';
+import { err, ofUnbounded, run, validView as view } from './helpers.ts';
 
 // What the grammar draws beyond the prototype's six samples (docs/chart-coverage-plan.md). Nothing here has a
 // prototype to match, so it is held to its own sweep, facts and golden scenes.
@@ -483,5 +483,19 @@ describe('presets with a second dimension', () => {
   it('errors name the fix: a split preset with one dimension, and a one-dimension preset with two', () => {
     expect(err({ use: 'stacked-bar', query: { metrics: ['visitors'], by: ['date.day'] } })).toBe('The "stacked-bar" preset needs two dimensions in query.by: the one on the axis, then the one to split by.');
     expect(err({ use: 'line', query: { metrics: ['visitors'], by: ['date.day', 'device'] } })).toBe('The query is by "device", and no layer encodes it, so its rows would be drawn over each other. Encode it on color, for a colour and a legend entry each, or on detail, for a series each in one paint, or remove it from query.by.');
+  });
+});
+
+// A dimension may hold numbers. Its series are keys all the same, strings as a painter reads them back from an attribute.
+describe('a split by a dimension of numbers', () => {
+  const cat = { metrics: { revenue: { label: 'Revenue', unit: 'usd', polarity: 'up' } }, dimensions: { day: { label: 'Day', type: 'time' }, tier: { label: 'Tier', type: 'number' } } } as const;
+  const rows = ['2026-10-01', '2026-10-02'].flatMap((day) => [1, 2].map((tier) => ({ day, tier, revenue: tier * 100 })));
+  const res = { rows, totals: { revenue: 600 }, totalsBy: { tier: [{ tier: 1, revenue: 200 }, { tier: 2, revenue: 400 }], day: [{ day: '2026-10-01', revenue: 300 }, { day: '2026-10-02', revenue: 300 }] }, meta: { compare: null, notes: [], empty: false } } as unknown as Result;
+  const query = { metrics: ['revenue'], by: ['day', 'tier'] };
+  it.each([['line', 'x', 'y'], ['bar', 'y', 'x']] as const)('names its series as strings, and draws each, in a %s', (mark, dim, metric) => {
+    const spec: Spec = { spec: 'view/0', layers: [{ mark, encode: { [dim]: 'day', [metric]: 'revenue', color: 'tier' }, ...(mark === 'bar' && { stack: 'zero' }) }], query } as Spec;
+    const { scene } = ofUnbounded(spec, res, query, cat as unknown as Catalog);
+    expect(scene.series).toEqual(['1', '2']);
+    expect(scene.nodes.filter((n) => n.series === '2' && n.layer !== 'guide').length).toBeGreaterThan(0);
   });
 });

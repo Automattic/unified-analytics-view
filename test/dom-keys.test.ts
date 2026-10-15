@@ -250,6 +250,14 @@ describe('the mouse leaving', () => {
     v.send('keydown', { key: 'Enter' });
     expect(v.activated()).toBe(1);
   });
+  it('leaves the readout to a view with no points of its own, as a treemap that keeps its box shows it', () => {
+    const tip = el({ classList: { contains: () => true, add: () => {} } }), fig = el({ querySelector: () => tip, children: [tip] });
+    const body = el({ matches: () => false, querySelector: () => null, querySelectorAll: () => [] });
+    const keys = new Keys(el() as unknown as HTMLElement, fig as unknown as HTMLElement, body as unknown as HTMLElement);
+    tip.hidden = false;
+    keys.paint({ rows: [] } as never, { metrics: [], by: [] } as never, { rows: [] } as never, { metrics: {}, dimensions: {} } as never, []);
+    expect(tip.hidden).toBe(false);
+  });
   it('steps the way the arrow points where the holder reads from the right, as a band does on such a page', () => {
     const v = view(true);
     direction = 'rtl';

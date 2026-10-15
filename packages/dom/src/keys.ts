@@ -396,7 +396,9 @@ export class Keys {
     // Held by the keyboard, or by a mouse still over the view: no pointerover follows for an element that was kept, so a
     // point let go here would take the readout, and the next click, with it.
     const at = this.#at, held = at != null && this.#keys.includes(at) && !!box && (box.matches(':focus') || this.#body.matches(':hover'));
-    this.#show(held ? at : null, held && this.#series != null && this.#order.includes(this.#series) ? this.#series : null);
+    // A view with no points of its own to choose, a treemap's, shows the one readout itself (chooseItem), and a paint
+    // that keeps its choice has just shown it again: the keys leave it be.
+    if (box || at != null) this.#show(held ? at : null, held && this.#series != null && this.#order.includes(this.#series) ? this.#series : null);
   }
 
   /** Name the options: after each paint, and after the measured pass, which can take points away. A point is an option

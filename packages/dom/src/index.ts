@@ -6,4 +6,5 @@ export { SURFACE_CSS, UaView, defineUaView, surfaceSheet, type Inputs } from './
 export { attr, ensure, keyed, prop, text } from './dom.ts';
 export { registerPainter } from './layouts/index.ts';
 export { paintAxes, paintLegend, paintRamp, paintSize, paintUnitKey, thinAxis } from './chrome/index.ts';
-export { hideReadout, hovers, placeReadout, pressed, readoutOf } from './keys.ts';
+export { chooseItem, hideReadout, placeReadout, readoutOf, roveItems } from './keys.ts';
+export { hovers, pressed, rove, type How, type Roving } from './rove.ts';

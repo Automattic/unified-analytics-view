@@ -1,5 +1,5 @@
 import { formatDimension, formatValue, type RectNode, type Result, type Row, type TextNode } from '@unified-analytics/core';
-import { FOCUS, HOVER, attr, ensure, hideReadout, hovers, keyed, nodePaint, paintRamp, placeReadout, pressed, prop, readoutOf, text, token, type LayoutPainter } from '@unified-analytics/dom';
+import { FOCUS, HOVER, attr, chooseItem, ensure, keyed, nodePaint, paintRamp, prop, roveItems, text, token, type LayoutPainter } from '@unified-analytics/dom';
 import { PARTITION_RULES, boxNames } from './index.ts';
 
 /* The `partition` mark's half for the DOM: the painter of its layout, for registerPainter().
@@ -62,7 +62,7 @@ const css = `
 }`;
 
 /* What the listeners read. They are bound once to the part, which outlives every paint, and this is set by each. */
-interface Tree { rows: Map<string, { row: Row; rows: Row[] }>; fresh: boolean }
+interface Tree { rows: Map<string, { row: Row; rows: Row[] }> }
 const trees = new WeakMap<HTMLElement, Tree>();
 const ITEM = '[role="treeitem"]:not([data-exit])';
 
@@ -78,53 +78,17 @@ export function stepBox(key: string, chosen: { at: number; count: number; depth:
   return chosen.depth === 1 ? { to: 'parent', at: 0 } : null;
 }
 
-/** Choose a box, or none, and say how: by the keys or by the pointer, as keys.ts does. The readout is the box's own
- * name, and is the view's one readout, shown and placed as keys.ts shows it. */
-function choose(plot: HTMLElement, el: HTMLElement | null, how: 'keys' | 'pointer' = 'pointer'): void {
-  plot.querySelector('[data-active]')?.removeAttribute('data-active');
-  el?.setAttribute('data-active', how);
-  attr(plot, 'aria-activedescendant', el?.id);
-  const fig = plot.closest<HTMLElement>('.uav')!, tip = readoutOf(fig);
-  if (!el) { hideReadout(tip); return; }
-  tip.textContent = el.getAttribute('aria-label');
-  placeReadout(tip, fig, el);
-}
-
+/* The interaction is the element's own, for a holder of elements (roveItems). A box's is the step through the tree. */
 function bind(plot: HTMLElement): void {
-  const box = (e: Event) => (e.target as Element).closest?.<HTMLElement>(ITEM) ?? null;
   const items = (of: Element) => Array.from(of.querySelectorAll<HTMLElement>(':scope > ' + ITEM)).filter((el) => el.getClientRects().length > 0);
-  const activate = (el: HTMLElement) => {
-    const detail = trees.get(plot)!.rows.get(el.dataset.key!);
-    if (detail) (plot.getRootNode() as ShadowRoot).host.dispatchEvent(new CustomEvent('ua-activate', { bubbles: true, composed: true, detail }));
-  };
-  plot.addEventListener('pointerover', (e) => {
-    const el = box(e);
-    if (!el) return;
-    // A touch that has only just chosen a box shows its readout. The next one activates it.
-    trees.get(plot)!.fresh = pressed(e) && !el.hasAttribute('data-active');
-    choose(plot, el);
-  });
-  plot.addEventListener('pointerleave', (e) => { if (hovers(e, trees.get(plot)!.fresh)) choose(plot, null); });
-  plot.addEventListener('pointercancel', () => choose(plot, null));
-  plot.addEventListener('focusout', () => choose(plot, null));
-  plot.addEventListener('click', (e) => {
-    const el = box(e), tree = trees.get(plot)!;
-    if (!el?.hasAttribute('data-active')) return;
-    if (tree.fresh) tree.fresh = false; else activate(el);
-  });
-  plot.addEventListener('keydown', (e) => {
-    if (e.target !== plot) return;
-    const on = plot.querySelector<HTMLElement>(ITEM + '[data-active]');
-    if (e.key === 'Escape') { if (on) { e.preventDefault(); choose(plot, null); } return; }
-    if (e.key === 'Enter' || e.key === ' ') { if (on) { e.preventDefault(); activate(on); } return; }
+  roveItems(plot, ITEM, (e, on) => {
     const beside = on ? items(on.parentElement!) : [], kids = on?.querySelector('.uav-kids');
     const to = stepBox(e.key, on ? { at: beside.indexOf(on), count: beside.length, depth: on.parentElement === plot ? 0 : 1, kids: kids ? items(kids).length : 0 } : null);
     // An arrow with nowhere to go is still the tree's: the page behind it does not scroll, and take the readout with it.
     if (to || (on && e.key.startsWith('Arrow'))) e.preventDefault();
-    if (!to) return;
-    const el = to.to === 'first' ? items(plot)[0] : to.to === 'sibling' ? beside[to.at] : to.to === 'child' ? items(kids!)[0] : on!.parentElement!.closest<HTMLElement>(ITEM);
-    if (el) choose(plot, el, 'keys');
-  });
+    if (!to) return null;
+    return (to.to === 'first' ? items(plot)[0] : to.to === 'sibling' ? beside[to.at] : to.to === 'child' ? items(kids!)[0] : on!.parentElement!.closest<HTMLElement>(ITEM)) ?? null;
+  }, (el) => trees.get(plot)!.rows.get(el.dataset.key!));
 }
 
 /** A name fits where the box it stands in is as wide and as tall as it is, to half a pixel. */
@@ -173,13 +137,13 @@ export const partitionPainter: LayoutPainter = {
       keyed(group, mine, () => 'i', (c, k) => { box(c, k, 2); name(c, labels.get(k.key)); });
     });
     if (!trees.has(plot)) bind(plot);
-    trees.set(plot, { rows: new Map([...names].map(([k, v]) => [k, { row: v.row, rows: v.rows }])), fresh: false });
+    trees.set(plot, { rows: new Map([...names].map(([k, v]) => [k, { row: v.row, rows: v.rows }])) });
     attr(plot, 'role', 'tree'); attr(plot, 'tabindex', parents.length ? 0 : null);
     attr(plot, 'aria-label', data.catalog.dimensions[(data.layers[0]?.encode?.x ?? '') as string]?.label);
     // A box that a data change took away takes the choice with it. One that is still here keeps it.
     const on = plot.querySelector<HTMLElement>('[data-active]');
-    if (on && (on.hasAttribute('data-exit') || !(plot.matches(':focus') || plot.matches(':hover')))) choose(plot, null);
-    else if (on) choose(plot, on, on.getAttribute('data-active') as 'keys' | 'pointer');
+    if (on && (on.hasAttribute('data-exit') || !(plot.matches(':focus') || plot.matches(':hover')))) chooseItem(plot, null);
+    else if (on) chooseItem(plot, on, on.getAttribute('data-active') as 'keys' | 'pointer');
 
     paintRamp(body, scene);
   },

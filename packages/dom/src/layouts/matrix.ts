@@ -1,7 +1,7 @@
 import { formatBin, formatDimension, formatValue, type CircleNode, type RectNode, type Row } from '@unified-analytics/core';
 import { attr, ensure, keyed, nodePaint, prop } from '../dom.ts';
 import { token } from '../tokens.ts';
-import { hideReadout, hovers, placeReadout, pressed, readout, readoutOf } from '../keys.ts';
+import { chooseItem, readout, roveItems } from '../keys.ts';
 import type { LayoutPainter } from '../layout.ts';
 import { paintAxes, thinAxis } from '../chrome/axes.ts';
 import { paintRamp } from '../chrome/ramp.ts';
@@ -55,54 +55,17 @@ export function stepCell(key: string, at: [x: number, y: number] | null, nx: num
 }
 
 /* What the listeners read. They are bound once to the grid, which outlives every paint, and this is set by each. */
-interface Grid { nx: number; ny: number; rows: Map<string, Row>; fresh: boolean }
+interface Grid { nx: number; ny: number; rows: Map<string, Row> }
 const grids = new WeakMap<HTMLElement, Grid>();
 const id = (x: number, y: number) => 'cell-' + x + '-' + y;
 
-/** Choose a cell, or none, and say how: by the keys or by the pointer, as keys.ts does. The readout is the cell's own
- * name, and is the view's one readout, shown and placed as keys.ts shows it. */
-function choose(cells: HTMLElement, el: HTMLElement | null, how: 'keys' | 'pointer' = 'pointer'): void {
-  cells.querySelector('[data-active]')?.removeAttribute('data-active');
-  el?.setAttribute('data-active', how);
-  attr(cells, 'aria-activedescendant', el?.id);
-  const fig = cells.closest<HTMLElement>('.uav')!, tip = readoutOf(fig);
-  if (!el) { hideReadout(tip); return; }
-  tip.textContent = el.getAttribute('aria-label');
-  placeReadout(tip, fig, el);
-}
-
+/* The interaction is the one every holder has (rove.ts, roveItems in keys.ts). A cell's is the step from its place. */
 function bind(cells: HTMLElement): void {
-  const cell = (e: Event) => (e.target as Element).closest?.<HTMLElement>('[role="gridcell"]:not([data-exit])') ?? null;
-  const activate = (el: HTMLElement) => {
-    const row = grids.get(cells)!.rows.get(el.id);
-    if (row) (cells.getRootNode() as ShadowRoot).host.dispatchEvent(new CustomEvent('ua-activate', { bubbles: true, composed: true, detail: { row } }));
-  };
-  cells.addEventListener('pointerover', (e) => {
-    const el = cell(e);
-    if (!el) return;
-    // A touch that has only just chosen a cell shows its readout. The next one activates it.
-    grids.get(cells)!.fresh = pressed(e) && !el.hasAttribute('data-active');
-    choose(cells, el);
-  });
-  cells.addEventListener('pointerleave', (e) => { if (hovers(e, grids.get(cells)!.fresh)) choose(cells, null); });
-  // A touch that turns into a scroll chose its cell on the way down. The browser cancels it, and it lets go.
-  cells.addEventListener('pointercancel', () => choose(cells, null));
-  cells.addEventListener('focusout', () => choose(cells, null));
-  cells.addEventListener('click', (e) => {
-    const el = cell(e), g = grids.get(cells)!;
-    if (!el?.hasAttribute('data-active')) return;
-    if (g.fresh) g.fresh = false; else activate(el);
-  });
-  cells.addEventListener('keydown', (e) => {
-    const g = grids.get(cells)!, on = cells.querySelector<HTMLElement>('[data-active]');
-    // Escape is taken only when a cell is chosen, so the first Escape of a dialog around the view is not swallowed.
-    if (e.key === 'Escape') { if (on) { e.preventDefault(); choose(cells, null); } return; }
-    if (e.key === 'Enter' || e.key === ' ') { if (on) { e.preventDefault(); activate(on); } return; }
-    const to = stepCell(e.key, on ? (on.id.split('-').slice(1).map(Number) as [number, number]) : null, g.nx, g.ny);
-    if (!to) return;
-    e.preventDefault();
-    choose(cells, cells.querySelector<HTMLElement>('#' + id(...to)), 'keys');
-  });
+  roveItems(cells, '[role="gridcell"]:not([data-exit])', (e, on) => {
+    const g = grids.get(cells)!, to = stepCell(e.key, on ? (on.id.split('-').slice(1).map(Number) as [number, number]) : null, g.nx, g.ny);
+    if (to) e.preventDefault();
+    return to && cells.querySelector<HTMLElement>('#' + id(...to));
+  }, (el) => { const row = grids.get(cells)!.rows.get(el.id); return row && { row }; });
 }
 
 // The number alone. The body goes whole, so kept axes do not stand with no grid between them.
@@ -128,7 +91,7 @@ export const matrix: LayoutPainter = {
 
     if (!grids.has(cells)) bind(cells);
     const at = new Map(data.result.rows.map((r) => [(xf ? r[xf] : '') + '\n' + (yf ? r[yf] : ''), r])), rows = new Map<string, Row>();
-    grids.set(cells, { nx: xs.length, ny: ys.length, rows, fresh: false });
+    grids.set(cells, { nx: xs.length, ny: ys.length, rows });
     prop(cells, '--uav-nx', xs.length); prop(cells, '--uav-ny', ys.length);
     attr(cells, 'role', 'grid'); attr(cells, 'tabindex', xs.length && ys.length ? 0 : null);
     attr(cells, 'aria-label', [yf, xf].filter(Boolean).map((f) => dims[f!]!.label).join(' by '));
@@ -155,7 +118,7 @@ export const matrix: LayoutPainter = {
       });
     });
     // ponytail: a chosen cell is let go on every paint, where keys.ts keeps a point that is still there.
-    choose(cells, null);
+    chooseItem(cells, null);
   },
 
   // The same query pivoted: a row for each value on y, a column for each on x, and the engine's totals at the edges.

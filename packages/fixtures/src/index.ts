@@ -1,4 +1,4 @@
-import type { Catalog, Query, Result, Row, Spec } from '@unified-analytics/core';
+import { inProgressNote, type Catalog, type Query, type Result, type Row, type Spec } from '@unified-analytics/core';
 import { registerLink } from '@unified-analytics/flow';
 import { registerGeo, type Shapes } from '@unified-analytics/geo';
 import { registerPartition } from '@unified-analytics/partition';
@@ -222,32 +222,36 @@ const INTENTS: [string, number, number, string[]][] = [
 ];
 const spread = seeded(71), near = (c: number) => Math.round((c + (spread() - 0.5) * 0.5) * 100) / 100;
 const TERMS = INTENTS.flatMap(([intent, x, y, terms]) => terms.map((term) => ({ term, intent, x: near(x), y: near(y) })));
+// Conversions by event, now and before: their count, their rate and their value.
+const EVENTS: [string, ...Cell[]][] = [
+  ['Add to cart',       [1310, 1180], [0.124, 0.125], [48200, 43100]],
+  ['Newsletter signup', [842, 610],   [0.08, 0.065],  [4210, 3050]],
+  ['Checkout started',  [655, 690],   [0.062, 0.073], [39800, 41900]],
+  ['Purchase',          [412, 371],   [0.039, 0.039], [31650, 27900]],
+  ['Trial started',     [198, null],  [0.019, null],  [9900, null]],
+  ['Contact form',      [96, 104],    [0.009, 0.011], [960, 1040]],
+];
+/** A step of the funnel that is an event: the visitors who reached it are the event's conversions, at the event's rate. */
+const reached = (event: string): Cell[] => EVENTS.find(([name]) => name === event)!.slice(1, 3) as Cell[];
+const pricing = PAGES.find((p) => p.page === '/pricing')!;
+// Errors by cause, now and before, and the share of them all that the causes down to each one hold.
+const CAUSES: [cause: string, now: number, before: number, share: number][] = [
+  ['Timeout', 412, 380, 0.38], ['Not found', 268, 301, 0.627], ['Server error', 171, 164, 0.785], ['Bad gateway', 98, 120, 0.875],
+  ['Forbidden', 61, 70, 0.932], ['Rate limited', 40, 52, 0.969], ['Other', 34, 33, 1],
+];
 const TABLES: Record<string, { fields: string[]; ranked: boolean; rows: [string, ...Cell[]][]; totals: Record<string, Cell>; also?: Record<string, Row>; split?: [dim: string, of: Record<string, string>] }> = {
-  event: { fields: ['conversions', 'conversion_rate', 'conversion_value'], ranked: true, rows: [
-    ['Add to cart',       [1310, 1180], [0.124, 0.125], [48200, 43100]],
-    ['Newsletter signup', [842, 610],   [0.08, 0.065],  [4210, 3050]],
-    ['Checkout started',  [655, 690],   [0.062, 0.073], [39800, 41900]],
-    ['Purchase',          [412, 371],   [0.039, 0.039], [31650, 27900]],
-    ['Trial started',     [198, null],  [0.019, null],  [9900, null]],
-    ['Contact form',      [96, 104],    [0.009, 0.011], [960, 1040]],
-  ], totals: { conversions: [3513, 2955], conversion_rate: [0.212, 0.198], conversion_value: [134720, 116990] } },
+  event: { fields: ['conversions', 'conversion_rate', 'conversion_value'], ranked: true, rows: EVENTS, totals: { conversions: [3513, 2955], conversion_rate: [0.212, 0.198], conversion_value: [134720, 116990] } },
   step: { fields: ['visitors', 'conversion_rate'], ranked: false, rows: [
     ['Visited the site',  [10531, 9437], [1, 1]],
-    ['Viewed pricing',    [1705, 1390],  [0.162, 0.147]],
-    ['Started checkout',  [655, 690],    [0.062, 0.073]],
-    ['Purchased',         [412, 371],    [0.039, 0.039]],
+    ['Viewed pricing',    [pricing.visitors, pricing.prev!.visitors], [0.162, 0.147]],
+    ['Started checkout',  ...reached('Checkout started')],
+    ['Purchased',         ...reached('Purchase')],
   ], totals: { conversion_rate: [0.039, 0.039] } },
   // Errors from the most to the fewest, and the share of them all that the rows down to each one hold. The engine adds it up.
   // The same share comes as a companion of the errors too, `errors@share`: the two ways an engine may send it.
-  cause: { fields: ['errors', 'errors_share'], ranked: false, also: Object.fromEntries([['Timeout', 0.38], ['Not found', 0.627], ['Server error', 0.785], ['Bad gateway', 0.875], ['Forbidden', 0.932], ['Rate limited', 0.969], ['Other', 1]].map(([cause, share]) => [cause, { 'errors@share': share }])), rows: [
-    ['Timeout',      [412, 380], [0.38, null]],
-    ['Not found',    [268, 301], [0.627, null]],
-    ['Server error', [171, 164], [0.785, null]],
-    ['Bad gateway',  [98, 120],  [0.875, null]],
-    ['Forbidden',    [61, 70],   [0.932, null]],
-    ['Rate limited', [40, 52],   [0.969, null]],
-    ['Other',        [34, 33],   [1, null]],
-  ], totals: { errors: [1084, 1120], errors_share: [1, 1] } },
+  cause: { fields: ['errors', 'errors_share'], ranked: false, also: Object.fromEntries(CAUSES.map(([cause, , , share]) => [cause, { 'errors@share': share }])),
+    rows: CAUSES.map(([cause, now, before, share]) => [cause, [now, before], [share, null]]),
+    totals: { errors: [1, 2].map((at) => CAUSES.reduce((s, c) => s + (c[at] as number), 0)) as Cell, errors_share: [1, 1] } },
   // What revenue would gain or lose were each assumption at the low or the high end of its range, from the widest swing
   // to the narrowest. Signed, from the forecast as it stands. There is no total of them to give.
   factor: { fields: ['revenue_effect'], ranked: false, rows: [
@@ -302,6 +306,11 @@ export function apportion(total: number, weights: number[]): number[] {
   exact.map((x, i) => [x - out[i]!, i] as const).sort((a, b) => b[0] - a[0]).slice(0, left).forEach(([, i]) => { out[i]!++; });
   return total < 0 ? out.map((n) => (n ? -n : 0)) : out;
 }
+
+/** A bin of a binned dimension, by its place: where it starts and, as a companion, where it ends. */
+const binRow = (d: string, i: number): Row => { const w = d === 'load_time' ? LOAD.width : WEIGHT.width; return { [d]: i * w, [d + '@end']: (i + 1) * w }; };
+/** The engine's total of each field over some rows: none where no row has a value of it, which is not a total of nothing. */
+const sumBy = (rows: Row[], fields: string[]): Row => Object.fromEntries(fields.map((f) => [f, rows.some((r) => r[f] != null) ? rows.reduce((s, r) => s + ((r[f] as number) || 0), 0) : null]));
 
 export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
   const metrics = q.metrics || [], dims = q.by || [], by = dims[0] || null;
@@ -359,12 +368,11 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
   // pairs divide the whole of the total, and a pair nothing fell in is a count of none, not no count.
   // ponytail: no period before, as a pair of any two dimensions has none of its own.
   if (binned) {
-    const bins = (d: string, i: number) => { const w = d === 'load_time' ? LOAD.width : WEIGHT.width; return { [d]: i * w, [d + '@end']: (i + 1) * w }; };
     const pairs = LOAD.weights.flatMap((l, i) => WEIGHT.weights.map((w, j) => ({ i, j, w: l * w * Math.exp(-((i / 2 - j) ** 2) / 5) * vary() })));
     const parts = metrics.map((m) => apportion(totals[m]!, pairs.map((p) => p.w)));
-    const rows = pairs.map((p, k): Row => ({ ...bins('load_time', p.i), ...bins('page_weight', p.j), ...Object.fromEntries(metrics.map((m, n) => [m, parts[n]![k]!])) }));
-    const along = (d: string, n: number, of: 'i' | 'j') => Array.from({ length: n }, (_, b): Row => ({ ...bins(d, b), ...Object.fromEntries(metrics.map((m, k) => [m, pairs.reduce((s, p, at) => s + (p[of] === b ? parts[k]![at]! : 0), 0)])) }));
-    return { rows, totals, totalsBy: { load_time: along('load_time', LOAD.weights.length, 'i'), page_weight: along('page_weight', WEIGHT.weights.length, 'j') }, meta };
+    const rows = pairs.map((p, k): Row => ({ ...binRow('load_time', p.i), ...binRow('page_weight', p.j), ...Object.fromEntries(metrics.map((m, n) => [m, parts[n]![k]!])) }));
+    const along = (d: string, n: number) => Array.from({ length: n }, (_, b): Row => { const bin = binRow(d, b); return { ...bin, ...sumBy(rows.filter((r) => r[d] === bin[d]), metrics) }; });
+    return { rows, totals, totalsBy: { load_time: along('load_time', LOAD.weights.length), page_weight: along('page_weight', WEIGHT.weights.length) }, meta };
   }
   // One row per value of a dimension, in the dimension's own order, before any sort or limit.
   function rowsBy(dim: string): Row[] {
@@ -415,7 +423,7 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
       const before = metrics.map((m) => (hasPrev ? apportion(totals[m + '@previous']!, LOAD.weights) : null));
       const held = metrics.map(() => 0);
       return weights.map((_, i) => {
-        const r: Row = { load_time: i * LOAD.width, 'load_time@end': (i + 1) * LOAD.width };
+        const r: Row = binRow('load_time', i);
         metrics.forEach((m, j) => {
           r[m] = parts[j]![i]!; r[m + '@density'] = Math.round(parts[j]![i]! / (totals[m] || 1) / LOAD.width * 1e4) / 1e4; if (wantPrev) r[m + '@previous'] = before[j] ? before[j]![i]! : null;
           if (m === 'pageviews') r[m + '@cumulative'] = Math.round((held[j]! += parts[j]![i]!) / (totals[m] || 1) * 1e4) / 1e4;
@@ -431,7 +439,7 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
       return r;
     });
   }
-  if (dims.indexOf('date.day') >= 0) meta.notes.push('Today is still in progress.');
+  if (dims.indexOf('date.day') >= 0) meta.notes.push(inProgressNote('day'));
   const m0 = metrics[0]!;
   // A categorical dimension is ranked by the first metric, and `limit` keeps its first values. Days and bins keep their own order.
   const top = (rs: Row[]) => { const ranked = rs.slice().sort((a, b) => (b[m0] as number) - (a[m0] as number)); return q.limit ? ranked.slice(0, q.limit) : ranked; };
@@ -470,11 +478,7 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
   // By week a pair has its place among its week's values too, by visitors: 1 for the most, counted before any limit.
   // ponytail: by week alone, so that no query a test already holds to the row comes back with more. Asked for, when a query can ask.
   if (outer === 'date.week' && metrics.indexOf('visitors') >= 0) pairs.forEach((p) => { p['visitors@rank'] = 1 + pairs.filter((o) => o[outer] === p[outer] && (o.visitors as number) > (p.visitors as number)).length; });
-  const innerRows = all.map(([name]) => {
-    const r: Row = { [inner]: name }, mine = pairs.filter((p) => p[inner] === name);
-    fields.forEach((f) => { r[f] = mine.some((p) => p[f] != null) ? mine.reduce((s, p) => s + ((p[f] as number) || 0), 0) : null; });
-    return r;
-  });
+  const innerRows = all.map(([name]): Row => ({ [inner]: name, ...sumBy(pairs.filter((p) => p[inner] === name), fields) }));
   // `limit` keeps the first values of each categorical dimension. A total still covers what the limit left out of the other.
   const kept = (rs: Row[], dim: string) => { const names = isTime(dim) ? null : top(rs).map((r) => r[dim]); return names ? rs.filter((r) => names.indexOf(r[dim]) >= 0) : rs; };
   const totalsBy = { [outer]: kept(outerRows, outer), [inner]: kept(innerRows, inner) };

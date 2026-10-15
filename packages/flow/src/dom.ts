@@ -1,6 +1,6 @@
-import type { PathNode, RectNode, TextNode } from '@unified-analytics/core';
-import { ensure, keyed, prop, text, thinLabels, token, type LayoutPainter } from '@unified-analytics/dom';
-import { LABEL, LINK_RULES, NODE, standing } from './index.ts';
+import { declutter, type PathNode, type RectNode, type TextNode } from '@unified-analytics/core';
+import { ensure, ensureSvg, keyed, prop, registerPainter, text, thinLabels, token, type LayoutPainter } from '@unified-analytics/dom';
+import { LABEL, NODE } from './index.ts';
 
 /* The `link` mark's half for the DOM: the painter of its layout, for registerPainter().
  *
@@ -38,25 +38,18 @@ const css = `
 export const linkPainter: LayoutPainter = {
   layout: 'link',
   css,
-  rules: () => LINK_RULES,
 
-  // Labels that would meet, by their real sizes, in each column: the larger node's stands (standing()).
+  // Labels that would meet, by their real sizes, in each column: the larger node's stands, as place() decides it by a line.
   measure(body) {
     for (const side of ['start', 'end']) {
-      thinLabels(body, '.uav-labels > span[data-anchor="' + side + '"]:not([data-exit])', (els) => {
-        const boxes = els.map((el) => el.getBoundingClientRect());
-        return standing(boxes.map((b, i) => ({ at: b.top + b.height / 2, rank: Number(els[i]!.dataset.rank) })), boxes[0]!.height).map((on) => !on);
-      });
+      thinLabels(body, '.uav-labels > span[data-anchor="' + side + '"]:not([data-exit])', (els) =>
+        declutter(els.map((el) => { const b = el.getBoundingClientRect(); return { x: 0, w: 1, y: b.top, h: b.height, rank: Number(el.dataset.rank) }; }), 0));
     }
   },
 
   paint(body, scene) {
     const plot = ensure(body, 'div', 'uav-plot');
-    let svg = plot.querySelector<SVGSVGElement>(':scope > svg');
-    if (!svg) {
-      svg = plot.appendChild(document.createElementNS('http://www.w3.org/2000/svg', 'svg'));
-      svg.setAttribute('viewBox', '0 0 100 100'); svg.setAttribute('preserveAspectRatio', 'none'); svg.setAttribute('data-hits', 'y');
-    }
+    const svg = ensureSvg(plot, { hits: 'y' });
     keyed(svg, scene.nodes.filter((n): n is PathNode => n.part === 'plot' && n.kind === 'path'), () => 'path', (el, n) => { el.setAttribute('d', n.d ?? ''); el.setAttribute('data-fill', ''); });
     // The nodes and their names say again what each ribbon's name says whole.
     const nodes = ensure(plot, 'div', 'uav-nodes'), labels = ensure(body, 'div', 'uav-labels');
@@ -65,3 +58,6 @@ export const linkPainter: LayoutPainter = {
     keyed(labels, scene.nodes.filter((n): n is TextNode => n.part === 'labels' && n.kind === 'text'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-y', 1 - n.t!); el.setAttribute('data-anchor', n.anchor); });
   },
 };
+
+/** Register the `link` mark's painter. */
+export const registerLinkPainter = (): void => registerPainter(linkPainter);

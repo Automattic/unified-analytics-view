@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { CONTAINER_RULES, PRESETS, customMarks, customPresets, expand, fallbackRule, fills, type PainterName, type Spec, type TextNode } from '@unified-analytics/core';
 import { compileFitRules } from '@unified-analytics/dom';
 import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
-import { PARTITION_RULES, boxNames, squarify, type Box } from '@unified-analytics/partition';
-import { nameFits, partitionPainter, stepBox } from '@unified-analytics/partition/dom';
+import { PARTITION_RULES, squarify, type Box } from '@unified-analytics/partition';
+import { boxNames, nameFits, partitionPainter, stepBox } from '@unified-analytics/partition/dom';
 import { errOf as err, rects, run, validView as view } from './helpers.ts';
 
 // Step 9 of docs/uncommon-coverage-plan.md: the `partition` mark, a custom mark that draws a treemap. No prototype
@@ -298,6 +298,9 @@ describe('names, prose and errors', () => {
     const both = runQuery(ramped.query);
     expect(boxNames({ layers: ramped.layers!, query: ramped.query, result: both, catalog }).get('primary:partition:Docs:/docs/api')!.says).toMatch(/^Docs, \/docs\/api: Page views [\d,]+; Visitors [\d,]+$/);
     expect(boxNames({ layers: tiles.layers!, query: tiles.query, result: runQuery(tiles.query), catalog }).get('primary:partition:Search')!.says).toBe('Search: Visitors 4,318');
+    // A box says what every other mark's readout says of its row: the period before, where the query compares, among it.
+    const compared = { ...tiles.query, compare: 'previous' as const }, prior = runQuery(compared);
+    expect(boxNames({ layers: tiles.layers!, query: compared, result: prior, catalog }).get('primary:partition:Search')!.says).toMatch(/^Search: Visitors 4,318, previous period [\d,]+$/);
   });
   it('the prose names the largest parent and its share of the engine\'s total, and with one dimension it is the ranked sentence', () => {
     expect(run(treemap, 346).plan.text).toBe('Marketing is the largest section at 42% of page views, and / the largest page at 21%.');
@@ -346,8 +349,8 @@ describe('a layout with a fallback for each shape of query', () => {
 });
 
 describe('the painter\'s half, as strings and plain functions', () => {
-  it('is the layout of the mark\'s name, with the mark\'s own rules, and its part holds the scene\'s aspect', () => {
-    expect([partitionPainter.layout, partitionPainter.rules!(CONTAINER_RULES)]).toEqual(['partition', PARTITION_RULES]);
+  it('is the layout of the mark\'s name, whose rules are the mark\'s alone, and its part holds the scene\'s aspect', () => {
+    expect([partitionPainter.layout, partitionPainter.rules]).toEqual(['partition', undefined]);
     expect(partitionPainter.css).toContain('.uav[data-layout="partition"] .uav-plot { flex: none; align-self: center; inline-size: min(100%, 480px); aspect-ratio: var(--uav-aspect, 1.6);');
     expect(partitionPainter.css).not.toMatch(/#[0-9a-f]{3,6}\b|rgb\(/i);
   });

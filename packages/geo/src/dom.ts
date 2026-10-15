@@ -1,6 +1,6 @@
 import type { CircleNode, PathNode, TextNode } from '@unified-analytics/core';
-import { FOCUS, HOVER, attr, ensure, holdShape, keyed, paintRamp, paintSize, prop, text, token, type LayoutPainter } from '@unified-analytics/dom';
-import { GEO_RULES, geoRules } from './index.ts';
+import { FOCUS, HOVER, attr, ensure, holdShape, keyed, paintRamp, paintSize, prop, registerPainter, svg as svgOf, text, token, unlist, type LayoutPainter } from '@unified-analytics/dom';
+import { MAP, NOTE, geoNames } from './index.ts';
 
 /* The `geo` mark's half for the DOM: the painter of its layout, for registerPainter().
  *
@@ -22,8 +22,7 @@ import { GEO_RULES, geoRules } from './index.ts';
  * the map by direction.
  * Below the room a map needs, the `marks` rule's `fallback` shows the same query as a ranked list in its place. That
  * is the element's doing (view.ts), and nothing here knows of it. */
-const SVG = 'http://www.w3.org/2000/svg';
-const shape = holdShape('480px', 'var(--uav-aspect, 2)');
+const shape = holdShape(MAP + 'px', 'var(--uav-aspect, 2)');
 const css = `
 .uav[data-layout="geo"] .uav-body { display: flex; flex-direction: column; }
 .uav[data-layout="geo"] .uav-plot { ${shape.part} container-type: inline-size; }
@@ -48,7 +47,7 @@ const css = `
 .uav[data-layout="geo"] .uav-points { pointer-events: none; }
 .uav[data-layout="geo"] .uav-points i { pointer-events: auto; }
 .uav[data-layout="geo"] .uav-ramp:empty { display: none; }
-.uav[data-layout="geo"] .uav-note { block-size: calc(var(--uav-font-tick) * 18 / 11); line-height: calc(18 / 11); overflow: hidden; white-space: nowrap; }
+.uav[data-layout="geo"] .uav-note { block-size: calc(var(--uav-font-tick) * ${NOTE} / 11); line-height: calc(${NOTE} / 11); overflow: hidden; white-space: nowrap; }
 .uav[data-layout="geo"] .uav-note span { color: var(--uav-paint); }
 .uav[data-layout="geo"] .uav-note:empty { display: none; }
 /* In a box the part gives way to the height and its width follows, as a circle of arcs does. */
@@ -110,7 +109,7 @@ const outlined = new WeakSet<SVGSVGElement>();
 function outline(svg: SVGSVGElement, over: SVGElement): void {
   if (outlined.has(svg)) return;
   outlined.add(svg);
-  const copy = over.appendChild(document.createElementNS(SVG, 'path'));
+  const copy = over.appendChild(svgOf('path'));
   const follow = () => {
     const on = svg.querySelector(':scope > :not(.uav-over) > path[data-active]'), d = on?.getAttribute('d') ?? null, how = on?.getAttribute('data-active') ?? null;
     if (copy.getAttribute('d') !== d) attr(copy, 'd', d);
@@ -123,24 +122,23 @@ function outline(svg: SVGSVGElement, over: SVGElement): void {
 /** The group of the map's SVG with this class, made on first use. */
 function group(svg: Element, cls: string): SVGElement {
   let g = svg.querySelector<SVGElement>(':scope > .' + cls);
-  if (!g) { g = svg.appendChild(document.createElementNS(SVG, 'g')); g.setAttribute('class', cls); }
+  if (!g) { g = svg.appendChild(svgOf('g')); g.setAttribute('class', cls); }
   return g;
 }
 /** Make an element the list a reader steps through, or take that from it. What the keyboard set on it goes with it. */
 function list(el: Element, on: boolean): void {
   attr(el, 'data-hits', on ? 'y' : null);
-  if (!on) for (const name of ['role', 'tabindex', 'aria-label', 'aria-orientation', 'aria-activedescendant']) el.removeAttribute(name);
+  if (!on) unlist(el);
 }
 
 export const geoPainter: LayoutPainter = {
   layout: 'geo',
   css,
-  rules: () => GEO_RULES,
 
   paint(body, scene) {
     const part = ensure(body, 'div', 'uav-plot'), aspect = scene.aspect ?? 2;
     let svg = part.querySelector<SVGSVGElement>(':scope > svg');
-    if (!svg) svg = part.appendChild(document.createElementNS(SVG, 'svg'));
+    if (!svg) svg = part.appendChild(svgOf('svg'));
     const zoom = zoomable(svg);
     zoom.home = [0, 0, 100, 100 / aspect];
     prop(part, '--uav-aspect', aspect);
@@ -166,6 +164,11 @@ export const geoPainter: LayoutPainter = {
 };
 
 /** The painter of the mark registered under another name (`registerGeo(shapes, { name })`): the same painter, as the
- * layout of that name. Register one for each name a page registers.
+ * layout of that name. Its fit rules are the mark's, which the element compiles itself.
  * ponytail: the stylesheet is written out again for each name. One sheet with a list of names if a page has many. */
-export const geoPainterAs = (name: string): LayoutPainter => ({ ...geoPainter, layout: name, css: css.replaceAll('[data-layout="geo"]', '[data-layout="' + name + '"]'), rules: () => geoRules(name) });
+export const geoPainterAs = (name: string): LayoutPainter => ({ ...geoPainter, layout: name, css: css.replaceAll('[data-layout="geo"]', '[data-layout="' + name + '"]') });
+
+/** Register a painter for every name the mark has been registered under so far (`registerGeo`). */
+export function registerGeoPainters(): void {
+  for (const name of geoNames()) registerPainter(name === 'geo' ? geoPainter : geoPainterAs(name));
+}

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { PRESETS, customMarks, customPresets, expand, makeContainer, place, resolve, type PainterName, type PathNode, type Result, type Spec, type TextNode } from '@unified-analytics/core';
+import { PRESETS, buildScene, declutter, customMarks, customPresets, expand, makeContainer, place, resolve, type PainterName, type PathNode, type RectNode, type Result, type Spec, type TextNode } from '@unified-analytics/core';
 import { compileFitRules } from '@unified-analytics/dom';
 import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
-import { LINK_RULES, NODE, standing } from '@unified-analytics/flow';
+import { LINK_RULES, NODE } from '@unified-analytics/flow';
 import { linkPainter } from '@unified-analytics/flow/dom';
 import { errOf as err, rects, run, validView as view } from './helpers.ts';
 
@@ -169,7 +169,8 @@ describe('link: two columns of nodes and a ribbon for each row', () => {
     expect(placed.map((n) => n.x)).toEqual([...Array(5).fill(NODE + 6), ...Array(5).fill(346 - NODE - 6)]);
     expect([scene.height, scene.plot]).toEqual([184, { w: 346, h: 184 }]);
     expect(run(sankey, 346, 160).scene.height).toBe(160);
-    expect(standing([{ at: 10, rank: 2 }, { at: 20, rank: 1 }, { at: 34, rank: 3 }, { at: 40, rank: 4 }], 14)).toEqual([false, true, true, false]);
+    // A column's labels a line of 14 apart about their middles, by rank: core's declutter in one dimension.
+    expect(declutter([10, 20, 34, 40].map((at, i) => ({ x: 0, w: 1, y: at - 7, h: 14, rank: [2, 1, 3, 4][i] })), 0)).toEqual([true, false, false, true]);
   });
 });
 
@@ -200,8 +201,8 @@ describe('prose and errors', () => {
 });
 
 describe('the painter\'s half, as strings', () => {
-  it('is the layout of the mark\'s name, with the mark\'s own rules, and reads no colour but a node\'s paint', () => {
-    expect([linkPainter.layout, linkPainter.rules!(undefined as never)]).toEqual(['link', LINK_RULES]);
+  it('is the layout of the mark\'s name, whose rules are the mark\'s alone, and reads no colour but a node\'s paint', () => {
+    expect([linkPainter.layout, linkPainter.rules]).toEqual(['link', undefined]);
     expect(linkPainter.css).toContain('.uav[data-layout="link"] .uav-plot svg { inset-inline: 8px; inline-size: calc(100% - 16px); }');
     expect(linkPainter.css).not.toMatch(/#[0-9a-f]{3,8}\b|rgb\(/i);
   });

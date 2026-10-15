@@ -1,4 +1,4 @@
-import { formatDimension, formatValue, registerMark, registerPreset, roleOf, seqScale } from '@unified-analytics/core';
+import { SERIES, formatDimension, heldBox, isDim, isMetric, layerKeys, metricOf, registerMark, registerPreset, roleOf, ruleFor, seqScale, tooManySeries, uniqueKeys } from '@unified-analytics/core';
 import type { CustomMark, FitRule, MarkView, Part, PlacedNode, RectNode, Row, SceneNode, TextNode } from '@unified-analytics/core';
 
 /* The `partition` mark: a box divided by area, nested once, which is a treemap. A custom mark (core's marks.ts). This
@@ -54,12 +54,18 @@ export function squarify(values: number[], w: number, h: number, total = 0): Box
   return out;
 }
 
-const ASPECT = 1.6;   // the part's width over its height
-const MAX = 480;      // px across a treemap that has room to spare
-const HEAD = 16;      // px a parent's name takes at the top of its box, over its children
-const LINE = 14;      // px a label's line takes
+/* What the scene sets and the painter's stylesheet sets again, so both are read from here. */
+/** The part's width over its height. */
+export const ASPECT = 1.6;
+/** px across a treemap that has room to spare. */
+export const MAX = 480;
+/** px a parent's name takes at the top of its box, over its children, and the most of the box's height it takes. */
+export const HEAD = 16, HEAD_MOST = 0.3;
+/** px a label's line takes. */
+export const LINE = 14;
+/** px between two parents, and between two children: a parent stands half its gap in from the part's edge all round. */
+export const GAP = 2, KID_GAP = 1;
 const CHAR = 6;       // px a character of a label takes, near enough, where nothing can be measured
-const SERIES = 6;     // the series colours there are
 
 /* Below the room a treemap needs it is not a smaller treemap: the view becomes a list of the same query. Which list
  * depends on the query, and a rule names one preset, so there are two rules: the first whose preset the query can
@@ -82,10 +88,10 @@ interface Group extends Leaf { kids: Leaf[]; rows: Row[]; n: number }
 function read({ layers, query, result, catalog }: Omit<MarkView, 'guides'>) {
   const l = layers[0]!, { x: dim, detail, size, color } = l.encode || {}, by = query.by || [], q = '"' + l.mark + '"';
   if (layers.length > 1) throw new Error('A treemap draws one ' + q + ' layer, and this view has ' + layers.length + '. Put the dimension to divide by on x, the one to divide each part by on detail, and the metric on size, in one layer.');
-  if (typeof dim !== 'string' || !(dim in catalog.dimensions)) throw new Error('A ' + q + ' layer needs the dimension to divide the box by on x, and this one has ' + JSON.stringify(dim) + ' there. Encode one of the query\'s dimensions on x: ' + (by.join(', ') || 'it has none, so add one to query.by') + '.');
-  if (typeof size !== 'string' || !(size.split('@')[0]! in catalog.metrics)) throw new Error('A ' + q + ' layer needs a metric on size, which each box\'s area is a share of, and this one has ' + JSON.stringify(size) + ' there. Encode one of the query\'s metrics on size: ' + query.metrics.join(', ') + '.');
+  if (!isDim(catalog, dim)) throw new Error('A ' + q + ' layer needs the dimension to divide the box by on x, and this one has ' + JSON.stringify(dim) + ' there. Encode one of the query\'s dimensions on x: ' + (by.join(', ') || 'it has none, so add one to query.by') + '.');
+  if (!isMetric(catalog, size)) throw new Error('A ' + q + ' layer needs a metric on size, which each box\'s area is a share of, and this one has ' + JSON.stringify(size) + ' there. Encode one of the query\'s metrics on size: ' + query.metrics.join(', ') + '.');
   if (detail === dim) throw new Error('A ' + q + ' layer divides by the dimension on x and then by the one on detail, and this one has "' + dim + '" on both. ' + (by.length > 1 ? 'Encode "' + by.find((d) => d !== dim) + '" on detail' : 'Remove "detail", for one level') + '.');
-  if (color != null && !(typeof color === 'string' && color.split('@')[0]! in catalog.metrics)) throw new Error('A ' + q + ' layer takes a metric on color, to paint every box by the ramp, and this one has ' + JSON.stringify(color) + ' there. Encode one of the query\'s metrics on color, or remove it: each "' + dim + '" then has a series colour.');
+  if (color != null && !isMetric(catalog, color)) throw new Error('A ' + q + ' layer takes a metric on color, to paint every box by the ramp, and this one has ' + JSON.stringify(color) + ' there. Encode one of the query\'s metrics on color, or remove it: each "' + dim + '" then has a series colour.');
   const two = typeof detail === 'string', by2 = result.totalsBy?.[dim];
   // A parent is sized by what the engine says it holds over all its children. With no such total there is no honest
   // box for it: its rows may be short of it by a `limit`, and are never summed.
@@ -97,11 +103,10 @@ function read({ layers, query, result, catalog }: Omit<MarkView, 'guides'>) {
   const total = result.totals[size], shown = total ? tops.filter((r) => is(r[size])) : [];
   const drawn = two ? result.rows.filter((r) => is(r[size]) && shown.some((t) => of(t) === of(r))) : shown;
   // The colour scale runs over the boxes that are painted by it, as a grid's runs over its cells.
-  const fill = typeof color === 'string' ? seqScale(drawn.map((r) => r[color]).filter((v): v is number => typeof v === 'number'), catalog.metrics[color.split('@')[0]!]) : null;
-  if (!fill && shown.length > SERIES) throw new Error('Dividing by "' + dim + '" makes ' + shown.length + ' boxes, and there are ' + SERIES + ' series colours. Add "limit": ' + SERIES + ' to the query, or less, or encode a metric on color to paint every box by the ramp.');
+  const fill = typeof color === 'string' ? seqScale(drawn.map((r) => r[color]).filter((v): v is number => typeof v === 'number'), metricOf(catalog, color)!) : null;
+  if (!fill && shown.length > SERIES) throw new Error(tooManySeries('Dividing by "' + dim + '"', shown.length, 'boxes', ', or encode a metric on color to paint every box by the ramp'));
   // A key is made unique as it is given out: two rows of one value, or a value with the separator in it.
-  const id = roleOf(l) + ':' + l.mark, taken = new Set<string>();
-  const key = (k: string) => { let u = k; for (let n = 2; taken.has(u); n++) u = k + '#' + n; taken.add(u); return u; };
+  const id = layerKeys(layers)[0]!, key = uniqueKeys();
   const paint = (r: Row, i: number) => (fill ? fill.paint(r[color as string] as number | null | undefined) : 'series.' + (i + 1));
   const groups = squarify(shown.map((r) => r[size] as number), ASPECT, 1, total || 0).map((b, i): Group => {
     const top = shown[i]!, k = key(id + ':' + of(top)), rows = two ? result.rows.filter((r) => of(r) === of(top)) : [top], inside = rows.filter((r) => two && is(r[size]));
@@ -113,14 +118,10 @@ function read({ layers, query, result, catalog }: Omit<MarkView, 'guides'>) {
   return { groups, two, fill, dim, role: roleOf(l), none: drawn.some((r) => fill && r[color as string] == null), key };
 }
 
-/** What each box says, by its node's key: its name, under its parent's where it has one, and each of the query's
- * metrics in the catalog's formats. A parent's are the engine's totals for it. This is a box's accessible name and its
- * readout, so no value is said by area or colour alone. `row` is the row it came from, and `rows` the rows inside it. */
-export function boxNames(view: Omit<MarkView, 'guides'>): Map<string, { says: string; row: Row; rows: Row[] }> {
-  const { groups } = read(view), { query, catalog } = view;
-  const values = (r: Row) => query.metrics.filter((m) => r[m] !== undefined).map((m) => catalog.metrics[m]!.label + ' ' + formatValue(r[m] as number | null, catalog.metrics[m]!)).join('; ');
-  return new Map(groups.flatMap((g): [string, { says: string; row: Row; rows: Row[] }][] => [[g.key, { says: g.name + ': ' + values(g.row), row: g.row, rows: g.rows }],
-    ...g.kids.map((c): [string, { says: string; row: Row; rows: Row[] }] => [c.key, { says: g.name + ', ' + c.name + ': ' + values(c.row), row: c.row, rows: [c.row] }])]));
+/** The boxes a view comes to, parents with their children inside, each with its node's key, the row it came from and, for a
+ * parent, the rows inside it: what the painter names each box from (dom.ts's boxNames). */
+export function boxesOf(view: Omit<MarkView, 'guides'>): { key: string; row: Row; rows: Row[]; kids: { key: string; row: Row }[] }[] {
+  return read(view).groups;
 }
 
 const round = (n: number) => Math.round(n * 1e5) / 1e5;
@@ -167,8 +168,8 @@ export const partitionMark: CustomMark = {
    * length: nothing is measured here. Where a parent's name does not fit, its children's are left out too, so a
    * child is never named without the parent it is in. */
   place(scene, W, room, container) {
-    const least = container.rules.fit.concat(PARTITION_RULES).find((r) => r.layout === scene.layout && r.id === 'marks')?.needs.block ?? 0;
-    const w = Math.min(W, MAX, room == null ? Infinity : Math.max(least, room) * scene.aspect!), h = w / scene.aspect!, left = (W - w) / 2;
+    const least = ruleFor(container.rules.fit.concat(PARTITION_RULES), scene.layout, 'marks')?.needs.block ?? 0;
+    const { w, h, left } = heldBox(W, room, scene.aspect!, MAX, least * scene.aspect!);
     const nodes: PlacedNode[] = [], fits = (n: TextNode, b: Box) => n.text.length * CHAR + 8 <= b.w && LINE <= b.h;
     let parent: Box = { x: 0, y: 0, w: 0, h: 0 }, inner = parent, named = false, last = parent;
     // A parent that is divided is a ground: a tint, or the tone of no value. Its name has a line of its own over its children.
@@ -176,14 +177,14 @@ export const partitionMark: CustomMark = {
     for (const n of scene.nodes) {
       if (n.part !== 'plot') continue;
       if (n.kind === 'rect') {
-        const child = !!n.pair, of = child ? inner : { x: left + 1, y: 1, w, h }, gap = child ? 1 : 2;
+        const child = !!n.pair, of = child ? inner : { x: left + GAP / 2, y: GAP / 2, w, h }, gap = child ? KID_GAP : GAP;
         last = { x: of.x + n.x! * of.w, y: of.y + n.y! * of.h, w: Math.max(0, n.w! * of.w - gap), h: Math.max(0, n.h! * of.h - gap) };
         nodes.push({ key: n.key, kind: 'rect', ...last, rx: 2, paint: n.paint, layer: n.layer, ...(n.opacity != null && { opacity: n.opacity }) });
         if (!child) parent = last;
       } else if (n.kind === 'text') {
-        const child = last !== parent, divided = !child && two, head = divided ? Math.min(HEAD, parent.h * 0.3) : 0;
+        const child = last !== parent, divided = !child && two, head = divided ? Math.min(HEAD, parent.h * HEAD_MOST) : 0;
         const shows: boolean = child ? named && fits(n, last) : fits(n, divided ? { ...parent, h: head } : parent);
-        if (!child) { named = shows; inner = { x: parent.x, y: parent.y + head, w: parent.w + 1, h: parent.h - head + 1 }; }
+        if (!child) { named = shows; inner = { x: parent.x, y: parent.y + head, w: parent.w + KID_GAP, h: parent.h - head + KID_GAP }; }
         if (shows) nodes.push({ key: n.key, kind: 'text', x: last.x + 4, y: last.y + (divided ? head / 2 : LINE / 2 + 2), text: n.text, anchor: 'start', baseline: 'middle', font: n.font, paint: n.paint, layer: n.layer, ...(n.halo && { halo: true }) });
       }
     }

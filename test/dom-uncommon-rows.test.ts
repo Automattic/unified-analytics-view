@@ -39,8 +39,8 @@ describe('a list whose rows are divided into series', () => {
     expect([stepSeries('ArrowUp', -1, 3), stepSeries('ArrowRight', 0, 3)]).toEqual([0, null]);
   });
   it('draws the chosen series whole and stands the rest of its row back', () => {
-    expect(KEYS_CSS).toContain('.uav-row:has(> [data-chosen]) > i[data-series]:not([data-chosen]) { opacity: var(--ua-charts-opacity-dim, 50%) !important; }');
-    expect(KEYS_CSS).toContain('.uav-row > i[data-chosen] { opacity: 1 !important; }');
+    expect(KEYS_CSS).toContain('.uav-row > i[data-series][data-emphasis="dimmed"] { opacity: var(--ua-charts-opacity-dim, 50%) !important; }');
+    expect(KEYS_CSS).toContain('.uav-row > i[data-emphasis="highlighted"] { opacity: 1 !important; }');
   });
   it('sets a stack\'s parts end to end with no least length, the range behind the marks as tall as the row, and half a tick in its half', () => {
     expect(TRACK_CSS).toContain('.uav-body[data-track] .uav-row > i[data-series]:not([data-mark]) { border-radius: 0; inline-size: max(0px, calc(var(--uav-v) * (100% - 2 * var(--uav-row-gap)) - var(--ua-charts-stroke-width-rule, 1px))); }');

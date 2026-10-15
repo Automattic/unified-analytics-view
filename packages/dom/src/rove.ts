@@ -7,6 +7,37 @@
 
 export type How = 'keys' | 'pointer';
 
+/* The states every atom has, in Figma and here (docs/component-states-plan.md), each an attribute on the atom. Every
+ * painter and stylesheet names them from here.
+ *   interaction  `hover` while the pointer is over its datum, `active` while it presses
+ *   focus        its datum has the keyboard's place
+ *   selected     the user picked its datum and the host kept it
+ *   emphasis     `highlighted` or `dimmed`: brought out or set back by something else, relayed onto it, never inferred
+ * The pointer and the keys hold a datum, and every atom of it takes the state: the mark, its rug tick, its region's copy.
+ * A state with no look of its own is still written; its look is the stylesheet's. */
+export const STATE = { interaction: 'data-interaction', focus: 'data-focus', selected: 'data-selected', emphasis: 'data-emphasis' } as const;
+export type Emphasis = 'highlighted' | 'dimmed';
+
+/** The states as selectors, for a stylesheet. Pressing is over it too, so `hover` holds while it is pressed. `held` is
+ * either way of holding it. */
+export const IS = {
+  hover: '[data-interaction]', active: '[data-interaction="active"]', focus: '[data-focus]', held: ':is([data-interaction], [data-focus])',
+  selected: '[data-selected]', highlighted: '[data-emphasis="highlighted"]', dimmed: '[data-emphasis="dimmed"]',
+} as const;
+
+/** Hold an element by the keys or the pointer, or let it go. */
+export function hold(el: Element, how: How | null | undefined): void {
+  el.toggleAttribute(STATE.focus, how === 'keys');
+  if (how !== 'pointer') el.removeAttribute(STATE.interaction);
+  else if (!el.hasAttribute(STATE.interaction)) el.setAttribute(STATE.interaction, 'hover');
+}
+/** How an element is held, or null where it is not. */
+export function heldBy(el: Element): How | null { return el.hasAttribute(STATE.focus) ? 'keys' : el.hasAttribute(STATE.interaction) ? 'pointer' : null; }
+/** Bring an element out, set it back, or neither. */
+export function emphasise(el: Element, e: Emphasis | null): void {
+  if (e == null) el.removeAttribute(STATE.emphasis); else if (el.getAttribute(STATE.emphasis) !== e) el.setAttribute(STATE.emphasis, e);
+}
+
 /** Where each arrow key points, across and down the page. A holder whose arrows step in two dimensions reads it. */
 export const ARROWS: Record<string, [x: number, y: number]> = { ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowDown: [0, 1], ArrowUp: [0, -1] };
 
@@ -53,6 +84,10 @@ export function rove<T>(on: HTMLElement, r: Roving<T>): void {
   // As version 4: the thing goes with the mouse, focus or none, and the next arrow starts from nothing. A touch has
   // no leaving to speak of.
   on.addEventListener('pointerleave', (e) => { if (hovers(e, fresh)) r.choose(null); });
+  // What the pointer holds is Active while it presses, and Hover again when it lifts.
+  const press = (to: 'active' | 'hover') => on.querySelectorAll(IS.hover).forEach((el) => el.setAttribute(STATE.interaction, to));
+  on.addEventListener('pointerdown', () => press('active'));
+  on.addEventListener('pointerup', () => press('hover'));
   // A touch that turns into a scroll chose its thing on the way down. The browser cancels it, and it lets go.
   on.addEventListener('pointercancel', () => r.choose(null));
   on.addEventListener('focusout', () => r.choose(null));

@@ -1,5 +1,5 @@
 import { formatDimension, type MarkView, type RectNode, type Row, type TextNode } from '@unified-analytics/core';
-import { FOCUS, FROM_TOP, HOVER, IN_BOX, attr, chooseItem, emptyTable, ensure, fieldLabel, holdShape, keyed, LABEL, lineOf, nodePaint, paintRamp, prop, readout, registerPainter, roveItems, tableRow, text, token, valueText, type Cell, type LayoutPainter } from '@unified-analytics/dom';
+import { FOCUS, FROM_TOP, HOVER, IN_BOX, IS, attr, chooseItem, emptyTable, ensure, fieldLabel, heldBy, holdShape, keyed, LABEL, lineOf, nodePaint, paintRamp, prop, readout, registerPainter, roveItems, tableRow, text, token, valueText, type Cell, type LayoutPainter } from '@unified-analytics/dom';
 import { ASPECT, GAP, HEAD, HEAD_MOST, KID_GAP, LINE, MAX, boxesOf } from './index.ts';
 
 /* The `partition` mark's half for the DOM: the painter of its layout, for registerPainter().
@@ -49,8 +49,8 @@ const css = `
 /* Boxes lie edge to edge and a parent cuts off what leaves it, so the chosen one is outlined inside its own edge. */
 .uav[data-layout="partition"] .uav-plot { outline: none; }
 .uav[data-layout="partition"] .uav-plot:focus-visible::after { content: ""; position: absolute; inset: 0; pointer-events: none; ${FOCUS.around} }
-.uav[data-layout="partition"] .uav-plot [data-active="keys"] { ${FOCUS.inside} }
-.uav[data-layout="partition"] .uav-plot [data-active="pointer"] { ${HOVER.around} outline-offset: -1px; }
+.uav[data-layout="partition"] .uav-plot ${IS.focus} { ${FOCUS.inside} }
+.uav[data-layout="partition"] .uav-plot ${IS.hover} { ${HOVER.around} outline-offset: -1px; }
 .uav[data-layout="partition"] .uav-ramp:empty { display: none; }
 /* In a box the part gives way to the height and its width follows, as a map does. */
 ${IN_BOX} {
@@ -149,9 +149,9 @@ export const partitionPainter: LayoutPainter = {
     attr(plot, 'role', 'tree'); attr(plot, 'tabindex', parents.length ? 0 : null);
     attr(plot, 'aria-label', data.catalog.dimensions[(data.layers[0]?.encode?.x ?? '') as string]?.label);
     // A box that a data change took away takes the choice with it. One that is still here keeps it.
-    const on = plot.querySelector<HTMLElement>('[data-active]');
+    const on = plot.querySelector<HTMLElement>(IS.held);
     if (on && (on.hasAttribute('data-exit') || !(plot.matches(':focus') || plot.matches(':hover')))) chooseItem(plot, null);
-    else if (on) chooseItem(plot, on, on.getAttribute('data-active') as 'keys' | 'pointer');
+    else if (on) chooseItem(plot, on, heldBy(on)!);
 
     paintRamp(body, scene);
   },

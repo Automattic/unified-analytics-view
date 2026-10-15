@@ -3,7 +3,7 @@ import { attr, ensure, keyed, nodePaint, prop } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { chooseItem, dimName, readout, roveItems } from '../keys.ts';
 import { emptyTable, fieldLabel, tableRow, valueText, type Cell } from '../table.ts';
-import { ARROWS } from '../rove.ts';
+import { ARROWS, IS } from '../rove.ts';
 import { AXES_HEIGHT, NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
 import { paintAxes, thinAxis } from '../chrome/axes.ts';
 import { paintRamp } from '../chrome/ramp.ts';
@@ -44,7 +44,7 @@ const css = `
 .uav-cells i[data-dot="alone"] { background: none; --uav-dot: var(--uav-paint); }
 .uav-cells i[data-dot]::before { content: ""; border-radius: 50%; background: var(--uav-dot);
   inline-size: min(${DOT}, (min(100cqw / var(--uav-nx), 100cqh / var(--uav-ny)) - 1px) * var(--uav-size, ${NO_SIZE}) / ${SIZES}); aspect-ratio: 1; }
-.uav-cells [data-active] { z-index: 1; }
+.uav-cells ${IS.held} { z-index: 1; }
 .uav[data-layout="matrix"] .uav-ramp { grid-area: ramp; }`;
 
 /** Where a key moves to in a grid `nx` cells across and `ny` down, from `at` (null when none is chosen): left and

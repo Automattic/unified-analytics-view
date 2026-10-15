@@ -1,4 +1,5 @@
 import { token } from '../tokens.ts';
+import { IS } from '../rove.ts';
 
 /* A plot label: words set in or about a plot at a point the scene gave them. An axis's ticks, the names at the line
  * ends, a reference line's words, a point's, a rim's, a Sankey node's and a treemap box's are all one atom: its words,
@@ -32,4 +33,4 @@ export const LABEL_CSS = `
 .uav [data-halo] { -webkit-text-stroke: 3px ${token('color-background')}; paint-order: stroke fill; }
 .uav [data-thin] { visibility: hidden; }
 /* Highlighted, a chosen series' name at its line's end, is underlined. */
-.uav-labels span[data-chosen] { text-decoration: underline; }`;
+.uav-labels span${IS.highlighted} { text-decoration: underline; }`;

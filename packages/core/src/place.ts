@@ -238,7 +238,6 @@ function placeSize(scene: Scene): Block {
 }
 
 // The ranked bar list: rows of a fixed height, labels clipped by character width.
-/** The px a column of values gives up beyond its widest text. */
 /** The room each of a row's columns takes, the first of them first: its widest text, a header among them, and COLUMN_PAD.
  * The DOM sets a column by its content. It asks this only for when to give one up, so that it agrees with resolve(). */
 export function columnRooms(scene: Scene): number[] {

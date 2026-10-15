@@ -262,7 +262,6 @@ describe('the radial layout paints the new forms', () => {
   it('the circle gives up a margin to the labels only where the plan shows them, and has a measured pass to thin them', () => {
     expect(radial.css).toContain('.uav[data-layout="radial"][data-parts~="rim"] .uav-radial { --uav-rim: 14px; }');
     expect(radial.css).toContain('.uav[data-layout="radial"]:not([data-parts~="rim"]) .uav-rim { display: none; }');
-    expect(radial.css).toContain('.uav-rim [data-thin] { visibility: hidden; }');
     expect(typeof radial.measure).toBe('function');
   });
   it('arcs that are no point of their own lie in a layer under the points, and one of a second ring wears the outline when chosen', () => {

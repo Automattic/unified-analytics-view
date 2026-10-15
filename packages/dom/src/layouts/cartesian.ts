@@ -4,6 +4,7 @@ import { paintAxes, thinAxis } from '../chrome/axes.ts';
 import { paintLegend } from '../chrome/legend.ts';
 import { paintSize } from '../chrome/size.ts';
 import { token } from '../tokens.ts';
+import { label } from '../chrome/label.ts';
 import { hitNodes } from '../keys.ts';
 import { NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
 import { apart } from '../measure.ts';
@@ -36,8 +37,7 @@ const css = `
 .uav-labels { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .uav-labels { grid-area: labels; display: none; }
 .uav-labels span { grid-area: 1 / 1; align-self: start; justify-self: start; position: relative; inset-block-start: calc((1 - var(--uav-t)) * 100%); translate: 0 calc(var(--uav-dy, 0px) - 50%);
-  box-sizing: border-box; max-inline-size: 14ch; padding-inline-start: 6px; overflow: hidden; text-overflow: ellipsis; color: var(--uav-paint); }
-.uav-labels [data-thin] { visibility: hidden; }
+  box-sizing: border-box; padding-inline-start: 6px; ${label({ truncate: true })} }
 /* The legend of a split plot is a swatch and a name per series, in a row that wraps (chrome/legend.ts). */
 .uav[data-layout="cartesian"] .uav-legend { grid-area: legend; }
 .uav-plot { grid-area: plot; position: relative; container: uav-plot / size; }
@@ -74,8 +74,7 @@ const css = `
 @media (prefers-reduced-motion: no-preference) { .uav-plot svg[data-draw] { animation: uav-draw ${token('motion-duration-draw')} linear both; } }
 @keyframes uav-draw { from { clip-path: inset(-8px 100% -8px -8px); } to { clip-path: inset(-8px); } }
 /* ponytail: a label in the plot is set above its line at the inline end, the one anchor a scene asks for today. */
-.uav-refs span { position: absolute; inset-inline-end: 0; inset-block-start: calc((1 - var(--uav-t)) * 100%); translate: 0 -100%; padding-block-end: 2px; white-space: nowrap; color: var(--uav-paint); }
-.uav-refs [data-halo] { -webkit-text-stroke: 3px ${token('color-background')}; paint-order: stroke fill; }`;
+.uav-refs span { position: absolute; inset-inline-end: 0; inset-block-start: calc((1 - var(--uav-t)) * 100%); translate: 0 -100%; padding-block-end: 2px; ${label()} }`;
 
 const inPlot = (n: SceneNode) => n.part === 'plot';
 

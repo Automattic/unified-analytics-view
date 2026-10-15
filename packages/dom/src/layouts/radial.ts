@@ -4,6 +4,7 @@ import { attr, ensure, keyed, paintVar, prop, text } from '../dom.ts';
 import type { LayoutPainter } from '../layout.ts';
 import { FOCUS, HOVER, token } from '../tokens.ts';
 import { paintUnitKey, unitDot } from '../chrome/unit.ts';
+import { label } from '../chrome/label.ts';
 
 /* Arcs about one centre, and under them the legend a band has. The part holds its shape: it is as wide as the view up
  * to 160 px and its height follows from the scene's aspect, 1 for a circle and 2 for the top half of one. Its SVG has
@@ -42,8 +43,7 @@ const css = `
 .uav[data-layout="radial"][data-parts~="rim"] .uav-radial { --uav-rim: 14px; }
 .uav-rim { position: absolute; inset: calc(var(--uav-rim, 0px) - 3px); pointer-events: none; direction: ltr; }
 .uav-rim span { position: absolute; left: calc(var(--uav-x) * 100%); top: calc((1 - var(--uav-t)) * 100%); translate: calc((var(--uav-x) - 1) * 100%) calc(var(--uav-t) * -100%);
-  white-space: nowrap; line-height: 1; color: var(--uav-paint); }
-.uav-rim [data-thin] { visibility: hidden; }
+  line-height: 1; ${label()} }
 .uav[data-layout="radial"]:not([data-parts~="rim"]) .uav-rim { display: none; }
 /* A segment is parted from the next by a line of one width from the rim to the middle: its own edge, drawn in the
  * colour of what the view is on. Two edges lie one on the other, so the line is as wide as either. It is two rules

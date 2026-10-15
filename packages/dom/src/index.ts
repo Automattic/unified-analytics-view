@@ -5,5 +5,5 @@ export type { LayoutPainter } from './layout.ts';
 export { SURFACE_CSS, UaView, defineUaView, surfaceSheet, type Inputs } from './view.ts';
 export { attr, ensure, keyed, prop, text } from './dom.ts';
 export { registerPainter } from './layouts/index.ts';
-export { paintAxes, paintLegend, paintRamp, paintSize, paintUnitKey, thinAxis } from './chrome/index.ts';
+export { ANCHOR, label, paintAxes, paintLegend, paintRamp, paintSize, paintUnitKey, thinAxis, type Anchor, type LabelOptions } from './chrome/index.ts';
 export { hideReadout, placeReadout, readoutOf } from './keys.ts';

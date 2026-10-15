@@ -1,7 +1,7 @@
 import type { Scene, TextNode } from '@unified-analytics/core';
 import { attr, ensure, keyed, prop, text } from '../dom.ts';
 import { thin } from '../measure.ts';
-import { token } from '../tokens.ts';
+import { ANCHOR, label } from './label.ts';
 
 /* The axes about a plot: the labels down its near side, along its foot, and down its far side for a second unit. A
  * plot and a grid of cells have the same ones, from the same nodes (core's axisTick).
@@ -13,14 +13,12 @@ import { token } from '../tokens.ts';
  * the page (cartesian.ts), which is the layout's to say, as is where each axis sits in its body. */
 export const AXES_CSS = `
 .uav-y-axis, .uav-y-axis-2, .uav-x-axis { display: grid; white-space: nowrap; font-variant-numeric: tabular-nums; }
-:is(.uav-y-axis, .uav-y-axis-2) span { grid-area: 1 / 1; align-self: start; justify-self: end; position: relative; inset-block-start: calc((1 - var(--uav-t)) * 100%); translate: 0 -50%; padding-inline-end: 6px; color: ${token('color-label-axis')}; }
+:is(.uav-y-axis, .uav-y-axis-2) span { grid-area: 1 / 1; align-self: start; justify-self: end; position: relative; inset-block-start: calc((1 - var(--uav-t)) * 100%); translate: 0 -50%; padding-inline-end: 6px; ${label({ tone: 'axis' })} }
 .uav-y-axis-2 span { justify-self: start; padding-inline: 6px 0; }
 .uav-x-axis { box-sizing: border-box; block-size: var(--uav-x-axis-block); padding-block-start: 5px; }
-.uav-x-axis span { grid-area: 1 / 1; justify-self: start; position: relative; inset-inline-start: calc(var(--uav-x) * 100%); translate: -50%; color: ${token('color-label-axis')}; }
-.uav-x-axis [data-anchor="start"] { translate: 0; }
-.uav-x-axis [data-anchor="end"] { translate: -100%; }
-/* A label the measured pass gave up keeps its box, so the next measurement reads the same. */
-:is(.uav-x-axis, .uav-y-axis) [data-thin] { visibility: hidden; }
+.uav-x-axis span { grid-area: 1 / 1; justify-self: start; position: relative; inset-inline-start: calc(var(--uav-x) * 100%); translate: ${ANCHOR.middle}; ${label({ tone: 'axis' })} }
+.uav-x-axis [data-anchor="start"] { translate: ${ANCHOR.start}; }
+.uav-x-axis [data-anchor="end"] { translate: ${ANCHOR.end}; }
 :is(.uav-x-axis, .uav-y-axis, .uav-y-axis-2) > span { unicode-bidi: plaintext; }`;
 
 /** The axes, and between them the plot they stand about, which is made here only so that it keeps that place among

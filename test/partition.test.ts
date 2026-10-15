@@ -358,7 +358,6 @@ describe('the painter\'s half, as strings and plain functions', () => {
   it('is the layout of the mark\'s name, with the mark\'s own rules, and its part holds the scene\'s aspect', () => {
     expect([partitionPainter.layout, partitionPainter.rules!(CONTAINER_RULES)]).toEqual(['partition', PARTITION_RULES]);
     expect(partitionPainter.css).toContain('.uav[data-layout="partition"] .uav-plot { flex: none; align-self: center; inline-size: min(100%, 480px); aspect-ratio: var(--uav-aspect, 1.6);');
-    expect(partitionPainter.css).toContain('.uav[data-layout="partition"] .uav-label[data-thin] { visibility: hidden; }');
     expect(partitionPainter.css).not.toMatch(/#[0-9a-f]{3,6}\b|rgb\(/i);
   });
   it('its rules compile to the ramp going, and then to the swap for the list, by width and by height', () => {

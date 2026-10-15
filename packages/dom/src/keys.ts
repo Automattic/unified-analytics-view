@@ -89,7 +89,8 @@ export function written(shown: string, row: Row, q: Query, catalog: Catalog, lay
 export function readoutAt(rows: Row[], total: Row | undefined, q: Query, catalog: Catalog, x: string, split: string, mass = false): string {
   const of = catalog.dimensions[split]!, { name, metrics } = headAt(rows, total, q, catalog, x);
   return name + ': ' + q.metrics.map((m, i) => {
-    const def = catalog.metrics[m]!, said = (r: Row) => formatDimension(r[split], of) + ' ' + formatValue(r[m] as number | null, def);
+    // A series with no value here says so in words, as a row's readout does, and never with a dash.
+    const def = catalog.metrics[m]!, said = (r: Row) => formatDimension(r[split], of) + ' ' + (r[m] == null ? 'no data' : formatValue(r[m] as number, def));
     const top = most(rows, m);
     return metrics[i] + ' (' + (mass ? rows.length + ' ' + many(rows.length, of.label.toLowerCase()) + (top?.[m] != null ? ', the most ' + said(top) : '') : rows.map(said).join(', ')) + ')';
   }).join('; ');
@@ -111,7 +112,7 @@ function headAt(rows: Row[], total: Row | undefined, q: Query, catalog: Catalog,
  * their values in the head's order. */
 export function readoutLines(rows: Row[], total: Row | undefined, q: Query, catalog: Catalog, x: string, split: string): { head: string; lines: { series: string; name: string; value: string }[] } {
   const of = catalog.dimensions[split]!, { name, metrics } = headAt(rows, total, q, catalog, x), head = name + ': ' + metrics.join('; ');
-  return { head, lines: rows.map((r) => ({ series: String(r[split]), name: formatDimension(r[split], of), value: q.metrics.map((m) => formatValue(r[m] as number | null, catalog.metrics[m]!)).join(', ') })) };
+  return { head, lines: rows.map((r) => ({ series: String(r[split]), name: formatDimension(r[split], of), value: q.metrics.every((m) => r[m] == null) ? 'No data' : q.metrics.map((m) => formatValue(r[m] as number | null, catalog.metrics[m]!)).join(', ') })) };
 }
 
 /** The rows of the result at each point of the scene. One each, in step, unless the plot is split into series:

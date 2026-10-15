@@ -167,6 +167,12 @@ describe('the readout of a split plot', () => {
     expect(readoutLines(rows[0]!, undefined, q, catalog, x!, split!).head).toBe('Sep 8: Visitors');
     expect(KEYS_CSS).toContain('.uav-readout[data-lines] { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto;');
   });
+  it('says a series with no value at a point in words, as the readout of that series alone does', () => {
+    const { rows, x, split, q, result } = at('stacked'), total = result.totalsBy![x!]![0], none = rows[0]!.map((r, i) => (i ? r : { ...r, visitors: null }));
+    expect(readoutAt(none, total, q, catalog, x!, split!)).toBe('Sep 8: Visitors 416 (Desktop no data, Mobile 173, Tablet 26)');
+    expect(readoutLines(none, total, q, catalog, x!, split!).lines[0]!.value).toBe('No data');
+    expect(readout(none[0]!, q, catalog, [])).toBe('Sep 8, Desktop: No data');
+  });
   it('finds the rows of a plot split by detail the same way, in the order of scene.detail', () => {
     const { rows, x, split, scene } = at('spaghetti');
     expect([x, split, scene.series]).toEqual(['date.day', 'country', undefined]);

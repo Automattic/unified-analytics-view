@@ -1,3 +1,4 @@
+import { lineOf } from '../layout.ts';
 import type { CircleNode, Scene, TextNode } from '@unified-analytics/core';
 import { ensure, keyed, pageWay, prop, text } from '../dom.ts';
 
@@ -28,7 +29,7 @@ export const UNIT_CSS = `
  * makes it: 20 px where a tick is 11 px, and with the tick's face from there. In a list it is the row after the rows. */
 .uav-unit-key { display: none; grid-column: 1 / -1; flex: none; padding-block-start: 4px; overflow: hidden; white-space: nowrap; }
 .uav[data-parts~="unit-key"] .uav-unit-key { display: block; }
-.uav-unit-key span { display: block; overflow: hidden; text-overflow: ellipsis; line-height: calc(16 / 11); color: var(--uav-paint); }
+.uav-unit-key span { display: block; overflow: hidden; text-overflow: ellipsis; line-height: ${lineOf('tick', 16)}; color: var(--uav-paint); }
 .uav[data-layout="rows"] .uav-unit-key { grid-row: 3; padding-inline: 8px; }`;
 
 /** The key to a unit's glyphs, after whatever the body holds already. Every layout that draws the mark has the

@@ -1,3 +1,4 @@
+import { lineOf } from '../layout.ts';
 import type { Scene, TextNode } from '@unified-analytics/core';
 import { attr, ensure, keyed, pageWay, paintVar, prop, text } from '../dom.ts';
 import { swatch as asSwatch } from './swatch.ts';
@@ -14,6 +15,8 @@ import { swatch as asSwatch } from './swatch.ts';
  * Beside it, `.uav-legend-top`: the one line that stands in for the whole legend where a rule swaps them.
  * A line is 20 px where a label is 13 px, and follows the label's face from there (--uav-legend-line, view.ts).
  * A layout says where the two stand in its body, and what they do in a box. keys.ts marks the chosen entry. */
+/** A line of the legend, in px where a label is drawn at DRAWN.label: it follows the face from there. */
+export const LEGEND_LINE = 20;
 export const LEGEND_CSS = `
 .uav-legend { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; grid-auto-rows: var(--uav-legend-line); gap: 4px 8px; align-items: center; margin-block-start: 10px; }
 .uav-legend i { grid-column: 1; }
@@ -21,7 +24,7 @@ export const LEGEND_CSS = `
 .uav-legend .uav-f-label { grid-column: 2; }
 .uav-legend .uav-f-value { grid-column: 3; justify-self: end; }
 .uav-legend-top { display: none; }
-.uav-legend-top span { display: block; padding-block-start: 3px; line-height: calc(21 / 13); }
+.uav-legend-top span { display: block; padding-block-start: 3px; line-height: ${lineOf('label', 21)}; }
 /* The plan names the legend, or the view has none. */
 .uav:not([data-parts~="legend"]) .uav-legend { display: none; }
 .uav-legend[data-names] { display: flex; flex-wrap: wrap; gap: 0 14px; margin-block-start: 6px; }

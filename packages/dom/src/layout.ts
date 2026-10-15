@@ -56,6 +56,15 @@ export const FROM_TOP = 'calc((1 - var(--uav-t)) * 100%)';
  * face is so many px at this size, and grows and shrinks with the face from there: a line-height is that line over
  * this. They are not the tokens' fallbacks, which a theme moves: a line-height stays a ratio of whatever face is set. */
 export const DRAWN = { tick: 11, label: 13, display: 37, 'display-small': 26 } as const;
+/** A line-height: a line `px` tall in `face` at the size it is drawn at. */
+export const lineOf = (face: keyof typeof DRAWN, px: number): string => `calc(${px} / ${DRAWN[face]})`;
+/** The number's value on its line, in its face and in the smaller one, in px at DRAWN. */
+export const DISPLAY_LINE = 34, DISPLAY_SMALL_LINE = 24;
+/** The number in its smaller face: declarations. */
+export const NUMBER_SMALL = `font-size: var(--uav-font-display-small); line-height: ${lineOf('display-small', DISPLAY_SMALL_LINE)};`;
+/** Rules that set the text under each selector in its shorter form, where it has one (dom.ts text()). */
+export const shortForm = (...sel: string[]): string =>
+  `${sel.map((s) => s + ' > .uav-full').join(', ')} { display: none; }\n${sel.map((s) => s + ' > .uav-short').join(', ')} { display: inline; }`;
 
 /** A plot's natural height with its axes, and without them beside the number: the context's, which the element sets on
  * the figure, and else core's defaults. */

@@ -7,7 +7,7 @@ import { RULE } from '../chrome/rule.ts';
 import { token } from '../tokens.ts';
 import { label } from '../chrome/label.ts';
 import { hitNodes } from '../keys.ts';
-import { AXES_HEIGHT, BARE_HEIGHT, FROM_TOP, IN_BOX, NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
+import { AXES_HEIGHT, BARE_HEIGHT, FROM_TOP, IN_BOX, NUMBER_ALONE, NUMBER_SMALL, type LayoutPainter } from '../layout.ts';
 import { apart, thinLabels } from '../measure.ts';
 import { morph, once } from '../motion.ts';
 import { POINTS_CSS, POINTS_FIT, measurePoints, paintPoints } from './points.ts';
@@ -92,7 +92,7 @@ export const cartesian: LayoutPainter = {
       // Its own rule asks only for width, so in a short box it would stand with no column to stand in.
       '.uav-y-axis-2': 'display: none;',
       '.uav-number': 'align-self: center; margin: 0;',
-      '.uav-number:not([data-fit]) .uav-f-display': 'font-size: var(--uav-font-display-small); line-height: calc(24 / 26);',
+      '.uav-number:not([data-fit]) .uav-f-display': NUMBER_SMALL,
       '.uav-number:not([data-fit]) :is(.uav-full, [data-rank])': 'display: none;',
       '.uav-number:not([data-fit]) .uav-short': 'display: inline;',
     },

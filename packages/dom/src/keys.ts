@@ -49,14 +49,20 @@ export function companionLabel(f: string, catalog: Catalog): string {
   return Object.hasOwn(catalog.metrics, f) ? catalog.metrics[f]!.label.toLowerCase() : f.slice(f.indexOf('@') + 1);
 }
 
+/** A row's value of a dimension, as the readout and a table name it: a bin by both its ends, as its label on an axis is. */
+export function dimName(row: Row, d: string, catalog: Catalog): string {
+  return row[d + '@end'] == null ? formatDimension(row[d], catalog.dimensions[d]!) : formatBin(row[d], row[d + '@end']);
+}
+
 /** What the readout says for one row of the result, in the catalog's formats: the dimension value, each metric
  * (marked when its bucket is unfinished), its comparison if the row has one, and each companion of it that a layer
  * encodes, under its suffix: what a range or a tick is drawn from is said as well as shown. */
 export function readout(row: Row, q: Query, catalog: Catalog, layers: Layer[]): string {
-  // A bin is named by both its ends, as its label on an axis is.
   // Two bins are each named by their dimension as well: two bare ranges do not say which is which.
   const both = (q.by || []).filter((d) => row[d + '@end'] != null).length > 1;
-  const dims = (q.by || []).map((d) => (row[d + '@end'] == null ? formatDimension(row[d], catalog.dimensions[d]!) : (both ? catalog.dimensions[d]!.label + ' ' : '') + formatBin(row[d], row[d + '@end']))).join(', '), partial = partialNote(row);
+  const dims = (q.by || []).map((d) => (both && row[d + '@end'] != null ? catalog.dimensions[d]!.label + ' ' : '') + dimName(row, d, catalog)).join(', '), partial = partialNote(row);
+  // Never a row of dashes: a row with no value says so in words.
+  if (q.metrics.every((m) => row[m] == null)) return (dims ? dims + ': ' : '') + 'No data';
   const values = q.metrics.map((m) => {
     const def = catalog.metrics[m]!, prev = q.compare === 'previous' ? row[m + '@previous'] : null;
     const more = companions(m, row, layers).filter((f) => row[f] != null).map((f) => ', ' + companionLabel(f, catalog) + ' ' + formatValue(row[f] as number, metricOf(catalog, f)!)).join('');
@@ -80,13 +86,22 @@ export function written(shown: string, row: Row, q: Query, catalog: Catalog, lay
  * are in one paint and may be many, it says how many there are and the one with the most there, by name: a comparison
  * of the engine's rows, as the prose's leader is. */
 export function readoutAt(rows: Row[], total: Row | undefined, q: Query, catalog: Catalog, x: string, split: string, mass = false): string {
-  const first = rows[0] ?? {}, partial = partialNote(first), of = catalog.dimensions[split]!;
-  return formatDimension(first[x], catalog.dimensions[x]!) + ': ' + q.metrics.map((m) => {
+  const of = catalog.dimensions[split]!, { name, metrics } = headAt(rows, total, q, catalog, x);
+  return name + ': ' + q.metrics.map((m, i) => {
     const def = catalog.metrics[m]!, said = (r: Row) => formatDimension(r[split], of) + ' ' + formatValue(r[m] as number | null, def);
     const top = rows.filter((r) => r[m] != null).reduce<Row | undefined>((a, r) => (!a || (r[m] as number) > (a[m] as number) ? r : a), undefined);
-    return def.label + (total ? ' ' + formatValue(total[m] as number | null, def) + (partial && ' ' + partial) : '')
-      + ' (' + (mass ? rows.length + ' ' + (rows.length === 1 ? of.label.toLowerCase() : plural(of.label.toLowerCase())) + (top ? ', the most ' + said(top) : '') : rows.map(said).join(', ')) + ')';
+    return metrics[i] + ' (' + (mass ? rows.length + ' ' + (rows.length === 1 ? of.label.toLowerCase() : plural(of.label.toLowerCase())) + (top ? ', the most ' + said(top) : '') : rows.map(said).join(', ')) + ')';
   }).join('; ');
+}
+
+/** What a point of a split plot is called, and each metric there with the engine's total for the point where the result
+ * has one: the head of its readout, in words (readoutAt) and as drawn (readoutLines). */
+function headAt(rows: Row[], total: Row | undefined, q: Query, catalog: Catalog, x: string): { name: string; metrics: string[] } {
+  const first = rows[0] ?? {}, partial = partialNote(first);
+  return {
+    name: formatDimension(first[x], catalog.dimensions[x]!),
+    metrics: q.metrics.map((m) => { const def = catalog.metrics[m]!; return def.label + (total ? ' ' + formatValue(total[m] as number | null, def) + (partial && ' ' + partial) : ''); }),
+  };
 }
 
 /** The readout of a point of a split plot as it is drawn: a head that says the x and each metric with the engine's
@@ -94,11 +109,7 @@ export function readoutAt(rows: Row[], total: Row | undefined, q: Query, catalog
  * series' paint. readoutAt() says the same in words, for the point's name. More than one metric: each line has
  * their values in the head's order. */
 export function readoutLines(rows: Row[], total: Row | undefined, q: Query, catalog: Catalog, x: string, split: string): { head: string; lines: { series: string; name: string; value: string }[] } {
-  const first = rows[0] ?? {}, partial = partialNote(first), of = catalog.dimensions[split]!;
-  const head = formatDimension(first[x], catalog.dimensions[x]!) + ': ' + q.metrics.map((m) => {
-    const def = catalog.metrics[m]!;
-    return def.label + (total ? ' ' + formatValue(total[m] as number | null, def) + (partial && ' ' + partial) : '');
-  }).join('; ');
+  const of = catalog.dimensions[split]!, { name, metrics } = headAt(rows, total, q, catalog, x), head = name + ': ' + metrics.join('; ');
   return { head, lines: rows.map((r) => ({ series: String(r[split]), name: formatDimension(r[split], of), value: q.metrics.map((m) => formatValue(r[m] as number | null, catalog.metrics[m]!)).join(', ') })) };
 }
 

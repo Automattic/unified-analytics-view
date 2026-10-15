@@ -1,7 +1,7 @@
-import { SIZES, formatBin, formatDimension, formatValue, type CircleNode, type RectNode, type Row } from '@unified-analytics/core';
+import { SIZES, formatDimension, formatValue, type CircleNode, type RectNode, type Row } from '@unified-analytics/core';
 import { attr, ensure, keyed, nodePaint, prop } from '../dom.ts';
 import { token } from '../tokens.ts';
-import { chooseItem, readout, roveItems } from '../keys.ts';
+import { chooseItem, dimName, readout, roveItems } from '../keys.ts';
 import { ARROWS } from '../rove.ts';
 import { AXES_HEIGHT, NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
 import { paintAxes, thinAxis } from '../chrome/axes.ts';
@@ -111,8 +111,7 @@ export const matrix: LayoutPainter = {
         attr(c, 'data-dot', dot ? (dot === n ? 'alone' : 'over') : null); prop(c, '--uav-size', dot?.size); prop(c, '--uav-dot', dot && dot !== n ? nodePaint(dot) : null);
         attr(c, 'role', 'gridcell'); attr(c, 'id', id(cx, cy));
         // Never colour alone: the value is in the cell's name, which is also its readout. No value says so in words.
-        attr(c, 'aria-label', row && data.query.metrics.some((f) => row[f] != null) ? readout(row, data.query, data.catalog, data.layers)
-          : (data.query.by || []).map((d) => formatDimension(d === xf ? x : y, dims[d]!)).join(', ') + ': No data');
+        attr(c, 'aria-label', readout(row ?? Object.fromEntries((data.query.by || []).map((d) => [d, d === xf ? x : y])), data.query, data.catalog, data.layers));
         if (row) rows.set(c.id, row);
       });
     });
@@ -130,7 +129,7 @@ export const matrix: LayoutPainter = {
     // A value is a key here, and so a string: a bin's start is a number in the result. A bin is named by both its ends.
     const of = (f: string, k: string) => (result.totalsBy?.[f] ?? result.rows).find((r) => String(r[f]) === k);
     const total = (f: string, k: string) => value(result.totalsBy?.[f]?.find((r) => String(r[f]) === k)?.[m!]);
-    const name = (f: string, k: string) => (of(f, k)?.[f + '@end'] == null ? formatDimension(k, catalog.dimensions[f]!) : formatBin(k, of(f, k)![f + '@end']));
+    const name = (f: string, k: string) => dimName({ ...of(f, k), [f]: k }, f, catalog);
     const cell = (tr: HTMLTableRowElement, s: string, scope?: 'col' | 'row', num = !scope) => {
       const c = tr.appendChild(document.createElement(scope ? 'th' : 'td'));
       c.textContent = s; if (scope) c.scope = scope; if (num) c.setAttribute('data-num', '');

@@ -70,6 +70,8 @@ function bytes(v: number): string {
   while (a >= 999.95 && i < BYTES.length - 1) { a /= 1000; i++; }
   return (v < 0 ? '-' : '') + +a.toFixed(i ? 1 : 0) + ' ' + BYTES[i];
 }
+/** A list as a sentence says it: "a, b or c". */
+export const orList = (items: readonly string[]): string => (items.length < 2 ? items.join('') : items.slice(0, -1).join(', ') + ' or ' + items[items.length - 1]);
 /** The units a catalog may give a metric, beside a currency's code. The `Unit` type, the catalog schema's enum and `formatUnit` are kept in step: a new unit is added to all three. */
 export const UNITS: Unit[] = ['count', 'ratio', 'percent', 'ms', 's', 'bytes', 'rank'];
 /** A value in a unit, where there is a unit and no one metric to hand: a tick on a scale that several metrics share. */

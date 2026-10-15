@@ -7,7 +7,7 @@ export { buildScene, detailOf, layerKeys, metricOf, roleOf, rowKeys, unitsOf } f
 export { COLUMNS_BLOCK, columnRooms, declutter, place, type LabelBox } from './place.ts';
 export { arcD, pathD, type PathBox } from './path.ts';
 export { gridProse, notShownNote, partialNote, plural, tldrProse } from './prose.ts';
-export { UNITS, formatBin, formatDimension, formatUnit, formatValue, rangeLabel } from './format.ts';
+export { UNITS, formatBin, formatDimension, formatUnit, formatValue, orList, rangeLabel } from './format.ts';
 export { SERIES, SIZES, seqScale, sizeKey, sizeStep, tooManySeries } from './scene.ts';
 export { radius as dotRadius } from './place.ts';
 export { fallbackRule, gaveWay } from './fit.ts';

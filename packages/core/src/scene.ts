@@ -1,6 +1,6 @@
 import { max, min } from 'd3-array';
 import { scaleBand, scaleLinear, scalePoint, scaleQuantize } from 'd3-scale';
-import { CHAR_W, delta, fmt, fmtPct, fmtTime, formatBin, formatDimension, formatUnit, formatValue } from './format.ts';
+import { CHAR_W, delta, fmt, fmtPct, fmtTime, formatBin, formatDimension, formatUnit, formatValue, orList } from './format.ts';
 import { arcD, pathD } from './path.ts';
 import { customMarks } from './marks.ts';
 import { NOW, crossesZero, emptyNote, endsOf, leader, portion } from './prose.ts';
@@ -485,7 +485,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   const say: Draw['say'] = (r, f) => { const M = metricOf(catalog, f); return typeof r[f] !== 'number' ? String(r[f]) : M ? formatValue(r[f] as number, M) : fmt(r[f] as number); };
   layers.forEach((l, i) => {
     const draw = PLOT_MARKS[l.mark], prev = l.series === 'previous', span = spans[i]!;
-    if (!draw) throw new Error('The "' + l.mark + '" mark has no rule for a time or category axis yet. Use line, area, bar, rule, dot, text, tick or unit.');
+    if (!draw) throw new Error('The "' + l.mark + '" mark has no rule for a time or category axis yet. Use ' + orList(Object.keys(PLOT_MARKS)) + '.');
     // A bar stands on a row's share of x, a tick lies across it, and a unit's glyphs are as wide as it. A metric there gives it none, and neither does a number dimension that came with no bins.
     // But for a tick with nothing on y, which stands at the foot of a plot of points at each row's value on x: a rug.
     const rug = l.mark === 'tick' && !!xOn && !xDim && l.encode!.y == null;
@@ -625,8 +625,6 @@ const TRACK_MARKS: Partial<Record<Mark, TrackFn>> = { bar: trackBar, rule: track
 export function trackBeside(layers: Layer[]): boolean {
   return layers.some((l) => TRACK_MARKS[l.mark] && (l.mark !== 'bar' || !!l.stack || (l.encode && (l.encode.x2 != null || l.encode.x == null))));
 }
-/** The marks core draws itself, as an error lists them. Any other name is a custom mark's, registered in code (marks.ts). */
-export const BUILT_IN_MARKS: string[] = [...new Set(Object.keys(PLOT_MARKS).concat(Object.keys(TRACK_MARKS), 'arc', 'cell'))];
 
 /** The dimension the rows of a list are divided by, where a layer divides them: the query's other dimension, on the
  * `color` of a stacked bar or on `detail`. Null for a list whose rows are the result's own. */
@@ -739,7 +737,7 @@ function sceneRows(catalog: Catalog, layers: Layer[], result: Result, limit: num
         nodes.push({ key: ids[li] + ':' + k, part: 'rows', kind: 'text', row: k, text: cell.text,
           anchor: l.align === 'end' ? 'end' : 'start', baseline: 'middle', font: cols.includes(l) ? 'value' : 'label', paint: cell.paint, layer: 'data', role: roleOf(l), ...rank(l) });
       } else {
-        throw new Error('The "' + l.mark + '" mark has no rule for rows yet. Use bar, text, rule, tick, dot or unit.');
+        throw new Error('The "' + l.mark + '" mark has no rule for rows yet. Use ' + orList([...Object.keys(TRACK_MARKS), 'text']) + '.');
       }
     });
   });

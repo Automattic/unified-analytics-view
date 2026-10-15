@@ -4,8 +4,9 @@ import { fmtTime, rangeLabel } from './format.ts';
 import { customMarks } from './marks.ts';
 import { PRESETS, expand, fills, presetNames, usesPrevious } from './presets.ts';
 import { COLUMNS_BLOCK, UNIT_KEY_BLOCK, legendBlock, place } from './place.ts';
-import { BUILT_IN_MARKS, DETAIL_LAYOUTS, SERIES, buildScene, columnLabel, columnsOf, tldrValueText, isDim, listRows, metricOf, pointDimOf, roleOf, seriesOf, trackBeside, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
+import { DETAIL_LAYOUTS, SERIES, buildScene, columnLabel, columnsOf, tldrValueText, isDim, listRows, metricOf, pointDimOf, roleOf, seriesOf, trackBeside, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
 import { differenceProse, gridProse, rangeProse, rankProse, tldrProse } from './prose.ts';
+import { MARKS } from './types.ts';
 import type { Catalog, Container, Layer, Layout, Plan, PlanShape, PresetLibrary, Query, Reduction, ReductionId, Result, Role, PlacedScene, Spec } from './types.ts';
 
 /* Start from everything the spec asks for, then apply the container's reductions
@@ -47,9 +48,9 @@ function checkLayers(layers: Layer[], q: Query, catalog: Catalog, result: Result
   const by = q.by || [], known = by.concat(q.metrics);
   if (by.length > 2 || (by.length === 2 && by[0] === by[1])) throw new Error('A view is by one dimension or by two different ones, and query.by has: ' + by.join(', ') + '. Remove all but two.');
   layers.forEach((l, i) => {
-    if (!l || !l.mark) throw new Error('Layer ' + (i + 1) + ' has no "mark". Use one of: line, area, bar, rule, text, arc, cell, dot, tick, unit.');
+    if (!l || !l.mark) throw new Error('Layer ' + (i + 1) + ' has no "mark". Use one of: ' + MARKS.join(', ') + '.');
     // A name the schema cannot check: it is one of core's marks or one registered in code, and anything else is an error here.
-    if (!BUILT_IN_MARKS.includes(l.mark) && !customMarks().has(l.mark)) throw new Error('Layer ' + (i + 1) + ' has the mark "' + l.mark + '", which is not built in and is not registered. Built in: ' + BUILT_IN_MARKS.join(', ') + '. Registered: ' + ([...customMarks().keys()].join(', ') || 'none') + '. Use one of those, or register it with registerMark("' + l.mark + '", …) before the view is resolved.');
+    if (!(MARKS as readonly string[]).includes(l.mark) && !customMarks().has(l.mark)) throw new Error('Layer ' + (i + 1) + ' has the mark "' + l.mark + '", which is not built in and is not registered. Built in: ' + MARKS.join(', ') + '. Registered: ' + ([...customMarks().keys()].join(', ') || 'none') + '. Use one of those, or register it with registerMark("' + l.mark + '", …) before the view is resolved.');
     // A second end belongs to a mark that can run from one value to another, and needs the first end to run from.
     for (const [end, start] of [['x2', 'x'], ['y2', 'y']] as const) {
       if (l.encode?.[end] == null) continue;

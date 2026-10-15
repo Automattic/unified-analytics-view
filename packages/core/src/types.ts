@@ -68,7 +68,8 @@ export interface Result {
  * a metric on x a run along a row's track, a metric on x and a dimension on `color` a grid of a hundred divided by
  * share, a metric on x alone that grid filled to the metric's place in its catalog `domain`, and a metric on `angle`
  * with a dimension on `color` and `sweep: "half"` seats round a half circle. What a glyph is worth comes from the data (unit.ts). */
-export type Mark = 'line' | 'area' | 'bar' | 'rule' | 'text' | 'arc' | 'cell' | 'dot' | 'tick' | 'unit' | (string & {});
+export const MARKS = ['line', 'area', 'bar', 'rule', 'text', 'arc', 'cell', 'dot', 'tick', 'unit'] as const;
+export type Mark = (typeof MARKS)[number] | (string & {});
 /** `x2` and `y2` are the second end of a `bar`, a `rule` or an `area`: it runs from the value on `x` or `y` to the one there.
  * A `rule` may start at a number, and with all four it is a line across a plot of points, from (`x`, `y`) to (`x2`, `y2`).
  * `detail` is a dimension that splits a layer into series as one on `color` does, and paints none of them apart:

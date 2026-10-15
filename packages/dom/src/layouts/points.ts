@@ -7,6 +7,7 @@ import { RULE } from '../chrome/rule.ts';
 import { thinLabels } from '../measure.ts';
 import { ANCHOR, label } from '../chrome/label.ts';
 import { unitDot } from '../chrome/unit.ts';
+import { ARROWS } from '../rove.ts';
 
 /* What a plot gains with `dot`, with `text` on its points, and with a metric on x: dots, the labels on them, the key
  * to their sizes (the chrome's), and a rule that stands at a value on x. It is the cartesian layout's, kept in a file of its own:
@@ -62,7 +63,7 @@ export const POINTS_FIT: Record<string, Record<string, string>> = {
  * A proposal. Version 4 of @automattic/charts has no keyboard model for points in two dimensions, and this one is
  * not confirmed (chart-coverage-plan, section 6, still open). */
 export function nearest(key: string, at: number, points: { x: number; y: number }[]): number | null {
-  const d = ({ ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowDown: [0, 1], ArrowUp: [0, -1] } as Record<string, [number, number]>)[key];
+  const d = ARROWS[key];
   if (!d || !points.length) return null;
   const from = points[at];
   if (!from) return 0;

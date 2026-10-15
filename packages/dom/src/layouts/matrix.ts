@@ -2,6 +2,7 @@ import { SIZES, formatBin, formatDimension, formatValue, type CircleNode, type R
 import { attr, ensure, keyed, nodePaint, prop } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { chooseItem, readout, roveItems } from '../keys.ts';
+import { ARROWS } from '../rove.ts';
 import { AXES_HEIGHT, NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
 import { paintAxes, thinAxis } from '../chrome/axes.ts';
 import { paintRamp } from '../chrome/ramp.ts';
@@ -49,7 +50,7 @@ const css = `
  * right along x, up and down along y, stopping at the edges. From nothing, any arrow is the first cell. Null when
  * the key is not a step. */
 export function stepCell(key: string, at: [x: number, y: number] | null, nx: number, ny: number): [x: number, y: number] | null {
-  const d = ({ ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowDown: [0, 1], ArrowUp: [0, -1] } as Record<string, [number, number]>)[key];
+  const d = ARROWS[key];
   if (!d || !nx || !ny) return null;
   return at ? [Math.min(Math.max(at[0] + d[0], 0), nx - 1), Math.min(Math.max(at[1] + d[1], 0), ny - 1)] : [0, 0];
 }

@@ -7,6 +7,9 @@
 
 export type How = 'keys' | 'pointer';
 
+/** Where each arrow key points, across and down the page. A holder whose arrows step in two dimensions reads it. */
+export const ARROWS: Record<string, [x: number, y: number]> = { ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowDown: [0, 1], ArrowUp: [0, -1] };
+
 /** What a holder tells rove(). `T` is what is chosen: an element, or a row and one series there. */
 export interface Roving<T> {
   /** The thing an event's target is in, or null where it is in none. */

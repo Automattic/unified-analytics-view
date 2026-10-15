@@ -1,7 +1,7 @@
-import { arcD, declutter, type ArcNode, type CircleNode, type TextNode } from '@unified-analytics/core';
-import { hideCutLegends, paintLegend } from '../chrome/legend.ts';
-import { attr, ensure, keyed, paintVar, prop, text } from '../dom.ts';
-import { FROM_TOP, IN_BOX, LEGEND_SWAP, NUMBER_ALONE, holdShape, type LayoutPainter } from '../layout.ts';
+import { CONTAINER_RULES, SEATS_LEAST, arcD, declutter, type ArcNode, type CircleNode, type TextNode } from '@unified-analytics/core';
+import { LEGEND_FIT, LEGEND_SWAP, hideCutLegends, legendBlock, legendTop, paintLegend } from '../chrome/legend.ts';
+import { attr, ensure, hits, keyed, paintVar, prop, text } from '../dom.ts';
+import { FROM_TOP, IN_BOX, NUMBER_ALONE, holdShape, type LayoutPainter } from '../layout.ts';
 import { FOCUS, HOVER, token } from '../tokens.ts';
 import { paintUnitKey, unitDot } from '../chrome/unit.ts';
 import { label } from '../chrome/label.ts';
@@ -22,6 +22,8 @@ import { thinLabels } from '../measure.ts';
  * Labels round the rim are HTML over the part, each set outside the point of the rim the scene gave it. The circle
  * gives up 14 px all round to them, a line's height, and those to either side run out of the part into the view's
  * width: the \`rim\` rule holds that wide enough, and gives the circle its margin back when it takes them away. */
+/** The least circle of arcs, in px: the height core's `marks` rule for it needs. */
+const ARCS_LEAST = CONTAINER_RULES.fit.find((r) => r.layout === 'radial' && r.id === 'marks')!.needs.block!;
 const shape = holdShape('var(--uav-radial-most, 160px)', 'var(--uav-aspect, 1)');
 const css = `
 .uav[data-layout="radial"] .uav-body { display: flex; flex-direction: column; }
@@ -58,19 +60,19 @@ const css = `
 .uav-radial[data-half] .uav-hole { place-items: end center; }
 .uav[data-layout="radial"][data-parts~="hole"] .uav-hole { display: grid; }
 /* The plan names one legend, as it does for a band, or neither. */
-.uav[data-layout="radial"][data-parts~="legend-top"] .uav-legend-top { display: block; }
+${legendTop('radial')}
 /* In a box the part gives way to the height, down to nothing, and its width follows; it is no taller than the body's
  * width allows its shape, which cqi is here, the part being a container itself. The legends swap as a band's do:
  * the full one needs the least circle of 64 px, 10 px and a line and its 4 px gap for each row, less the last gap. Under the one-line legend's
  * need the \`legend-top\` rule takes both away. */
 ${IN_BOX} {
-  .uav[data-layout="radial"] .uav-body { container-type: size; overflow: hidden; --uav-legend-block: calc(70px + var(--uav-rows, 1) * (var(--uav-legend-line) + 4px)); }
+  .uav[data-layout="radial"] .uav-body { container-type: size; overflow: hidden; --uav-legend-block: ${legendBlock(ARCS_LEAST)}; }
   .uav[data-layout="radial"] .uav-radial { ${shape.box} }
   .uav[data-layout="radial"] :is(.uav-legend, .uav-legend-top) { flex: none; }
   .uav[data-layout="radial"]:not([data-keep~="guides"]) .uav-legend { ${LEGEND_SWAP.full} }
   .uav[data-layout="radial"][data-parts~="legend"]:not([data-keep~="guides"]) .uav-legend-top { ${LEGEND_SWAP.top} }
   /* Seats keep 80 px of height under the full legend, the least place() builds them to, where arcs keep 64. */
-  .uav[data-layout="radial"] .uav-body:has(.uav-dots > [data-unit]) { --uav-legend-block: calc(86px + var(--uav-rows, 1) * (var(--uav-legend-line) + 4px)); }
+  .uav[data-layout="radial"] .uav-body:has(.uav-dots > [data-unit]) { --uav-legend-block: ${legendBlock(SEATS_LEAST / 2)}; }
 }`;
 
 type Arc = Pick<ArcNode, 'a0' | 'a1' | 'r0' | 'r1'>;
@@ -106,7 +108,7 @@ export const radial: LayoutPainter = {
   css,
   fit: {
     // As the band's: the rule's data only sets a switch, and this is the swap.
-    legend: { '.uav-legend': 'display: none;', '.uav-legend-top': 'display: block; max-block-size: none;' },
+    legend: LEGEND_FIT,
     // The circle takes back the margin it gave the labels.
     rim: { '.uav-radial': '--uav-rim: 0px;' },
     // The number alone. The body goes whole, and so does its grid row.
@@ -127,7 +129,7 @@ export const radial: LayoutPainter = {
     const seats = scene.nodes.filter((n): n is CircleNode => n.part === 'radial' && n.kind === 'circle');
     // Each segment is its own hit target. Arcs that read one value against a range have no row to step to, and
     // where a unit's seats stand there are no arcs: the seats are the targets, a group of them to a row (keys.ts).
-    if (rows.length && !seats.length) { svg.setAttribute('data-hits', 'x'); svg.removeAttribute('aria-hidden'); } else { svg.removeAttribute('data-hits'); svg.setAttribute('aria-hidden', 'true'); }
+    hits(svg, rows.length && !seats.length ? 'x' : null);
     part.toggleAttribute('data-half', aspect !== 1);
     prop(part, '--uav-aspect', aspect); prop(body, '--uav-rows', rows.length); prop(part, '--uav-radial-most', seats.length ? '240px' : null);
     keyed(svg, arcs.filter((n) => !under.includes(n)), () => 'path', (el, n) => turn(el as SVGElement, n));

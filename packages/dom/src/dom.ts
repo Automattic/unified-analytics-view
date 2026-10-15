@@ -74,6 +74,11 @@ export function attr(el: Element, name: string, v: string | number | null | unde
   if (el.getAttribute(name) === (v == null ? null : String(v))) return;
   if (v == null) el.removeAttribute(name); else el.setAttribute(name, String(v));
 }
+/** Make an element the holder of a layout's points, its points running `way` ("x" across, "y" down), or, with none,
+ * a picture that says again what the readout says, and so hidden from assistive technology. */
+export function hits(el: Element, way: string | null): void {
+  attr(el, 'data-hits', way); attr(el, 'aria-hidden', way ? null : 'true');
+}
 /** Hand a part the page's direction back, inside a body that is set from the left (cartesian.ts): a legend reads
  * the way the page does, under a plot that does not turn. The figure the body is in has the page's.
  * The way is the page's `dir`, read by `:dir()`: computed style would lay the page out again in the middle of every

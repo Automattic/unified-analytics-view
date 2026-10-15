@@ -86,10 +86,3 @@ export function holdShape(most: string, aspect: string | number): { part: string
   };
 }
 
-/** The swap of a band's legends in a box, which a circle of arcs has too: the full legend while the body's height
- * (100cqb) is at least --uav-legend-block, and the one line under it, with the full one's gap gone as well. A clamp
- * does it, since that need depends on the data. Declarations for `.uav-legend` and `.uav-legend-top`. */
-export const LEGEND_SWAP = {
-  full: 'overflow: hidden; max-block-size: max(0px, (100cqb - var(--uav-legend-block) + 0.01px) * 999999);\n    margin-block-start: clamp(0px, (100cqb - var(--uav-legend-block) + 0.01px) * 999999, 10px);',
-  top: 'display: block; overflow: hidden; max-block-size: max(0px, (var(--uav-legend-block) - 100cqb) * 999999);',
-};

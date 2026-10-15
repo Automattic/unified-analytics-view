@@ -17,8 +17,10 @@ import { swatch as asSwatch } from './swatch.ts';
  * A layout says where the two stand in its body, and what they do in a box. keys.ts marks the chosen entry. */
 /** A line of the legend, in px where a label is drawn at DRAWN.label: it follows the face from there. */
 export const LEGEND_LINE = 20;
+/** The full legend's space above it and between its lines, in px. */
+export const LEGEND_MARGIN = 10, LEGEND_GAP = 4;
 export const LEGEND_CSS = `
-.uav-legend { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; grid-auto-rows: var(--uav-legend-line); gap: 4px 8px; align-items: center; margin-block-start: 10px; }
+.uav-legend { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; grid-auto-rows: var(--uav-legend-line); gap: ${LEGEND_GAP}px 8px; align-items: center; margin-block-start: ${LEGEND_MARGIN}px; }
 .uav-legend i { grid-column: 1; }
 .uav-legend span, .uav-legend-top span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--uav-paint); }
 .uav-legend .uav-f-label { grid-column: 2; }
@@ -45,6 +47,22 @@ export function paintLegend(body: HTMLElement, scene: Scene): void {
   });
   keyed(top, scene.nodes.filter((n): n is TextNode => n.part === 'legend-top' && n.kind === 'text'), () => 'span', text);
 }
+
+/** The swap of a band's legends in a box, which a circle of arcs has too: the full legend while the body's height
+ * (100cqb) is at least --uav-legend-block, and the one line under it, with the full one's gap gone as well. A clamp
+ * does it, since that need depends on the data. Declarations for `.uav-legend` and `.uav-legend-top`. */
+export const LEGEND_SWAP = {
+  full: `overflow: hidden; max-block-size: max(0px, (100cqb - var(--uav-legend-block) + 0.01px) * 999999);\n    margin-block-start: clamp(0px, (100cqb - var(--uav-legend-block) + 0.01px) * 999999, ${LEGEND_MARGIN}px);`,
+  top: 'display: block; overflow: hidden; max-block-size: max(0px, (var(--uav-legend-block) - 100cqb) * 999999);',
+};
+/** The same swap under the `legend` rule, for a layout's `fit`: the rule's data only sets a switch, and this is the
+ * swap, whatever the box's height says. */
+export const LEGEND_FIT: Record<string, string> = { '.uav-legend': 'display: none;', '.uav-legend-top': 'display: block; max-block-size: none;' };
+/** The height the full legend needs in a box, as --uav-legend-block: `least` px for what stands over it, the legend's
+ * margin, and a line and its gap for each of --uav-rows, less the last gap. */
+export const legendBlock = (least: number): string => `calc(${least + LEGEND_MARGIN - LEGEND_GAP}px + var(--uav-rows, 1) * (var(--uav-legend-line) + ${LEGEND_GAP}px))`;
+/** The one-line legend, where the plan names it in place of the full one, in a layout that has both. */
+export const legendTop = (layout: string): string => `.uav[data-layout="${layout}"][data-parts~="legend-top"] .uav-legend-top { display: block; }`;
 
 /** For the measured pass of a layout whose legends a box clips to nothing rather than hides (band, radial): the one
  * with no height left is taken from assistive technology too, so a reader hears the legend that shows, and only it. */

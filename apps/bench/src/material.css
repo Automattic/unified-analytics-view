@@ -4,24 +4,13 @@
  * filter on the backdrop, which only Chromium runs; elsewhere the crystal is the same, without the bending.
  * Lives in the bench until the look is settled. */
 
-/* ───────── The light model ─────────
- * One light for everything on the page. --ua-light is where it comes from, clockwise from the top;
- * the vector is the same direction for anything that has to move toward or away from it.
- * hi and lo are how strong every highlight and every shade is, per theme. In dark a material only
- * catches light, it casts no shade on itself. */
-:root {
-  --ua-light: 322deg;
-  --ua-light-x: sin(var(--ua-light));
-  --ua-light-y: calc(-1 * cos(var(--ua-light)));
-  --ua-light-hi: 1; --ua-light-lo: 1;
-
-  /* The strength of the crystal's body tint and sheen. */
-  --ua-crystal-body: .34; --ua-crystal-sheen: .16;
-}
+/* The light model (--ua-light, its vector, and how strong highlights and shades are per theme) comes from
+ * the token package's common tier. The crystal's strengths are the bench's own. */
+:root { --ua-crystal-body: .34; --ua-crystal-sheen: .16; }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) { --ua-light-hi: .8; --ua-light-lo: 0; --ua-crystal-body: .13; --ua-crystal-sheen: .085; }
+  :root:not([data-theme="light"]) { --ua-crystal-body: .13; --ua-crystal-sheen: .085; }
 }
-:root[data-theme="dark"] { --ua-light-hi: .8; --ua-light-lo: 0; --ua-crystal-body: .13; --ua-crystal-sheen: .085; }
+:root[data-theme="dark"] { --ua-crystal-body: .13; --ua-crystal-sheen: .085; }
 
 /* ───────── Grain ─────────
  * A tile of grey noise, laid over a surface in overlay so it lightens and darkens without tinting.

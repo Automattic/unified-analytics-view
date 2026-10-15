@@ -6,7 +6,7 @@ export { SURFACE_CSS, UaView, defineUaView, surfaceSheet, type Inputs } from './
 export { attr, ensure, ensureSvg, hits, keyed, prop, svg, text } from './dom.ts';
 export { registerPainter } from './layouts/index.ts';
 export { ANCHOR, label, paintAxes, paintLegend, paintRamp, paintSize, paintUnitKey, say, thinAxis, type Anchor, type LabelOptions } from './chrome/index.ts';
-export { chooseItem, hideReadout, placeReadout, readoutOf, roveItems, unlist } from './keys.ts';
+export { chooseItem, hideReadout, placeReadout, readout, readoutOf, roveItems, unlist } from './keys.ts';
 export { ARROWS, hovers, pressed, rove, type How, type Roving } from './rove.ts';
 export { thinLabels } from './measure.ts';
 export { emptyTable, fieldLabel, tableRow, valueText, type Cell } from './table.ts';

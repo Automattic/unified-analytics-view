@@ -1,4 +1,4 @@
-import { SERIES, formatDimension, formatValue, heldBox, isDim, isMetric, layerKeys, metricOf, registerMark, registerPreset, roleOf, ruleFor, seqScale, tooManySeries, uniqueKeys } from '@unified-analytics/core';
+import { SERIES, formatDimension, heldBox, isDim, isMetric, layerKeys, metricOf, registerMark, registerPreset, roleOf, ruleFor, seqScale, tooManySeries, uniqueKeys } from '@unified-analytics/core';
 import type { CustomMark, FitRule, MarkView, Part, PlacedNode, RectNode, Row, SceneNode, TextNode } from '@unified-analytics/core';
 
 /* The `partition` mark: a box divided by area, nested once, which is a treemap. A custom mark (core's marks.ts). This
@@ -118,14 +118,10 @@ function read({ layers, query, result, catalog }: Omit<MarkView, 'guides'>) {
   return { groups, two, fill, dim, role: roleOf(l), none: drawn.some((r) => fill && r[color as string] == null), key };
 }
 
-/** What each box says, by its node's key: its name, under its parent's where it has one, and each of the query's
- * metrics in the catalog's formats. A parent's are the engine's totals for it. This is a box's accessible name and its
- * readout, so no value is said by area or colour alone. `row` is the row it came from, and `rows` the rows inside it. */
-export function boxNames(view: Omit<MarkView, 'guides'>): Map<string, { says: string; row: Row; rows: Row[] }> {
-  const { groups } = read(view), { query, catalog } = view;
-  const values = (r: Row) => query.metrics.filter((m) => r[m] !== undefined).map((m) => catalog.metrics[m]!.label + ' ' + formatValue(r[m] as number | null, catalog.metrics[m]!)).join('; ');
-  return new Map(groups.flatMap((g): [string, { says: string; row: Row; rows: Row[] }][] => [[g.key, { says: g.name + ': ' + values(g.row), row: g.row, rows: g.rows }],
-    ...g.kids.map((c): [string, { says: string; row: Row; rows: Row[] }] => [c.key, { says: g.name + ', ' + c.name + ': ' + values(c.row), row: c.row, rows: [c.row] }])]));
+/** The boxes a view comes to, parents with their children inside, each with its node's key, the row it came from and, for a
+ * parent, the rows inside it: what the painter names each box from (dom.ts's boxNames). */
+export function boxesOf(view: Omit<MarkView, 'guides'>): { key: string; row: Row; rows: Row[]; kids: { key: string; row: Row }[] }[] {
+  return read(view).groups;
 }
 
 const round = (n: number) => Math.round(n * 1e5) / 1e5;

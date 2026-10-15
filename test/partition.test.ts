@@ -4,8 +4,8 @@ import { CONTAINER_RULES, PRESETS, buildScene, customMarks, customPresets, expan
 import viewSchema from '@unified-analytics/core/schema/view.schema.json';
 import { compileFitRules } from '@unified-analytics/dom';
 import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
-import { PARTITION_RULES, boxNames, squarify, type Box } from '@unified-analytics/partition';
-import { nameFits, partitionPainter, stepBox } from '@unified-analytics/partition/dom';
+import { PARTITION_RULES, squarify, type Box } from '@unified-analytics/partition';
+import { boxNames, nameFits, partitionPainter, stepBox } from '@unified-analytics/partition/dom';
 
 // Step 9 of docs/uncommon-coverage-plan.md: the `partition` mark, a custom mark that draws a treemap. No prototype
 // knows it, so it is held to a sweep, facts and golden scenes of its own.
@@ -307,6 +307,9 @@ describe('names, prose and errors', () => {
     const both = runQuery(ramped.query);
     expect(boxNames({ layers: ramped.layers!, query: ramped.query, result: both, catalog }).get('primary:partition:Docs:/docs/api')!.says).toMatch(/^Docs, \/docs\/api: Page views [\d,]+; Visitors [\d,]+$/);
     expect(boxNames({ layers: tiles.layers!, query: tiles.query, result: runQuery(tiles.query), catalog }).get('primary:partition:Search')!.says).toBe('Search: Visitors 4,318');
+    // A box says what every other mark's readout says of its row: the period before, where the query compares, among it.
+    const compared = { ...tiles.query, compare: 'previous' as const }, prior = runQuery(compared);
+    expect(boxNames({ layers: tiles.layers!, query: compared, result: prior, catalog }).get('primary:partition:Search')!.says).toMatch(/^Search: Visitors 4,318, previous period [\d,]+$/);
   });
   it('the prose names the largest parent and its share of the engine\'s total, and with one dimension it is the ranked sentence', () => {
     expect(run(treemap, 346).plan.text).toBe('Marketing is the largest section at 42% of page views, and / the largest page at 21%.');

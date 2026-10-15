@@ -1,6 +1,6 @@
-import { formatDimension, formatValue, type RectNode, type Result, type Row, type TextNode } from '@unified-analytics/core';
-import { FOCUS, HOVER, attr, chooseItem, ensure, holdShape, keyed, label, nodePaint, paintRamp, prop, registerPainter, roveItems, text, token, type LayoutPainter } from '@unified-analytics/dom';
-import { ASPECT, GAP, HEAD, HEAD_MOST, KID_GAP, LINE, MAX, boxNames } from './index.ts';
+import { formatDimension, type MarkView, type RectNode, type Row, type TextNode } from '@unified-analytics/core';
+import { FOCUS, HOVER, attr, chooseItem, emptyTable, ensure, fieldLabel, holdShape, keyed, label, nodePaint, paintRamp, prop, readout, registerPainter, roveItems, tableRow, text, token, valueText, type Cell, type LayoutPainter } from '@unified-analytics/dom';
+import { ASPECT, GAP, HEAD, HEAD_MOST, KID_GAP, LINE, MAX, boxesOf } from './index.ts';
 
 /* The `partition` mark's half for the DOM: the painter of its layout, for registerPainter().
  *
@@ -89,6 +89,17 @@ function bind(plot: HTMLElement): void {
   }, (el) => trees.get(plot)!.rows.get(el.dataset.key!));
 }
 
+/** What each box says, by its node's key: the readout every mark's row has (dom's readout), of the row it came from,
+ * named by its parent's value and then its own. A parent's values are the engine's totals for it. This is a box's
+ * accessible name and its readout, so no value is said by area or colour alone. `rows` are the rows inside it. */
+export function boxNames(view: Omit<MarkView, 'guides'>): Map<string, { says: string; row: Row; rows: Row[] }> {
+  const { query, catalog, layers } = view, [dim, detail] = [layers[0]!.encode!.x as string, layers[0]!.encode!.detail as string];
+  const says = (r: Row, by: string[]) => readout(r, { ...query, by }, catalog, layers);
+  type Said = [string, { says: string; row: Row; rows: Row[] }];
+  return new Map(boxesOf(view).flatMap((g): Said[] => [[g.key, { says: says(g.row, [dim]), row: g.row, rows: g.rows }],
+    ...g.kids.map((c): Said => [c.key, { says: says(c.row, [dim, detail]), row: c.row, rows: [c.row] }])]));
+}
+
 /** A name fits where the box it stands in is as wide and as tall as it is, to half a pixel. */
 export const nameFits = (name: { width: number; height: number }, box: { width: number; height: number }) => name.width <= box.width + 0.5 && name.height <= box.height + 0.5;
 
@@ -149,18 +160,10 @@ export const partitionPainter: LayoutPainter = {
    * total for the whole at the foot. Nothing is summed. With one dimension it is the table every view has. */
   table(table, title, _scene, { query: q, result, catalog }) {
     const by = q.by || [], [a, b] = by, fields = q.metrics.flatMap((m) => (q.compare === 'previous' ? [m, m + '@previous'] : [m]));
-    const row = (parent: HTMLElement, heads: string[], from: Row | Result['totals']) => {
-      const tr = parent.appendChild(document.createElement('tr'));
-      heads.forEach((s) => { const th = tr.appendChild(document.createElement('th')); th.textContent = s; th.scope = 'row'; });
-      for (const f of fields) { const td = tr.appendChild(document.createElement('td')); td.textContent = formatValue(from[f] as number | null, catalog.metrics[f.split('@')[0]!]!, 'exact'); td.setAttribute('data-num', ''); }
-    };
+    const row = (parent: HTMLElement, heads: string[], from: Row) => tableRow(parent, [...heads.map((s): Cell => [s, 'th']), ...fields.map((f): Cell => [valueText(from[f], f, catalog), 'td', true])]);
     const say = (d: string, r: Row) => formatDimension(r[d], catalog.dimensions[d]!);
-    table.replaceChildren();
-    if (title) table.createCaption().textContent = title;
-    const head = table.createTHead().appendChild(document.createElement('tr'));
-    for (const [s, num] of [...by.map((d) => [catalog.dimensions[d]!.label, false] as const), ...fields.map((f) => [catalog.metrics[f.split('@')[0]!]!.label + (f.includes('@') ? ', previous period' : ''), true] as const)]) {
-      const th = head.appendChild(document.createElement('th')); th.textContent = s; th.scope = 'col'; if (num) th.setAttribute('data-num', '');
-    }
+    emptyTable(table, title);
+    tableRow(table.createTHead(), [...by.map((d): Cell => [catalog.dimensions[d]!.label, 'th']), ...fields.map((f): Cell => [fieldLabel(f, catalog), 'th', true])]);
     const body = table.createTBody();
     if (b == null) for (const r of result.rows) row(body, [say(a!, r)], r);
     else for (const top of result.totalsBy?.[a!] ?? []) {

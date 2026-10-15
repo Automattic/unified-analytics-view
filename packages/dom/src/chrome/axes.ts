@@ -1,3 +1,4 @@
+import { DRAWN, FROM_TOP } from '../layout.ts';
 import type { Scene, TextNode } from '@unified-analytics/core';
 import { attr, ensure, keyed, prop, text } from '../dom.ts';
 import { thin, thinLabels } from '../measure.ts';
@@ -11,11 +12,17 @@ import { ANCHOR, label } from './label.ts';
  * face from there (--uav-x-axis-block, view.ts). pixels.ts sets each label on a whole px, after this sheet.
  * A label's words run their own way, in a box placed from the left: the frame an axis stands in does not turn with
  * the page (cartesian.ts), which is the layout's to say, as is where each axis sits in its body. */
+/** The x axis: the space above its labels, and its height at the tick face's own size (core's gutter under a plot),
+ * in px. The view works its height out from the face (X_AXIS_FACE). */
+export const X_AXIS_PAD = 5;
+export const X_AXIS_BLOCK = 22;
+/** The x axis's height at the face the view has: the pad, and the line the labels take, scaled from the token's own size. */
+export const X_AXIS_FACE = `calc(${X_AXIS_PAD}px + var(--uav-font-tick) * ${X_AXIS_BLOCK - X_AXIS_PAD} / ${DRAWN.tick})`;
 export const AXES_CSS = `
 .uav-y-axis, .uav-y-axis-2, .uav-x-axis { display: grid; white-space: nowrap; font-variant-numeric: tabular-nums; }
-:is(.uav-y-axis, .uav-y-axis-2) span { grid-area: 1 / 1; align-self: start; justify-self: end; position: relative; inset-block-start: calc((1 - var(--uav-t)) * 100%); translate: 0 -50%; padding-inline-end: 6px; ${label({ tone: 'axis' })} }
+:is(.uav-y-axis, .uav-y-axis-2) span { grid-area: 1 / 1; align-self: start; justify-self: end; position: relative; inset-block-start: ${FROM_TOP}; translate: 0 -50%; padding-inline-end: 6px; ${label({ tone: 'axis' })} }
 .uav-y-axis-2 span { justify-self: start; padding-inline: 6px 0; }
-.uav-x-axis { box-sizing: border-box; block-size: var(--uav-x-axis-block); padding-block-start: 5px; }
+.uav-x-axis { box-sizing: border-box; block-size: var(--uav-x-axis-block); padding-block-start: ${X_AXIS_PAD}px; }
 .uav-x-axis span { grid-area: 1 / 1; justify-self: start; position: relative; inset-inline-start: calc(var(--uav-x) * 100%); translate: ${ANCHOR.middle}; ${label({ tone: 'axis' })} }
 .uav-x-axis [data-anchor="start"] { translate: ${ANCHOR.start}; }
 .uav-x-axis [data-anchor="end"] { translate: ${ANCHOR.end}; }

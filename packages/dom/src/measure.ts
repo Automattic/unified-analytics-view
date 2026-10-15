@@ -1,4 +1,5 @@
 import type { Room } from '@unified-analytics/core';
+import { CELL, SLOT } from './dots.ts';
 
 /* The measured pass: what a container query cannot ask, because the need is the size of the content itself.
  * It reads sizes and writes attributes, and the stylesheet does the hiding. It never rebuilds the scene.
@@ -23,8 +24,8 @@ export interface NumberSizes {
 
 /** The ways the number is set, as `data-fit` tokens on it, fullest first. The ruler holds one of each. */
 export const NUMBER_FITS = ['', 'short', 'small short'];
-/** The least room a number in dots is cut to, in px: two glyphs. */
-export const SCREEN_LEAST = 44;
+/** The least room a number in dots is cut to, in px: two slots, less the column after the last. */
+export const SCREEN_LEAST = (2 * SLOT - 1) * CELL;
 
 /** The number's `data-fit` for this room: the first form whose value fits, the delta's short form when the long
  * one does not fit, and no note when it would be cut or would make the number taller than the box. The note is

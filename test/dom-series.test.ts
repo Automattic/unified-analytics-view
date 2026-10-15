@@ -7,7 +7,7 @@ import { cartesian } from '../packages/dom/src/layouts/cartesian.ts';
 import { KEYS_CSS, hitNodes, readout, readoutAt, readoutLines, rowsAt, stepSeries } from '../packages/dom/src/keys.ts';
 import { apart, thinLabels } from '../packages/dom/src/measure.ts';
 import { mix, resample } from '../packages/dom/src/motion.ts';
-import { pivot } from '../packages/dom/src/view.ts';
+import { pivot } from '../packages/dom/src/table.ts';
 
 // What <ua-view> adds for a plot split into series, a stack, a signed scale and a second unit, where it is a plain
 // function or a string. That they draw, fit and move is checked in a browser on the bench.

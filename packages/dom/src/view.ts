@@ -1,15 +1,20 @@
-import { CONTAINER_RULES, buildScene, expand, fallbackRule, fills, formatDimension, formatValue, gaveWay, metricOf, resolve, unboundedContainer } from '@unified-analytics/core';
-import type { Catalog, ContainerRules, Layer, Layout, Query, Result, Row, SceneNode, Spec } from '@unified-analytics/core';
-import { compileFitRules, type FitExtras } from './compile.ts';
+import { CONTAINER_RULES, DELTA_FULL, NOTE_LEAST, NUMBER_SHORT, buildScene, customMarks, expand, fallbackRule, fills, gaveWay, resolve, unboundedContainer } from '@unified-analytics/core';
+import type { Catalog, ContainerRules, Layout, Result, SceneNode, Spec } from '@unified-analytics/core';
+import { compileFitRules } from './compile.ts';
+import { LEGEND_LINE } from './chrome/legend.ts';
 import { CHROME_CSS, swatch } from './chrome/index.ts';
+import { SWATCH } from './chrome/swatch.ts';
+import { X_AXIS_FACE } from './chrome/axes.ts';
 import { attr, ensure, keyed, paintVar, text } from './dom.ts';
 import { DOTS_CSS } from './dots.ts';
 import { PIXELS_CSS, pixels } from './pixels.ts';
-import { KEYS_CSS, Keys, companionLabel, companions, hideReadout, readoutOf } from './keys.ts';
+import { paintTable } from './table.ts';
+import { KEYS_CSS, Keys, hideReadout, readoutOf } from './keys.ts';
 import { LAYOUTS, painterOf } from './layouts/index.ts';
 import { NUMBER_FITS, fitNumber, readNumber } from './measure.ts';
 import { MOTION_CSS, begin, register, settle, still } from './motion.ts';
 import { FACES, token } from './tokens.ts';
+import { DISPLAY_LINE, DRAWN, IN_BOX, NUMBER_SMALL, SHOWN, VISUALLY_HIDDEN, lineOf, shortForm } from './layout.ts';
 
 /* <ua-view>: one view, in whatever room it is handed. It plans once per data change, for a container with no
  * limits, builds the ratio scene and paints it. The stylesheet fits it. On resize only the measured pass runs
@@ -19,6 +24,8 @@ import { FACES, token } from './tokens.ts';
  * layout that hands out a box makes it `container-type: size`, and the body fills what is left. */
 
 const painters = Object.values(LAYOUTS);
+/** The space before the pulse beside the number, and between it and the number, in px. */
+const PULSE_MARGIN = [2, 8] as const;
 
 /* Everything the element owns, in one layer, so a compiled fit rule beats it whatever the specificity. */
 export const BASE_CSS = `@layer uav {
@@ -30,12 +37,12 @@ export const BASE_CSS = `@layer uav {
  * makes each a size here and not a formula handed down. Where that fails a part reads the token for itself.
  * What follows from a face is written from it: a line of the legend, and the x axis, are as tall as their text needs. */
 .uav, .uav-ruler, .uav-error { ${FACES.map((f) => `--uav-font-${f}: ${token('font-size-' + f)};`).join(' ')} font-size: var(--uav-font-tick);
-  --uav-legend-line: calc(var(--uav-font-label) * 20 / 13); --uav-x-axis-block: calc(5px + var(--uav-font-tick) * 17 / 11); }
+  --uav-legend-line: calc(var(--uav-font-label) * ${LEGEND_LINE} / ${DRAWN.label}); --uav-x-axis-block: ${X_AXIS_FACE}; }
 .uav { position: relative; box-sizing: border-box; block-size: 100%; margin: 0; display: grid; grid-template: "number" auto "body" minmax(0, 1fr) / minmax(0, 1fr); print-color-adjust: exact; }
 /* A bar, a segment, a swatch and a rule are backgrounds. A printer leaves those out unless told, and forced colours
  * repaint them as the page, so both are told to leave a mark its paint. */
 .uav-body i { forced-color-adjust: none; }
-.uav-prose { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.uav-prose { ${VISUALLY_HIDDEN} }
 .uav-body { grid-area: body; box-sizing: border-box; min-inline-size: 0; block-size: var(--uav-body-block, auto); }
 .uav-error { margin: 0; font-size: var(--uav-font-label); overflow-wrap: anywhere; color: ${paintVar('delta.bad')}; }
 /* Loading: until the view has an input it has not been handed, or until its turn to paint has come. A plot's natural
@@ -43,7 +50,7 @@ export const BASE_CSS = `@layer uav {
  * once never shows it, and then breathes on its opacity alone, which asks nothing of the page's style. */
 .uav-loading { block-size: ${CONTAINER_RULES.axes.height}px; border-radius: ${token('border-radius-bar')}; background: ${token('color-grid')};
   animation: uav-loading-in .2s .15s both, uav-loading 1.2s .35s ease-in-out infinite alternate; }
-@container uav-view (block-size >= 0px) { .uav-loading { block-size: 100%; } }
+${IN_BOX} { .uav-loading { block-size: 100%; } }
 @keyframes uav-loading-in { from { opacity: 0; } }
 @keyframes uav-loading { to { opacity: .5; } }
 @media (prefers-reduced-motion: reduce) { .uav-loading { animation: uav-loading-in .2s .15s both; } }
@@ -57,7 +64,7 @@ export const BASE_CSS = `@layer uav {
 .uav-plot :is(.uav-f-tick, .uav-f-value) { font-family: inherit; }
 /* Small type in a pixel face is set with every pixel whole: the optical size a browser would pick for it thins them unevenly. */
 .uav-f-tick, .uav-f-value { font-optical-sizing: none; }
-.uav-f-display { font-size: var(--uav-font-display); line-height: calc(34 / 37); font-weight: ${token('font-weight-display')}; font-variant-numeric: tabular-nums; letter-spacing: ${token('letter-spacing-display')}; }
+.uav-f-display { font-size: var(--uav-font-display); line-height: ${lineOf('display', DISPLAY_LINE)}; font-weight: ${token('font-weight-display')}; font-variant-numeric: tabular-nums; letter-spacing: ${token('letter-spacing-display')}; }
 
 /* The number: a value, then a delta and a note, each on its own line. It is in every scene and shows when the
  * plan names it or a fit rule brings it in. */
@@ -69,30 +76,29 @@ export const BASE_CSS = `@layer uav {
 /* A number in dots is a block, so its screen has the number's whole width to fill. The ruler's is as wide as its glyphs. */
 :not(.uav-ruler) > .uav-number > b:has(.uav-glyphs) { display: block; }
 /* Beside a pulse it is what the pulse and its margins leave. */
-:not(.uav-ruler) > .uav-number > .uav-pulse + b:has(.uav-glyphs) { display: inline-block; inline-size: calc(100% - 20px); }
-.uav-number > span { display: block; line-height: calc(18 / 13); overflow: hidden; text-overflow: ellipsis; }
-.uav-number > .uav-f-tick { line-height: calc(16 / 11); }
-.uav-pulse { vertical-align: middle; margin-inline: 2px 8px; }
+:not(.uav-ruler) > .uav-number > .uav-pulse + b:has(.uav-glyphs) { display: inline-block; inline-size: calc(100% - ${SWATCH.pulse + PULSE_MARGIN[0] + PULSE_MARGIN[1]}px); }
+.uav-number > span { display: block; line-height: ${lineOf('label', 18)}; overflow: hidden; text-overflow: ellipsis; }
+.uav-number > .uav-f-tick { line-height: ${lineOf('tick', 16)}; }
+.uav-pulse { vertical-align: middle; margin-inline: ${PULSE_MARGIN[0]}px ${PULSE_MARGIN[1]}px; }
 .uav-short { display: none; }
 /* What the measured pass found, as data-fit on the number: its size, its forms, and whether its note fits. */
-.uav-number[data-fit~="short"] > .uav-f-display > .uav-full, .uav-number[data-fit~="delta-short"] > .uav-f-value > .uav-full { display: none; }
-.uav-number[data-fit~="short"] > .uav-f-display > .uav-short, .uav-number[data-fit~="delta-short"] > .uav-f-value > .uav-short { display: inline; }
-.uav-number[data-fit~="small"] > .uav-f-display { font-size: var(--uav-font-display-small); line-height: calc(24 / 26); }
+${shortForm('.uav-number[data-fit~="short"] > .uav-f-display', '.uav-number[data-fit~="delta-short"] > .uav-f-value')}
+.uav-number[data-fit~="small"] > .uav-f-display { ${NUMBER_SMALL} }
 .uav-number[data-fit~="no-note"] > .uav-f-tick { display: none; }
 /* A number the pass has not set carries no data-fit: one beside a bare plot, which its layout sets, or any number
  * where the pass does not run. For that one the widths at which place() takes the shorter forms stand in. */
-@container uav-view (inline-size < 200px) { .uav-number:not([data-fit]) > .uav-f-value > .uav-full { display: none; } .uav-number:not([data-fit]) > .uav-f-value > .uav-short { display: inline; } }
-@container uav-view (inline-size < 160px) {
-  .uav-number:not([data-fit]) > .uav-f-display > .uav-full { display: none; } .uav-number:not([data-fit]) > .uav-f-display > .uav-short { display: inline; }
-  .uav-number:not([data-fit]) > .uav-f-display { font-size: var(--uav-font-display-small); line-height: calc(24 / 26); }
+@container uav-view (inline-size < ${DELTA_FULL}px) { ${shortForm('.uav-number:not([data-fit]) > .uav-f-value')} }
+@container uav-view (inline-size < ${NUMBER_SHORT}px) {
+  ${shortForm('.uav-number:not([data-fit]) > .uav-f-display')}
+  .uav-number:not([data-fit]) > .uav-f-display { ${NUMBER_SMALL} }
 }
-@container uav-view (inline-size < 120px) { .uav-number:not([data-fit]) > .uav-f-tick { display: none; } }
+@container uav-view (inline-size < ${NOTE_LEAST}px) { .uav-number:not([data-fit]) > .uav-f-tick { display: none; } }
 
 /* What the measured pass reads. The room takes the view's width, and its height only when the view was handed a
  * box, so nothing the pass writes can resize it. The ruler holds the number set in each of its forms, clipped to
  * nothing so that it adds no overflow, and outside the figure so that no fit rule reaches it. */
 .uav-room { position: absolute; inset-inline: 0; inset-block-start: 0; block-size: 0; visibility: hidden; pointer-events: none; }
-@container uav-view (block-size >= 0px) { .uav-room { block-size: 100%; } }
+${IN_BOX} { .uav-room { block-size: 100%; } }
 .uav-ruler { position: absolute; inline-size: 0; block-size: 0; overflow: hidden; visibility: hidden; pointer-events: none; }
 .uav-ruler > .uav-number { display: block; position: absolute; inline-size: max-content; }
 .uav-ruler > .uav-number > span { inline-size: max-content; }
@@ -106,11 +112,11 @@ ${PIXELS_CSS}
 
 /* Only a size container answers a block-size query, so this matches exactly when a layout has handed the view a
  * box. The body then takes the height left over. No attribute on the view. */
-@container uav-view (block-size >= 0px) { .uav-body { block-size: auto; } }
+${IN_BOX} { .uav-body { block-size: auto; } }
 
 /* The prose alone: the last rung, set by the plan or, when the number itself does not fit, by the measured pass. */
 .uav:is([data-layout="prose"], [data-fit="prose"]) > :not(.uav-prose, .uav-room) { display: none !important; }
-.uav:is([data-layout="prose"], [data-fit="prose"]) > .uav-prose { position: static; inline-size: auto; block-size: auto; clip-path: none; white-space: normal; font-size: var(--uav-font-label); }
+.uav:is([data-layout="prose"], [data-fit="prose"]) > .uav-prose { ${SHOWN} white-space: normal; font-size: var(--uav-font-label); }
 
 /* The same result as a table, in place of the marks. The switch is public: the surface that offers it is outside the shadow root. */
 .uav-table { display: none; inline-size: 100%; border-collapse: collapse; font-size: var(--uav-font-tick); font-variant-numeric: tabular-nums; }
@@ -133,15 +139,13 @@ export function surfaceSheet(): CSSStyleSheet {
   return sheet;
 }
 
-const EXTRAS: FitExtras = Object.fromEntries(painters.map((p) => [p.layout, p.fit ?? {}]));
-
 /* A layout whose rule names a `fallback` is painted twice: by this view, and as that preset by a view of its own
  * beside the figure, handed the same query, result, catalog and rules. That one is its own container, with its own
  * rules, keyboard and measured pass. The compiled rule shows one of the two, so nothing runs on resize. The table is
  * the same query's either way, so it is this view's. */
 export const FALLBACK_CSS = `@layer uav {
 .uav-fallback { display: none; }
-@container uav-view (block-size >= 0px) { .uav-fallback { block-size: 100%; container-type: size; } }
+${IN_BOX} { .uav-fallback { block-size: 100%; container-type: size; } }
 :host([table]) .uav { display: block !important; }
 :host([table]) .uav-fallback { display: none !important; }
 }`;
@@ -194,57 +198,9 @@ export function rulesOver(given: Partial<ContainerRules> = {}): ContainerRules {
   return { ...d, ...given, axes: { ...d.axes, ...given.axes }, bare: { ...d.bare, ...given.bare }, rows: { ...d.rows, ...given.rows }, tldrValue: { ...d.tldrValue, ...given.tldrValue } };
 }
 
-/** A result by two dimensions as a pivot: a row per value of the first, a column per value of the second for each
- * field, then the field over all of them. Totals are the engine's, per value of each dimension, so a cell is empty
- * where the result has none. The columns run in the engine's order, as the series of a plot do. */
-export function pivot(q: Query, result: Result, fields: string[]): { cols: Row[string][]; rows: { key: Row[string]; cells: Row[string][] }[]; foot: Row[string][] } {
-  const [a, b] = q.by as [string, string], uniq = (rows: Row[], d: string) => [...new Set(rows.map((r) => r[d]))];
-  const of = (d: string, v: Row[string]) => result.totalsBy?.[d]?.find((t) => t[d] === v);
-  const cols = uniq(result.totalsBy?.[b] ?? result.rows, b);
-  return {
-    cols,
-    rows: uniq(result.rows, a).map((key) => {
-      const at = result.rows.filter((r) => r[a] === key);
-      return { key, cells: [...cols.flatMap((c) => fields.map((f) => at.find((r) => r[b] === c)?.[f])), ...fields.map((f) => of(a, key)?.[f])] };
-    }),
-    foot: [...cols.flatMap((c) => fields.map((f) => of(b, c)?.[f])), ...fields.map((f) => result.totals[f])],
-  };
-}
-
-/* The table is rebuilt whole: nothing in it moves, so there is nothing to keep. Totals are the engine's, never a sum of the rows. */
-function paintTable(table: HTMLTableElement, title: string | undefined, q: Query, result: Result, catalog: Catalog, layers: Layer[]): void {
-  const by = q.by || [], prev = q.compare === 'previous';
-  // A companion of a metric that a layer encodes has a column after it, under its suffix, or its own label where the catalog has an entry for it, as the readout says it, and in its own unit. With two dimensions the table is a pivot, and has none.
-  const more = (m: string) => (by.length === 2 ? [] : companions(m, result.rows[0], layers));
-  const fields = q.metrics.flatMap((m) => [m, ...(prev ? [m + '@previous'] : []), ...more(m)]);
-  const label = (f: string) => { const [m, of] = f.split('@'); return catalog.metrics[m!]!.label + (of == null ? '' : ', ' + (of === 'previous' ? 'previous period' : companionLabel(f, catalog))); };
-  const row = (parent: HTMLElement, cells: [text: string, tag: 'th' | 'td', num?: boolean][]) => {
-    const tr = parent.appendChild(document.createElement('tr'));
-    for (const [s, tag, num] of cells) { const c = tr.appendChild(document.createElement(tag)); c.textContent = s; if (num) c.setAttribute('data-num', ''); if (tag === 'th') c.scope = parent.tagName === 'THEAD' ? 'col' : 'row'; }
-  };
-  table.replaceChildren();
-  if (title) table.createCaption().textContent = title;
-  if (by.length === 2) {
-    // Two dimensions: the first down the side, the second across, and each field once more for the whole row.
-    const p = pivot(q, result, fields), per = (v: Row[string][]) => v.map((x, i): [string, 'td', boolean] => [x === undefined ? '' : cell(x, fields[i % fields.length]!), 'td', true]);
-    const cell = (v: Row[string], f: string) => formatValue(v as number | null, catalog.metrics[f.replace('@previous', '')]!, 'exact'), dim = (i: number, v: Row[string]) => formatDimension(v, catalog.dimensions[by[i]!]!);
-    row(table.createTHead(), [[catalog.dimensions[by[0]!]!.label, 'th'], ...p.cols.flatMap((c) => fields.map((f): [string, 'th', boolean] => [dim(1, c) + (fields.length > 1 ? ', ' + label(f) : ''), 'th', true])), ...fields.map((f): [string, 'th', boolean] => [label(f), 'th', true])]);
-    const tbody = table.createTBody();
-    for (const r of p.rows) row(tbody, [[dim(0, r.key), 'th'], ...per(r.cells)]);
-    row(table.createTFoot(), [['Total', 'th'], ...per(p.foot)]);
-    return;
-  }
-  row(table.createTHead(), [...by.map((d): [string, 'th'] => [catalog.dimensions[d]!.label, 'th']), ...fields.map((f): [string, 'th', boolean] => [label(f), 'th', true])]);
-  const value = (v: Row[string], f: string) => formatValue(v as number | null, metricOf(catalog, f)!, 'exact');
-  const body = table.createTBody(), totals = fields.map((f): [string, 'td', boolean] => [value(result.totals[f], f), 'td', true]);
-  for (const r of result.rows) row(body, [...by.map((d): [string, 'th'] => [formatDimension(r[d], catalog.dimensions[d]!), 'th']), ...fields.map((f): [string, 'td', boolean] => [value(r[f], f), 'td', true])]);
-  if (!by.length) row(body, totals);
-  else row(table.createTFoot(), [['Total', 'th'], ...by.slice(1).map((): [string, 'td'] => ['', 'td']), ...totals]);
-}
-
 function paintNumber(el: HTMLElement, nodes: SceneNode[]): void {
   keyed(el, nodes, (n) => (n.kind === 'circle' ? 'i' : n.kind === 'text' && n.font === 'display' ? 'b' : 'span'), (c, n) => {
-    if (n.kind === 'text') { text(c, n); (c as HTMLElement).title = n.note ?? ''; } else { c.classList.add('uav-pulse'); swatch(c, '10 circle'); }      // what the number counts, when it is pointed at
+    if (n.kind === 'text') { text(c, n); (c as HTMLElement).title = n.note ?? ''; } else { c.classList.add('uav-pulse'); swatch(c, SWATCH.pulse + ' circle'); }      // what the number counts, when it is pointed at
   });
 }
 
@@ -398,9 +354,12 @@ export class UaView extends Base {
       check(spec, result, catalog);
       if (!Array.isArray(rules.fit)) throw new Error('The rules need "fit", an array of fit rules. Leave it out to use the defaults.');
       if (!Array.isArray(rules.order)) throw new Error('The rules need "order", a list of reductions such as ["drop-guides", "prose"]. Leave it out to use the defaults.');
-      // Painters registered since this module loaded, for custom marks: their styles, extras and rules join the rest.
-      const doc = this.ownerDocument, more = Object.values(LAYOUTS).filter((p) => !painters.includes(p)), fits = [...rules.fit, ...painters.concat(more).flatMap((p) => p.rules?.(rules) ?? [])];
-      const fit = sheet(doc, compileFitRules(fits, { ...EXTRAS, ...Object.fromEntries(more.map((p) => [p.layout, p.fit ?? {}])) }));
+      // Every painter's extras and rules, the built-in ones' and those registered since this module loaded, for custom
+      // marks, whose styles join the rest as a sheet of their own. A custom mark's rules are its own, as core holds them
+      // (marks.ts); a painter's `rules` stand in where no mark of its name gives any.
+      const doc = this.ownerDocument, all = Object.values(LAYOUTS), more = all.filter((p) => !painters.includes(p));
+      const fits = [...rules.fit, ...all.flatMap((p) => customMarks().get(p.layout)?.rules ?? p.rules?.(rules) ?? [])];
+      const fit = sheet(doc, compileFitRules(fits, Object.fromEntries(all.map((p) => [p.layout, p.fit ?? {}]))));
       const plan = resolve(spec, result, { ...unboundedContainer(), rules }, catalog);
       const scene = buildScene(plan, spec.query, result, catalog), fig = this.#fig;
 

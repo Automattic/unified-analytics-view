@@ -1,3 +1,4 @@
+import { lineOf } from '../layout.ts';
 import type { CircleNode, Scene, TextNode } from '@unified-analytics/core';
 import { ensure, keyed, pageWay, prop, text } from '../dom.ts';
 
@@ -20,15 +21,16 @@ import { ensure, keyed, pageWay, prop, text } from '../dom.ts';
  * Keys step by group and never by glyph. In a plot the hit targets are a row's, as for bars, and in a list the row is
  * the target. In the band and round the half circle every glyph of a group carries its row, the first of them is the
  * group's option, and all of them wear the outline together (keys.ts). */
-const DOT = (room: string) => `max(1px, calc(${room} - 1px))`;
+/** A round glyph's width in the room it has: the room, less a hairline, and never less than one. */
+export const glyph = (room: string): string => `max(1px, calc(${room} - 1px))`;
 export const UNIT_CSS = `
-.uav-dots i[data-unit] { inline-size: ${DOT('var(--uav-w) * 100cqi')}; block-size: auto; aspect-ratio: 1; }
-.uav-plot .uav-dots i[data-unit] { inline-size: ${DOT('min(var(--uav-w) * 100cqi, var(--uav-h) * 100cqb)')}; }
+.uav-dots i[data-unit] { inline-size: ${glyph('var(--uav-w) * 100cqi')}; block-size: auto; aspect-ratio: 1; }
+.uav-plot .uav-dots i[data-unit] { inline-size: ${glyph('min(var(--uav-w) * 100cqi, var(--uav-h) * 100cqb)')}; }
 /* The key takes a line of its own under whatever the body holds, and the view is that much taller for it, as place()
  * makes it: 20 px where a tick is 11 px, and with the tick's face from there. In a list it is the row after the rows. */
 .uav-unit-key { display: none; grid-column: 1 / -1; flex: none; padding-block-start: 4px; overflow: hidden; white-space: nowrap; }
 .uav[data-parts~="unit-key"] .uav-unit-key { display: block; }
-.uav-unit-key span { display: block; overflow: hidden; text-overflow: ellipsis; line-height: calc(16 / 11); color: var(--uav-paint); }
+.uav-unit-key span { display: block; overflow: hidden; text-overflow: ellipsis; line-height: ${lineOf('tick', 16)}; color: var(--uav-paint); }
 .uav[data-layout="rows"] .uav-unit-key { grid-row: 3; padding-inline: 8px; }`;
 
 /** The key to a unit's glyphs, after whatever the body holds already. Every layout that draws the mark has the

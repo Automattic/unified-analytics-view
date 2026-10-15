@@ -1,4 +1,4 @@
-import type { Catalog, ContainerRules, FitRule, Layer, Layout, Query, Result, Room, Scene } from '@unified-analytics/core';
+import { CONTAINER_RULES, type Catalog, type ContainerRules, type FitRule, type Layer, type Layout, type Query, type Result, type Room, type Scene } from '@unified-analytics/core';
 
 /* The seam between <ua-view> and a layout. A layout is one module in layouts/, exporting one LayoutPainter.
  *
@@ -34,7 +34,8 @@ export interface LayoutPainter {
    * figure itself), then declarations. They are written under the rule's own condition and `keep`. */
   fit?: Record<string, Record<string, string>>;
   /** Fit rules of its own, for what the context's set does not carry yet. Compiled after the context's. It is handed
-   * the context's rule set, so a need that is one of its sizes is written from it. */
+   * the context's rule set, so a need that is one of its sizes is written from it. A custom mark's painter leaves it out:
+   * the element compiles the rules the mark was registered with in core. Where one gives it, the mark's own still win. */
   rules?(context: ContainerRules): FitRule[];
   paint(body: HTMLElement, scene: Scene, rules: ContainerRules, data: ViewData): void;
   /** The table alternative, where the element's own, a row of the table per row of the result, is not this layout's. */
@@ -45,6 +46,35 @@ export interface LayoutPainter {
    * settle: hide with `visibility`, never `display`. It is not called while the view shows only its prose. */
   measure?(body: HTMLElement, room: Room): void;
 }
+
+/** The condition that holds exactly when a layout has handed the view a box: only a size container answers a
+ * block-size query. For a stylesheet's `@container` block. */
+export const IN_BOX = '@container uav-view (block-size >= 0px)';
+/** How far down its box a thing stands that is --uav-t of the way up it: a scene's ratios run from the foot. */
+export const FROM_TOP = 'calc((1 - var(--uav-t)) * 100%)';
+
+/** The faces core lays a view out for, in px (place.ts measures its characters and lines at these). A line set in a
+ * face is so many px at this size, and grows and shrinks with the face from there: a line-height is that line over
+ * this. They are not the tokens' fallbacks, which a theme moves: a line-height stays a ratio of whatever face is set. */
+export const DRAWN = { tick: 11, label: 13, display: 37, 'display-small': 26 } as const;
+/** A line-height: a line `px` tall in `face` at the size it is drawn at. */
+export const lineOf = (face: keyof typeof DRAWN, px: number): string => `calc(${px} / ${DRAWN[face]})`;
+/** The number's value on its line, in its face and in the smaller one, in px at DRAWN. */
+export const DISPLAY_LINE = 34, DISPLAY_SMALL_LINE = 24;
+/** The number in its smaller face: declarations. */
+export const NUMBER_SMALL = `font-size: var(--uav-font-display-small); line-height: ${lineOf('display-small', DISPLAY_SMALL_LINE)};`;
+/** Rules that set the text under each selector in its shorter form, where it has one (dom.ts text()). */
+export const shortForm = (...sel: string[]): string =>
+  `${sel.map((s) => s + ' > .uav-full').join(', ')} { display: none; }\n${sel.map((s) => s + ' > .uav-short').join(', ')} { display: inline; }`;
+
+/** Words kept for assistive technology and out of sight, and the same words brought back into the flow: declarations. */
+export const VISUALLY_HIDDEN = 'position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;';
+export const SHOWN = 'position: static; inline-size: auto; block-size: auto; overflow: visible; clip-path: none;';
+
+/** A plot's natural height with its axes, and without them beside the number: the context's, which the element sets on
+ * the figure, and else core's defaults. */
+export const AXES_HEIGHT = `var(--uav-axes-height, ${CONTAINER_RULES.axes.height}px)`;
+export const BARE_HEIGHT = `var(--uav-bare-height, ${CONTAINER_RULES.bare.height}px)`;
 
 /** What changes with a rule that leaves the number alone: the figure's grid is the number's row, the body goes whole
  * so that its row holds no gap, and the number gives up the margin that stood between them. For a layout's `fit`. */
@@ -61,10 +91,3 @@ export function holdShape(most: string, aspect: string | number): { part: string
   };
 }
 
-/** The swap of a band's legends in a box, which a circle of arcs has too: the full legend while the body's height
- * (100cqb) is at least --uav-legend-block, and the one line under it, with the full one's gap gone as well. A clamp
- * does it, since that need depends on the data. Declarations for `.uav-legend` and `.uav-legend-top`. */
-export const LEGEND_SWAP = {
-  full: 'overflow: hidden; max-block-size: max(0px, (100cqb - var(--uav-legend-block) + 0.01px) * 999999);\n    margin-block-start: clamp(0px, (100cqb - var(--uav-legend-block) + 0.01px) * 999999, 10px);',
-  top: 'display: block; overflow: hidden; max-block-size: max(0px, (var(--uav-legend-block) - 100cqb) * 999999);',
-};

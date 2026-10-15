@@ -1,11 +1,12 @@
-import { formatBin, formatDimension, formatValue, layerKeys, metricOf, partialNote, plural, rowKeys, unitsOf, type Catalog, type Layer, type Query, type RectNode, type Result, type Row, type Scene } from '@unified-analytics/core';
+import { POINT_INSET, formatBin, formatDimension, formatValue, layerKeys, metricOf, partialNote, plural, rowKeys, unitsOf, type Catalog, type Layer, type Query, type RectNode, type Result, type Row, type Scene } from '@unified-analytics/core';
 import { attr, ensure, paintVar, prop } from './dom.ts';
 import { centred, say, tip as chip } from './chrome/tip.ts';
 import { apart } from './measure.ts';
 import { FOCUS, HOVER, token } from './tokens.ts';
-import { swatch as swatchOf } from './chrome/swatch.ts';
+import { SWATCH, swatch as swatchOf } from './chrome/swatch.ts';
 import { nearest } from './layouts/points.ts';
 import { rove, type How } from './rove.ts';
+import { FROM_TOP } from './layout.ts';
 
 /* Hit targets, the keyboard and the readout. A layout marks the element that holds its points with `data-hits`
  * ("x" where they run across, "y" where they run down), and each point is a child carrying `data-row`. Bars in a
@@ -48,14 +49,20 @@ export function companionLabel(f: string, catalog: Catalog): string {
   return Object.hasOwn(catalog.metrics, f) ? catalog.metrics[f]!.label.toLowerCase() : f.slice(f.indexOf('@') + 1);
 }
 
+/** A row's value of a dimension, as the readout and a table name it: a bin by both its ends, as its label on an axis is. */
+export function dimName(row: Row, d: string, catalog: Catalog): string {
+  return row[d + '@end'] == null ? formatDimension(row[d], catalog.dimensions[d]!) : formatBin(row[d], row[d + '@end']);
+}
+
 /** What the readout says for one row of the result, in the catalog's formats: the dimension value, each metric
  * (marked when its bucket is unfinished), its comparison if the row has one, and each companion of it that a layer
  * encodes, under its suffix: what a range or a tick is drawn from is said as well as shown. */
 export function readout(row: Row, q: Query, catalog: Catalog, layers: Layer[]): string {
-  // A bin is named by both its ends, as its label on an axis is.
   // Two bins are each named by their dimension as well: two bare ranges do not say which is which.
   const both = (q.by || []).filter((d) => row[d + '@end'] != null).length > 1;
-  const dims = (q.by || []).map((d) => (row[d + '@end'] == null ? formatDimension(row[d], catalog.dimensions[d]!) : (both ? catalog.dimensions[d]!.label + ' ' : '') + formatBin(row[d], row[d + '@end']))).join(', '), partial = partialNote(row);
+  const dims = (q.by || []).map((d) => (both && row[d + '@end'] != null ? catalog.dimensions[d]!.label + ' ' : '') + dimName(row, d, catalog)).join(', '), partial = partialNote(row);
+  // Never a row of dashes: a row with no value says so in words.
+  if (q.metrics.every((m) => row[m] == null)) return (dims ? dims + ': ' : '') + 'No data';
   const values = q.metrics.map((m) => {
     const def = catalog.metrics[m]!, prev = q.compare === 'previous' ? row[m + '@previous'] : null;
     const more = companions(m, row, layers).filter((f) => row[f] != null).map((f) => ', ' + companionLabel(f, catalog) + ' ' + formatValue(row[f] as number, metricOf(catalog, f)!)).join('');
@@ -79,13 +86,22 @@ export function written(shown: string, row: Row, q: Query, catalog: Catalog, lay
  * are in one paint and may be many, it says how many there are and the one with the most there, by name: a comparison
  * of the engine's rows, as the prose's leader is. */
 export function readoutAt(rows: Row[], total: Row | undefined, q: Query, catalog: Catalog, x: string, split: string, mass = false): string {
-  const first = rows[0] ?? {}, partial = partialNote(first), of = catalog.dimensions[split]!;
-  return formatDimension(first[x], catalog.dimensions[x]!) + ': ' + q.metrics.map((m) => {
+  const of = catalog.dimensions[split]!, { name, metrics } = headAt(rows, total, q, catalog, x);
+  return name + ': ' + q.metrics.map((m, i) => {
     const def = catalog.metrics[m]!, said = (r: Row) => formatDimension(r[split], of) + ' ' + formatValue(r[m] as number | null, def);
     const top = rows.filter((r) => r[m] != null).reduce<Row | undefined>((a, r) => (!a || (r[m] as number) > (a[m] as number) ? r : a), undefined);
-    return def.label + (total ? ' ' + formatValue(total[m] as number | null, def) + (partial && ' ' + partial) : '')
-      + ' (' + (mass ? rows.length + ' ' + (rows.length === 1 ? of.label.toLowerCase() : plural(of.label.toLowerCase())) + (top ? ', the most ' + said(top) : '') : rows.map(said).join(', ')) + ')';
+    return metrics[i] + ' (' + (mass ? rows.length + ' ' + (rows.length === 1 ? of.label.toLowerCase() : plural(of.label.toLowerCase())) + (top ? ', the most ' + said(top) : '') : rows.map(said).join(', ')) + ')';
   }).join('; ');
+}
+
+/** What a point of a split plot is called, and each metric there with the engine's total for the point where the result
+ * has one: the head of its readout, in words (readoutAt) and as drawn (readoutLines). */
+function headAt(rows: Row[], total: Row | undefined, q: Query, catalog: Catalog, x: string): { name: string; metrics: string[] } {
+  const first = rows[0] ?? {}, partial = partialNote(first);
+  return {
+    name: formatDimension(first[x], catalog.dimensions[x]!),
+    metrics: q.metrics.map((m) => { const def = catalog.metrics[m]!; return def.label + (total ? ' ' + formatValue(total[m] as number | null, def) + (partial && ' ' + partial) : ''); }),
+  };
 }
 
 /** The readout of a point of a split plot as it is drawn: a head that says the x and each metric with the engine's
@@ -93,11 +109,7 @@ export function readoutAt(rows: Row[], total: Row | undefined, q: Query, catalog
  * series' paint. readoutAt() says the same in words, for the point's name. More than one metric: each line has
  * their values in the head's order. */
 export function readoutLines(rows: Row[], total: Row | undefined, q: Query, catalog: Catalog, x: string, split: string): { head: string; lines: { series: string; name: string; value: string }[] } {
-  const first = rows[0] ?? {}, partial = partialNote(first), of = catalog.dimensions[split]!;
-  const head = formatDimension(first[x], catalog.dimensions[x]!) + ': ' + q.metrics.map((m) => {
-    const def = catalog.metrics[m]!;
-    return def.label + (total ? ' ' + formatValue(total[m] as number | null, def) + (partial && ' ' + partial) : '');
-  }).join('; ');
+  const of = catalog.dimensions[split]!, { name, metrics } = headAt(rows, total, q, catalog, x), head = name + ': ' + metrics.join('; ');
   return { head, lines: rows.map((r) => ({ series: String(r[split]), name: formatDimension(r[split], of), value: q.metrics.map((m) => formatValue(r[m] as number | null, catalog.metrics[m]!)).join(', ') })) };
 }
 
@@ -212,7 +224,7 @@ svg[data-hits] path[data-active="pointer"] { ${HOVER.stroke} }
 /* The readout is a tooltip chip at a point (chrome/tip.ts), as wide as its words up to a width of its own. */
 .uav-readout { z-index: 1; left: 0; top: 0; inline-size: max-content; max-inline-size: min(320px, 100%); }
 /* At a point of a split plot it is a head and a line to each series: a swatch of its paint, its name, and its value at the end. */
-.uav-readout[data-lines] { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; column-gap: 4px; align-items: center; min-inline-size: min(160px, 100%); }
+.uav-readout[data-lines] { display: grid; grid-template-columns: ${SWATCH.readout}px minmax(0, 1fr) auto; column-gap: 4px; align-items: center; min-inline-size: min(160px, 100%); }
 .uav-readout[data-lines] > b { grid-column: 1 / -1; font-weight: inherit; }
 .uav-readout[data-lines] > span:nth-of-type(2n) { text-align: end; }
 /* In the top layer it is placed on the screen, over whatever holds the view, and is as wide as its words up to a width of its own. */
@@ -226,7 +238,7 @@ svg[data-hits] path[data-active="pointer"] { ${HOVER.stroke} }
  * raised while it has a crosshair, or the axis labels after it would be drawn over them. */
 .uav-plot:has(> .uav-cross) { z-index: 2; }
 .uav-cross { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
-.uav-cross i { position: absolute; inset-inline: 0; inset-block-start: calc((1 - var(--uav-t)) * 100% - var(--uav-rule) / 2); block-size: var(--uav-rule); background: var(--uav-rule-paint); }
+.uav-cross i { position: absolute; inset-inline: 0; inset-block-start: calc(${FROM_TOP} - var(--uav-rule) / 2); block-size: var(--uav-rule); background: var(--uav-rule-paint); }
 .uav-cross-x { inset-block-start: calc(100% + 3px); unicode-bidi: plaintext; }
 .uav-cross-y { translate: 0 -50%; text-align: end; }
 .uav-cross-y[data-side="1"] { text-align: start; }
@@ -238,7 +250,7 @@ svg[data-hits] path[data-active="pointer"] { ${HOVER.stroke} }
 .uav:has(.uav-row > .uav-f-value) > .uav-readout { transition: visibility 0s ${token('motion-delay-tooltip')}; }
 @starting-style { .uav:has(.uav-row > .uav-f-value) > .uav-readout { visibility: hidden; } }
 .uav-hits { position: absolute; inset: 0; }
-.uav-body[data-scale="point"] .uav-hits { inset-inline: 2px; }
+.uav-body[data-scale="point"] .uav-hits { inset-inline: ${POINT_INSET}px; }
 .uav-hits i { position: absolute; inset-block: 0; inset-inline-start: calc(var(--uav-x) * 100%); inline-size: calc(var(--uav-w) * 100%); }
 /* Hit targets are not marks. On a data change they take their new places at once, and one whose row has gone
  * goes at once: motion.ts keeps a leaving node only while --uav-leaving is set. */
@@ -246,7 +258,6 @@ svg[data-hits] path[data-active="pointer"] { ${HOVER.stroke} }
 .uav[data-moving] .uav-plot .uav-hits [data-exit] { --uav-leaving: initial; transition: none; }
 .uav-hits [data-active]::before { content: ""; position: absolute; inset-block: 0; inset-inline-start: calc(var(--uav-c) * 100% - var(--uav-rule) / 2); inline-size: var(--uav-rule); background: var(--uav-rule-paint); }
 .uav-plot:has(:is(.uav-bars, .uav-dots) > [data-active]) .uav-hits [data-active]::before { display: none; }
-.uav-legend span[data-active] { text-decoration: underline; }
 /* A series chosen at a point: the rest of the plot stands back, and its name is marked wherever it is written. */
 .uav-plot:has([data-chosen]) :is(.uav-bars i, path):not([data-chosen]) { opacity: ${token('opacity-dim')} !important; }
 /* In a plot split by detail every line is drawn light, so that many together read darker. The one chosen is drawn whole. */
@@ -254,8 +265,8 @@ svg[data-hits] path[data-active="pointer"] { ${HOVER.stroke} }
 /* A series chosen in a row of a list: the rest of that row's stand back, and a dot of many is drawn whole. */
 .uav-row:has(> [data-chosen]) > i[data-series]:not([data-chosen]) { opacity: ${token('opacity-dim')} !important; }
 .uav-row > i[data-chosen] { opacity: 1 !important; }
-:is(.uav-legend, .uav-legend-top) span[data-chosen] { text-decoration: underline; }
-:is(.uav-legend, .uav-labels) span[data-chosen] { text-decoration: underline; }`;
+/* A chosen entry of a legend, and a chosen series' name wherever it is written, are underlined. */
+.uav-legend span[data-active], :is(.uav-legend, .uav-legend-top, .uav-labels) span[data-chosen] { text-decoration: underline; }`;
 
 /** A view's readout: one element, the figure's own, which every layout that says what is under the pointer sets.
  * In the top layer where there is one, so nothing that holds the view can clip it: a card, a scrolling panel. */
@@ -437,7 +448,7 @@ export class Keys {
     if (row && (point as Element).classList?.contains('uav-row') && written((point as Element).textContent ?? '', row, this.#q!, this.#catalog!, this.#layers)) { hideReadout(tip); return; }
     const lines = pair ? null : this.#lines[i];
     say(tip, !lines ? says : [el('b', lines.head), ...lines.lines.flatMap((l) => {
-      const swatch = document.createElement('i'); swatchOf(swatch, '8');
+      const swatch = document.createElement('i'); swatchOf(swatch, String(SWATCH.readout));
       prop(swatch, '--uav-paint', paintVar(this.#paints.get(l.series) ?? 'series.1'));
       return [swatch, el('span', l.name), el('span', l.value)];
     })]);
@@ -499,6 +510,12 @@ export class Keys {
     if (row) this.#host.dispatchEvent(new CustomEvent('ua-activate', { bubbles: true, composed: true, detail: { row, rows } }));
     return true;
   }
+}
+
+/** Take from an element what the keyboard set on it as a holder of points (Keys.paint and name()), for one that holds
+ * none any longer. */
+export function unlist(el: Element): void {
+  for (const name of ['role', 'tabindex', 'aria-label', 'aria-orientation', 'aria-activedescendant']) el.removeAttribute(name);
 }
 
 /** Choose an element of a holder of them, or none, and say how, as the element's points are chosen. The readout is

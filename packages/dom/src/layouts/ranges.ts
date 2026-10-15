@@ -1,4 +1,4 @@
-import type { LineNode, Scene } from '@unified-analytics/core';
+import { POINT_INSET, type LineNode, type Scene } from '@unified-analytics/core';
 import { ensure, keyed, prop } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { RULE } from '../chrome/rule.ts';
@@ -17,7 +17,7 @@ import { RULE } from '../chrome/rule.ts';
 const span = (a: string, b: string) => `calc(max(var(${a}) - var(${b}), var(${b}) - var(${a})) * 100%)`;
 export const RANGES_CSS = `
 .uav-ranges { position: absolute; inset: 0; pointer-events: none; }
-.uav-body[data-scale="point"] .uav-ranges { inset-inline: 2px; }
+.uav-body[data-scale="point"] .uav-ranges { inset-inline: ${POINT_INSET}px; }
 .uav-ranges i { position: absolute; background: var(--uav-paint);
   inset-inline-start: calc(min(var(--uav-x), var(--uav-x2)) * 100%); inline-size: max(${RULE}, ${span('--uav-x2', '--uav-x')});
   inset-block-end: calc(min(var(--uav-t), var(--uav-t2)) * 100%); block-size: max(${RULE}, ${span('--uav-t2', '--uav-t')}); }

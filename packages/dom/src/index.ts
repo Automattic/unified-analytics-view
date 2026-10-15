@@ -1,11 +1,12 @@
 export { compileFitRules, type FitExtras } from './compile.ts';
 export { nodePaint, paintVar } from './dom.ts';
 export { FOCUS, HOVER, TOKENS, token } from './tokens.ts';
-export { holdShape, type LayoutPainter } from './layout.ts';
+export { AXES_HEIGHT, FROM_TOP, IN_BOX, holdShape, type LayoutPainter } from './layout.ts';
 export { SURFACE_CSS, UaView, defineUaView, surfaceSheet, type Inputs } from './view.ts';
-export { attr, ensure, keyed, prop, text } from './dom.ts';
+export { attr, ensure, ensureSvg, hits, keyed, prop, svg, text } from './dom.ts';
 export { registerPainter } from './layouts/index.ts';
 export { ANCHOR, label, paintAxes, paintLegend, paintRamp, paintSize, paintUnitKey, say, thinAxis, type Anchor, type LabelOptions } from './chrome/index.ts';
-export { chooseItem, hideReadout, placeReadout, readoutOf, roveItems } from './keys.ts';
-export { hovers, pressed, rove, type How, type Roving } from './rove.ts';
+export { chooseItem, hideReadout, placeReadout, readoutOf, roveItems, unlist } from './keys.ts';
+export { ARROWS, hovers, pressed, rove, type How, type Roving } from './rove.ts';
 export { thinLabels } from './measure.ts';
+export { emptyTable, fieldLabel, tableRow, valueText, type Cell } from './table.ts';

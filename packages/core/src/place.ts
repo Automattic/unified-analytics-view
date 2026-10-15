@@ -13,15 +13,20 @@ import type { CircleNode, Container, Part, PathNode, PlacedCircle, PlacedNode, P
 interface Block { nodes: PlacedNode[]; height: number }
 type Point = PathNode['points'][number];
 
-const SHORT_PLOT = 120;   // px of plot height under which ranked y ticks go
+export const SHORT_PLOT = 120;   // px of plot height under which ranked y ticks go
 const LABEL = 14;         // characters a label at a line's end is given before it is clipped
 const LABEL_LINE = 12;    // px from one such label to the next
 const RADIAL = 160;       // px across a circle of arcs that has room to spare
 const RIM = 14;           // px a circle gives up all round to the labels at its rim: a line of them
 const SEATS = 240;        // px across a half circle of seats that has: a seat of a hundred is then 11 px, and
-const SEATS_LEAST = 160;  // the least it is built to: a seat of 7. Under that the legend gives way before the seats do
+export const SEATS_LEAST = 160;  // the least it is built to: a seat of 7. Under that the legend gives way before the seats do
 const GRID = 160;         // px across a unit's grid of a hundred that has room to spare, and
-const GRID_LEAST = 100;   // the least it is built to: a cell of 9 px, a hairline apart
+export const GRID_LEAST = 100;   // the least it is built to: a cell of 9 px, a hairline apart
+export const NUMBER_SHORT = 160;  // px of width under which the number takes its short form
+export const DELTA_FULL = 200;    // px of width the delta's long form needs
+export const NOTE_LEAST = 120;    // px of width under which the number's note goes
+export const POINT_INSET = 2;     // px a point scale puts its first and last marks inside the plot
+export const NOTICE_HEIGHT = 120; // px a notice is tall where it is not held shorter
 /** The line a unit's key takes under its glyphs, in px. */
 export const UNIT_KEY_BLOCK = 20;
 /** A dot's radius in px: by its size step, or the one size of a dot that has none. */

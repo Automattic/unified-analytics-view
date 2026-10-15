@@ -9,7 +9,7 @@ As of October 15, 2026. **Status: agreed in conversation on October 15; nothing 
 3. **Styling chosen by context belongs to the parent too.** Tone, halo, type size and a mass's lightness are a token override on the nested atom. They become a *parent* property only where that parent needs more than one value in the views: an axis with Tone = Axis | Paint, for example.
 4. **A combination exists because a parent uses it.** So it cannot go missing. Paint × End is drawn the day the Sankey column is.
 5. **Every atom supports every state**, even where a state looks the same as Default. A pointer passes over an atom whether or not a style is tied to it. The more universal a state, the lower in the tree it sits. The more discretionary an option, the higher.
-6. **Focus is drawn by a layer underneath, not by the atom.** Every atom has the Focus state, and its look is always the shared focus indicator under it: the Focus outline (24:12) round a box, or a focus stroke along a path, both in `color-focus` at `stroke-width-focus`.
+6. **Focus is drawn by a layer underneath, not by the atom, and always at full strength.** No emphasis or opacity of the atom or its parent dims it. Every atom has the Focus state, and its look is always the shared focus indicator under it: the Focus outline (24:12) round a box, or a focus stroke along a path, both in `color-focus` at `stroke-width-focus`.
 
 ## 2. The states
 
@@ -156,7 +156,7 @@ Steps 1–5 were built on October 15: #32 (Plot label and its parents), #33 (the
 
 **Where the plan did not hold up in Figma.**
 - **Focus sits on top of a stroked shape, not underneath.** An arc, a region or a hex draws its gap as a stroke in the background colour, which would hide a layer underneath. On top, the focus layer has no fill, so it draws only the ring, as code's `FOCUS.stroke` does. Rule 6 holds for boxes. For these shapes it reads "a focus stroke along the path, drawn over it".
-- **The focus layer takes the atom's opacity.** In Figma a Dimmed atom's focus is dimmed too, and so is a rug tick at rest. Code draws it at full strength. That is for design to settle.
+- **The focus layer took the atom's opacity.** In Figma a Dimmed atom's focus was dimmed too, and so was a rug tick at rest. **Decided October 15:** the focus ring is drawn at full strength everywhere, as code draws it. A variant's opacity sits on its shape's layers, never on the variant itself, so the Focus layer is never dimmed.
 - **_Path shape gets its path through a slot.** Its focus stroke is a second slot, `Focus path`, which each parent fills with a stroked copy of the path: Line, Area, Rule. A new parent has to fill it too.
 - **Mass was already on the parents.** Line, Dot and Tick / Row set it as an opacity override, which is rule 3. Nothing changed there.
 - **_Row state was not folded into a row.** Most of its instances sit straight in view frames, so it took the set as its own atom.

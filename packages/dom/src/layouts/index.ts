@@ -26,8 +26,10 @@ export const LAYOUTS: Record<string, LayoutPainter> = { cartesian, rows, band, r
 /** Register the painter of a custom mark: the DOM's half of it. A custom mark is a layout of its own under its own
  * name (core's marks.ts), so `painter.layout` is the name the mark was registered under there. */
 export function registerPainter(painter: LayoutPainter): void {
-  LAYOUTS[painter.layout] = painter;
+  LAYOUTS[painter.layout] = painter; registered++;
 }
+/** How many painters have been registered, so the element works its stylesheet out again only when one is. */
+export let registered = 0;
 
 /** The painter of a layout, or none for the two that have no body. Any other with none is a custom mark whose DOM
  * half was never registered: it would paint nothing and say nothing, so it is an error. */

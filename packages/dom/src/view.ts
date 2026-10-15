@@ -10,11 +10,11 @@ import { DOTS_CSS } from './dots.ts';
 import { PIXELS_CSS, pixels } from './pixels.ts';
 import { paintTable } from './table.ts';
 import { KEYS_CSS, Keys, hideReadout, readoutOf } from './keys.ts';
-import { LAYOUTS, painterOf } from './layouts/index.ts';
+import { LAYOUTS, painterOf, registered } from './layouts/index.ts';
 import { NUMBER_FITS, fitNumber, readNumber } from './measure.ts';
 import { MOTION_CSS, begin, register, settle, still } from './motion.ts';
 import { FACES, token } from './tokens.ts';
-import { DISPLAY_LINE, DRAWN, IN_BOX, NUMBER_SMALL, SHOWN, VISUALLY_HIDDEN, lineOf, shortForm } from './layout.ts';
+import { DISPLAY_LINE, DRAWN, IN_BOX, NUMBER_SMALL, SHOWN, VISUALLY_HIDDEN, lineOf, shortForm, type LayoutPainter } from './layout.ts';
 
 /* <ua-view>: one view, in whatever room it is handed. It plans once per data change, for a container with no
  * limits, builds the ratio scene and paints it. The stylesheet fits it. On resize only the measured pass runs
@@ -23,12 +23,12 @@ import { DISPLAY_LINE, DRAWN, IN_BOX, NUMBER_SMALL, SHOWN, VISUALLY_HIDDEN, line
  * The host is the `view` container. By default it fills the width and takes its natural height; a surface
  * layout that hands out a box makes it `container-type: size`, and the body fills what is left. */
 
-const painters = Object.values(LAYOUTS);
 /** The space before the pulse beside the number, and between it and the number, in px. */
 const PULSE_MARGIN = [2, 8] as const;
 
-/* Everything the element owns, in one layer, so a compiled fit rule beats it whatever the specificity. */
-export const BASE_CSS = `@layer uav {
+/* Everything the element owns, in one layer, so a compiled fit rule beats it whatever the specificity. Every painter's
+ * styles, the built-in ones' and a custom mark's alike, come in one place in it: after the base, before the chrome. */
+const stylesOf = (painters: LayoutPainter[]) => `@layer uav {
 :host { display: block; container: uav-view / inline-size; line-height: 1.3; text-align: start; text-indent: 0; color: ${paintVar('ink')}; }
 :host([hidden]), [hidden] { display: none !important; }
 /* The faces, worked out here and nowhere else. A page's type tokens may be fluid, in cqi, and these are the view's
@@ -128,6 +128,11 @@ ${IN_BOX} { .uav-body { block-size: auto; } }
 :host([table]) .uav { display: block; overflow: auto; }
 :host([table]) .uav-table { display: table; }
 }`;
+/** The element's stylesheet with the built-in painters, which is what a view loading or refused adopts. */
+export const BASE_CSS = stylesOf(Object.values(LAYOUTS));
+// With the painters registered since, worked out again only when one is.
+let styled = 0, styles = BASE_CSS;
+const allStyles = () => (styled === registered ? styles : ((styled = registered), (styles = stylesOf(Object.values(LAYOUTS)))));
 
 /** The two surface layouts of docs/dom-painter-plan.md section 4.2. The surface owns them; they are here so that a
  * surface which is itself a custom element can adopt them into its shadow root. */
@@ -356,16 +361,16 @@ export class UaView extends Base {
       if (!Array.isArray(rules.fit)) throw new Error('The rules need "fit", an array of fit rules. Leave it out to use the defaults.');
       if (!Array.isArray(rules.order)) throw new Error('The rules need "order", a list of reductions such as ["drop-guides", "prose"]. Leave it out to use the defaults.');
       // Every painter's extras and rules, the built-in ones' and those registered since this module loaded, for custom
-      // marks, whose styles join the rest as a sheet of their own. A custom mark's rules are its own, as core holds them
-      // (marks.ts); a painter's `rules` stand in where no mark of its name gives any.
-      const doc = this.ownerDocument, all = Object.values(LAYOUTS), more = all.filter((p) => !painters.includes(p));
+      // marks. A custom mark's rules are its own, as core holds them (marks.ts); a painter's `rules` stand in where no
+      // mark of its name gives any.
+      const doc = this.ownerDocument, all = Object.values(LAYOUTS);
       const fits = [...rules.fit, ...all.flatMap((p) => customMarks().get(p.layout)?.rules ?? p.rules?.(rules) ?? [])];
       const fit = sheet(doc, compileFitRules(fits, Object.fromEntries(all.map((p) => [p.layout, p.fit ?? {}]))));
       const plan = resolve(spec, result, { ...unboundedContainer(), rules }, catalog);
       const scene = buildScene(plan, spec.query, result, catalog), fig = this.#fig;
 
       painting = true;
-      this.#root.adoptedStyleSheets = [sheet(doc, BASE_CSS), sheet(doc, FALLBACK_CSS), ...more.map((p) => sheet(doc, '@layer uav {' + p.css + '}')), fit];
+      this.#root.adoptedStyleSheets = [sheet(doc, allStyles()), sheet(doc, FALLBACK_CSS), fit];
       fig.dataset.layout = scene.layout; fig.dataset.keep = (spec.keep || []).join(' '); fig.dataset.parts = scene.parts.join(' ');
       if (spec.title) fig.setAttribute('aria-label', spec.title); else fig.removeAttribute('aria-label');
       // The plot's natural heights are the context's, read by the stylesheet. The painter hard-codes neither.

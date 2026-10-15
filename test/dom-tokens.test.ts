@@ -8,7 +8,7 @@ import { geoPainter } from '@unified-analytics/geo/dom';
 import { KEYS_CSS } from '../packages/dom/src/keys.ts';
 import { LAYOUTS } from '../packages/dom/src/layouts/index.ts';
 import { MOTION_CSS } from '../packages/dom/src/motion.ts';
-import { FACES, FOCUS, HOVER, NAMED, TOKENS } from '../packages/dom/src/tokens.ts';
+import { FACES, FOCUS, HOVER, NAMED, TOKENS, UNTHEMED } from '../packages/dom/src/tokens.ts';
 import { BASE_CSS, FALLBACK_CSS } from '../packages/dom/src/view.ts';
 import { ROOT } from '../packages/tokens/src/generate.ts';
 
@@ -17,6 +17,14 @@ import { ROOT } from '../packages/tokens/src/generate.ts';
 type Tree = { [key: string]: Tree | unknown };
 const leaves = (tree: Tree, path: string[] = []): string[] => Object.entries(tree).flatMap(([key, v]) =>
   key.startsWith('$') ? [] : v && typeof v === 'object' && '$value' in v ? [path.concat(key).join('-')] : leaves(v as Tree, path.concat(key)));
+// The light theme's declarations, with each alias into another tier followed to its value. A fluid size is the
+// widest end of its clamp, in px.
+const declared = new Map([...readFileSync(join(ROOT, 'generated/tokens.css'), 'utf-8').split('\n}')[0]!.matchAll(/^\s*--([a-z0-9-]+): ([^;]+);/gm)].map((m) => [m[1]!, m[2]!]));
+const resolve = (value: string): string => {
+  const v = value.replace(/var\(--([a-z0-9-]+)\)/g, (_, name: string) => resolve(declared.get(name) ?? 'undefined --' + name));
+  const clamp = /^clamp\(.*, ([\d.]+)rem\)$/.exec(v);
+  return clamp ? +(+clamp[1]! * 16).toFixed(2) + 'px' : v;
+};
 const tier = leaves(JSON.parse(readFileSync(join(ROOT, 'config/charts.tokens.json'), 'utf-8')).charts);
 
 const painters = [...Object.values(LAYOUTS).filter((p) => p.layout !== 'geo'), geoPainter];
@@ -33,6 +41,12 @@ describe('the public tokens', () => {
     expect(read.filter((name) => !Object.hasOwn(TOKENS, name))).toEqual([]);
     // Each is read with a fallback, so a page that loads no tokens still gets a view.
     expect(css.match(/var\(--ua-charts-[a-z0-9-]+\)/g)).toBeNull();
+  });
+  it('fall back to what the token package gives them, but for the ones that differ on purpose', () => {
+    const own = (name: string) => Object.keys(UNTHEMED).some((start) => name.startsWith(start));
+    const drift = Object.entries(TOKENS).filter(([name, value]) => !own(name) && resolve('var(--ua-charts-' + name + ')') !== value);
+    expect(drift.map(([name, value]) => `${name}: ${value}, the token package ${resolve('var(--ua-charts-' + name + ')')}`)).toEqual([]);
+    expect(Object.keys(UNTHEMED).filter((start) => !Object.keys(TOKENS).some((name) => name.startsWith(start)))).toEqual([]);
   });
   it('fall back to the value in the table, or to the one a part gives in its place', () => {
     expect(token('border-radius-bar')).toBe('var(--ua-charts-border-radius-bar, 2px)');

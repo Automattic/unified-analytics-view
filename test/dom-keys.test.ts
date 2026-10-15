@@ -241,6 +241,15 @@ describe('the mouse leaving', () => {
     gone.send('pointerover', { pointerType: 'mouse' }); gone.paint();
     expect(gone.chosen()).toEqual([]);
   });
+  it('activates the chosen row on a click whether or not it has a point on show, and by a key only where it has', () => {
+    // A legend's entry or a map's region is the row's as well, and a row with no cell or symbol on show has one.
+    const v = view(true, true);
+    v.points[1]!.getClientRects = () => [];
+    v.send('pointerover', { pointerType: 'mouse' }); v.send('click', {});
+    expect(v.activated()).toBe(1);
+    v.send('keydown', { key: 'Enter' });
+    expect(v.activated()).toBe(1);
+  });
   it('steps the way the arrow points where the holder reads from the right, as a band does on such a page', () => {
     const v = view(true);
     direction = 'rtl';

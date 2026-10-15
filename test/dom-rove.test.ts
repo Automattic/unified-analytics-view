@@ -4,7 +4,7 @@ import { step } from '../packages/dom/src/keys.ts';
 
 // The interaction every holder shares, against a holder of three numbered things with no DOM: the event's target
 // is the holder, and `on` the number it is on. Which thing a key moves to is the holder's, here the element's own step().
-const holder = (elsewhere = false) => {
+const holder = (elsewhere = false, under?: (t: number, at: number) => boolean) => {
   const on = new EventTarget() as unknown as HTMLElement, log: string[] = [];
   let at: number | null = null, activated = 0;
   rove<number>(on, {
@@ -14,6 +14,7 @@ const holder = (elsewhere = false) => {
     activate: () => { if (at == null) return false; activated++; return true; },
     step: (e) => step(e.key, at ?? -1, 3),
     holder: () => (elsewhere ? null : on),
+    ...(under && { under }),
   });
   const send = (type: string, init: object = {}) => { const e = Object.assign(new Event(type, { cancelable: true }), init); on.dispatchEvent(e); return e.defaultPrevented; };
   return { send, log, at: () => at, activated: () => activated };
@@ -57,6 +58,15 @@ describe('rove', () => {
     expect(v.activated()).toBe(1);
     expect(v.send('keydown', { key: 'Escape' })).toBe(true);
     expect(v.at()).toBe(null);
+  });
+  it('activates on a click under the chosen thing, by the holder\'s own measure where it has one', () => {
+    const v = holder();
+    v.send('keydown', { key: 'ArrowRight' }); v.send('keydown', { key: 'ArrowRight' }); v.send('click', { on: 0 });
+    expect(v.activated()).toBe(0);
+    // Things in tens: a click on 7 is under the 0 chosen.
+    const tens = holder(false, (t, at) => Math.floor(t / 10) === Math.floor(at / 10));
+    tens.send('keydown', { key: 'ArrowRight' }); tens.send('click', { on: 7 });
+    expect(tens.activated()).toBe(1);
   });
   it('leaves a key pressed on anything but the holder alone, and lets go when focus leaves', () => {
     expect(holder(true).send('keydown', { key: 'ArrowRight' })).toBe(false);

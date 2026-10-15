@@ -18,13 +18,16 @@ export interface Roving<T> {
   chosen(): T | null;
   /** Choose a thing, or none, and say how. Letting go says nothing of how. */
   choose(t: T | null, how?: How): void;
-  /** Activate the chosen thing. False where nothing is chosen to activate, so Enter and Space go on to the page. */
-  activate(): boolean;
+  /** Activate the chosen thing, by a click or by a key. False where nothing is chosen to activate, so Enter and Space
+   * go on to the page. */
+  activate(how: How): boolean;
   /** Where any other key moves the choice, or null where it is no step. A step that goes nowhere may still take its
    * key with preventDefault(), so the page behind does not scroll. */
   step(e: KeyboardEvent): T | null;
   /** Whether two are one thing. By default, the one value. */
   same?(a: T, b: T): boolean;
+  /** Whether a click on `t` is on the chosen thing `at`, and activates it. By default, whether they are the same. */
+  under?(t: T, at: T): boolean;
   /** The element with the tab stop: a key pressed on anything else is not the holder's. By default, the one bound. */
   holder?(): Element | null;
 }
@@ -38,7 +41,7 @@ export function hovers(e: PointerEvent, fresh: boolean): boolean { return e.poin
 
 /** Bind the interaction to `on`, once: it listens there, so `on` must outlive every paint, and nothing is bound per thing. */
 export function rove<T>(on: HTMLElement, r: Roving<T>): void {
-  const same = r.same ?? Object.is, holds = (t: T) => { const at = r.chosen(); return at != null && same(t, at); };
+  const same = r.same ?? Object.is, under = r.under ?? same, holds = (t: T) => { const at = r.chosen(); return at != null && same(t, at); };
   // A touch that has only just chosen a thing shows its readout. The next one activates it.
   let fresh = false;
   on.addEventListener('pointerover', (e) => {
@@ -54,14 +57,14 @@ export function rove<T>(on: HTMLElement, r: Roving<T>): void {
   on.addEventListener('pointercancel', () => r.choose(null));
   on.addEventListener('focusout', () => r.choose(null));
   on.addEventListener('click', (e) => {
-    const t = r.hit(e);
-    if (t == null || !holds(t)) return;
-    if (fresh) fresh = false; else r.activate();
+    const t = r.hit(e), at = r.chosen();
+    if (t == null || at == null || !under(t, at)) return;
+    if (fresh) fresh = false; else r.activate('pointer');
   });
   on.addEventListener('keydown', (e) => {
     if (e.target !== (r.holder ? r.holder() : on)) return;
     if (e.key === 'Escape') { if (r.chosen() != null) { e.preventDefault(); r.choose(null); } return; }
-    if (e.key === 'Enter' || e.key === ' ') { if (r.activate()) e.preventDefault(); return; }
+    if (e.key === 'Enter' || e.key === ' ') { if (r.activate('keys')) e.preventDefault(); return; }
     const t = r.step(e);
     if (t == null) return;
     e.preventDefault();

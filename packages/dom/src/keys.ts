@@ -353,8 +353,10 @@ export class Keys {
       },
       chosen: () => (this.#at == null ? null : { row: this.#at, series: this.#series }),
       same: (a, b) => a.row === b.row && a.series === b.series,
+      // A click anywhere on the chosen row's point activates the series the keys chose there.
+      under: (t, at) => t.row === at.row,
       choose: (t, how) => this.#show(t?.row ?? null, t?.series ?? null, how),
-      activate: () => this.#activate(),
+      activate: (how) => this.#activate(how),
       holder: () => this.#box(),
       step: (e) => {
         const box = this.#box()!, points = this.#points(box), at = points.findIndex((el) => el.getAttribute('data-row') === this.#at);
@@ -502,11 +504,12 @@ export class Keys {
     return this.#series == null ? undefined : this.#rows[i]?.find((r) => String(r[this.#split!]) === this.#series);
   }
 
-  /** `row` is the chosen series' at the point, or the point's first. `rows` is every row at the point. False where no
-   * point on show is chosen. */
-  #activate(): boolean {
+  /** `row` is the chosen series' at the point, or the point's first. `rows` is every row at the point. By a key, false
+   * where no point on show is chosen. A click is on the row's own element, a legend's entry or a map's region among
+   * them, whether or not the row has a point on show. */
+  #activate(how: How): boolean {
     const box = this.#box();
-    if (!box || !this.#points(box).some((el) => el.getAttribute('data-row') === this.#at)) return false;
+    if (this.#at == null || (how === 'keys' && (!box || !this.#points(box).some((el) => el.getAttribute('data-row') === this.#at)))) return false;
     const i = this.#keys.indexOf(this.#at!), rows = this.#rows[i] ?? [], row = this.#pair(i) ?? rows[0];
     if (row) this.#host.dispatchEvent(new CustomEvent('ua-activate', { bubbles: true, composed: true, detail: { row, rows } }));
     return true;

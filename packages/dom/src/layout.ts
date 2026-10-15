@@ -1,4 +1,4 @@
-import type { Catalog, ContainerRules, FitRule, Layer, Layout, Query, Result, Room, Scene } from '@unified-analytics/core';
+import { CONTAINER_RULES, type Catalog, type ContainerRules, type FitRule, type Layer, type Layout, type Query, type Result, type Room, type Scene } from '@unified-analytics/core';
 
 /* The seam between <ua-view> and a layout. A layout is one module in layouts/, exporting one LayoutPainter.
  *
@@ -51,6 +51,16 @@ export interface LayoutPainter {
 export const IN_BOX = '@container uav-view (block-size >= 0px)';
 /** How far down its box a thing stands that is --uav-t of the way up it: a scene's ratios run from the foot. */
 export const FROM_TOP = 'calc((1 - var(--uav-t)) * 100%)';
+
+/** The faces core lays a view out for, in px (place.ts measures its characters and lines at these). A line set in a
+ * face is so many px at this size, and grows and shrinks with the face from there: a line-height is that line over
+ * this. They are not the tokens' fallbacks, which a theme moves: a line-height stays a ratio of whatever face is set. */
+export const DRAWN = { tick: 11, label: 13, display: 37, 'display-small': 26 } as const;
+
+/** A plot's natural height with its axes, and without them beside the number: the context's, which the element sets on
+ * the figure, and else core's defaults. */
+export const AXES_HEIGHT = `var(--uav-axes-height, ${CONTAINER_RULES.axes.height}px)`;
+export const BARE_HEIGHT = `var(--uav-bare-height, ${CONTAINER_RULES.bare.height}px)`;
 
 /** What changes with a rule that leaves the number alone: the figure's grid is the number's row, the body goes whole
  * so that its row holds no gap, and the number gives up the margin that stood between them. For a layout's `fit`. */

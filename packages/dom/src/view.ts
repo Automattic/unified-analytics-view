@@ -1,7 +1,8 @@
-import { CONTAINER_RULES, buildScene, expand, fallbackRule, fills, formatDimension, formatValue, gaveWay, metricOf, resolve, unboundedContainer } from '@unified-analytics/core';
+import { CONTAINER_RULES, DELTA_FULL, NOTE_LEAST, NUMBER_SHORT, buildScene, expand, fallbackRule, fills, formatDimension, formatValue, gaveWay, metricOf, resolve, unboundedContainer } from '@unified-analytics/core';
 import type { Catalog, ContainerRules, Layer, Layout, Query, Result, Row, SceneNode, Spec } from '@unified-analytics/core';
 import { compileFitRules, type FitExtras } from './compile.ts';
 import { CHROME_CSS, swatch } from './chrome/index.ts';
+import { X_AXIS_FACE } from './chrome/axes.ts';
 import { attr, ensure, keyed, paintVar, text } from './dom.ts';
 import { DOTS_CSS } from './dots.ts';
 import { PIXELS_CSS, pixels } from './pixels.ts';
@@ -31,7 +32,7 @@ export const BASE_CSS = `@layer uav {
  * makes each a size here and not a formula handed down. Where that fails a part reads the token for itself.
  * What follows from a face is written from it: a line of the legend, and the x axis, are as tall as their text needs. */
 .uav, .uav-ruler, .uav-error { ${FACES.map((f) => `--uav-font-${f}: ${token('font-size-' + f)};`).join(' ')} font-size: var(--uav-font-tick);
-  --uav-legend-line: calc(var(--uav-font-label) * 20 / 13); --uav-x-axis-block: calc(5px + var(--uav-font-tick) * 17 / 11); }
+  --uav-legend-line: calc(var(--uav-font-label) * 20 / 13); --uav-x-axis-block: ${X_AXIS_FACE}; }
 .uav { position: relative; box-sizing: border-box; block-size: 100%; margin: 0; display: grid; grid-template: "number" auto "body" minmax(0, 1fr) / minmax(0, 1fr); print-color-adjust: exact; }
 /* A bar, a segment, a swatch and a rule are backgrounds. A printer leaves those out unless told, and forced colours
  * repaint them as the page, so both are told to leave a mark its paint. */
@@ -82,12 +83,12 @@ ${IN_BOX} { .uav-loading { block-size: 100%; } }
 .uav-number[data-fit~="no-note"] > .uav-f-tick { display: none; }
 /* A number the pass has not set carries no data-fit: one beside a bare plot, which its layout sets, or any number
  * where the pass does not run. For that one the widths at which place() takes the shorter forms stand in. */
-@container uav-view (inline-size < 200px) { .uav-number:not([data-fit]) > .uav-f-value > .uav-full { display: none; } .uav-number:not([data-fit]) > .uav-f-value > .uav-short { display: inline; } }
-@container uav-view (inline-size < 160px) {
+@container uav-view (inline-size < ${DELTA_FULL}px) { .uav-number:not([data-fit]) > .uav-f-value > .uav-full { display: none; } .uav-number:not([data-fit]) > .uav-f-value > .uav-short { display: inline; } }
+@container uav-view (inline-size < ${NUMBER_SHORT}px) {
   .uav-number:not([data-fit]) > .uav-f-display > .uav-full { display: none; } .uav-number:not([data-fit]) > .uav-f-display > .uav-short { display: inline; }
   .uav-number:not([data-fit]) > .uav-f-display { font-size: var(--uav-font-display-small); line-height: calc(24 / 26); }
 }
-@container uav-view (inline-size < 120px) { .uav-number:not([data-fit]) > .uav-f-tick { display: none; } }
+@container uav-view (inline-size < ${NOTE_LEAST}px) { .uav-number:not([data-fit]) > .uav-f-tick { display: none; } }
 
 /* What the measured pass reads. The room takes the view's width, and its height only when the view was handed a
  * box, so nothing the pass writes can resize it. The ruler holds the number set in each of its forms, clipped to

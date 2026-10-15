@@ -1,13 +1,13 @@
-import type { LineNode, PathNode, RectNode, SceneNode, TextNode } from '@unified-analytics/core';
+import { POINT_INSET, SHORT_PLOT, type LineNode, type PathNode, type RectNode, type SceneNode, type TextNode } from '@unified-analytics/core';
 import { ensure, ensureSvg, keyed, prop, text } from '../dom.ts';
-import { paintAxes, thinAxis } from '../chrome/axes.ts';
+import { X_AXIS_BLOCK, paintAxes, thinAxis } from '../chrome/axes.ts';
 import { paintLegend } from '../chrome/legend.ts';
 import { paintSize } from '../chrome/size.ts';
 import { RULE } from '../chrome/rule.ts';
 import { token } from '../tokens.ts';
 import { label } from '../chrome/label.ts';
 import { hitNodes } from '../keys.ts';
-import { FROM_TOP, IN_BOX, NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
+import { AXES_HEIGHT, BARE_HEIGHT, FROM_TOP, IN_BOX, NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
 import { apart, thinLabels } from '../measure.ts';
 import { morph, once } from '../motion.ts';
 import { POINTS_CSS, POINTS_FIT, measurePoints, paintPoints } from './points.ts';
@@ -23,9 +23,11 @@ import { paintUnitKey } from '../chrome/unit.ts';
  * lines to a view of natural height, as place() adds them. What comes off it is the 10 px above the plot and the x axis,
  * which is 22 px where a tick is 11 px and follows the tick's face from there (--uav-x-axis-block, view.ts).
  * In a box the plot takes what is left, and the legend's lines come out of it. */
+/** The space above a plot with axes, and above and below a bare one, in px: core's margins (place.ts). */
+const PLOT_TOP = 10, BARE_PAD = 3;
 const css = `
-.uav[data-layout="cartesian"] { --uav-plot-block: calc(var(--uav-axes-height, 184px) - 10px - var(--uav-x-axis-block)); }
-.uav[data-layout="cartesian"] .uav-body { display: grid; padding-block-start: 10px;
+.uav[data-layout="cartesian"] { --uav-plot-block: calc(${AXES_HEIGHT} - ${PLOT_TOP}px - var(--uav-x-axis-block)); }
+.uav[data-layout="cartesian"] .uav-body { display: grid; padding-block-start: ${PLOT_TOP}px;
   grid-template: "y plot y2 labels" var(--uav-plot-block) ". x . ." auto "legend legend legend legend" auto / auto minmax(0, 1fr) auto auto; }
 /* On the body, where it outranks whatever a fit rule sets on the figure. */
 ${IN_BOX} { .uav[data-layout="cartesian"] .uav-body { --uav-plot-block: minmax(0, 1fr); } }
@@ -64,8 +66,8 @@ ${IN_BOX} { .uav[data-layout="cartesian"] .uav-body { --uav-plot-block: minmax(0
 .uav-bars i[data-stacked] { --uav-gap-y: ${token('stroke-width-rule')}; }
 .uav-plot svg { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; overflow: visible; }
 /* A point scale puts its first and last marks 2 px inside the plot. */
-.uav-body[data-scale="point"] svg { inset-inline-start: 2px; inline-size: calc(100% - 4px); }
-.uav-body[data-scale="point"] .uav-x-axis { margin-inline: 2px; }
+.uav-body[data-scale="point"] svg { inset-inline-start: ${POINT_INSET}px; inline-size: calc(100% - ${2 * POINT_INSET}px); }
+.uav-body[data-scale="point"] .uav-x-axis { margin-inline: ${POINT_INSET}px; }
 .uav-plot path { fill: none; stroke: var(--uav-paint); stroke-width: ${token('stroke-width-line')}; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke-linecap: round; }
 .uav-plot path[data-fill] { fill: var(--uav-paint); stroke: none; }
 /* When a plot first shows, its lines and the fills under them draw in from the start of x to its end, as the readout
@@ -85,8 +87,8 @@ export const cartesian: LayoutPainter = {
     // Without its axes the plot is a sparkline beside the number, which takes its short forms and gives up its note.
     // A number the measured pass has set carries data-fit and is left to it: that is the number alone, under `marks`.
     axes: {
-      '': '--uav-plot-block: calc(var(--uav-bare-height, 46px) - 6px); grid-template: "number body" minmax(0, 1fr) / auto minmax(0, 1fr); column-gap: 12px;',
-      '.uav-body': 'grid-template: "plot" var(--uav-plot-block) / minmax(0, 1fr); padding-block: 3px;',
+      '': `--uav-plot-block: calc(${BARE_HEIGHT} - ${2 * BARE_PAD}px); grid-template: "number body" minmax(0, 1fr) / auto minmax(0, 1fr); column-gap: 12px;`,
+      '.uav-body': `grid-template: "plot" var(--uav-plot-block) / minmax(0, 1fr); padding-block: ${BARE_PAD}px;`,
       // Its own rule asks only for width, so in a short box it would stand with no column to stand in.
       '.uav-y-axis-2': 'display: none;',
       '.uav-number': 'align-self: center; margin: 0;',
@@ -104,7 +106,7 @@ export const cartesian: LayoutPainter = {
   // ponytail: no rule in core carries the 120 px under which place() drops ranked y ticks, and the y axis sits outside the
   // plot container, so this asks the view: 120 for the plot, 10 above it and 22 for the x axis. Wrong when the number
   // is above the plot. A `plot` rule in core, and the y axis inside that container, would say it properly.
-  rules: () => [{ id: 'y-ticks', layout: 'cartesian', container: 'view', needs: { block: 152 }, hide: ['y-tick.ranked'] }],
+  rules: () => [{ id: 'y-ticks', layout: 'cartesian', container: 'view', needs: { block: SHORT_PLOT + PLOT_TOP + X_AXIS_BLOCK }, hide: ['y-tick.ranked'] }],
 
   // X labels that would collide, by their real widths (chrome/axes.ts).
   // ponytail: a label at a line's end is set from where it is going, at once, while its line morphs there.

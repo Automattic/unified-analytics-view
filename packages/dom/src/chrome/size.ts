@@ -5,8 +5,11 @@ import { swatch } from './swatch.ts';
 /* The key to sizes: the metric's name, then a dot at each step with the most it stands for. A plot of points has it,
  * a grid of dots, and a map of symbols, and a dot in it is a plot's dot, in a plot's steps (points.ts).
  * A layout says only where it stands, and how much taller its view is for it. */
+/** The line the key takes, and the space above it, in px: a view with the key is that much taller. */
+const SIZE_LINE = 24, SIZE_MARGIN = 4;
+export const SIZE_KEY_BLOCK = SIZE_LINE + SIZE_MARGIN;
 export const SIZE_CSS = `
-.uav-size { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; block-size: 24px; margin-block-start: 4px; overflow: hidden; white-space: nowrap; }
+.uav-size { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; block-size: ${SIZE_LINE}px; margin-block-start: ${SIZE_MARGIN}px; overflow: hidden; white-space: nowrap; }
 .uav-size:empty { display: none; }
 .uav-size span { margin-inline-end: 6px; color: var(--uav-paint); }`;
 

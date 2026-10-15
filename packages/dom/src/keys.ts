@@ -1,4 +1,4 @@
-import { formatBin, formatDimension, formatValue, layerKeys, metricOf, partialNote, plural, rowKeys, unitsOf, type Catalog, type Layer, type Query, type RectNode, type Result, type Row, type Scene } from '@unified-analytics/core';
+import { POINT_INSET, formatBin, formatDimension, formatValue, layerKeys, metricOf, partialNote, plural, rowKeys, unitsOf, type Catalog, type Layer, type Query, type RectNode, type Result, type Row, type Scene } from '@unified-analytics/core';
 import { attr, ensure, paintVar, prop } from './dom.ts';
 import { centred, say, tip as chip } from './chrome/tip.ts';
 import { apart } from './measure.ts';
@@ -239,7 +239,7 @@ svg[data-hits] path[data-active="pointer"] { ${HOVER.stroke} }
 .uav:has(.uav-row > .uav-f-value) > .uav-readout { transition: visibility 0s ${token('motion-delay-tooltip')}; }
 @starting-style { .uav:has(.uav-row > .uav-f-value) > .uav-readout { visibility: hidden; } }
 .uav-hits { position: absolute; inset: 0; }
-.uav-body[data-scale="point"] .uav-hits { inset-inline: 2px; }
+.uav-body[data-scale="point"] .uav-hits { inset-inline: ${POINT_INSET}px; }
 .uav-hits i { position: absolute; inset-block: 0; inset-inline-start: calc(var(--uav-x) * 100%); inline-size: calc(var(--uav-w) * 100%); }
 /* Hit targets are not marks. On a data change they take their new places at once, and one whose row has gone
  * goes at once: motion.ts keeps a leaving node only while --uav-leaving is set. */

@@ -1,5 +1,6 @@
-import { FROM_TOP } from '../layout.ts';
-import { declutter, type CircleNode, type PathNode, type Scene, type SceneNode, type TextNode } from '@unified-analytics/core';
+import { AXES_HEIGHT, FROM_TOP } from '../layout.ts';
+import { SIZE_KEY_BLOCK } from '../chrome/size.ts';
+import { POINT_INSET, declutter, type CircleNode, type PathNode, type Scene, type SceneNode, type TextNode } from '@unified-analytics/core';
 import { attr, ensure, keyed, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { RULE } from '../chrome/rule.ts';
@@ -23,7 +24,7 @@ import { unitDot } from '../chrome/unit.ts';
 export const DOT = 'calc(4px + var(--uav-size, 0.4) * 5px)';
 export const POINTS_CSS = `
 .uav-dots, .uav-points, .uav-point-labels { position: absolute; inset: 0; }
-.uav-body[data-scale="point"] :is(.uav-dots, .uav-point-labels) { inset-inline: 2px; }
+.uav-body[data-scale="point"] :is(.uav-dots, .uav-point-labels) { inset-inline: ${POINT_INSET}px; }
 /* The holder of points lies over the plot's own hit targets, so only its dots take the pointer. */
 .uav-dots, .uav-points, .uav-point-labels { pointer-events: none; }
 .uav-points i { pointer-events: auto; }
@@ -39,7 +40,7 @@ export const POINTS_CSS = `
 .uav-refs span[data-upright] { inset-inline: calc(var(--uav-x) * 100%) auto; translate: 4px 0; padding: 0; }
 .uav-refs span[data-upright][data-anchor="end"] { translate: calc(${ANCHOR.end} - 4px) 0; }
 /* The key to sizes takes a row of its own under whatever else the body holds, and the view is that much taller for it. */
-.uav[data-layout="cartesian"][data-parts~="size"] { --uav-body-block: calc(var(--uav-axes-height, 184px) + 28px); }
+.uav[data-layout="cartesian"][data-parts~="size"] { --uav-body-block: calc(${AXES_HEIGHT} + ${SIZE_KEY_BLOCK}px); }
 .uav[data-layout="cartesian"] .uav-size { grid-column: 1 / -1; }`;
 
 /* A plot of points has no sparkline form. Under its `points` rule the body goes whole, and the number that the rule

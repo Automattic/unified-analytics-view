@@ -2,10 +2,10 @@ import { formatBin, formatDimension, formatValue, type CircleNode, type RectNode
 import { attr, ensure, keyed, nodePaint, prop } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { chooseItem, readout, roveItems } from '../keys.ts';
-import { NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
+import { AXES_HEIGHT, NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
 import { paintAxes, thinAxis } from '../chrome/axes.ts';
 import { paintRamp } from '../chrome/ramp.ts';
-import { paintSize } from '../chrome/size.ts';
+import { SIZE_KEY_BLOCK, paintSize } from '../chrome/size.ts';
 import { DOT } from './points.ts';
 
 /* A dimension on x, another on y, a metric on colour: a grid of cells. The cells are a CSS grid, each set in its
@@ -23,11 +23,11 @@ import { DOT } from './points.ts';
  * activate, Escape to let go. To assistive technology it is a grid of rows of cells, each named by its readout.
  * ponytail: version 4 has no model for two dimensions, so this one is a proposal (chart-coverage-plan, section 6). */
 const css = `
-.uav[data-layout="matrix"] { --uav-body-block: var(--uav-axes-height, 184px); }
+.uav[data-layout="matrix"] { --uav-body-block: ${AXES_HEIGHT}; }
 /* The frame is set from the left whichever way the page reads, as a plot's is (cartesian.ts): the row labels stay on
  * the left of the cells. The ramp is a legend, and follows the page. */
 .uav[data-layout="matrix"] .uav-body { display: grid; grid-template: "y plot" minmax(0, 1fr) ". x" auto "ramp ramp" auto "size size" auto / auto minmax(0, 1fr); direction: ltr; }
-.uav[data-layout="matrix"][data-parts~="size"] { --uav-body-block: calc(var(--uav-axes-height, 184px) + 28px); }
+.uav[data-layout="matrix"][data-parts~="size"] { --uav-body-block: calc(${AXES_HEIGHT} + ${SIZE_KEY_BLOCK}px); }
 .uav[data-layout="matrix"] .uav-y-axis { grid-area: y; }
 .uav[data-layout="matrix"] .uav-x-axis { grid-area: x; }
 .uav[data-layout="matrix"] .uav-size { grid-area: size; }

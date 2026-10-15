@@ -1,4 +1,4 @@
-import type { TextNode } from '@unified-analytics/core';
+import { NOTICE_HEIGHT, type TextNode } from '@unified-analytics/core';
 import { keyed, text } from '../dom.ts';
 import type { LayoutPainter } from '../layout.ts';
 import { band } from './band.ts';
@@ -11,7 +11,7 @@ import { rows } from './rows.ts';
 const notice: LayoutPainter = {
   layout: 'notice',
   css: `
-.uav[data-layout="notice"] { --uav-body-block: 120px; }
+.uav[data-layout="notice"] { --uav-body-block: ${NOTICE_HEIGHT}px; }
 .uav[data-layout="notice"] .uav-body { display: grid; }
 .uav-notice { place-self: center; text-align: center; color: var(--uav-paint); }`,
   fit: { notice: { '.uav-body': 'display: none;' } },      // the room goes with the line

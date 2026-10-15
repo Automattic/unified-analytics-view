@@ -43,6 +43,10 @@ export const CELL = 4;
 export const FACE = '0123456789.,-– kMB%$€£¥mshGTP';
 /** The face, by the name a page loads it under. */
 export const FAMILY = 'Ans Mono Scroll';
+/** The face the unlit cells and a unit are set in, which a page loads beside it, and the stack after either. */
+const MONO = '"Ans Mono", monospace';
+/** A slot: the cells a character advances by, a glyph of five and a column between. */
+export const SLOT = 6;
 
 /** A character that takes less than a glyph and its gap: how many cells it advances by, and how far its glyph is
  * set back to sit at the start of them. The rest advance by six. */
@@ -106,7 +110,7 @@ export const DOTS_CSS = `
 .uav-hole .uav-glyphs { display: inline-flex; inline-size: auto; }
 .uav-glyphs::before, .uav-number:has(> b .uav-glyphs)::before { content: "${FIELD}"; content: "${FIELD}" / ""; position: absolute; z-index: -1; inset-block-start: 0; inset-inline-start: 0;
   inline-size: round(down, 100%, var(--uav-u)); block-size: round(down, 100%, var(--uav-u)); overflow: hidden; direction: ltr; text-align: left; white-space: pre;
-  font: normal 400 calc(${U} * 8) / calc(${U} * 8) "Ans Mono", monospace; font-optical-sizing: none; font-variation-settings: "opsz" ${OPSZ}; letter-spacing: 0;
+  font: normal 400 calc(${U} * 8) / calc(${U} * 8) ${MONO}; font-optical-sizing: none; font-variation-settings: "opsz" ${OPSZ}; letter-spacing: 0;
   color: color-mix(in srgb, ${token('color-label-screen')} 9%, transparent); pointer-events: none; user-select: none; }
 /* A view's number is on one screen with what is said under it: the unlit cells run under the value, its change and
  * its note, a row past the last of them, to a whole cell each way. Every line there is a whole number of cells, a
@@ -123,14 +127,14 @@ export const DOTS_CSS = `
 @media (prefers-reduced-motion: reduce) { .uav-glyphs[data-over]:hover .uav-glyph-run { animation: none; --uav-s: 1; --uav-e: 1; } }
 /* A slot is six cells by seven, and its character is set from the slot's corner at eight cells to the em: seven rows
  * of it are the slot's, and the eighth, where a comma's tail is, is the row under it. The face is as wide as a slot. */
-.uav-glyph-run i { position: relative; flex: none; inline-size: calc(${U} * 6); block-size: calc(${U} * 7);
-  font: normal 400 calc(${U} * 8) / 1 "${FAMILY}", "Ans Mono", monospace; letter-spacing: 0; font-optical-sizing: none; }
+.uav-glyph-run i { position: relative; flex: none; inline-size: calc(${U} * ${SLOT}); block-size: calc(${U} * 7);
+  font: normal 400 calc(${U} * 8) / 1 "${FAMILY}", ${MONO}; letter-spacing: 0; font-optical-sizing: none; }
 .uav-glyph-run i:last-child { margin-inline-end: calc(${U} * -1); }
 /* A unit, in type: in the face's small capitals, whichever case it was written in, at the number's own size and
  * with its pixels as far apart, so it reads as part of the number and a step quieter. It is a slot wide, so what follows
  * it is still on the grid, and it stands on the number's baseline, the foot of the slots: a line three quarters of the
  * face's size ends where the face's baseline is. */
-.uav-glyph-run sup { flex: none; align-self: flex-end; inline-size: calc(${U} * 6); font: normal 400 calc(${U} * 8) / 0.75 "Ans Mono", monospace; font-optical-sizing: none;
+.uav-glyph-run sup { flex: none; align-self: flex-end; inline-size: calc(${U} * ${SLOT}); font: normal 400 calc(${U} * 8) / 0.75 ${MONO}; font-optical-sizing: none;
   font-variation-settings: "opsz" ${OPSZ}; font-variant-caps: all-small-caps; letter-spacing: 0; vertical-align: baseline; white-space: nowrap; }
 .uav-glyph-run sup:last-child { margin-inline-end: calc(${U} * -1); }
 .uav-glyph-run i::before, .uav-glyph-run i[data-roll]::after { position: absolute; inset-block-start: 0; left: 0; ${at(0)} }

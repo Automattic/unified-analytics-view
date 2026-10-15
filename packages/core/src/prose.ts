@@ -35,7 +35,7 @@ export function leader(result: Result, dim: string, m: string): Row | undefined 
 /** The metric a companion field came with: "visitors" for "visitors@rank". Its own name for a field that is no companion. */
 const companionOf = (catalog: Catalog, f: string): MetricDef | undefined => catalog.metrics[baseOf(f)];
 /** The row with the most of a field, the first of equals. A comparison, never a sum. */
-const most = (rows: Row[], f: string): Row | undefined => rows.reduce<Row | undefined>((top, r) => (!top || (r[f] as number) > (top[f] as number) ? r : top), undefined);
+export const most = (rows: Row[], f: string): Row | undefined => rows.reduce<Row | undefined>((top, r) => (!top || (r[f] as number) > (top[f] as number) ? r : top), undefined);
 /** Rows from the most of a metric to the least. Rows the engine ranked stay as they are; rows in a dimension's own order are ranked here, by comparing them. */
 const ranked = (rows: Row[], m: string) => rows.slice().sort((a, b) => ((b[m] as number) || 0) - ((a[m] as number) || 0));
 
@@ -48,7 +48,7 @@ const at = (v: number, total: number | null | undefined, metric: MetricDef, of =
 /** More than one of a dimension's values, by its label: "pages", "countries". */
 export const plural = (label: string) => label.replace(/([^aeiou])y$/, '$1ie') + 's';
 /** A label for `n` of a thing: itself for one, its plural for any other number. */
-const many = (n: number, label: string) => (n === 1 ? label : plural(label));
+export const many = (n: number, label: string) => (n === 1 ? label : plural(label));
 /** How many of a whole: "all 5" where it is all of them, "3 of 5" where it is not. */
 const allOrSome = (n: number, of: number) => (n === of ? 'all ' + n : n + ' of ' + of);
 /** Which value is highest on each of two metrics, by their labels: one sentence for both where it is the same value. */

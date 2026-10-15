@@ -1,4 +1,4 @@
-import { POINT_INSET, formatBin, formatDimension, formatValue, layerKeys, metricOf, partialNote, plural, rowKeys, unitsOf, type Catalog, type Layer, type Query, type RectNode, type Result, type Row, type Scene } from '@unified-analytics/core';
+import { POINT_INSET, formatBin, formatDimension, formatValue, layerKeys, many, metricOf, most, partialNote, rowKeys, unitsOf, type Catalog, type Layer, type Query, type RectNode, type Result, type Row, type Scene } from '@unified-analytics/core';
 import { attr, ensure, paintVar, prop } from './dom.ts';
 import { centred, say, tip as chip } from './chrome/tip.ts';
 import { apart } from './measure.ts';
@@ -90,8 +90,8 @@ export function readoutAt(rows: Row[], total: Row | undefined, q: Query, catalog
   const of = catalog.dimensions[split]!, { name, metrics } = headAt(rows, total, q, catalog, x);
   return name + ': ' + q.metrics.map((m, i) => {
     const def = catalog.metrics[m]!, said = (r: Row) => formatDimension(r[split], of) + ' ' + formatValue(r[m] as number | null, def);
-    const top = rows.filter((r) => r[m] != null).reduce<Row | undefined>((a, r) => (!a || (r[m] as number) > (a[m] as number) ? r : a), undefined);
-    return metrics[i] + ' (' + (mass ? rows.length + ' ' + (rows.length === 1 ? of.label.toLowerCase() : plural(of.label.toLowerCase())) + (top ? ', the most ' + said(top) : '') : rows.map(said).join(', ')) + ')';
+    const top = most(rows.filter((r) => r[m] != null), m);
+    return metrics[i] + ' (' + (mass ? rows.length + ' ' + many(rows.length, of.label.toLowerCase()) + (top ? ', the most ' + said(top) : '') : rows.map(said).join(', ')) + ')';
   }).join('; ');
 }
 

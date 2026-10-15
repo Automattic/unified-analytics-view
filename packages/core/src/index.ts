@@ -6,7 +6,7 @@ export { resolve } from './plan.ts';
 export { buildScene, detailOf, isDim, isMetric, layerKeys, metricOf, roleOf, rowKeys, uniqueKeys, unitsOf } from './scene.ts';
 export { COLUMNS_BLOCK, columnRooms, declutter, place, type LabelBox } from './place.ts';
 export { arcD, pathD, type PathBox } from './path.ts';
-export { gridProse, notShownNote, partialNote, plural, tldrProse } from './prose.ts';
+export { gridProse, many, most, notShownNote, partialNote, plural, tldrProse } from './prose.ts';
 export { UNITS, formatBin, formatDimension, formatUnit, formatValue, orList, rangeLabel } from './format.ts';
 export { SERIES, SIZES, seqScale, sizeKey, sizeStep, tooManySeries } from './scene.ts';
 export { radius as dotRadius } from './place.ts';

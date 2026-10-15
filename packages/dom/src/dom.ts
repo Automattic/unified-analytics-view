@@ -26,14 +26,20 @@ export function ensure<K extends keyof HTMLElementTagNameMap>(parent: Element, t
   if (!el) { el = document.createElement(tag); el.className = cls; parent.appendChild(el); }
   return el;
 }
-/** The one stretched SVG of a plot: paths are drawn in a 100 by 100 box. */
-export function ensureSvg(parent: Element): SVGSVGElement {
-  let svg = parent.querySelector<SVGSVGElement>(':scope > svg');
-  if (!svg) {
-    svg = parent.appendChild(document.createElementNS(SVG, 'svg'));
-    svg.setAttribute('viewBox', '0 0 100 100'); svg.setAttribute('preserveAspectRatio', 'none'); svg.setAttribute('aria-hidden', 'true');
+/** A new SVG element. */
+export function svg<K extends keyof SVGElementTagNameMap>(tag: K): SVGElementTagNameMap[K] {
+  return document.createElementNS(SVG, tag);
+}
+/** The one stretched SVG of a plot: paths are drawn in a 100 by 100 box. It is a picture, hidden from assistive
+ * technology, unless `hits` makes it the holder of the points, running that way (layout.ts). */
+export function ensureSvg(parent: Element, { hits }: { hits?: string } = {}): SVGSVGElement {
+  let el = parent.querySelector<SVGSVGElement>(':scope > svg');
+  if (!el) {
+    el = parent.appendChild(svg('svg'));
+    el.setAttribute('viewBox', '0 0 100 100'); el.setAttribute('preserveAspectRatio', 'none');
+    if (hits) el.setAttribute('data-hits', hits); else el.setAttribute('aria-hidden', 'true');
   }
-  return svg;
+  return el;
 }
 
 /** Reconcile the children of `parent` with scene nodes, by data-key: new keys enter, missing keys leave (motion.ts

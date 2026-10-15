@@ -1,6 +1,6 @@
 import { CONTAINER_RULES, SEATS_LEAST, arcD, declutter, type ArcNode, type CircleNode, type TextNode } from '@unified-analytics/core';
 import { LEGEND_FIT, LEGEND_SWAP, hideCutLegends, legendBlock, legendTop, paintLegend } from '../chrome/legend.ts';
-import { attr, ensure, hits, keyed, paintVar, prop, text } from '../dom.ts';
+import { attr, ensure, hits, keyed, svg, paintVar, prop, text } from '../dom.ts';
 import { FROM_TOP, IN_BOX, NUMBER_ALONE, holdShape, type LayoutPainter } from '../layout.ts';
 import { FOCUS, HOVER, token } from '../tokens.ts';
 import { paintUnitKey, unitDot } from '../chrome/unit.ts';
@@ -120,19 +120,19 @@ export const radial: LayoutPainter = {
     const arcs = scene.nodes.filter((n): n is ArcNode => n.kind === 'arc'), box = '-50 -50 100 ' + 100 / aspect;
     // What lies under the points: an arc of a row that is not the row's own mark.
     const under = arcs.filter((n) => n.row != null && (n.series != null || n.role !== 'primary'));
-    let svg = part.querySelector<SVGSVGElement>(':scope > svg:not(.uav-under)');
-    if (!svg) svg = part.appendChild(document.createElementNS('http://www.w3.org/2000/svg', 'svg'));
-    svg.setAttribute('viewBox', box);
+    let own = part.querySelector<SVGSVGElement>(':scope > svg:not(.uav-under)');
+    if (!own) own = part.appendChild(svg('svg'));
+    own.setAttribute('viewBox', box);
     let below = part.querySelector<SVGSVGElement>(':scope > svg.uav-under');
-    if (!below && under.length) { below = part.insertBefore(document.createElementNS('http://www.w3.org/2000/svg', 'svg'), svg); below.setAttribute('class', 'uav-under'); below.setAttribute('aria-hidden', 'true'); }
+    if (!below && under.length) { below = part.insertBefore(svg('svg'), own); below.setAttribute('class', 'uav-under'); below.setAttribute('aria-hidden', 'true'); }
     if (below) { below.setAttribute('viewBox', box); keyed(below, under, () => 'path', (el, n) => turn(el as SVGElement, n)); }
     const seats = scene.nodes.filter((n): n is CircleNode => n.part === 'radial' && n.kind === 'circle');
     // Each segment is its own hit target. Arcs that read one value against a range have no row to step to, and
     // where a unit's seats stand there are no arcs: the seats are the targets, a group of them to a row (keys.ts).
-    hits(svg, rows.length && !seats.length ? 'x' : null);
+    hits(own, rows.length && !seats.length ? 'x' : null);
     part.toggleAttribute('data-half', aspect !== 1);
     prop(part, '--uav-aspect', aspect); prop(body, '--uav-rows', rows.length); prop(part, '--uav-radial-most', seats.length ? '240px' : null);
-    keyed(svg, arcs.filter((n) => !under.includes(n)), () => 'path', (el, n) => turn(el as SVGElement, n));
+    keyed(own, arcs.filter((n) => !under.includes(n)), () => 'path', (el, n) => turn(el as SVGElement, n));
     const dots = ensure(part, 'div', 'uav-dots');
     attr(dots, 'data-hits', seats.length ? 'x' : null);
     keyed(dots, seats, () => 'i', (el, n) => { prop(el, '--uav-x', n.x); prop(el, '--uav-t', n.t); unitDot(el, n); });

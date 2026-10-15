@@ -501,6 +501,12 @@ export class Keys {
   }
 }
 
+/** Take from an element what the keyboard set on it as a holder of points (Keys.paint and name()), for one that holds
+ * none any longer. */
+export function unlist(el: Element): void {
+  for (const name of ['role', 'tabindex', 'aria-label', 'aria-orientation', 'aria-activedescendant']) el.removeAttribute(name);
+}
+
 /** Choose an element of a holder of them, or none, and say how, as the element's points are chosen. The readout is
  * the element's own name, and is the view's one readout, shown and placed as a point's is. */
 export function chooseItem(holder: HTMLElement, el: HTMLElement | null, how: How = 'pointer'): void {

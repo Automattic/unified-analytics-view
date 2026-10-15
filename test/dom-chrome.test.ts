@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CHROME_CSS } from '../packages/dom/src/chrome/index.ts';
 import { AXES_CSS } from '../packages/dom/src/chrome/axes.ts';
-import { LABEL_CSS, label } from '../packages/dom/src/chrome/label.ts';
+import { LABEL, LABEL_CSS, cut } from '../packages/dom/src/chrome/label.ts';
 import { KEYS_CSS } from '../packages/dom/src/keys.ts';
 import { linkPainter } from '../packages/flow/src/dom.ts';
 import { partitionPainter } from '../packages/partition/src/dom.ts';
@@ -29,12 +29,16 @@ describe('chrome', () => {
     for (const p of Object.values(LAYOUTS)) expect(p.css).not.toMatch(/(^|\n)(:is\()?\.uav-[xy]-axis\b/);
     for (const layout of ['cartesian', 'matrix']) for (const [axis, area] of [['x', 'x'], ['y', 'y']]) expect(LAYOUTS[layout]!.css).toContain(`.uav[data-layout="${layout}"] .uav-${axis}-axis { grid-area: ${area}; }`);
   });
-  it('sets every plot label from one rule set: its tone, its cut, its halo and, given up, its box kept, said once for every view', () => {
+  it('sets every plot label from one rule set: its words in its paint, its halo, its highlight and, given up, its box kept, said once for every view', () => {
     expect(CHROME_CSS).toContain(LABEL_CSS);
     expect(LABEL_CSS).toContain('.uav [data-thin] { visibility: hidden; }');
     expect(LABEL_CSS).toContain('.uav [data-halo] { -webkit-text-stroke: 3px var(--ua-charts-color-background');
-    expect(AXES_CSS).toContain(label({ tone: 'axis' }));
-    expect(label({ truncate: true })).toBe('white-space: nowrap; color: var(--uav-paint); max-inline-size: 14ch; overflow: hidden; text-overflow: ellipsis;');
+    // The atom is its words in its paint. Its tone and its cut are each parent's.
+    expect(LABEL).toBe('white-space: nowrap; color: var(--uav-paint);');
+    expect(AXES_CSS).toContain(`${LABEL} color: var(--ua-charts-color-label-axis`);
+    expect(cut('14ch')).toBe('max-inline-size: 14ch; overflow: hidden; text-overflow: ellipsis;');
+    expect(linkPainter.css).toContain(`${LABEL} ${cut('45%')}`);
+    expect(LABEL_CSS).toContain('.uav-labels span[data-chosen] { text-decoration: underline; }');
     for (const css of [...Object.values(LAYOUTS).map((p) => p.css), linkPainter.css, partitionPainter.css, AXES_CSS, KEYS_CSS]) expect(css).not.toMatch(/\[data-(thin|halo)\] \{|-webkit-text-stroke/);
   });
   it('styles both forms of the legend in its own sheet, and a layout says only where it stands and what it does in a box', () => {

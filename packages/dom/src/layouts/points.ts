@@ -4,7 +4,7 @@ import { attr, ensure, keyed, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { RULE } from '../chrome/rule.ts';
 import { thinLabels } from '../measure.ts';
-import { ANCHOR, label } from '../chrome/label.ts';
+import { ANCHOR, LABEL, cut } from '../chrome/label.ts';
 import { DOT } from '../chrome/swatch.ts';
 import { centred } from '../chrome/tip.ts';
 import { unitDot } from '../chrome/unit.ts';
@@ -37,7 +37,7 @@ export const POINTS_CSS = `
   inline-size: ${DOT}; block-size: ${DOT}; border-radius: 50%; background: var(--uav-paint); }
 /* A label sits above its point, clear of the dot. --uav-nudge is the measured pass's: what keeps it inside the plot. */
 .uav-point-labels span { position: absolute; inset-inline-start: calc(var(--uav-x) * 100%); inset-block-start: ${FROM_TOP};
-  translate: calc(${ANCHOR.middle} + var(--uav-nudge, 0px)) calc(-100% - ${CLEAR}px - ${DOT} / 2); ${label({ truncate: true })} }
+  translate: calc(${ANCHOR.middle} + var(--uav-nudge, 0px)) calc(-100% - ${CLEAR}px - ${DOT} / 2); ${LABEL} ${cut('14ch')} }
 /* A rule at a value on x stands the height of the plot, and its label sits beside it at the top. */
 .uav-line[data-upright] { inset-block: 0; inset-inline: calc(var(--uav-x) * 100%) auto; inline-size: ${RULE}; block-size: auto; translate: -50%; --uav-rule-way: 0deg; }
 .uav-refs span[data-upright] { inset-inline: calc(var(--uav-x) * 100%) auto; translate: 4px 0; padding: 0; }

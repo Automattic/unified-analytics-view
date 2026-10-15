@@ -5,7 +5,7 @@ import { paintLegend } from '../chrome/legend.ts';
 import { paintSize } from '../chrome/size.ts';
 import { RULE } from '../chrome/rule.ts';
 import { token } from '../tokens.ts';
-import { label } from '../chrome/label.ts';
+import { LABEL, cut } from '../chrome/label.ts';
 import { hitNodes } from '../keys.ts';
 import { AXES_HEIGHT, BARE_HEIGHT, FROM_TOP, IN_BOX, NUMBER_ALONE, NUMBER_SMALL, type LayoutPainter } from '../layout.ts';
 import { apart, thinLabels } from '../measure.ts';
@@ -38,7 +38,7 @@ ${IN_BOX} { .uav[data-layout="cartesian"] .uav-body { --uav-plot-block: minmax(0
 .uav-labels { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .uav-labels { grid-area: labels; display: none; }
 .uav-labels span { grid-area: 1 / 1; align-self: start; justify-self: start; position: relative; inset-block-start: ${FROM_TOP}; translate: 0 calc(var(--uav-dy, 0px) - 50%);
-  box-sizing: border-box; padding-inline-start: 6px; ${label({ truncate: true })} }
+  box-sizing: border-box; padding-inline-start: 6px; ${LABEL} ${cut('14ch')} }
 /* The legend of a split plot is a swatch and a name per series, in a row that wraps (chrome/legend.ts). */
 .uav[data-layout="cartesian"] .uav-legend { grid-area: legend; }
 .uav-plot { grid-area: plot; position: relative; container: uav-plot / size; }
@@ -74,7 +74,7 @@ ${IN_BOX} { .uav[data-layout="cartesian"] .uav-body { --uav-plot-block: minmax(0
 @media (prefers-reduced-motion: no-preference) { .uav-plot svg[data-draw] { animation: uav-draw ${token('motion-duration-draw')} linear both; } }
 @keyframes uav-draw { from { clip-path: inset(-8px 100% -8px -8px); } to { clip-path: inset(-8px); } }
 /* ponytail: a label in the plot is set above its line at the inline end, the one anchor a scene asks for today. */
-.uav-refs span { position: absolute; inset-inline-end: 0; inset-block-start: ${FROM_TOP}; translate: 0 -100%; padding-block-end: 2px; ${label()} }`;
+.uav-refs span { position: absolute; inset-inline-end: 0; inset-block-start: ${FROM_TOP}; translate: 0 -100%; padding-block-end: 2px; ${LABEL} }`;
 
 const inPlot = (n: SceneNode) => n.part === 'plot';
 

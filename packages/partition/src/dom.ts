@@ -1,5 +1,5 @@
 import { formatDimension, type MarkView, type RectNode, type Row, type TextNode } from '@unified-analytics/core';
-import { FOCUS, FROM_TOP, HOVER, IN_BOX, attr, chooseItem, emptyTable, ensure, fieldLabel, holdShape, keyed, label, lineOf, nodePaint, paintRamp, prop, readout, registerPainter, roveItems, tableRow, text, token, valueText, type Cell, type LayoutPainter } from '@unified-analytics/dom';
+import { FOCUS, FROM_TOP, HOVER, IN_BOX, attr, chooseItem, emptyTable, ensure, fieldLabel, holdShape, keyed, LABEL, lineOf, nodePaint, paintRamp, prop, readout, registerPainter, roveItems, tableRow, text, token, valueText, type Cell, type LayoutPainter } from '@unified-analytics/dom';
 import { ASPECT, GAP, HEAD, HEAD_MOST, KID_GAP, LINE, MAX, boxesOf } from './index.ts';
 
 /* The `partition` mark's half for the DOM: the painter of its layout, for registerPainter().
@@ -45,7 +45,7 @@ const css = `
 .uav[data-layout="partition"] .uav-plot[data-divided] .uav-head { position: relative; inset: auto; flex: none; block-size: ${HEAD}px; max-block-size: ${Math.round(HEAD_MOST * 100)}%; }
 .uav[data-layout="partition"] .uav-kids { position: relative; flex: 1; min-block-size: 0; margin-inline-end: -${KID_GAP}px; margin-block-end: -${KID_GAP}px; }
 .uav[data-layout="partition"] .uav-kids i { position: absolute; ${at(KID_GAP, 0)} overflow: hidden; border-radius: ${token('border-radius-cell')}; background: var(--uav-paint); }
-.uav[data-layout="partition"] .uav-label { position: absolute; inset-inline-start: 0; inset-block-start: 0; inline-size: max-content; padding: 1px 4px; line-height: ${lineOf('tick', LINE)}; pointer-events: none; ${label()} }
+.uav[data-layout="partition"] .uav-label { position: absolute; inset-inline-start: 0; inset-block-start: 0; inline-size: max-content; padding: 1px 4px; line-height: ${lineOf('tick', LINE)}; pointer-events: none; ${LABEL} }
 /* Boxes lie edge to edge and a parent cuts off what leaves it, so the chosen one is outlined inside its own edge. */
 .uav[data-layout="partition"] .uav-plot { outline: none; }
 .uav[data-layout="partition"] .uav-plot:focus-visible::after { content: ""; position: absolute; inset: 0; pointer-events: none; ${FOCUS.around} }

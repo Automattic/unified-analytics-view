@@ -3,8 +3,8 @@ import { attr } from '../dom.ts';
 import { token } from '../tokens.ts';
 
 /* A plot's dot, across, by its size step: core's dotRadius() is a base and a step for each size, and a dot with no
- * size is NO_SIZE steps. Read back from it, so the stylesheet's dot is core's. Here and not in points.ts, which
- * re-exports it, so that the swatch reads it without an import cycle (points.ts -> chrome/size.ts -> here). */
+ * size is NO_SIZE steps. Read back from it, so the stylesheet's dot is core's. Here and not in points.ts, so that
+ * the swatch reads it without an import cycle (points.ts -> chrome/size.ts -> here). A grid's dot reads it here too. */
 const STEP = dotRadius(2) - dotRadius(1), BASE = dotRadius(1) - STEP;
 export const NO_SIZE = (dotRadius() - BASE) / STEP;
 export const DOT = `calc(${2 * BASE}px + var(--uav-size, ${NO_SIZE}) * ${2 * STEP}px)`;

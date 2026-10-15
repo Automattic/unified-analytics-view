@@ -6,7 +6,7 @@ import { token } from '../tokens.ts';
 import { RULE } from '../chrome/rule.ts';
 import { thinLabels } from '../measure.ts';
 import { ANCHOR, label } from '../chrome/label.ts';
-import { DOT, NO_SIZE } from '../chrome/swatch.ts';
+import { DOT } from '../chrome/swatch.ts';
 import { unitDot } from '../chrome/unit.ts';
 import { ARROWS } from '../rove.ts';
 
@@ -23,8 +23,6 @@ import { ARROWS } from '../rove.ts';
  *                            Where a line joins them they are stepped through in its order: data-hits="path"
  *     .uav-point-labels      a label on each point. The measured pass hides the ones that collide
  *   .uav-size                the key to sizes, under the plot (chrome/size.ts) */
-// The dot's size is core's dotRadius(), written once in chrome/swatch.ts.
-export { DOT, NO_SIZE };
 /** How far a point's label stands clear of its dot, in px. */
 const CLEAR = 2;
 export const POINTS_CSS = `

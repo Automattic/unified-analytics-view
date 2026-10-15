@@ -8,7 +8,7 @@ import { AXES_HEIGHT, NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
 import { paintAxes, thinAxis } from '../chrome/axes.ts';
 import { paintRamp } from '../chrome/ramp.ts';
 import { SIZE_KEY_BLOCK, paintSize } from '../chrome/size.ts';
-import { DOT, NO_SIZE } from './points.ts';
+import { DOT, NO_SIZE } from '../chrome/swatch.ts';
 
 /* A dimension on x, another on y, a metric on colour: a grid of cells. The cells are a CSS grid, each set in its
  * track by two custom properties, so nothing here runs on resize. The axes are a plot's (chrome/axes.ts): the row labels are a

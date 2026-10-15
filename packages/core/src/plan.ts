@@ -4,17 +4,20 @@ import { fmtTime, rangeLabel } from './format.ts';
 import { customMarks } from './marks.ts';
 import { PRESETS, expand, fills, presetNames, usesPrevious } from './presets.ts';
 import { COLUMNS_BLOCK, UNIT_KEY_BLOCK, legendBlock, place } from './place.ts';
-import { BUILT_IN_MARKS, DETAIL_LAYOUTS, buildScene, columnLabel, columnsOf, tldrValueText, isDim, listRows, metricOf, pointDimOf, roleOf, seriesOf, trackBeside, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
+import { DETAIL_LAYOUTS, SERIES, isMetric, buildScene, columnLabel, columnsOf, tldrValueText, isDim, listRows, metricOf, pointDimOf, roleOf, seriesOf, trackBeside, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
 import { differenceProse, gridProse, rangeProse, rankProse, tldrProse } from './prose.ts';
+import { MARKS, baseOf } from './types.ts';
 import type { Catalog, Container, Layer, Layout, Plan, PlanShape, PresetLibrary, Query, Reduction, ReductionId, Result, Role, PlacedScene, Spec } from './types.ts';
 
 /* Start from everything the spec asks for, then apply the container's reductions
  * in order until the view fits. Layers carry a role; reductions act on roles. */
 const ROLE_NAMES: Partial<Record<Role, string>> = { comparison: 'comparison series', reference: 'reference lines', context: 'context fill' };
+/** What a grid's or a custom mark's two keys are called where they are given up. */
+const KEY_NAMES = { ramp: 'the colour ramp', size: 'the key to sizes' } as const;
 
 /* The layout a layer's fields ask for: what is on x, on y and on color, first match first. `any` asks nothing of its channel. */
 type FieldKind = 'dimension' | 'metric' | 'any';
-const LAYOUTS: [x: FieldKind, y: FieldKind, color: FieldKind, layout: Layout][] = [
+const BY_FIELDS: [x: FieldKind, y: FieldKind, color: FieldKind, layout: Layout][] = [
   ['dimension', 'dimension', 'any',       'matrix'],
   ['dimension', 'any',       'any',       'cartesian'],
   ['any',       'dimension', 'any',       'rows'],
@@ -22,8 +25,6 @@ const LAYOUTS: [x: FieldKind, y: FieldKind, color: FieldKind, layout: Layout][] 
   ['any',       'any',       'dimension', 'band'],
 ];
 
-/** A metric, or a companion the engine returns with one, such as "pageviews@density". */
-const isMetric = (catalog: Catalog, f: unknown): f is string => typeof f === 'string' && f.split('@')[0]! in catalog.metrics;
 /** Whether a plot sets one metric against another: a point for each row. It has a dimension to key its rows by, and none on x. */
 const isPoints = (catalog: Catalog, layers: Layer[]) => !xDimOf(catalog, layers) && !layers.some((l) => isDim(catalog, l.encode && l.encode.y)) && layers.some((l) => isMetric(catalog, l.encode && l.encode.x));
 
@@ -37,7 +38,7 @@ function detectLayout(catalog: Catalog, layers: Layer[]): Layout {
   if (layers.some((l) => l.encode && l.encode.angle != null)) return 'radial';
   // A cell along one dimension is a grid one column wide or one row tall, and not a list's rows or a plot.
   if (layers.some((l) => l.mark === 'cell' && l.encode && (isDim(catalog, l.encode.y) || (l.encode.y == null && isDim(catalog, l.encode.x))))) return 'matrix';
-  for (const [x, y, color, layout] of LAYOUTS) if (layers.some((l) => l.encode && is(x, l.encode.x) && is(y, l.encode.y) && is(color, l.encode.color))) return layout;
+  for (const [x, y, color, layout] of BY_FIELDS) if (layers.some((l) => l.encode && is(x, l.encode.x) && is(y, l.encode.y) && is(color, l.encode.color))) return layout;
   // A unit with a metric and no dimension at all is a grid read against the metric's range, in the place a band has.
   if (layers.some((l) => l.mark === 'unit' && isMetric(catalog, l.encode?.x))) return 'band';
   throw new Error('These layers put no dimension on x, y or color, so there is nothing to lay out.');
@@ -47,9 +48,9 @@ function checkLayers(layers: Layer[], q: Query, catalog: Catalog, result: Result
   const by = q.by || [], known = by.concat(q.metrics);
   if (by.length > 2 || (by.length === 2 && by[0] === by[1])) throw new Error('A view is by one dimension or by two different ones, and query.by has: ' + by.join(', ') + '. Remove all but two.');
   layers.forEach((l, i) => {
-    if (!l || !l.mark) throw new Error('Layer ' + (i + 1) + ' has no "mark". Use one of: line, area, bar, rule, text, arc, cell, dot, tick, unit.');
+    if (!l || !l.mark) throw new Error('Layer ' + (i + 1) + ' has no "mark". Use one of: ' + MARKS.join(', ') + '.');
     // A name the schema cannot check: it is one of core's marks or one registered in code, and anything else is an error here.
-    if (!BUILT_IN_MARKS.includes(l.mark) && !customMarks().has(l.mark)) throw new Error('Layer ' + (i + 1) + ' has the mark "' + l.mark + '", which is not built in and is not registered. Built in: ' + BUILT_IN_MARKS.join(', ') + '. Registered: ' + ([...customMarks().keys()].join(', ') || 'none') + '. Use one of those, or register it with registerMark("' + l.mark + '", …) before the view is resolved.');
+    if (!(MARKS as readonly string[]).includes(l.mark) && !customMarks().has(l.mark)) throw new Error('Layer ' + (i + 1) + ' has the mark "' + l.mark + '", which is not built in and is not registered. Built in: ' + MARKS.join(', ') + '. Registered: ' + ([...customMarks().keys()].join(', ') || 'none') + '. Use one of those, or register it with registerMark("' + l.mark + '", …) before the view is resolved.');
     // A second end belongs to a mark that can run from one value to another, and needs the first end to run from.
     for (const [end, start] of [['x2', 'x'], ['y2', 'y']] as const) {
       if (l.encode?.[end] == null) continue;
@@ -73,7 +74,7 @@ function checkLayers(layers: Layer[], q: Query, catalog: Catalog, result: Result
     // Painted by direction, a mark is a gain or a loss by which of its two ends is the higher. So it has two, and no colours of a split to give up for it.
     if (l.paint === 'direction') {
       const end = (['x2', 'y2'] as const).find((e) => l.encode?.[e] != null);
-      if (!end || (l.mark !== 'bar' && l.mark !== 'area')) throw new Error('Layer ' + (i + 1) + ' is a "' + l.mark + '" with paint: "direction"' + (end ? '' : ' and one end') + ', and that paints a bar or an area by which way it runs from one value to another. Give a bar or an area its second end on x2 or y2, or name a paint token: series.1 to series.6, delta.good, delta.bad.');
+      if (!end || (l.mark !== 'bar' && l.mark !== 'area')) throw new Error('Layer ' + (i + 1) + ' is a "' + l.mark + '" with paint: "direction"' + (end ? '' : ' and one end') + ', and that paints a bar or an area by which way it runs from one value to another. Give a bar or an area its second end on x2 or y2, or name a paint token: series.1 to series.' + SERIES + ', delta.good, delta.bad.');
       if (l.encode!.color != null) throw new Error('Layer ' + (i + 1) + ' has paint: "direction" and encodes "' + l.encode!.color + '" on color, and a mark has one paint: its series\' colour, or a gain\'s or a loss\'s. Remove one of the two.');
     }
     if (l.series === 'delta' && !(l.mark === 'text' && isDim(catalog, l.encode && l.encode.y) && typeof (l.encode && l.encode.text) === 'string' && (l.encode!.text as string) in catalog.metrics))
@@ -89,15 +90,15 @@ function checkLayers(layers: Layer[], q: Query, catalog: Catalog, result: Result
     // In rows a colour says which rows go together, so it is the rows' own dimension or something the engine says of it.
     // A stacked bar is the one mark that is divided there: by the query's other dimension, into a series for each of its values.
     const { x: lx, y: ly, color: lc } = l.encode || {}, divided = l.mark === 'bar' && !!l.stack && by.indexOf(lc as string) >= 0;
-    if (l.mark !== 'cell' && !divided && isDim(catalog, ly) && !isDim(catalog, lx) && typeof lc === 'string' && lc.split('@')[0] !== ly) throw new Error('Layer ' + (i + 1) + ' is in rows by "' + ly + '" and encodes "' + lc + '" on color. A row is painted by its own dimension, for a colour each, or by a companion the result returns with it, for rows that go together. Encode "' + ly + '" on color, or remove it.' + (l.mark === 'bar' && by.indexOf(lc) >= 0 ? ' To divide each row\'s bar by "' + lc + '", give the layer "stack".' : ''));
+    if (l.mark !== 'cell' && !divided && isDim(catalog, ly) && !isDim(catalog, lx) && typeof lc === 'string' && baseOf(lc) !== ly) throw new Error('Layer ' + (i + 1) + ' is in rows by "' + ly + '" and encodes "' + lc + '" on color. A row is painted by its own dimension, for a colour each, or by a companion the result returns with it, for rows that go together. Encode "' + ly + '" on color, or remove it.' + (l.mark === 'bar' && by.indexOf(lc) >= 0 ? ' To divide each row\'s bar by "' + lc + '", give the layer "stack".' : ''));
     // A size on a bar is its column's width, which is a share of a whole: so the plot is one of shares, column by column.
     if (l.mark === 'bar' && l.encode?.size != null && !(isDim(catalog, lx) && isDim(catalog, lc) && lc !== lx && l.stack === 'normalize')) throw new Error('Layer ' + (i + 1) + ' is a bar with ' + JSON.stringify(l.encode.size) + ' on size, which makes each column as wide as its share of the engine\'s total. That is read in a plot of shares: a dimension on x, the query\'s other dimension on color, and stack: "normalize". Add what is missing, or remove "size".');
     Object.entries(l.encode || {}).forEach(([ch, f]) => {
       if (typeof f === 'number') return;
-      if (ch === 'size' && !(f.split('@')[0]! in catalog.metrics)) throw new Error('Layer ' + (i + 1) + ' encodes "' + f + '" on size, and a size is a quantity. Encode one of the query\'s metrics: ' + q.metrics.join(', ') + '.');
+      if (ch === 'size' && !isMetric(catalog, f)) throw new Error('Layer ' + (i + 1) + ' encodes "' + f + '" on size, and a size is a quantity. Encode one of the query\'s metrics: ' + q.metrics.join(', ') + '.');
       // A companion of a field the query returns is the engine's to send, so it is looked for in the result. An empty result has none to show.
-      const row = result.rows[0], of = f.split('@')[0]!;
-      if (f !== of && known.indexOf(of) >= 0 && row && !(f in row)) throw new Error('Layer ' + (i + 1) + ' encodes "' + f + '" on ' + ch + ', which the result does not return. With "' + of + '" it returns: ' + (Object.keys(row).filter((c) => c.split('@')[0] === of && c !== of).join(', ') || 'nothing') + '.');
+      const row = result.rows[0], of = baseOf(f);
+      if (f !== of && known.indexOf(of) >= 0 && row && !(f in row)) throw new Error('Layer ' + (i + 1) + ' encodes "' + f + '" on ' + ch + ', which the result does not return. With "' + of + '" it returns: ' + (Object.keys(row).filter((c) => baseOf(c) === of && c !== of).join(', ') || 'nothing') + '.');
       if (f !== of && known.indexOf(of) >= 0) return;
       if (known.indexOf(f) < 0) throw new Error('Layer ' + (i + 1) + ' encodes "' + f + '" on ' + ch + ', which the query does not return. It returns: ' + known.join(', ') + '.');
     });
@@ -266,11 +267,11 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
       if (p.layout === 'radial' && p.guides.rim) { p.guides = {}; return 'the labels round the rim'; }
       // A grid's two keys go together: the ramp, and the key to sizes where it has dots.
       if (p.layout === 'matrix' && (p.guides.ramp || p.guides.size)) {
-        const shown = buildScene(p, q, result, catalog).parts, said = (['ramp', 'size'] as const).filter((g) => shown.includes(g)).map((g) => (g === 'ramp' ? 'the colour ramp' : 'the key to sizes')).join(' and ');
+        const shown = buildScene(p, q, result, catalog).parts, said = (['ramp', 'size'] as const).filter((g) => shown.includes(g)).map((g) => KEY_NAMES[g]).join(' and ');
         p.guides = { ...p.guides, ramp: false, ...(p.guides.size != null && { size: false }) };
         return said || null;
       }
-      if (customMarks().has(p.layout)) { const key = keyed(); p.guides = {}; return key ? (key === 'ramp' ? 'the colour ramp' : 'the key to sizes') : null; }
+      if (customMarks().has(p.layout)) { const key = keyed(); p.guides = {}; return key ? KEY_NAMES[key] : null; }
       return null;
     },
     'drop-secondary': () => {
@@ -315,7 +316,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   // place() leaves the number out of a hole too small for it, by the `hole` rule and by the number's own width.
   if (p.layout === 'radial' && buildScene(p, q, result, catalog).parts.includes('hole') && !scene.nodes.some((n) => n.key === 'hole')) dropped.push('the number in the hole');
   if (p.layout === 'cartesian' && p.guides.x && labelled && !p.guides.pointLabels) dropped.push('the labels on the points');
-  if (p.layout === 'cartesian' && p.guides.x && sized && !p.guides.size) dropped.push('the key to sizes');
+  if (p.layout === 'cartesian' && p.guides.x && sized && !p.guides.size) dropped.push(KEY_NAMES.size);
   if (p.layout === 'rows' && columnsOf(catalog, p.layers).length > 1 && !p.guides.columns) dropped.push('the column headers');
   // The key a rule took before any reduction ran. One that went with the axes, or in `drop-guides`, is said there.
   if (noKey && (p.layout !== 'cartesian' || p.guides.x) && buildScene({ ...p, guides: { ...p.guides, unitKey: true } }, q, result, catalog).parts.includes('unit-key')) dropped.push('the key to what a glyph is worth');

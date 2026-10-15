@@ -3,12 +3,12 @@ export { CONTAINER_RULES, makeContainer, unboundedContainer } from './container.
 export { FIT_RULES, applies, type FitRule, type Room } from './fit.ts';
 export { PRESETS, customPresets, expand, fills, registerPreset } from './presets.ts';
 export { resolve } from './plan.ts';
-export { buildScene, detailOf, layerKeys, metricOf, roleOf, rowKeys, unitsOf } from './scene.ts';
+export { buildScene, detailOf, isDim, isMetric, layerKeys, metricOf, roleOf, rowKeys, uniqueKeys, unitsOf } from './scene.ts';
 export { COLUMNS_BLOCK, columnRooms, declutter, place, type LabelBox } from './place.ts';
 export { arcD, pathD, type PathBox } from './path.ts';
 export { gridProse, notShownNote, partialNote, plural, tldrProse } from './prose.ts';
-export { UNITS, formatBin, formatDimension, formatUnit, formatValue, rangeLabel } from './format.ts';
-export { SIZES, seqScale, sizeKey, sizeStep } from './scene.ts';
+export { UNITS, formatBin, formatDimension, formatUnit, formatValue, orList, rangeLabel } from './format.ts';
+export { SERIES, SIZES, seqScale, sizeKey, sizeStep, tooManySeries } from './scene.ts';
 export { radius as dotRadius } from './place.ts';
 export { fallbackRule, gaveWay } from './fit.ts';
 export { customMarks, registerMark, type CustomMark, type MarkView } from './marks.ts';

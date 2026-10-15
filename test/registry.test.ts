@@ -48,7 +48,7 @@ describe('the registry', () => {
     expect(view({ ...tiles, layers: [{ mark: 'nope' }] })).toBe(true);
     expect(view({ ...tiles, layers: [{ mark: 'not a name' }] })).toBe(false);
     const says = err(() => run({ ...tiles, layers: [{ mark: 'nope', encode: { x: 'page' } }] }, 346))!;
-    expect(says).toMatch(/^Layer 1 has the mark "nope", which is not built in and is not registered\. Built in: line, area, bar, rule, dot, text, .*arc, cell\. Registered: .*toy.*\. Use one of those, or register it with registerMark\("nope", …\) before the view is resolved\.$/);
+    expect(says).toMatch(/^Layer 1 has the mark "nope", which is not built in and is not registered\. Built in: line, area, bar, rule, text, arc, cell, dot, tick, unit\. Registered: .*toy.*\. Use one of those, or register it with registerMark\("nope", …\) before the view is resolved\.$/);
   });
 });
 

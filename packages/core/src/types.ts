@@ -1,7 +1,12 @@
 import type { FitRule } from './fit.ts';
 
-/* Catalog: the slice of the semantic model the front end needs. */
-export type Polarity = 'up' | 'down' | 'none';
+/* Catalog: the slice of the semantic model the front end needs.
+ * Each `as const` list here is the one source of a union below and of the enum the schemas give it (test/core.test.ts compares them). */
+export const POLARITIES = ['up', 'down', 'none'] as const;
+export type Polarity = (typeof POLARITIES)[number];
+export const RANGE_TOTALS = ['sum', 'sum of daily'] as const;
+export const DIMENSION_TYPES = ['time', 'categorical', 'number'] as const;
+export const DIMENSION_VALUES = ['country'] as const;
 /** A currency is its ISO 4217 code in lower case, `usd` or `eur`: each is a unit of its own, so two currencies never share an axis. */
 export type Unit = 'count' | 'ratio' | 'percent' | 'ms' | 's' | 'bytes' | 'rank' | (string & {});
 export interface MetricDef {
@@ -14,7 +19,7 @@ export interface MetricDef {
   /** What the number counts, caveats included, in a sentence or two. Carried on the tldr value as its `note`, so the
    * caveat travels with the number: a painter shows it when the number is pointed at. It is too long to stand under the number. */
   definition?: string;
-  rangeTotal?: 'sum' | 'sum of daily';
+  rangeTotal?: (typeof RANGE_TOTALS)[number];
   instant?: boolean;
   /** The range a value is read against, where it has one: the two ends of a gauge. Proposed to the API's owners, as the
    * next two are (chart-coverage-plan, section 3.5). */
@@ -29,10 +34,10 @@ export interface DimensionDef {
   label: string;
   /** `number` is a quantity the engine has cut into bins, or sampled along. Each row holds where its bin starts, and where it
    * ends as `<dimension>@end`. Proposed to the API's owners (chart-coverage-plan, section 3.5). */
-  type: 'time' | 'categorical' | 'number';
+  type: (typeof DIMENSION_TYPES)[number];
   /** What the values are codes of, when the engine sends codes: `country` is ISO 3166-1 alpha-2, in capitals, and is
    * written as the country's name. */
-  values?: 'country';
+  values?: (typeof DIMENSION_VALUES)[number];
 }
 export interface Catalog {
   /** By name. A companion the engine returns with a metric (`pageviews@rank`) may have an entry of its own, under its
@@ -41,6 +46,8 @@ export interface Catalog {
   metrics: Record<string, MetricDef>;
   dimensions: Record<string, DimensionDef>;
 }
+/** The field a companion came with: `pageviews` of `pageviews@rank`, and a field with no suffix itself. */
+export const baseOf = (f: string): string => f.split('@')[0]!;
 
 /* Query and result. */
 export interface Query {
@@ -68,7 +75,8 @@ export interface Result {
  * a metric on x a run along a row's track, a metric on x and a dimension on `color` a grid of a hundred divided by
  * share, a metric on x alone that grid filled to the metric's place in its catalog `domain`, and a metric on `angle`
  * with a dimension on `color` and `sweep: "half"` seats round a half circle. What a glyph is worth comes from the data (unit.ts). */
-export type Mark = 'line' | 'area' | 'bar' | 'rule' | 'text' | 'arc' | 'cell' | 'dot' | 'tick' | 'unit' | (string & {});
+export const MARKS = ['line', 'area', 'bar', 'rule', 'text', 'arc', 'cell', 'dot', 'tick', 'unit'] as const;
+export type Mark = (typeof MARKS)[number] | (string & {});
 /** `x2` and `y2` are the second end of a `bar`, a `rule` or an `area`: it runs from the value on `x` or `y` to the one there.
  * A `rule` may start at a number, and with all four it is a line across a plot of points, from (`x`, `y`) to (`x2`, `y2`).
  * `detail` is a dimension that splits a layer into series as one on `color` does, and paints none of them apart:
@@ -77,27 +85,33 @@ export type Mark = 'line' | 'area' | 'bar' | 'rule' | 'text' | 'arc' | 'cell' | 
  * a metric on `angle` and a dimension on `color` is a share each, and `detail` beside them a second ring; a dimension on
  * `angle` and a metric on `radius` is a slice each that reaches to its value; a dimension on `radius` and a metric on
  * `angle` is a ring each. A number on `radius` is the inner radius. */
-export type Channel = 'x' | 'y' | 'color' | 'detail' | 'text' | 'angle' | 'radius' | 'size' | 'x2' | 'y2';
-export type Role = 'primary' | 'comparison' | 'reference' | 'context';
-export type KeepPart = 'guides' | 'secondary' | 'rows' | 'marks';
+export const CHANNELS = ['x', 'y', 'color', 'detail', 'text', 'angle', 'radius', 'size', 'x2', 'y2'] as const;
+export type Channel = (typeof CHANNELS)[number];
+export const ROLES = ['primary', 'comparison', 'reference', 'context'] as const;
+export type Role = (typeof ROLES)[number];
+export const KEEP_PARTS = ['guides', 'secondary', 'rows', 'marks'] as const;
+export type KeepPart = (typeof KEEP_PARTS)[number];
+export const LAYER_SERIES = ['previous', 'delta'] as const;
+export const STACKS = ['zero', 'normalize', 'center', 'diverge'] as const;
+export const ALIGNS = ['start', 'end'] as const;
 export interface Layer {
   mark: Mark;
   encode?: Partial<Record<Channel, string | number>>;
   /** `previous` draws the metric's comparison companion. On a `text` layer in rows, `delta` says the row's change on it instead, painted by the metric's polarity. */
-  series?: 'previous' | 'delta';
+  series?: (typeof LAYER_SERIES)[number];
   role?: Role;
   /** On a layer split by `color`, and not by `detail`: each series starts where the one under it ends. `normalize` makes each a share of the whole,
    * and `center` sets each stack half on either side of zero. `diverge` sets the first half of the series below zero and the second
    * half above it, in their order, and with an odd count the middle one half on each side. In rows it is what lets a bar's `color` be the query's second
    * dimension: each row's bar is divided into a series for each of its values. */
-  stack?: 'zero' | 'normalize' | 'center' | 'diverge';
+  stack?: (typeof STACKS)[number];
   /** On an `arc`: the arcs run over the top half of the circle, from left to right, and not all the way round. On a
    * `unit` about a centre: its seats sit round that half, which is the one way they are drawn.
    * The one layer field that is neither data nor role. */
   sweep?: 'half';
   label?: string;
   /** On a `text` layer in rows, `end` sets it as a column of values. On a `tick`, the half of it to that side of its band's middle. */
-  align?: 'start' | 'end';
+  align?: (typeof ALIGNS)[number];
   /** A paint token in place of the layer's own. `delta` is the paint of its metric's change over the range: good or bad by
    * the metric's polarity, and the layer's own where there is no change to judge. `direction`, on a `bar` or an `area`
    * with two ends, paints each mark by which way it runs from the first end to the second: `delta.good` or `delta.bad`
@@ -163,8 +177,9 @@ export interface Container {
 }
 
 /* Plan: what will be drawn at this size, and what was dropped. */
-/** A custom mark is laid out by its own code, under its own name. */
-export type Layout = 'cartesian' | 'rows' | 'band' | 'radial' | 'matrix' | 'none' | 'notice' | 'prose' | (string & {});
+/** The layouts core builds. A custom mark is laid out by its own code, under its own name, which so cannot be one of these. */
+export const LAYOUTS = ['cartesian', 'rows', 'band', 'radial', 'matrix', 'none', 'notice', 'prose'] as const;
+export type Layout = (typeof LAYOUTS)[number] | (string & {});
 export interface Reduction {
   id: ReductionId;
   state: 'not needed' | 'applied' | 'kept by the spec' | 'nothing to drop';

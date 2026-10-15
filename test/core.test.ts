@@ -5,7 +5,7 @@ import * as d3array from 'd3-array';
 import * as d3scale from 'd3-scale';
 import * as d3shape from 'd3-shape';
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, UNITS, buildScene, expand, formatDimension, formatValue, makeContainer, partialNote, pathD, place, resolve, unboundedContainer, type PainterName, type Spec, type Unit } from '@unified-analytics/core';
+import { ALIGNS, CHANNELS, CONTAINER_RULES, DIMENSION_TYPES, DIMENSION_VALUES, KEEP_PARTS, LAYER_SERIES, MARKS, POLARITIES, RANGE_TOTALS, ROLES, SERIES, STACKS, UNITS, buildScene, expand, formatDimension, formatValue, makeContainer, partialNote, pathD, place, resolve, unboundedContainer, type PainterName, type Spec, type Unit } from '@unified-analytics/core';
 import catalogSchema from '@unified-analytics/core/schema/catalog.schema.json';
 import viewSchema from '@unified-analytics/core/schema/view.schema.json';
 import { catalog, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
@@ -289,6 +289,23 @@ describe('schemas', () => {
     expect((catalogSchema as any).properties.metrics.additionalProperties.properties.unit.anyOf[0].enum).toEqual(UNITS);
     expect(cat({ metrics: { m: { label: 'M', unit: 'eur', polarity: 'up' } }, dimensions: {} })).toBe(true);     // a currency's code
     expect(cat({ metrics: { m: { label: 'M', unit: 'furlongs', polarity: 'up' } }, dimensions: {} })).toBe(false);
+  });
+  it('every other enum is the list in types.ts its union is made from, and no other', () => {
+    const metric = (catalogSchema as any).properties.metrics.additionalProperties.properties, dim = (catalogSchema as any).properties.dimensions.additionalProperties.properties;
+    const layer = (viewSchema as any).definitions.layer.properties;
+    expect(metric.polarity.enum).toEqual(POLARITIES);
+    expect(metric.rangeTotal.enum).toEqual(RANGE_TOTALS);
+    expect(dim.type.enum).toEqual(DIMENSION_TYPES);
+    expect(dim.values.enum).toEqual(DIMENSION_VALUES);
+    expect(layer.mark.anyOf[0].enum).toEqual(MARKS);
+    expect(Object.keys(layer.encode.properties)).toEqual(CHANNELS);
+    expect(layer.series.enum).toEqual(LAYER_SERIES);
+    expect(layer.role.enum).toEqual(ROLES);
+    expect(layer.stack.enum).toEqual(STACKS);
+    expect(layer.align.enum).toEqual(ALIGNS);
+    expect((viewSchema as any).properties.keep.items.enum).toEqual(KEEP_PARTS);
+    // A description cannot be derived, so it is held to the count it states.
+    expect(layer.paint.description).toContain('series.1 to series.' + SERIES + ',');
   });
 });
 

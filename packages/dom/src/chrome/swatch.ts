@@ -16,8 +16,9 @@ export const DOT = `calc(${2 * BASE}px + var(--uav-size, ${NO_SIZE}) * ${2 * STE
  * (`.uav-swatch`), or drawn before the words it belongs to (`.uav-swatch-before`) where a wrap must not part the two
  * (legend.ts says why). It is painted from --uav-swatch where its host is not the colour it names, and else from its
  * own paint, and keeps that paint where a printer or forced colours would leave it out.
- * Where it stands, and its margins, are the module's that has it. Figma: the Swatch component set. */
-/** The square sizes, in px: a line of the readout, the pulse beside the number, and an entry of the legend. */
+ * Where it stands, and its margins, are the module's that has it. Figma: the Swatch component set, by Size and Shape;
+ * its Size=10, Shape=Circle is the pulse (`10 circle`). */
+/** The sizes, in px: a line of the readout, the pulse beside the number (round), and an entry of the legend. */
 export const SWATCH = { readout: 8, pulse: 10, legend: 12 } as const;
 export const SWATCH_CSS = `
 .uav-swatch, .uav-swatch-before::before { display: inline-block; flex: none; inline-size: var(--uav-swatch-i); block-size: var(--uav-swatch-b); border-radius: var(--uav-swatch-r, ${token('border-radius-swatch')});

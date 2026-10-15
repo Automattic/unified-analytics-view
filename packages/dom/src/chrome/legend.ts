@@ -12,7 +12,9 @@ import { SWATCH, swatch as asSwatch } from './swatch.ts';
  * two forms are not one markup: a swatch that is its own element is a grid's cell, and in a wrapping row it would be
  * left at a line's end with its name on the next.
  *
- * Beside it, `.uav-legend-top`: the one line that stands in for the whole legend where a rule swaps them.
+ * Beside it, `.uav-legend-top`: the one line that stands in for the whole legend where a rule swaps them. It is in
+ * its series' paint where the scene names one (a row split by colour), and else in the label's (a share's legend):
+ * Figma's `Legend top`, Tone = Series | Label.
  * A line is 20 px where a label is 13 px, and follows the label's face from there (--uav-legend-line, view.ts).
  * A layout says where the two stand in its body, and what they do in a box. keys.ts marks the chosen entry. */
 /** A line of the legend, in px where a label is drawn at DRAWN.label: it follows the face from there. */

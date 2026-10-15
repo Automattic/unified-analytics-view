@@ -1,5 +1,5 @@
-import { formatDimension, formatValue, metricOf, type Catalog, type Layer, type Query, type Result, type Row } from '@unified-analytics/core';
-import { companionLabel, companions } from './keys.ts';
+import { formatValue, metricOf, type Catalog, type Layer, type Query, type Result, type Row } from '@unified-analytics/core';
+import { companionLabel, companions, dimName } from './keys.ts';
 
 /* The table alternative: the same result as a table, in place of the marks. The element's own is here, and so are the
  * parts every table is made of, for a layout or a custom mark that lays out its own (matrix.ts's, a treemap's): a
@@ -63,7 +63,8 @@ export function paintTable(table: HTMLTableElement, title: string | undefined, q
   if (by.length === 2) {
     // Two dimensions: the first down the side, the second across, and each field once more for the whole row.
     const p = pivot(q, result, fields), per = (v: Row[string][]) => v.map((x, i): Cell => (x === undefined ? ['', 'td', true] : value(x, fields[i % fields.length]!)));
-    const dim = (i: number, v: Row[string]) => formatDimension(v, catalog.dimensions[by[i]!]!);
+    // A bin is named by both its ends, as the readout names it.
+    const dim = (i: number, v: Row[string]) => { const d = by[i]!; return dimName((result.totalsBy?.[d] ?? result.rows).find((r) => r[d] === v) ?? { [d]: v }, d, catalog); };
     tableRow(table.createTHead(), [[catalog.dimensions[by[0]!]!.label, 'th'], ...p.cols.flatMap((c) => fields.map((f): Cell => [dim(1, c) + (fields.length > 1 ? ', ' + label(f) : ''), 'th', true])), ...fields.map((f): Cell => [label(f), 'th', true])]);
     const tbody = table.createTBody();
     for (const r of p.rows) tableRow(tbody, [[dim(0, r.key), 'th'], ...per(r.cells)]);
@@ -72,7 +73,7 @@ export function paintTable(table: HTMLTableElement, title: string | undefined, q
   }
   tableRow(table.createTHead(), [...by.map((d): Cell => [catalog.dimensions[d]!.label, 'th']), ...fields.map((f): Cell => [label(f), 'th', true])]);
   const body = table.createTBody(), totals = fields.map((f) => value(result.totals[f], f));
-  for (const r of result.rows) tableRow(body, [...by.map((d): Cell => [formatDimension(r[d], catalog.dimensions[d]!), 'th']), ...fields.map((f) => value(r[f], f))]);
+  for (const r of result.rows) tableRow(body, [...by.map((d): Cell => [dimName(r, d, catalog), 'th']), ...fields.map((f) => value(r[f], f))]);
   if (!by.length) tableRow(body, totals);
   else tableRow(table.createTFoot(), [['Total', 'th'], ...by.slice(1).map((): Cell => ['', 'td']), ...totals]);
 }

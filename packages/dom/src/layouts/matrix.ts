@@ -1,4 +1,4 @@
-import { SIZES, formatDimension, type CircleNode, type RectNode, type Row } from '@unified-analytics/core';
+import { SIZES, type CircleNode, type RectNode, type Row } from '@unified-analytics/core';
 import { attr, ensure, keyed, nodePaint, prop } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { chooseItem, dimName, readout, roveItems } from '../keys.ts';
@@ -138,7 +138,7 @@ export const matrix: LayoutPainter = {
     if (!xf || !yf) {
       const f = (yf || xf)!;
       tableRow(head, [[catalog.dimensions[f]!.label, 'th'], [fieldLabel(m, catalog), 'th', true]]);
-      for (const k of (yf ? scene.ys : xs) ?? []) tableRow(body, [[formatDimension(k, catalog.dimensions[f]!), 'th'], value(at.get(yf ? '\n' + k : k + '\n'))]);
+      for (const k of (yf ? scene.ys : xs) ?? []) tableRow(body, [[name(f, k), 'th'], value(at.get(yf ? '\n' + k : k + '\n'))]);
       tableRow(foot, [['Total', 'th'], value(result.totals[m])]);
       return;
     }

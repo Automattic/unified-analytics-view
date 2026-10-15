@@ -32,7 +32,7 @@ describe('chrome', () => {
   it('sets every plot label from one rule set: its words in its paint, its halo, its highlight and, given up, its box kept, said once for every view', () => {
     expect(CHROME_CSS).toContain(LABEL_CSS);
     expect(LABEL_CSS).toContain('.uav [data-thin] { visibility: hidden; }');
-    expect(LABEL_CSS).toContain('.uav [data-halo] { -webkit-text-stroke: 3px var(--ua-charts-color-background');
+    expect(LABEL_CSS).toContain('.uav [data-halo] { -webkit-text-stroke: calc(var(--ua-charts-stroke-width-halo, 1.5px) * 2) var(--ua-charts-color-background');
     // The atom is its words in its paint. Its tone and its cut are each parent's.
     expect(LABEL).toBe('white-space: nowrap; color: var(--uav-paint);');
     expect(AXES_CSS).toContain(`${LABEL} color: var(--ua-charts-color-label-axis`);

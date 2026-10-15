@@ -49,6 +49,7 @@ export const TOKENS: Record<string, string> = {
   'stroke-width-line': '1px',
   'stroke-width-rule': '1px',
   'stroke-width-focus': '2px',
+  'stroke-width-halo': '1.5px',
 
   // The face of the axis labels and notes, and of the small numbers. Unthemed, the page's own.
   'font-family-tick': 'inherit',

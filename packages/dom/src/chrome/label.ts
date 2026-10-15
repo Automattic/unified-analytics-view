@@ -30,7 +30,8 @@ export const cut = (width: string): string => `max-inline-size: ${width}; overfl
 
 /* Once for every view, whichever layout set the label. */
 export const LABEL_CSS = `
-.uav [data-halo] { -webkit-text-stroke: 3px ${token('color-background')}; paint-order: stroke fill; }
+/* A text stroke is centred on the letter's edge, and the fill is painted over its inner half: the halo is half of it. */
+.uav [data-halo] { -webkit-text-stroke: calc(${token('stroke-width-halo')} * 2) ${token('color-background')}; paint-order: stroke fill; }
 .uav [data-thin] { visibility: hidden; }
 /* Highlighted, a chosen series' name at its line's end, is underlined. */
 .uav-labels span${IS.highlighted} { text-decoration: underline; }`;

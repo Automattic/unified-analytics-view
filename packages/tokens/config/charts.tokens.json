@@ -216,7 +216,7 @@
     },
     "stroke-width": {
       "$type": "dimension",
-      "$description": "A line of the data where its layer gives no width, a rule or a grid line, and the outline of whatever has the reader's attention: the holder with focus, and the mark chosen in it.",
+      "$description": "A line of the data where its layer gives no width, a rule or a grid line, and the outline of whatever has the reader's attention: the holder with focus, and the mark chosen in it; and the halo, the ring of the background round each letter of a label set over marks.",
       "line": {
         "$value": {
           "value": 1,
@@ -232,6 +232,12 @@
       "focus": {
         "$value": {
           "value": 2,
+          "unit": "px"
+        }
+      },
+      "halo": {
+        "$value": {
+          "value": 1.5,
           "unit": "px"
         }
       }

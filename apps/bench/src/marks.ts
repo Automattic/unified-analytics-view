@@ -68,7 +68,7 @@ function specimen(parent: Element, label: string, state: Omit<State, 'label'>, s
   // A screen and frosted glass are more than a colour: material.css. Glass has no colour of its own, and is set over something to blur.
   if (surface === 'screen') box.classList.add('ua-screen');
   if (surface === 'crystal') { box.classList.add('ua-crystal-surface'); box.style.setProperty('--surface', 'var(--ua-surface-card)'); }   // crystal goes over any fill: the card's here
-  if (surface === 'frost') { box.classList.add('ua-frost'); box.style.setProperty('--surface', 'color-mix(in srgb, var(--ua-color-card) var(--ua-frost-tint, 45%), transparent)'); cell.classList.add('backdrop'); }
+  if (surface === 'frost') { box.classList.add('ua-frost'); box.style.setProperty('--surface', 'var(--ua-frost-fill)'); cell.classList.add('backdrop'); }
   if (series > 1) for (const part of ['', '-text', '-soft']) view.style.setProperty('--ua-charts-color-series-1' + part, `var(--ua-charts-color-series-${series}${part})`);
   view.catalog = state.catalog ?? catalog; view.spec = state.spec;
   try { view.result = runQuery(state.spec.query, state.scenario); } catch (e) { box.append(el('p', 'meta error', (e as Error).message)); }

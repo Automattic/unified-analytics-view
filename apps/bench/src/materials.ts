@@ -2,7 +2,6 @@
  * to hold up at, under one light. The same light is the one elevation's shadows fall away from. The material's surface is material.css; this file builds
  * the stage and the lens filter. */
 import { el, heading } from './setup.ts';
-const root = document.documentElement;
 const main = document.querySelector<HTMLElement>('#materials')!;
 
 /** The crystal's four layers, bottom to top. */
@@ -124,13 +123,6 @@ main.append(heading('Screen', 'a surface sunk into the page, as an LCD is: the i
   main.append(row);
 }
 
-// The light and the material, as they were settled when the page had controls to move them.
-const s = { light: 322, bevel: 20, thick: 0.44, disp: 0.6, blur: 18, saturate: 180, tint: 45, grain: 0.55 };
-root.style.setProperty('--ua-light', s.light + 'deg');
-main.style.setProperty('--ua-crystal-flat', 100 - s.bevel + '%');
-main.style.setProperty('--ua-frost-blur', s.blur + 'px');
-main.style.setProperty('--ua-frost-saturate', s.saturate + '%');
-main.style.setProperty('--ua-frost-tint', s.tint + '%');
-main.style.setProperty('--ua-grain', String(s.grain));
-main.dataset.crystal = 'on';
-lens(1 - s.bevel / 100, s.thick, s.disp);
+// The light and the material are material.css's. The lens is built for the bevel it sets; how thick the glass is and how
+// much it disperses are the lens's alone, as they were settled when the page had controls to move them.
+lens(parseFloat(getComputedStyle(crystals[0]!.el).getPropertyValue('--flat')) / 100, 0.44, 0.6);

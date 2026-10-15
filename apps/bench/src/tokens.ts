@@ -1,6 +1,6 @@
 /* Every custom property the token stylesheet declares, read from the page's own
  * stylesheets, so this page cannot drift from what ships. Values follow the theme. */
-import { declared, el, heading } from './setup.ts';
+import { declared, el, heading } from './page.ts';
 const main = document.querySelector('#tokens')!;
 
 /** `var(--ua-color-neutral-300)` reads as `neutral-300`. */

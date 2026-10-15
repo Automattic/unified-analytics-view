@@ -1,7 +1,8 @@
 import type { Catalog, Spec } from '@unified-analytics/core';
 import { UaView } from '@unified-analytics/dom';
 import { catalog, runQuery, type Scenario } from '@unified-analytics/fixtures';
-import { declared, el, register, samples } from './setup.ts';
+import { declared, el } from './page.ts';
+import { register, samples } from './setup.ts';
 
 /* The marks: each one on its own, at a size where nothing has been given up, for tuning how it looks. A mark is
  * shown in each of the six series colours, on each of the three surfaces, and in the states it has. Every specimen

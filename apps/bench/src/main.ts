@@ -2,7 +2,8 @@ import { buildScene, resolve, unboundedContainer } from '@unified-analytics/core
 import { UaView } from '@unified-analytics/dom';
 import { catalog, runQuery, type Scenario } from '@unified-analytics/fixtures';
 import { resizable } from './resizer.ts';
-import { boxIn, heading, register, samples } from './setup.ts';
+import { heading } from './page.ts';
+import { boxIn, register, samples } from './setup.ts';
 
 /* The bench: every sample, in frames that stand in for containers.
  * Controls live in the URL, so a reload or a shared link keeps them. */

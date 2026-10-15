@@ -1,7 +1,7 @@
 /* The materials, on the tokens page: each material over the page and over each surface it has to sit on, at the sizes it has
  * to hold up at, under one light. The same light is the one elevation's shadows fall away from. The material's surface is material.css; this file builds
  * the stage and the lens filter. */
-import { el, heading } from './setup.ts';
+import { el, heading } from './page.ts';
 const main = document.querySelector<HTMLElement>('#materials')!;
 
 /** The crystal's four layers, bottom to top. */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildScene, rangeLabel, resolve, unboundedContainer, type Catalog, type Result, type Row, type Spec } from '@unified-analytics/core';
-import { rangeProse, tldrProse } from '../packages/core/src/prose.ts';
+import { inProgressNote, rangeProse, tldrProse } from '../packages/core/src/prose.ts';
 
 // query.range is optional in the schema, so an answer may name no range. A view then says nothing of one: no word is made up.
 const catalog: Catalog = {
@@ -61,5 +61,12 @@ describe('a count in the prose is pluralised as plural() does it', () => {
   it('in the days a split leads on', () => {
     const res = result([{ delivery: '1', country: 'DE', revenue: 200 }, { delivery: '1', country: 'FR', revenue: 100 }], { totalsBy: { country: [{ country: 'DE', revenue: 200 }, { country: 'FR', revenue: 100 }] } });
     expect(tldrProse({ metrics: ['revenue'], by: ['delivery', 'country'] }, res, false, ys)).toBe('DE is the largest country at 67% of revenue, and leads on all 1 deliveries.');
+  });
+});
+
+describe('the note an unfinished bucket carries', () => {
+  it('names the bucket', () => {
+    expect(inProgressNote('day')).toBe('Today is still in progress.');
+    expect(inProgressNote('hour')).toBe('This hour is still in progress.');
   });
 });

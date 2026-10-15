@@ -194,6 +194,10 @@ export function gridProse(q: Query, result: Result, catalog: Catalog): string | 
 export function partialNote(row: Row): string {
   return row.partial ? 'so far' : '';
 }
+/** The note an answer carries where its last bucket is unfinished, by the granularity of its buckets: "Today is still in progress." */
+export function inProgressNote(granularity: string): string {
+  return (granularity === 'hour' ? 'This hour' : 'Today') + ' is still in progress.';
+}
 
 /** What a view says of the rows it has no place to draw, by the label of their dimension: "12 countries not shown".
  * The table still lists them. Empty when there are none, so it also answers whether there is anything to say. */

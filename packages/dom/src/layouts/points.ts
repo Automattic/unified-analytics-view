@@ -1,6 +1,6 @@
 import { AXES_HEIGHT, FROM_TOP } from '../layout.ts';
 import { SIZE_KEY_BLOCK } from '../chrome/size.ts';
-import { POINT_INSET, declutter, type CircleNode, type PathNode, type Scene, type SceneNode, type TextNode } from '@unified-analytics/core';
+import { POINT_INSET, declutter, dotRadius, type CircleNode, type PathNode, type Scene, type SceneNode, type TextNode } from '@unified-analytics/core';
 import { attr, ensure, keyed, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { RULE } from '../chrome/rule.ts';
@@ -13,7 +13,7 @@ import { unitDot } from '../chrome/unit.ts';
  * cartesian.ts adds POINTS_CSS and POINTS_FIT to its own and calls paintPoints, the key's painter and measurePoints.
  *
  * Dots are HTML placed by custom properties, as bars are. A dot's size is a step in the scene. How big a step is, in
- * pixels, is here and nowhere else: 9 px across at the first and 5 more with each, and 6 for a dot with no size.
+ * pixels, is core's (dotRadius), which DOT reads back: 9 px across at the first and 5 more with each, and 6 for a dot with no size.
  *
  *   .uav-plot
  *     .uav-dots              dots on a time or category axis. The plot's own hit targets step through them
@@ -21,7 +21,13 @@ import { unitDot } from '../chrome/unit.ts';
  *                            Where a line joins them they are stepped through in its order: data-hits="path"
  *     .uav-point-labels      a label on each point. The measured pass hides the ones that collide
  *   .uav-size                the key to sizes, under the plot (chrome/size.ts) */
-export const DOT = 'calc(4px + var(--uav-size, 0.4) * 5px)';
+// Core's dotRadius() is a base and a step for each size, and a dot with no size is NO_SIZE steps. Read back from it, so
+// the stylesheet's dot is core's.
+const STEP = dotRadius(2) - dotRadius(1), BASE = dotRadius(1) - STEP;
+export const NO_SIZE = (dotRadius() - BASE) / STEP;
+export const DOT = `calc(${2 * BASE}px + var(--uav-size, ${NO_SIZE}) * ${2 * STEP}px)`;
+/** How far a point's label stands clear of its dot, in px. */
+const CLEAR = 2;
 export const POINTS_CSS = `
 .uav-dots, .uav-points, .uav-point-labels { position: absolute; inset: 0; }
 .uav-body[data-scale="point"] :is(.uav-dots, .uav-point-labels) { inset-inline: ${POINT_INSET}px; }
@@ -34,7 +40,7 @@ export const POINTS_CSS = `
   inline-size: ${DOT}; block-size: ${DOT}; border-radius: 50%; background: var(--uav-paint); }
 /* A label sits above its point, clear of the dot. --uav-nudge is the measured pass's: what keeps it inside the plot. */
 .uav-point-labels span { position: absolute; inset-inline-start: calc(var(--uav-x) * 100%); inset-block-start: ${FROM_TOP};
-  translate: calc(${ANCHOR.middle} + var(--uav-nudge, 0px)) calc(-100% - 2px - ${DOT} / 2); ${label({ truncate: true })} }
+  translate: calc(${ANCHOR.middle} + var(--uav-nudge, 0px)) calc(-100% - ${CLEAR}px - ${DOT} / 2); ${label({ truncate: true })} }
 /* A rule at a value on x stands the height of the plot, and its label sits beside it at the top. */
 .uav-line[data-upright] { inset-block: 0; inset-inline: calc(var(--uav-x) * 100%) auto; inline-size: ${RULE}; block-size: auto; translate: -50%; --uav-rule-way: 0deg; }
 .uav-refs span[data-upright] { inset-inline: calc(var(--uav-x) * 100%) auto; translate: 4px 0; padding: 0; }
@@ -84,7 +90,7 @@ export function measurePoints(body: HTMLElement): void {
     return declutter(labels.map((el) => {
       const r = el.getBoundingClientRect(), mid = num(el, '--uav-x') * room.width - r.width / 2, x = Math.max(0, Math.min(mid, room.width - r.width));
       prop(el, '--uav-nudge', x - mid + 'px');
-      return { x, y: (1 - num(el, '--uav-t')) * room.height - 2 - (4 + (num(el, '--uav-size') || 0.4) * 5) / 2 - r.height, w: r.width, h: r.height, rank: Number(el.dataset.rank) || 0 };
+      return { x, y: (1 - num(el, '--uav-t')) * room.height - CLEAR - dotRadius(num(el, '--uav-size') || undefined) - r.height, w: r.width, h: r.height, rank: Number(el.dataset.rank) || 0 };
     }));
   });
 }

@@ -1,4 +1,4 @@
-import { formatBin, formatDimension, formatValue, type CircleNode, type RectNode, type Row } from '@unified-analytics/core';
+import { SIZES, formatBin, formatDimension, formatValue, type CircleNode, type RectNode, type Row } from '@unified-analytics/core';
 import { attr, ensure, keyed, nodePaint, prop } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { chooseItem, readout, roveItems } from '../keys.ts';
@@ -6,7 +6,7 @@ import { AXES_HEIGHT, NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
 import { paintAxes, thinAxis } from '../chrome/axes.ts';
 import { paintRamp } from '../chrome/ramp.ts';
 import { SIZE_KEY_BLOCK, paintSize } from '../chrome/size.ts';
-import { DOT } from './points.ts';
+import { DOT, NO_SIZE } from './points.ts';
 
 /* A dimension on x, another on y, a metric on colour: a grid of cells. The cells are a CSS grid, each set in its
  * track by two custom properties, so nothing here runs on resize. The axes are a plot's (chrome/axes.ts): the row labels are a
@@ -41,7 +41,7 @@ const css = `
 .uav-cells i[data-dot] { display: grid; place-items: center; }
 .uav-cells i[data-dot="alone"] { background: none; --uav-dot: var(--uav-paint); }
 .uav-cells i[data-dot]::before { content: ""; border-radius: 50%; background: var(--uav-dot);
-  inline-size: min(${DOT}, (min(100cqw / var(--uav-nx), 100cqh / var(--uav-ny)) - 1px) * var(--uav-size, 0.4) / 4); aspect-ratio: 1; }
+  inline-size: min(${DOT}, (min(100cqw / var(--uav-nx), 100cqh / var(--uav-ny)) - 1px) * var(--uav-size, ${NO_SIZE}) / ${SIZES}); aspect-ratio: 1; }
 .uav-cells [data-active] { z-index: 1; }
 .uav[data-layout="matrix"] .uav-ramp { grid-area: ramp; }`;
 

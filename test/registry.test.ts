@@ -1,9 +1,8 @@
-import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { PRESETS, buildScene, customMarks, customPresets, expand, makeContainer, place, registerMark, registerPreset, resolve, seqScale } from '@unified-analytics/core';
+import { PRESETS, customMarks, customPresets, expand, makeContainer, place, registerMark, registerPreset, resolve, seqScale } from '@unified-analytics/core';
 import type { CustomMark, FitRule, Part, PresetLibrary, RectNode, Spec } from '@unified-analytics/core';
-import viewSchema from '@unified-analytics/core/schema/view.schema.json';
 import { catalog, runQuery, samples } from '@unified-analytics/fixtures';
+import { errOf as err, run, validView as view } from './helpers.ts';
 
 // Step 8 of docs/chart-coverage-plan.md, part 1: the registry of custom marks. Held here with a mark made for the
 // test, so nothing in it depends on a map. The `geo` mark is in test/geo.test.ts, and `fallback` in test/fallback.test.ts.
@@ -25,12 +24,6 @@ const toy: CustomMark = {
 registerMark('toy', toy);
 
 const tiles: Spec = { spec: 'view/0', title: 'Tiles', query: { metrics: ['pageviews'], by: ['page'], range: '28d', limit: 8 }, layers: [{ mark: 'toy', encode: { x: 'page', color: 'pageviews' } }] };
-const run = (spec: Spec, w: number, h: number | null = null) => {
-  const container = makeContainer(w, h), result = runQuery(spec.query), plan = resolve(spec, result, container, catalog), ratio = buildScene(plan, spec.query, result, catalog);
-  return { plan, ratio, scene: place(ratio, container) };
-};
-const err = (f: () => unknown) => { try { f(); } catch (e) { return (e as Error).message; } };
-const view = new Ajv().compile(viewSchema);
 
 describe('the registry', () => {
   it('is a map and two functions: a mark is registered under a name, and found by it', () => {

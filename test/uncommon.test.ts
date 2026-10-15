@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { buildScene, expand, makeContainer, place, resolve, type PathNode, type Spec } from '@unified-analytics/core';
+import { expand, place, type PathNode, type Result, type Spec } from '@unified-analytics/core';
 import { catalog, moreSamples, runQuery } from '@unified-analytics/fixtures';
+import { errOf, run as runAt, startingWith as of } from './helpers.ts';
 
 // Step 0 of docs/uncommon-coverage-plan.md: the Uncommon types that today's marks already say, each as a sample, and
 // what running them found (section 7 of that note). The samples are swept, and have their golden scenes, with the
@@ -8,12 +9,8 @@ import { catalog, moreSamples, runQuery } from '@unified-analytics/fixtures';
 // and where the grammar stops short of it. A fact marked "for step N" is a hole that step is to close, held so that
 // closing it is a change made on purpose.
 const S = (name: string) => moreSamples[name]!.spec;
-const run = (spec: Spec, w = 700, result = runQuery(spec.query)) => {
-  const container = makeContainer(w, null, 'svg', 8), plan = resolve(spec, result, container, catalog), ratio = buildScene(plan, spec.query, result, catalog);
-  return { plan, ratio, scene: place(ratio, container), result };
-};
-const err = (spec: Spec, result = runQuery(spec.query)) => { try { run(spec, 700, result); } catch (e) { return (e as Error).message; } };
-const of = <T = any>(nodes: { key: string }[], start: string) => nodes.filter((n) => n.key.startsWith(start)) as unknown as T[];
+const run = (spec: Spec, w = 700, result?: Result) => runAt(spec, w, null, 'typical', 'svg', result);
+const err = (spec: Spec, result?: Result) => errOf(() => run(spec, 700, result));
 const paths = (nodes: { kind: string }[]) => nodes.filter((n): n is PathNode => n.kind === 'path');
 
 describe('the fixture engine, for the Uncommon types', () => {

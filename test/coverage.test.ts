@@ -1,20 +1,11 @@
-import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
 import { buildScene, expand, makeContainer, place, resolve, type PainterName, type Spec } from '@unified-analytics/core';
-import viewSchema from '@unified-analytics/core/schema/view.schema.json';
 import { catalog, moreSamples, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
+import { err, run, validView as view } from './helpers.ts';
 
 // What the grammar draws beyond the prototype's six samples (docs/chart-coverage-plan.md). Nothing here has a
 // prototype to match, so it is held to its own sweep, facts and golden scenes.
-const run = (spec: Spec, w: number, h: number | null = null, scenario: (typeof scenarios)[number] = 'typical', painter: PainterName = 'svg') => {
-  const container = makeContainer(w, h, painter, 8), result = runQuery(spec.query, scenario);
-  const plan = resolve(spec, result, container, catalog);
-  const ratio = buildScene(plan, spec.query, result, catalog);
-  return { plan, ratio, scene: place(ratio, container), result };
-};
 // The engine refuses some queries itself. `q` is one it answers, for an error that is resolve()'s to make.
-const err = (s: Spec, q = s.query) => { try { resolve(s, runQuery(q), makeContainer(346), catalog); } catch (e) { return (e as Error).message; } };
-const view = new Ajv().compile(viewSchema);
 
 // The plots and the rows among them. Another layout has a suite of its own: test/radial.test.ts, test/cell.test.ts.
 // Ranges and ticks have one too: test/ranges.test.ts.
@@ -121,7 +112,7 @@ describe('two dimensions', () => {
   });
   it('errors name the fix: a third dimension, a field the query lacks, and a dimension nothing encodes', () => {
     const bar = (encode: Record<string, string>, by: string[]): Spec => ({ query: { metrics: ['visitors'], by }, layers: [{ mark: 'bar', encode }] });
-    expect(err(bar({ x: 'date.day', y: 'visitors' }, ['date.day', 'channel', 'device']), { metrics: ['visitors'] })).toBe('A view is by one dimension or by two different ones, and query.by has: date.day, channel, device. Remove all but two.');
+    expect(err(bar({ x: 'date.day', y: 'visitors' }, ['date.day', 'channel', 'device']), runQuery({ metrics: ['visitors'] }))).toBe('A view is by one dimension or by two different ones, and query.by has: date.day, channel, device. Remove all but two.');
     expect(err(bar({ x: 'date.day', y: 'visitors', color: 'device' }, ['date.day', 'channel']))).toBe('Layer 1 encodes "device" on color, which the query does not return. It returns: date.day, channel, visitors.');
     expect(err(bar({ x: 'date.day', y: 'visitors' }, ['date.day', 'channel']))).toBe('The query is by "channel", and no layer encodes it, so its rows would be drawn over each other. Encode it on color, for a colour and a legend entry each, or on detail, for a series each in one paint, or remove it from query.by.');
     expect(() => runQuery({ metrics: ['visitors'], by: ['channel', 'channel'] })).toThrow('A query is by one dimension or by two different ones. This one is by: channel, channel.');

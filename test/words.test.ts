@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildScene, resolve, unboundedContainer, type Catalog, type Result, type Row, type Spec } from '@unified-analytics/core';
+import { type Catalog, type Result, type Row, type Spec } from '@unified-analytics/core';
+import { ofUnbounded } from './helpers.ts';
 
 // A catalog with no visits, people or pages in it. Whatever a view says of these is said from the catalog and the query.
 const catalog: Catalog = {
@@ -21,7 +22,7 @@ const result = (totals: Result['totals'], rows: Row[] = [], range = '28d'): Resu
 const view = (metric: string, by?: string, use?: string): Spec => ({ spec: 'view/0', ...(use && { use }), query: { metrics: [metric], ...(by && { by: [by] }), ...(!catalog.metrics[metric]!.instant && { range: '28d' }) } });
 /** Everything a view says in words: its prose, and the text of each node of its scene. */
 const said = (spec: Spec, res: Result) => {
-  const plan = resolve(spec, res, unboundedContainer(), catalog), scene = buildScene(plan, spec.query, res, catalog);
+  const { plan, scene } = ofUnbounded(spec, res, spec.query, catalog);
   return { prose: plan.text, texts: scene.nodes.flatMap((n) => (n.kind === 'text' ? [n.text] : [])) };
 };
 

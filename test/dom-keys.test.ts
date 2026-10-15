@@ -3,6 +3,7 @@ import { buildScene, makeContainer, place, resolve, rowKeys, unboundedContainer,
 import { catalog, runQuery, samples, type Scenario } from '@unified-analytics/fixtures';
 import { TIP_CSS, centred } from '../packages/dom/src/chrome/tip.ts';
 import { Keys, crossMarks, hitNodes, readout, rowsAt, step, written } from '../packages/dom/src/keys.ts';
+import { ofUnbounded } from './helpers.ts';
 
 // Which point a key moves to, what the readout says and where a plot's hit targets lie are plain functions, held
 // here with no DOM. Focus, hover and the event are checked in a browser on the bench. What the mouse leaving does
@@ -10,7 +11,7 @@ import { Keys, crossMarks, hitNodes, readout, rowsAt, step, written } from '../p
 
 const of = (sample: string, scenario: Scenario = 'typical') => {
   const spec = samples[sample]!.spec, result = runQuery(spec.query, scenario), q = spec.query;
-  const plan = resolve(spec, result, unboundedContainer(), catalog), scene = buildScene(plan, spec.query, result, catalog);
+  const { plan, scene } = ofUnbounded(spec, result);
   return { result, scene, says: result.rows.map((r) => readout(r, q, catalog, plan.layers)) };
 };
 

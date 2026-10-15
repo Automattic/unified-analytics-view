@@ -35,9 +35,9 @@ export const err = (s: Spec, result: Result = runQuery(s.query), cat: Catalog = 
 export const validView = new Ajv({ allowUnionTypes: true }).compile(viewSchema);
 
 /** The plan and ratio scene of `spec` with no limits, as `<ua-view>` makes them. */
-export const ofUnbounded = (spec: Spec, result: Result = runQuery(spec.query), query = spec.query) => {
-  const plan = resolve(spec, result, unboundedContainer(), catalog);
-  return { plan, scene: buildScene(plan, query, result, catalog) };
+export const ofUnbounded = (spec: Spec, result: Result = runQuery(spec.query), query = spec.query, cat: Catalog = catalog) => {
+  const plan = resolve(spec, result, unboundedContainer(), cat);
+  return { plan, scene: buildScene(plan, query, result, cat) };
 };
 
 // Scene helpers.

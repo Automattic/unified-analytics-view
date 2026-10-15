@@ -1,19 +1,14 @@
-import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
 import { buildScene, makeContainer, place, resolve, unitsOf, type Layer, type PainterName, type Result, type Spec } from '@unified-analytics/core';
-import viewSchema from '@unified-analytics/core/schema/view.schema.json';
 import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
+import { errOf, run as runAt, startingWith as of, validView as view } from './helpers.ts';
 
 // Step 4 of docs/uncommon-coverage-plan.md: what rows, bars, ticks and rules take that they refused. Each part of the
 // step has its facts here. The samples are swept, and have their golden scenes, at the foot of this file.
-const run = (spec: Spec, w = 346, h: number | null = null, result: Result = runQuery(spec.query)) => {
-  const container = makeContainer(w, h, 'svg', 8), plan = resolve(spec, result, container, catalog), ratio = buildScene(plan, spec.query, result, catalog);
-  return { plan, ratio, scene: place(ratio, container), result };
-};
-const err = (spec: Spec, result: Result = runQuery(spec.query)) => { try { run(spec, 346, null, result); } catch (e) { return (e as Error).message; } };
-const of = <T = any>(nodes: { key: string }[], start: string) => nodes.filter((n) => n.key.startsWith(start)) as unknown as T[];
+const run = (spec: Spec, w = 346, h: number | null = null, result?: Result) => runAt(spec, w, h, 'typical', 'svg', result);
+const err = (spec: Spec, result?: Result) => errOf(() => run(spec, 346, null, result));
 const label = (y: string): Layer => ({ mark: 'text', encode: { y, text: y } });
-const S = (name: string) => moreSamples[name]!.spec, view = new Ajv().compile(viewSchema);
+const S = (name: string) => moreSamples[name]!.spec;
 
 describe('a row divided by a second dimension', () => {
   const q = { metrics: ['visitors'], by: ['channel', 'device'], range: '28d' };
@@ -494,10 +489,7 @@ describe('the sweep, for the samples of step 4', () => {
     rug: ['cartesian', 'none', 'none', 'prose'], qq: ['cartesian', 'none', 'none', 'prose'],
   };
   const painters: PainterName[] = ['svg', 'dots'], heights = [null, 300, 160, 100, 60, 40], widths = [54, 80, 120, 170, 250, 290, 346, 500, 700];
-  const at = (name: string, w: number, h: number | null, sc: (typeof scenarios)[number], painter: PainterName = 'svg') => {
-    const spec = S(name), container = makeContainer(w, h, painter, 8), result = runQuery(spec.query, sc), plan = resolve(spec, result, container, catalog), ratio = buildScene(plan, spec.query, result, catalog);
-    return { plan, ratio, scene: place(ratio, container) };
-  };
+  const at = (name: string, w: number, h: number | null, sc: (typeof scenarios)[number], painter: PainterName = 'svg') => runAt(S(name), w, h, sc, painter);
   for (const [name, layouts] of Object.entries(samples)) {
     it(name + ': unique keys, no NaN, nothing taller than the container allows, and ratios from 0 to 1', () => {
       for (const sc of scenarios) for (const p of painters) for (const h of heights) for (const w of widths) {

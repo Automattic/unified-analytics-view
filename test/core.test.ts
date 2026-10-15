@@ -10,7 +10,7 @@ import catalogSchema from '@unified-analytics/core/schema/catalog.schema.json';
 import viewSchema from '@unified-analytics/core/schema/view.schema.json';
 import { catalog, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
 import { CHAR_W, clip, delta } from '../packages/core/src/format.ts';
-import { ALWAYS, err, heights, painters, run, specs, trend, validView, widths } from './helpers.ts';
+import { ALWAYS, err, heights, ofUnbounded, painters, run, specs, trend, validView, widths } from './helpers.ts';
 
 // The prototype, loaded as the reference the port is held to.
 (globalThis as any).d3 = { ...d3array, ...d3scale, ...d3shape };
@@ -312,10 +312,7 @@ describe('the ratio scene (dom-painter-plan section 3)', () => {
     cartesian: ['number', 'plot', 'x-axis', 'y-axis'], rows: ['number', 'rows'], band: ['number', 'band', 'legend', 'legend-top'],
     none: ['number'], notice: ['number', 'notice'], prose: [],
   };
-  const unbounded = (spec: Spec) => {
-    const result = runQuery(spec.query), plan = resolve(spec, result, unboundedContainer(), catalog);
-    return { plan, ratio: buildScene(plan, spec.query, result, catalog) };
-  };
+  const unbounded = (spec: Spec) => { const { plan, scene } = ofUnbounded(spec); return { plan, ratio: scene }; };
   const numbers = (d: string) => (d.match(/-?[\d.]+/g) || []).map(Number);
 
   it('has a part on every node, ratios from 0 to 1, unique keys, and the keys place() keeps', () => {

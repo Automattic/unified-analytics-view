@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, buildScene, expand, pathD, resolve, unboundedContainer, type PathNode, type RectNode } from '@unified-analytics/core';
+import { CONTAINER_RULES, expand, pathD, type PathNode, type RectNode } from '@unified-analytics/core';
 import { catalog, moreSamples, runQuery, type Scenario } from '@unified-analytics/fixtures';
 import { compileFitRules } from '../packages/dom/src/compile.ts';
 import { LEGEND_CSS } from '../packages/dom/src/chrome/legend.ts';
@@ -8,13 +8,14 @@ import { KEYS_CSS, hitNodes, readout, readoutAt, readoutLines, rowsAt, stepSerie
 import { apart, thinLabels } from '../packages/dom/src/measure.ts';
 import { mix, resample } from '../packages/dom/src/motion.ts';
 import { pivot } from '../packages/dom/src/table.ts';
+import { ofUnbounded } from './helpers.ts';
 
 // What <ua-view> adds for a plot split into series, a stack, a signed scale and a second unit, where it is a plain
 // function or a string. That they draw, fit and move is checked in a browser on the bench.
 
 const of = (sample: string, scenario: Scenario = 'typical', range = '28d') => {
   const spec = { ...moreSamples[sample]!.spec, query: { ...moreSamples[sample]!.spec.query, range } }, result = runQuery(spec.query, scenario);
-  return { spec, result, scene: buildScene(resolve(spec, result, unboundedContainer(), catalog), spec.query, result, catalog) };
+  return { spec, result, scene: ofUnbounded(spec, result).scene };
 };
 const names = Object.keys(moreSamples).filter((k) => of(k).scene.layout === 'cartesian' && of(k).scene.scale !== 'linear');   // the plots that share x among rows; points and other layouts have their own tests
 

@@ -1,24 +1,15 @@
 import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { FIT_RULES, applies, arcD, buildScene, expand, makeContainer, place, resolve, type ArcNode, type PainterName, type Spec } from '@unified-analytics/core';
+import { FIT_RULES, applies, arcD, buildScene, expand, makeContainer, resolve, type ArcNode, type PainterName, type Spec } from '@unified-analytics/core';
 import catalogSchema from '@unified-analytics/core/schema/catalog.schema.json';
-import viewSchema from '@unified-analytics/core/schema/view.schema.json';
 import { catalog, moreSamples, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
+import { err, round, run, validView as view } from './helpers.ts';
 
 // Step 6 of docs/chart-coverage-plan.md: the `arc` mark and the `radial` layout. It has no prototype to match, so it
 // is held to its own sweep, facts and golden scenes, as test/coverage.test.ts holds the plots.
-const run = (spec: Spec, w: number, h: number | null = null, scenario: (typeof scenarios)[number] = 'typical', painter: PainterName = 'svg') => {
-  const container = makeContainer(w, h, painter, 8), result = runQuery(spec.query, scenario);
-  const plan = resolve(spec, result, container, catalog);
-  const ratio = buildScene(plan, spec.query, result, catalog);
-  return { plan, ratio, scene: place(ratio, container), result };
-};
-const err = (s: Spec, c = catalog) => { try { resolve(s, runQuery(s.query), makeContainer(346), c); } catch (e) { return (e as Error).message; } };
-const view = new Ajv().compile(viewSchema);
 const specs = Object.fromEntries(['donut', 'pie', 'half', 'gauge'].map((k) => [k, moreSamples[k]!.spec]));
 const { donut, pie, half, gauge } = specs as Record<string, Spec>;
 const arcs = (spec: Spec, w = 346) => run(spec, w).ratio.nodes.filter((n): n is ArcNode => n.kind === 'arc');
-const round = (n: number) => Math.round(n * 1000) / 1000;
 
 describe('the sweep, about a centre', () => {
   const painters: PainterName[] = ['svg', 'dots'], heights = [null, 300, 160, 100, 60, 40], widths = [54, 80, 120, 170, 250, 290, 346, 500, 700];

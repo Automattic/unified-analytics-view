@@ -1,16 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { FIT_RULES, buildScene, resolve, unboundedContainer } from '@unified-analytics/core';
+import { FIT_RULES } from '@unified-analytics/core';
 import { compileFitRules } from '@unified-analytics/dom';
 import { catalog, moreSamples, runQuery } from '@unified-analytics/fixtures';
 import { companions, hitNodes, readout } from '../packages/dom/src/keys.ts';
 import { cartesian } from '../packages/dom/src/layouts/cartesian.ts';
 import { rows } from '../packages/dom/src/layouts/rows.ts';
+import { ofUnbounded } from './helpers.ts';
 
 // What <ua-view> adds for ranges, ticks and a row's track, where it is a plain function or a string. That they
 // draw, fit and move is checked in a browser on the bench.
 const of = (sample: string) => {
-  const spec = moreSamples[sample]!.spec, result = runQuery(spec.query), plan = resolve(spec, result, unboundedContainer(), catalog);
-  return { spec, result, layers: plan.layers, scene: buildScene(plan, spec.query, result, catalog) };
+  const spec = moreSamples[sample]!.spec, result = runQuery(spec.query), { plan, scene } = ofUnbounded(spec, result);
+  return { spec, result, layers: plan.layers, scene };
 };
 
 describe('a row\'s segments in a plot', () => {

@@ -1,19 +1,11 @@
-import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
 import { buildScene, expand, makeContainer, place, resolve, sizeStep, type CircleNode, type PainterName, type RectNode, type Spec } from '@unified-analytics/core';
-import viewSchema from '@unified-analytics/core/schema/view.schema.json';
 import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
+import { err, run, validView as view } from './helpers.ts';
 
 // The `cell` mark and the grid it is laid out in (docs/chart-coverage-plan.md, step 5). No prototype knows it, so it
 // is held to a sweep, facts and golden scenes of its own, as test/coverage.test.ts holds step 1.
 const heatmap = moreSamples.heatmap!.spec;
-const run = (spec: Spec, w: number, h: number | null = null, scenario: (typeof scenarios)[number] = 'typical', painter: PainterName = 'svg', result = runQuery(spec.query, scenario)) => {
-  const container = makeContainer(w, h, painter, 8), plan = resolve(spec, result, container, catalog);
-  const ratio = buildScene(plan, spec.query, result, catalog);
-  return { plan, ratio, scene: place(ratio, container), result };
-};
-const err = (s: Spec) => { try { resolve(s, runQuery(s.query), makeContainer(346), catalog); } catch (e) { return (e as Error).message; } };
-const view = new Ajv().compile(viewSchema);
 const cells = (ratio: { nodes: unknown[] }) => (ratio.nodes as RectNode[]).filter((n) => n.part === 'plot' && n.kind === 'rect');
 const dots = (ratio: { nodes: unknown[] }) => (ratio.nodes as CircleNode[]).filter((n) => n.part === 'plot' && n.kind === 'circle');
 const texts = (scene: { nodes: unknown[] }, prefix: string) => (scene.nodes as { key: string; kind: string; text: string }[]).filter((n) => n.kind === 'text' && n.key.startsWith(prefix)).map((n) => n.text);

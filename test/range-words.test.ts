@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { buildScene, rangeLabel, resolve, unboundedContainer, type Catalog, type Result, type Row, type Spec } from '@unified-analytics/core';
+import { rangeLabel, type Catalog, type Result, type Row, type Spec } from '@unified-analytics/core';
 import { inProgressNote, rangeProse, tldrProse } from '../packages/core/src/prose.ts';
+import { ofUnbounded } from './helpers.ts';
 
 // query.range is optional in the schema, so an answer may name no range. A view then says nothing of one: no word is made up.
 const catalog: Catalog = {
@@ -10,7 +11,7 @@ const catalog: Catalog = {
 const result = (rows: Row[], more: Partial<Result> = {}, range?: string): Result =>
   ({ rows, totals: { revenue: 300, orders: 30 }, meta: { ...(range && { range }), compare: null, notes: [], empty: !rows.length } as Result['meta'], ...more });
 const said = (spec: Spec, res: Result) => {
-  const plan = resolve(spec, res, unboundedContainer(), catalog), scene = buildScene(plan, spec.query, res, catalog);
+  const { plan, scene } = ofUnbounded(spec, res, spec.query, catalog);
   return [plan.text, ...scene.nodes.flatMap((n) => (n.kind === 'text' ? [n.text] : [])), ...res.meta.notes].join(' | ');
 };
 const skus = [{ sku: 'A', revenue: 200, orders: 10 }, { sku: 'B', revenue: 100, orders: 20 }];

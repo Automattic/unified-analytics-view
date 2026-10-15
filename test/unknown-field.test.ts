@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { resolve, unboundedContainer, type Catalog, type Result, type Spec } from '@unified-analytics/core';
+import { errOf } from './helpers.ts';
 
 // A name the catalog does not carry is refused by resolve(), by name, with what the catalog has and what to do.
 const catalog: Catalog = {
@@ -7,7 +8,7 @@ const catalog: Catalog = {
   dimensions: { day: { label: 'Day', type: 'time' }, sku: { label: 'SKU', type: 'categorical' } },
 };
 const result: Result = { rows: [{ sku: 'A', revenue: 2 }], totals: { revenue: 2 }, meta: { range: '28d', compare: null, notes: [] } };
-const refused = (spec: Spec, cat = catalog) => { try { resolve(spec, result, unboundedContainer(), cat); } catch (e) { return (e as Error).message; } return 'no error'; };
+const refused = (spec: Spec, cat = catalog) => errOf(() => resolve(spec, result, unboundedContainer(), cat)) ?? 'no error';
 
 describe('a name the catalog does not carry', () => {
   const metric = 'The catalog has no metric "revenu". It has: revenue, orders. Add it to the catalog passed in, or correct the name in query.metrics.';

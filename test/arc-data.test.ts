@@ -1,25 +1,15 @@
-import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
 import { FIT_RULES, arcD, buildScene, expand, makeContainer, place, resolve, tldrProse, type ArcNode, type PainterName, type Result, type Spec, type TextNode } from '@unified-analytics/core';
-import viewSchema from '@unified-analytics/core/schema/view.schema.json';
 import { compileFitRules } from '@unified-analytics/dom';
 import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
 import { radial } from '../packages/dom/src/layouts/radial.ts';
+import { err, round, run, validView as view } from './helpers.ts';
 
 // Step 2 of docs/uncommon-coverage-plan.md: an `arc` that reads data on `angle` and `radius`, and a second ring by
 // `detail`. Held to its own sweep, facts and golden scenes, as test/radial.test.ts holds the circle divided by colour.
-const run = (spec: Spec, w: number, h: number | null = null, scenario: (typeof scenarios)[number] = 'typical', painter: PainterName = 'svg') => {
-  const container = makeContainer(w, h, painter, 8), result = runQuery(spec.query, scenario);
-  const plan = resolve(spec, result, container, catalog);
-  const ratio = buildScene(plan, spec.query, result, catalog);
-  return { plan, ratio, scene: place(ratio, container), result };
-};
-const err = (s: Spec, result: Result = runQuery(s.query)) => { try { resolve(s, result, makeContainer(346), catalog); } catch (e) { return (e as Error).message; } };
-const view = new Ajv({ allowUnionTypes: true }).compile(viewSchema);
 const specs = Object.fromEntries(['rose', 'rings', 'sunburst'].map((k) => [k, moreSamples[k]!.spec])) as Record<string, Spec>;
 const { rose, rings, sunburst } = specs;
 const arcs = (spec: Spec, w = 346) => run(spec, w).ratio.nodes.filter((n): n is ArcNode => n.kind === 'arc');
-const round = (n: number) => Math.round(n * 1000) / 1000;
 const arc = (encode: Record<string, string | number>, by = ['channel'], more = {}): Spec => ({ spec: 'view/0', query: { metrics: ['visitors'], by }, layers: [{ mark: 'arc', encode, ...more }] });
 
 describe('the sweep, with data on angle and radius', () => {

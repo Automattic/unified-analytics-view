@@ -3,6 +3,7 @@ import { CONTAINER_RULES, FIT_RULES, buildScene, fallbackRule, fills, gaveWay, m
 import type { Container, FitRule, Spec } from '@unified-analytics/core';
 import { compileFitRules } from '@unified-analytics/dom';
 import { catalog, runQuery, samples } from '@unified-analytics/fixtures';
+import { errOf as err } from './helpers.ts';
 
 // Step 8 of docs/chart-coverage-plan.md, part 3: `fallback` on a fit rule, the preset a view becomes below the rule's
 // need. No default rule names one, so a context hands the samples a rule that does. A custom mark with a fallback of
@@ -14,7 +15,6 @@ const run = (spec: Spec, container: Container, scenario: 'typical' | 'empty' = '
   const result = runQuery(spec.query, scenario), plan = resolve(spec, result, container, catalog);
   return { plan, scene: place(buildScene(plan, spec.query, result, catalog), container) };
 };
-const err = (f: () => unknown) => { try { f(); } catch (e) { return (e as Error).message; } };
 
 describe('fallback on a fit rule', () => {
   it('under the rule\'s need the view is the preset it names, planned again from the same query', () => {

@@ -1,20 +1,14 @@
-import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { FIT_RULES, buildScene, expand, glyphRadius, makeContainer, place, resolve, unitWorth } from '@unified-analytics/core';
+import { FIT_RULES, expand, glyphRadius, place, resolve, unitWorth } from '@unified-analytics/core';
 import type { Catalog, CircleNode, Layer, PainterName, PlacedCircle, PlacedRect, RectNode, Result, Spec, TextNode } from '@unified-analytics/core';
-import viewSchema from '@unified-analytics/core/schema/view.schema.json';
-import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
+import { catalog, moreSamples, scenarios } from '@unified-analytics/fixtures';
+import { err as shared, run, validView as view } from './helpers.ts';
 
 // Step 6 of docs/uncommon-coverage-plan.md: the `unit` mark, which draws a value as counted glyphs. It has no prototype
 // to match, so it is held to its own sweep, facts and golden scenes, as test/radial.test.ts holds the arcs. The rules its
 // counts come from are tested where they are written, in test/unit-rules.test.ts.
-const run = (spec: Spec, w: number, h: number | null = null, scenario: (typeof scenarios)[number] = 'typical', painter: PainterName = 'svg', result: Result = runQuery(spec.query, scenario), cat: Catalog = catalog) => {
-  const container = makeContainer(w, h, painter, 8), plan = resolve(spec, result, container, cat);
-  const ratio = buildScene(plan, spec.query, result, cat);
-  return { plan, ratio, scene: place(ratio, container), result };
-};
-const err = (s: Spec, result: Result = runQuery(s.query), c: Catalog = catalog) => { try { resolve(s, result, makeContainer(346), c); return 'no error'; } catch (e) { return (e as Error).message; } };
-const view = new Ajv().compile(viewSchema);
+// Unlike the shared one, says so when there is no error.
+const err = (s: Spec, result?: Result, c?: Catalog) => shared(s, result, c) ?? 'no error';
 const NAMES = ['waffle', 'units', 'wilkinson', 'isotype', 'parliament', 'icons'];
 const specs = Object.fromEntries(NAMES.map((k) => [k, moreSamples[k]!.spec])) as Record<string, Spec>;
 const { waffle, units, wilkinson, isotype, parliament, icons } = specs as Record<string, Spec>;

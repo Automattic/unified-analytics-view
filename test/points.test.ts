@@ -6,16 +6,10 @@ import viewSchema from '@unified-analytics/core/schema/view.schema.json';
 import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
 import { hitNodes } from '../packages/dom/src/keys.ts';
 import { nearest } from '../packages/dom/src/layouts/points.ts';
+import { err, run } from './helpers.ts';
 
 // A metric on both axes, `dot`, `size`, labels on points, a rule on x, and a numeric dimension
 // (docs/chart-coverage-plan.md, step 4). The samples are swept and have golden scenes in coverage.test.ts.
-const run = (spec: Spec, w: number, h: number | null = null, scenario: (typeof scenarios)[number] = 'typical') => {
-  const container = makeContainer(w, h), result = runQuery(spec.query, scenario);
-  const plan = resolve(spec, result, container, catalog);
-  const ratio = buildScene(plan, spec.query, result, catalog);
-  return { plan, ratio, scene: place(ratio, container), result };
-};
-const err = (s: Spec, result = runQuery(s.query)) => { try { resolve(s, result, makeContainer(346), catalog); } catch (e) { return (e as Error).message; } };
 const { scatter, bubble, quadrant, histogram, density } = Object.fromEntries(Object.entries(moreSamples).map(([k, s]) => [k, s.spec])) as Record<string, Spec>;
 const texts = (ratio: { nodes: any[] }, part: string) => ratio.nodes.filter((n) => n.part === part && n.kind === 'text').map((n) => n.text);
 

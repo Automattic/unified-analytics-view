@@ -139,6 +139,13 @@ function cut(pts: Pt[]): { up: boolean; pts: Pt[] }[] {
   return out;
 }
 const MASS = 0.5;    // how much of its paint a line of a mass is drawn in, and a dot or a tick of one on a row's track
+const FADED = 0.4;   // how much of its paint an incomplete bucket's bar, glyph or stacked piece is drawn in
+/** A fill that tints and does not mark: the area under a line, the cells a gauge's grid has not reached, the ring or the sweep behind a value. */
+const TINT = { opacity: 0.14, tone: 'soft' as const };
+/** How a reference line is drawn: a dashed rule, thinner than a series' line. */
+const REFERENCE = { paint: 'rule', dash: '5 3', width: 1.5 };
+/** A reference rule's label, in the rule's paint, at `at` in the plot. */
+const ruleLabel = (id: string, text: string, role: Role, at: { x?: number; t: number }, anchor: TextNode['anchor']): TextNode => ({ key: id + ':label', part: 'plot', kind: 'text', ...at, text, anchor, font: 'tick', paint: 'rule', halo: true, layer: 'guide', role });
 const path: MarkFn = (l, { id: layer, series, mass, role: role0, paint, prev, rows: pts, k, unit, ends, polarity, step, points: joined }) => {
   const id = series == null ? layer : layer + ':' + series, role = series == null ? { role: role0 } : { role: role0, series };
   const whole = pts.filter((r) => prev || !r.partial);
@@ -151,12 +158,12 @@ const path: MarkFn = (l, { id: layer, series, mass, role: role0, paint, prev, ro
   const points = (rs: Row[]): Pt[] => rs.map((r) => { const [v0, v] = ends(r); return { row: k(r), x: unit.cx(k(r)), v, ...(l.mark === 'area' && v0 && { v0 }), ...(step && { w: unit.span!(k(r)) }) }; });
   if (l.mark === 'area') {
     // An area under a line is a tint. Stacked, each is the mark itself.
-    const area = (key: string, ps: Pt[], paint: string): SceneNode => ({ key, part, kind: 'path', d: pathD(ps, curve, true), points: ps, ...bent, fill: true, paint, ...(!(l.stack && series != null) && { opacity: 0.14, tone: 'soft' as const }), layer: 'data', ...role });
+    const area = (key: string, ps: Pt[], paint: string): SceneNode => ({ key, part, kind: 'path', d: pathD(ps, curve, true), points: ps, ...bent, fill: true, paint, ...(!(l.stack && series != null) && TINT), layer: 'data', ...role });
     // Painted by direction, it is cut where its two ends cross, and each piece is a gain or a loss. A piece is keyed by the row it starts at.
     if (polarity && polarity !== 'none') return cut(points(whole)).map((piece) => area(id + ':' + piece.pts.find((p) => p.row != null)!.row, piece.pts, toned(polarity, 0, piece.up ? 1 : -1, paint)));
     // Stacked, an incomplete bucket is drawn too, as a bar of one is: a piece of its own in from the first and out to the last, faded.
     if (!(l.stack && series != null) || prev) return [area(id, points(whole), paint)];
-    return [area(id, points(whole), paint), ...partials().map(([key, rs]): SceneNode => ({ ...area(id + key, points(rs), paint), opacity: 0.4, note: 'incomplete bucket' }))];
+    return [area(id, points(whole), paint), ...partials().map(([key, rs]): SceneNode => ({ ...area(id + key, points(rs), paint), opacity: FADED, note: 'incomplete bucket' }))];
   }
   const nodes: SceneNode[] = [{ key: id, part, kind: 'path', d: pathD(points(whole), curve), points: points(whole), ...bent, paint, width: prev ? 1.5 : 2, dash: prev ? '3 3' : null, ...(mass && { opacity: MASS }), layer: 'data', ...role }];
   if (!prev) for (const [key, rs] of partials()) nodes.push({ key: id + key, part, kind: 'path', d: pathD(points(rs)), points: points(rs), paint, width: 2, dash: '2 4', opacity: mass ? MASS : 0.75, layer: 'data', ...role, note: 'incomplete bucket' });
@@ -170,7 +177,7 @@ const path: MarkFn = (l, { id: layer, series, mass, role: role0, paint, prev, ro
 const bar: MarkFn = (_l, { id, series, role, paint, prev, rows, k, unit, ends, polarity, slot: [j, n] = [0, 1] }) => rows.map((r) => {
   const [v0, v] = ends(r), w = (unit.span ? unit.span(k(r)) : unit.w) / n;
   return { ...markOf(id, k(r), series), part: 'plot', kind: 'rect', x: unit.x(k(r)) + j * w, w, v, ...(v0 && { v0 }),
-    paint: toned(polarity, v0, v, paint), opacity: r.partial && !prev ? 0.4 : 1, layer: 'data', role };
+    paint: toned(polarity, v0, v, paint), opacity: r.partial && !prev ? FADED : 1, layer: 'data', role };
 });
 /** Whether a rule runs across the plot from one place to another: it has both ends on both axes. */
 const across = (l: Layer) => l.mark === 'rule' && l.encode != null && l.encode.x2 != null && l.encode.y2 != null;
@@ -187,7 +194,7 @@ const rule: MarkFn = (l, { id, series, role, rows, k, unit, ends, v, xv }) => {
       const [x0, y0, x1, y1] = [x, y, x2, y2].map((f) => at(f, r));
       if (x0 == null || y0 == null || x1 == null || y1 == null) return [];   // a row with an end missing has no line
       const points = [{ row: r ? k(r) : '', x: xv(x0), v: v(y0) }, { row: r ? k(r) : '', x: xv(x1), v: v(y1) }];
-      return [{ key, part: 'plot', kind: 'path', d: pathD(points), points, ...(r ? { row: k(r), paint: l.paint || 'ink', width: 2 } : { paint: 'rule', width: 1.5, dash: '5 3' }), layer: 'data', role }];
+      return [{ key, part: 'plot', kind: 'path', d: pathD(points), points, ...(r ? { row: k(r), paint: l.paint || 'ink', width: 2 } : REFERENCE), layer: 'data', role }];
     };
     return [x, y, x2, y2].every((f) => typeof f === 'number') ? line(id) : rows.flatMap((r) => line(id + ':' + k(r), r));
   }
@@ -199,14 +206,14 @@ const rule: MarkFn = (l, { id, series, role, rows, k, unit, ends, v, xv }) => {
   // A constant on x stands the height of the plot. Its label sits beside it, at the top, on the side with more room.
   if (typeof x === 'number') {
     if (!xv) throw new Error('A rule at x: ' + x + ' needs a scale to be measured on, and this plot has a time or a category on x. Put the rule on y, or a metric or a number dimension on x.');
-    const at = xv(x), up: SceneNode[] = [{ key: id, part: 'plot', kind: 'line', x: at, x2: at, t: 0, t2: 1, paint: 'rule', dash: '5 3', width: 1.5, layer: 'data', role }];
-    if (l.label) up.push({ key: id + ':label', part: 'plot', kind: 'text', x: at, t: 1, text: l.label, anchor: at > 0.5 ? 'end' : 'start', font: 'tick', paint: 'rule', halo: true, layer: 'guide', role });
+    const at = xv(x), up: SceneNode[] = [{ key: id, part: 'plot', kind: 'line', x: at, x2: at, t: 0, t2: 1, ...REFERENCE, layer: 'data', role }];
+    if (l.label) up.push(ruleLabel(id, l.label, role, { x: at, t: 1 }, at > 0.5 ? 'end' : 'start'));
     return up;
   }
   if (typeof y !== 'number') throw new Error('A rule is drawn at a number, and this one has none on x or on y. Encode one, for example { "y": 1000 }.');
   const t = v(y);
-  const nodes: SceneNode[] = [{ key: id, part: 'plot', kind: 'line', t, paint: 'rule', dash: '5 3', width: 1.5, layer: 'data', role }];
-  if (l.label) nodes.push({ key: id + ':label', part: 'plot', kind: 'text', t, text: l.label, anchor: 'end', font: 'tick', paint: 'rule', halo: true, layer: 'guide', role });
+  const nodes: SceneNode[] = [{ key: id, part: 'plot', kind: 'line', t, ...REFERENCE, layer: 'data', role }];
+  if (l.label) nodes.push(ruleLabel(id, l.label, role, { t }, 'end'));
   return nodes;
 };
 export const SIZES = 4;    // the steps a value on `size` falls into. How big each is, in pixels, is the painter's
@@ -249,7 +256,7 @@ const unitStack: MarkFn = (l, { id, role, paint, rows, k, unit, ends, v, worth }
   return rows.flatMap((r) => {
     const [from, to] = ends(r), w = unit.span ? unit.span(k(r)) : unit.w;
     return Array.from({ length: Math.round((to - from) / h) }, (_, j): SceneNode => ({ key: id + ':' + k(r) + ':' + (j + 1), part: 'plot', kind: 'circle', pulse: false, x: unit.cx(k(r)), t: from + (j + 0.5) * h, w, h,
-      row: k(r), paint, ...(r.partial && { opacity: 0.4 }), layer: 'data', role }));
+      row: k(r), paint, ...(r.partial && { opacity: FADED }), layer: 'data', role }));
   });
 };
 /** What a layer's glyphs are worth where they are counted from one metric, row by row: the round number at which the
@@ -791,7 +798,7 @@ function sceneGrid(catalog: Catalog, layer: Layer, id: string, result: Result): 
   if (!isDim(catalog, dim)) {
     if (!M.domain) throw new Error('A "unit" with no dimension reads "' + m + '" against a range, and the catalog gives that metric no "domain". Add "domain": [least, most] to it in the catalog, or encode a dimension on color to divide the grid by it.');
     const v = result.totals[m], [least, most] = M.domain, lit = v == null || !(v > least) ? 0 : Math.max(1, Math.round(along(M.domain, v) * UNIT_CELLS));
-    for (let i = 0; i < UNIT_CELLS; i++) cell(id + ':' + (i + 1), i < lit ? {} : { opacity: 0.14, tone: 'soft' });
+    for (let i = 0; i < UNIT_CELLS; i++) cell(id + ':' + (i + 1), i < lit ? {} : TINT);
     return { nodes: nodes.concat(unitKey(id, (most - least) / UNIT_CELLS, M)), aspect: 1 };
   }
   const rows = result.rows, total = result.totals[m], keys = rowKeys(rows, dim), k = (r: Row) => keys.get(r)!, paint = (i: number) => 'series.' + ((i % SERIES) + 1);
@@ -919,7 +926,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
         const [least, most] = (M && M.domain) || [0, top], pitch = (1 - INNER) / (rows.length || 1), shade = (j: number) => l.paint || (enc.color != null ? 'series.' + (j + 1) : 'series.1');
         rows.forEach((r, j) => {
           const r1 = 1 - j * pitch, inner = r1 - pitch * RING;
-          if (angle == null) return arcs.push(arc(ids[i] + ':' + k(r), l, 0, 1, inner, shade(j), { row: k(r), opacity: 0.14, tone: 'soft' }, r1));
+          if (angle == null) return arcs.push(arc(ids[i] + ':' + k(r), l, 0, 1, inner, shade(j), { row: k(r), ...TINT }, r1));
           if (r[m as string] != null) arcs.push(arc(ids[i] + ':' + k(r), l, 0, along([least, most], num(r, m as string)), inner, shade(j), { row: k(r) }, r1));
         });
         // A ring in a colour of its own has an entry in the legend, which says its value: a ring is no share of a whole.
@@ -960,7 +967,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
       return;
     }
     if (split) throw new Error(n + ' encodes "' + split + '" on detail and no dimension on color. A second ring divides the segments of a circle that color has divided: encode the query\'s other dimension on color, or remove "detail".');
-    if (angle == null) return arcs.push(arc(ids[i]!, l, 0, 1, r0 as number, l.paint || 'series.1', { opacity: 0.14, tone: 'soft' }));
+    if (angle == null) return arcs.push(arc(ids[i]!, l, 0, 1, r0 as number, l.paint || 'series.1', TINT));
     const marked = typeof angle === 'number' || roleOf(l) === 'reference', m = typeof angle === 'number' ? q.metrics[0]! : angle, M = catalog.metrics[m];
     if (!M) throw new Error(n + ' has "' + m + '" on angle, which is not a metric. Put a metric on angle, and a dimension on color.');
     if (!M.domain) throw new Error(n + ' reads "' + m + '" against a range, and the catalog gives that metric no "domain". Add "domain": [least, most] to it in the catalog, or encode a dimension on color to divide the circle by it.');

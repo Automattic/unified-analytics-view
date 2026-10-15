@@ -14,7 +14,7 @@ describe('a unit\'s glyphs in the DOM', () => {
     expect(UNIT_CSS).toContain('.uav-plot .uav-dots i[data-unit] { inline-size: max(1px, calc(min(var(--uav-w) * 100cqi, var(--uav-h) * 100cqb) - 1px)); }');
     expect(UNIT_CSS).toContain('.uav-dots i[data-unit] { inline-size: max(1px, calc(var(--uav-w) * 100cqi - 1px)); block-size: auto; aspect-ratio: 1; }');
     expect(rows.css).toMatch(/i\[data-mark="unit"\] \{ inset-block: 0; margin-block: auto; inline-size: max\(1px, calc\(min\(var\(--uav-w\) \* [^;]+, var\(--uav-row-block\) - 8px\) - 1px\)\); block-size: auto; aspect-ratio: 1; border-radius: 50%;/);
-    expect(band.css).toContain('.uav-band[data-unit] { display: grid; grid-template: repeat(10, minmax(0, 1fr)) / repeat(10, minmax(0, 1fr)); gap: 1px; block-size: auto; inline-size: min(100%, 160px); aspect-ratio: 1; margin-inline: auto; }');
+    expect(band.css).toContain('.uav-band[data-unit] { display: grid; grid-template: repeat(10, minmax(0, 1fr)) / repeat(10, minmax(0, 1fr)); gap: 1px; block-size: auto; flex: none; align-self: center; inline-size: min(100%, 160px); aspect-ratio: 1; margin-inline: auto; }');
     expect(radial.css).toContain('inline-size: min(100%, var(--uav-radial-most, 160px)); aspect-ratio: var(--uav-aspect, 1); container: uav-plot / inline-size;');
   });
   it('the shared styles join the base sheet once, and the key shows only where the plan names it', () => {

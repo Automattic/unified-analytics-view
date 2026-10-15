@@ -1,5 +1,5 @@
 import { formatDimension, formatValue, type RectNode, type Result, type Row, type TextNode } from '@unified-analytics/core';
-import { FOCUS, HOVER, attr, ensure, hideReadout, keyed, nodePaint, paintRamp, placeReadout, prop, readoutOf, text, token, type LayoutPainter } from '@unified-analytics/dom';
+import { FOCUS, HOVER, attr, ensure, hideReadout, holdShape, keyed, nodePaint, paintRamp, placeReadout, prop, readoutOf, text, token, type LayoutPainter } from '@unified-analytics/dom';
 import { PARTITION_RULES, boxNames } from './index.ts';
 
 /* The `partition` mark's half for the DOM: the painter of its layout, for registerPainter().
@@ -33,9 +33,10 @@ import { PARTITION_RULES, boxNames } from './index.ts';
  * Below the room a treemap needs, the `marks` rule's `fallback` shows the same query as a list in its place. That is
  * the element's doing (view.ts), and nothing here knows of it. */
 const at = (gap: number, off: number) => `inset-inline-start: calc(var(--uav-x) * 100% + ${off}px); inset-block-start: calc((1 - var(--uav-t)) * 100% + ${off}px); inline-size: calc(var(--uav-w) * 100% - ${gap}px); block-size: calc(var(--uav-v) * 100% - ${gap}px);`;
+const shape = holdShape('480px', 'var(--uav-aspect, 1.6)');
 const css = `
 .uav[data-layout="partition"] .uav-body { display: flex; flex-direction: column; }
-.uav[data-layout="partition"] .uav-plot { flex: none; align-self: center; inline-size: min(100%, 480px); aspect-ratio: var(--uav-aspect, 1.6); container-type: inline-size; }
+.uav[data-layout="partition"] .uav-plot { ${shape.part} container-type: inline-size; }
 /* Parents are 2 px apart, a pixel in from the part's edge all round, and children 1 px: the gap is what tells one box
  * from the next, and a parent's is the wider. A child gives up its gap at its far edges, and the room that holds the
  * children is that much larger, so the last of them end where their parent does. */
@@ -57,7 +58,7 @@ const css = `
 /* In a box the part gives way to the height and its width follows, as a map does. */
 @container uav-view (block-size >= 0px) {
   .uav[data-layout="partition"] .uav-body { container-type: size; overflow: hidden; }
-  .uav[data-layout="partition"] .uav-plot { flex: 0 1 calc(min(100cqi, 480px) / var(--uav-aspect, 1.6)); min-block-size: 0; inline-size: auto; max-inline-size: 100%; }
+  .uav[data-layout="partition"] .uav-plot { ${shape.box} }
   .uav[data-layout="partition"] .uav-ramp { flex: none; }
 }`;
 

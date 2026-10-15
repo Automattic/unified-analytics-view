@@ -2,13 +2,14 @@ import type { RectNode } from '@unified-analytics/core';
 import { hideCutLegends, paintLegend } from '../chrome/legend.ts';
 import { attr, ensure, keyed, prop } from '../dom.ts';
 import { token } from '../tokens.ts';
-import { NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
+import { NUMBER_ALONE, holdShape, type LayoutPainter } from '../layout.ts';
 import { paintUnitKey } from '../chrome/unit.ts';
 
 /* One band, split by colour, and its legend. Segments are flex items that grow by their share, so the band needs no
  * width. The scene holds both legends: the full one is a grid of swatch, label and share, the one-line one a line of
  * text (chrome/legend.ts). The stylesheet here shows one of them. Sizes are the pixel painter's: a 24 px bar and 24 px
  * to a legend row, of which 20 are the line's where a label is 13 px. */
+const shape = holdShape('160px', 1);
 const css = `
 .uav-band { display: flex; gap: 2px; block-size: 24px; }
 .uav-band i { flex: var(--uav-v) 1 0px; min-inline-size: 0; background: var(--uav-paint); border-radius: ${token('border-radius-bar')}; }
@@ -21,7 +22,7 @@ const css = `
 /* A unit's grid in the band's place: a hundred cells, ten to a line, set in the order they come, which is reading
  * order, so nothing here places one. The part holds its shape, as a circle of arcs does: a square as wide as the view
  * up to 160 px, in the middle of the width, with a hairline between cells. */
-.uav-band[data-unit] { display: grid; grid-template: repeat(10, minmax(0, 1fr)) / repeat(10, minmax(0, 1fr)); gap: 1px; block-size: auto; inline-size: min(100%, 160px); aspect-ratio: 1; margin-inline: auto; }
+.uav-band[data-unit] { display: grid; grid-template: repeat(10, minmax(0, 1fr)) / repeat(10, minmax(0, 1fr)); gap: 1px; block-size: auto; ${shape.part} margin-inline: auto; }
 .uav-band[data-unit] i { border-radius: 1px; }
 @container uav-view (block-size >= 0px) {
   .uav[data-layout="band"] .uav-body { container-type: size; overflow: hidden; --uav-legend-block: calc(30px + var(--uav-rows, 1) * (var(--uav-legend-line) + 4px)); }
@@ -31,7 +32,7 @@ const css = `
   /* In a box the grid gives way to the height, down to nothing, and its width follows, as a circle of arcs does. The
    * full legend stays while the grid has 100 px under it, which is the least place() builds it to. */
   .uav[data-layout="band"] .uav-body:has(> .uav-band[data-unit]) { display: flex; flex-direction: column; --uav-legend-block: calc(106px + var(--uav-rows, 1) * (var(--uav-legend-line) + 4px)); }
-  .uav-band[data-unit] { flex: 0 1 160px; align-self: center; min-block-size: 0; max-block-size: 100cqi; inline-size: auto; max-inline-size: 100%; margin-inline: 0; }
+  .uav-band[data-unit] { ${shape.box} margin-inline: 0; }
   .uav[data-layout="band"] .uav-body:has(> .uav-band[data-unit]) > :is(.uav-legend, .uav-legend-top) { flex: none; }
 }`;
 

@@ -1,7 +1,7 @@
 import { arcD, declutter, type ArcNode, type CircleNode, type TextNode } from '@unified-analytics/core';
 import { hideCutLegends, paintLegend } from '../chrome/legend.ts';
 import { attr, ensure, keyed, paintVar, prop, text } from '../dom.ts';
-import { NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
+import { NUMBER_ALONE, holdShape, type LayoutPainter } from '../layout.ts';
 import { FOCUS, HOVER, token } from '../tokens.ts';
 import { paintUnitKey, unitDot } from '../chrome/unit.ts';
 
@@ -20,9 +20,10 @@ import { paintUnitKey, unitDot } from '../chrome/unit.ts';
  * Labels round the rim are HTML over the part, each set outside the point of the rim the scene gave it. The circle
  * gives up 14 px all round to them, a line's height, and those to either side run out of the part into the view's
  * width: the \`rim\` rule holds that wide enough, and gives the circle its margin back when it takes them away. */
+const shape = holdShape('var(--uav-radial-most, 160px)', 'var(--uav-aspect, 1)');
 const css = `
 .uav[data-layout="radial"] .uav-body { display: flex; flex-direction: column; }
-.uav-radial { position: relative; flex: none; align-self: center; box-sizing: border-box; padding: var(--uav-rim, 0px); inline-size: min(100%, var(--uav-radial-most, 160px)); aspect-ratio: var(--uav-aspect, 1); container: uav-plot / inline-size; }
+.uav-radial { position: relative; box-sizing: border-box; padding: var(--uav-rim, 0px); ${shape.part} container: uav-plot / inline-size; }
 /* A unit's seats are dots over the part's box, placed across and up it as a plot's are, from the left whichever way
  * the page reads. They are their own hit targets. A hundred of them are small, so the part is given 240 px. */
 .uav-radial > .uav-dots { direction: ltr; }
@@ -63,7 +64,7 @@ const css = `
  * need the \`legend-top\` rule takes both away. */
 @container uav-view (block-size >= 0px) {
   .uav[data-layout="radial"] .uav-body { container-type: size; overflow: hidden; --uav-legend-block: calc(70px + var(--uav-rows, 1) * (var(--uav-legend-line) + 4px)); }
-  .uav[data-layout="radial"] .uav-radial { flex: 0 1 calc(var(--uav-radial-most, 160px) / var(--uav-aspect, 1)); min-block-size: 0; max-block-size: calc(100cqi / var(--uav-aspect, 1)); inline-size: auto; max-inline-size: 100%; }
+  .uav[data-layout="radial"] .uav-radial { ${shape.box} }
   .uav[data-layout="radial"] :is(.uav-legend, .uav-legend-top) { flex: none; }
   .uav[data-layout="radial"]:not([data-keep~="guides"]) .uav-legend { overflow: hidden; max-block-size: max(0px, (100cqb - var(--uav-legend-block) + 0.01px) * 999999);
     margin-block-start: clamp(0px, (100cqb - var(--uav-legend-block) + 0.01px) * 999999, 10px); }

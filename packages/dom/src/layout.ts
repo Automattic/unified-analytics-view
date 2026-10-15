@@ -49,3 +49,14 @@ export interface LayoutPainter {
 /** What changes with a rule that leaves the number alone: the figure's grid is the number's row, the body goes whole
  * so that its row holds no gap, and the number gives up the margin that stood between them. For a layout's `fit`. */
 export const NUMBER_ALONE: Record<string, string> = { '': 'grid-template: "number" auto / minmax(0, 1fr);', '.uav-body': 'display: none;', '.uav-number': 'align-self: start; margin: 0;' };
+
+/** A part that holds its shape, as a circle of arcs, a unit's grid, a map and a treemap do: `part` is as wide as the
+ * view up to `most` and as tall as `aspect` (width over height) makes it, in the middle of a column. In a box, `box`
+ * has it give way to the height, down to nothing, and its width follows. Both are declarations, for a painter's own
+ * selectors; the body must be a flex column, and in a box a size container. */
+export function holdShape(most: string, aspect: string | number): { part: string; box: string } {
+  return {
+    part: `flex: none; align-self: center; inline-size: min(100%, ${most}); aspect-ratio: ${aspect};`,
+    box: `flex: 0 1 calc(min(100cqi, ${most}) / ${aspect}); min-block-size: 0; inline-size: auto; max-inline-size: 100%;`,
+  };
+}

@@ -1,5 +1,5 @@
 import type { CircleNode, PathNode, TextNode } from '@unified-analytics/core';
-import { FOCUS, HOVER, attr, ensure, keyed, paintRamp, paintSize, prop, text, token, type LayoutPainter } from '@unified-analytics/dom';
+import { FOCUS, HOVER, attr, ensure, holdShape, keyed, paintRamp, paintSize, prop, text, token, type LayoutPainter } from '@unified-analytics/dom';
 import { GEO_RULES, geoRules } from './index.ts';
 
 /* The `geo` mark's half for the DOM: the painter of its layout, for registerPainter().
@@ -23,9 +23,10 @@ import { GEO_RULES, geoRules } from './index.ts';
  * Below the room a map needs, the `marks` rule's `fallback` shows the same query as a ranked list in its place. That
  * is the element's doing (view.ts), and nothing here knows of it. */
 const SVG = 'http://www.w3.org/2000/svg';
+const shape = holdShape('480px', 'var(--uav-aspect, 2)');
 const css = `
 .uav[data-layout="geo"] .uav-body { display: flex; flex-direction: column; }
-.uav[data-layout="geo"] .uav-plot { flex: none; align-self: center; inline-size: min(100%, 480px); aspect-ratio: var(--uav-aspect, 2); container-type: inline-size; }
+.uav[data-layout="geo"] .uav-plot { ${shape.part} container-type: inline-size; }
 .uav[data-layout="geo"] .uav-plot path { fill: var(--uav-paint); stroke: ${token('color-background')}; stroke-width: ${token('stroke-width-rule')}; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
 /* A region in the list is clicked to bring the map in to it, and clicked again, or the land about it, to take the map
  * back out. A border is one width at any size of map, in or out. What is outside the map's box is cut off, by the
@@ -53,7 +54,7 @@ const css = `
 /* In a box the part gives way to the height and its width follows, as a circle of arcs does. */
 @container uav-view (block-size >= 0px) {
   .uav[data-layout="geo"] .uav-body { container-type: size; overflow: hidden; }
-  .uav[data-layout="geo"] .uav-plot { flex: 0 1 calc(min(100cqi, 480px) / var(--uav-aspect, 2)); min-block-size: 0; inline-size: auto; max-inline-size: 100%; }
+  .uav[data-layout="geo"] .uav-plot { ${shape.box} }
   .uav[data-layout="geo"] :is(.uav-note, .uav-ramp, .uav-size) { flex: none; }
 }`;
 

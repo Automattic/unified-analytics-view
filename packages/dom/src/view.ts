@@ -1,7 +1,7 @@
 import { CONTAINER_RULES, buildScene, expand, fallbackRule, fills, formatDimension, formatValue, gaveWay, metricOf, resolve, unboundedContainer } from '@unified-analytics/core';
 import type { Catalog, ContainerRules, Layer, Layout, Query, Result, Row, SceneNode, Spec } from '@unified-analytics/core';
 import { compileFitRules, type FitExtras } from './compile.ts';
-import { CHROME_CSS } from './chrome/index.ts';
+import { CHROME_CSS, swatch } from './chrome/index.ts';
 import { attr, ensure, keyed, paintVar, text } from './dom.ts';
 import { DOTS_CSS } from './dots.ts';
 import { PIXELS_CSS, pixels } from './pixels.ts';
@@ -34,7 +34,7 @@ export const BASE_CSS = `@layer uav {
 .uav { position: relative; box-sizing: border-box; block-size: 100%; margin: 0; display: grid; grid-template: "number" auto "body" minmax(0, 1fr) / minmax(0, 1fr); print-color-adjust: exact; }
 /* A bar, a segment, a swatch and a rule are backgrounds. A printer leaves those out unless told, and forced colours
  * repaint them as the page, so both are told to leave a mark its paint. */
-.uav-body i, .uav-pulse { forced-color-adjust: none; }
+.uav-body i { forced-color-adjust: none; }
 .uav-prose { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .uav-body { grid-area: body; box-sizing: border-box; min-inline-size: 0; block-size: var(--uav-body-block, auto); }
 .uav-error { margin: 0; font-size: var(--uav-font-label); overflow-wrap: anywhere; color: ${paintVar('delta.bad')}; }
@@ -72,7 +72,7 @@ export const BASE_CSS = `@layer uav {
 :not(.uav-ruler) > .uav-number > .uav-pulse + b:has(.uav-glyphs) { display: inline-block; inline-size: calc(100% - 20px); }
 .uav-number > span { display: block; line-height: calc(18 / 13); overflow: hidden; text-overflow: ellipsis; }
 .uav-number > .uav-f-tick { line-height: calc(16 / 11); }
-.uav-pulse { display: inline-block; vertical-align: middle; inline-size: 10px; block-size: 10px; margin-inline: 2px 8px; border-radius: 50%; background: var(--uav-paint); }
+.uav-pulse { vertical-align: middle; margin-inline: 2px 8px; }
 .uav-short { display: none; }
 /* What the measured pass found, as data-fit on the number: its size, its forms, and whether its note fits. */
 .uav-number[data-fit~="short"] > .uav-f-display > .uav-full, .uav-number[data-fit~="delta-short"] > .uav-f-value > .uav-full { display: none; }
@@ -244,7 +244,7 @@ function paintTable(table: HTMLTableElement, title: string | undefined, q: Query
 
 function paintNumber(el: HTMLElement, nodes: SceneNode[]): void {
   keyed(el, nodes, (n) => (n.kind === 'circle' ? 'i' : n.kind === 'text' && n.font === 'display' ? 'b' : 'span'), (c, n) => {
-    if (n.kind === 'text') { text(c, n); (c as HTMLElement).title = n.note ?? ''; } else c.classList.add('uav-pulse');      // what the number counts, when it is pointed at
+    if (n.kind === 'text') { text(c, n); (c as HTMLElement).title = n.note ?? ''; } else { c.classList.add('uav-pulse'); swatch(c, '10 circle'); }      // what the number counts, when it is pointed at
   });
 }
 

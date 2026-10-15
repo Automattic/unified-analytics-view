@@ -16,6 +16,11 @@ const num = (r: Row, f: string) => r[f] as number;
 /* A row's dimension value as its key. A result may hold a number or a boolean there, and a key is compared with
  * what a painter wrote into an attribute, so it is a string from here on. */
 const str = (r: Row, f: string) => String(r[f]);
+/** A dimension's values in its own order, which is the engine's: its row of totals for each where it sends them, and
+ * else the order its rows first have them. Said by `say`, a key's string unless a caller asks for the value as it is.
+ * ponytail: a plot's and a list's series keep the value as it is (orderOf(…, raw)) and compare it with ===, though a key is a string (issue #25). */
+const orderOf = (result: Result, f: string, say: (r: Row, f: string) => string = str) => [...new Set(((result.totalsBy && result.totalsBy[f]) || result.rows).map((r) => say(r, f)))];
+const raw = (r: Row, f: string) => r[f] as string;
 /** The key of each row of a result: its value of `dim`, and for a row that says a value again, the value and which
  * time it is (`Google#2`). So no two rows share a key, a mark or a place, whatever a result repeats: a host that
  * hands over labels where it had ids repeats one. In a plot split by `split` the rows of one value are its series,
@@ -361,7 +366,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   const own = rowKeys(rows, xField, split), k = (r: Row) => own.get(r) ?? str(r, xField), keys = [...new Set(rows.map(k))];
   // What a key says on the axis: its row's value, which a repeat shares with the row it repeats.
   const said = new Map(rows.map((r) => [k(r), str(r, xField)]));
-  const series = split ? [...new Set(((result.totalsBy && result.totalsBy[split]) || rows).map((r) => r[split] as string))] : [];
+  const series = split ? orderOf(result, split, raw) : [];
   // Whether any layer paints its series apart. Only that spends the series colours, so only that is held to their count, and has a legend.
   const painted = layers.some((l) => paintedOf(catalog, l, xField));
   if (painted && series.length > SERIES) throw new Error(tooManySeries('Splitting by "' + split + '"', series.length, 'series'));
@@ -691,7 +696,7 @@ function sceneRows(catalog: Catalog, layers: Layer[], result: Result, limit: num
   };
   // The series a divided row has, and where each one's share of a stacked bar starts and ends. A share is of the
   // engine's total for the row.
-  const series = split ? [...new Set(((result.totalsBy && result.totalsBy[split]) || result.rows).map((r) => r[split] as string))] : [];
+  const series = split ? orderOf(result, split, raw) : [];
   const divides = (l: Layer) => !!split && splitOf(catalog, l, dim) === split, painted = layers.some((l) => paintedOf(catalog, l, dim));
   if (painted && series.length > SERIES) throw new Error(tooManySeries('Splitting by "' + split + '"', series.length, 'series'));
   // By detail a row has a mark for each pair where the marks can lie over each other and still be read: a dot or a tick.
@@ -927,7 +932,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
       const rows = whole, own = rowKeys(rows, dim), k = (r: Row) => own.get(r)!, edge = split ? inner + (1 - inner) * SPLIT : 1;
       if (rows.length > SERIES) throw new Error(tooManySeries('Splitting by "' + dim + '"', rows.length, 'segments'));
       // The second ring's values in the engine's order, which each segment's arcs run in.
-      const kids = split ? [...new Set(((result.totalsBy && result.totalsBy[split]) || result.rows).map((r) => str(r, split)))] : [];
+      const kids = split ? orderOf(result, split) : [];
       // Each segment starts where the one before it ends, a hair apart.
       let run = 0;
       rows.forEach((r, j) => {
@@ -1005,9 +1010,8 @@ function sceneMatrix(catalog: Catalog, layers: Layer[], result: Result): Body {
     throw new Error('A dimension on both x and y makes a grid, and a grid draws a "cell" with a metric on color, a "dot" with a metric on size, or the two together on the same x and y. Write { "mark": "cell", "encode": { "x": "' + xf + '", "y": "' + yf + '", "color": a metric } }, or { "mark": "dot", "encode": { "x": "' + xf + '", "y": "' + yf + '", "size": a metric } }, which may have a metric on color where no cell has one. Leave x or y out of a cell alone for one column or one row, or move a dimension off an axis.');
   }
   // Each dimension in its own order, which is the engine's, so the grid does not turn with the ranking.
-  const domain = (f: string) => [...new Set(((result.totalsBy && result.totalsBy[f]) || result.rows).map((r) => String(r[f])))];
   // A binned quantity has an order of its own, least first, whatever the engine ranked its rows by.
-  const binned = (f: string | undefined) => (f == null ? [''] : catalog.dimensions[f]!.type === 'number' ? domain(f).sort((a, b) => Number(a) - Number(b)) : domain(f));
+  const binned = (f: string | undefined) => (f == null ? [''] : catalog.dimensions[f]!.type === 'number' ? orderOf(result, f).sort((a, b) => Number(a) - Number(b)) : orderOf(result, f));
   // Down the side a category is read from the top, as a table is. A quantity beside another dimension is read from the
   // foot, as a plot's y axis is: its least bin is the bottom row. Alone it is one column, a list, and reads down.
   const xs = binned(xf), ys = xf != null && yf != null && catalog.dimensions[yf]!.type === 'number' ? binned(yf).reverse() : binned(yf);

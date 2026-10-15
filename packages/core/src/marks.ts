@@ -1,5 +1,5 @@
 import type { FitRule } from './fit.ts';
-import { MARKS } from './types.ts';
+import { LAYOUTS, MARKS } from './types.ts';
 import type { Catalog, Container, Guides, Layer, Part, PlacedNode, Query, Result, Scene } from './types.ts';
 
 /* Custom marks: the escape hatch for what the grammar cannot express (reference, section 7). One is registered in
@@ -30,13 +30,12 @@ export interface CustomMark {
 }
 
 const REGISTERED = new Map<string, CustomMark>();
-// The layouts core builds. A custom mark's name is its layout's, so it cannot be one of them.
-const TAKEN = ['cartesian', 'rows', 'band', 'radial', 'matrix', 'none', 'notice', 'prose'];
 
 /** Register a custom mark under a name, or replace the one that has it. */
 export function registerMark(name: string, mark: CustomMark): void {
   if (!/^[\w-]+$/.test(name)) throw new Error('A custom mark cannot be named ' + JSON.stringify(name) + ': the name is written into specs and selectors. Use letters, digits, "_" and "-" only.');
-  if ([...MARKS, ...TAKEN].includes(name)) throw new Error('A custom mark cannot be named "' + name + '", which core has already. Register it under another name.');
+  // A custom mark's name is its layout's, so it cannot be one of core's layouts either.
+  if (([...MARKS, ...LAYOUTS] as string[]).includes(name)) throw new Error('A custom mark cannot be named "' + name + '", which core has already. Register it under another name.');
   REGISTERED.set(name, mark);
 }
 /** The marks registered, by name. */

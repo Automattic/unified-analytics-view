@@ -15,7 +15,7 @@ const ROLE_NAMES: Partial<Record<Role, string>> = { comparison: 'comparison seri
 
 /* The layout a layer's fields ask for: what is on x, on y and on color, first match first. `any` asks nothing of its channel. */
 type FieldKind = 'dimension' | 'metric' | 'any';
-const LAYOUTS: [x: FieldKind, y: FieldKind, color: FieldKind, layout: Layout][] = [
+const BY_FIELDS: [x: FieldKind, y: FieldKind, color: FieldKind, layout: Layout][] = [
   ['dimension', 'dimension', 'any',       'matrix'],
   ['dimension', 'any',       'any',       'cartesian'],
   ['any',       'dimension', 'any',       'rows'],
@@ -38,7 +38,7 @@ function detectLayout(catalog: Catalog, layers: Layer[]): Layout {
   if (layers.some((l) => l.encode && l.encode.angle != null)) return 'radial';
   // A cell along one dimension is a grid one column wide or one row tall, and not a list's rows or a plot.
   if (layers.some((l) => l.mark === 'cell' && l.encode && (isDim(catalog, l.encode.y) || (l.encode.y == null && isDim(catalog, l.encode.x))))) return 'matrix';
-  for (const [x, y, color, layout] of LAYOUTS) if (layers.some((l) => l.encode && is(x, l.encode.x) && is(y, l.encode.y) && is(color, l.encode.color))) return layout;
+  for (const [x, y, color, layout] of BY_FIELDS) if (layers.some((l) => l.encode && is(x, l.encode.x) && is(y, l.encode.y) && is(color, l.encode.color))) return layout;
   // A unit with a metric and no dimension at all is a grid read against the metric's range, in the place a band has.
   if (layers.some((l) => l.mark === 'unit' && isMetric(catalog, l.encode?.x))) return 'band';
   throw new Error('These layers put no dimension on x, y or color, so there is nothing to lay out.');

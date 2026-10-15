@@ -175,8 +175,9 @@ export interface Container {
 }
 
 /* Plan: what will be drawn at this size, and what was dropped. */
-/** A custom mark is laid out by its own code, under its own name. */
-export type Layout = 'cartesian' | 'rows' | 'band' | 'radial' | 'matrix' | 'none' | 'notice' | 'prose' | (string & {});
+/** The layouts core builds. A custom mark is laid out by its own code, under its own name, which so cannot be one of these. */
+export const LAYOUTS = ['cartesian', 'rows', 'band', 'radial', 'matrix', 'none', 'notice', 'prose'] as const;
+export type Layout = (typeof LAYOUTS)[number] | (string & {});
 export interface Reduction {
   id: ReductionId;
   state: 'not needed' | 'applied' | 'kept by the spec' | 'nothing to drop';

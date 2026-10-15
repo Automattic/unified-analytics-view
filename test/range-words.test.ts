@@ -63,6 +63,10 @@ describe('a count in the prose is pluralised as plural() does it', () => {
     const res = result([{ delivery: '1', country: 'DE', revenue: 200 }, { delivery: '1', country: 'FR', revenue: 100 }], { totalsBy: { country: [{ country: 'DE', revenue: 200 }, { country: 'FR', revenue: 100 }] } });
     expect(tldrProse({ metrics: ['revenue'], by: ['delivery', 'country'] }, res, false, ys)).toBe('DE is the largest country at 67% of revenue, and leads on all 1 delivery.');
   });
+  it('in the points a view sets one metric against another', () => {
+    const res = result([{ country: 'DE', revenue: 200, orders: 10 }]);
+    expect(tldrProse({ metrics: ['revenue', 'orders'], by: ['country'] }, res, false, { ...ys, metrics: catalog.metrics }, true)).toMatch(/^Across 1 country, /);
+  });
 });
 
 // A row may have no figure, and a value may hold the very words the sentence is made of.

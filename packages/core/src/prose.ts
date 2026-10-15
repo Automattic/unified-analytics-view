@@ -80,7 +80,7 @@ export function tldrProse(q: Query, result: Result, share: boolean, catalog: Cat
     if (path && catalog.dimensions[of]!.type === 'time' && a && b && a !== b)
       return 'From ' + say(catalog, of, a) + ' to ' + say(catalog, of, b) + ', ' + two.map((f, i) => label(f) + (i ? ' from ' : ' went from ') + formatValue(a[f] as number, catalog.metrics[f]!) + ' to ' + formatValue(b[f] as number, catalog.metrics[f]!)).join(' and ') + '. '
         + tops;
-    return 'Across ' + rows.length + ' ' + plural(catalog.dimensions[of]!.label.toLowerCase()) + range + ', ' + 'the range of ' + two.map((f) => label(f) + ' is ' + vals(f).map((v) => formatValue(v, catalog.metrics[f]!)).join(' to ')).join(' and of ') + '. '
+    return 'Across ' + rows.length + ' ' + many(rows.length, catalog.dimensions[of]!.label.toLowerCase()) + range + ', ' + 'the range of ' + two.map((f) => label(f) + ' is ' + vals(f).map((v) => formatValue(v, catalog.metrics[f]!)).join(' to ')).join(' and of ') + '. '
       + tops;
   }
   if (dims.length === 2 && result.totalsBy && rows.length) {

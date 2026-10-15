@@ -230,7 +230,6 @@ svg[data-hits] path[data-active="pointer"] { ${HOVER.stroke} }
 .uav-cross-x { inset-block-start: calc(100% + 3px); unicode-bidi: plaintext; }
 .uav-cross-y { translate: 0 -50%; text-align: end; }
 .uav-cross-y[data-side="1"] { text-align: start; }
-.uav-cross [data-thin] { visibility: hidden; }
 /* A row that says its own value has told the reader what the readout would, so there the readout waits, as a tooltip
  * does, and is not in the way of the list. A mark that is read against an axis, a ramp or a legend says no number, so
  * its readout comes at once. It waits only to appear: once it is up it follows the pointer or the keys from row to

@@ -54,6 +54,14 @@ export function thin(spans: Span[], gap = 6): boolean[] {
   return gone;
 }
 
+/** What every label the measured pass may give up goes through: the labels `selector` finds under `root` that have a
+ * box (a fit rule may have hidden some), handed to `gone`, which says of each whether it goes, and may set where the
+ * rest stand. Those that go take data-thin and keep their box (chrome/label.ts). */
+export function thinLabels(root: ParentNode, selector: string, gone: (labels: HTMLElement[]) => boolean[]): void {
+  const labels = Array.from(root.querySelectorAll<HTMLElement>(selector)).filter((el) => el.getClientRects().length);
+  if (labels.length) gone(labels).forEach((g, i) => labels[i]!.toggleAttribute('data-thin', g));
+}
+
 /** Where to set labels so that each stands at least `line` from the next: every one as near its own place as that
  * allows, pushed down from the highest and then back up from the bottom of the room, as place() sets them. Null for
  * one there is no room for; the lowest go first. */

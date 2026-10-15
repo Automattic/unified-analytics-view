@@ -5,9 +5,10 @@ import { paintLegend } from '../chrome/legend.ts';
 import { paintSize } from '../chrome/size.ts';
 import { RULE } from '../chrome/rule.ts';
 import { token } from '../tokens.ts';
+import { label } from '../chrome/label.ts';
 import { hitNodes } from '../keys.ts';
 import { NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
-import { apart } from '../measure.ts';
+import { apart, thinLabels } from '../measure.ts';
 import { morph, once } from '../motion.ts';
 import { POINTS_CSS, POINTS_FIT, measurePoints, paintPoints } from './points.ts';
 import { RANGES_CSS, paintRanges } from './ranges.ts';
@@ -37,8 +38,7 @@ const css = `
 .uav-labels { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .uav-labels { grid-area: labels; display: none; }
 .uav-labels span { grid-area: 1 / 1; align-self: start; justify-self: start; position: relative; inset-block-start: calc((1 - var(--uav-t)) * 100%); translate: 0 calc(var(--uav-dy, 0px) - 50%);
-  box-sizing: border-box; max-inline-size: 14ch; padding-inline-start: 6px; overflow: hidden; text-overflow: ellipsis; color: var(--uav-paint); }
-.uav-labels [data-thin] { visibility: hidden; }
+  box-sizing: border-box; padding-inline-start: 6px; ${label({ truncate: true })} }
 /* The legend of a split plot is a swatch and a name per series, in a row that wraps (chrome/legend.ts). */
 .uav[data-layout="cartesian"] .uav-legend { grid-area: legend; }
 .uav-plot { grid-area: plot; position: relative; container: uav-plot / size; }
@@ -74,8 +74,7 @@ const css = `
 @media (prefers-reduced-motion: no-preference) { .uav-plot svg[data-draw] { animation: uav-draw ${token('motion-duration-draw')} linear both; } }
 @keyframes uav-draw { from { clip-path: inset(-8px 100% -8px -8px); } to { clip-path: inset(-8px); } }
 /* ponytail: a label in the plot is set above its line at the inline end, the one anchor a scene asks for today. */
-.uav-refs span { position: absolute; inset-inline-end: 0; inset-block-start: calc((1 - var(--uav-t)) * 100%); translate: 0 -100%; padding-block-end: 2px; white-space: nowrap; color: var(--uav-paint); }
-.uav-refs [data-halo] { -webkit-text-stroke: 3px ${token('color-background')}; paint-order: stroke fill; }`;
+.uav-refs span { position: absolute; inset-inline-end: 0; inset-block-start: calc((1 - var(--uav-t)) * 100%); translate: 0 -100%; padding-block-end: 2px; ${label()} }`;
 
 const inPlot = (n: SceneNode) => n.part === 'plot';
 
@@ -113,12 +112,12 @@ export const cartesian: LayoutPainter = {
     thinAxis(body, 'x');
     measurePoints(body);
     // Labels at the line ends, set a line apart. They are moved by a translate, which changes no size that is read.
-    const ends = Array.from(body.querySelectorAll<HTMLElement>('.uav-labels > span')).filter((el) => el.getClientRects().length);
-    if (!ends.length) return;
-    const block = body.querySelector('.uav-labels')!.getBoundingClientRect().height, own = ends.map((el) => (1 - Number(el.style.getPropertyValue('--uav-t'))) * block);
-    apart(own, ends[0]!.getBoundingClientRect().height, block).forEach((y, i) => {
-      ends[i]!.toggleAttribute('data-thin', y == null);
-      prop(ends[i]!, '--uav-dy', y == null ? null : y - own[i]! + 'px');
+    thinLabels(body, '.uav-labels > span', (ends) => {
+      const block = body.querySelector('.uav-labels')!.getBoundingClientRect().height, own = ends.map((el) => (1 - Number(el.style.getPropertyValue('--uav-t'))) * block);
+      return apart(own, ends[0]!.getBoundingClientRect().height, block).map((y, i) => {
+        prop(ends[i]!, '--uav-dy', y == null ? null : y - own[i]! + 'px');
+        return y == null;
+      });
     });
   },
 

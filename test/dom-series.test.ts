@@ -5,7 +5,7 @@ import { compileFitRules } from '../packages/dom/src/compile.ts';
 import { LEGEND_CSS } from '../packages/dom/src/chrome/legend.ts';
 import { cartesian } from '../packages/dom/src/layouts/cartesian.ts';
 import { KEYS_CSS, hitNodes, readout, readoutAt, readoutLines, rowsAt, stepSeries } from '../packages/dom/src/keys.ts';
-import { apart } from '../packages/dom/src/measure.ts';
+import { apart, thinLabels } from '../packages/dom/src/measure.ts';
 import { mix, resample } from '../packages/dom/src/motion.ts';
 import { pivot } from '../packages/dom/src/view.ts';
 
@@ -85,6 +85,16 @@ describe('the cartesian layout\'s guides', () => {
     expect(cartesian.css).toContain('.uav[data-layout="cartesian"] .uav-legend { grid-area: legend; }');
     expect(LEGEND_CSS).toContain('.uav-legend[data-names] { display: flex; flex-wrap: wrap;');
     expect(LEGEND_CSS).toContain('.uav-legend { display: grid;');
+  });
+});
+
+describe('thinLabels', () => {
+  it('hands on only labels with a box, and marks the ones given up, keeping the rest', () => {
+    const el = (rects: number) => ({ rects, thin: false, getClientRects: () => ({ length: rects }), toggleAttribute(_: string, on: boolean) { this.thin = on; } });
+    const els = [el(1), el(0), el(1)], root = { querySelectorAll: () => els } as unknown as ParentNode;
+    let seen = 0;
+    thinLabels(root, 'span', (labels) => { seen = labels.length; return [false, true]; });
+    expect([seen, els.map((e) => e.thin)]).toEqual([2, [false, false, true]]);
   });
 });
 

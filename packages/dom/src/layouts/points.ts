@@ -2,6 +2,8 @@ import { declutter, type CircleNode, type PathNode, type Scene, type SceneNode, 
 import { attr, ensure, keyed, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { RULE } from '../chrome/rule.ts';
+import { thinLabels } from '../measure.ts';
+import { ANCHOR, label } from '../chrome/label.ts';
 import { unitDot } from '../chrome/unit.ts';
 
 /* What a plot gains with `dot`, with `text` on its points, and with a metric on x: dots, the labels on them, the key
@@ -30,14 +32,11 @@ export const POINTS_CSS = `
   inline-size: ${DOT}; block-size: ${DOT}; border-radius: 50%; background: var(--uav-paint); }
 /* A label sits above its point, clear of the dot. --uav-nudge is the measured pass's: what keeps it inside the plot. */
 .uav-point-labels span { position: absolute; inset-inline-start: calc(var(--uav-x) * 100%); inset-block-start: calc((1 - var(--uav-t)) * 100%);
-  translate: calc(-50% + var(--uav-nudge, 0px)) calc(-100% - 2px - ${DOT} / 2); max-inline-size: 14ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--uav-paint); }
-.uav-point-labels [data-halo] { -webkit-text-stroke: 3px ${token('color-background')}; paint-order: stroke fill; }
-/* A label the measured pass gave up keeps its box, so the next measurement reads the same. */
-.uav-point-labels [data-thin] { visibility: hidden; }
+  translate: calc(${ANCHOR.middle} + var(--uav-nudge, 0px)) calc(-100% - 2px - ${DOT} / 2); ${label({ truncate: true })} }
 /* A rule at a value on x stands the height of the plot, and its label sits beside it at the top. */
 .uav-line[data-upright] { inset-block: 0; inset-inline: calc(var(--uav-x) * 100%) auto; inline-size: ${RULE}; block-size: auto; translate: -50%; --uav-rule-way: 0deg; }
 .uav-refs span[data-upright] { inset-inline: calc(var(--uav-x) * 100%) auto; translate: 4px 0; padding: 0; }
-.uav-refs span[data-upright][data-anchor="end"] { translate: calc(-100% - 4px) 0; }
+.uav-refs span[data-upright][data-anchor="end"] { translate: calc(${ANCHOR.end} - 4px) 0; }
 /* The key to sizes takes a row of its own under whatever else the body holds, and the view is that much taller for it. */
 .uav[data-layout="cartesian"][data-parts~="size"] { --uav-body-block: calc(var(--uav-axes-height, 184px) + 28px); }
 .uav[data-layout="cartesian"] .uav-size { grid-column: 1 / -1; }`;
@@ -78,14 +77,14 @@ const num = (el: HTMLElement, name: string) => Number(el.style.getPropertyValue(
 export function measurePoints(body: HTMLElement): void {
   const holder = body.querySelector<HTMLElement>('.uav-point-labels');
   if (!holder) return;
-  const labels = Array.from(holder.querySelectorAll<HTMLElement>(':scope > span:not([data-exit])')).filter((el) => el.getClientRects().length);
-  const room = holder.getBoundingClientRect();
-  const gone = declutter(labels.map((el) => {
-    const r = el.getBoundingClientRect(), mid = num(el, '--uav-x') * room.width - r.width / 2, x = Math.max(0, Math.min(mid, room.width - r.width));
-    prop(el, '--uav-nudge', x - mid + 'px');
-    return { x, y: (1 - num(el, '--uav-t')) * room.height - 2 - (4 + (num(el, '--uav-size') || 0.4) * 5) / 2 - r.height, w: r.width, h: r.height, rank: Number(el.dataset.rank) || 0 };
-  }));
-  labels.forEach((el, i) => el.toggleAttribute('data-thin', gone[i]));
+  thinLabels(holder, ':scope > span:not([data-exit])', (labels) => {
+    const room = holder.getBoundingClientRect();
+    return declutter(labels.map((el) => {
+      const r = el.getBoundingClientRect(), mid = num(el, '--uav-x') * room.width - r.width / 2, x = Math.max(0, Math.min(mid, room.width - r.width));
+      prop(el, '--uav-nudge', x - mid + 'px');
+      return { x, y: (1 - num(el, '--uav-t')) * room.height - 2 - (4 + (num(el, '--uav-size') || 0.4) * 5) / 2 - r.height, w: r.width, h: r.height, rank: Number(el.dataset.rank) || 0 };
+    }));
+  });
 }
 
 /** A target for each row a joining line passes through, once, where it has a row: what stands in for dots that no layer drew. */

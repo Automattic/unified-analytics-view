@@ -52,10 +52,7 @@ h2 small { display: inline; }
 .bar { display: grid; grid-template-columns: 9em auto 1fr; gap: var(--ua-space-xs); align-items: center; }
 .bar i { display: block; block-size: 12px; background: var(--ua-charts-color-series-1); border-radius: 2px; }
 
-/* The two surface layouts, as docs/dom-painter-plan.md section 4.2 writes them. */
-.ua-stack { display: grid; gap: var(--ua-space-s); }
-.ua-row   { display: flex; gap: var(--ua-space-s); }
-/* A frame holding one <ua-view>: a stack, or a row when the height control hands it a box. The gap is between views, and there is one. */
+/* The two surface layouts are packages/dom's (surfaceSheet(), adopted by each page). A frame holding one <ua-view>: a stack, or a row when the height control hands it a box. The gap is between views, and there is one. */
 .frame:is(.ua-stack, .ua-row) { gap: 0; }
 
 /* A grid to see a material against: 16 px lines, heavier every 80. */

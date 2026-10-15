@@ -225,8 +225,7 @@ svg[data-hits] path[data-active="pointer"] { ${HOVER.stroke} }
 /* The crosshair's words hang past the plot, over the axes. The plot is a layer of its own, so it is the plot that is
  * raised while it has a crosshair, or the axis labels after it would be drawn over them. */
 .uav-plot:has(> .uav-cross) { z-index: 2; }
-.uav-cross { position: absolute; inset: 0; z-index: 1; pointer-events: none; --uav-rule: ${HOVER.width}; --uav-rule-paint: ${paintVar('rule')}; }
-.uav-cross[data-active="keys"] { --uav-rule: ${FOCUS.width}; --uav-rule-paint: ${FOCUS.color}; }
+.uav-cross { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
 .uav-cross i { position: absolute; inset-inline: 0; inset-block-start: calc((1 - var(--uav-t)) * 100% - var(--uav-rule) / 2); block-size: var(--uav-rule); background: var(--uav-rule-paint); }
 .uav-cross-x { inset-block-start: calc(100% + 3px); unicode-bidi: plaintext; }
 .uav-cross-y { translate: 0 -50%; text-align: end; }
@@ -246,8 +245,6 @@ svg[data-hits] path[data-active="pointer"] { ${HOVER.stroke} }
  * goes at once: motion.ts keeps a leaving node only while --uav-leaving is set. */
 .uav[data-moving] .uav-hits [data-key] { transition: none; }
 .uav[data-moving] .uav-plot .uav-hits [data-exit] { --uav-leaving: initial; transition: none; }
-.uav-hits [data-active] { --uav-rule: ${HOVER.width}; --uav-rule-paint: ${paintVar('rule')}; }
-.uav-hits [data-active="keys"] { --uav-rule: ${FOCUS.width}; --uav-rule-paint: ${FOCUS.color}; }
 .uav-hits [data-active]::before { content: ""; position: absolute; inset-block: 0; inset-inline-start: calc(var(--uav-c) * 100% - var(--uav-rule) / 2); inline-size: var(--uav-rule); background: var(--uav-rule-paint); }
 .uav-plot:has(:is(.uav-bars, .uav-dots) > [data-active]) .uav-hits [data-active]::before { display: none; }
 .uav-legend span[data-active] { text-decoration: underline; }

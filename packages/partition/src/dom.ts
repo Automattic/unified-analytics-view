@@ -1,5 +1,5 @@
 import { formatDimension, formatValue, type RectNode, type Result, type Row, type TextNode } from '@unified-analytics/core';
-import { FOCUS, HOVER, attr, ensure, hideReadout, keyed, nodePaint, paintRamp, placeReadout, prop, readoutOf, text, token, type LayoutPainter } from '@unified-analytics/dom';
+import { FOCUS, HOVER, attr, ensure, hideReadout, hovers, keyed, nodePaint, paintRamp, placeReadout, pressed, prop, readoutOf, text, token, type LayoutPainter } from '@unified-analytics/dom';
 import { PARTITION_RULES, boxNames } from './index.ts';
 
 /* The `partition` mark's half for the DOM: the painter of its layout, for registerPainter().
@@ -101,10 +101,10 @@ function bind(plot: HTMLElement): void {
     const el = box(e);
     if (!el) return;
     // A touch that has only just chosen a box shows its readout. The next one activates it.
-    trees.get(plot)!.fresh = e.pointerType !== 'mouse' && !el.hasAttribute('data-active');
+    trees.get(plot)!.fresh = pressed(e) && !el.hasAttribute('data-active');
     choose(plot, el);
   });
-  plot.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') choose(plot, null); });
+  plot.addEventListener('pointerleave', (e) => { if (hovers(e, trees.get(plot)!.fresh)) choose(plot, null); });
   plot.addEventListener('pointercancel', () => choose(plot, null));
   plot.addEventListener('focusout', () => choose(plot, null));
   plot.addEventListener('click', (e) => {

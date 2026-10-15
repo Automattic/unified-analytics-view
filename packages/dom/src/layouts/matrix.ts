@@ -85,6 +85,8 @@ function bind(cells: HTMLElement): void {
     choose(cells, el);
   });
   cells.addEventListener('pointerleave', (e) => { if (hovers(e, grids.get(cells)!.fresh)) choose(cells, null); });
+  // A touch that turns into a scroll chose its cell on the way down. The browser cancels it, and it lets go.
+  cells.addEventListener('pointercancel', () => choose(cells, null));
   cells.addEventListener('focusout', () => choose(cells, null));
   cells.addEventListener('click', (e) => {
     const el = cell(e), g = grids.get(cells)!;

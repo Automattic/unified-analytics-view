@@ -3,6 +3,7 @@ import { attr, ensure, paintVar, prop } from './dom.ts';
 import { apart } from './measure.ts';
 import { FOCUS, HOVER, token } from './tokens.ts';
 import { nearest } from './layouts/points.ts';
+import { rove, type How } from './rove.ts';
 
 /* Hit targets, the keyboard and the readout. A layout marks the element that holds its points with `data-hits`
  * ("x" where they run across, "y" where they run down), and each point is a child carrying `data-row`. Bars in a
@@ -162,13 +163,6 @@ export function step(key: string, at: number, count: number, vertical = false, r
   const d = key === on || (vertical && key === 'ArrowDown') ? 1 : key === back || (vertical && key === 'ArrowUp') ? -1 : 0;
   return d && count ? Math.min(Math.max(at + d, 0), count - 1) : null;
 }
-
-/** Whether a pointer chose by pressing, a touch or a pen on the glass, so the press that follows activates. A mouse,
- * or a pen held over the glass, chooses by hovering. */
-export function pressed(e: PointerEvent): boolean { return e.pointerType === 'touch' || (e.pointerType === 'pen' && e.buttons > 0); }
-/** Whether a pointer leaving lets its point go: a mouse, or a pen that was hovering. A touch, or a pen whose press has
- * not yet clicked, leaves as it lifts, before the click it chose for. */
-export function hovers(e: PointerEvent, fresh: boolean): boolean { return e.pointerType === 'mouse' || (e.pointerType === 'pen' && !fresh); }
 
 /** The hit targets of a plot: one per row that drew a mark, tiling the plot from edge to edge, each reaching half
  * way to its neighbours. `c` is where the row's own x falls inside its target, for the rule that marks it: the
@@ -334,8 +328,6 @@ export class Keys {
   #at: string | null = null;
   // The series of a split plot, the one chosen at the point, and what a readout of one needs.
   #order: string[] = []; #series: string | null = null; #split: string | undefined; #q: Query | null = null; #catalog: Catalog | null = null; #layers: Layer[] = [];
-  // A touch that has only just chosen a point shows its readout. The next one activates it.
-  #fresh = false;
   // How the chosen point was chosen. Each has its own look, and a paint keeps the one it found.
   #how: 'keys' | 'pointer' = 'pointer';
   // What a crosshair says at each row of a plot of lines, the dimension on x, and the crosshair once one is drawn.
@@ -346,43 +338,34 @@ export class Keys {
     this.#tip = readoutOf(fig);
     this.#tip.setAttribute('aria-hidden', 'true'); this.#tip.hidden = true;
     const row = (e: Event) => { const k = (e.target as Element).closest?.('[data-row]')?.getAttribute('data-row'); return k != null && this.#keys.includes(k) ? k : null; };
-    body.addEventListener('pointerover', (e) => {
-      const k = row(e);
-      if (k == null) return;
-      // An arc of a circle's second ring is a target of its own: the pointer chooses it there, as up and down do (layouts/radial.ts).
-      const of = (e.target as Element).closest?.('.uav-under [data-series]')?.getAttribute('data-series'), series = of != null && this.#order.includes(of) ? of : null;
-      this.#fresh = pressed(e) && (k !== this.#at || series !== this.#series);
-      this.#show(k, series, 'pointer');
-    });
-    // As version 4: the point goes with the mouse, focus or none, and the next arrow starts from nothing. A touch has
-    // no leaving to speak of.
-    body.addEventListener('pointerleave', (e) => { if (hovers(e, this.#fresh)) this.#show(null); });
-    body.addEventListener('focusout', () => this.#show(null));
-    // A touch that turns into a scroll chose its point on the way down. The browser cancels it, and it lets go.
-    body.addEventListener('pointercancel', () => this.#show(null));
-    body.addEventListener('click', (e) => { if (row(e) !== this.#at) return; if (this.#fresh) this.#fresh = false; else this.#activate(); });
-    body.addEventListener('keydown', (e) => {
-      const box = this.#box();
-      if (!box || e.target !== box) return;
-      // Version 4 takes Escape only when a point is chosen, so the first Escape of a dialog around it is not swallowed.
-      if (e.key === 'Escape') { if (this.#at != null) { e.preventDefault(); this.#show(null); } return; }
-      const points = this.#points(box), at = points.findIndex((el) => el.getAttribute('data-row') === this.#at);
-      if (e.key === 'Enter' || e.key === ' ') { if (at >= 0) { e.preventDefault(); this.#activate(); } return; }
-      // Points in two dimensions: an arrow goes to the nearest point that way (layouts/points.ts). A proposal, not version 4's.
-      if (box.dataset.hits === 'xy') {
-        const near = nearest(e.key, at, points.map((el) => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }));
-        if (near != null) { e.preventDefault(); this.#show(points[near]!.getAttribute('data-row'), null, 'keys'); }
-        return;
-      }
-      // In a list the series lie along the chosen row, and are the ones that row has.
-      const list = box.dataset.hits === 'y' && this.#order.length > 0, here = list ? (this.#rows[this.#keys.indexOf(this.#at ?? '')] ?? []).map((r) => String(r[this.#split!])) : this.#order;
-      const series = at >= 0 && (list || box.dataset.hits === 'x') ? stepSeries(e.key, here.indexOf(this.#series ?? ''), here.length, list, getComputedStyle(box).direction === 'rtl') : null;
-      if (series != null) { e.preventDefault(); this.#show(this.#at, here[series] ?? null, 'keys'); return; }
-      // A plot's points run from the left whatever the page, as its whole frame does (cartesian.ts), and a band's the way the page reads.
-      const to = step(e.key, at, points.length, box.dataset.hits === 'y', box.dataset.hits === 'x' && getComputedStyle(box).direction === 'rtl');
-      if (to == null) return;
-      e.preventDefault();
-      this.#show(points[to]!.getAttribute('data-row'), this.#series, 'keys');
+    rove<{ row: string; series: string | null }>(body, {
+      hit: (e) => {
+        const k = row(e);
+        if (k == null) return null;
+        // An arc of a circle's second ring is a target of its own: the pointer chooses it there, as up and down do (layouts/radial.ts).
+        const of = (e.target as Element).closest?.('.uav-under [data-series]')?.getAttribute('data-series');
+        return { row: k, series: of != null && this.#order.includes(of) ? of : null };
+      },
+      chosen: () => (this.#at == null ? null : { row: this.#at, series: this.#series }),
+      same: (a, b) => a.row === b.row && a.series === b.series,
+      choose: (t, how) => this.#show(t?.row ?? null, t?.series ?? null, how),
+      activate: () => this.#activate(),
+      holder: () => this.#box(),
+      step: (e) => {
+        const box = this.#box()!, points = this.#points(box), at = points.findIndex((el) => el.getAttribute('data-row') === this.#at);
+        // Points in two dimensions: an arrow goes to the nearest point that way (layouts/points.ts). A proposal, not version 4's.
+        if (box.dataset.hits === 'xy') {
+          const near = nearest(e.key, at, points.map((el) => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }));
+          return near == null ? null : { row: points[near]!.getAttribute('data-row')!, series: null };
+        }
+        // In a list the series lie along the chosen row, and are the ones that row has.
+        const list = box.dataset.hits === 'y' && this.#order.length > 0, here = list ? (this.#rows[this.#keys.indexOf(this.#at ?? '')] ?? []).map((r) => String(r[this.#split!])) : this.#order;
+        const series = at >= 0 && (list || box.dataset.hits === 'x') ? stepSeries(e.key, here.indexOf(this.#series ?? ''), here.length, list, getComputedStyle(box).direction === 'rtl') : null;
+        if (series != null) return { row: this.#at!, series: here[series] ?? null };
+        // A plot's points run from the left whatever the page, as its whole frame does (cartesian.ts), and a band's the way the page reads.
+        const to = step(e.key, at, points.length, box.dataset.hits === 'y', box.dataset.hits === 'x' && getComputedStyle(box).direction === 'rtl');
+        return to == null ? null : { row: points[to]!.getAttribute('data-row')!, series: this.#series };
+      },
     });
   }
 
@@ -517,9 +500,44 @@ export class Keys {
     return this.#series == null ? undefined : this.#rows[i]?.find((r) => String(r[this.#split!]) === this.#series);
   }
 
-  /** `row` is the chosen series' at the point, or the point's first. `rows` is every row at the point. */
-  #activate(): void {
+  /** `row` is the chosen series' at the point, or the point's first. `rows` is every row at the point. False where no
+   * point on show is chosen. */
+  #activate(): boolean {
+    const box = this.#box();
+    if (!box || !this.#points(box).some((el) => el.getAttribute('data-row') === this.#at)) return false;
     const i = this.#keys.indexOf(this.#at!), rows = this.#rows[i] ?? [], row = this.#pair(i) ?? rows[0];
     if (row) this.#host.dispatchEvent(new CustomEvent('ua-activate', { bubbles: true, composed: true, detail: { row, rows } }));
+    return true;
   }
+}
+
+/** Choose an element of a holder of them, or none, and say how, as the element's points are chosen. The readout is
+ * the element's own name, and is the view's one readout, shown and placed as a point's is. */
+export function chooseItem(holder: HTMLElement, el: HTMLElement | null, how: How = 'pointer'): void {
+  holder.querySelector('[data-active]')?.removeAttribute('data-active');
+  el?.setAttribute('data-active', how);
+  attr(holder, 'aria-activedescendant', el?.id);
+  const fig = holder.closest<HTMLElement>('.uav')!, tip = readoutOf(fig);
+  if (!el) { hideReadout(tip); return; }
+  tip.textContent = el.getAttribute('aria-label');
+  placeReadout(tip, fig, el);
+}
+
+/** rove() for a holder whose things are its own elements, each named by its readout: a grid's cells, a treemap's
+ * boxes, a custom mark's. `item` selects them, and `step` says where a key goes from the chosen one, or from none.
+ * `detail` is what the chosen one activates with, if it has anything to. Bind it once, to a holder that outlives
+ * every paint; a paint that lets go of the chosen one, or keeps it, says so with chooseItem(). */
+export function roveItems(holder: HTMLElement, item: string, step: (e: KeyboardEvent, on: HTMLElement | null) => HTMLElement | null, detail: (el: HTMLElement) => object | undefined): void {
+  const chosen = () => holder.querySelector<HTMLElement>(item + '[data-active]');
+  rove<HTMLElement>(holder, {
+    hit: (e) => (e.target as Element).closest?.<HTMLElement>(item) ?? null,
+    chosen,
+    choose: (el, how) => chooseItem(holder, el, how),
+    activate: () => {
+      const on = chosen(), d = on && detail(on);
+      if (d) (holder.getRootNode() as ShadowRoot).host.dispatchEvent(new CustomEvent('ua-activate', { bubbles: true, composed: true, detail: d }));
+      return !!on;
+    },
+    step: (e) => step(e, chosen()),
+  });
 }

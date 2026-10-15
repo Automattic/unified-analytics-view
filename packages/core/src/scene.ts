@@ -21,6 +21,11 @@ const str = (r: Row, f: string) => String(r[f]);
  * ponytail: a plot's and a list's series keep the value as it is (orderOf(…, raw)) and compare it with ===, though a key is a string (issue #25). */
 const orderOf = (result: Result, f: string, say: (r: Row, f: string) => string = str) => [...new Set(((result.totalsBy && result.totalsBy[f]) || result.rows).map((r) => say(r, f)))];
 const raw = (r: Row, f: string) => r[f] as string;
+/** The ends of a linear scale that holds zero and whatever is on either side of it. With nothing to hold it is 0 to 1;
+ * with nothing above zero it ends at zero. */
+const holdingZero = (vals: number[]): [number, number] => { const lo = Math.min(0, min(vals) ?? 0); return [lo, Math.max(0, max(vals) ?? 0) || (lo ? 0 : 1)]; };
+/** Where a value lies along a range, least to most, as a ratio held to 0 to 1. A range of one value is measured as one wide. */
+const along = ([least, most]: [number, number], v: number) => Math.min(1, Math.max(0, (v - least) / (most - least || 1)));
 /** The key of each row of a result: its value of `dim`, and for a row that says a value again, the value and which
  * time it is (`Google#2`). So no two rows share a key, a mark or a place, whatever a result repeats: a host that
  * hands over labels where it had ids repeats one. In a plot split by `split` the rows of one value are its series,
@@ -422,8 +427,8 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     // A stack set about the middle is read by how thick each band is, and a scale that counts away from the middle says
     // nothing true of that. So it has no ticks and no grid, and is not rounded: the bands take the height of the plot.
     const centred = layers.some((l, i) => l.stack === 'center' && spans[i]!.size > 0 && Math.max(0, units.indexOf(unitOf(catalog, l, xField)!)) === ui);
-    const share = u === 'share', lo = Math.min(0, min(vals) ?? 0), hi = share ? 1 : Math.max(0, max(vals) ?? 0) || (lo ? 0 : 1);
-    const y = scaleLinear().domain([lo, hi]);
+    const share = u === 'share', [lo, most] = holdingZero(vals);
+    const y = scaleLinear().domain([lo, share ? 1 : most]);
     if (guides.y && !centred) y.nice(4);
     const [bottom, top] = y.domain() as [number, number];
     if (centred) return { v: (n: number) => (n - bottom) / (top - bottom), ticks: [], coarse: [], text: String };
@@ -450,7 +455,8 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     const at = new Map(rows.map((r) => [k(r), r])), lo = (key: string) => num(at.get(key)!, xOn), hi = (key: string) => (at.get(key)![xOn + '@end'] as number | undefined) ?? lo(key);
     const vals = keys.flatMap((key) => [lo(key), hi(key)]).concat(layers.map((l) => l.encode && l.encode.x).filter((x): x is number => typeof x === 'number'))
       .concat(layers.filter(across).flatMap((l) => [l.encode!.x, l.encode!.x2].flatMap((f) => (typeof f === 'number' ? [f] : rows.map((r) => r[f!] as number).filter((n) => n != null)))));
-    const x = scaleLinear().domain(xDim ? [min(vals) ?? 0, max(vals) ?? 1] : [Math.min(0, min(vals) ?? 0), Math.max(0, max(vals) ?? 0) || 1]);
+    // ponytail: a metric on x with nothing above zero still runs to 1, past the zero y would end at (issue #26).
+    const [lo0, hi0] = holdingZero(vals), x = scaleLinear().domain(xDim ? [min(vals) ?? 0, max(vals) ?? 1] : [lo0, hi0 || 1]);
     if (guides.x && !xDim) x.nice(4);
     const [left, right] = x.domain() as [number, number], to = (n: number) => (n - left) / (right - left || 1);
     xv = to;
@@ -705,7 +711,7 @@ function sceneRows(catalog: Catalog, layers: Layer[], result: Result, limit: num
   const whole = new Map(items.flatMap((i) => i.pairs.map((r) => [r, i.row] as const)));
   const spans = new Map(tracked.filter((l) => divides(l) && l.stack).map((l) => { const f = l.encode!.x as string; return [l, stacked(shown, series, split!, (r) => own.get(r)!, f, l.stack, l.stack === 'normalize' ? (r) => (whole.get(r)![f] as number) || Infinity : () => 1)] as const; }));
   const vals = edges.concat(tracked.flatMap((l) => (spans.has(l) ? [...spans.get(l)!.values()].flat() : divides(l) ? shown.flatMap((r) => on(l, r) as number[]) : rows.flatMap((r) => on(l, r) as number[])))), beside = trackBeside(layers);
-  const lo = Math.min(0, min(vals) ?? 0), hi = Math.max(0, max(vals) ?? 0) || (lo ? 0 : 1), v = (n: number) => (n - lo) / (hi - lo);
+  const [lo, hi] = holdingZero(vals), v = (n: number) => (n - lo) / (hi - lo);
   const ids = layerKeys(layers), cols = columnsOf(catalog, layers);
   // A column after the first is ranked by its place, so the last goes first. One column of values needs no header: the view's title says what it is.
   const rank = (l: Layer) => { const j = cols.indexOf(l); return j > 0 && { rank: j }; };
@@ -784,7 +790,7 @@ function sceneGrid(catalog: Catalog, layer: Layer, id: string, result: Result): 
   const cell = (key: string, more: Partial<RectNode>): number => nodes.push({ key, part: 'band', kind: 'rect', x: (nodes.length % side) / side, w: 1 / side, y: Math.floor(nodes.length / side) / side, h: 1 / side, paint: own, layer: 'data', role, ...more });
   if (!isDim(catalog, dim)) {
     if (!M.domain) throw new Error('A "unit" with no dimension reads "' + m + '" against a range, and the catalog gives that metric no "domain". Add "domain": [least, most] to it in the catalog, or encode a dimension on color to divide the grid by it.');
-    const v = result.totals[m], [least, most] = M.domain, lit = v == null || !(v > least) ? 0 : Math.max(1, Math.round(Math.min(1, (v - least) / (most - least || 1)) * UNIT_CELLS));
+    const v = result.totals[m], [least, most] = M.domain, lit = v == null || !(v > least) ? 0 : Math.max(1, Math.round(along(M.domain, v) * UNIT_CELLS));
     for (let i = 0; i < UNIT_CELLS; i++) cell(id + ':' + (i + 1), i < lit ? {} : { opacity: 0.14, tone: 'soft' });
     return { nodes: nodes.concat(unitKey(id, (most - least) / UNIT_CELLS, M)), aspect: 1 };
   }
@@ -914,7 +920,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
         rows.forEach((r, j) => {
           const r1 = 1 - j * pitch, inner = r1 - pitch * RING;
           if (angle == null) return arcs.push(arc(ids[i] + ':' + k(r), l, 0, 1, inner, shade(j), { row: k(r), opacity: 0.14, tone: 'soft' }, r1));
-          if (r[m as string] != null) arcs.push(arc(ids[i] + ':' + k(r), l, 0, Math.min(1, Math.max(0, (num(r, m as string) - least) / (most - least || 1))), inner, shade(j), { row: k(r) }, r1));
+          if (r[m as string] != null) arcs.push(arc(ids[i] + ':' + k(r), l, 0, along([least, most], num(r, m as string)), inner, shade(j), { row: k(r) }, r1));
         });
         // A ring in a colour of its own has an entry in the legend, which says its value: a ring is no share of a whole.
         if (angle != null && enc.color != null && !legend.length) legend.push(...shareLegend(rows, k, one, dim, m as string, M!, null, shade, (r) => formatValue(r[m as string] as number | null, M!)));
@@ -960,7 +966,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
     if (!M.domain) throw new Error(n + ' reads "' + m + '" against a range, and the catalog gives that metric no "domain". Add "domain": [least, most] to it in the catalog, or encode a dimension on color to divide the circle by it.');
     const v = typeof angle === 'number' ? angle : marked ? M.target : result.totals[m], [least, most] = M.domain;
     if (v == null) return;                                                   // no target to mark, or no total to sweep to
-    const at = Math.min(1, Math.max(0, (v - least) / (most - least || 1)));
+    const at = along(M.domain, v);
     // ponytail: a mark is a thin arc, since there is no `tick` mark to draw it with yet (chart-coverage-plan, step 3).
     arcs.push(marked ? arc(ids[i]!, l, Math.max(0, at - MARK / span), Math.min(1, at + MARK / span), r0 as number, l.paint || 'rule') : arc(ids[i]!, l, 0, at, r0 as number, l.paint || 'series.1'));
   });

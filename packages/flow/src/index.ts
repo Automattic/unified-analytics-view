@@ -1,4 +1,4 @@
-import { SERIES, applies, formatDimension, isDim, isMetric, layerKeys, registerMark, registerPreset, roleOf, rowKeys, ruleFor, tooManySeries } from '@unified-analytics/core';
+import { SERIES, applies, declutter, formatDimension, isDim, isMetric, layerKeys, registerMark, registerPreset, roleOf, rowKeys, ruleFor, tooManySeries } from '@unified-analytics/core';
 import type { CustomMark, FitRule, Part, PathNode, PlacedNode, RectNode, Row, SceneNode, TextNode } from '@unified-analytics/core';
 
 /* The `link` mark: a ribbon from a value of one dimension to a value of another, as a custom mark (core's marks.ts).
@@ -31,14 +31,6 @@ export const LINK_RULES: FitRule[] = [
   { id: 'marks',  layout: 'link', container: 'view', needs: { inline: 280, block: 120 },      // ribbons too short, or nodes too thin, to follow
     hide: [], fallback: 'heatmap', keep: 'marks' },
 ];
-
-/** Which of one column's labels stand, where each takes `line` of the column: the larger node's first, and one that
- * would meet a label that stands does not. `at` is where a label's middle is and `rank` its node's place by size. */
-export function standing(labels: { at: number; rank: number }[], line: number): boolean[] {
-  const kept: number[] = [], on = labels.map(() => false);
-  labels.map((l, i) => [l, i] as const).sort((a, b) => a[0].rank - b[0].rank).forEach(([l, i]) => { if (kept.every((k) => Math.abs(k - l.at) >= line)) { kept.push(l.at); on[i] = true; } });
-  return on;
-}
 
 const round = (n: number) => Math.round(n * 100) / 100;
 /** A ribbon in a box 100 by 100: from `y0`, `w0` deep, on the left edge to `y1`, `w1` deep, on the right, all in ratios of the box. */
@@ -114,8 +106,9 @@ export const linkMark: CustomMark = {
     // A label stays inside the box, and gives way to the label of a larger node it would meet.
     const at = (n: TextNode) => Math.min(Math.max((1 - n.t!) * h, LINE / 2), h - LINE / 2);
     for (const side of [0, 1]) {
-      const col = labels.filter((n) => n.x === side), on = standing(col.map((n) => ({ at: at(n), rank: n.rank! })), LINE);
-      nodes.push(...col.filter((_, i) => on[i]).map((n): PlacedNode => ({ key: n.key, kind: 'text', x: side ? W - NODE - LABEL : NODE + LABEL, y: round(at(n)), text: n.text, anchor: n.anchor, baseline: 'middle', font: n.font, paint: n.paint, layer: n.layer })));
+      // One column's labels, each a line tall about its middle: the larger node's first, and one that would meet a label that stands goes.
+      const col = labels.filter((n) => n.x === side), gone = declutter(col.map((n) => ({ x: 0, w: 1, y: at(n) - LINE / 2, h: LINE, rank: n.rank })), 0);
+      nodes.push(...col.filter((_, i) => !gone[i]).map((n): PlacedNode => ({ key: n.key, kind: 'text', x: side ? W - NODE - LABEL : NODE + LABEL, y: round(at(n)), text: n.text, anchor: n.anchor, baseline: 'middle', font: n.font, paint: n.paint, layer: n.layer })));
     }
     return { nodes, height: h, plot: { w: W, h } };
   },

@@ -528,7 +528,7 @@ export function unlist(el: Element): void {
 /** Choose an element of a holder of them, or none, and say how, as the element's points are chosen. The readout is
  * the element's own name, and is the view's one readout, shown and placed as a point's is. */
 export function chooseItem(holder: HTMLElement, el: HTMLElement | null, how: How = 'pointer'): void {
-  holder.querySelector('[data-active]')?.removeAttribute('data-active');
+  holder.querySelectorAll('[data-active]').forEach((on) => on.removeAttribute('data-active'));
   el?.setAttribute('data-active', how);
   attr(holder, 'aria-activedescendant', el?.id);
   const fig = holder.closest<HTMLElement>('.uav')!, tip = readoutOf(fig);
@@ -542,14 +542,16 @@ export function chooseItem(holder: HTMLElement, el: HTMLElement | null, how: How
  * `detail` is what the chosen one activates with, if it has anything to. Bind it once, to a holder that outlives
  * every paint; a paint that lets go of the chosen one, or keeps it, says so with chooseItem(). */
 export function roveItems(holder: HTMLElement, item: string, step: (e: KeyboardEvent, on: HTMLElement | null) => HTMLElement | null, detail: (el: HTMLElement) => object | undefined): void {
-  const chosen = () => holder.querySelector<HTMLElement>(item + '[data-active]');
+  // `item` may be a list of selectors, each of which the chosen one may match.
+  const chosen = () => holder.querySelector<HTMLElement>(':is(' + item + ')[data-active]');
   rove<HTMLElement>(holder, {
     hit: (e) => (e.target as Element).closest?.<HTMLElement>(item) ?? null,
     chosen,
     choose: (el, how) => chooseItem(holder, el, how),
     activate: () => {
       const on = chosen(), d = on && detail(on);
-      if (d) (holder.getRootNode() as ShadowRoot).host.dispatchEvent(new CustomEvent('ua-activate', { bubbles: true, composed: true, detail: d }));
+      // From the view's element where the holder is in its shadow root, and from the holder where it is not.
+      if (d) ((holder.getRootNode() as Partial<ShadowRoot>).host ?? holder).dispatchEvent(new CustomEvent('ua-activate', { bubbles: true, composed: true, detail: d }));
       return !!on;
     },
     step: (e) => step(e, chosen()),

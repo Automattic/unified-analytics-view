@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { hovers, pressed, rove } from '../packages/dom/src/rove.ts';
-import { step } from '../packages/dom/src/keys.ts';
+import { roveItems, step } from '../packages/dom/src/keys.ts';
 
 // The interaction every holder shares, against a holder of three numbered things with no DOM: the event's target
 // is the holder, and `on` the number it is on. Which thing a key moves to is the holder's, here the element's own step().
@@ -73,5 +73,17 @@ describe('rove', () => {
     const v = holder();
     v.send('keydown', { key: 'ArrowRight' }); v.send('focusout');
     expect(v.at()).toBe(null);
+  });
+});
+
+describe('roveItems', () => {
+  it('finds the chosen one by any selector of a list, and activates outside a shadow root as in one', () => {
+    const asked: string[] = [], on = { id: 'b' }, holder = Object.assign(new EventTarget(), { querySelector: (sel: string) => (asked.push(sel), on), getRootNode: () => ({}) }) as unknown as HTMLElement;
+    const heard: unknown[] = [];
+    holder.addEventListener('ua-activate', (e) => heard.push((e as CustomEvent).detail));
+    roveItems(holder, '.a, .b', () => null, (el) => ({ id: el.id }));
+    holder.dispatchEvent(Object.assign(new Event('keydown', { cancelable: true }), { key: 'Enter' }));
+    expect(asked).toEqual([':is(.a, .b)[data-active]']);
+    expect(heard).toEqual([{ id: 'b' }]);
   });
 });

@@ -243,14 +243,16 @@ function placeSize(scene: Scene): Block {
 export function columnRooms(scene: Scene): number[] {
   const values: number[] = [], headers: number[] = [];
   scene.nodes.forEach((n) => {
-    // The header over the labels is no column of values: it starts where they do and takes no room of its own.
-    if (n.kind !== 'text' || !((n.part === 'columns' && n.anchor !== 'start') || (n.part === 'rows' && n.font === 'value'))) return;
+    if (!inColumn(n)) return;
     const i = n.rank || 0, of = n.part === 'columns' ? headers : values;
     of[i] = Math.max(of[i] || 0, n.text.length);
     values[i] ??= 0;
   });
   return values.map((v, i) => columnRoom(v, headers[i]));
 }
+/** Whether a node is text in a column of a row's values: a value, or the header over one. The header over the labels
+ * is no column of values: it starts where they do and takes no room of its own. */
+export const inColumn = (n: SceneNode): n is TextNode => n.kind === 'text' && ((n.part === 'columns' && n.anchor !== 'start') || (n.part === 'rows' && n.font === 'value'));
 export const COLUMNS_BLOCK = 20;   // px the headers take over the rows
 
 // Rows of a fixed height. The track, with the bar in it, lies behind the label and the first column of values, and each

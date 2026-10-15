@@ -4,7 +4,7 @@ export { FIT_RULES, applies, type FitRule, type Room } from './fit.ts';
 export { PRESETS, customPresets, expand, fills, registerPreset } from './presets.ts';
 export { resolve } from './plan.ts';
 export { buildScene, detailOf, isDim, isMetric, layerKeys, metricOf, roleOf, rowKeys, uniqueKeys, unitsOf } from './scene.ts';
-export { COLUMNS_BLOCK, columnRooms, declutter, place, type LabelBox } from './place.ts';
+export { COLUMNS_BLOCK, columnRooms, declutter, inColumn, place, type LabelBox } from './place.ts';
 export { arcD, pathD, type PathBox } from './path.ts';
 export { gridProse, many, most, notShownNote, partialNote, plural, tldrProse } from './prose.ts';
 export { UNITS, formatBin, formatDimension, formatUnit, formatValue, orList, rangeLabel } from './format.ts';

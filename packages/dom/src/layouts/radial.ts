@@ -1,4 +1,4 @@
-import { CONTAINER_RULES, SEATS_LEAST, arcD, declutter, type ArcNode, type CircleNode, type TextNode } from '@unified-analytics/core';
+import { CONTAINER_RULES, SEATS_LEAST, arcD, declutter, ruleFor, type ArcNode, type CircleNode, type TextNode } from '@unified-analytics/core';
 import { LEGEND_FIT, LEGEND_SWAP, hideCutLegends, legendBlock, legendTop, paintLegend } from '../chrome/legend.ts';
 import { attr, ensure, hits, keyed, svg, paintVar, prop, text } from '../dom.ts';
 import { FROM_TOP, IN_BOX, NUMBER_ALONE, holdShape, type LayoutPainter } from '../layout.ts';
@@ -23,7 +23,7 @@ import { thinLabels } from '../measure.ts';
  * gives up 14 px all round to them, a line's height, and those to either side run out of the part into the view's
  * width: the \`rim\` rule holds that wide enough, and gives the circle its margin back when it takes them away. */
 /** The least circle of arcs, in px: the height core's `marks` rule for it needs. */
-const ARCS_LEAST = CONTAINER_RULES.fit.find((r) => r.layout === 'radial' && r.id === 'marks')!.needs.block!;
+const ARCS_LEAST = ruleFor(CONTAINER_RULES.fit, 'radial', 'marks')!.needs.block!;
 const shape = holdShape('var(--uav-radial-most, 160px)', 'var(--uav-aspect, 1)');
 const css = `
 .uav[data-layout="radial"] .uav-body { display: flex; flex-direction: column; }

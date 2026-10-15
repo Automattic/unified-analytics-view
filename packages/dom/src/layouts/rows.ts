@@ -1,4 +1,4 @@
-import { COLUMNS_BLOCK, columnRooms, type RowNode, type Scene, type SceneNode, type TextNode } from '@unified-analytics/core';
+import { COLUMNS_BLOCK, columnRooms, inColumn, ruleFor, type RowNode, type Scene, type SceneNode, type TextNode } from '@unified-analytics/core';
 import { paintLegend } from '../chrome/legend.ts';
 import { attr, ensure, keyed, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
@@ -40,8 +40,7 @@ function roomsHere(body: HTMLElement, scene: Scene): number[] {
   const [tick, value] = probes.map((probe) => probe.getBoundingClientRect().width / 10), room: number[] = [];
   for (const probe of probes) probe.remove();
   if (!tick || !value) return columnRooms(scene);
-  for (const n of scene.nodes) {
-    if (n.kind !== 'text' || !((n.part === 'columns' && n.anchor !== 'start') || (n.part === 'rows' && n.font === 'value'))) continue;
+  for (const n of scene.nodes.filter(inColumn)) {
     const i = n.rank || 0;
     room[i] = Math.max(room[i] || 0, Math.ceil(n.text.length * (n.part === 'columns' ? tick : value)) + 2 * PAD);
   }
@@ -85,7 +84,7 @@ export const rows: LayoutPainter = {
 
   paint(body, scene, rules) {
     const head = ensure(body, 'div', 'uav-columns'), list = ensure(body, 'div', 'uav-rows'), by = new Map<string, SceneNode[]>();
-    const beside = scene.track === 'beside', room = (id: string) => rules.fit.find((r) => r.layout === 'rows' && r.id === id)?.needs.inline;
+    const beside = scene.track === 'beside', room = (id: string) => ruleFor(rules.fit, 'rows', id)?.needs.inline;
     // Core's rooms until the measured pass reads the faces (measure, below).
     const rooms = columnRooms(scene), label = (beside ? room('track') : undefined) ?? room('marks') ?? 0, cells: [HTMLElement | SVGElement, number | undefined][] = [];
     painted.set(body, { scene, label, cells });

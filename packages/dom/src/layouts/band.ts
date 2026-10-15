@@ -25,7 +25,7 @@ ${legendTop('band')}
  * order, so nothing here places one. The part holds its shape, as a circle of arcs does: a square as wide as the view
  * up to 160 px, in the middle of the width, with a hairline between cells. */
 .uav-band[data-unit] { display: grid; grid-template: repeat(10, minmax(0, 1fr)) / repeat(10, minmax(0, 1fr)); gap: 1px; block-size: auto; ${shape.part} margin-inline: auto; }
-.uav-band[data-unit] i { border-radius: 1px; }
+.uav-band[data-unit] i { border-radius: ${token('border-radius-cell')}; }
 ${IN_BOX} {
   .uav[data-layout="band"] .uav-body { container-type: size; overflow: hidden; --uav-legend-block: ${legendBlock(BAR)}; }
   .uav[data-layout="band"]:not([data-keep~="guides"]) .uav-legend { ${LEGEND_SWAP.full} }

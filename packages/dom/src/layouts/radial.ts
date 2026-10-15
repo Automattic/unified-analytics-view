@@ -1,7 +1,7 @@
 import { arcD, declutter, type ArcNode, type CircleNode, type TextNode } from '@unified-analytics/core';
 import { hideCutLegends, paintLegend } from '../chrome/legend.ts';
 import { attr, ensure, keyed, paintVar, prop, text } from '../dom.ts';
-import { NUMBER_ALONE, holdShape, type LayoutPainter } from '../layout.ts';
+import { LEGEND_SWAP, NUMBER_ALONE, holdShape, type LayoutPainter } from '../layout.ts';
 import { FOCUS, HOVER, token } from '../tokens.ts';
 import { paintUnitKey, unitDot } from '../chrome/unit.ts';
 
@@ -66,9 +66,8 @@ const css = `
   .uav[data-layout="radial"] .uav-body { container-type: size; overflow: hidden; --uav-legend-block: calc(70px + var(--uav-rows, 1) * (var(--uav-legend-line) + 4px)); }
   .uav[data-layout="radial"] .uav-radial { ${shape.box} }
   .uav[data-layout="radial"] :is(.uav-legend, .uav-legend-top) { flex: none; }
-  .uav[data-layout="radial"]:not([data-keep~="guides"]) .uav-legend { overflow: hidden; max-block-size: max(0px, (100cqb - var(--uav-legend-block) + 0.01px) * 999999);
-    margin-block-start: clamp(0px, (100cqb - var(--uav-legend-block) + 0.01px) * 999999, 10px); }
-  .uav[data-layout="radial"][data-parts~="legend"]:not([data-keep~="guides"]) .uav-legend-top { display: block; overflow: hidden; max-block-size: max(0px, (var(--uav-legend-block) - 100cqb) * 999999); }
+  .uav[data-layout="radial"]:not([data-keep~="guides"]) .uav-legend { ${LEGEND_SWAP.full} }
+  .uav[data-layout="radial"][data-parts~="legend"]:not([data-keep~="guides"]) .uav-legend-top { ${LEGEND_SWAP.top} }
   /* Seats keep 80 px of height under the full legend, the least place() builds them to, where arcs keep 64. */
   .uav[data-layout="radial"] .uav-body:has(.uav-dots > [data-unit]) { --uav-legend-block: calc(86px + var(--uav-rows, 1) * (var(--uav-legend-line) + 4px)); }
 }`;

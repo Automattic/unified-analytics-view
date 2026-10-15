@@ -2,7 +2,7 @@ import type { RectNode } from '@unified-analytics/core';
 import { hideCutLegends, paintLegend } from '../chrome/legend.ts';
 import { attr, ensure, keyed, prop } from '../dom.ts';
 import { token } from '../tokens.ts';
-import { NUMBER_ALONE, holdShape, type LayoutPainter } from '../layout.ts';
+import { LEGEND_SWAP, NUMBER_ALONE, holdShape, type LayoutPainter } from '../layout.ts';
 import { paintUnitKey } from '../chrome/unit.ts';
 
 /* One band, split by colour, and its legend. Segments are flex items that grow by their share, so the band needs no
@@ -26,9 +26,8 @@ const css = `
 .uav-band[data-unit] i { border-radius: 1px; }
 @container uav-view (block-size >= 0px) {
   .uav[data-layout="band"] .uav-body { container-type: size; overflow: hidden; --uav-legend-block: calc(30px + var(--uav-rows, 1) * (var(--uav-legend-line) + 4px)); }
-  .uav[data-layout="band"]:not([data-keep~="guides"]) .uav-legend { overflow: hidden; max-block-size: max(0px, (100cqb - var(--uav-legend-block) + 0.01px) * 999999);
-    margin-block-start: clamp(0px, (100cqb - var(--uav-legend-block) + 0.01px) * 999999, 10px); }
-  .uav[data-layout="band"]:not([data-keep~="guides"]) .uav-legend-top { display: block; overflow: hidden; max-block-size: max(0px, (var(--uav-legend-block) - 100cqb) * 999999); }
+  .uav[data-layout="band"]:not([data-keep~="guides"]) .uav-legend { ${LEGEND_SWAP.full} }
+  .uav[data-layout="band"]:not([data-keep~="guides"]) .uav-legend-top { ${LEGEND_SWAP.top} }
   /* In a box the grid gives way to the height, down to nothing, and its width follows, as a circle of arcs does. The
    * full legend stays while the grid has 100 px under it, which is the least place() builds it to. */
   .uav[data-layout="band"] .uav-body:has(> .uav-band[data-unit]) { display: flex; flex-direction: column; --uav-legend-block: calc(106px + var(--uav-rows, 1) * (var(--uav-legend-line) + 4px)); }

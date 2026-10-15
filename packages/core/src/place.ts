@@ -13,15 +13,28 @@ import type { CircleNode, Container, Part, PathNode, PlacedCircle, PlacedNode, P
 interface Block { nodes: PlacedNode[]; height: number }
 type Point = PathNode['points'][number];
 
-const SHORT_PLOT = 120;   // px of plot height under which ranked y ticks go
+export const SHORT_PLOT = 120;   // px of plot height under which ranked y ticks go
 const LABEL = 14;         // characters a label at a line's end is given before it is clipped
 const LABEL_LINE = 12;    // px from one such label to the next
 const RADIAL = 160;       // px across a circle of arcs that has room to spare
 const RIM = 14;           // px a circle gives up all round to the labels at its rim: a line of them
 const SEATS = 240;        // px across a half circle of seats that has: a seat of a hundred is then 11 px, and
-const SEATS_LEAST = 160;  // the least it is built to: a seat of 7. Under that the legend gives way before the seats do
+export const SEATS_LEAST = 160;  // the least it is built to: a seat of 7. Under that the legend gives way before the seats do
 const GRID = 160;         // px across a unit's grid of a hundred that has room to spare, and
-const GRID_LEAST = 100;   // the least it is built to: a cell of 9 px, a hairline apart
+export const GRID_LEAST = 100;   // the least it is built to: a cell of 9 px, a hairline apart
+/** A number's widths, in px: under NUMBER_SHORT its value takes its short form, under DELTA_FULL its delta does, and
+ * under NOTE_LEAST the note under it goes. */
+export const NUMBER_SHORT = 160, DELTA_FULL = 200, NOTE_LEAST = 120;
+/** The px a point scale keeps inside each end of the plot. */
+export const POINT_INSET = 2;
+/** The height of a notice in px, where the view has room for it. */
+export const NOTICE_HEIGHT = 120;
+/** A box that holds its shape: of `aspect`, as wide as the view up to `most`, and no taller than `room` leaves once
+ * `under` is set, though never under `least` across. It sits in the middle of the width. */
+export function heldBox(W: number, room: number | null, aspect: number, most: number, least: number, under = 0): { w: number; h: number; left: number } {
+  const w = Math.min(W, most, room == null ? Infinity : Math.max(least, (room - under) * aspect));
+  return { w, h: w / aspect, left: (W - w) / 2 };
+}
 /** The line a unit's key takes under its glyphs, in px. */
 export const UNIT_KEY_BLOCK = 20;
 /** A dot's radius in px: by its size step, or the one size of a dot that has none. */
@@ -64,16 +77,16 @@ function placeNumber(nodes: SceneNode[], W: number, container: Container, small:
   const out: PlacedNode[] = [], pulse = nodes.find((n) => n.kind === 'circle'), lead = pulse ? 20 : 0;
   const face = (font: TextNode['font']) => nodes.find((n): n is TextNode => n.kind === 'text' && n.font === font);
   const value = face('display')!, dl = face('value'), sub = face('tick');
-  const shown = small || W < 160 ? value.short ?? value.text : value.text;
+  const shown = small || W < NUMBER_SHORT ? value.short ?? value.text : value.text;
   const disp = container.display(shown.length, W - lead, small);
   if (pulse) out.push({ key: pulse.key, kind: 'circle', cx: 7, cy: disp.h / 2, r: 5, paint: pulse.paint, pulse: pulse.pulse, layer: pulse.layer });
   out.push({ ...text(value, lead, 0, shown), h: disp.h, cell: disp.cell });
   let yy = disp.h + 18;
   if (dl) {
-    out.push(text(dl, 0, yy, fit(!small && W >= 200 ? dl.text : dl.short ?? dl.text, W)));
+    out.push(text(dl, 0, yy, fit(!small && W >= DELTA_FULL ? dl.text : dl.short ?? dl.text, W)));
     yy += 18;
   }
-  if (sub && note && W >= 120 && !(small && sub.rank)) {
+  if (sub && note && W >= NOTE_LEAST && !(small && sub.rank)) {
     out.push(text(sub, 0, yy, clip(sub.text, Math.floor(W / TICK_W))));
     yy += 16;
   }
@@ -88,7 +101,7 @@ function placePlot(scene: Scene, W: number, H: number, narrow: boolean): PlacedN
   const lw = labels.length ? Math.min(LABEL, Math.max(...labels.map((n) => n.text.length))) * CHAR_W + 6 : 0;
   // The second y axis has a gutter as the first does, between the plot and those labels.
   const g2 = scene.parts.includes('y-axis-2') ? 30 : 0;
-  const ml = gy ? 36 : 1, mr = (gy ? 6 : 1) + g2 + lw, mt = gy ? 10 : 3, mb = gx ? 22 : 3, inset = scene.scale === 'point' ? 2 : 0;
+  const ml = gy ? 36 : 1, mr = (gy ? 6 : 1) + g2 + lw, mt = gy ? 10 : 3, mb = gx ? 22 : 3, inset = scene.scale === 'point' ? POINT_INSET : 0;
   const y = scaleLinear().domain([0, 1]).range([H - mb, mt]);
   // On a linear x every node has its own ratio of the plot's width. Otherwise a node is placed by its row, on the scale the scene used.
   // A ratio of the plot's width is taken inside the inset, which is where the scale the scene used runs.
@@ -303,7 +316,7 @@ function placeShares(scene: Scene, W: number, top: number): Block {
 // GRID_LEAST. It sits in the middle of the width, and its cells are a hairline apart. `plot` is that square.
 function placeGrid(scene: Scene, W: number, room: number | null): Block & { plot: { w: number; h: number } } {
   const key = placeUnitKey(scene), under = key.height + placeShares(scene, W, 0).height;
-  const S = Math.min(W, GRID, room == null ? Infinity : Math.max(GRID_LEAST, room - under)), left = (W - S) / 2;
+  const { w: S, left } = heldBox(W, room, 1, GRID, GRID_LEAST, under);
   const cells = scene.nodes.filter((n): n is RectNode => n.part === 'band' && n.kind === 'rect').map(({ y, h, ...n }) => rect(n, left + n.x! * S, y! * S, Math.max(1, n.w! * S - 1), Math.max(1, h! * S - 1), 1));
   const above = stack({ nodes: cells, height: S }, key), legend = placeShares(scene, W, above.height);
   return { nodes: above.nodes.concat(legend.nodes), height: legend.height, plot: { w: S, h: S } };
@@ -334,7 +347,7 @@ function placeRadial(scene: Scene, W: number, room: number | null, container: Co
   const rules = container.rules.fit, aspect = scene.aspect || 1, least = ruleFor(rules, 'radial', 'marks')?.needs.block ?? 0;
   // Seats want more room than arcs do: a hundred of them are small. Their key is a line between them and the legend.
   const key = placeUnitKey(scene), under = key.height + placeShares(scene, W, 0).height, seats = scene.nodes.some((n) => n.part === 'radial' && n.kind === 'circle');
-  const D = Math.min(W, seats ? SEATS : RADIAL, room == null ? Infinity : Math.max(seats ? SEATS_LEAST : least, (room - under) * aspect)), h = D / aspect, plot = { w: D, h };
+  const { w: D, h, left } = heldBox(W, room, aspect, seats ? SEATS : RADIAL, seats ? SEATS_LEAST : least, under), plot = { w: D, h };
   const nodes: PlacedNode[] = [], R = D / 2 - (scene.parts.includes('rim') ? RIM : 0);
   let r0 = 1;
   const tags = (scene.parts.includes('rim') ? scene.nodes.filter((n): n is TextNode => n.part === 'rim' && n.kind === 'text') : []).map((n) => {
@@ -360,7 +373,7 @@ function placeRadial(scene: Scene, W: number, room: number | null, container: Co
       nodes.push({ ...text(n, W / 2, D / 2 - (aspect === 1 ? face.h / 2 : face.h)), h: face.h, cell: face.cell });
     } else if (n.part === 'radial' && n.kind === 'circle') {
       // A seat, across and up the part's own box.
-      nodes.push(circle(n, (W - D) / 2 + n.x! * D, (1 - n.t!) * h, glyphRadius(n.w! * D, n.h! * h)));
+      nodes.push(circle(n, left + n.x! * D, (1 - n.t!) * h, glyphRadius(n.w! * D, n.h! * h)));
     }
   });
   const above = stack({ nodes, height: h }, key), legend = placeShares(scene, W, above.height);
@@ -389,7 +402,7 @@ export function place(scene: Scene, container: Container): PlacedScene {
     let body: Block;
     if (scene.layout === 'notice') {
       // The least a notice is built to is its rule's block need. With no rule it has no least.
-      const least = ruleFor(rules.fit, 'notice', 'notice')?.needs.block ?? 0, h = H ? Math.max(least, Math.min(120, H - above)) : 120;
+      const least = ruleFor(rules.fit, 'notice', 'notice')?.needs.block ?? 0, h = H ? Math.max(least, Math.min(NOTICE_HEIGHT, H - above)) : NOTICE_HEIGHT;
       body = { height: h, nodes: scene.nodes.filter((n): n is TextNode => n.part === 'notice' && n.kind === 'text').map((n) => text(n, W / 2, h / 2, fit(n.text, W))) };
     } else if (scene.layout === 'cartesian') {
       const guided = scene.parts.includes('x-axis') || scene.parts.includes('y-axis');

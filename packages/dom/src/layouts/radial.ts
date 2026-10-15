@@ -1,7 +1,7 @@
 import { arcD, declutter, type ArcNode, type CircleNode, type TextNode } from '@unified-analytics/core';
 import { hideCutLegends, paintLegend } from '../chrome/legend.ts';
 import { attr, ensure, keyed, paintVar, prop, text } from '../dom.ts';
-import type { LayoutPainter } from '../layout.ts';
+import { NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
 import { FOCUS, HOVER, token } from '../tokens.ts';
 import { paintUnitKey, unitDot } from '../chrome/unit.ts';
 
@@ -109,7 +109,7 @@ export const radial: LayoutPainter = {
     // The circle takes back the margin it gave the labels.
     rim: { '.uav-radial': '--uav-rim: 0px;' },
     // The number alone. The body goes whole, and so does its grid row.
-    marks: { '': 'grid-template: "number" auto / minmax(0, 1fr);', '.uav-body': 'display: none;', '.uav-number': 'align-self: start; margin: 0;' },
+    marks: NUMBER_ALONE,
   },
 
   paint(body, scene) {

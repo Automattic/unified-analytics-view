@@ -2,7 +2,7 @@ import { formatBin, formatDimension, formatValue, type CircleNode, type RectNode
 import { attr, ensure, keyed, nodePaint, prop } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { hideReadout, hovers, placeReadout, pressed, readout, readoutOf } from '../keys.ts';
-import type { LayoutPainter } from '../layout.ts';
+import { NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
 import { paintAxes, thinAxis } from '../chrome/axes.ts';
 import { paintRamp } from '../chrome/ramp.ts';
 import { paintSize } from '../chrome/size.ts';
@@ -103,13 +103,11 @@ function bind(cells: HTMLElement): void {
   });
 }
 
-// The number alone. The body goes whole, so kept axes do not stand with no grid between them.
-const alone = { '': 'grid-template: "number" auto / minmax(0, 1fr);', '.uav-body': 'display: none;', '.uav-number': 'align-self: start; margin: 0;' };
-
 export const matrix: LayoutPainter = {
   layout: 'matrix',
   css,
-  fit: { marks: alone },
+  // The number alone. The body goes whole, so kept axes do not stand with no grid between them.
+  fit: { marks: NUMBER_ALONE },
 
   // Labels that would meet, by their real sizes, along each axis (chrome/axes.ts). A grid's are not anchored to stay inside
   // it, so one that would run past the far edge goes first, and down the side they may stand line on line.

@@ -3,6 +3,7 @@ import { ensure, ensureSvg, keyed, prop, text } from '../dom.ts';
 import { paintAxes, thinAxis } from '../chrome/axes.ts';
 import { paintLegend } from '../chrome/legend.ts';
 import { paintSize } from '../chrome/size.ts';
+import { RULE } from '../chrome/rule.ts';
 import { token } from '../tokens.ts';
 import { hitNodes } from '../keys.ts';
 import { NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
@@ -51,8 +52,7 @@ const css = `
 .uav[data-layout="cartesian"] .uav-body, .uav-plot { direction: ltr; }
 :is(.uav-labels, .uav-refs, .uav-point-labels) > span { unicode-bidi: plaintext; }
 .uav-grid, .uav-bars, .uav-refs { position: absolute; inset: 0; }
-.uav-line { position: absolute; inset-inline: 0; inset-block-start: calc((1 - var(--uav-t)) * 100%); block-size: var(--uav-stroke, ${token('stroke-width-rule')}); background: var(--uav-paint); }
-.uav-line[data-dash] { background: repeating-linear-gradient(90deg, var(--uav-paint) 0 var(--uav-dash), transparent 0 calc(var(--uav-dash) + var(--uav-gap))); }
+.uav-line { position: absolute; inset-inline: 0; inset-block-start: calc((1 - var(--uav-t)) * 100%); block-size: ${RULE}; background: var(--uav-paint); }
 /* A bar runs from where it starts to its value, whichever is the higher: a stack's segment starts on the one under
  * it, and a value below zero hangs from the zero line. With no start it rises from the bottom. */
 .uav-bars i { position: absolute; inset-inline-start: calc(var(--uav-x) * 100%); inline-size: calc(var(--uav-w) * 100% - var(--uav-gap-x, 0px));

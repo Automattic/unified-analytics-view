@@ -5,6 +5,7 @@ import { arcD, pathD } from './path.ts';
 import { customMarks } from './marks.ts';
 import { NOW, crossesZero, emptyNote, endsOf, leader, portion } from './prose.ts';
 import { UNIT_CELLS, UNIT_MOST, UNIT_SEATS, unitCount, unitSeats, unitShares, unitWorth } from './unit.ts';
+import { baseOf } from './types.ts';
 import type { ArcNode, Catalog, DimensionDef, Guides, Layer, Mark, MetricDef, Part, PathNode, PlanShape, Polarity, Query, RectNode, Result, Role, Row, Scene, SceneNode, TextNode } from './types.ts';
 
 /* Node kinds: rect, path, line, circle, text. Every node has a stable key,
@@ -58,7 +59,10 @@ export function layerKeys(layers: Layer[]): string[] {
   });
   return keys;
 }
+/** A dimension of the catalog's. */
 export function isDim(catalog: Catalog, f: unknown): f is string { return typeof f === 'string' && f in catalog.dimensions; }
+/** A metric, or a companion the engine returns with one, such as "pageviews@density". */
+export const isMetric = (catalog: Catalog, f: unknown): f is string => typeof f === 'string' && baseOf(f) in catalog.metrics;
 
 /** How a plot shares x among its rows. The scene uses it on 0 to 1 and place() in pixels, so both divide the room the same way. */
 export function xScale(rows: string[], scale: 'band' | 'point', lo: number, hi: number) {
@@ -110,7 +114,7 @@ const markOf = (id: string, k: string, series?: string) => ({ key: id + ':' + k 
 /** A field's definition: its own, where the catalog has one under its whole name, and for a companion with none the
  * one of the metric it came with. So a companion is in its metric's unit unless the catalog says otherwise
  * (`"pageviews@rank": { "unit": "rank" }`), and core reads no suffix to know it. */
-export const metricOf = (catalog: Catalog, f: unknown): MetricDef | undefined => (typeof f !== 'string' ? undefined : Object.hasOwn(catalog.metrics, f) ? catalog.metrics[f] : catalog.metrics[f.split('@')[0]!]);
+export const metricOf = (catalog: Catalog, f: unknown): MetricDef | undefined => (typeof f !== 'string' ? undefined : Object.hasOwn(catalog.metrics, f) ? catalog.metrics[f] : catalog.metrics[baseOf(f)]);
 /** The paint of a mark that runs from one value to another: good or bad by which way it goes, turned by its metric's
  * polarity. One whose metric has no better way keeps its own paint. Positions are compared as they are drawn. */
 const toned = (polarity: Polarity | undefined, from: number, to: number, paint: string) => (!polarity || polarity === 'none' ? paint : (to < from) === (polarity === 'down') ? 'delta.good' : 'delta.bad');
@@ -684,7 +688,7 @@ function sceneRows(catalog: Catalog, layers: Layer[], result: Result, limit: num
   // where the catalog's `bands` divide it. The track's scale holds it whole.
   const ranged = (l: Layer) => l.mark === 'bar' && l.encode!.x == null && l.encode!.x2 == null, fieldOn = (l: Layer) => [l.encode!.x, l.encode!.x2].find((f) => typeof f === 'string') as string | undefined;
   const tracked = layers.filter((l) => TRACK_MARKS[l.mark] && !ranged(l)), units = [...new Set(tracked.map((l) => metricOf(catalog, fieldOn(l))?.unit))];
-  const behind = layers.findIndex(ranged), of = (tracked.map(fieldOn).find(Boolean) || '').split('@')[0]!, range = behind < 0 ? undefined : catalog.metrics[of];
+  const behind = layers.findIndex(ranged), of = baseOf(tracked.map(fieldOn).find(Boolean) || ''), range = behind < 0 ? undefined : catalog.metrics[of];
   if (behind >= 0 && !range) throw new Error('Layer ' + (behind + 1) + ' is a bar with nothing on x, which is the range a row\'s marks are read against, and no other mark in these rows puts a metric on x for it to be the range of. Add one, for example { "mark": "bar", "encode": { "y": "' + dim + '", "x": a metric } }, or encode a metric on this bar\'s x.');
   // Where each part of the range starts and ends: the domain's two ends, and each band between them. A metric the
   // catalog gives no domain has no range to draw, as one with no target has no tick at it: no mark, and no error.
@@ -1097,7 +1101,7 @@ function sceneNumber(catalog: Catalog, q: Query, result: Result, share: boolean)
 function checkValues(result: Result, catalog: Catalog): void {
   const check = (has: Row, where: string) => {
     for (const f in has) {
-      const v = has[f], of = f.split('@')[0]!;
+      const v = has[f], of = baseOf(f);
       if (v === null || Number.isFinite(v)) continue;
       // A number dimension is a bin on a linear x, and `@end` its other edge: the scale is made of both.
       if ((f === of || f === of + '@end') && Object.hasOwn(catalog.dimensions, of) && catalog.dimensions[of]!.type === 'number') throw new Error('The result has "' + f + '": ' + (typeof v === 'string' ? JSON.stringify(v) : String(v)) + ' in ' + where + ', and a number dimension\'s value is a finite number or null. Send the bin\'s start and end as numbers from the query layer, or give the dimension "type": "categorical" in the catalog where its values are names.');

@@ -46,6 +46,8 @@ export interface Catalog {
   metrics: Record<string, MetricDef>;
   dimensions: Record<string, DimensionDef>;
 }
+/** The field a companion came with: `pageviews` of `pageviews@rank`, and a field with no suffix itself. */
+export const baseOf = (f: string): string => f.split('@')[0]!;
 
 /* Query and result. */
 export interface Query {

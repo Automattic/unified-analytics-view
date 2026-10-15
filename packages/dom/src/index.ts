@@ -1,7 +1,7 @@
 export { compileFitRules, type FitExtras } from './compile.ts';
 export { nodePaint, paintVar } from './dom.ts';
 export { FOCUS, HOVER, TOKENS, token } from './tokens.ts';
-export { FROM_TOP, IN_BOX, holdShape, type LayoutPainter } from './layout.ts';
+export { AXES_HEIGHT, FROM_TOP, IN_BOX, holdShape, type LayoutPainter } from './layout.ts';
 export { SURFACE_CSS, UaView, defineUaView, surfaceSheet, type Inputs } from './view.ts';
 export { attr, ensure, ensureSvg, hits, keyed, prop, svg, text } from './dom.ts';
 export { registerPainter } from './layouts/index.ts';

@@ -32,7 +32,8 @@ export function declared(): Map<string, string> {
       }
     }
   };
-  for (const sheet of document.styleSheets) walk(sheet.cssRules);
+  // A sheet from another origin, a font's or an extension's, cannot be read, and declares none of these.
+  for (const sheet of document.styleSheets) { let rules: CSSRuleList; try { rules = sheet.cssRules; } catch { continue; } walk(rules); }
   return out;
 }
 

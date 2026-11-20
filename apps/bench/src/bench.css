@@ -26,6 +26,9 @@ h2 small { font-weight: 400; }
 .meta { inline-size: 0; min-inline-size: 100%; margin: var(--ua-space-xs) 0 0; font-size: var(--ua-font-size-xs); color: var(--ua-color-muted-foreground); overflow-wrap: anywhere; }
 .meta.error { color: var(--ua-color-destructive-text); }
 
+/* A page embedded in another (a theme's half on the marks and parts pages) shows neither nav nor controls, and never scrolls itself. */
+.embed nav, .embed #controls { display: none; }
+html:has(.embed) { overflow: hidden; }
 nav { display: flex; gap: var(--ua-space-s); margin-block-end: var(--ua-space-xs); }
 nav a { color: var(--ua-color-muted-foreground); text-decoration: none; }
 nav a[aria-current] { color: var(--ua-color-foreground); font-weight: 600; }

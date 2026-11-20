@@ -8,3 +8,6 @@ prototype/bench.js
 
 # agent worktrees
 .claude/worktrees/
+
+# the bench's captures (pnpm capture), taken locally
+apps/bench/captures/

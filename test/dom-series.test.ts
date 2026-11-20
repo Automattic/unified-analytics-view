@@ -190,7 +190,7 @@ describe('the readout of a split plot', () => {
     expect(readout(rows[0]![1]!, q, catalog, [])).toMatch(/^Sep 8, India: Visitors \d+$/);
   });
   it('draws the chosen line of a mass whole', () => {
-    expect(KEYS_CSS).toContain('.uav-body[data-mass] .uav-plot path[data-chosen] { opacity: 1 !important; }');
+    expect(KEYS_CSS).toContain('.uav-body[data-mass] .uav-plot path[data-emphasis="highlighted"] { opacity: 1 !important; }');
   });
   it('says one pair as any row is said', () => {
     const { rows, q } = at('grouped');

@@ -38,7 +38,7 @@ describe('chrome', () => {
     expect(AXES_CSS).toContain(`${LABEL} color: var(--ua-charts-color-label-axis`);
     expect(cut('14ch')).toBe('max-inline-size: 14ch; overflow: hidden; text-overflow: ellipsis;');
     expect(linkPainter.css).toContain(`${LABEL} ${cut('45%')}`);
-    expect(LABEL_CSS).toContain('.uav-labels span[data-chosen] { text-decoration: underline; }');
+    expect(LABEL_CSS).toContain('.uav-labels span[data-emphasis="highlighted"] { text-decoration: underline; }');
     for (const css of [...Object.values(LAYOUTS).map((p) => p.css), linkPainter.css, partitionPainter.css, AXES_CSS, KEYS_CSS]) expect(css).not.toMatch(/\[data-(thin|halo)\] \{|-webkit-text-stroke/);
   });
   it('styles both forms of the legend in its own sheet, and a layout says only where it stands and what it does in a box', () => {

@@ -5,7 +5,7 @@ import { apart } from './measure.ts';
 import { FOCUS, HOVER, token } from './tokens.ts';
 import { SWATCH, swatch as swatchOf } from './chrome/swatch.ts';
 import { nearest } from './layouts/points.ts';
-import { rove, type How } from './rove.ts';
+import { IS, emphasise, hold, rove, type Emphasis, type How } from './rove.ts';
 import { FROM_TOP } from './layout.ts';
 
 /* Hit targets, the keyboard and the readout. A layout marks the element that holds its points with `data-hits`
@@ -206,8 +206,8 @@ export function hitNodes(scene: Scene): (RectNode & { c: number })[] {
 /* Nothing here changes a size the measured pass reads: the readout is out of flow, and a chosen point gains only
  * an outline, an underline, a tint or a rule.
  *
- * A chosen mark says how it was chosen: `data-active` is "keys" or "pointer". The holder with focus and the mark an
- * arrow key chose in it wear one outline (FOCUS in tokens.ts): inside a holder and a row, which are clipped at their
+ * A chosen mark says how it was chosen, in the states every atom has (rove.ts): Focus where the keys chose it, and
+ * Hover where the pointer did. The holder with focus and the mark an arrow key chose in it wear one outline (FOCUS in tokens.ts): inside a holder and a row, which are clipped at their
  * edge, about a mark that stands free, and as the edge of a shape in an SVG. What the pointer is over wears the
  * quieter one (HOVER): a hairline in those places, and a tint behind a row. A plot of lines has no mark at a point to
  * wear either, so a rule stands there, in the width and colour of whichever it is; where a bar or a dot is there to
@@ -217,12 +217,12 @@ export const KEYS_CSS = `
 /* A row's bar and its text are positioned, and so are the rows of a list, so they are painted over an outline drawn
  * inside the row or the list that holds them. There the outline is a box of its own, over them all. */
 .uav-rows:focus-visible { outline: none; }
-.uav-rows:focus-visible::after, .uav-row[data-active="keys"]::after { content: ""; position: absolute; inset: 0; pointer-events: none; ${FOCUS.inside} }
-:is(.uav-bars, .uav-dots, .uav-points, .uav-band, .uav-cells) [data-active="keys"] { ${FOCUS.around} }
-svg[data-hits] path[data-active="keys"] { ${FOCUS.stroke} }
-.uav-row[data-active="pointer"] { ${HOVER.row} }
-:is(.uav-bars, .uav-dots, .uav-points, .uav-band, .uav-cells) [data-active="pointer"] { ${HOVER.around} }
-svg[data-hits] path[data-active="pointer"] { ${HOVER.stroke} }
+.uav-rows:focus-visible::after, .uav-row${IS.focus}::after { content: ""; position: absolute; inset: 0; pointer-events: none; ${FOCUS.inside} }
+:is(.uav-bars, .uav-dots, .uav-points, .uav-band, .uav-cells) ${IS.focus} { ${FOCUS.around} }
+svg[data-hits] path${IS.focus} { ${FOCUS.stroke} }
+.uav-row${IS.hover} { ${HOVER.row} }
+:is(.uav-bars, .uav-dots, .uav-points, .uav-band, .uav-cells) ${IS.hover} { ${HOVER.around} }
+svg[data-hits] path${IS.hover} { ${HOVER.stroke} }
 /* The readout is a tooltip chip at a point (chrome/tip.ts), as wide as its words up to a width of its own. */
 .uav-readout { z-index: 1; left: 0; top: 0; inline-size: max-content; max-inline-size: min(320px, 100%); }
 /* At a point of a split plot it is a head and a line to each series: a swatch of its paint, its name, and its value at the end. */
@@ -258,17 +258,17 @@ svg[data-hits] path[data-active="pointer"] { ${HOVER.stroke} }
  * goes at once: motion.ts keeps a leaving node only while --uav-leaving is set. */
 .uav[data-moving] .uav-hits [data-key] { transition: none; }
 .uav[data-moving] .uav-plot .uav-hits [data-exit] { --uav-leaving: initial; transition: none; }
-.uav-hits [data-active]::before { content: ""; position: absolute; inset-block: 0; inset-inline-start: calc(var(--uav-c) * 100% - var(--uav-rule) / 2); inline-size: var(--uav-rule); background: var(--uav-rule-paint); }
-.uav-plot:has(:is(.uav-bars, .uav-dots) > [data-active]) .uav-hits [data-active]::before { display: none; }
-/* A series chosen at a point: the rest of the plot stands back, and its name is marked wherever it is written. */
-.uav-plot:has([data-chosen]) :is(.uav-bars i, path):not([data-chosen]) { opacity: ${token('opacity-dim')} !important; }
+.uav-hits ${IS.held}::before { content: ""; position: absolute; inset-block: 0; inset-inline-start: calc(var(--uav-c) * 100% - var(--uav-rule) / 2); inline-size: var(--uav-rule); background: var(--uav-rule-paint); }
+.uav-plot:has(:is(.uav-bars, .uav-dots) > ${IS.held}) .uav-hits ${IS.held}::before { display: none; }
+/* A series chosen at a point is Highlighted wherever it is drawn, and the rest of the plot is Dimmed, each set by #show. */
+.uav-plot :is(.uav-bars i, path)${IS.dimmed} { opacity: ${token('opacity-dim')} !important; }
 /* In a plot split by detail every line is drawn light, so that many together read darker. The one chosen is drawn whole. */
-.uav-body[data-mass] .uav-plot path[data-chosen] { opacity: 1 !important; }
+.uav-body[data-mass] .uav-plot path${IS.highlighted} { opacity: 1 !important; }
 /* A series chosen in a row of a list: the rest of that row's stand back, and a dot of many is drawn whole. */
-.uav-row:has(> [data-chosen]) > i[data-series]:not([data-chosen]) { opacity: ${token('opacity-dim')} !important; }
-.uav-row > i[data-chosen] { opacity: 1 !important; }
-/* A chosen entry of a legend, and a chosen series' name in either legend, are underlined. A line end's name is a plot label, which draws its own (chrome/label.ts). */
-.uav-legend span[data-active], :is(.uav-legend, .uav-legend-top) span[data-chosen] { text-decoration: underline; }`;
+.uav-row > i[data-series]${IS.dimmed} { opacity: ${token('opacity-dim')} !important; }
+.uav-row > i${IS.highlighted} { opacity: 1 !important; }
+/* A legend's entry of the chosen row or series is Highlighted, and underlined. A line end's name is a plot label, which draws its own (chrome/label.ts). */
+:is(.uav-legend, .uav-legend-top) span${IS.highlighted} { text-decoration: underline; }`;
 
 /** A view's readout: one element, the figure's own, which every layout that says what is under the pointer sets.
  * In the top layer where there is one, so nothing that holds the view can clip it: a card, a scrolling panel. */
@@ -432,12 +432,16 @@ export class Keys {
     this.#at = key; this.#series = series = key == null ? null : series; this.#how = how;
     const box = this.#box(), tip = this.#tip;
     let point: Element | null = null;
+    const lit: Element[] = [];
     this.#body.querySelectorAll('[data-row], [data-series]').forEach((el) => {
       const row = el.getAttribute('data-row'), of = el.getAttribute('data-series'), on = key != null && row === key;
-      if (row != null) attr(el, 'data-active', on ? how : null);
-      if (of != null) el.toggleAttribute('data-chosen', of === series && (row == null || on));
+      // What echoes a row elsewhere, its rug tick and its legend entry, is Highlighted with it, and is not itself held.
+      const echo = !!el.closest?.('.uav-ranges, .uav-legend, .uav-legend-top');
+      if (row != null) hold(el, on && !echo ? how : null);
+      if ((on && echo) || (of != null && of === series && (row == null || on))) lit.push(el);
       if (on && el.parentElement === box) point ??= el;                       // the first of a group of glyphs is its point
     });
+    this.#relay(lit, series != null, box);
     if (box) attr(box, 'aria-activedescendant', (point as Element | null)?.id);
     const marks = point ? this.#crossAt(key!, series) : [];
     if (!point || marks.length) hideReadout(tip);
@@ -459,7 +463,22 @@ export class Keys {
       return [swatch, el('span', l.name), el('span', l.value)];
     })]);
     // Over the arc of a second ring where one is chosen, and else over the row's point.
-    placeReadout(tip, this.#fig, (series != null && this.#body.querySelector<HTMLElement>('.uav-under [data-chosen]')) || (point as HTMLElement));
+    placeReadout(tip, this.#fig, (series != null && this.#body.querySelector<HTMLElement>('.uav-under ' + IS.highlighted)) || (point as HTMLElement));
+  }
+
+  /** Relay emphasis: what is drawn from the chosen series, or echoes the chosen row, is Highlighted. A chosen series
+   * sets back the rest of a plot and the rest of its row in a list. A holder of points with `data-dims`, a Sankey's
+   * ribbons, sets back every point but the held one. Nothing is inferred from another atom by a stylesheet. */
+  #relay(lit: Element[], chosenSeries: boolean, box: HTMLElement | null): void {
+    const to = new Map<Element, Emphasis>(lit.map((el) => [el, 'highlighted']));
+    if (chosenSeries) for (const el of lit) {
+      const plot = el.closest?.('.uav-plot'), row = el.parentElement?.matches?.('.uav-row') ? el.parentElement : null;
+      plot?.querySelectorAll('.uav-bars i, path').forEach((m) => { if (!to.has(m)) to.set(m, 'dimmed'); });
+      row?.querySelectorAll(':scope > i[data-series]').forEach((m) => { if (!to.has(m)) to.set(m, 'dimmed'); });
+    }
+    if (box?.hasAttribute('data-dims') && box.querySelector(IS.held)) for (const el of Array.from(box.children)) if (!to.has(el) && !el.matches(IS.held)) to.set(el, 'dimmed');
+    this.#body.querySelectorAll('[data-emphasis]').forEach((el) => { if (!to.has(el)) emphasise(el, null); });
+    to.forEach((e, el) => emphasise(el, e));
   }
 
   /** What the crosshair says at a row, or nothing where the readout says it instead: where an axis is not on show
@@ -469,7 +488,7 @@ export class Keys {
     const marks = this.#cross.get(key) ?? [], body = this.#body;
     if (!marks.length) return [];
     const shown = (sel: string) => (body.querySelector(sel)?.getClientRects().length ?? 0) > 0;
-    if (!shown('.uav-x-axis') || !shown('.uav-y-axis') || body.querySelector(':is(.uav-bars, .uav-dots) > [data-active]')) return [];
+    if (!shown('.uav-x-axis') || !shown('.uav-y-axis') || body.querySelector(':is(.uav-bars, .uav-dots) > ' + IS.held)) return [];
     return this.#order.length ? marks.filter((m) => series != null && m.series === series) : marks;
   }
 
@@ -478,10 +497,10 @@ export class Keys {
    * line clear of the next (measure.ts), with the one there is no room for left out.
    * ponytail: placed in the page's px over the plot's own, so under a transform the words are off by its scale. */
   #drawCross(point: Element | null, marks: CrossMark[], how: 'keys' | 'pointer'): void {
-    if (!point || !marks.length) { if (this.#crossEl?.isConnected) this.#crossEl.replaceChildren(); this.#crossEl = null; return; }
+    if (!point || !marks.length) { if (this.#crossEl?.isConnected) { this.#crossEl.replaceChildren(); hold(this.#crossEl, null); } this.#crossEl = null; return; }
     const plot = point.closest<HTMLElement>('.uav-plot')!, cross = this.#crossEl = ensure(plot, 'div', 'uav-cross');
     const add = <K extends 'i' | 'span'>(tag: K, cls: string) => { const el = cross.appendChild(document.createElement(tag)); if (cls) el.className = cls; return el; };
-    attr(cross, 'data-active', how); cross.setAttribute('aria-hidden', 'true'); cross.replaceChildren();
+    hold(cross, how); cross.setAttribute('aria-hidden', 'true'); cross.replaceChildren();
     for (const m of marks) prop(add('i', ''), '--uav-t', m.t);
     const p = plot.getBoundingClientRect(), b = this.#body.getBoundingClientRect(), r = point.getBoundingClientRect();
     // How far the body runs to either side of the plot: the gutters the axes are in.
@@ -522,8 +541,8 @@ export class Keys {
 /** Choose an element of a holder of them, or none, and say how, as the element's points are chosen. The readout is
  * the element's own name, and is the view's one readout, shown and placed as a point's is. */
 export function chooseItem(holder: HTMLElement, el: HTMLElement | null, how: How = 'pointer'): void {
-  holder.querySelectorAll('[data-active]').forEach((on) => on.removeAttribute('data-active'));
-  el?.setAttribute('data-active', how);
+  holder.querySelectorAll(IS.held).forEach((on) => { if (on !== el) hold(on, null); });
+  if (el) hold(el, how);
   attr(holder, 'aria-activedescendant', el?.id);
   const fig = holder.closest<HTMLElement>('.uav')!, tip = readoutOf(fig);
   if (!el) { hideReadout(tip); return; }
@@ -537,7 +556,7 @@ export function chooseItem(holder: HTMLElement, el: HTMLElement | null, how: How
  * every paint; a paint that lets go of the chosen one, or keeps it, says so with chooseItem(). */
 export function roveItems(holder: HTMLElement, item: string, step: (e: KeyboardEvent, on: HTMLElement | null) => HTMLElement | null, detail: (el: HTMLElement) => object | undefined): void {
   // `item` may be a list of selectors, each of which the chosen one may match.
-  const chosen = () => holder.querySelector<HTMLElement>(':is(' + item + ')[data-active]');
+  const chosen = () => holder.querySelector<HTMLElement>(':is(' + item + ')' + IS.held);
   rove<HTMLElement>(holder, {
     hit: (e) => (e.target as Element).closest?.<HTMLElement>(item) ?? null,
     chosen,

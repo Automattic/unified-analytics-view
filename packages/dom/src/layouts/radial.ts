@@ -6,6 +6,7 @@ import { FOCUS, HOVER, token } from '../tokens.ts';
 import { paintUnitKey, unitDot } from '../chrome/unit.ts';
 import { LABEL } from '../chrome/label.ts';
 import { thinLabels } from '../measure.ts';
+import { IS } from '../rove.ts';
 
 /* Arcs about one centre, and under them the legend a band has. The part holds its shape: it is as wide as the view up
  * to 160 px and its height follows from the scene's aspect, 1 for a circle and 2 for the top half of one. Its SVG has
@@ -39,9 +40,9 @@ const css = `
 .uav-radial svg path { pointer-events: auto; }
 .uav-radial svg.uav-under { position: absolute; inset: var(--uav-rim, 0px); inline-size: auto; block-size: auto; }
 /* An arc of a second ring that is chosen wears the outline, and its segment, chosen with it, gives its own up. */
-.uav-radial .uav-under path[data-chosen][data-active="keys"] { ${FOCUS.stroke} }
-.uav-radial .uav-under path[data-chosen][data-active="pointer"] { ${HOVER.stroke} }
-.uav-radial:has(.uav-under [data-chosen]) svg[data-hits] path:is([data-active="keys"], [data-active="pointer"]) { stroke: ${token('color-background')}; stroke-width: calc(${token('stroke-width-rule')} * 2); }
+.uav-radial .uav-under path${IS.highlighted}${IS.focus} { ${FOCUS.stroke} }
+.uav-radial .uav-under path${IS.highlighted}${IS.hover} { ${HOVER.stroke} }
+.uav-radial:has(.uav-under ${IS.highlighted}) svg[data-hits] path:is(${IS.focus}, ${IS.hover}) { stroke: ${token('color-background')}; stroke-width: calc(${token('stroke-width-rule')} * 2); }
 /* Labels round the rim. Each is set from the point the scene gave it: to the right of one on the right, to the left of
  * one on the left, over one at the top and under one at the foot, and by degrees between. */
 .uav[data-layout="radial"][data-parts~="rim"] .uav-radial { --uav-rim: 14px; }

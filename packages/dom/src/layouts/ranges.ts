@@ -2,6 +2,7 @@ import { POINT_INSET, type LineNode, type Scene } from '@unified-analytics/core'
 import { ensure, keyed, prop } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { RULE } from '../chrome/rule.ts';
+import { IS } from '../rove.ts';
 
 /* What a plot gains with a second end and with `tick`: a segment for each row. A rule from one of the row's values
  * to another stands at its x, and a tick lies across its band. It is the cartesian layout's, kept in a file of its
@@ -23,8 +24,8 @@ export const RANGES_CSS = `
   inset-block-end: calc(min(var(--uav-t), var(--uav-t2)) * 100%); block-size: max(${RULE}, ${span('--uav-t2', '--uav-t')}); }
 .uav-ranges i[data-upright] { translate: -50%; }
 .uav-ranges i:not([data-upright]) { translate: 0 50%; }
-/* A stroke of a rug is drawn light, so that many together read darker. The one whose point is chosen is drawn whole. */
-.uav-ranges i[data-active] { opacity: 1 !important; }
+/* A stroke of a rug is drawn light, so that many together read darker. The one whose point is chosen is Highlighted, and drawn whole. */
+.uav-ranges i${IS.highlighted} { opacity: 1 !important; }
 /* One the scene sets before the bars lies under them, as it does where the scene is painted in order: a whisker
  * behind its box. The plot is a container, so this is under its bars and no further. */
 .uav-ranges i[data-under] { z-index: -1; }`;

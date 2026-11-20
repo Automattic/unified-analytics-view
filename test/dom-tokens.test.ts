@@ -70,23 +70,23 @@ describe('the focus outline', () => {
   it('is on every holder that takes focus, and on the mark the keys chose in each kind of holder', () => {
     expect(css).toContain(`:is([data-hits], .uav-cells):focus-visible { ${FOCUS.inside} }`);
     // A list's rows and a row's bar are painted over an outline of the box that holds them, so there it is a box of its own, on top.
-    expect(css).toContain(`.uav-rows:focus-visible::after, .uav-row[data-active="keys"]::after { content: ""; position: absolute; inset: 0; pointer-events: none; ${FOCUS.inside} }`);
+    expect(css).toContain(`.uav-rows:focus-visible::after, .uav-row[data-focus]::after { content: ""; position: absolute; inset: 0; pointer-events: none; ${FOCUS.inside} }`);
     expect(css).toContain('.uav-rows { position: relative;');
-    expect(css).toContain(`:is(.uav-bars, .uav-dots, .uav-points, .uav-band, .uav-cells) [data-active="keys"] { ${FOCUS.around} }`);
+    expect(css).toContain(`:is(.uav-bars, .uav-dots, .uav-points, .uav-band, .uav-cells) [data-focus] { ${FOCUS.around} }`);
     // An arc and a region are shapes, so the outline is the shape's own edge, at the same width and colour.
-    expect(css).toContain(`svg[data-hits] path[data-active="keys"] { ${FOCUS.stroke} }`);
-    expect(css).toContain(`.uav[data-layout="geo"] .uav-plot path[data-active="keys"] { ${FOCUS.stroke} }`);
+    expect(css).toContain(`svg[data-hits] path[data-focus] { ${FOCUS.stroke} }`);
+    expect(css).toContain(`.uav[data-layout="geo"] .uav-plot path[data-focus] { ${FOCUS.stroke} }`);
     expect(css).toContain(`.uav[data-layout="geo"] .uav-plot:has(.uav-regions:focus-visible) { ${FOCUS.inside} }`);
   });
   // A reader who tabs to a view must be able to tell where focus is from where the mouse was left.
   it('is never what the pointer\'s mark wears: that has a hairline, and a row a tint', () => {
-    expect(css).toContain(`.uav-row[data-active="pointer"] { ${HOVER.row} }`);
-    expect(css).toContain(`:is(.uav-bars, .uav-dots, .uav-points, .uav-band, .uav-cells) [data-active="pointer"] { ${HOVER.around} }`);
-    expect(css).toContain(`svg[data-hits] path[data-active="pointer"] { ${HOVER.stroke} }`);
-    expect(css).toContain(`.uav[data-layout="geo"] .uav-plot path[data-active="pointer"] { ${HOVER.stroke} }`);
+    expect(css).toContain(`.uav-row[data-interaction] { ${HOVER.row} }`);
+    expect(css).toContain(`:is(.uav-bars, .uav-dots, .uav-points, .uav-band, .uav-cells) [data-interaction] { ${HOVER.around} }`);
+    expect(css).toContain(`svg[data-hits] path[data-interaction] { ${HOVER.stroke} }`);
+    expect(css).toContain(`.uav[data-layout="geo"] .uav-plot path[data-interaction] { ${HOVER.stroke} }`);
     for (const part of Object.values(HOVER)) expect(part).not.toContain('focus');
-    // Every rule that draws either names how the mark was chosen. One that did not would draw for both.
-    expect(css.match(/\[data-active\] \{ (outline|stroke|background):/g)).toBeNull();
+    // Every rule that draws either names how the mark was chosen: Focus or Hover. One that named both would draw for both.
+    expect(css.match(/:is\(\[data-interaction\], \[data-focus\]\) \{ (outline|stroke|background):/g)).toBeNull();
   });
 });
 

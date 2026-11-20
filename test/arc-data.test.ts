@@ -256,6 +256,6 @@ describe('the radial layout paints the new forms', () => {
   });
   it('arcs that are no point of their own lie in a layer under the points, and one of a second ring wears the outline when chosen', () => {
     expect(radial.css).toContain('.uav-radial svg.uav-under { position: absolute;');
-    expect(radial.css).toContain('.uav-radial .uav-under path[data-chosen][data-active="keys"] {');
+    expect(radial.css).toContain('.uav-radial .uav-under path[data-emphasis="highlighted"][data-focus] {');
   });
 });

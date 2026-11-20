@@ -74,6 +74,7 @@ export function geoMark(shapes: Shapes, { name = 'geo', projection }: GeoOptions
 
   return {
     rules,
+    reads: { x: ['dimension'], color: ['metric'], size: ['metric'] },
 
     scene({ layers, guides, query, result, catalog }) {
       const l = layers[0]!, { x: dim, color, size } = l.encode || {}, rows = result.rows;

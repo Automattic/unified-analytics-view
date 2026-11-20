@@ -1,4 +1,5 @@
 import type { FitRule } from './fit.ts';
+import type { Reads } from './reads.ts';
 import { LAYOUTS, MARKS } from './types.ts';
 import type { Catalog, Container, Guides, Layer, Part, PlacedNode, Query, Result, Scene } from './types.ts';
 
@@ -16,6 +17,9 @@ import type { Catalog, Container, Guides, Layer, Part, PlacedNode, Query, Result
 export interface MarkView { layers: Layer[]; guides: Guides; query: Query; result: Result; catalog: Catalog }
 
 export interface CustomMark {
+  /** The channels it reads, and what each may hold (reads.ts). `resolve()` refuses an encoding that is not among them,
+   * as it does for core's marks: one a mark does not read is drawn without. A mark that says nothing here is not asked. */
+  reads?: Reads;
   /** The fit rules of its layout. A context's own rules for the layout come before these. Two ids are asked for by
    * `resolve()`: `guides` is the room its `ramp` and `size` parts need, and `marks` the room the marks do. */
   rules: FitRule[];

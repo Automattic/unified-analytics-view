@@ -226,6 +226,7 @@ Rules:
 - A spec with no dimension and no layers is the tldr value alone.
 - A spec with a dimension and no layers (and no `use`) is an error. There is no silent default.
 - A layer that encodes a field the query does not return is an error that lists what the query does return.
+- A layer that encodes what its mark does not read is an error that lists what the mark does read, in the layout it is drawn in (section 7, "What each mark reads"). Nothing a layer encodes is dropped without a word.
 - There is no `intent` field. An earlier version had one; it was a chart type under a new name and was removed.
 - There is no `headline` field and no `guides` field. Both were presentation switches and were removed on October 7; the schema rejects them. The container's rules decide what they used to.
 
@@ -266,7 +267,53 @@ A value is rounded to whole glyphs, and a value above nothing has one at least. 
 
 A mark carries only its shape and those constraints. Relationships between marks (stacked, overlaid, normalized) are transforms or layering, never part of the mark.
 
-A custom mark registered in code and referenced by name is the escape hatch for anything the grammar cannot express (maps, Sankeys). Keep the spec small; do not let it grow an expression language. The registry is `registerMark` in `packages/core/src/marks.ts`. There are two: `geo`, in `packages/geo`, and `link`, in `packages/flow`.
+A custom mark registered in code and referenced by name is the escape hatch for anything the grammar cannot express (maps, Sankeys). Keep the spec small; do not let it grow an expression language. The registry is `registerMark` in `packages/core/src/marks.ts`. There are two: `geo`, in `packages/geo`, and `link`, in `packages/flow`. A custom mark says which channels it reads, in `reads` beside its fit rules, and is held to that as core's marks are (below).
+
+### What each mark reads
+
+**Built November 20.** What a mark reads depends on the layout it is drawn in, and this table is the whole of it: a row for each mark in each layout, with the channels it reads there and what each may hold. It is data, `READS` in `packages/core/src/reads.ts`, and the rows below are held to it by `test/reads.test.ts`. A custom mark states its own beside its fit rules (`reads`), and its layout is its name.
+
+`resolve()` refuses an encoding that is not here, by name: a mark its layout does not draw, a channel the mark does not read there, or a channel holding what the mark takes no account of. The error says what the mark does read, and where what was written is read. Until this was built such an encoding was dropped and the view drawn without it: a bar with a metric on `color` was drawn in one colour, and a `text` beside a band's bar not at all.
+
+| Layout | Mark | Reads |
+|---|---|---|
+| `cartesian` | `line` | `x` dimension, metric; `y` metric; `color` dimension; `detail` dimension |
+| `cartesian` | `area` | `x` dimension; `y` metric; `y2` metric, number; `color` dimension; `detail` dimension |
+| `cartesian` | `bar` | `x` dimension; `y` metric, number; `y2` metric, number; `color` dimension; `detail` dimension; `size` metric |
+| `cartesian` | `rule` | `x` dimension, metric, number; `y` metric, number; `x2` metric, number; `y2` metric, number; `detail` dimension |
+| `cartesian` | `dot` | `x` dimension, metric; `y` metric; `color` dimension; `detail` dimension; `size` metric |
+| `cartesian` | `tick` | `x` dimension, metric; `y` metric; `detail` dimension |
+| `cartesian` | `text` | `x` dimension, metric; `y` metric; `text` dimension, metric, companion; `detail` dimension |
+| `cartesian` | `unit` | `x` dimension; `y` metric |
+| `rows` | `bar` | `y` dimension; `x` metric, number; `x2` metric, number; `color` dimension, companion |
+| `rows` | `rule` | `y` dimension; `x` metric, number; `x2` metric, number |
+| `rows` | `tick` | `y` dimension; `x` metric; `detail` dimension |
+| `rows` | `dot` | `y` dimension; `x` metric; `color` dimension, companion; `detail` dimension |
+| `rows` | `unit` | `y` dimension; `x` metric; `color` dimension, companion |
+| `rows` | `text` | `y` dimension; `text` dimension, metric, companion |
+| `band` | `bar` | `x` metric; `color` dimension |
+| `band` | `unit` | `x` metric; `color` dimension |
+| `radial` | `arc` | `angle` dimension, metric, number; `radius` dimension, metric, number; `color` dimension; `detail` dimension |
+| `radial` | `unit` | `angle` metric; `color` dimension |
+| `matrix` | `cell` | `x` dimension; `y` dimension; `color` metric |
+| `matrix` | `dot` | `x` dimension; `y` dimension; `color` metric; `size` metric |
+| `geo` | `geo` | `x` dimension; `color` metric; `size` metric |
+| `link` | `link` | `x` dimension; `y` dimension; `size` metric |
+| `geo-tiles` | `geo-tiles` | `x` dimension; `color` metric; `size` metric |
+| `geo-hexes` | `geo-hexes` | `x` dimension; `color` metric; `size` metric |
+| `partition` | `partition` | `x` dimension; `detail` dimension; `size` metric; `color` metric |
+
+A `metric` is one of the catalog's, or a companion the engine returns with one (`visitors@p25`): a quantity, as its metric is. A `companion` is one returned with a dimension (`source@kind`). A `number` is a constant.
+
+The table says what one channel may hold. What a mark asks of several together, a second end that needs a first or a `size` on a bar that needs a plot of shares, is refused where the mark is drawn, in that code's own words, and those errors come first: the table is asked once the scene has been built. A mark or a channel that is built is added to `READS` in the same change.
+
+**What it does not catch yet.** Each of these was found while building it, and each is still drawn wrong or not at all with nothing said:
+
+- A layer's other fields are not in the table. A `label`, an `align` or a `sweep` on a mark that reads none is dropped.
+- A dimension on `color` that is also the plot's x is no split, and is dropped: a bar for each page is not a colour for each page. In rows the same encoding is a colour for each row.
+- Two layers that draw in one place are drawn over each other: a bar for each of two metrics on one x.
+- A channel a form cannot do without is not marked as needed. A band's bar with nothing on `x` breaks in the scene builder, and the error is the runtime's and names no fix.
+- A number alone on a row's `x` is refused for measuring in two units, of which it names one.
 
 ### Transforms
 

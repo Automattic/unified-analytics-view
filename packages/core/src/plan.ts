@@ -3,6 +3,7 @@ import { applies, fallbackRule, gaveWay, ruleFor, type FitRule } from './fit.ts'
 import { fmtTime, rangeLabel } from './format.ts';
 import { customMarks } from './marks.ts';
 import { PRESETS, expand, fills, presetNames, usesPrevious } from './presets.ts';
+import { checkReads } from './reads.ts';
 import { COLUMNS_BLOCK, UNIT_KEY_BLOCK, legendBlock, place } from './place.ts';
 import { DETAIL_LAYOUTS, SERIES, isMetric, buildScene, columnLabel, columnsOf, tldrValueText, isDim, listRows, metricOf, pointDimOf, roleOf, seriesOf, trackBeside, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
 import { differenceProse, gridProse, rangeProse, rankProse, tldrProse } from './prose.ts';
@@ -54,7 +55,6 @@ export function layoutOf(catalog: Catalog, layers: Layer[]): LayoutChoice {
   if (i >= 0) return { layout: 'band', layer: i, why: 'a unit with a metric and no dimension is a grid read against its range' };
   throw new Error('These layers put no dimension on x, y or color, so there is nothing to lay out.');
 }
-const detectLayout = (catalog: Catalog, layers: Layer[]): Layout => layoutOf(catalog, layers).layout;
 
 function checkLayers(layers: Layer[], q: Query, catalog: Catalog, result: Result): void {
   const by = q.by || [], known = by.concat(q.metrics);
@@ -147,7 +147,10 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   const unit = layers.some((l) => l.mark === 'unit'), divided = (l: Layer) => l.mark === 'unit' && isDim(catalog, l.encode?.color) && !isDim(catalog, l.encode?.x) && !isDim(catalog, l.encode?.y);
   const share = layers.some((l) => l.stack === 'normalize' || (l.mark === 'arc' && !isDim(catalog, l.encode?.angle) && !isDim(catalog, l.encode?.radius)) || divided(l));
   // A custom mark brings the rules of its own layout. A context's rules for that layout come first.
-  const laid = layers.length ? detectLayout(catalog, layers) : 'none', custom = customMarks().get(laid), fit = custom ? rules.fit.concat(custom.rules) : rules.fit;
+  const choice = layers.length ? layoutOf(catalog, layers) : null, laid = choice ? choice.layout : 'none', custom = customMarks().get(laid), fit = custom ? rules.fit.concat(custom.rules) : rules.fit;
+  // What a layer encodes and nothing reads is refused (reads.ts): every layer the spec has, so a view is not valid with a
+  // comparison and refused without one. It is asked once the scene has been built, below.
+  const read = () => { if (choice) checkReads(laid, choice.why, spec.layers || [], catalog); };
   // A layout that does not read detail would draw its series over each other, and say nothing. A custom mark reads its own channels.
   const lost = custom || DETAIL_LAYOUTS.includes(laid) ? -1 : layers.findIndex((l) => l.encode?.detail != null);
   if (lost >= 0) throw new Error('Layer ' + (lost + 1) + ' encodes "' + layers[lost]!.encode!.detail + '" on detail, and these layers are laid out as "' + laid + '", which does not split a layer by detail. It is read in: ' + DETAIL_LAYOUTS.join(', ') + '. Put a dimension on x and a metric on y, or remove "detail".');
@@ -199,6 +202,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
     if (M.instant || !layers.length) { p.layout = 'none'; p.layers = []; p.tldrValue = true; p.guides = {}; }
     else { p.layout = 'notice'; p.layers = []; p.guides = {}; p.tldrValue = false; }
   } else if (swap && applies(swap, { view: { inline: container.width, block: container.height } })) {
+    read();                                                                 // no scene is built of these layers here, and they are refused as they are with the room to draw them
     const { layers: _layers, ...rest } = spec0, plan = resolve({ ...rest, use: swap.fallback }, result, container, catalog, presets, via.concat(gaveWay(swap)));
     return { ...plan, dropped: ['the ' + p.layout + ' marks (drawn as "' + swap.fallback + '")'].concat(plan.dropped) };
   }
@@ -313,7 +317,11 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
     'prose': () => { p.layout = 'prose'; p.layers = []; p.guides = {}; p.tldrValue = false; p.side = false; return 'the number (kept the sentence)'; },
   };
   const steps: Reduction[] = rules.order.map((id) => ({ id, state: 'not needed' }));
-  let done = fits();
+  // The scene's own errors come first: they know more of the form. Where it breaks on what no one foresaw, what the
+  // layers encode that nothing reads is the likelier cause, and is said in its place.
+  let done: boolean;
+  try { done = fits(); } catch (e) { if (e instanceof TypeError) read(); throw e; }
+  read();
   steps.forEach((st) => {
     if (done) return;
     const kept = KEEP[st.id];

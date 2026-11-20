@@ -40,6 +40,7 @@ interface Node { key: string; value: Row[string]; v: number; i: number; y: numbe
 
 export const linkMark: CustomMark = {
   rules: LINK_RULES,
+  reads: { x: ['dimension'], y: ['dimension'], size: ['metric'] },
 
   scene({ layers, guides, query, result, catalog }) {
     const l = layers[0]!, { x: src, y: tgt, size: m } = l.encode || {}, by = query.by || [];

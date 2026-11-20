@@ -128,6 +128,7 @@ const round = (n: number) => Math.round(n * 1e5) / 1e5;
 
 export const partitionMark: CustomMark = {
   rules: PARTITION_RULES,
+  reads: { x: ['dimension'], detail: ['dimension'], size: ['metric'], color: ['metric'] },
 
   /* The nodes, in order: a parent's box, its name, and then each of its children's boxes with the child's name after
    * it. A parent's box is set in the part, as a cell is: `x` and `w` across it and `y` and `h` down it. A child's is

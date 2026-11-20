@@ -267,8 +267,8 @@ svg[data-hits] path[data-active="pointer"] { ${HOVER.stroke} }
 /* A series chosen in a row of a list: the rest of that row's stand back, and a dot of many is drawn whole. */
 .uav-row:has(> [data-chosen]) > i[data-series]:not([data-chosen]) { opacity: ${token('opacity-dim')} !important; }
 .uav-row > i[data-chosen] { opacity: 1 !important; }
-/* A chosen entry of a legend, and a chosen series' name wherever it is written, are underlined. */
-.uav-legend span[data-active], :is(.uav-legend, .uav-legend-top, .uav-labels) span[data-chosen] { text-decoration: underline; }`;
+/* A chosen entry of a legend, and a chosen series' name in either legend, are underlined. A line end's name is a plot label, which draws its own (chrome/label.ts). */
+.uav-legend span[data-active], :is(.uav-legend, .uav-legend-top) span[data-chosen] { text-decoration: underline; }`;
 
 /** A view's readout: one element, the figure's own, which every layout that says what is under the pointer sets.
  * In the top layer where there is one, so nothing that holds the view can clip it: a card, a scrolling panel. */

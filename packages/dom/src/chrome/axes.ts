@@ -2,7 +2,8 @@ import { DRAWN, FROM_TOP } from '../layout.ts';
 import { X_AXIS_BLOCK, type Scene, type TextNode } from '@unified-analytics/core';
 import { attr, ensure, keyed, prop, text } from '../dom.ts';
 import { thin, thinLabels } from '../measure.ts';
-import { ANCHOR, label } from './label.ts';
+import { ANCHOR, LABEL } from './label.ts';
+import { token } from '../tokens.ts';
 
 /* The axes about a plot: the labels down its near side, along its foot, and down its far side for a second unit. A
  * plot and a grid of cells have the same ones, from the same nodes (core's axisTick).
@@ -19,10 +20,10 @@ export const X_AXIS_PAD = 5;
 export const X_AXIS_FACE = `calc(${X_AXIS_PAD}px + var(--uav-font-tick) * ${X_AXIS_BLOCK - X_AXIS_PAD} / ${DRAWN.tick})`;
 export const AXES_CSS = `
 .uav-y-axis, .uav-y-axis-2, .uav-x-axis { display: grid; white-space: nowrap; font-variant-numeric: tabular-nums; }
-:is(.uav-y-axis, .uav-y-axis-2) span { grid-area: 1 / 1; align-self: start; justify-self: end; position: relative; inset-block-start: ${FROM_TOP}; translate: 0 -50%; padding-inline-end: 6px; ${label({ tone: 'axis' })} }
+:is(.uav-y-axis, .uav-y-axis-2) span { grid-area: 1 / 1; align-self: start; justify-self: end; position: relative; inset-block-start: ${FROM_TOP}; translate: 0 -50%; padding-inline-end: 6px; ${LABEL} color: ${token('color-label-axis')}; }
 .uav-y-axis-2 span { justify-self: start; padding-inline: 6px 0; }
 .uav-x-axis { box-sizing: border-box; block-size: var(--uav-x-axis-block); padding-block-start: ${X_AXIS_PAD}px; }
-.uav-x-axis span { grid-area: 1 / 1; justify-self: start; position: relative; inset-inline-start: calc(var(--uav-x) * 100%); translate: ${ANCHOR.middle}; ${label({ tone: 'axis' })} }
+.uav-x-axis span { grid-area: 1 / 1; justify-self: start; position: relative; inset-inline-start: calc(var(--uav-x) * 100%); translate: ${ANCHOR.middle}; ${LABEL} color: ${token('color-label-axis')}; }
 .uav-x-axis [data-anchor="start"] { translate: ${ANCHOR.start}; }
 .uav-x-axis [data-anchor="end"] { translate: ${ANCHOR.end}; }
 :is(.uav-x-axis, .uav-y-axis, .uav-y-axis-2) > span { unicode-bidi: plaintext; }`;

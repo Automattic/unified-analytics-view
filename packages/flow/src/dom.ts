@@ -1,5 +1,5 @@
 import { declutter, type PathNode, type RectNode, type TextNode } from '@unified-analytics/core';
-import { AXES_HEIGHT, ensure, ensureSvg, hits, keyed, label, prop, registerPainter, text, thinLabels, token, type LayoutPainter } from '@unified-analytics/dom';
+import { AXES_HEIGHT, ensure, ensureSvg, hits, keyed, LABEL as PLOT_LABEL, cut, prop, registerPainter, text, thinLabels, token, type LayoutPainter } from '@unified-analytics/dom';
 import { LABEL, NODE } from './index.ts';
 
 /* The `link` mark's half for the DOM: the painter of its layout, for registerPainter().
@@ -31,11 +31,11 @@ const css = `
 .uav-nodes i { position: absolute; inset-block-start: calc(var(--uav-y) * 100%); block-size: calc(var(--uav-h) * 100%); inset-inline-start: calc(var(--uav-x) * (100% - ${NODE}px)); inline-size: ${NODE}px; background: var(--uav-paint); }
 /* The labels are set from the left whichever way the page reads, as the plot they lie over is. One near the top or the
  * foot stays inside the part, and one the measured pass found no room for keeps its box and is not seen.
- * Each is a plot label (chrome/label.ts) in its node's paint, cut as a line end's is, but at 45% of the part, not 14
+ * Each is a plot label (chrome/label.ts) in its node's paint, cut at 45% of the part, where a line end's is cut at 14
  * characters. Its anchor is a column's edge, so it is placed by justify-self, not moved back by ANCHOR. */
 .uav[data-layout="link"] .uav-labels { grid-area: plot; display: grid; direction: ltr; pointer-events: none; }
 .uav[data-layout="link"] .uav-labels span { inset-block-start: clamp(0.7em, var(--uav-y) * 100%, 100% - 0.7em); translate: 0 -50%;
-  ${label({ truncate: true })} max-inline-size: 45%; padding-inline: ${NODE + LABEL}px; }
+  ${PLOT_LABEL} ${cut('45%')} padding-inline: ${NODE + LABEL}px; }
 .uav[data-layout="link"] .uav-labels span[data-anchor="end"] { justify-self: end; }`;
 
 export const linkPainter: LayoutPainter = {

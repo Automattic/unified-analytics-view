@@ -16,7 +16,7 @@ import { UNIT_CSS } from './unit.ts';
 export const CHROME_CSS = LABEL_CSS + SWATCH_CSS + AXES_CSS + LEGEND_CSS + RAMP_CSS + SIZE_CSS + TIP_CSS + RULE_CSS + '\n' + UNIT_CSS;
 
 export { paintAxes, thinAxis } from './axes.ts';
-export { ANCHOR, label, type Anchor, type LabelOptions } from './label.ts';
+export { ANCHOR, LABEL, cut, type Anchor } from './label.ts';
 export { paintLegend } from './legend.ts';
 export { paintRamp } from './ramp.ts';
 export { paintSize } from './size.ts';

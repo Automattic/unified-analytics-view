@@ -5,7 +5,7 @@ export { AXES_HEIGHT, DRAWN, FROM_TOP, IN_BOX, holdShape, lineOf, type LayoutPai
 export { SURFACE_CSS, UaView, defineUaView, surfaceSheet, type Inputs } from './view.ts';
 export { attr, ensure, ensureSvg, hits, keyed, prop, svg, text } from './dom.ts';
 export { registerPainter } from './layouts/index.ts';
-export { ANCHOR, label, paintAxes, paintLegend, paintRamp, paintSize, paintUnitKey, say, thinAxis, type Anchor, type LabelOptions } from './chrome/index.ts';
+export { ANCHOR, LABEL, cut, paintAxes, paintLegend, paintRamp, paintSize, paintUnitKey, say, thinAxis, type Anchor } from './chrome/index.ts';
 export { chooseItem, hideReadout, placeReadout, readout, readoutOf, roveItems } from './keys.ts';
 export { ARROWS, hovers, pressed, rove, type How, type Roving } from './rove.ts';
 export { thinLabels } from './measure.ts';

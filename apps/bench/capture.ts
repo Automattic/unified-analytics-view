@@ -26,7 +26,8 @@ const base = server.resolvedUrls!.local[0]!;
 // Reduced motion: the element then draws each state at once, so what is taken is where it ends, not a step on the way.
 const browser = await chromium.launch(), context = await browser.newContext({ viewport: VIEWPORT, reducedMotion: 'reduce', deviceScaleFactor: 2 });
 
-interface Record { sample: string; theme: string; height: string; width: string; error?: string; measure: FrameMeasure; frame: string; parts: { [part: string]: string } }
+export interface Plan { layout: string; parts: string[]; keep: string[]; marks: string[] }
+export interface Record { sample: string; plan?: Plan; theme: string; height: string; width: string; error?: string; measure: FrameMeasure; frame: string; parts: { [part: string]: string } }
 const records: Record[] = [];
 
 /** Every frame's measure, read until two readings 150 ms apart agree: the view has painted and the measured pass is done. */
@@ -47,10 +48,11 @@ async function take(page: Page, sample: string, theme: string, height: string): 
   const query = new URLSearchParams({ sample, part: '', scenario, height: height === 'natural' ? '' : height, theme });
   await page.goto(`${base}parts.html?${query}&embed`);
   const measures = await settled(page), frames = page.locator('.frame');
+  const plan = await page.evaluate(() => (window as unknown as { benchPlan?: Plan }).benchPlan);
   for (const [i, measure] of measures.entries()) {
     const frame = frames.nth(i), width = (await frame.getAttribute('data-width'))!, name = `${theme}-${height}-${width}`;
     const error = await frame.locator('xpath=following-sibling::p[contains(@class,"error")]').textContent({ timeout: 50 }).catch(() => undefined);
-    const record: Record = { sample, theme, height, width, ...(error && { error }), measure, frame: `frames/${sample}/${name}.png`, parts: {} };
+    const record: Record = { sample, plan, theme, height, width, ...(error && { error }), measure, frame: `frames/${sample}/${name}.png`, parts: {} };
     mkdirSync(out + `frames/${sample}`, { recursive: true });
     await frame.screenshot({ path: out + record.frame, animations: 'disabled' });
     const at = (await frame.boundingBox())!;

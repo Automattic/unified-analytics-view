@@ -1,3 +1,4 @@
+import { buildScene, expand, resolve, unboundedContainer } from '@unified-analytics/core';
 import { UaView } from '@unified-analytics/dom';
 import { catalog, runQuery, type Scenario } from '@unified-analytics/fixtures';
 import { el } from './page.ts';
@@ -12,7 +13,7 @@ register();
 const WIDTHS = [480, 346, 250, 170, 120, 80, 40];
 /* Each part of a scene is drawn under a class of its name (core's `Part`), and the readout chip is one more. */
 const PARTS = ['number', 'plot', 'x-axis', 'y-axis', 'y-axis-2', 'labels', 'columns', 'rows', 'band', 'legend', 'legend-top', 'radial', 'hole', 'rim',
-  'ramp', 'notice', 'points', 'point-labels', 'size', 'note', 'unit-key', 'readout'];
+  'ramp', 'notice', 'points', 'point-labels', 'size', 'note', 'unit-key', 'track', 'readout'];
 
 const params = new URLSearchParams(location.search), embed = params.has('embed');
 const controls = document.querySelector<HTMLFormElement>('#controls')!, main = document.querySelector('main')!;
@@ -57,7 +58,8 @@ function measure(frame: HTMLElement): FrameMeasure {
     parts[p] = {
       box: [x0 - f.left, y0 - f.top, x1 - x0, y1 - y0].map(Math.round) as Box,
       outside: x0 < f.left - .5 || y0 < f.top - .5 || x1 > f.right + .5 || y1 > f.bottom + .5,
-      clipped: Math.max(0, ...inner.filter((n) => getComputedStyle(n).overflow !== 'visible').map(over)),
+      // Text cut short with an ellipsis is counted as that, not as clipped.
+      clipped: Math.max(0, ...inner.filter((n) => getComputedStyle(n).overflow !== 'visible' && getComputedStyle(n).textOverflow !== 'ellipsis').map(over)),
       ellipsis: inner.filter((n) => getComputedStyle(n).textOverflow === 'ellipsis' && n.scrollWidth > n.clientWidth + 1).length,
     };
     els[p] = shown;
@@ -97,6 +99,11 @@ if (!embed) {
 } else {
   document.body.classList.add('embed');
   const { sample, part, scenario, height } = state(), spec = samples[sample]!.spec;
+  // What the view plans with no limits: its layout and every part it can show. The capture keeps it beside the frames, for the checker.
+  try {
+    const result = runQuery(spec.query, scenario), plan = resolve(spec, result, unboundedContainer(), catalog);
+    Object.assign(window, { benchPlan: { layout: plan.layout, parts: buildScene(plan, spec.query, result, catalog).parts, keep: expand(spec).keep ?? [], marks: (expand(spec).layers ?? []).map((l) => l.mark) } });
+  } catch { /* the frames say what went wrong */ }
   const strip = el('div', 'strip');
   for (const w of [...WIDTHS, 0]) {
     const cell = el('div', 'cell'), frame = el('div', 'frame'), caption = el('p', 'meta'), view = new UaView();

@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build"
+    "build": "vite build",
+    "capture": "node capture.ts"
   },
   "dependencies": {
     "@unified-analytics/core": "workspace:*",
@@ -17,6 +18,7 @@
     "@unified-analytics/tokens": "workspace:*"
   },
   "devDependencies": {
+    "playwright": "^1.65.1",
     "vite": "^8.3.3"
   }
 }

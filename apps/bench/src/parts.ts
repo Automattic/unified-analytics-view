@@ -38,11 +38,44 @@ function focus(view: UaView, part: string): void {
   root.adoptedStyleSheets = [...root.adoptedStyleSheets.filter((s) => !(s as CSSStyleSheet & { bench?: true }).bench), Object.assign(sheet, { bench: true })];
 }
 
-/** What the frame says under it: its size, and the parts that show there once the container and the measured pass have had their say. */
-function readout(frame: HTMLElement, view: UaView, caption: HTMLElement): void {
-  const { width, height } = frame.getBoundingClientRect(), root = view.shadowRoot;
-  const shown = PARTS.filter((p) => [...(root?.querySelectorAll(`.uav-${p}`) ?? [])].some((n) => n.checkVisibility() && n.getBoundingClientRect().width > 0));
-  caption.textContent = `${Math.round(width)} × ${Math.round(height)} · ${shown.join(' ') || 'nothing'}`;
+type Box = [x: number, y: number, w: number, h: number];
+interface PartMeasure { box: Box; /** Reaches past the frame. */ outside: boolean; /** The most, in px, by which something in it holds more than its box shows: 0 when nothing is cut. */ clipped: number; /** Lines cut short with an ellipsis. */ ellipsis: number }
+export interface FrameMeasure { width: number; height: number; parts: Record<string, PartMeasure>; /** Parts whose boxes cross, where neither holds the other. */ overlaps: [string, string][] }
+
+/** What shows in a frame once the container and the measured pass have had their say, in px from the frame's corner.
+ * The readout under each frame and the capture script (capture.ts) both read this. */
+function measure(frame: HTMLElement): FrameMeasure {
+  const f = frame.getBoundingClientRect(), root = frame.querySelector('ua-view')?.shadowRoot, parts: Record<string, PartMeasure> = {}, els: Record<string, Element[]> = {};
+  for (const p of PARTS) {
+    const shown = [...(root?.querySelectorAll(`.uav-${p}`) ?? [])].filter((n) => n.checkVisibility({ visibilityProperty: true }) && n.getBoundingClientRect().width > 0);
+    if (!shown.length) continue;
+    const rects = shown.map((n) => n.getBoundingClientRect());
+    const x0 = Math.min(...rects.map((r) => r.left)), y0 = Math.min(...rects.map((r) => r.top)), x1 = Math.max(...rects.map((r) => r.right)), y1 = Math.max(...rects.map((r) => r.bottom));
+    const inner = shown.flatMap((n) => [n, ...n.querySelectorAll('*')]).filter((n): n is HTMLElement => n instanceof HTMLElement && n.checkVisibility({ visibilityProperty: true }));
+    // A box of a pixel or none is text kept for a screen reader, not cut.
+    const over = (n: HTMLElement) => n.clientWidth <= 1 && n.clientHeight <= 1 ? 0 : Math.max(n.scrollWidth - n.clientWidth, n.scrollHeight - n.clientHeight, 0);
+    parts[p] = {
+      box: [x0 - f.left, y0 - f.top, x1 - x0, y1 - y0].map(Math.round) as Box,
+      outside: x0 < f.left - .5 || y0 < f.top - .5 || x1 > f.right + .5 || y1 > f.bottom + .5,
+      clipped: Math.max(0, ...inner.filter((n) => getComputedStyle(n).overflow !== 'visible').map(over)),
+      ellipsis: inner.filter((n) => getComputedStyle(n).textOverflow === 'ellipsis' && n.scrollWidth > n.clientWidth + 1).length,
+    };
+    els[p] = shown;
+  }
+  const names = Object.keys(parts), overlaps: [string, string][] = [];
+  const nested = (a: string, b: string) => els[a]!.some((x) => els[b]!.some((y) => x.contains(y) || y.contains(x)));
+  for (const [i, a] of names.entries()) for (const b of names.slice(i + 1)) {
+    const [ax, ay, aw, ah] = parts[a]!.box, [bx, by, bw, bh] = parts[b]!.box;
+    if (Math.min(ax + aw, bx + bw) - Math.max(ax, bx) > 1 && Math.min(ay + ah, by + bh) - Math.max(ay, by) > 1 && !nested(a, b)) overlaps.push([a, b]);
+  }
+  return { width: Math.round(f.width), height: Math.round(f.height), parts, overlaps };
+}
+Object.assign(window, { benchMeasure: measure });
+
+/** What the frame says under it: its size, and the parts that show there, with a mark on any that is cut. */
+function readout(frame: HTMLElement, caption: HTMLElement): void {
+  const m = measure(frame), cut = (p: PartMeasure) => p.outside || p.clipped > 1 || p.ellipsis ? '✂' : '';
+  caption.textContent = `${m.width} × ${m.height} · ${Object.entries(m.parts).map(([p, v]) => p + cut(v)).join(' ') || 'nothing'}`;
 }
 
 if (!embed) {
@@ -68,6 +101,7 @@ if (!embed) {
   for (const w of [...WIDTHS, 0]) {
     const cell = el('div', 'cell'), frame = el('div', 'frame'), caption = el('p', 'meta'), view = new UaView();
     // The last frame is the free one: as wide as the page, and dragged from its corner.
+    frame.dataset.width = w ? String(w) : 'free';
     if (w) frame.style.inlineSize = w + 'px'; else cell.classList.add('free');
     boxIn(frame, height);
     resizable(frame);
@@ -77,7 +111,7 @@ if (!embed) {
     cell.append(frame, caption);
     strip.append(cell);
     // The view paints, then fits on the next frame or two; read it once that has settled, and again at every new size.
-    new ResizeObserver(() => requestAnimationFrame(() => requestAnimationFrame(() => { focus(view, part); readout(frame, view, caption); }))).observe(frame);
+    new ResizeObserver(() => requestAnimationFrame(() => requestAnimationFrame(() => { focus(view, part); readout(frame, caption); }))).observe(frame);
   }
   main.append(strip);
 }

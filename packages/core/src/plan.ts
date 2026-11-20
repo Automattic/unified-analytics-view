@@ -154,6 +154,16 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   // A layout that does not read detail would draw its series over each other, and say nothing. A custom mark reads its own channels.
   const lost = custom || DETAIL_LAYOUTS.includes(laid) ? -1 : layers.findIndex((l) => l.encode?.detail != null);
   if (lost >= 0) throw new Error('Layer ' + (lost + 1) + ' encodes "' + layers[lost]!.encode!.detail + '" on detail, and these layers are laid out as "' + laid + '", which does not split a layer by detail. It is read in: ' + DETAIL_LAYOUTS.join(', ') + '. Put a dimension on x and a metric on y, or remove "detail".');
+  // A plot has a mark for each value of one dimension: the one on x, or under two metrics the one its points are keyed by.
+  // On color that dimension splits nothing and paints nothing apart, and on detail beside itself on x it is said twice.
+  if (laid === 'cartesian') {
+    const xDim = xDimOf(catalog, layers), each = xDim || pointDimOf(catalog, layers, by);
+    layers.forEach((l, i) => {
+      const ch = each == null ? null : l.encode?.color === each ? 'color' : xDim && l.encode?.detail === xDim ? 'detail' : null;
+      if (ch) throw new Error('Layer ' + (i + 1) + ' encodes "' + each + '" on ' + ch + ', and this plot has a mark for each "' + each + '" already, so it splits the layer no further and no mark is painted by it. Remove "' + ch + '".'
+        + (xDim && ch === 'color' ? ' For a colour each, put "' + each + '" on y and the metric on x: a row is painted by its own dimension.' : ''));
+    });
+  }
   // A plot of points has no sparkline form: two metrics need both their axes to be read. So it has no bare rung, and
   // below the room its axes need it is the number alone. Its `points` rule says so, where the others' is `axes`.
   const points = !!layers.length && isPoints(catalog, layers);

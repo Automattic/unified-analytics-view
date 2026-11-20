@@ -207,6 +207,7 @@ const rule: MarkFn = (l, { id, series, role, rows, k, unit, ends, v, xv }) => {
     return [x, y, x2, y2].every((f) => typeof f === 'number') ? line(id) : rows.flatMap((r) => line(id + ':' + k(r), r));
   }
   // A field on y, or on y2 from a number: a segment for each row, standing at its x from one of its values to another, or up from zero where it has one end.
+  if ((typeof y === 'string' || y2 != null) && l.label) throw new Error('A rule for each row has no place for its label yet. Remove "label", and name what the strokes are in the view\'s title.');
   if (typeof y === 'string' || y2 != null) return rows.map((r): SceneNode => {
     const [t, t2] = ends(r), at = unit.cx(k(r));
     return { ...markOf(id, k(r), series), part: 'plot', kind: 'line', x: at, x2: at, t, t2, paint: l.paint || 'ink', layer: 'data', role };
@@ -516,6 +517,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     // A bar stands on a row's share of x, a tick lies across it, and a unit's glyphs are as wide as it. A metric there gives it none, and neither does a number dimension that came with no bins.
     // But for a tick with nothing on y, which stands at the foot of a plot of points at each row's value on x: a rug.
     const rug = l.mark === 'tick' && !!xOn && !xDim && l.encode!.y == null;
+    if (l.mark === 'tick' && l.encode!.y == null && !rug) throw new Error('Layer ' + (i + 1) + ' is a tick with nothing on y, so there is no value to stand it at. Encode a metric on y, for a stroke across each "' + xField + '" at its value. With no y a tick is a rug, along the foot of a plot whose x is a metric.');
     if (rug && l.encode!.x !== xOn) throw new Error('Layer ' + (i + 1) + ' is a tick at ' + JSON.stringify(l.encode!.x) + ' along the foot of a plot whose x is "' + xOn + '", so it would stand at places the axis does not measure. Encode "' + xOn + '" on its x.');
     if ((l.mark === 'bar' || l.mark === 'tick' || l.mark === 'unit') && xOn && !xDim && !rug) throw new Error('Layer ' + (i + 1) + ' is a ' + l.mark + ' with the metric "' + xOn + '" on x, and a ' + l.mark + ' needs a dimension there to stand on. Use "dot" for a point at two metrics, or put a dimension on x.');
     // An area fills down from a line that runs one way along x. The points of two metrics run in no order there.
@@ -694,7 +696,7 @@ function sceneRows(catalog: Catalog, layers: Layer[], result: Result, limit: num
   // nothing on angle is a gauge's. It is the catalog `domain` of the metric the other marks put on the track, divided
   // where the catalog's `bands` divide it. The track's scale holds it whole.
   const ranged = (l: Layer) => l.mark === 'bar' && l.encode!.x == null && l.encode!.x2 == null, fieldOn = (l: Layer) => [l.encode!.x, l.encode!.x2].find((f) => typeof f === 'string') as string | undefined;
-  const tracked = layers.filter((l) => TRACK_MARKS[l.mark] && !ranged(l)), units = [...new Set(tracked.map((l) => metricOf(catalog, fieldOn(l))?.unit))];
+  const tracked = layers.filter((l) => TRACK_MARKS[l.mark] && !ranged(l)), units = [...new Set(tracked.map((l) => metricOf(catalog, fieldOn(l))?.unit).filter((u) => u != null))];   // a mark at a number alone has no unit, and stands on the track's scale as it is
   const behind = layers.findIndex(ranged), of = baseOf(tracked.map(fieldOn).find(Boolean) || ''), range = behind < 0 ? undefined : catalog.metrics[of];
   if (behind >= 0 && !range) throw new Error('Layer ' + (behind + 1) + ' is a bar with nothing on x, which is the range a row\'s marks are read against, and no other mark in these rows puts a metric on x for it to be the range of. Add one, for example { "mark": "bar", "encode": { "y": "' + dim + '", "x": a metric } }, or encode a metric on this bar\'s x.');
   // Where each part of the range starts and ends: the domain's two ends, and each band between them. A metric the

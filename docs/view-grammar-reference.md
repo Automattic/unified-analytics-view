@@ -271,49 +271,47 @@ A custom mark registered in code and referenced by name is the escape hatch for 
 
 ### What each mark reads
 
-**Built November 20.** What a mark reads depends on the layout it is drawn in, and this table is the whole of it: a row for each mark in each layout, with the channels it reads there and what each may hold. It is data, `READS` in `packages/core/src/reads.ts`, and the rows below are held to it by `test/reads.test.ts`. A custom mark states its own beside its fit rules (`reads`), and its layout is its name.
+**Built November 20.** What a mark reads depends on the layout it is drawn in, and this table is the whole of it: a row for each mark in each layout, with the channels it reads there and what each may hold, the ones it is not drawn without, and the fields of the layer it has a use for. It is data: `READS`, `NEEDS` and `FIELDS` in `packages/core/src/reads.ts`. The rows below are held to them by `test/reads.test.ts`, which also holds every cell to be true: a sample draws it, or a probe there writes that channel another way and gets another scene. A custom mark states the channels it reads beside its fit rules (`reads`), and its layout is its name.
 
-`resolve()` refuses an encoding that is not here, by name: a mark its layout does not draw, a channel the mark does not read there, or a channel holding what the mark takes no account of. The error says what the mark does read, and where what was written is read. Until this was built such an encoding was dropped and the view drawn without it: a bar with a metric on `color` was drawn in one colour, and a `text` beside a band's bar not at all.
+`resolve()` refuses what a layer says that is not here, by name: a mark its layout does not draw, a channel the mark does not read there, a channel holding what the mark takes no account of, and a `label`, an `align` or a `sweep` on a mark with no use for it. It refuses a mark with nothing on a channel it needs. The error says what the mark does read, and where what was written is read. Until this was built each of these was dropped and the view drawn without it: a bar with a metric on `color` was drawn in one colour, a `text` beside a band's bar not at all, and a bar with nothing on `y` as a plot with no marks.
 
-| Layout | Mark | Reads |
-|---|---|---|
-| `cartesian` | `line` | `x` dimension, metric; `y` metric; `color` dimension; `detail` dimension |
-| `cartesian` | `area` | `x` dimension; `y` metric; `y2` metric, number; `color` dimension; `detail` dimension |
-| `cartesian` | `bar` | `x` dimension; `y` metric, number; `y2` metric, number; `color` dimension; `detail` dimension; `size` metric |
-| `cartesian` | `rule` | `x` dimension, metric, number; `y` metric, number; `x2` metric, number; `y2` metric, number; `detail` dimension |
-| `cartesian` | `dot` | `x` dimension, metric; `y` metric; `color` dimension; `detail` dimension; `size` metric |
-| `cartesian` | `tick` | `x` dimension, metric; `y` metric; `detail` dimension |
-| `cartesian` | `text` | `x` dimension, metric; `y` metric; `text` dimension, metric, companion; `detail` dimension |
-| `cartesian` | `unit` | `x` dimension; `y` metric |
-| `rows` | `bar` | `y` dimension; `x` metric, number; `x2` metric, number; `color` dimension, companion |
-| `rows` | `rule` | `y` dimension; `x` metric, number; `x2` metric, number |
-| `rows` | `tick` | `y` dimension; `x` metric; `detail` dimension |
-| `rows` | `dot` | `y` dimension; `x` metric; `color` dimension, companion; `detail` dimension |
-| `rows` | `unit` | `y` dimension; `x` metric; `color` dimension, companion |
-| `rows` | `text` | `y` dimension; `text` dimension, metric, companion |
-| `band` | `bar` | `x` metric; `color` dimension |
-| `band` | `unit` | `x` metric; `color` dimension |
-| `radial` | `arc` | `angle` dimension, metric, number; `radius` dimension, metric, number; `color` dimension; `detail` dimension |
-| `radial` | `unit` | `angle` metric; `color` dimension |
-| `matrix` | `cell` | `x` dimension; `y` dimension; `color` metric |
-| `matrix` | `dot` | `x` dimension; `y` dimension; `color` metric; `size` metric |
-| `geo` | `geo` | `x` dimension; `color` metric; `size` metric |
-| `link` | `link` | `x` dimension; `y` dimension; `size` metric |
-| `geo-tiles` | `geo-tiles` | `x` dimension; `color` metric; `size` metric |
-| `geo-hexes` | `geo-hexes` | `x` dimension; `color` metric; `size` metric |
-| `partition` | `partition` | `x` dimension; `detail` dimension; `size` metric; `color` metric |
+| Layout | Mark | Channels, the ones it needs in bold | Fields |
+|---|---|---|---|
+| `cartesian` | `line` | `x` dimension, metric; **`y`** metric; `color` dimension; `detail` dimension |  |
+| `cartesian` | `area` | `x` dimension; **`y`** metric; `y2` metric, number; `color` dimension; `detail` dimension |  |
+| `cartesian` | `bar` | `x` dimension; **`y`** metric, number; `y2` metric, number; `color` dimension; `detail` dimension; `size` metric |  |
+| `cartesian` | `rule` | `x` dimension, metric, number; `y` metric, number; `x2` metric, number; `y2` metric, number; `detail` dimension | `label` |
+| `cartesian` | `dot` | `x` dimension, metric; **`y`** metric; `color` dimension; `detail` dimension; `size` metric |  |
+| `cartesian` | `tick` | `x` dimension, metric; `y` metric; `detail` dimension | `align` |
+| `cartesian` | `text` | `x` dimension, metric; **`y`** metric; **`text`** dimension, metric, companion; `detail` dimension |  |
+| `cartesian` | `unit` | `x` dimension; **`y`** metric |  |
+| `rows` | `bar` | `y` dimension; `x` metric, number; `x2` metric, number; `color` dimension, companion |  |
+| `rows` | `rule` | `y` dimension; **`x`** metric, number; `x2` metric, number |  |
+| `rows` | `tick` | `y` dimension; **`x`** metric, number; `detail` dimension | `align` |
+| `rows` | `dot` | `y` dimension; **`x`** metric, number; `color` dimension, companion; `detail` dimension |  |
+| `rows` | `unit` | `y` dimension; **`x`** metric; `color` dimension, companion |  |
+| `rows` | `text` | `y` dimension; **`text`** dimension, metric, companion | `align` |
+| `band` | `bar` | **`x`** metric; **`color`** dimension |  |
+| `band` | `unit` | **`x`** metric; `color` dimension |  |
+| `radial` | `arc` | `angle` dimension, metric, number; `radius` dimension, metric, number; `color` dimension; `detail` dimension | `sweep` |
+| `radial` | `unit` | **`angle`** metric; **`color`** dimension | `sweep` |
+| `matrix` | `cell` | `x` dimension; `y` dimension; **`color`** metric |  |
+| `matrix` | `dot` | **`x`** dimension; **`y`** dimension; `color` metric; **`size`** metric |  |
+| `geo` | `geo` | `x` dimension; `color` metric; `size` metric |  |
+| `link` | `link` | `x` dimension; `y` dimension; `size` metric |  |
+| `geo-tiles` | `geo-tiles` | `x` dimension; `color` metric; `size` metric |  |
+| `geo-hexes` | `geo-hexes` | `x` dimension; `color` metric; `size` metric |  |
+| `partition` | `partition` | `x` dimension; `detail` dimension; `size` metric; `color` metric |  |
 
 A `metric` is one of the catalog's, or a companion the engine returns with one (`visitors@p25`): a quantity, as its metric is. A `companion` is one returned with a dimension (`source@kind`). A `number` is a constant.
 
-The table says what one channel may hold. What a mark asks of several together, a second end that needs a first or a `size` on a bar that needs a plot of shares, is refused where the mark is drawn, in that code's own words, and those errors come first: the table is asked once the scene has been built. A mark or a channel that is built is added to `READS` in the same change.
+The table says what one channel may hold. What a mark asks of several together is refused where the mark is drawn, in that code's own words: a second end that needs a first, a `size` on a bar that needs a plot of shares, a tick that needs a value on `y` unless it is a rug, a `label` on a rule for each row. Those errors come first: the table is asked once the scene has been built. One such rule is the plan's: the dimension a plot has a mark for each of, the one on x or under two metrics the one its points are keyed by, splits nothing on `color` and paints nothing, so it is refused there, and beside itself on `detail`. In rows that encoding is read, as a colour for each row. A mark, a channel or a field that is built is added to these tables in the same change.
 
 **What it does not catch yet.** Each of these was found while building it, and each is still drawn wrong or not at all with nothing said:
 
-- A layer's other fields are not in the table. A `label`, an `align` or a `sweep` on a mark that reads none is dropped.
-- A dimension on `color` that is also the plot's x is no split, and is dropped: a bar for each page is not a colour for each page. In rows the same encoding is a colour for each row.
 - Two layers that draw in one place are drawn over each other: a bar for each of two metrics on one x.
-- A channel a form cannot do without is not marked as needed. A band's bar with nothing on `x` breaks in the scene builder, and the error is the runtime's and names no fix.
-- A number alone on a row's `x` is refused for measuring in two units, of which it names one.
+- A band draws its first layer, and a second bar is dropped.
+- `paint`, `series` and `stack` are not in the tables. Each is refused in some forms where it is drawn, and elsewhere it may still be dropped: a `paint` on a `text` is, and a band's bar is divided by share whatever its `stack` says.
 
 ### Transforms
 

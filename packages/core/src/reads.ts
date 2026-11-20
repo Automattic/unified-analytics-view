@@ -34,8 +34,8 @@ export const READS: Record<string, Record<string, Reads>> = {
   rows: {
     bar:  { y: [D], x: [M, N], x2: [M, N], color: [D, C] },
     rule: { y: [D], x: [M, N], x2: [M, N] },
-    tick: { y: [D], x: [M],    detail: [D] },
-    dot:  { y: [D], x: [M],    color: [D, C], detail: [D] },
+    tick: { y: [D], x: [M, N], detail: [D] },
+    dot:  { y: [D], x: [M, N], color: [D, C], detail: [D] },
     unit: { y: [D], x: [M],    color: [D, C] },
     text: { y: [D], text: [D, M, C] },
   },
@@ -53,6 +53,24 @@ export const READS: Record<string, Record<string, Reads>> = {
   },
 };
 
+/** The channels a mark is not drawn without, where it has any. With one missing it was drawn as nothing, or as
+ * "undefined", or it broke its builder. Where a mark needs one of two (a rule, a number on x or on y) its builder says so. */
+export const NEEDS: Record<string, Record<string, readonly Channel[]>> = {
+  cartesian: { line: ['y'], area: ['y'], bar: ['y'], dot: ['y'], text: ['y', 'text'], unit: ['y'] },
+  rows:      { rule: ['x'], tick: ['x'], dot: ['x'], unit: ['x'], text: ['text'] },
+  band:      { bar: ['x', 'color'], unit: ['x'] },
+  radial:    { unit: ['angle', 'color'] },
+  matrix:    { cell: ['color'], dot: ['x', 'y', 'size'] },
+};
+
+/** The layer fields that only some marks read, and where. On any other mark one was dropped. `role` is read of every
+ * layer, and `paint`, `series` and `stack` are refused where they are drawn, form by form: they are not here. */
+export const FIELDS: Record<string, Record<string, readonly ('label' | 'align' | 'sweep')[]>> = {
+  cartesian: { rule: ['label'], tick: ['align'] },
+  rows:      { text: ['align'], tick: ['align'] },
+  radial:    { arc: ['sweep'], unit: ['sweep'] },
+};
+
 const A: Record<Held, string> = { dimension: 'a dimension', metric: 'a metric', number: 'a number', companion: 'a companion of a dimension' };
 const heldOf = (catalog: Catalog, f: string | number): Held => (typeof f === 'number' ? N : isDim(catalog, f) ? D : isMetric(catalog, f) ? M : C);
 const said = (reads: Reads) => Object.entries(reads).map(([ch, takes]) => ch + ' (' + orList(takes.map((h) => A[h])) + ')').join(', ');
@@ -62,8 +80,9 @@ const every = () => [
   ...[...customMarks()].flatMap(([mark, { reads }]) => (reads ? [{ mark, layout: mark, reads }] : [])),
 ];
 
-/** Refuse what a layer encodes and nothing reads: a mark its layout does not draw, a channel its mark does not read
- * there, or a channel holding what the mark takes no account of. `why` is how the layout was chosen (layoutOf).
+/** Refuse what a layer says and nothing reads: a mark its layout does not draw, a channel its mark does not read
+ * there, a channel holding what the mark takes no account of, or a field of the layer the mark has no use for. And
+ * what it does not say that the mark is not drawn without. `why` is how the layout was chosen (layoutOf).
  * A custom mark is held to what it says it reads, and one that says nothing is not asked. */
 export function checkReads(layout: Layout, why: string, layers: Layer[], catalog: Catalog): void {
   const own = customMarks().get(layout)?.reads, marks = own ? { [layout]: own } : READS[layout];
@@ -86,6 +105,13 @@ export function checkReads(layout: Layout, why: string, layers: Layer[], catalog
         throw new Error(n + ' encodes ' + JSON.stringify(f) + ', ' + A[held] + ', on ' + ch + ', and ' + there + ' takes ' + orList(takes.map((h) => A[h])) + ' there. Encode ' + (takes.length > 1 ? 'one of those' : 'one') + ', or remove "' + ch + '".'
           + (where.length ? ' On ' + ch + ', ' + A[held] + ' is read by: ' + where.join(', ') + '.' : ''));
       }
+    }
+    const missing = (own ? [] : NEEDS[layout]?.[l.mark] ?? []).find((ch) => l.encode?.[ch] == null);
+    if (missing) throw new Error(n + ' has the mark "' + l.mark + '" and nothing on ' + missing + ', and ' + there + ' is not drawn without it. Encode ' + orList(reads[missing]!.map((h) => A[h])) + ' on ' + missing + '.');
+    for (const field of ['label', 'align', 'sweep'] as const) {
+      if (l[field] == null || (!own && FIELDS[layout]?.[l.mark]?.includes(field))) continue;
+      const where = Object.entries(FIELDS).flatMap(([lay, ms]) => Object.keys(ms).filter((m) => ms[m]!.includes(field)).map((m) => m + ' in ' + lay));
+      throw new Error(n + ' has "' + field + '", and ' + there + ' reads none. Remove it. It is read by: ' + where.join(', ') + '.');
     }
   });
 }

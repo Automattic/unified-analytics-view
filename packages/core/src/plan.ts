@@ -28,21 +28,33 @@ const BY_FIELDS: [x: FieldKind, y: FieldKind, color: FieldKind, layout: Layout][
 /** Whether a plot sets one metric against another: a point for each row. It has a dimension to key its rows by, and none on x. */
 const isPoints = (catalog: Catalog, layers: Layer[]) => !xDimOf(catalog, layers) && !layers.some((l) => isDim(catalog, l.encode && l.encode.y)) && layers.some((l) => isMetric(catalog, l.encode && l.encode.x));
 
-function detectLayout(catalog: Catalog, layers: Layer[]): Layout {
+/** The layout a view's layers ask for, the layer that asked, and why: what explain() says of it. */
+export interface LayoutChoice { layout: Layout; layer: number; why: string }
+const KIND_NAMES: Record<FieldKind, string> = { dimension: 'a dimension', metric: 'a metric', any: '' };
+
+export function layoutOf(catalog: Catalog, layers: Layer[]): LayoutChoice {
   // A custom mark is laid out by its own code, under its own name, and that code draws its layers alone.
-  const custom = layers.find((l) => customMarks().has(l.mark)), other = custom && layers.find((l) => l.mark !== custom.mark);
-  if (other) throw new Error('The "' + custom!.mark + '" mark is laid out by its own code, and layer ' + (layers.indexOf(other) + 1) + ' is a "' + other.mark + '". Keep the "' + custom!.mark + '" layers alone, and draw the others as a view of their own.');
-  if (custom) return custom.mark;
+  const custom = layers.findIndex((l) => customMarks().has(l.mark)), other = custom >= 0 ? layers.find((l) => l.mark !== layers[custom]!.mark) : undefined;
+  if (other) throw new Error('The "' + layers[custom]!.mark + '" mark is laid out by its own code, and layer ' + (layers.indexOf(other) + 1) + ' is a "' + other.mark + '". Keep the "' + layers[custom]!.mark + '" layers alone, and draw the others as a view of their own.');
+  if (custom >= 0) return { layout: layers[custom]!.mark, layer: custom, why: 'the "' + layers[custom]!.mark + '" mark is registered in code and lays itself out' };
   const is = (kind: FieldKind, f: unknown) => kind === 'any' || (kind === 'metric' ? isMetric(catalog, f) : isDim(catalog, f));
+  const find = (test: (l: Layer) => boolean) => layers.findIndex(test);
   // Anything on angle is laid out about a centre, whatever else is encoded. It is not a row of the table: that asks about x, y and color.
-  if (layers.some((l) => l.encode && l.encode.angle != null)) return 'radial';
+  let i = find((l) => l.encode?.angle != null);
+  if (i >= 0) return { layout: 'radial', layer: i, why: 'something is on angle, so it is drawn about a centre' };
   // A cell along one dimension is a grid one column wide or one row tall, and not a list's rows or a plot.
-  if (layers.some((l) => l.mark === 'cell' && l.encode && (isDim(catalog, l.encode.y) || (l.encode.y == null && isDim(catalog, l.encode.x))))) return 'matrix';
-  for (const [x, y, color, layout] of BY_FIELDS) if (layers.some((l) => l.encode && is(x, l.encode.x) && is(y, l.encode.y) && is(color, l.encode.color))) return layout;
+  i = find((l) => l.mark === 'cell' && !!l.encode && (isDim(catalog, l.encode.y) || (l.encode.y == null && isDim(catalog, l.encode.x))));
+  if (i >= 0) return { layout: 'matrix', layer: i, why: 'a cell along a dimension is a grid' };
+  for (const [x, y, color, layout] of BY_FIELDS) {
+    i = find((l) => !!l.encode && is(x, l.encode.x) && is(y, l.encode.y) && is(color, l.encode.color));
+    if (i >= 0) return { layout, layer: i, why: ([['x', x], ['y', y], ['color', color]] as const).filter(([, k]) => k !== 'any').map(([ch, k]) => KIND_NAMES[k] + ' on ' + ch).join(' and ') };
+  }
   // A unit with a metric and no dimension at all is a grid read against the metric's range, in the place a band has.
-  if (layers.some((l) => l.mark === 'unit' && isMetric(catalog, l.encode?.x))) return 'band';
+  i = find((l) => l.mark === 'unit' && isMetric(catalog, l.encode?.x));
+  if (i >= 0) return { layout: 'band', layer: i, why: 'a unit with a metric and no dimension is a grid read against its range' };
   throw new Error('These layers put no dimension on x, y or color, so there is nothing to lay out.');
 }
+const detectLayout = (catalog: Catalog, layers: Layer[]): Layout => layoutOf(catalog, layers).layout;
 
 function checkLayers(layers: Layer[], q: Query, catalog: Catalog, result: Result): void {
   const by = q.by || [], known = by.concat(q.metrics);

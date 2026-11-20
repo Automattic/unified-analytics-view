@@ -564,6 +564,12 @@ A sketch, untested. The worked rules are in `docs/dom-painter-plan.md`, section 
 4. Height queries need a container with a definite height. A container sized by its content can only be queried on width.
 5. Container queries of this kind have been widely supported since early 2023. Style queries are still partial; do not depend on them.
 
+### 10.4 Why a view looks as it does (Proven)
+
+A spec that does not come out as its author expected is fixed in the spec, so the view says what it decided in the spec's own words. `explain(spec, result, catalog, room)` in core returns the layout and why the layers asked for it, every part the plan has and the place in the spec it comes from (`layers[0].encode.color`, `query.metrics[0]`, or `use "donut": layers[0]` for a preset's), and at a room each fit rule that holds: what it hides or shows, what it needs and what the room has, its id, and the lever where the spec has one (`keep`, a field, `compare`). An entry with no lever is a default, and the rules are where it is fixed. `UaView.explain()` asks it at the element's own size and adds what the measured pass decided there: labels given up or cut short, the number's shorter forms, the prose rung.
+
+The fit rules are the contract it reads, so a part the element hides that no rule names is a gap in the rules. Building it found two: the `axes` rule now names `y-axis-2`, and the grid's `marks` rule its axes and keys.
+
 ---
 
 ## 11. The scene

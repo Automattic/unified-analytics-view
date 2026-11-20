@@ -1,5 +1,5 @@
-import { CONTAINER_RULES, DELTA_FULL, NOTE_LEAST, NUMBER_SHORT, buildScene, customMarks, expand, fallbackRule, fills, gaveWay, resolve, unboundedContainer } from '@unified-analytics/core';
-import type { Catalog, ContainerRules, Layout, Result, SceneNode, Spec } from '@unified-analytics/core';
+import { CONTAINER_RULES, DELTA_FULL, NOTE_LEAST, NUMBER_SHORT, buildScene, customMarks, expand, explain, fallbackRule, fills, gaveWay, resolve, unboundedContainer } from '@unified-analytics/core';
+import type { Because, Catalog, ContainerRules, Explanation, Layout, Result, SceneNode, Spec } from '@unified-analytics/core';
 import { compileFitRules } from './compile.ts';
 import { LEGEND_LINE } from './chrome/legend.ts';
 import { CHROME_CSS, swatch } from './chrome/index.ts';
@@ -289,6 +289,39 @@ export class UaView extends Base {
   get selected(): string | null { return this.#selected; }
   set selected(v: string | null) { this.#selected = v ?? null; this.#keys.select(this.#selected); }
   #selected: string | null = null;
+
+  /** Why the view looks as it does at the size it has now, in the words of its spec: core's explain() for this room,
+   * and after it what the measured pass decided here, which no rule says. An invalid spec is one entry, its error.
+   * ponytail: core's default fit rules, as the plan is explained; a context's own `rules.fit` is not read here yet. */
+  explain(): Explanation {
+    const { spec, result, catalog } = this;
+    if (!spec || !result || !catalog) return { layout: 'none', entries: [{ what: 'not drawn', from: 'inputs', why: 'it waits for ' + (['spec', 'result', 'catalog'] as const).filter((k) => !this[k]).join(', ') }] };
+    const box = this.#room.getBoundingClientRect(), plot = this.#body.querySelector(':scope > :is(.uav-plot, .uav-radial)')?.getBoundingClientRect();
+    let e: Explanation;
+    try { e = explain(spec, result, catalog, { inline: box.width, block: box.height || null, plot: plot?.width ? { inline: plot.width, block: plot.height } : null }); }
+    catch (err) { return { layout: 'none', entries: [{ what: 'not drawn', from: 'spec', why: (err as Error).message }] }; }
+    return { ...e, entries: e.entries.concat(this.#measured(e)) };
+  }
+
+  /* What the measured pass decided, read off what it wrote: the number's form, the prose rung, and labels given up or cut short. */
+  #measured(e: Explanation): Because[] {
+    const out: Because[] = [], from = (part: string) => e.entries.find((b) => b.part === part)?.from ?? 'the layout';
+    if (this.#fig.dataset.fit === 'prose') return [{ what: 'shown as its sentence', from: 'query.metrics[0]', why: 'measured: the number fits the room in none of its forms' }];
+    const fit = this.#number.dataset.fit?.split(' ') ?? [];
+    const forms: Record<string, string> = { short: 'its value set shorter', small: 'its value set smaller', 'delta-short': 'its change set shorter', 'no-note': 'shown without its note' };
+    for (const f of fit) if (forms[f]) out.push({ part: 'number', what: forms[f]!, from: 'query.metrics[0]', why: 'measured: the fuller form is wider or taller than the room' });
+    // Labels by the part they are in: the parts the explanation names, which have a class of their name.
+    const parts = [...new Set(e.entries.map((b) => b.part).filter((p): p is string => !!p))];
+    for (const p of parts) {
+      const el = this.#fig.querySelector<HTMLElement>('.uav-' + p);
+      if (!el?.getClientRects().length) continue;
+      const labels = [...el.querySelectorAll<HTMLElement>('span, b, text')].filter((n) => n.getClientRects().length), thin = labels.filter((n) => n.hasAttribute('data-thin')).length;
+      const cut = labels.filter((n) => getComputedStyle(n).textOverflow === 'ellipsis' && n.scrollWidth > n.clientWidth + 1).length;
+      if (thin) out.push({ part: p, what: thin + ' of ' + labels.length + ' labels given up', from: from(p), why: 'measured: they would meet the labels beside them' });
+      if (cut) out.push({ part: p, what: cut + ' labels cut short', from: from(p), why: 'measured: they are longer than the room they are given' });
+    }
+    return out;
+  }
 
   connectedCallback(): void {
     // A property set before the element was defined sits on the instance and hides the accessor.

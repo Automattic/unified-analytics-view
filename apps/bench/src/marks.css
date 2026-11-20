@@ -13,8 +13,6 @@
 /* Both themes: the page twice, side by side. Each half is as tall as what it holds (marks.ts), so the page scrolls both. */
 .both { display: grid; grid-template-columns: 1fr 1fr; gap: var(--ua-space-s); align-items: start; }
 .both iframe { inline-size: 100%; border: 1px solid var(--ua-color-border); border-radius: var(--ua-radius-lg); }
-.embed nav, .embed #controls { display: none; }
-html:has(.embed) { overflow: hidden; }
 /* A screen and glass have their own edges, and no border. */
 .surface:is(.ua-screen, .ua-frost, .ua-crystal-surface) { border-color: transparent; }
 .specimen.backdrop { padding: var(--ua-space-s); }

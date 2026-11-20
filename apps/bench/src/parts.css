@@ -1,0 +1,9 @@
+/* The parts page: a half for each theme, and in each a strip of frames, narrowest last, then the free one. */
+.parts h2 { margin-block-start: var(--ua-space-m); }
+.parts iframe { display: block; inline-size: 100%; border: 1px solid var(--ua-color-border); border-radius: var(--ua-radius-lg); }
+.strip { display: flex; flex-wrap: wrap; align-items: start; gap: var(--ua-space-m); }
+.strip .free { flex-basis: 100%; }
+.strip .free .frame { inline-size: 100%; }
+/* Every frame's extent shows, not only on hover: here the edge is what is being looked at. */
+.strip .frame { outline: 1px dashed var(--ua-color-border); }
+.strip .meta { font-family: var(--ua-font-family-code); }

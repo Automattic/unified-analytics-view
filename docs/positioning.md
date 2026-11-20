@@ -1,8 +1,8 @@
 # Positioning: the next version of `@automattic/charts`
 
-As of October 5, 2026. A five-minute read.
+As of October 5, 2026, with what is not there yet brought up to date on November 20. A five-minute read.
 
-**How much to trust this.** The facts about the two existing codebases are in `design-inputs/4-a8c-charts-and-jetpack-stats.md`, read from `Automattic/jetpack` trunk at `a737864` (`@automattic/charts` 4.7.0, `jetpack-premium-analytics` 0.11.0). The dependency between them, the token names and the size of the Stats wrapper layer were checked directly. The descriptions of what the wrappers do come from a delegated read. Nothing was run. That Stats drove particular changes in the charts package is an inference.
+**How much to trust this.** The facts about the two existing codebases are in `design-inputs/4-a8c-charts-and-jetpack-stats.md`, read from `Automattic/jetpack` trunk at `a737864` (`@automattic/charts` 4.7.0, `jetpack-premium-analytics` 0.11.0). The dependency between them, the token names and the size of the Stats wrapper layer were checked directly. The descriptions of what the wrappers do come from a delegated read. Nothing was run. That Stats drove particular changes in the charts package is an inference. `design-inputs/5-jetpack-stats-gap.md` reads both again at `56174bc` (charts 4.10.0) and lists the gap in full.
 
 ## The short version
 
@@ -77,15 +77,16 @@ Stats' own rule for widgets is "the host owns all chrome; the widget renders bod
 
 ## What is not there yet
 
-This is an honest list. Version 4 does all of it today.
+This is an honest list. Version 4 does each of these today. Tooltips, keyboard navigation over points, pie, semi-circle, heatmap, map, funnel, and split, grouped and stacked bars, which this list named on October 5, are built.
 
-- Tooltips, interactive legends, zoom and annotations anchored to a point.
-- Keyboard navigation over points.
-- Pie, semi-circle and heatmap, which need the `arc` and `cell` marks.
-- Map and funnel, which become custom marks.
-- Several series split by a second dimension; grouped and time-stacked bars.
+- **Rows that carry links, media and drill-downs.** Every Stats leaderboard puts a link, an avatar or a drill button in its rows; the view has none.
+- **Locale, time zone and strings.** The view formats in `en-US` and UTC and writes its prose in English.
+- **Packaging and a React binding.** Nothing is built for release, and two copies on one page fail silently.
+- **Interactive legends, zoom and annotations anchored to a point,** and extra lines in the readout.
+- **A WordPress token alias sheet,** and accessibility checked against version 4's.
+- **Facets, and maps below country level.**
 
-None of these is in the Spacefast MVP. All of them are needed before Jetpack Stats could move, so version 4 stays maintained until the next version covers what Stats uses.
+None of these is in the Spacefast MVP. All of them are needed before Jetpack Stats could move, so version 4 stays maintained until the next version covers what Stats uses. `design-inputs/5-jetpack-stats-gap.md` gives the order they block in.
 
 ## The path
 

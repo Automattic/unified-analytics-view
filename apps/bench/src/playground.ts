@@ -2,7 +2,7 @@ import { expand, resolve, unboundedContainer, type Spec } from '@unified-analyti
 import { UaView } from '@unified-analytics/dom';
 import { catalog, runQuery, type Scenario } from '@unified-analytics/fixtures';
 import { resizable } from './resizer.ts';
-import { boxIn, register, samples } from './setup.ts';
+import { boxIn, focus, register, samples } from './setup.ts';
 
 /* The playground: write a spec, see the view it makes on the fixture engine. The spec and the controls live in the
  * URL's hash, so a reload or a shared link keeps them. */
@@ -13,6 +13,10 @@ const controls = $<HTMLFormElement>('#controls'), editor = $<HTMLTextAreaElement
 const frame = $('#frame'), plan = $('#plan'), rows = $('#rows'), picker = controls.querySelector('select')!;
 const expanded = $<HTMLDetailsElement>('#expanded');
 let written: Spec | undefined;
+const why = $('#why ol');
+// ponytail: the element says nothing when its measured pass is done, so the panel waits a moment after a change. An event from the element, if this ever reads a frame late.
+let settle = 0;
+const later = () => { clearTimeout(settle); settle = window.setTimeout(explainView, 120); };
 const view = frame.appendChild(new UaView());
 resizable(frame);
 view.catalog = catalog;
@@ -54,6 +58,7 @@ function apply() {
     editor.removeAttribute('aria-invalid'); status.className = 'meta'; status.textContent = 'OK';
     plan.textContent = 'planned with no limits: ' + p.layout + ' · ' + p.text;
     rows.textContent = JSON.stringify(result.rows, null, 1);
+    later();
   } catch (e) { fail((e as Error).message); }
 }
 function fail(message: string) {
@@ -66,3 +71,18 @@ picker.addEventListener('change', () => { if (picker.value) editor.value = prett
 expanded.querySelector('button')!.addEventListener('click', () => { editor.value = pretty(written!); picker.value = ''; apply(); });
 controls.addEventListener('change', apply);
 apply();
+
+/* Why the view looks as it does, from the view itself (UaView.explain): read again whenever the frame changes size, once
+ * the measured pass has run. Pointing at an entry picks its part out in the view. */
+function explainView() {
+  why.replaceChildren(...view.explain().entries.map((b) => {
+    const li = document.createElement('li');
+    li.innerHTML = '<b></b> <span></span> <code></code><span class="meta"></span>' + (b.lever ? '<em></em>' : '');
+    const [part, what, from, because, lever] = li.children as unknown as HTMLElement[];
+    part!.textContent = b.part ?? ''; what!.textContent = b.what; from!.textContent = b.from; because!.textContent = b.why;
+    if (lever) lever.textContent = b.lever!;
+    if (b.part) { li.dataset.part = b.part; li.addEventListener('pointerenter', () => focus(view, b.part!)); li.addEventListener('pointerleave', () => focus(view, '')); }
+    return li;
+  }));
+}
+new ResizeObserver(later).observe(frame);

@@ -3,7 +3,7 @@ import { UaView } from '@unified-analytics/dom';
 import { catalog, runQuery, type Scenario } from '@unified-analytics/fixtures';
 import { el } from './page.ts';
 import { resizable } from './resizer.ts';
-import { boxIn, register, samples } from './setup.ts';
+import { boxIn, focus, register, samples } from './setup.ts';
 
 /* The parts bench: one view at a time, at a ladder of widths, in light and in dark, with one of its parts picked out.
  * The page holds the controls and a half for each theme; each half is this page again, embedded, with its theme handed
@@ -29,15 +29,6 @@ for (const [k, v] of params) {
   else controls.querySelector<HTMLInputElement>(`[name="${k}"][value="${v}"]`)?.click();
 }
 const state = () => Object.fromEntries(new FormData(controls)) as { sample: string; part: string; scenario: Scenario; height: string };
-
-/** The bench's own rule inside a view: the picked part outlined, everything that neither holds it nor is in it faded. */
-function focus(view: UaView, part: string): void {
-  const root = view.shadowRoot;
-  if (!root) return;
-  const sheet = new CSSStyleSheet(), p = `.uav-${part}`;
-  if (part) sheet.replaceSync(`.uav :not(:has(${p}), ${p}, ${p} *) { opacity: .15; } ${p} { outline: 1px dashed #e0306a; outline-offset: 1px; }`);
-  root.adoptedStyleSheets = [...root.adoptedStyleSheets.filter((s) => !(s as CSSStyleSheet & { bench?: true }).bench), Object.assign(sheet, { bench: true })];
-}
 
 type Box = [x: number, y: number, w: number, h: number];
 interface PartMeasure { box: Box; /** Reaches past the frame. */ outside: boolean; /** The most, in px, by which something in it holds more than its box shows: 0 when nothing is cut. */ clipped: number; /** Lines cut short with an ellipsis. */ ellipsis: number }
@@ -77,7 +68,11 @@ Object.assign(window, { benchMeasure: measure });
 /** What the frame says under it: its size, and the parts that show there, with a mark on any that is cut. */
 function readout(frame: HTMLElement, caption: HTMLElement): void {
   const m = measure(frame), cut = (p: PartMeasure) => p.outside || p.clipped > 1 || p.ellipsis ? '✂' : '';
-  caption.textContent = `${m.width} × ${m.height} · ${Object.entries(m.parts).map(([p, v]) => p + cut(v)).join(' ') || 'nothing'}`;
+  // And why: what the view says changed here from its plan with no limits, by the rule or the measured pass that did it. The whole of it on hover.
+  const e = frame.querySelector<UaView>('ua-view')?.explain(), changed = e?.entries.filter((b) => b.what !== 'shown' && !b.what.startsWith('the layout')) ?? [];
+  caption.textContent = `${m.width} × ${m.height} · ${Object.entries(m.parts).map(([p, v]) => p + cut(v)).join(' ') || 'nothing'}`
+    + (changed.length ? ' · ' + changed.map((b) => `${b.part ? b.part + ' ' : ''}${b.what}${b.rule ? ` (${b.rule})` : ''}`).join(', ') : '');
+  caption.title = e ? e.entries.map((b) => [b.part, b.what, b.from, b.why, b.lever].filter(Boolean).join(' · ')).join('\n') : '';
 }
 
 if (!embed) {

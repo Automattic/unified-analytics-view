@@ -1,4 +1,4 @@
-import { defineUaView, surfaceSheet } from '@unified-analytics/dom';
+import { defineUaView, surfaceSheet, type UaView } from '@unified-analytics/dom';
 import { moreSamples, samples as known } from '@unified-analytics/fixtures';
 import { registerLinkPainter } from '@unified-analytics/flow/dom';
 import { registerGeoPainters } from '@unified-analytics/geo/dom';
@@ -25,4 +25,13 @@ export function boxIn(frame: HTMLElement, height: string): void {
   const boxed = !!Number(height);
   frame.classList.toggle('ua-row', boxed); frame.classList.toggle('ua-stack', !boxed);
   frame.style.blockSize = boxed ? height + 'px' : '';
+}
+
+/** The bench's own rule inside a view: the picked part outlined, everything that neither holds it nor is in it faded. */
+export function focus(view: UaView, part: string): void {
+  const root = view.shadowRoot;
+  if (!root) return;
+  const sheet = new CSSStyleSheet(), p = `.uav-${part}`;
+  if (part) sheet.replaceSync(`.uav :not(:has(${p}), ${p}, ${p} *) { opacity: .15; } ${p} { outline: 1px dashed #e0306a; outline-offset: 1px; }`);
+  root.adoptedStyleSheets = [...root.adoptedStyleSheets.filter((s) => !(s as CSSStyleSheet & { bench?: true }).bench), Object.assign(sheet, { bench: true })];
 }

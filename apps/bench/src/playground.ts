@@ -16,6 +16,10 @@ let written: Spec | undefined;
 const view = frame.appendChild(new UaView());
 resizable(frame);
 view.catalog = catalog;
+// The host keeps the selection: what the view proposes is set back on it, and said here, since it has no look yet.
+const selected = $('#selected');
+view.addEventListener('ua-select', (e) => { view.selected = (e as CustomEvent<{ key: string | null }>).detail.key; selected.textContent = view.selected == null ? 'Nothing selected. Activate a point, with a click or Enter, to select it; again to let it go.' : 'Selected: ' + view.selected; });
+view.dispatchEvent(new CustomEvent('ua-select', { detail: { key: null } }));
 
 for (const [name, s] of Object.entries(samples)) picker.add(new Option(s.label, name));
 // What a query can ask for: every metric and dimension, by the name a spec uses.

@@ -106,13 +106,15 @@ describe('the states every atom has', () => {
 
 describe('roveItems', () => {
   it('finds the chosen one by any selector of a list, and activates outside a shadow root as in one', () => {
-    const asked: string[] = [], on = { id: 'b' }, holder = Object.assign(new EventTarget(), { querySelector: (sel: string) => (asked.push(sel), on), getRootNode: () => ({}) }) as unknown as HTMLElement;
+    const asked: string[] = [], on = { id: 'b', hasAttribute: () => false, getAttribute: () => 'box:b' }, holder = Object.assign(new EventTarget(), { querySelector: (sel: string) => (asked.push(sel), on), getRootNode: () => ({}) }) as unknown as HTMLElement;
     const heard: unknown[] = [];
     holder.addEventListener('ua-activate', (e) => heard.push((e as CustomEvent).detail));
+    holder.addEventListener('ua-select', (e) => heard.push((e as CustomEvent).detail));
     roveItems(holder, '.a, .b', () => null, (el) => ({ id: el.id }));
     holder.dispatchEvent(Object.assign(new Event('keydown', { cancelable: true }), { key: 'Enter' }));
     expect(asked).toEqual([':is(.a, .b):is([data-interaction], [data-focus])']);
-    expect(heard).toEqual([{ id: 'b' }]);
+    // It proposes the chosen one as the selection, by its own key: it is no row.
+    expect(heard).toEqual([{ id: 'b' }, { key: 'box:b' }]);
   });
 });
 

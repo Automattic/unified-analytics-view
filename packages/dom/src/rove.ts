@@ -11,7 +11,7 @@ export type How = 'keys' | 'pointer';
  * painter and stylesheet names them from here.
  *   interaction  `hover` while the pointer is over its datum, `active` while it presses
  *   focus        its datum has the keyboard's place
- *   selected     the user picked its datum and the host kept it
+ *   selected     the user picked its datum and the host kept it: `ua-select` proposes, the view's `selected` keeps
  *   emphasis     `highlighted` or `dimmed`: brought out or set back by something else, relayed onto it, never inferred
  * The pointer and the keys hold a datum, and every atom of it takes the state: the mark, its rug tick, its region's copy.
  * A state with no look of its own is still written; its look is the stylesheet's. */

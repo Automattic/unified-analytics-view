@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CHROME_CSS } from '../packages/dom/src/chrome/index.ts';
 import { AXES_CSS } from '../packages/dom/src/chrome/axes.ts';
+import { LABELS_SHARE } from '../packages/dom/src/layouts/matrix.ts';
 import { LABEL, LABEL_CSS, cut } from '../packages/dom/src/chrome/label.ts';
 import { KEYS_CSS } from '../packages/dom/src/keys.ts';
 import { linkPainter } from '../packages/flow/src/dom.ts';
@@ -27,7 +28,13 @@ describe('chrome', () => {
     expect(CHROME_CSS).toContain(AXES_CSS);
     expect(BASE_CSS.indexOf(AXES_CSS)).toBeLessThan(BASE_CSS.indexOf(PIXELS_CSS));
     for (const p of Object.values(LAYOUTS)) expect(p.css).not.toMatch(/(^|\n)(:is\()?\.uav-[xy]-axis\b/);
-    for (const layout of ['cartesian', 'matrix']) for (const [axis, area] of [['x', 'x'], ['y', 'y']]) expect(LAYOUTS[layout]!.css).toContain(`.uav[data-layout="${layout}"] .uav-${axis}-axis { grid-area: ${area}; }`);
+    for (const layout of ['cartesian', 'matrix']) for (const [axis, area] of [['x', 'x'], ['y', 'y']]) expect(LAYOUTS[layout]!.css).toContain(`.uav[data-layout="${layout}"] .uav-${axis}-axis { grid-area: ${area};`);
+  });
+  it('cuts a row label short where a grid\'s names would take more than their share of it, so the cells always have room', () => {
+    // A name down the side of a grid can be wider than the view: adjacency's page paths took 192 px of a 170 px view, and its cells none.
+    expect(LAYOUTS.matrix!.css).toContain(`/ fit-content(${LABELS_SHARE}%) minmax(0, 1fr);`);
+    expect(LAYOUTS.matrix!.css).toContain('.uav[data-layout="matrix"] .uav-y-axis { grid-area: y; min-inline-size: 0; }');
+    expect(AXES_CSS).toContain(`box-sizing: border-box; ${cut('100%')} }`);
   });
   it('sets every plot label from one rule set: its words in its paint, its halo, its highlight and, given up, its box kept, said once for every view', () => {
     expect(CHROME_CSS).toContain(LABEL_CSS);

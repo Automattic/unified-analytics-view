@@ -148,7 +148,7 @@ describe('bars in rows: tornado, bullet', () => {
 describe('lines and areas: Pareto, sparkline, fan, streamgraph, slopegraph, cumulative flow', () => {
   it('a Pareto chart is bars and a line in a second unit, each on its own axis', () => {
     const { ratio, plan } = run(S('pareto'), 346), line = paths(ratio.nodes)[0]!;
-    expect(ratio.parts).toEqual(['y-axis', 'plot', 'y-axis-2', 'x-axis']);
+    expect(ratio.parts).toEqual(['y-axis', 'plot', 'y-axis-2', 'x-axis', 'legend']);
     expect(of<{ text: string }>(ratio.nodes, 'ytick:ratio:').map((n) => n.text)).toEqual(['0%', '20%', '40%', '60%', '80%', '100%']);
     expect(line.points.map((p) => p.v)).toEqual([0.38, 0.627, 0.785, 0.875, 0.932, 0.969, 1]);
     expect(of<{ v: number }>(ratio.nodes, 'primary:bar:')[0]!.v).toBeCloseTo(412 / 500, 12);
@@ -160,8 +160,11 @@ describe('lines and areas: Pareto, sparkline, fan, streamgraph, slopegraph, cumu
     const { ratio, plan, result } = run(asCompanion, 346), metric = run(pareto, 346).ratio;
     expect(catalog.metrics['errors@share']).toEqual({ label: 'Cumulative share', unit: 'ratio', polarity: 'none' });
     expect(result.rows.map((r) => r['errors@share'])).toEqual(runQuery(pareto.query).rows.map((r) => r.errors_share));
-    expect(ratio.parts).toEqual(['y-axis', 'plot', 'y-axis-2', 'x-axis']);
-    expect(ratio.nodes).toEqual(metric.nodes);
+    expect(ratio.parts).toEqual(['y-axis', 'plot', 'y-axis-2', 'x-axis', 'legend']);
+    // The marks and the axes are the same. The legend names the share by the field it is, in each.
+    const drawn = (nodes: typeof ratio.nodes) => nodes.filter((n) => n.part !== 'legend' && n.part !== 'labels');
+    expect(drawn(ratio.nodes)).toEqual(drawn(metric.nodes));
+    expect(ratio.nodes.filter((n) => n.part === 'legend').map((n) => n.key)).toEqual(['swatch:errors', 'legend:errors', 'swatch:errors@share', 'legend:errors@share']);
     // A companion is no metric of the query, so the sentence has no total of it to say.
     expect(plan.text).toBe('Top causes by errors, last 28 days: Timeout (412), Not found (268), Server error (171).');
     // With no entry a companion is in its metric's unit, as a quantile is: a rank beside the count it ranks is still on the count's scale.

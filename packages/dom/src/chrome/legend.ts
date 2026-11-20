@@ -42,10 +42,11 @@ export function paintLegend(body: HTMLElement, scene: Scene): void {
   pageWay(legend, body); pageWay(top, body);
   const nodes = scene.nodes.filter((n) => n.part === 'legend'), names = nodes.length > 0 && !nodes.some((n) => n.kind === 'text' && n.font === 'value');
   attr(legend, 'data-names', names ? '' : null);
-  const swatch = new Map(nodes.filter((n) => n.kind === 'rect').map((n) => [n.series, n.paint]));
+  // An entry's swatch and its name share what follows the colon in their keys: a series' value, or a metric's name.
+  const id = (key: string) => key.slice(key.indexOf(':') + 1), swatch = new Map(nodes.filter((n) => n.kind === 'rect').map((n) => [id(n.key), n.paint]));
   keyed(legend, names ? nodes.filter((n) => n.kind === 'text') : nodes, (n) => (n.kind === 'text' ? 'span' : 'i'), (el, n) => {
     if (n.kind !== 'text') { asSwatch(el, String(SWATCH.legend)); return; }
-    asSwatch(el, names ? String(SWATCH.legend) : null, true); text(el, n); prop(el, '--uav-swatch', names ? paintVar(swatch.get(n.series) ?? n.paint) : null);
+    asSwatch(el, names ? String(SWATCH.legend) : null, true); text(el, n); prop(el, '--uav-swatch', names ? paintVar(swatch.get(id(n.key)) ?? n.paint) : null);
   });
   keyed(top, scene.nodes.filter((n): n is TextNode => n.part === 'legend-top' && n.kind === 'text'), () => 'span', text);
 }

@@ -48,5 +48,7 @@ exports[`explain > says which rule hides a part at a room, what it needs and wha
   "y-axis | hidden | layers[0].encode.y | rule "axes" needs 280 px wide and 120 px tall of the view, and it has 480 × 100 | add "guides" to keep to hold it, or give the view 120 px tall",
   "y-axis-2 | hidden | layers[1].encode.y | rule "axes" needs 280 px wide and 120 px tall of the view, and it has 480 × 100 | add "guides" to keep to hold it, or give the view 120 px tall",
   "number | shown in its place | query.metrics[0] | rule "axes" needs 280 px wide and 120 px tall of the view, and it has 480 × 100 | ",
+  "legend | hidden | layers[0].encode.y, layers[1].encode.y | rule "legend" needs 320 px wide and 180 px tall of the view, and it has 480 × 100 | add "guides" to keep to hold it, or give the view 180 px tall",
+  "labels | hidden | layers[0].encode.y, layers[1].encode.y | rule "labels" needs 280 px wide and 120 px tall of the view, and it has 480 × 100 | add "guides" to keep to hold it, or give the view 120 px tall",
 ]
 `;

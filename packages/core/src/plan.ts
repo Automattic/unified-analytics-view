@@ -1,11 +1,12 @@
 import { CONTAINER_RULES, KEEP } from './container.ts';
 import { applies, fallbackRule, gaveWay, ruleFor, type FitRule } from './fit.ts';
+import { guidesOf } from './guides.ts';
 import { fmtTime, rangeLabel } from './format.ts';
 import { customMarks } from './marks.ts';
 import { PRESETS, expand, fills, presetNames, usesPrevious } from './presets.ts';
 import { checkReads } from './reads.ts';
 import { COLUMNS_BLOCK, UNIT_KEY_BLOCK, legendBlock, place } from './place.ts';
-import { DETAIL_LAYOUTS, SERIES, isMetric, buildScene, columnLabel, columnsOf, tldrValueText, isDim, listRows, metricOf, pointDimOf, roleOf, seriesOf, trackBeside, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
+import { DETAIL_LAYOUTS, SERIES, isMetric, buildScene, columnLabel, columnsOf, tldrValueText, isDim, listRows, metricOf, pointDimOf, roleOf, seriesOf, trackBeside, valueRoomOf, xDimOf } from './scene.ts';
 import { differenceProse, gridProse, rangeProse, rankProse, tldrProse } from './prose.ts';
 import { MARKS, baseOf } from './types.ts';
 import type { Catalog, Container, Layer, Layout, Plan, PlanShape, PresetLibrary, Query, Reduction, ReductionId, Result, Role, PlacedScene, Spec } from './types.ts';
@@ -170,11 +171,10 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   // Glyphs with no dimension say how far along its range a metric is, and not what it is: the number stands above them.
   const p: PlanShape = { layout: laid, layers, guides: {}, tldrValue: rules.tldrValue.above === 'always' || !!M.instant || !layers.length || (unit && !by), side: false, rowLimit: null,
                          share, text: tldrProse(q, result, share, catalog, points && pointDimOf(catalog, layers, by), layers.some((l) => l.mark === 'line')) };
-  if (p.layout === 'cartesian') p.guides = { x: true, y: true, grid: true };
   // A plot whose y is a place in an order says who is first and who moved, where it has a dimension to split by. A rank is known by its unit.
   const ranked = p.layout === 'cartesian' && xDimOf(catalog, layers) ? layers.map((l) => (l.encode || {}).y).find((f): f is string => metricOf(catalog, f)?.unit === 'rank') : undefined;
   if (ranked) p.text = rankProse(q, result, catalog, ranked, xDimOf(catalog, layers)!) ?? p.text;
-  if (p.layout === 'matrix') { p.guides = { x: true, y: true, ramp: true, ...(layers.some((l) => l.mark === 'dot') && { size: true }) }; p.text = gridProse(q, result, catalog) ?? p.text; }
+  if (p.layout === 'matrix') p.text = gridProse(q, result, catalog) ?? p.text;
   // A range that supports the central mark is said after the view's own sentence: its least and its most. One that
   // runs from the period before is the comparison, which is not a range.
   const range = layers.filter((l) => roleOf(l) === 'context' && !usesPrevious(l)).map((l) => l.encode || {}).map((e) => (e.y2 != null ? [e.y, e.y2] : [e.x, e.x2])).find((ends): ends is [string, string] => ends.every((f) => typeof f === 'string'));
@@ -182,32 +182,23 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   // An area painted by direction is a surplus and a deficit: on how many rows its second end is above its first is said after the view's own sentence.
   const gap = p.layout === 'cartesian' ? layers.find((l) => l.mark === 'area' && l.paint === 'direction') : undefined;
   if (gap && !result.meta.empty) p.text += differenceProse(q, result, catalog, [gap.encode!.y as string, gap.encode!.y2!]);
-  if (custom) p.guides = { ramp: true, size: true };
   // A layout with a rule that names a `fallback` gives way to that preset, whole, where the rule applies: the same query,
   // planned again. Asked before the reductions, which have nothing to give up for a view that is not this one.
   // A rule for one mark is for a view that holds it, and a preset the query cannot fill is no fallback of this view's.
   const swap = layers.length ? fallbackRule(fit, p.layout, keep, via, { marks: layers.map((l) => l.mark), fills: (use) => fills(use, q, presets) }) : undefined;
-  // A split plot starts with its legend. Its rules step that down to a label at the end of each line, where there
-  // are lines, and then to nothing. They are asked once, of the view: unlike the reductions, they change no one else's room.
-  const series = p.layout === 'cartesian' ? seriesOf(catalog, layers) : null;
+  // The guides a view has are read off what its layers encode (guides.ts). A guide with a rule of its own is then asked
+  // once, of the view, and is off, or in its shorter form, where the rule applies: unlike the reductions, these change
+  // no one else's room.
+  const had = guidesOf(laid, layers, catalog);
+  p.guides = { ...had };
   const short = (id: string, layout: Layout = 'cartesian') => { const r = ruleFor(rules.fit, layout, id); return !!r && !(r.keep && keep.indexOf(r.keep) >= 0) && applies(r, { view: { inline: container.width, block: container.height } }); };
-  if (series) { if (!short('legend')) p.guides.legend = 'full'; else if (series.lines && !short('labels')) p.guides.legend = 'labels'; }
-  // Layers that measure in two units have a y axis on each side, and the second is given up first.
-  const twoUnits = p.layout === 'cartesian' && unitsOf(catalog, layers).length > 1;
-  if (twoUnits && !short('axis-2')) p.guides.y2 = true;
-  // Labels on the points go first, then the key to sizes. Both are asked once, as the legend is.
-  const labelled = p.layout === 'cartesian' && layers.some((l) => l.mark === 'text'), sized = p.layout === 'cartesian' && layers.some((l) => l.mark !== 'bar' && l.encode && l.encode.size != null);
-  if (labelled && !short('point-labels')) p.guides.pointLabels = true;
-  if (sized && !short('size')) p.guides.size = true;
-  // A band divided by a dimension has a legend. A grid that reads a metric against its range has none.
-  if (p.layout === 'band') p.guides = layers.some((l) => isDim(catalog, l.encode && l.encode.color)) ? { legend: 'full' } : {};
-  // A circle divided by a dimension has the band's legend. One that reads a metric against its range has none.
-  if (p.layout === 'radial' && layers.some((l) => isDim(catalog, l.encode && l.encode.color))) p.guides = { legend: 'full' };
-  // One divided into slices by a dimension on angle has a label for each round its rim.
-  else if (p.layout === 'radial' && layers.some((l) => isDim(catalog, l.encode && l.encode.angle))) p.guides = { rim: true };
-  // What a unit's glyph is worth is said under them, and goes before the glyphs do. Asked once, as the legend is.
-  const noKey = unit && short('unit-key', p.layout);
-  if (unit && !noKey) p.guides.unitKey = true;
+  // A split plot's legend steps down to a label at the end of each line, where there are lines, and then to nothing.
+  const series = p.layout === 'cartesian' ? seriesOf(catalog, layers) : null;
+  if (series && short('legend')) { if (series.lines && !short('labels')) p.guides.legend = 'labels'; else delete p.guides.legend; }
+  // The second y axis is given up before the first, labels on the points go before the key to sizes, and what a unit's
+  // glyph is worth goes before the glyphs do.
+  const noKey = !!had.unitKey && short('unit-key', p.layout);
+  if (!custom) for (const [guide, id] of [['y2', 'axis-2'], ['pointLabels', 'point-labels'], ['size', 'size'], ['unitKey', 'unit-key']] as const) if (p.guides[guide] && short(id, p.layout)) delete p.guides[guide];
   if (result.meta.empty || (M.instant && !result.rows.length)) {
     if (M.instant || !layers.length) { p.layout = 'none'; p.layers = []; p.tldrValue = true; p.guides = {}; }
     else { p.layout = 'notice'; p.layers = []; p.guides = {}; p.tldrValue = false; }
@@ -226,8 +217,8 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   const beside = () => (p.layout === 'rows' && trackBeside(p.layers) && rule('track')) || undefined;
   // A row divided into series starts with its legend, as a band does, and steps it down the same way: to one line that
   // names the series with the most, and then to nothing. Asked once, as a plot's is.
-  const dividedRows = p.layout === 'rows' && layers.some((l) => l.stack);
-  if (dividedRows) p.guides.legend = short('legend-top', 'rows') ? undefined : short('legend', 'rows') ? 'top' : 'full';
+  const dividedRows = p.layout === 'rows' && !!had.legend;
+  if (dividedRows) { if (short('legend-top', 'rows')) delete p.guides.legend; else if (short('legend', 'rows')) p.guides.legend = 'top'; }
   if (p.layout === 'rows') {
     const label = (beside() || rule('marks'))?.needs.inline ?? 0;
     for (let cols = columnsOf(catalog, p.layers); cols.length > 1 && container.width < label + valueRoomOf(catalog, p.layers, listRows(catalog, p.layers, result)); cols = columnsOf(catalog, p.layers)) {
@@ -235,7 +226,7 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
       p.layers = p.layers.filter((l) => l !== last);
       dropped.push('the "' + columnLabel(catalog, last) + '" column');
     }
-    if (columnsOf(catalog, p.layers).length > 1 && !short('columns', 'rows')) p.guides.columns = true;
+    if (!(columnsOf(catalog, p.layers).length > 1 && !short('columns', 'rows'))) delete p.guides.columns;
   }
   // The view rule the layout stands on now, and the room beside its part that only measuring gives:
   // a number wider than the bare plot's rule allows it, or a row's widest value.
@@ -342,11 +333,11 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   // place() gives up the note of a number that stands alone before the reducer gives up the number. Said here, as the middle label is.
   if (p.layout === 'none' && container.height != null && alone(p) > container.height) dropped.push('the note under the number');
   if (p.layout === 'cartesian' && p.guides.x && series && p.guides.legend !== 'full') dropped.push(p.guides.legend === 'labels' ? 'the legend (kept a label at the end of each line)' : 'the legend');
-  if (p.layout === 'cartesian' && p.guides.y && twoUnits && !p.guides.y2) dropped.push('the second y axis');
+  if (p.layout === 'cartesian' && p.guides.y && had.y2 && !p.guides.y2) dropped.push('the second y axis');
   // place() leaves the number out of a hole too small for it, by the `hole` rule and by the number's own width.
   if (p.layout === 'radial' && buildScene(p, q, result, catalog).parts.includes('hole') && !scene.nodes.some((n) => n.key === 'hole')) dropped.push('the number in the hole');
-  if (p.layout === 'cartesian' && p.guides.x && labelled && !p.guides.pointLabels) dropped.push('the labels on the points');
-  if (p.layout === 'cartesian' && p.guides.x && sized && !p.guides.size) dropped.push(KEY_NAMES.size);
+  if (p.layout === 'cartesian' && p.guides.x && had.pointLabels && !p.guides.pointLabels) dropped.push('the labels on the points');
+  if (p.layout === 'cartesian' && p.guides.x && had.size && !p.guides.size) dropped.push(KEY_NAMES.size);
   if (p.layout === 'rows' && columnsOf(catalog, p.layers).length > 1 && !p.guides.columns) dropped.push('the column headers');
   // The key a rule took before any reduction ran. One that went with the axes, or in `drop-guides`, is said there.
   if (noKey && (p.layout !== 'cartesian' || p.guides.x) && buildScene({ ...p, guides: { ...p.guides, unitKey: true } }, q, result, catalog).parts.includes('unit-key')) dropped.push('the key to what a glyph is worth');

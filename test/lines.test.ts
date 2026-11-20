@@ -49,7 +49,8 @@ describe('a companion\'s unit', () => {
     expect(metricOf(catalog, 'hits@share')).toBe(catalog.metrics['hits@share']);
     expect(unitsOf(catalog, withLine('hits@share').layers!)).toEqual(['count', 'ratio']);
     const s = scene(withLine('hits@share'), bySource);
-    expect(s.scene.parts).toEqual(['y-axis', 'plot', 'y-axis-2', 'x-axis']);
+    // A companion with an entry of its own is a quantity of its own, so the two are told apart in a legend.
+    expect(s.scene.parts).toEqual(['y-axis', 'plot', 'y-axis-2', 'x-axis', 'legend']);
     expect(ticks(s, 'y-axis-2')).toEqual(['0%', '20%', '40%', '60%', '80%', '100%']);
     expect(paths(s)[0]!.points.map((p) => p.v)).toEqual([0.438, 0.84, 1]);
   });

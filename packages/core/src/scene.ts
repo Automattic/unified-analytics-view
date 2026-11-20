@@ -319,11 +319,27 @@ export function unitsOf(catalog: Catalog, layers: Layer[]): string[] {
   if (units.length > 2) throw new Error('These layers measure in ' + units.length + ' units (' + units.join(', ') + '), and a plot has a y axis on each side at most. Remove a layer, or draw them as separate views.');
   return units;
 }
-/** Whether a plot's layers are split into series that are painted apart, and so have a legend, and whether one of those
- * is a line or an area, which has an end to label. A split by `detail` paints none apart, and is not one of these. */
+/** What a layer of a plot measures on y, where it is a mark drawn in the layer's own paint: its metric, and for a
+ * companion the metric it came with, since a box's quartiles are one quantity. A companion with a catalog entry of
+ * its own (`pageviews@rank`) is a quantity of its own. A rule, a tick and a label are set in ink, and measure nothing here. */
+const PAINTED: Mark[] = ['line', 'area', 'bar', 'dot', 'unit'];
+function measureOf(catalog: Catalog, l: Layer): string | null {
+  const f = !PAINTED.includes(l.mark) || !l.encode ? null : typeof l.encode.y === 'string' ? l.encode.y : l.encode.y2;
+  return typeof f !== 'string' || !isMetric(catalog, f) ? null : Object.hasOwn(catalog.metrics, f) ? f : baseOf(f);
+}
+/** The quantities a plot's layers measure, in layer order. With more than one, the layers differ by metric: each
+ * metric has a series colour, where its layer states no paint, and an entry in the legend, as each value of a
+ * dimension on `color` has. */
+export function measuresOf(catalog: Catalog, layers: Layer[]): string[] {
+  return [...new Set(layers.map((l) => measureOf(catalog, l)).filter((m): m is string => m != null))];
+}
+/** Whether a plot's layers are told apart by colour, and so have a legend: split into series that are painted apart,
+ * or measuring several metrics. And whether one of those is a line or an area, which has an end to label. A split by
+ * `detail` paints none apart, and is not one of these. */
 export function seriesOf(catalog: Catalog, layers: Layer[]): { lines: boolean } | null {
-  const x = xDimOf(catalog, layers), split = layers.filter((l) => paintedOf(catalog, l, x));
-  return split.length ? { lines: split.some((l) => l.mark === 'line' || l.mark === 'area') } : null;
+  const x = xDimOf(catalog, layers), split = layers.filter((l) => paintedOf(catalog, l, x)), ended = (ls: Layer[]) => ls.some((l) => l.mark === 'line' || l.mark === 'area');
+  if (split.length) return { lines: ended(split) };
+  return measuresOf(catalog, layers).length > 1 ? { lines: ended(layers.filter((l) => l.series !== 'previous' && measureOf(catalog, l) != null)) } : null;
 }
 /** The dimension a layer is split into series by and painted apart by: the one on `color`, unless it is the one on x. */
 function paintedOf(catalog: Catalog, l: Layer, xField?: string): string | null {
@@ -507,6 +523,12 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     });
   }
   const ids = layerKeys(layers), ends = new Map<string, number>();
+  // Layers that measure several metrics are told apart as series are: a series colour for each metric, in layer order,
+  // where the layer states no paint, and the paint it is drawn in for its entry in the legend. Not beside a split by
+  // color, whose series the colours are spent on.
+  const measures = painted ? [] : measuresOf(catalog, layers), several = measures.length > 1, paints = new Map<string, string>();
+  const unpainted = several ? layers.findIndex((l) => !l.paint && l.series !== 'previous' && measures.indexOf(measureOf(catalog, l)!) >= SERIES) : -1;
+  if (unpainted >= 0) throw new Error('These layers measure ' + measures.length + ' metrics (' + measures.join(', ') + '), and there are ' + SERIES + ' series colours for the ones that state no paint. Give layer ' + (unpainted + 1) + ' a "paint", or draw fewer metrics on one plot.');
   // Bars of one metric that fall below nothing as well as rise from it: each is a gain or a loss, and is painted as one.
   // A split plot's bars are painted by their series, and are not these.
   const diverges = (l: Layer) => { const y = l.encode!.y; return typeof y === 'string' && !splitOf(catalog, l, xField) && rows.some((r) => (r[y] as number) < 0); };
@@ -524,12 +546,19 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     if (l.mark === 'area' && xOn && !xDim) throw new Error('Layer ' + (i + 1) + ' is an area with the metric "' + xOn + '" on x, and an area fills under a line that runs one way along x, which the points of two metrics do not. Use "line" to join the points in the order of their rows, or put a dimension on x.');
     if ((l.mark === 'bar' || l.mark === 'unit') && xOn && rows.length && rows[0]![xOn + '@end'] == null) throw new Error((l.mark === 'bar' ? 'Bars' : 'The glyphs of a unit') + ' on the number dimension "' + xOn + '" need its bins, and this result has no "' + xOn + '@end". Return where each bin ends from the query layer, or use line or dot.');
     const v = scaleOf(l).v;
-    const d: Draw = { say, id: ids[i]!, role: roleOf(l), paint: paintOf(l, catalog, result) || (prev ? 'compare' : 'series.1'), prev, rows: rows.filter((r) => (rug ? r[xOn!] != null : across(l) || span.has(r))), k, unit, v, xv, size, points: !!xOn && !xDim, worth: worths[i],
+    const m = several ? measureOf(catalog, l) : null;
+    const d: Draw = { say, id: ids[i]!, role: roleOf(l), paint: paintOf(l, catalog, result) || (prev ? 'compare' : 'series.' + (m == null ? 1 : measures.indexOf(m) + 1)), prev, rows: rows.filter((r) => (rug ? r[xOn!] != null : across(l) || span.has(r))), k, unit, v, xv, size, points: !!xOn && !xDim, worth: worths[i],
       ends: (r) => { const [lo, hi] = span.get(r)!; return [v(lo), v(hi)]; },
       step: !!xDim && !!xOn && rows.length > 0 && rows[0]![xOn + '@end'] != null,
       // A mark with two ends is painted by which way it goes only where its layer says so: `paint: "direction"`.
       ...((l.paint === 'direction' ? l.encode!.y2 != null : l.mark === 'bar' && !l.paint && l.encode!.y2 == null && diverges(l)) && { polarity: metricOf(catalog, [l.encode!.y, l.encode!.y2].find((f) => typeof f === 'string'))?.polarity }) };
-    if (!splitOf(catalog, l, xField)) return nodes.push(...draw(l, d));
+    // A metric's entry is in the paint of the layer that marks it: its primary one, where it has a fill under it too.
+    if (m != null && !prev && (!paints.has(m) || d.role === 'primary')) paints.set(m, d.paint);
+    if (!splitOf(catalog, l, xField)) {
+      const drawn = draw(l, d), last = m == null || prev ? undefined : drawn.filter((n): n is PathNode => n.kind === 'path').map((n) => n.points[n.points.length - 1]!).pop();
+      if (last) ends.set(m!, last.v);                                       // where the metric's line ends, for its label
+      return nodes.push(...drawn);
+    }
     // Split by detail, every series is in the layer's own paint, and none has a label at its end: a label is in its series' colour.
     const plain = !paintedOf(catalog, l, xField);
     series.forEach((s, j) => {
@@ -549,6 +578,13 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
       if (ends.has(s)) nodes.push({ key: 'label:' + s, part: 'labels', kind: 'text', series: s, t: ends.get(s)!, text: s, anchor: 'start', baseline: 'middle', font: 'tick', paint: 'series.' + (j + 1), layer: 'guide' });
     });
     nodes.push(...seriesLegend(series));
+  } else if (several) {
+    // The same two keys, for metrics: an entry each, named by its label, and a label where its line ends.
+    measures.forEach((f) => {
+      const name = metricOf(catalog, f)!.label, paint = paints.get(f) ?? 'series.1';
+      if (ends.has(f)) nodes.push({ key: 'label:' + f, part: 'labels', kind: 'text', t: ends.get(f)!, text: name, anchor: 'start', baseline: 'middle', font: 'tick', paint, layer: 'guide' });
+      nodes.push(...legendEntry(f, {}, name, paint));
+    });
   }
   if (size) nodes.push(...sizeKey(metricOf(catalog, size.field)!, size.top));
   layers.forEach((l, i) => { if (worths[i] != null) nodes.push(...unitKey(ids[i]!, worths[i]!, metricOf(catalog, l.encode!.y))); });
@@ -822,7 +858,7 @@ function sceneGrid(catalog: Catalog, layer: Layer, id: string, result: Result): 
   return { nodes: nodes.concat(shareLegend(rows, k, dim, catalog.dimensions[dim]!, m, M, total, paint)), rows: rows.map(k), aspect: 1 };
 }
 // A legend's entry, whichever legend it is in: a swatch in the paint of what it stands for, a row or a series, and its name.
-const legendEntry = (k: string, of: { row: string } | { series: string }, text: string, paint: string): SceneNode[] => [
+const legendEntry = (k: string, of: { row?: string; series?: string }, text: string, paint: string): SceneNode[] => [
   { key: 'swatch:' + k, part: 'legend', kind: 'rect', ...of, paint, layer: 'data' },
   { key: 'legend:' + k, part: 'legend', kind: 'text', ...of, text, anchor: 'start', baseline: 'middle', font: 'label', paint: 'ink', layer: 'guide' },
 ];
@@ -1141,7 +1177,7 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
     side = p.side;                                                          // a bare plot, set beside the number
     if (side && !parts.length) parts.push('number');
     body = sceneCartesian(catalog, p.layers, p.guides, result, (q.by || [])[0]);
-    const key = body.series ? p.guides.legend : undefined;                 // layers that were split may have been given up
+    const key = body.nodes.some((n) => n.part === 'legend') ? p.guides.legend : undefined;   // layers that were told apart may have been given up
     if (p.guides.y && body.nodes.some((n) => n.part === 'y-axis')) parts.push('y-axis');   // a stack about the middle has no value axis
     parts.push('plot');
     if (body.nodes.some((n) => n.part === 'points')) parts.push('points');

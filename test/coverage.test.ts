@@ -407,8 +407,9 @@ describe('a scale per unit', () => {
   const dual = specs.dual!, ticks = (ratio: { nodes: any[] }, part: string) => ratio.nodes.filter((n) => n.part === part).map((n) => n.text);
   it('layers whose metrics differ in unit get a y scale each, and a second axis on the far side', () => {
     const { ratio, plan, result } = run(dual, 346);
-    expect(plan.guides).toEqual({ x: true, y: true, y2: true, grid: true });
-    expect(ratio.parts).toEqual(['y-axis', 'plot', 'y-axis-2', 'x-axis']);
+    // Two metrics are told apart, so the view has a legend too.
+    expect(plan.guides).toEqual({ x: true, y: true, y2: true, grid: true, legend: 'full' });
+    expect(ratio.parts).toEqual(['y-axis', 'plot', 'y-axis-2', 'x-axis', 'legend']);
     expect(ticks(ratio, 'y-axis')).toEqual(['0', '200', '400', '600']);
     expect(ticks(ratio, 'y-axis-2')).toEqual(['$0', '$1k', '$2k', '$3k', '$4k']);
     expect(ratio.nodes.filter((n) => n.part === 'y-axis-2').map((n) => [n.key, (n as { anchor: string }).anchor])[1]).toEqual(['ytick:usd:1000', 'start']);
@@ -422,14 +423,33 @@ describe('a scale per unit', () => {
     const counts: Spec = { query: { metrics: ['visitors', 'pageviews'], by: ['date.day'] }, layers: [{ mark: 'bar', encode: { x: 'date.day', y: 'visitors' } }, { mark: 'line', encode: { x: 'date.day', y: 'pageviews' } }, { mark: 'rule', encode: { y: 1000 } }] };
     const { ratio, plan } = run(counts, 346);
     expect(plan.guides.y2).toBe(undefined);
-    expect(ratio.parts).toEqual(['y-axis', 'plot', 'x-axis']);
+    expect(ratio.parts).toEqual(['y-axis', 'plot', 'x-axis', 'legend']);
     expect(ticks(ratio, 'y-axis')).toEqual(['0', '500', '1k', '1.5k']);
     expect((ratio.nodes.find((n) => n.key === 'reference:rule') as { t: number }).t).toBeCloseTo(1000 / 1500, 12);
   });
+  it('layers that differ by metric are told apart as series are: a colour each where none is stated, an entry each in the legend, and a label where a line ends', () => {
+    const counts: Spec = { query: { metrics: ['visitors', 'pageviews'], by: ['date.day'] }, layers: [{ mark: 'area', encode: { x: 'date.day', y: 'visitors' }, role: 'context' }, { mark: 'line', encode: { x: 'date.day', y: 'visitors' } }, { mark: 'line', encode: { x: 'date.day', y: 'pageviews' } }] };
+    const { ratio, plan } = run(counts, 346), paint = (key: string) => ratio.nodes.find((n) => n.key === key)!.paint;
+    // The fill under a line is its metric's, in its metric's colour. The second metric takes the next.
+    expect([paint('context:area'), paint('primary:line'), paint('primary:line#2')]).toEqual(['series.1', 'series.1', 'series.2']);
+    expect(plan.guides.legend).toBe('full');
+    expect(ratio.nodes.filter((n) => n.part === 'legend').map((n) => [n.key, n.paint, (n as { text?: string }).text])).toEqual([
+      ['swatch:visitors', 'series.1', undefined], ['legend:visitors', 'ink', 'Visitors'], ['swatch:pageviews', 'series.2', undefined], ['legend:pageviews', 'ink', 'Page views']]);
+    // The legend's rule swaps it for a label at each line's end, in the line's colour, as a split plot's does.
+    const narrow = run(counts, 300);
+    expect(narrow.plan.guides.legend).toBe('labels');
+    expect(narrow.ratio.nodes.filter((n) => n.part === 'labels').map((n) => [n.key, n.paint, (n as { text?: string }).text])).toEqual([['label:visitors', 'series.1', 'Visitors'], ['label:pageviews', 'series.2', 'Page views']]);
+    // A paint that is stated stands, and one metric has no legend: nor have a box's quartiles, which are one metric's.
+    expect(run({ ...counts, layers: [counts.layers![1]!, { ...counts.layers![2]!, paint: 'series.4' }] }, 346).ratio.nodes.find((n) => n.key === 'swatch:pageviews')!.paint).toBe('series.4');
+    expect(run({ query: counts.query, layers: [counts.layers![0]!, counts.layers![1]!] }, 346).plan.guides.legend).toBe(undefined);
+    expect(run(moreSamples.box!.spec, 346).plan.guides.legend).toBe(undefined);
+    // Beside a split by color the colours are the series', and the legend is theirs.
+    expect(run(specs.grouped!, 346).ratio.nodes.filter((n) => n.part === 'legend' && n.kind === 'text').map((n) => n.series)).toEqual(run(specs.grouped!, 346).ratio.series);
+  });
   it('the second axis is given up before the first, and the marks keep their scale', () => {
     const wide = run(dual, 346), narrow = run(dual, 300), marks = (r: typeof wide) => r.ratio.nodes.filter((n) => n.layer === 'data' && n.part === 'plot');
-    expect(narrow.plan).toMatchObject({ guides: { x: true, y: true, grid: true }, dropped: ['the second y axis', 'the middle date label'] });
-    expect(narrow.ratio.parts).toEqual(['y-axis', 'plot', 'x-axis']);
+    expect(narrow.plan).toMatchObject({ guides: { x: true, y: true, grid: true }, dropped: ['the legend (kept a label at the end of each line)', 'the second y axis', 'the middle date label'] });
+    expect(narrow.ratio.parts).toEqual(['y-axis', 'plot', 'labels', 'x-axis']);
     expect(marks(narrow)).toEqual(marks(wide));
     expect(run({ ...dual, keep: ['guides'] }, 300).plan.guides.y2).toBe(true);
     expect(run(dual, 250).plan.guides).toEqual({ x: false, y: false, grid: false });

@@ -1,10 +1,12 @@
 import { CONTAINER_RULES, makeContainer, unboundedContainer } from './container.ts';
 import { applies, type FitRule, type Room } from './fit.ts';
+import { GUIDE_CHANNEL } from './guides.ts';
 import { customMarks } from './marks.ts';
 import { place } from './place.ts';
 import { PRESETS, expand, usesPrevious } from './presets.ts';
 import { layoutOf, resolve } from './plan.ts';
-import { buildScene, layerKeys } from './scene.ts';
+import { buildScene, layerKeys, measuresOf } from './scene.ts';
+import { baseOf } from './types.ts';
 import type { Catalog, Layout, PresetLibrary, Result, Spec } from './types.ts';
 
 /* Why a view looks as it does, said in the words of its spec. Every entry names the place in the spec it came from,
@@ -34,8 +36,6 @@ export interface Explanation { layout: Layout; entries: Because[] }
 /** The room a view has: its width, its height where it was handed one, and its plot's, where it has been measured. */
 export interface ExplainRoom { inline: number; block?: number | null; plot?: Room | null }
 
-/** The channel a guide part says, and so the field it comes from. */
-const GUIDES: Record<string, string> = { 'x-axis': 'x', 'y-axis': 'y', 'y-axis-2': 'y', legend: 'color', 'legend-top': 'color', labels: 'color', ramp: 'color', size: 'size', rim: 'angle', 'point-labels': 'text' };
 /** The parts the marks are drawn in. */
 const DATA = new Set(['plot', 'points', 'rows', 'band', 'radial', 'track']);
 const need = (r: FitRule) => [r.needs.inline && r.needs.inline + ' px wide', r.needs.block && r.needs.block + ' px tall'].filter(Boolean).join(' and ');
@@ -68,11 +68,14 @@ export function explain(spec0: Spec, result: Result, catalog: Catalog, room?: Ex
   const keys = layerKeys(plan.layers), source = (part: string): { from: string; why: string } => {
     if (part === 'number' || part === 'hole') return { from: 'query.metrics[0]', why: 'the total of "' + q.metrics[0] + '", from the engine' };
     if (part === 'notice') return { from: 'result', why: 'no rows came back' };
-    const ch = GUIDES[part], on = plan.layers.map((l, k) => ((l.encode as Record<string, unknown> | undefined)?.[ch!] != null ? k : -1)).filter((k) => k >= 0);
+    const ch = GUIDE_CHANNEL[part], on = plan.layers.map((l, k) => ((l.encode as Record<string, unknown> | undefined)?.[ch!] != null ? k : -1)).filter((k) => k >= 0);
     // The second y axis is the last layer's to measure on y; every other guide is the first's.
     const j = !ch || !on.length ? -1 : part === 'y-axis-2' ? on.at(-1)! : on[0]!;
     if (part === 'labels' && j < 0) { const d = plan.layers.findIndex((l) => l.encode?.detail != null); if (d >= 0) return { from: of(d) + '.encode.detail', why: 'a label at the end of each series' }; }
     if (j >= 0) { const f = (plan.layers[j]!.encode as Record<string, unknown>)[ch!]; return { from: of(j) + '.encode.' + ch, why: JSON.stringify(f) + ' on ' + ch }; }
+    // With nothing on color, a plot's legend is of the metrics its layers measure: the first layer of each says which.
+    const told = part === 'legend' || part === 'labels' ? measuresOf(catalog, plan.layers) : [];
+    if (told.length > 1) return { from: told.map((m) => of(plan.layers.findIndex((l) => [l.encode?.y, l.encode?.y2].some((f) => typeof f === 'string' && (f === m || baseOf(f) === m)))) + '.encode.y').join(', '), why: 'the layers measure ' + told.length + ' metrics, told apart by colour' };
     const drawn = [...new Set(scene.nodes.filter((n) => n.part === part).map((n) => keys.findIndex((k) => n.key === k || n.key.startsWith(k + ':'))).filter((k) => k >= 0))];
     // A part some layouts draw from the layers whole, with no key of a layer's own on its nodes: the band, a grid of glyphs.
     if (!drawn.length && DATA.has(part)) drawn.push(...plan.layers.map((_, k) => k));
@@ -90,7 +93,7 @@ export function explain(spec0: Spec, result: Result, catalog: Catalog, room?: Ex
   const keep = new Set(spec.keep ?? []), marks = plan.layers.map((l) => l.mark);
   const plot = room.plot !== undefined ? room.plot : (() => { const b = place(scene, makeContainer(room.inline, room.block)).plot; return b ? { inline: b.w, block: b.h } : null; })();
   const rooms = { view: { inline: room.inline, block: room.block ?? null }, plot };
-  const gone = new Set<string>(), said = (r: FitRule) => 'rule "' + r.id + '" needs ' + need(r) + ' of the ' + r.container + ', and it has ' + has(rooms[r.container]);
+  const gone = new Set<string>(), placed = new Set<string>(), said = (r: FitRule) => 'rule "' + r.id + '" needs ' + need(r) + ' of the ' + r.container + ', and it has ' + has(rooms[r.container]);
   for (const r of rules) {
     if (r.mark && !marks.includes(r.mark)) continue;
     // A rule on the plot holds when there is no plot left: what sits in it has gone with it.
@@ -110,13 +113,13 @@ export function explain(spec0: Spec, result: Result, catalog: Catalog, room?: Ex
     const lever = r.keep ? 'add "' + r.keep + '" to keep to hold it' + (short ? ', or give the ' + r.container + ' ' + short : '') : undefined;
     let acted = false;
     for (const p of [...r.hide, ...(r.set?.legend === 'top' ? ['legend'] : [])]) {
-      if (!parts.includes(p as never) || gone.has(p)) continue;
+      if ((!parts.includes(p as never) && !placed.has(p)) || gone.has(p)) continue;
       gone.add(p); acted = true;
       out.push({ part: p, what: r.set?.legend === 'top' && p === 'legend' ? 'shown as one line' : 'hidden', from: source(p).from, why: said(r), rule: r.id, lever });
     }
     // What a rule shows takes the place of what it hid, so it is said only where the rule hid something.
-    if (acted) for (const p of r.show ?? []) if (!gone.has(p) && !out.some((b) => b.part === p && b.what === 'shown in its place')) out.push({ part: p, what: 'shown in its place', from: source(p).from, why: said(r), rule: r.id });
+    if (acted) for (const p of r.show ?? []) if (!gone.has(p) && !out.some((b) => b.part === p && b.what === 'shown in its place')) { placed.add(p); out.push({ part: p, what: 'shown in its place', from: source(p).from, why: said(r), rule: r.id }); }
   }
-  // A part shown and then hidden is said once, as hidden.
-  return { layout: plan.layout, entries: out.filter((b) => !(b.what === 'shown' && gone.has(b.part!))) };
+  // A part shown and then hidden is said once, as hidden: one the plan shows, and one a rule put in another's place.
+  return { layout: plan.layout, entries: out.filter((b) => !((b.what === 'shown' || b.what === 'shown in its place') && gone.has(b.part!))) };
 }

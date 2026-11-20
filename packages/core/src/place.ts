@@ -166,10 +166,11 @@ function placeLegend(scene: Scene, W: number): Block {
     const top = scene.parts.includes('legend-top') && scene.nodes.find((n): n is TextNode => n.part === 'legend-top' && n.kind === 'text');
     return top ? topLine(top, W) : { nodes: [], height: 0 };
   }
-  const nodes: PlacedNode[] = [], of = (kind: string, s: string) => scene.nodes.find((n) => n.part === 'legend' && n.kind === kind && n.series === s);
+  // An entry is a swatch and a name that share what follows the colon in their keys: a series' value, or a metric's name.
+  const nodes: PlacedNode[] = [], entries = scene.nodes.filter((n): n is TextNode => n.part === 'legend' && n.kind === 'text');
   let x = 0, yy = 16;
-  scene.series!.forEach((s) => {
-    const swatch = of('rect', s) as RectNode, name = of('text', s) as TextNode, w = 18 + Math.min(name.text.length * CHAR_W, W - 18);
+  entries.forEach((name) => {
+    const swatch = scene.nodes.find((n) => n.key === 'swatch:' + name.key.slice(name.key.indexOf(':') + 1)) as RectNode, w = 18 + Math.min(name.text.length * CHAR_W, W - 18);
     if (x && x + w > W) { x = 0; yy += 20; }
     nodes.push(rect(swatch, x, yy - 6, 12, 12, 2), text(name, x + 18, yy, fit(name.text, W - 18)));
     x += w + 14;

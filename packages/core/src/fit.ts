@@ -36,7 +36,7 @@ export interface Room { inline: number; block?: number | null }
  * the width of a row's value and of each column after it, and anything that depends on how tall the content is. */
 export const FIT_RULES: FitRule[] = [
   { id: 'axes',      layout: 'cartesian', container: 'view', needs: { inline: 280, block: 120 },      // a plot with axes
-    hide: ['x-axis', 'y-axis', 'grid'], show: ['number'], set: { arrange: 'side' }, keep: 'guides' },
+    hide: ['x-axis', 'y-axis', 'y-axis-2', 'grid'], show: ['number'], set: { arrange: 'side' }, keep: 'guides' },
   { id: 'axis-2',    layout: 'cartesian', container: 'view', needs: { inline: 340 },                  // the second y axis goes before the first
     hide: ['y-axis-2'], keep: 'guides' },
   { id: 'legend',    layout: 'cartesian', container: 'view', needs: { inline: 320, block: 180 },      // a split plot's legend becomes a label at the end of each line
@@ -79,7 +79,7 @@ export const FIT_RULES: FitRule[] = [
   { id: 'ramp',      layout: 'matrix',    container: 'view', needs: { inline: 240, block: 150 },      // a grid has no bare form: its ramp goes, and then the grid
     hide: ['ramp', 'size'], keep: 'guides' },
   { id: 'marks',     layout: 'matrix',    container: 'view', needs: { inline: 150, block: 90 },       // its labels thin by rank where they would meet, which is measured
-    hide: ['plot', 'ramp'], show: ['number'], keep: 'marks' },
+    hide: ['plot', 'x-axis', 'y-axis', 'ramp', 'size'], show: ['number'], keep: 'marks' },
   { id: 'notice',    layout: 'notice',    container: 'view', needs: { inline: 150, block: 40 },
     hide: ['notice'], show: ['number'], keep: 'marks' },
   { id: 'track',     layout: 'rows',      container: 'view', needs: { inline: 160 },                  // a track beside its label: the label's 90 px and 70 to read a mark's place in. The value's room is measured

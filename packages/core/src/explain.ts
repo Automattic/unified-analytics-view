@@ -20,7 +20,8 @@ import type { Catalog, Layout, PresetLibrary, Result, Spec } from './types.ts';
 export interface Because {
   /** The part it is about, where it is about one. */
   part?: string;
-  /** What happened: "the layout is rows", "shown", "hidden", "kept", "shown in its place", "not drawn". */
+  /** What happened: "the layout is rows", "shown", "hidden", "kept", "shown in its place", "not drawn", a key's shorter
+   * form ("shown as a thin strip"), or what went with a key ("hidden, and the marks it keyed drawn in one colour"). */
   what: string;
   /** Where in the spec it came from: a path such as `layers[0].encode.color`, `keep` or `query.metrics[0]`. A layer of
    * a preset is named through it: `use "bar-list", layer 1`. */
@@ -36,6 +37,12 @@ export interface Explanation { layout: Layout; entries: Because[] }
 /** The room a view has: its width, its height where it was handed one, and its plot's, where it has been measured. */
 export interface ExplainRoom { inline: number; block?: number | null; plot?: Room | null }
 
+/** A key's shorter form, by the switch a fit rule sets for it: the part, and what is said of it. */
+const SHORTER: Record<string, [part: string, what: string]> = { 'legend: top': ['legend', 'shown as one line'], 'ramp: strip': ['ramp', 'shown as a thin strip'], 'size-key: most': ['size', 'shown as its largest step'] };
+/** What the marks give up when a rule takes their key, by the switch it sets: the parts that are that key, and what is said of them. */
+const PLAIN: Record<string, [parts: string[], what: string]> = { 'split: plain': [['legend', 'legend-top', 'labels'], 'hidden, and the marks it keyed drawn in one colour'], 'dots: one': [['size'], 'hidden, and the dots drawn at one size'] };
+/** A part a rule thins and does not take, by the target it names. */
+const THINNED: Record<string, [part: string, what: string]> = { 'rim.ranked': ['rim', 'thinned to about four'] };
 /** The parts the marks are drawn in. */
 const DATA = new Set(['plot', 'points', 'rows', 'band', 'radial', 'track']);
 const need = (r: FitRule) => [r.needs.inline && r.needs.inline + ' px wide', r.needs.block && r.needs.block + ' px tall'].filter(Boolean).join(' and ');
@@ -112,10 +119,13 @@ export function explain(spec0: Spec, result: Result, catalog: Catalog, room?: Ex
     const c = rooms[r.container], short = [r.needs.inline != null && c && c.inline < r.needs.inline && r.needs.inline + ' px wide', r.needs.block != null && c?.block != null && c.block < r.needs.block && r.needs.block + ' px tall'].filter(Boolean).join(' and ');
     const lever = r.keep ? 'add "' + r.keep + '" to keep to hold it' + (short ? ', or give the ' + r.container + ' ' + short : '') : undefined;
     let acted = false;
-    for (const p of [...r.hide, ...(r.set?.legend === 'top' ? ['legend'] : [])]) {
+    // What a rule does to a part without taking it: a key in its shorter form, by a switch, and a rim thinned to its unranked names.
+    const less = new Map<string, string>([...Object.entries(r.set ?? {}).flatMap(([k, v]): [string, string][] => (SHORTER[k + ': ' + v] ? [SHORTER[k + ': ' + v]!] : [])), ...r.hide.flatMap((t): [string, string][] => (THINNED[t] ? [THINNED[t]!] : []))]);
+    const plain = Object.entries(r.set ?? {}).flatMap(([k, v]) => (PLAIN[k + ': ' + v] ? [PLAIN[k + ': ' + v]!] : []));
+    for (const p of [...r.hide, ...less.keys()]) {
       if ((!parts.includes(p as never) && !placed.has(p)) || gone.has(p)) continue;
       gone.add(p); acted = true;
-      out.push({ part: p, what: r.set?.legend === 'top' && p === 'legend' ? 'shown as one line' : 'hidden', from: source(p).from, why: said(r), rule: r.id, lever });
+      out.push({ part: p, what: less.get(p) ?? plain.find(([of]) => of.includes(p))?.[1] ?? 'hidden', from: source(p).from, why: said(r), rule: r.id, lever });
     }
     // What a rule shows takes the place of what it hid, so it is said only where the rule hid something.
     if (acted) for (const p of r.show ?? []) if (!gone.has(p) && !out.some((b) => b.part === p && b.what === 'shown in its place')) { placed.add(p); out.push({ part: p, what: 'shown in its place', from: source(p).from, why: said(r), rule: r.id }); }

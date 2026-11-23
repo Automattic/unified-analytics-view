@@ -10,11 +10,14 @@ export interface FitRule {
   container: 'view' | 'plot';
   /** In px. The part stays while the container has at least this in each. */
   needs: { inline?: number; block?: number };
-  /** Parts or roles given up otherwise. */
+  /** Parts or roles given up otherwise, and `axis:2` for the marks drawn on the second y axis. */
   hide: string[];
   /** Parts that appear in compensation, under the same condition. */
   show?: string[];
-  /** Layout switches under the same condition, as data-attributes. */
+  /** Switches under the same condition, each a custom property on the figure that a layout's own rules answer to.
+   * `arrange: side` sets the number beside a bare plot, and `legend: top` a legend as its one line. A key's shorter form
+   * is one too: `ramp: strip`, `size-key: most`. So is a drawing without an encoding whose key the rule takes:
+   * `dots: one` for dots of one size, `split: plain` for series in one paint. */
   set?: Record<string, string>;
   /** The spec's `keep` entry that disables this rule. */
   keep?: KeepPart;
@@ -22,7 +25,8 @@ export interface FitRule {
    * whole view, so `hide` and `show` have nothing left to act on. `resolve()` plans again with it. A browser container
    * paints both, and the compiled rule shows one. */
   fallback?: string;
-  /** On a rule with a `fallback`: the mark the layout's layers must hold for the view to give way. A built-in mark
+  /** The mark a view's layers must hold for the rule to be its: a legend gives way to labels at line ends only where
+   * there is a line. On a rule with a `fallback`: the mark the layout's layers must hold for the view to give way. A built-in mark
    * shares its layout with others, so a rule for one of its forms names it: a band of glyphs gives way to the share
    * bar, and the share bar, in the same layout, gives way to nothing. A custom mark's layout is its own, and needs none. */
   mark?: string;
@@ -35,18 +39,24 @@ export interface Room { inline: number; block?: number | null }
  * What these cannot say is measured in `resolve()`: the width of the number,
  * the width of a row's value and of each column after it, and anything that depends on how tall the content is. */
 export const FIT_RULES: FitRule[] = [
-  { id: 'axes',      layout: 'cartesian', container: 'view', needs: { inline: 280, block: 120 },      // a plot with axes
-    hide: ['x-axis', 'y-axis', 'y-axis-2', 'grid'], show: ['number'], set: { arrange: 'side' }, keep: 'guides' },
-  { id: 'axis-2',    layout: 'cartesian', container: 'view', needs: { inline: 340 },                  // the second y axis goes before the first
-    hide: ['y-axis-2'], keep: 'guides' },
-  { id: 'legend',    layout: 'cartesian', container: 'view', needs: { inline: 320, block: 180 },      // a split plot's legend becomes a label at the end of each line
+  // A plot with axes. The second y axis is the key to what is measured in a second unit, which is read against nothing
+  // else: it stays as long as the first does, and what is drawn on it goes when it goes. A bare plot is of one unit.
+  // It has no room for a key to sizes either, so its dots are drawn at one size: what a size meant goes with what said it.
+  { id: 'axes',      layout: 'cartesian', container: 'view', needs: { inline: 280, block: 120 },
+    hide: ['x-axis', 'y-axis', 'y-axis-2', 'grid', 'axis:2', 'size'], show: ['number'], set: { arrange: 'side', dots: 'one' }, keep: 'guides' },
+  // A plot told apart by colour has a legend, which becomes a label at the end of each line. That is for a view with
+  // a line or an area in it: bars have no ends to label, so their legend has nothing to give way to and stays. Both go
+  // when the axes do, and the colours go with them: a bare plot's series are in one paint, as a split by `detail` is.
+  { id: 'legend',      layout: 'cartesian', mark: 'line', container: 'view', needs: { inline: 320, block: 180 },
     hide: ['legend'], show: ['labels'], keep: 'guides' },
-  { id: 'labels',    layout: 'cartesian', container: 'view', needs: { inline: 280, block: 120 },      // and those go when the axes do
-    hide: ['labels'], keep: 'guides' },
+  { id: 'legend-area', layout: 'cartesian', mark: 'area', container: 'view', needs: { inline: 320, block: 180 },
+    hide: ['legend'], show: ['labels'], keep: 'guides' },
+  { id: 'labels',      layout: 'cartesian', container: 'view', needs: { inline: 280, block: 120 },
+    hide: ['labels', 'legend'], set: { split: 'plain' }, keep: 'guides' },
   { id: 'point-labels', layout: 'cartesian', container: 'view', needs: { inline: 340, block: 180 },   // labels on points go first
     hide: ['point-labels'], keep: 'guides' },
-  { id: 'size',      layout: 'cartesian', container: 'view', needs: { inline: 320, block: 160 },      // then the key to the sizes of dots
-    hide: ['size'], keep: 'guides' },
+  { id: 'size',      layout: 'cartesian', container: 'view', needs: { inline: 320, block: 160 },      // then the key to the sizes of dots, down to its largest step: it stays as long as sized dots do
+    hide: [], set: { 'size-key': 'most' }, keep: 'guides' },
   { id: 'points',    layout: 'cartesian', container: 'view', needs: { inline: 280, block: 120 },      // a plot of points has no sparkline form: under the axes' need it is the number alone
     hide: ['points'], show: ['number'], keep: 'marks' },
   { id: 'mid-tick',  layout: 'cartesian', container: 'view', needs: { inline: 380 }, hide: ['x-tick.mid'] },
@@ -54,55 +64,56 @@ export const FIT_RULES: FitRule[] = [
     hide: ['role:comparison', 'role:reference', 'role:context'], keep: 'secondary' },
   { id: 'marks',     layout: 'cartesian', container: 'view', needs: { inline: 152, block: 46 },       // 76 for the number, a 12 px gap and a 64 px bare plot
     hide: ['plot'], show: ['number'], keep: 'marks' },
-  { id: 'columns',   layout: 'rows',      container: 'view', needs: { block: 80 },                    // headers over the columns: their 20 px and two rows under them
-    hide: ['columns'], keep: 'guides' },
   { id: 'marks',     layout: 'rows',      container: 'view', needs: { inline: 90 },                   // the label; the value's room is measured, and each ranked column's
     hide: ['rows'], show: ['number'], keep: 'marks' },
   { id: 'legend',     layout: 'rows',     container: 'view', needs: { inline: 170, block: 150 },      // a divided row's legend becomes one line, as the band's does, and where the rows have under three of their own
     hide: ['legend'], show: ['legend-top'], keep: 'guides' },
-  { id: 'legend-top', layout: 'rows',     container: 'view', needs: { block: 84 },                    // and that line goes where it would leave no two rows
-    hide: ['legend', 'legend-top'], keep: 'guides' },
+  { id: 'legend-top', layout: 'rows',     container: 'view', needs: { block: 84 },                    // and that line goes where it would leave no two rows, and the series' colours with it
+    hide: ['legend', 'legend-top'], set: { split: 'plain' }, keep: 'guides' },
   { id: 'legend',    layout: 'band',      container: 'view', needs: { inline: 170 },                  // the full legend becomes the largest segment's label
     hide: [], set: { legend: 'top' }, keep: 'guides' },
   { id: 'marks',     layout: 'band',      container: 'view', needs: { inline: 110 },
     hide: ['band', 'legend'], show: ['number'], keep: 'marks' },
   { id: 'legend',     layout: 'radial', container: 'view', needs: { inline: 170 },                    // as the band's
     hide: [], set: { legend: 'top' }, keep: 'guides' },
-  { id: 'legend-top', layout: 'radial', container: 'view', needs: { block: 88 },                      // the least circle, and one line under it
-    hide: ['legend', 'legend-top'], keep: 'guides' },
-  { id: 'rim',        layout: 'radial', container: 'view', needs: { inline: 230, block: 120 },        // labels round the rim: the circle, and a label's width to either side of it
-    hide: ['rim'], keep: 'guides' },
+  { id: 'legend-top', layout: 'radial', container: 'view', needs: { block: 88 },                      // the least circle, and one line under it. Under that the legend goes, and the segments' colours with it
+    hide: ['legend', 'legend-top'], set: { split: 'plain' }, keep: 'guides' },
+  // Labels round the rim: the circle, and a label's width to either side of it. They are the key to which slice is
+  // which, so under that they thin to the ones with no rank, about four, and stay as long as the circle does.
+  { id: 'rim',        layout: 'radial', container: 'view', needs: { inline: 230, block: 120 },
+    hide: ['rim.ranked'], keep: 'guides' },
   { id: 'hole',       layout: 'radial', container: 'plot', needs: { inline: 120 },                    // the number sits in a donut's hole while the circle is this wide
     hide: ['hole'] },
   { id: 'marks',      layout: 'radial', container: 'view', needs: { inline: 72, block: 64 },          // the least circle
     hide: ['radial', 'legend', 'legend-top'], show: ['number'], keep: 'marks' },
-  { id: 'ramp',      layout: 'matrix',    container: 'view', needs: { inline: 240, block: 150 },      // a grid has no bare form: its ramp goes, and then the grid
-    hide: ['ramp', 'size'], keep: 'guides' },
+  // A grid has no bare form. Its ramp is the key to its colours and its key to sizes to its dots, so neither goes before
+  // the grid: under this each is in its shorter form, the ramp a thin strip of every step and the sizes their largest alone.
+  { id: 'ramp',      layout: 'matrix',    container: 'view', needs: { inline: 240, block: 150 },
+    hide: [], set: { ramp: 'strip', 'size-key': 'most' }, keep: 'guides' },
   { id: 'marks',     layout: 'matrix',    container: 'view', needs: { inline: 150, block: 90 },       // its labels thin by rank where they would meet, which is measured
     hide: ['plot', 'x-axis', 'y-axis', 'ramp', 'size'], show: ['number'], keep: 'marks' },
   { id: 'notice',    layout: 'notice',    container: 'view', needs: { inline: 150, block: 40 },
     hide: ['notice'], show: ['number'], keep: 'marks' },
   { id: 'track',     layout: 'rows',      container: 'view', needs: { inline: 160 },                  // a track beside its label: the label's 90 px and 70 to read a mark's place in. The value's room is measured
     hide: ['track'], keep: 'marks' },
-  /* The `unit` mark, in each layout it draws in. What a glyph is worth is said in a line under the glyphs, a guide, and
-   * goes first: by height alone, since a line of a few words is never short of width where its glyphs are drawn.
-   * Glyphs are counted, so under the room that takes they are not drawn smaller: the view becomes the
-   * preset of the same query that needs less, whole, and that one steps down to the number by its own rules. A rule
-   * names the mark, so the layout's other views are not asked. A grid with no dimension has no share bar to become,
-   * so the rule after it gives it the gauge, which reads the same metric against the same range. */
-  { id: 'unit-key',   layout: 'cartesian', container: 'view', needs: { block: 160 }, hide: ['unit-key'], keep: 'guides' },                // as the key to sizes
-  { id: 'unit-key',   layout: 'rows',      container: 'view', needs: { block: 120 }, hide: ['unit-key'], keep: 'guides' },                // three rows and the line
-  { id: 'unit-key',   layout: 'band',      container: 'view', needs: { block: 220 }, hide: ['unit-key'], keep: 'guides' },
-  { id: 'unit-key',   layout: 'radial',    container: 'view', needs: { block: 200 }, hide: ['unit-key'], keep: 'guides' },
-  { id: 'unit',       layout: 'cartesian', mark: 'unit', container: 'view', needs: { inline: 280, block: 120 },                           // a stack, where a plot has its axes
+  /* The `unit` mark, in each layout it draws in. Glyphs are counted, so under the room that takes they are not drawn
+   * smaller: the view becomes the preset of the same query that needs less, whole, and that one steps down to the
+   * number by its own rules. What a glyph is worth is said in a line under the glyphs, and that line is the key to
+   * them: a count of dots says nothing with no word of what one is. So no rule takes the line alone, and the room a
+   * form needs is its glyphs' and the line's together. A rule names the mark, so the layout's other views are not
+   * asked. A grid with no dimension has no share bar to become, so the rule after it gives it the gauge, which reads
+   * the same metric against the same range. A grid divided by a dimension has no line: its cells are hundredths.
+   * ponytail: a form whose glyph is worth one has no line, and gives way at the height one would need all the same.
+   * A rule cannot ask what a view shows. Let one name a part it is for (`has`), if those 40 px are ever missed. */
+  { id: 'unit',       layout: 'cartesian', mark: 'unit', container: 'view', needs: { inline: 280, block: 160 },                           // a stack, where a plot has its axes, and the line
     hide: [], fallback: 'bar', keep: 'marks' },
-  { id: 'unit',       layout: 'rows',      mark: 'unit', container: 'view', needs: { inline: 280 },                                       // a run of ten beside its label and its value
+  { id: 'unit',       layout: 'rows',      mark: 'unit', container: 'view', needs: { inline: 280, block: 120 },                           // a run of ten beside its label and its value: three rows and the line
     hide: [], fallback: 'bar-list', keep: 'marks' },
   { id: 'unit',       layout: 'band',      mark: 'unit', container: 'view', needs: { inline: 280, block: 180 },                           // a hundred cells, and a legend under them
     hide: [], fallback: 'share-bar', keep: 'marks' },
-  { id: 'unit-alone', layout: 'band',      mark: 'unit', container: 'view', needs: { inline: 280, block: 180 },
+  { id: 'unit-alone', layout: 'band',      mark: 'unit', container: 'view', needs: { inline: 280, block: 220 },                           // a hundred cells under the number, and the line
     hide: [], fallback: 'gauge', keep: 'marks' },
-  { id: 'unit',       layout: 'radial',    mark: 'unit', container: 'view', needs: { inline: 280, block: 160 },                           // up to a hundred seats
+  { id: 'unit',       layout: 'radial',    mark: 'unit', container: 'view', needs: { inline: 280, block: 200 },                           // up to a hundred seats, the line and the legend
     hide: [], fallback: 'pie-semi-circle', keep: 'marks' },
 ];
 

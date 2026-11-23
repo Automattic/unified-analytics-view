@@ -149,7 +149,7 @@ function cut(pts: Pt[]): { up: boolean; pts: Pt[] }[] {
 const MASS = 0.5;    // how much of its paint a line of a mass is drawn in, and a dot or a tick of one on a row's track
 const FADED = 0.4;   // how much of its paint an incomplete bucket's bar, glyph or stacked piece is drawn in
 /** A fill that tints and does not mark: the area under a line, the cells a gauge's grid has not reached, the ring or the sweep behind a value. */
-const TINT = { opacity: 0.14, tone: 'soft' as const };
+export const TINT = { opacity: 0.14, tone: 'soft' as const };
 /** How a reference line is drawn: a dashed rule, thinner than a series' line. */
 const REFERENCE = { paint: 'rule', dash: '5 3', width: 1.5 };
 /** A reference rule's label, in the rule's paint, at `at` in the plot. */
@@ -526,7 +526,8 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   // Layers that measure several metrics are told apart as series are: a series colour for each metric, in layer order,
   // where the layer states no paint, and the paint it is drawn in for its entry in the legend. Not beside a split by
   // color, whose series the colours are spent on.
-  const measures = painted ? [] : measuresOf(catalog, layers), several = measures.length > 1, paints = new Map<string, string>();
+  // Without its legend the colours say nothing, so a plan that shows none has every series in its layer's own paint.
+  const measures = painted ? [] : measuresOf(catalog, layers), several = measures.length > 1, paints = new Map<string, string>(), told = !!guides.legend;
   const unpainted = several ? layers.findIndex((l) => !l.paint && l.series !== 'previous' && measures.indexOf(measureOf(catalog, l)!) >= SERIES) : -1;
   if (unpainted >= 0) throw new Error('These layers measure ' + measures.length + ' metrics (' + measures.join(', ') + '), and there are ' + SERIES + ' series colours for the ones that state no paint. Give layer ' + (unpainted + 1) + ' a "paint", or draw fewer metrics on one plot.');
   // Bars of one metric that fall below nothing as well as rise from it: each is a gain or a loss, and is painted as one.
@@ -545,9 +546,12 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     // An area fills down from a line that runs one way along x. The points of two metrics run in no order there.
     if (l.mark === 'area' && xOn && !xDim) throw new Error('Layer ' + (i + 1) + ' is an area with the metric "' + xOn + '" on x, and an area fills under a line that runs one way along x, which the points of two metrics do not. Use "line" to join the points in the order of their rows, or put a dimension on x.');
     if ((l.mark === 'bar' || l.mark === 'unit') && xOn && rows.length && rows[0]![xOn + '@end'] == null) throw new Error((l.mark === 'bar' ? 'Bars' : 'The glyphs of a unit') + ' on the number dimension "' + xOn + '" need its bins, and this result has no "' + xOn + '@end". Return where each bin ends from the query layer, or use line or dot.');
-    const v = scaleOf(l).v;
+    const v = scaleOf(l).v, far = units.indexOf(unitOf(catalog, l, xField)!) > 0;
+    // What is on the second scale says so, node by node: it goes with the axis it is read against.
+    // And what is painted a colour that the legend is the key to says so: it is drawn plain where there is no legend.
+    const on = (drawn: SceneNode[], keyed = false) => { for (const n of drawn) { if (far) n.axis = 2; if (keyed) n.legend = true; } return drawn; };
     const m = several ? measureOf(catalog, l) : null;
-    const d: Draw = { say, id: ids[i]!, role: roleOf(l), paint: paintOf(l, catalog, result) || (prev ? 'compare' : 'series.' + (m == null ? 1 : measures.indexOf(m) + 1)), prev, rows: rows.filter((r) => (rug ? r[xOn!] != null : across(l) || span.has(r))), k, unit, v, xv, size, points: !!xOn && !xDim, worth: worths[i],
+    const d: Draw = { say, id: ids[i]!, role: roleOf(l), paint: paintOf(l, catalog, result) || (prev ? 'compare' : 'series.' + (m == null || !told ? 1 : measures.indexOf(m) + 1)), prev, rows: rows.filter((r) => (rug ? r[xOn!] != null : across(l) || span.has(r))), k, unit, v, xv, size: guides.size ? size : undefined, points: !!xOn && !xDim, worth: worths[i],
       ends: (r) => { const [lo, hi] = span.get(r)!; return [v(lo), v(hi)]; },
       step: !!xDim && !!xOn && rows.length > 0 && rows[0]![xOn + '@end'] != null,
       // A mark with two ends is painted by which way it goes only where its layer says so: `paint: "direction"`.
@@ -555,7 +559,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     // A metric's entry is in the paint of the layer that marks it: its primary one, where it has a fill under it too.
     if (m != null && !prev && (!paints.has(m) || d.role === 'primary')) paints.set(m, d.paint);
     if (!splitOf(catalog, l, xField)) {
-      const drawn = draw(l, d), last = m == null || prev ? undefined : drawn.filter((n): n is PathNode => n.kind === 'path').map((n) => n.points[n.points.length - 1]!).pop();
+      const drawn = on(draw(l, d), m != null && !prev && !l.paint), last = m == null || prev ? undefined : drawn.filter((n): n is PathNode => n.kind === 'path').map((n) => n.points[n.points.length - 1]!).pop();
       if (last) ends.set(m!, last.v);                                       // where the metric's line ends, for its label
       return nodes.push(...drawn);
     }
@@ -563,7 +567,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     const plain = !paintedOf(catalog, l, xField);
     series.forEach((s, j) => {
       // Bars of one x that are not stacked sit side by side: overlapping bars are never what was meant. Lines and areas overlay.
-      const drawn = draw(l, { ...d, series: s, paint: prev || plain ? d.paint : 'series.' + (j + 1), ...(plain && { mass: true }), rows: d.rows.filter((r) => str(r, split!) === s), ...(l.mark === 'bar' && !l.stack && { slot: [j, series.length] }) });
+      const drawn = on(draw(l, { ...d, series: s, paint: prev || plain || !told ? d.paint : 'series.' + (j + 1), ...(plain && { mass: true }), rows: d.rows.filter((r) => str(r, split!) === s), ...(l.mark === 'bar' && !l.stack && { slot: [j, series.length] }) }), !prev && !plain);
       nodes.push(...drawn);
       // Where the series' line ends, for its label: half way up its band where areas are stacked.
       const last = drawn.filter((n): n is PathNode => n.kind === 'path').map((n) => n.points[n.points.length - 1]!).pop();
@@ -725,7 +729,8 @@ export function listRows(catalog: Catalog, layers: Layer[], result: Result): Row
 // With the query's second dimension on the color of a stacked bar, each row's bar is divided into a series for each of
 // its values, in that dimension's own order, which is the engine's: paint follows it, and there is a legend.
 // With it on the detail of a dot or a tick, a row has one for each of its pairs, all in one paint and with no legend.
-function sceneRows(catalog: Catalog, layers: Layer[], result: Result, limit: number | null): Body {
+// `told` is whether the plan shows a legend: without one a divided row's series are in one paint, parted by their gaps.
+function sceneRows(catalog: Catalog, layers: Layer[], result: Result, limit: number | null, told = true): Body {
   const nodes: SceneNode[] = [];
   const { dim, split, own, items: all } = listOf(catalog, layers, result), items = all.slice(0, limit || all.length), rows = items.map((i) => i.row), shown = items.flatMap((i) => i.pairs);
   // A bar with nothing on x is no mark of a value: it is the range the row's marks are read against, as an arc with
@@ -793,7 +798,9 @@ function sceneRows(catalog: Catalog, layers: Layer[], result: Result, limit: num
           if (str(p, split!) !== s) return;
           const ends = span ? span.get(p) : on(l, p), d = { id: ids[li]!, role: roleOf(l), k, series: s, v, beside };
           if (!ends || ends[0] == null) return;
-          nodes.push(...draw(l, span ? { ...d, paint: 'series.' + (j + 1), at: ends[0], to: ends[1]! } : { ...d, paint: paintOf(l, catalog, result) || shade(l, r) || 'series.1', at: ends[0], mass: true }));
+          const drawn = draw(l, span ? { ...d, paint: told ? 'series.' + (j + 1) : 'series.1', at: ends[0], to: ends[1]! } : { ...d, paint: paintOf(l, catalog, result) || shade(l, r) || 'series.1', at: ends[0], mass: true });
+          if (span) for (const n of drawn) n.legend = true;                 // a stacked piece is in its series' colour, which the legend is the key to
+          nodes.push(...drawn);
         }));
       } else if (draw) {
         const [at, to] = on(l, r), two = l.encode!.x2 != null;
@@ -905,7 +912,9 @@ const RINGS = 6;     // the most rings a circle is divided into: under that each
 // With no dimension it reads the metric against its catalog `domain`: its total swept from the start, or, as a
 // `reference`, its `target` marked. A constant on angle is marked the same way. A layer with nothing on angle is the
 // whole sweep: the range behind the value.
-function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result): Body & Pick<Scene, 'aspect'> {
+// `told` is whether the plan shows a legend: without one the segments, rings and seats are in one paint, parted by their gaps.
+function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result, told = true): Body & Pick<Scene, 'aspect'> {
+  const hue = (j: number) => (told ? 'series.' + (j + 1) : 'series.1');
   const half = layers.some((l) => l.sweep === 'half'), from = half ? -0.25 : 0, span = half ? 0.5 : 1;
   const ids = layerKeys(layers), arcs: ArcNode[] = [], legend: SceneNode[] = [], rim: SceneNode[] = [], seats: SceneNode[] = [];
   let keys: string[] | undefined, rings: string | undefined, detail: string[] | undefined;
@@ -935,7 +944,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
         const { a, r } = at[seats.length]!, turn = Math.PI * (1 - a);
         seats.push({ key, part: 'radial', kind: 'circle', pulse: false, x: 0.5 + r * Math.cos(turn) / 2, t: r * Math.sin(turn), w: pitch / 2, h: pitch, paint: 'seq.none', layer: 'data', role: roleOf(l), ...more } as SceneNode);
       };
-      rows.forEach((r, j) => { for (let c = 1; c <= counts[j]!; c++) seat(ids[i] + ':' + k(r) + ':' + c, { row: k(r), paint: 'series.' + (j + 1) }); });
+      rows.forEach((r, j) => { for (let c = 1; c <= counts[j]!; c++) seat(ids[i] + ':' + k(r) + ':' + c, { row: k(r), paint: hue(j), legend: true }); });
       for (let c = 1; c <= rest; c++) seat(ids[i] + '#rest:' + c, {});
       legend.push(...unitKey(ids[i]!, worth, M), ...shareLegend(rows, k, dim, catalog.dimensions[dim]!, m, M, total, (j) => 'series.' + (j + 1)));
       keys = rows.map(k);
@@ -973,11 +982,11 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
         });
       } else {
         if (angle != null && (!M || isDim(catalog, angle))) throw new Error(n + ' has a ring for each "' + one + '" and ' + JSON.stringify(angle) + ' on angle. Put a metric on angle, which each ring\'s arc sweeps to, or leave angle out for the whole ring.');
-        const [least, most] = (M && M.domain) || [0, top], pitch = (1 - INNER) / (rows.length || 1), shade = (j: number) => l.paint || (enc.color != null ? 'series.' + (j + 1) : 'series.1');
+        const [least, most] = (M && M.domain) || [0, top], pitch = (1 - INNER) / (rows.length || 1), shade = (j: number) => l.paint || (enc.color != null ? hue(j) : 'series.1'), keyed = enc.color != null && !l.paint && { legend: true as const };
         rows.forEach((r, j) => {
           const r1 = 1 - j * pitch, inner = r1 - pitch * RING;
-          if (angle == null) return arcs.push(arc(ids[i] + ':' + k(r), l, 0, 1, inner, shade(j), { row: k(r), ...TINT }, r1));
-          if (r[m as string] != null) arcs.push(arc(ids[i] + ':' + k(r), l, 0, along([least, most], num(r, m as string)), inner, shade(j), { row: k(r) }, r1));
+          if (angle == null) return arcs.push(arc(ids[i] + ':' + k(r), l, 0, 1, inner, shade(j), { row: k(r), ...TINT, ...keyed }, r1));
+          if (r[m as string] != null) arcs.push(arc(ids[i] + ':' + k(r), l, 0, along([least, most], num(r, m as string)), inner, shade(j), { row: k(r), ...keyed }, r1));
         });
         // A ring in a colour of its own has an entry in the legend, which says its value: a ring is no share of a whole.
         if (angle != null && enc.color != null && !legend.length) legend.push(...shareLegend(rows, k, one, dim, m as string, M!, null, shade, (r) => formatValue(r[m as string] as number | null, M!)));
@@ -1000,7 +1009,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
       let run = 0;
       rows.forEach((r, j) => {
         const lo = run / total, hi = (run += num(r, m)) / total;
-        arcs.push(arc(ids[i] + ':' + k(r), l, lo, Math.max(lo, hi - (rows.length > 1 ? GAP / span : 0)), inner, 'series.' + (j + 1), { row: k(r) }, edge));
+        arcs.push(arc(ids[i] + ':' + k(r), l, lo, Math.max(lo, hi - (rows.length > 1 ? GAP / span : 0)), inner, hue(j), { row: k(r), legend: true }, edge));
         // Its part of the second ring starts where it does, and each arc there is a share of the same total: lighter, in
         // its segment's paint, and with no entry in the legend. Rows past a `limit` leave it short of its segment's end.
         // ponytail: a pair the result says twice would share a key. A result is one row per pair.
@@ -1008,7 +1017,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
         const mine = result.rows.filter((p) => split && p[dim] === r[dim] && p[m] != null).sort((a, b) => kids.indexOf(str(a, split!)) - kids.indexOf(str(b, split!)));
         mine.forEach((p) => {
           const start = at / total, end = (at += num(p, m)) / total;
-          arcs.push(arc(ids[i] + ':' + k(r) + ':' + str(p, split!), l, start, Math.max(start, end - GAP / span), edge, 'series.' + (j + 1), { row: k(r), series: str(p, split!), opacity: CHILD }));
+          arcs.push(arc(ids[i] + ':' + k(r) + ':' + str(p, split!), l, start, Math.max(start, end - GAP / span), edge, hue(j), { row: k(r), series: str(p, split!), opacity: CHILD, legend: true }));
         });
       });
       legend.push(...shareLegend(rows, k, dim, catalog.dimensions[dim]!, m, catalog.metrics[m]!, result.totals[m], (j) => 'series.' + (j + 1)));
@@ -1168,8 +1177,11 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
   const number = sceneNumber(catalog, q, result, p.share);
   const parts: Part[] = p.tldrValue || p.layout === 'none' ? ['number'] : [];
   let body: Body = { nodes: [] }, side = false;
+  const short: Part[] = [];
   // The key to a unit's glyphs, where the plan shows it and the scene has one: a glyph worth one has none.
   const unitKeyed = () => { if (p.guides.unitKey && body.nodes.some((n) => n.part === 'unit-key')) parts.push('unit-key'); };
+  // A ramp or a key to sizes, where the plan shows it and the scene has one, and whether in its shorter form.
+  const keyTo = (part: 'ramp' | 'size', guide: boolean | string | undefined, shorter: string) => { if (guide && body.nodes.some((n) => n.part === part)) { parts.push(part); if (guide === shorter) short.push(part); } };
   if (p.layout === 'notice') {
     parts.push('notice');
     body.nodes.push({ key: 'notice', part: 'notice', kind: 'text', text: emptyNote(catalog.metrics[q.metrics[0]!]!, true), anchor: 'middle', baseline: 'middle', font: 'label', paint: 'ink.muted', layer: 'guide' });
@@ -1186,19 +1198,19 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
     if (key === 'labels') parts.push('labels');
     if (p.guides.x) parts.push('x-axis');
     if (key === 'full') parts.push('legend');
-    if (p.guides.size && body.nodes.some((n) => n.part === 'size')) parts.push('size');
+    keyTo('size', p.guides.size, 'most');
     unitKeyed();
   } else if (p.layout === 'matrix') {
     body = sceneMatrix(catalog, p.layers, result);
     if (p.guides.y) parts.push('y-axis');
     parts.push('plot');
     if (p.guides.x) parts.push('x-axis');
-    if (p.guides.ramp && body.nodes.some((n) => n.part === 'ramp')) parts.push('ramp');
-    if (p.guides.size && body.nodes.some((n) => n.part === 'size')) parts.push('size');
+    keyTo('ramp', p.guides.ramp, 'strip');
+    keyTo('size', p.guides.size, 'most');
   } else if (p.layout === 'rows') {
     if (p.guides.columns) parts.push('columns');
     parts.push('rows');
-    body = sceneRows(catalog, p.layers, result, p.rowLimit);
+    body = sceneRows(catalog, p.layers, result, p.rowLimit, !!p.guides.legend);
     unitKeyed();
     // The key to a divided row's series, under the rows: all of it, or the one line.
     if (body.series && p.guides.legend) parts.push(legendPart(p.guides.legend));
@@ -1210,11 +1222,11 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
     unitKeyed();
     if (p.guides.legend) parts.push(legendPart(p.guides.legend));
   } else if (p.layout === 'radial') {
-    body = sceneRadial(catalog, p.layers, q, result);
+    body = sceneRadial(catalog, p.layers, q, result, !!p.guides.legend);
     parts.push('radial');
     // A number above the circle is not said again inside it.
     if (!parts.includes('number') && body.nodes.some((n) => n.part === 'hole')) parts.push('hole');
-    if (p.guides.rim && body.nodes.some((n) => n.part === 'rim')) parts.push('rim');
+    if (p.guides.rim && body.nodes.some((n) => n.part === 'rim')) { parts.push('rim'); if (p.guides.rim === 'few') short.push('rim'); }
     unitKeyed();
     if (p.guides.legend) parts.push(legendPart(p.guides.legend));
   } else if (customMarks().has(p.layout)) {
@@ -1222,6 +1234,8 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
     const { parts: own, ...rest } = customMarks().get(p.layout)!.scene({ layers: p.layers, guides: p.guides, query: q, result, catalog });
     parts.push(...own);
     body = rest;
+    if (p.guides.ramp === 'strip' && own.includes('ramp')) short.push('ramp');
+    if (p.guides.size === 'most' && own.includes('size')) short.push('size');
   }
-  return { layout: p.layout, parts, ...(side && { side }), ...body, nodes: number.concat(body.nodes) };
+  return { layout: p.layout, parts, ...(side && { side }), ...(short.length && { short }), ...body, nodes: number.concat(body.nodes) };
 }

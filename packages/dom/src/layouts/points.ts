@@ -48,6 +48,9 @@ export const POINTS_CSS = `
 
 /* A plot of points has no sparkline form. Under its `points` rule the body goes whole, and the number that the rule
  * shows stands alone, as it does under `marks`. Both ask for dots in `.uav-points`, so no other plot is touched. */
+/** Dots of one size, where a rule takes the key to their sizes with the axes (`dots: one`): each is the dot that has no
+ * size, whole, as the scene draws one. Declarations for the plot's dots, over what each wrote on itself. */
+export const ONE_SIZE = '--uav-size: initial !important; opacity: 1 !important;';
 export const POINTS_FIT: Record<string, Record<string, string>> = {
   points: { '.uav-body:has(.uav-points > i)': 'display: none;', '.uav-number:has(~ .uav-body .uav-points > i)': 'margin: 0;' },
 };

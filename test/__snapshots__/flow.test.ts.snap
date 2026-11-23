@@ -591,12 +591,12 @@ exports[`golden scenes > sankey at 250 by any 1`] = `
 }
 `;
 
-exports[`golden scenes > sankey at 300 by any 1`] = `
+exports[`golden scenes > sankey at 320 by any 1`] = `
 {
   "height": 184,
   "nodes": [
     {
-      "d": "M8,0C150,0 150,0 292,0L292,21.68C150,21.68 150,21.68 8,21.68Z",
+      "d": "M8,0C160,0 160,0 312,0L312,21.68C160,21.68 160,21.68 8,21.68Z",
       "fill": true,
       "key": "primary:link:Search:Home",
       "kind": "path",
@@ -605,7 +605,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "series.1",
     },
     {
-      "d": "M8,21.68C150,21.68 150,53.64 292,53.64L292,72.68C150,72.68 150,40.72 8,40.72Z",
+      "d": "M8,21.68C160,21.68 160,53.64 312,53.64L312,72.68C160,72.68 160,40.72 8,40.72Z",
       "fill": true,
       "key": "primary:link:Search:Blog",
       "kind": "path",
@@ -614,7 +614,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "series.1",
     },
     {
-      "d": "M8,40.72C150,40.72 150,102.12 292,102.12L292,114.94C150,114.94 150,53.54 8,53.54Z",
+      "d": "M8,40.72C160,40.72 160,102.12 312,102.12L312,114.94C160,114.94 160,53.54 8,53.54Z",
       "fill": true,
       "key": "primary:link:Search:Docs",
       "kind": "path",
@@ -623,7 +623,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "series.1",
     },
     {
-      "d": "M8,53.54C150,53.54 150,137.6 292,137.6L292,146.37C150,146.37 150,62.32 8,62.32Z",
+      "d": "M8,53.54C160,53.54 160,137.6 312,137.6L312,146.37C160,146.37 160,62.32 8,62.32Z",
       "fill": true,
       "key": "primary:link:Search:Pricing",
       "kind": "path",
@@ -632,7 +632,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "series.1",
     },
     {
-      "d": "M8,62.32C150,62.32 150,166.56 292,166.56L292,172.15C150,172.15 150,67.9 8,67.9Z",
+      "d": "M8,62.32C160,62.32 160,166.56 312,166.56L312,172.15C160,172.15 160,67.9 8,67.9Z",
       "fill": true,
       "key": "primary:link:Search:Changelog",
       "kind": "path",
@@ -641,7 +641,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "series.1",
     },
     {
-      "d": "M8,71.58C150,71.58 150,21.68 292,21.68L292,34.74C150,34.74 150,84.64 8,84.64Z",
+      "d": "M8,71.58C160,71.58 160,21.68 312,21.68L312,34.74C160,34.74 160,84.64 8,84.64Z",
       "fill": true,
       "key": "primary:link:Direct:Home",
       "kind": "path",
@@ -650,7 +650,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "series.2",
     },
     {
-      "d": "M8,84.64C150,84.64 150,72.68 292,72.68L292,84.93C150,84.93 150,96.89 8,96.89Z",
+      "d": "M8,84.64C160,84.64 160,72.68 312,72.68L312,84.93C160,84.93 160,96.89 8,96.89Z",
       "fill": true,
       "key": "primary:link:Direct:Blog",
       "kind": "path",
@@ -659,7 +659,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "series.2",
     },
     {
-      "d": "M8,96.89C150,96.89 150,114.94 292,114.94L292,124.05C150,124.05 150,106 8,106Z",
+      "d": "M8,96.89C160,96.89 160,114.94 312,114.94L312,124.05C160,124.05 160,106 8,106Z",
       "fill": true,
       "key": "primary:link:Direct:Docs",
       "kind": "path",
@@ -668,7 +668,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "series.2",
     },
     {
-      "d": "M8,106C150,106 150,146.37 292,146.37L292,154.5C150,154.5 150,114.14 8,114.14Z",
+      "d": "M8,106C160,106 160,146.37 312,146.37L312,154.5C160,154.5 160,114.14 8,114.14Z",
       "fill": true,
       "key": "primary:link:Direct:Pricing",
       "kind": "path",
@@ -677,7 +677,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "series.2",
     },
     {
-      "d": "M8,114.14C150,114.14 150,172.15 292,172.15L292,175.96C150,175.96 150,117.96 8,117.96Z",
+      "d": "M8,114.14C160,114.14 160,172.15 312,172.15L312,175.96C160,175.96 160,117.96 8,117.96Z",
       "fill": true,
       "key": "primary:link:Direct:Changelog",
       "kind": "path",
@@ -686,7 +686,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "series.2",
     },
     {
-      "d": "M8,121.64C150,121.64 150,34.74 292,34.74L292,42.03C150,42.03 150,128.91 8,128.91Z",
+      "d": "M8,121.64C160,121.64 160,34.74 312,34.74L312,42.03C160,42.03 160,128.91 8,128.91Z",
       "fill": true,
       "key": "primary:link:Social:Home",
       "kind": "path",
@@ -695,7 +695,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "series.3",
     },
     {
-      "d": "M8,128.91C150,128.91 150,84.93 292,84.93L292,90.55C150,90.55 150,134.52 8,134.52Z",
+      "d": "M8,128.91C160,128.91 160,84.93 312,84.93L312,90.55C160,90.55 160,134.52 8,134.52Z",
       "fill": true,
       "key": "primary:link:Social:Blog",
       "kind": "path",
@@ -704,7 +704,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "series.3",
     },
     {
-      "d": "M8,134.52C150,134.52 150,124.05 292,124.05L292,128.45C150,128.45 150,138.94 8,138.94Z",
+      "d": "M8,134.52C160,134.52 160,124.05 312,124.05L312,128.45C160,128.45 160,138.94 8,138.94Z",
       "fill": true,
       "key": "primary:link:Social:Docs",
       "kind": "path",
@@ -713,7 +713,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "series.3",
     },
     {
-      "d": "M8,138.94C150,138.94 150,154.5 292,154.5L292,158.31C150,158.31 150,142.73 8,142.73Z",
+      "d": "M8,138.94C160,138.94 160,154.5 312,154.5L312,158.31C160,158.31 160,142.73 8,142.73Z",
       "fill": true,
       "key": "primary:link:Social:Pricing",
       "kind": "path",
@@ -722,7 +722,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "series.3",
     },
     {
-      "d": "M8,142.73C150,142.73 150,175.96 292,175.96L292,178.04C150,178.04 150,144.81 8,144.81Z",
+      "d": "M8,142.73C160,142.73 160,175.96 312,175.96L312,178.04C160,178.04 160,144.81 8,144.81Z",
       "fill": true,
       "key": "primary:link:Social:Changelog",
       "kind": "path",
@@ -731,7 +731,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "series.3",
     },
     {
-      "d": "M8,148.49C150,148.49 150,42.03 292,42.03L292,45.69C150,45.69 150,152.15 8,152.15Z",
+      "d": "M8,148.49C160,148.49 160,42.03 312,42.03L312,45.69C160,45.69 160,152.15 8,152.15Z",
       "fill": true,
       "key": "primary:link:AI assistants:Home",
       "kind": "path",
@@ -740,7 +740,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "series.4",
     },
     {
-      "d": "M8,152.15C150,152.15 150,90.55 292,90.55L292,94.26C150,94.26 150,155.88 8,155.88Z",
+      "d": "M8,152.15C160,152.15 160,90.55 312,90.55L312,94.26C160,94.26 160,155.88 8,155.88Z",
       "fill": true,
       "key": "primary:link:AI assistants:Blog",
       "kind": "path",
@@ -749,7 +749,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "series.4",
     },
     {
-      "d": "M8,155.88C150,155.88 150,128.45 292,128.45L292,131.06C150,131.06 150,158.5 8,158.5Z",
+      "d": "M8,155.88C160,155.88 160,128.45 312,128.45L312,131.06C160,131.06 160,158.5 8,158.5Z",
       "fill": true,
       "key": "primary:link:AI assistants:Docs",
       "kind": "path",
@@ -758,7 +758,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "series.4",
     },
     {
-      "d": "M8,158.5C150,158.5 150,158.31 292,158.31L292,160.58C150,160.58 150,160.78 8,160.78Z",
+      "d": "M8,158.5C160,158.5 160,158.31 312,158.31L312,160.58C160,160.58 160,160.78 8,160.78Z",
       "fill": true,
       "key": "primary:link:AI assistants:Pricing",
       "kind": "path",
@@ -767,7 +767,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "series.4",
     },
     {
-      "d": "M8,160.78C150,160.78 150,178.04 292,178.04L292,179C150,179 150,161.74 8,161.74Z",
+      "d": "M8,160.78C160,160.78 160,178.04 312,178.04L312,179C160,179 160,161.74 8,161.74Z",
       "fill": true,
       "key": "primary:link:AI assistants:Changelog",
       "kind": "path",
@@ -776,7 +776,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "series.4",
     },
     {
-      "d": "M8,165.42C150,165.42 150,45.69 292,45.69L292,48.32C150,48.32 150,168.05 8,168.05Z",
+      "d": "M8,165.42C160,165.42 160,45.69 312,45.69L312,48.32C160,48.32 160,168.05 8,168.05Z",
       "fill": true,
       "key": "primary:link:Email:Home",
       "kind": "path",
@@ -785,7 +785,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "series.5",
     },
     {
-      "d": "M8,168.05C150,168.05 150,94.26 292,94.26L292,97.34C150,97.34 150,171.12 8,171.12Z",
+      "d": "M8,168.05C160,168.05 160,94.26 312,94.26L312,97.34C160,97.34 160,171.12 8,171.12Z",
       "fill": true,
       "key": "primary:link:Email:Blog",
       "kind": "path",
@@ -794,7 +794,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "series.5",
     },
     {
-      "d": "M8,171.12C150,171.12 150,131.06 292,131.06L292,132.9C150,132.9 150,172.96 8,172.96Z",
+      "d": "M8,171.12C160,171.12 160,131.06 312,131.06L312,132.9C160,132.9 160,172.96 8,172.96Z",
       "fill": true,
       "key": "primary:link:Email:Docs",
       "kind": "path",
@@ -803,7 +803,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "series.5",
     },
     {
-      "d": "M8,172.96C150,172.96 150,160.58 292,160.58L292,162.09C150,162.09 150,174.47 8,174.47Z",
+      "d": "M8,172.96C160,172.96 160,160.58 312,160.58L312,162.09C160,162.09 160,174.47 8,174.47Z",
       "fill": true,
       "key": "primary:link:Email:Pricing",
       "kind": "path",
@@ -812,7 +812,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "series.5",
     },
     {
-      "d": "M8,174.47C150,174.47 150,179 292,179L292,179.88C150,179.88 150,175.35 8,175.35Z",
+      "d": "M8,174.47C160,174.47 160,179 312,179L312,179.88C160,179.88 160,175.35 8,175.35Z",
       "fill": true,
       "key": "primary:link:Email:Changelog",
       "kind": "path",
@@ -821,7 +821,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "series.5",
     },
     {
-      "d": "M8,179.03C150,179.03 150,48.32 292,48.32L292,49.96C150,49.96 150,180.67 8,180.67Z",
+      "d": "M8,179.03C160,179.03 160,48.32 312,48.32L312,49.96C160,49.96 160,180.67 8,180.67Z",
       "fill": true,
       "key": "primary:link:Other:Home",
       "kind": "path",
@@ -830,7 +830,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "series.6",
     },
     {
-      "d": "M8,180.67C150,180.67 150,97.34 292,97.34L292,98.44C150,98.44 150,181.77 8,181.77Z",
+      "d": "M8,180.67C160,180.67 160,97.34 312,97.34L312,98.44C160,98.44 160,181.77 8,181.77Z",
       "fill": true,
       "key": "primary:link:Other:Blog",
       "kind": "path",
@@ -839,7 +839,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "series.6",
     },
     {
-      "d": "M8,181.77C150,181.77 150,132.9 292,132.9L292,133.92C150,133.92 150,182.77 8,182.77Z",
+      "d": "M8,181.77C160,181.77 160,132.9 312,132.9L312,133.92C160,133.92 160,182.77 8,182.77Z",
       "fill": true,
       "key": "primary:link:Other:Docs",
       "kind": "path",
@@ -848,7 +848,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "series.6",
     },
     {
-      "d": "M8,182.77C150,182.77 150,162.09 292,162.09L292,162.88C150,162.88 150,183.56 8,183.56Z",
+      "d": "M8,182.77C160,182.77 160,162.09 312,162.09L312,162.88C160,162.88 160,183.56 8,183.56Z",
       "fill": true,
       "key": "primary:link:Other:Pricing",
       "kind": "path",
@@ -857,7 +857,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "series.6",
     },
     {
-      "d": "M8,183.56C150,183.56 150,179.88 292,179.88L292,180.32C150,180.32 150,184 8,184Z",
+      "d": "M8,183.56C160,183.56 160,179.88 312,179.88L312,180.32C160,180.32 160,184 8,184Z",
       "fill": true,
       "key": "primary:link:Other:Changelog",
       "kind": "path",
@@ -939,7 +939,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "ink.muted",
       "rx": 0,
       "w": 8,
-      "x": 292,
+      "x": 312,
       "y": 0,
     },
     {
@@ -950,7 +950,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "ink.muted",
       "rx": 0,
       "w": 8,
-      "x": 292,
+      "x": 312,
       "y": 53.64,
     },
     {
@@ -961,7 +961,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "ink.muted",
       "rx": 0,
       "w": 8,
-      "x": 292,
+      "x": 312,
       "y": 102.12,
     },
     {
@@ -972,7 +972,7 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "ink.muted",
       "rx": 0,
       "w": 8,
-      "x": 292,
+      "x": 312,
       "y": 137.59,
     },
     {
@@ -983,15 +983,135 @@ exports[`golden scenes > sankey at 300 by any 1`] = `
       "paint": "ink.muted",
       "rx": 0,
       "w": 8,
-      "x": 292,
+      "x": 312,
       "y": 166.56,
+    },
+    {
+      "anchor": "start",
+      "baseline": "middle",
+      "font": "tick",
+      "key": "label:channel:Search",
+      "kind": "text",
+      "layer": "guide",
+      "paint": "ink",
+      "text": "Search",
+      "x": 14,
+      "y": 33.95,
+    },
+    {
+      "anchor": "start",
+      "baseline": "middle",
+      "font": "tick",
+      "key": "label:channel:Direct",
+      "kind": "text",
+      "layer": "guide",
+      "paint": "ink",
+      "text": "Direct",
+      "x": 14,
+      "y": 94.77,
+    },
+    {
+      "anchor": "start",
+      "baseline": "middle",
+      "font": "tick",
+      "key": "label:channel:Social",
+      "kind": "text",
+      "layer": "guide",
+      "paint": "ink",
+      "text": "Social",
+      "x": 14,
+      "y": 133.22,
+    },
+    {
+      "anchor": "start",
+      "baseline": "middle",
+      "font": "tick",
+      "key": "label:channel:AI assistants",
+      "kind": "text",
+      "layer": "guide",
+      "paint": "ink",
+      "text": "AI assistants",
+      "x": 14,
+      "y": 155.11,
+    },
+    {
+      "anchor": "start",
+      "baseline": "middle",
+      "font": "tick",
+      "key": "label:channel:Email",
+      "kind": "text",
+      "layer": "guide",
+      "paint": "ink",
+      "text": "Email",
+      "x": 14,
+      "y": 170.38,
+    },
+    {
+      "anchor": "end",
+      "baseline": "middle",
+      "font": "tick",
+      "key": "label:landing:Home",
+      "kind": "text",
+      "layer": "guide",
+      "paint": "ink",
+      "text": "Home",
+      "x": 306,
+      "y": 24.98,
+    },
+    {
+      "anchor": "end",
+      "baseline": "middle",
+      "font": "tick",
+      "key": "label:landing:Blog",
+      "kind": "text",
+      "layer": "guide",
+      "paint": "ink",
+      "text": "Blog",
+      "x": 306,
+      "y": 76.04,
+    },
+    {
+      "anchor": "end",
+      "baseline": "middle",
+      "font": "tick",
+      "key": "label:landing:Docs",
+      "kind": "text",
+      "layer": "guide",
+      "paint": "ink",
+      "text": "Docs",
+      "x": 306,
+      "y": 118.02,
+    },
+    {
+      "anchor": "end",
+      "baseline": "middle",
+      "font": "tick",
+      "key": "label:landing:Pricing",
+      "kind": "text",
+      "layer": "guide",
+      "paint": "ink",
+      "text": "Pricing",
+      "x": 306,
+      "y": 150.24,
+    },
+    {
+      "anchor": "end",
+      "baseline": "middle",
+      "font": "tick",
+      "key": "label:landing:Changelog",
+      "kind": "text",
+      "layer": "guide",
+      "paint": "ink",
+      "text": "Changelog",
+      "x": 306,
+      "y": 173.44,
     },
   ],
   "plot": {
     "h": 184,
-    "w": 300,
+    "w": 320,
   },
-  "width": 300,
+  "width": 320,
 }
 `;
 

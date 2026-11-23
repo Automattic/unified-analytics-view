@@ -127,16 +127,16 @@ export interface Guides {
   /** On a band, `top` is the largest segment's label. On a split plot, `labels` is a label at the end of each line.
    * On rows divided into series, `top` is one line that names the series with the most. */
   legend?: 'full' | 'top' | 'labels';
-  /** Under a grid of cells: the steps of the colour scale, with its low and its high value. */
-  ramp?: boolean;
+  /** Under a grid of cells: the steps of the colour scale, with its low and its high value. `strip` is the same steps, each a sliver. */
+  ramp?: boolean | 'strip';
   /** The labels a `text` layer sets on the points of a plot. */
   pointLabels?: boolean;
-  /** The key to the sizes of a plot's dots. */
-  size?: boolean;
+  /** The key to the sizes of a plot's dots. `most` is its largest step alone. */
+  size?: boolean | 'most';
   /** The headers over a row's columns, where it has more than one column of values. */
   columns?: boolean;
-  /** The labels round a circle that a dimension on `angle` divides: which slice is which. */
-  rim?: boolean;
+  /** The labels round a circle that a dimension on `angle` divides: which slice is which. `few` is the ones with no rank, about four. */
+  rim?: boolean | 'few';
   /** Under a `unit`'s glyphs: what one of them is worth. A scene has none where that is one. */
   unitKey?: boolean;
 }
@@ -222,6 +222,13 @@ interface NodeBase {
   paint: string;
   layer: 'data' | 'guide';
   role?: Role;
+  /** Its paint is one of a legend's: a series colour that only the legend says the meaning of. Where a view's legend
+   * goes with nothing in its place, a mark that has this is drawn in its layer's own paint, as a split by `detail` is:
+   * the scene builders do so for a plan with no legend, and a fit rule that sets `split: plain` does in a stylesheet. */
+  legend?: true;
+  /** The y scale a mark is drawn on, where that is a plot's second: its layer measures in the second of two units.
+   * It is read against the second y axis and nothing else, so a rule that takes that axis takes it too (`axis:2`). */
+  axis?: 2;
   /** The dimension value the node came from. */
   row?: string;
   /** The value it came from of the dimension on `color` or on `detail`, where a layer is split into series. */
@@ -307,6 +314,10 @@ export interface Scene {
   parts: Part[];
   /** The number sits beside a bare plot. */
   side?: boolean;
+  /** The keys the plan shows in their shorter form: the names round a rim thinned to the ones with no rank, a ramp as a
+   * thin strip, a key to sizes as its largest step. Every node is in the scene either way. This is for a painter with
+   * no fit rules to step a key down by: place() reads it, and the DOM's rules do the same without it. */
+  short?: Part[];
   /** Dimension values in order: the x domain, the rows or the segments. Of a circle: its segments, slices or rings. */
   rows?: string[];
   /** The colour dimension's values in its own order, where a plot is split into series. A series' paint is its place here. */

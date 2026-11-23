@@ -60,8 +60,8 @@ describe('the sweep, in glyphs', () => {
 });
 
 describe('golden scenes', () => {
-  // With room for the glyphs, without it, and in a box.
-  const sizes: [number, number | null][] = [[346, null], [250, null], [346, 200]];
+  // With room for the glyphs, without it, and in a box: the least tall that every form still draws its glyphs in.
+  const sizes: [number, number | null][] = [[346, null], [250, null], [346, 220]];
   for (const name of NAMES) for (const [w, h] of sizes) {
     it(`${name} at ${w} by ${h ?? 'any'}`, () => expect(run(specs[name]!, w, h).scene).toMatchSnapshot());
   }
@@ -90,7 +90,7 @@ describe('a stack up from the axis', () => {
     expect(tue.every((n) => n.x === tue[0]!.x)).toBe(true);
   });
   it('holds its shape: the painter draws the largest circle the room holds, by the lesser side in pixels, so a stack never overlaps and is never stretched', () => {
-    for (const [w, h] of [[346, null], [700, null], [346, 150], [290, 130]] as [number, number | null][]) {
+    for (const [w, h] of [[346, null], [700, null], [346, 170], [290, 160]] as [number, number | null][]) {
       const { scene, ratio } = run(units!, w, h), dots = glyphs(scene.nodes) as PlacedCircle[], tue = dots.filter((n) => n.key.startsWith('primary:unit:Tue:'));
       const pitch = tue[0]!.cy - tue[1]!.cy, band = (glyphs(ratio.nodes)[0] as CircleNode).w! * (scene.plot!.w - 42);
       expect(new Set(dots.map((n) => n.r)).size, w + ' ' + h).toBe(1);
@@ -151,8 +151,8 @@ describe('a run along a row\'s track', () => {
     }
   });
   it('what a glyph is worth holds when a height limit trims the rows: it is worked out from every row of the result', () => {
-    const { plan, ratio } = run(isotype!, 346, 100);
-    expect(plan).toMatchObject({ layout: 'rows', rowLimit: 3, dropped: ['rows 4 to 6', 'the key to what a glyph is worth'] });
+    const { plan, ratio } = run(isotype!, 346, 130);
+    expect(plan).toMatchObject({ layout: 'rows', rowLimit: 3, guides: { unitKey: true }, dropped: ['rows 4 to 6'] });
     expect([...count((glyphs(ratio.nodes) as CircleNode[]).map((n) => n.row))]).toEqual([['Search', 9], ['Direct', 6], ['Social', 3]]);
     // Trimmed to the small rows alone, they would be counted finer were the worth theirs.
     const small = run({ ...isotype!, query: { ...isotype!.query, limit: 2 } }, 346).ratio;
@@ -276,7 +276,7 @@ describe('seats round a half circle', () => {
     expect([keyOf(none), [...count((glyphs(none.nodes) as CircleNode[]).map((n) => n.row))]]).toEqual([['Each is 500'], [['Search', 9], ['Direct', 6]]]);
   });
   it('placed, the seats are round, of one size, inside the half circle, and no two overlap', () => {
-    for (const [w, h, across] of [[346, null, 240], [700, null, 240], [300, null, 240], [346, 220, 240], [346, 160, 240]] as [number, number | null, number][]) {
+    for (const [w, h, across] of [[346, null, 240], [700, null, 240], [300, null, 240], [346, 220, 240], [346, 200, 240]] as [number, number | null, number][]) {
       const { scene, plan } = run(parliament!, w, h), seats = glyphs(scene.nodes) as PlacedCircle[], r = seats[0]!.r;
       expect(plan.layers.some((l) => l.mark === 'unit'), w + ' ' + h).toBe(true);
       expect(scene.plot, w + ' ' + h).toEqual({ w: across, h: across / 2 });
@@ -306,16 +306,16 @@ describe('the key to what a glyph is worth', () => {
     expect(scene.height).toBe(184 + 20);
     for (const name of ['isotype', 'parliament', 'icons']) { const { scene } = run(specs[name]!, 346); expect(scene.nodes.some((n) => n.key === 'unit-key:primary:unit'), name).toBe(true); }
   });
-  it('goes with the guides, before the glyphs do: by its own rule in a box that is short, and first of what a reduction drops', () => {
-    expect(FIT_RULES.filter((r) => r.id === 'unit-key').map((r) => [r.layout, r.needs, r.hide, r.keep])).toEqual([
-      ['cartesian', { block: 160 }, ['unit-key'], 'guides'], ['rows', { block: 120 }, ['unit-key'], 'guides'], ['band', { block: 220 }, ['unit-key'], 'guides'], ['radial', { block: 200 }, ['unit-key'], 'guides']]);
-    expect(run(units!, 346, 160).plan).toMatchObject({ guides: { unitKey: true }, dropped: [] });
-    expect(run(units!, 346, 159).plan).toMatchObject({ layout: 'cartesian', guides: { x: true }, dropped: ['the key to what a glyph is worth'] });
-    expect(run(units!, 346, 159).ratio.parts).toEqual(['y-axis', 'plot', 'x-axis']);
-    // A spec that keeps its guides keeps it.
-    expect(run({ ...units!, keep: ['guides'] }, 346, 159).ratio.parts).toContain('unit-key');
-    // Rows as tall as their rule asks, and not as tall as six of them and the line: the line goes, and then rows are trimmed.
-    expect(run(isotype!, 346, 190).plan).toMatchObject({ rowLimit: null, guides: { unitKey: false }, dropped: ['the key to what a glyph is worth'] });
+  it('is the key to the glyphs, and stays as long as they do: no rule takes it, a reduction does not, and short of the height the two need the form gives way', () => {
+    expect(FIT_RULES.some((r) => r.hide.includes('unit-key'))).toBe(false);
+    expect(run(units!, 346, 160)).toMatchObject({ plan: { guides: { unitKey: true }, dropped: [] }, ratio: { parts: ['y-axis', 'plot', 'x-axis', 'unit-key'] } });
+    // A pixel under that, the glyphs once stayed with nothing to say what one was worth. Now the view is its bars.
+    expect(run(units!, 346, 159).plan).toMatchObject({ layout: 'cartesian', dropped: ['the cartesian marks (drawn as "bar")'] });
+    expect(run(units!, 346, 159).plan.layers.some((l) => l.mark === 'unit')).toBe(false);
+    // Rows not as tall as six of them and the line: the line stays, and the rows are trimmed to what is left over it.
+    expect(run(isotype!, 346, 190)).toMatchObject({ plan: { rowLimit: 5, guides: { unitKey: true }, dropped: ['row 6'] }, ratio: { parts: ['rows', 'unit-key'] } });
+    // Seats in a box their legend does not fit: the legend steps down to its one line, and the line under the seats stays.
+    expect(run(parliament!, 346, 200)).toMatchObject({ plan: { dropped: ['the legend, except the largest segment'] }, ratio: { parts: ['radial', 'unit-key', 'legend-top'] } });
   });
 });
 
@@ -382,9 +382,10 @@ describe('refusals, each naming its fix', () => {
 describe('fallbacks: under the room its glyphs need, a form becomes the preset of the same query that needs less', () => {
   it('each form has a rule that names the mark and the preset, by the room a plot with axes needs across', () => {
     expect(FIT_RULES.filter((r) => r.fallback).map((r) => [r.layout, r.id, r.mark, r.fallback, r.needs, r.keep])).toEqual([
-      ['cartesian', 'unit', 'unit', 'bar', { inline: 280, block: 120 }, 'marks'], ['rows', 'unit', 'unit', 'bar-list', { inline: 280 }, 'marks'],
-      ['band', 'unit', 'unit', 'share-bar', { inline: 280, block: 180 }, 'marks'], ['band', 'unit-alone', 'unit', 'gauge', { inline: 280, block: 180 }, 'marks'],
-      ['radial', 'unit', 'unit', 'pie-semi-circle', { inline: 280, block: 160 }, 'marks']]);
+      // Each form's height is its glyphs' and the line's that says what one is worth. A grid divided by a dimension has no line.
+      ['cartesian', 'unit', 'unit', 'bar', { inline: 280, block: 160 }, 'marks'], ['rows', 'unit', 'unit', 'bar-list', { inline: 280, block: 120 }, 'marks'],
+      ['band', 'unit', 'unit', 'share-bar', { inline: 280, block: 180 }, 'marks'], ['band', 'unit-alone', 'unit', 'gauge', { inline: 280, block: 220 }, 'marks'],
+      ['radial', 'unit', 'unit', 'pie-semi-circle', { inline: 280, block: 200 }, 'marks']]);
   });
   for (const name of NAMES) it(name + ': at 279 px it is that preset\'s scene to the node, and from there steps down by that preset\'s own rules', () => {
     const spec = specs[name]!, [layout, fallback] = FORMS[name]!, other: Spec = { ...spec, layers: undefined, use: fallback };

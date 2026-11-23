@@ -27,14 +27,14 @@ describe('the guides a view has', () => {
 
 /* A key says what an encoding means, so the marks it keys cannot be read without it. A fit rule that takes a key while
  * those marks are still drawn leaves a window of sizes where a colour, a size, a glyph or a second scale is on screen
- * with nothing to say what it is (docs/visual-audit, F2). Each rule that does is listed here, with its window. The list
- * is what is owed: a rule that closes its window comes off it, and a new rule that opens one fails here. Closing one is
- * a decision about that key, which has two honest answers: the key stays as long as its marks, or the marks give up
- * the encoding when the key goes.
+ * with nothing to say what it is (docs/visual-audit, F2). There were eighteen such windows, and there are none: a rule
+ * that opens one fails here, and names it. A key has three honest answers, and every rule gives one of them: the key
+ * stays as long as its marks, a shorter form of it does, or the marks give up the encoding when the key goes.
  *
- * A rule is not listed where it puts a shorter form of the same guide in the key's place (the legend's one line, a
- * label at each line's end), or where it takes the marks too. What a rule cannot see is not here either: a label at a
- * line's end is no key to bars, which have no ends. */
+ * So a rule passes where it puts a shorter form of the same guide in the key's place (the legend's one line, a label
+ * at each line's end), where it takes the marks too (`marks` in GUIDES), or where it has the marks drawn without the
+ * encoding (`plain` in GUIDES: dots of one size, series in one paint). A key cut down in place (the ramp as a strip,
+ * the key to sizes as its largest step, a rim thinned by rank) is never hidden, so no rule that does it is asked. */
 describe('a key leaves no sooner than the marks it keys', () => {
   const DATA = ['plot', 'points', 'rows', 'band', 'radial'];
   const keyOf = (part: string) => Object.values(GUIDES).find((g) => g.key && (g.parts as string[]).includes(part));
@@ -43,7 +43,10 @@ describe('a key leaves no sooner than the marks it keys', () => {
     const own = rules.filter((r) => r.layout === layout);
     return own.flatMap((r) => {
       const keys = r.hide.filter((p) => keyOf(p)), shorter = (r.show ?? []).some((p) => keys.some((k) => keyOf(k) === keyOf(p))) || r.set?.legend === 'top';
-      if (!keys.length || shorter || r.fallback || r.hide.some((p) => DATA.includes(p))) return [];
+      // A rule that takes the marks takes their keys with good reason: all of a view's marks, or the ones a key is for.
+      // So does one that has the marks drawn without the encoding: dots of one size, series in one paint.
+      const settled = (k: string) => { const g = keyOf(k)!; return r.hide.includes(g.marks ?? '') || (!!g.plain && r.set?.[g.plain[0]] === g.plain[1]); };
+      if (!keys.length || shorter || r.fallback || r.hide.some((p) => DATA.includes(p)) || keys.every(settled)) return [];
       // What takes the marks these key: the rules that hide a part of marks, or for a glyph's worth the rule its glyphs give way under.
       const glyphs = keys.includes('unit-key'), takes = own.filter((m) => (glyphs ? m.mark === 'unit' : !m.mark && (m.fallback || m.hide.some((p) => DATA.includes(p)))));
       const least = { inline: Math.min(...takes.map((m) => m.needs.inline ?? 0), Infinity), block: Math.min(...takes.map((m) => m.needs.block ?? 0), Infinity) };
@@ -52,31 +55,18 @@ describe('a key leaves no sooner than the marks it keys', () => {
     });
   });
 
-  it('in core: the windows that are owed, and no other', () => {
-    expect(windows(FIT_RULES)).toEqual([
-      'cartesian axes: y-axis-2 under 280 × 120, marks to 152 × 46',                 // a second unit's line, in the bare plot beside the number
-      'cartesian axis-2: y-axis-2 under 340 × 0, marks to 152 × 46',                // and beside the first axis, which it is then read against
-      'cartesian labels: labels under 280 × 120, marks to 152 × 46',                // series colours in the bare plot
-      'cartesian size: size under 320 × 160, marks to 152 × 46',                    // sized dots
-      'cartesian unit-key: unit-key under 0 × 160, marks to 280 × 120',             // glyphs worth more than one, with nothing to say how much
-      'rows columns: columns under 0 × 80, marks to 90 × 0',                        // columns of values with no header
-      'rows legend-top: legend, legend-top under 0 × 84, marks to 90 × 0',          // a divided row's colours
-      'rows unit-key: unit-key under 0 × 120, marks to 280 × 0',
-      'band unit-key: unit-key under 0 × 220, marks to 280 × 180',
-      'radial legend-top: legend, legend-top under 0 × 88, marks to 72 × 64',       // a circle's colours
-      'radial rim: rim under 230 × 120, marks to 72 × 64',                          // slices with no names
-      'radial unit-key: unit-key under 0 × 200, marks to 280 × 160',
-      'matrix ramp: ramp, size under 240 × 150, marks to 150 × 90',                 // a grid's colours, and its dots' sizes
-    ]);
+  it('in core: no rule opens a window', () => {
+    expect(windows(FIT_RULES)).toEqual([]);
+  });
+
+  it('and one that did would be named, with its window', () => {
+    const bare = { id: 'bare', layout: 'cartesian', container: 'view', needs: { inline: 400 }, hide: ['legend'], keep: 'guides' } as FitRule;
+    expect(windows([...FIT_RULES, bare])).toEqual(['cartesian bare: legend under 400 × 0, marks to 152 × 46']);
+    // The same rule is honest once it says the marks are then one paint.
+    expect(windows([...FIT_RULES, { ...bare, set: { split: 'plain' } }])).toEqual([]);
   });
 
   it('in the custom marks registered: the same', () => {
-    expect(windows([...customMarks().values()].flatMap((m) => m.rules))).toEqual([
-      'geo guides: ramp, size under 320 × 170, marks to 280 × 120',                 // a map's fills and symbols
-      'link guides: labels under 320 × 140, marks to 280 × 120',                    // a Sankey's nodes with no names
-      'geo-tiles guides: ramp, size under 320 × 170, marks to 280 × 120',
-      'geo-hexes guides: ramp, size under 320 × 170, marks to 280 × 120',
-      'partition guides: ramp, size under 320 × 170, marks to 280 × 120',           // a treemap painted by a metric
-    ]);
+    expect(windows([...customMarks().values()].flatMap((m) => m.rules))).toEqual([]);
   });
 });

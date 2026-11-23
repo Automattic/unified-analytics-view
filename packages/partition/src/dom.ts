@@ -1,5 +1,5 @@
 import { formatDimension, type MarkView, type RectNode, type Row, type TextNode } from '@unified-analytics/core';
-import { FOCUS, FROM_TOP, HOVER, IN_BOX, IS, attr, chooseItem, emptyTable, ensure, fieldLabel, heldBy, holdShape, keyed, LABEL, lineOf, nodePaint, paintRamp, prop, readout, registerPainter, roveItems, tableRow, text, token, valueText, type Cell, type LayoutPainter } from '@unified-analytics/dom';
+import { FOCUS, FROM_TOP, HOVER, IN_BOX, IS, attr, chooseItem, emptyTable, ensure, fieldLabel, heldBy, holdShape, keyed, LABEL, lineOf, nodePaint, paintRamp, prop, RAMP_STRIP, readout, registerPainter, roveItems, tableRow, text, token, valueText, type Cell, type LayoutPainter } from '@unified-analytics/dom';
 import { ASPECT, GAP, HEAD, HEAD_MOST, KID_GAP, LINE, MAX, boxesOf } from './index.ts';
 
 /* The `partition` mark's half for the DOM: the painter of its layout, for registerPainter().
@@ -106,6 +106,8 @@ export const nameFits = (name: { width: number; height: number }, box: { width: 
 export const partitionPainter: LayoutPainter = {
   layout: 'partition',
   css,
+  // The ramp as a thin strip, under the mark's `guides` rule: it stays as long as the boxes do.
+  fit: { guides: RAMP_STRIP },
 
   paint(body, scene, _rules, data) {
     const plot = ensure(body, 'div', 'uav-plot'), names = boxNames(data);

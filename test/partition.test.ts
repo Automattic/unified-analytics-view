@@ -239,12 +239,12 @@ describe('partition, painted by a second metric', () => {
     const plain = run({ ...ramped, layers: [{ mark: 'partition', encode: { x: 'section', detail: 'page', size: 'pageviews' } }] }, 346).ratio;
     expect(rects(ratio).map(({ x, y, w, h }) => [x, y, w, h])).toEqual(rects(plain).map(({ x, y, w, h }) => [x, y, w, h]));
   });
-  it('has the ramp a grid has, as a guide that goes first, and its names are in ink with a halo', () => {
+  it('has the ramp a grid has, which steps down to a strip and stays as long as the boxes, and its names are in ink with a halo', () => {
     expect(ratio.parts).toEqual(['plot', 'ramp']);
     expect(ratio.nodes.filter((n) => n.part === 'ramp').map((n) => n.key)).toEqual(['ramp:low', ...Array.from({ length: 10 }, (_, i) => 'ramp:' + (i + 1)), 'ramp:high']);
     expect(names(ratio).filter((n) => n.key.split(':').length > 4).every((n) => n.paint === 'ink' && n.halo)).toBe(true);
     expect(names(ratio).find((n) => n.text === 'Docs')).toMatchObject({ paint: 'ink.muted' });
-    expect([run(ramped, 319).ratio.parts, run(ramped, 319).plan.dropped]).toEqual([['plot'], ['the colour ramp']]);
+    expect([run(ramped, 319).ratio.parts, run(ramped, 319).ratio.short, run(ramped, 319).plan.dropped]).toEqual([['plot', 'ramp'], ['ramp'], ['the colour ramp, down to a strip']]);
     expect(run(ramped, 346).scene.nodes.find((n) => n.key === 'ramp:1')).toMatchObject({ ty: 346 / ASPECT });
   });
   it('takes the diverging ramp where the metric on color crosses zero, as a grid does, with zero said in its middle', () => {
@@ -354,9 +354,10 @@ describe('the painter\'s half, as strings and plain functions', () => {
     expect(partitionPainter.css).toContain('.uav[data-layout="partition"] .uav-plot { flex: none; align-self: center; inline-size: min(100%, 480px); aspect-ratio: var(--uav-aspect, 1.6);');
     expect(partitionPainter.css).not.toMatch(/#[0-9a-f]{3,6}\b|rgb\(/i);
   });
-  it('its rules compile to the ramp going, and then to the swap for the list, by width and by height', () => {
+  it('its rules compile to the ramp as a strip, and then to the swap for the list, by width and by height', () => {
     const css = compileFitRules(PARTITION_RULES, { partition: partitionPainter.fit ?? {} }), fig = (keep: string) => '.uav[data-layout="partition"]:not([data-keep~="' + keep + '"])';
-    expect(css).toContain('@container uav-view (inline-size < 319.5px) {\n  ' + fig('guides') + ' :is(.uav-ramp, .uav-size) { display: none; }\n}');
+    expect(css).toContain('@container uav-view (inline-size < 319.5px) {\n  ' + fig('guides') + ' { --uav-ramp: strip; }\n  ' + fig('guides') + ' .uav-ramp { gap: 0; }\n  ' + fig('guides') + ' .uav-ramp i { --uav-swatch-i: 7px; --uav-swatch-r: 0px; }\n  '
+      + fig('guides') + ' .uav-ramp :is([data-key="ramp:none"], [data-key="ramp:none:label"]) { display: none; }\n}');
     const swap = '  ' + fig('marks') + ':has(~ .uav-fallback[data-rule="marks"]) { display: none; }\n  ' + fig('marks') + ' ~ .uav-fallback[data-rule="marks"] { display: block; }\n}';
     expect(css).toContain('@container uav-view (inline-size < 279.5px) {\n' + swap);
     expect(css).toContain('@container uav-view (block-size < 119.5px) {\n' + swap);

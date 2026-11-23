@@ -6,7 +6,7 @@ import { customMarks } from './marks.ts';
 import { PRESETS, expand, fills, presetNames, usesPrevious } from './presets.ts';
 import { checkReads } from './reads.ts';
 import { COLUMNS_BLOCK, UNIT_KEY_BLOCK, legendBlock, place } from './place.ts';
-import { DETAIL_LAYOUTS, SERIES, isMetric, buildScene, columnLabel, columnsOf, tldrValueText, isDim, listRows, metricOf, pointDimOf, roleOf, seriesOf, trackBeside, valueRoomOf, xDimOf } from './scene.ts';
+import { DETAIL_LAYOUTS, SERIES, isMetric, buildScene, columnLabel, columnsOf, tldrValueText, isDim, listRows, metricOf, pointDimOf, roleOf, seriesOf, trackBeside, unitsOf, valueRoomOf, xDimOf } from './scene.ts';
 import { differenceProse, gridProse, rangeProse, rankProse, tldrProse } from './prose.ts';
 import { MARKS, baseOf } from './types.ts';
 import type { Catalog, Container, Layer, Layout, Plan, PlanShape, PresetLibrary, Query, Reduction, ReductionId, Result, Role, PlacedScene, Spec } from './types.ts';
@@ -14,8 +14,12 @@ import type { Catalog, Container, Layer, Layout, Plan, PlanShape, PresetLibrary,
 /* Start from everything the spec asks for, then apply the container's reductions
  * in order until the view fits. Layers carry a role; reductions act on roles. */
 const ROLE_NAMES: Partial<Record<Role, string>> = { comparison: 'comparison series', reference: 'reference lines', context: 'context fill' };
-/** What a grid's or a custom mark's two keys are called where they are given up. */
+/** A legend that goes with nothing in its place takes what it was the key to: the series are then in one paint. */
+const LEGEND_GONE = 'the legend, and the colours it was the key to';
+/** What a ramp and a key to sizes are called where a rule takes them. */
 const KEY_NAMES = { ramp: 'the colour ramp', size: 'the key to sizes' } as const;
+/** What they are said to have done where they step down to their shorter forms. */
+const SHORTER = { ramp: 'the colour ramp, down to a strip', size: 'the key to sizes, down to its largest step' } as const;
 
 /* The layout a layer's fields ask for: what is on x, on y and on color, first match first. `any` asks nothing of its channel. */
 type FieldKind = 'dimension' | 'metric' | 'any';
@@ -192,13 +196,13 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
   const had = guidesOf(laid, layers, catalog);
   p.guides = { ...had };
   const short = (id: string, layout: Layout = 'cartesian') => { const r = ruleFor(rules.fit, layout, id); return !!r && !(r.keep && keep.indexOf(r.keep) >= 0) && applies(r, { view: { inline: container.width, block: container.height } }); };
-  // A split plot's legend steps down to a label at the end of each line, where there are lines, and then to nothing.
+  // A split plot's legend steps down to a label at the end of each line, where there are lines, and goes with the
+  // axes. Where no line has an end to label it has nothing to give way to, and stays whole until then.
   const series = p.layout === 'cartesian' ? seriesOf(catalog, layers) : null;
-  if (series && short('legend')) { if (series.lines && !short('labels')) p.guides.legend = 'labels'; else delete p.guides.legend; }
-  // The second y axis is given up before the first, labels on the points go before the key to sizes, and what a unit's
-  // glyph is worth goes before the glyphs do.
-  const noKey = !!had.unitKey && short('unit-key', p.layout);
-  if (!custom) for (const [guide, id] of [['y2', 'axis-2'], ['pointLabels', 'point-labels'], ['size', 'size'], ['unitKey', 'unit-key']] as const) if (p.guides[guide] && short(id, p.layout)) delete p.guides[guide];
+  if (series && short('labels')) delete p.guides.legend; else if (series?.lines && short('legend')) p.guides.legend = 'labels';
+  // Labels on the points go first. The key to sizes steps down to its largest step, and stays as long as sized dots do.
+  if (!custom && p.guides.pointLabels && short('point-labels', p.layout)) delete p.guides.pointLabels;
+  if (!custom && p.guides.size && short('size', p.layout)) p.guides.size = 'most';
   if (result.meta.empty || (M.instant && !result.rows.length)) {
     if (M.instant || !layers.length) { p.layout = 'none'; p.layers = []; p.tldrValue = true; p.guides = {}; }
     else { p.layout = 'notice'; p.layers = []; p.guides = {}; p.tldrValue = false; }
@@ -226,7 +230,8 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
       p.layers = p.layers.filter((l) => l !== last);
       dropped.push('the "' + columnLabel(catalog, last) + '" column');
     }
-    if (!(columnsOf(catalog, p.layers).length > 1 && !short('columns', 'rows'))) delete p.guides.columns;
+    // The headers are a key to the columns under them, and stay as long as two columns do: short of height a list gives up rows.
+    if (columnsOf(catalog, p.layers).length < 2) delete p.guides.columns;
   }
   // The view rule the layout stands on now, and the room beside its part that only measuring gives:
   // a number wider than the bare plot's rule allows it, or a row's widest value.
@@ -234,9 +239,9 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
     if (p.layout === 'cartesian') return p.side ? { rule: rule('marks'), measured: Math.max(0, container.displayWidth(valueLen) - rules.bare.numberWidth) } : { rule: (points && rule('points')) || rule('axes'), measured: 0 };
     if (p.layout === 'rows') return { rule: beside() || rule('marks'), measured: valueRoomOf(catalog, p.layers, listRows(catalog, p.layers, result)) };
     if (p.layout === 'band') return { rule: rule(p.guides.legend === 'full' ? 'legend' : 'marks'), measured: 0 };
-    if (p.layout === 'radial') return { rule: rule(p.guides.legend === 'full' ? 'legend' : p.guides.rim ? 'rim' : 'marks'), measured: 0 };
-    if (p.layout === 'matrix') return { rule: rule((p.guides.ramp || p.guides.size) && keep.indexOf('guides') < 0 ? 'ramp' : 'marks'), measured: 0 };   // a ramp the spec keeps asks for no room of its own, nor a key to sizes
-    if (customMarks().has(p.layout)) return { rule: rule(keyed().length && keep.indexOf('guides') < 0 ? 'guides' : 'marks'), measured: 0 };
+    if (p.layout === 'radial') return { rule: rule(p.guides.legend === 'full' ? 'legend' : p.guides.rim === true ? 'rim' : 'marks'), measured: 0 };
+    if (p.layout === 'matrix') return { rule: rule((p.guides.ramp === true || p.guides.size === true) && keep.indexOf('guides') < 0 ? 'ramp' : 'marks'), measured: 0 };   // a ramp the spec keeps asks for no room of its own, nor a key to sizes
+    if (customMarks().has(p.layout)) return { rule: rule(keyed().some((g) => p.guides[g] === true) && keep.indexOf('guides') < 0 ? 'guides' : 'marks'), measured: 0 };
     return { rule: rule('notice'), measured: 0 };
   }
   // Whether the scene shows the key to a unit's glyphs: the plan has it on, and a glyph is worth more than one.
@@ -263,32 +268,48 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
     if (secondary && scene.plot && p.layers.some((l) => roleOf(l) !== 'primary')) return !applies(secondary, { view, plot: { inline: scene.plot.w, block: scene.plot.h } });
     return true;
   }
-  const act: Record<ReductionId | 'guides', () => string | null> = {
+  // What a step gives up beside the thing it is named for, said after it.
+  const also: string[] = [];
+  // A ramp and a key to sizes are keys, and stay as long as the marks they key: short of room each steps down to its
+  // shorter form, a thin strip of every step and the largest step alone. That is what the layout's own rule says of
+  // them (`set`), and the rule is what is read: one that takes a key (`hide`), as a custom mark's may, has it taken
+  // here too, and so has a layout with no rule for its keys. Said of the ones the scene shows.
+  const stepKeys = (): string | null => {
+    const r = rule(p.layout === 'matrix' ? 'ramp' : 'guides'), shown = buildScene(p, q, result, catalog).parts, said: string[] = [];
+    for (const [g, form, by] of [['ramp', 'strip', 'ramp'], ['size', 'most', 'size-key']] as const) {
+      if (p.guides[g] !== true) continue;
+      const shorter = r?.set?.[by] === form && !r.hide.includes(g);
+      p.guides = { ...p.guides, [g]: shorter ? form : false };
+      if (shown.includes(g)) said.push(shorter ? SHORTER[g] : KEY_NAMES[g]);
+    }
+    return said.join(' and ') || null;
+  };
+  const act: Record<ReductionId, () => string | null> = {
     'drop-guides': () => {
-      // The key to a unit's glyphs is the first guide to go, and where that is enough the rest stay.
-      const key = unitKeyed() ? 'the key to what a glyph is worth' : null;
-      if (key) { p.guides = { ...p.guides, unitKey: false }; if (fits()) return key; }
-      const rest = act.guides();
-      return key && rest ? key + ', ' + rest : key || rest;
-    },
-    guides: () => {
+      // What a unit's glyph is worth is the key to its glyphs, and is no guide to give up: it stays where a legend steps down.
+      const worth = p.guides.unitKey ? { unitKey: true } : {};
       if (p.layout === 'cartesian' && points) return null;                 // no bare plot: the next step that applies is the number
-      if (p.layout === 'cartesian' && (p.guides.x || p.guides.y || p.guides.grid)) { p.guides = { x: false, y: false, grid: false }; p.tldrValue = true; p.side = true; return 'axes and grid (added the number to make up for them)'; }
-      if (p.layout === 'band' && p.guides.legend === 'full') { p.guides = { legend: 'top' }; return 'the legend, except the largest segment'; }
+      if (p.layout === 'cartesian' && (p.guides.x || p.guides.y || p.guides.grid)) {
+        // What is measured in a second unit is read against the second axis and nothing else, so it goes with it: a bare plot is of one unit.
+        const units = unitsOf(catalog, p.layers), far = p.layers.filter((l) => { const u = unitsOf(catalog, [l])[0]; return u != null && units.indexOf(u) > 0; });
+        p.layers = p.layers.filter((l) => !far.includes(l));
+        p.guides = { x: false, y: false, grid: false }; p.tldrValue = true; p.side = true;
+        if (far.length) also.push('the layers measured on the second axis');
+        if (had.size) also.push('the sizes of the dots');
+        if (had.legend) also.push('the colours the legend was the key to');
+        return 'axes and grid (added the number to make up for them)';
+      }
+      if (p.layout === 'band' && p.guides.legend === 'full') { p.guides = { ...worth, legend: 'top' }; return 'the legend, except the largest segment'; }
       // A circle steps down as a band does, and then once more: it is still worth drawing with no legend at all.
       if (p.layout === 'radial' && p.guides.legend) {
-        if (p.guides.legend === 'full') { p.guides = { legend: 'top' }; if (fits()) return 'the legend, except the largest segment'; }
-        p.guides = {};
-        return 'the legend';
+        if (p.guides.legend === 'full') { p.guides = { ...worth, legend: 'top' }; if (fits()) return 'the legend, except the largest segment'; }
+        p.guides = worth;
+        return LEGEND_GONE;
       }
-      if (p.layout === 'radial' && p.guides.rim) { p.guides = {}; return 'the labels round the rim'; }
-      // A grid's two keys go together: the ramp, and the key to sizes where it has dots.
-      if (p.layout === 'matrix' && (p.guides.ramp || p.guides.size)) {
-        const shown = buildScene(p, q, result, catalog).parts, said = (['ramp', 'size'] as const).filter((g) => shown.includes(g)).map((g) => KEY_NAMES[g]).join(' and ');
-        p.guides = { ...p.guides, ramp: false, ...(p.guides.size != null && { size: false }) };
-        return said || null;
-      }
-      if (customMarks().has(p.layout)) { const said = keyed().map((g) => KEY_NAMES[g]).join(' and '); p.guides = {}; return said || null; }
+      // The names round a rim are the key to its slices: they thin to the ones with no rank, and those stay as long as the circle.
+      if (p.layout === 'radial' && p.guides.rim === true) { p.guides = { ...p.guides, rim: 'few' }; return 'the labels round the rim, all but about four'; }
+      // A grid's two keys step down together, and a custom mark's.
+      if ((p.layout === 'matrix' || customMarks().has(p.layout)) && (p.guides.ramp === true || p.guides.size === true)) return stepKeys();
       return null;
     },
     'drop-secondary': () => {
@@ -328,20 +349,16 @@ export function resolve(spec0: Spec, result: Result, container: Container, catal
     const kept = KEEP[st.id];
     if (kept && keep.indexOf(kept) >= 0) { st.state = 'kept by the spec'; return; }
     const what = act[st.id]();
-    if (what) { st.state = 'applied'; dropped.push(what); done = fits(); } else st.state = 'nothing to drop';
+    if (what) { st.state = 'applied'; dropped.push(what, ...also.splice(0)); done = fits(); } else st.state = 'nothing to drop';
   });
   // place() gives up the note of a number that stands alone before the reducer gives up the number. Said here, as the middle label is.
   if (p.layout === 'none' && container.height != null && alone(p) > container.height) dropped.push('the note under the number');
   if (p.layout === 'cartesian' && p.guides.x && series && p.guides.legend !== 'full') dropped.push(p.guides.legend === 'labels' ? 'the legend (kept a label at the end of each line)' : 'the legend');
-  if (p.layout === 'cartesian' && p.guides.y && had.y2 && !p.guides.y2) dropped.push('the second y axis');
   // place() leaves the number out of a hole too small for it, by the `hole` rule and by the number's own width.
   if (p.layout === 'radial' && buildScene(p, q, result, catalog).parts.includes('hole') && !scene.nodes.some((n) => n.key === 'hole')) dropped.push('the number in the hole');
   if (p.layout === 'cartesian' && p.guides.x && had.pointLabels && !p.guides.pointLabels) dropped.push('the labels on the points');
-  if (p.layout === 'cartesian' && p.guides.x && had.size && !p.guides.size) dropped.push(KEY_NAMES.size);
-  if (p.layout === 'rows' && columnsOf(catalog, p.layers).length > 1 && !p.guides.columns) dropped.push('the column headers');
-  // The key a rule took before any reduction ran. One that went with the axes, or in `drop-guides`, is said there.
-  if (noKey && (p.layout !== 'cartesian' || p.guides.x) && buildScene({ ...p, guides: { ...p.guides, unitKey: true } }, q, result, catalog).parts.includes('unit-key')) dropped.push('the key to what a glyph is worth');
-  if (p.layout === 'rows' && dividedRows && p.guides.legend !== 'full') dropped.push(p.guides.legend === 'top' ? 'the legend, except the series with the most' : 'the legend');
+  if (p.layout === 'cartesian' && p.guides.x && had.size && p.guides.size === 'most') dropped.push(SHORTER.size);
+  if (p.layout === 'rows' && dividedRows && p.guides.legend !== 'full') dropped.push(p.guides.legend === 'top' ? 'the legend, except the series with the most' : LEGEND_GONE);
   const midTick = rule('mid-tick');
   if (p.layout === 'cartesian' && p.guides.x && midTick && applies(midTick, { view: { inline: container.width } }) && catalog.dimensions[xDimOf(catalog, p.layers)!]?.type === 'time') dropped.push('the middle date label');
 

@@ -37,9 +37,10 @@ describe('the sweep', () => {
     });
   }
   it('one spec is a map with room and the ranked list of its query without: then the number, then the prose', () => {
-    for (const [spec, key, lost] of [[map, 'ramp', 'the colour ramp'], [symbols, 'points size', 'the key to sizes']] as [Spec, string, string][]) {
+    // Its key stays as long as the map does, and under the `guides` rule's need is in its shorter form.
+    for (const [spec, key, lost] of [[map, 'ramp', 'the colour ramp, down to a strip'], [symbols, 'points size', 'the key to sizes, down to its largest step']] as [Spec, string, string][]) {
       expect(view(spec), JSON.stringify(view.errors)).toBe(true);
-      const drawn = key === 'ramp' ? 'plot' : 'plot points', fell = 'the geo marks (drawn as "bar-list")';
+      const drawn = 'plot ' + key, fell = 'the geo marks (drawn as "bar-list")';
       for (const sc of scenarios) {
         const at = (w: number, h: number | null = null) => { const { plan, ratio } = run(spec, w, h, sc); return [plan.layout, ratio.parts.join(' '), plan.dropped.join('; ')]; };
         if (sc === 'empty') { expect([346, 250, 120, 10].map((w) => at(w)[0])).toEqual(['notice', 'notice', 'none', 'prose']); continue; }
@@ -169,10 +170,11 @@ describe('geo, filled by a metric', () => {
   it('place() fits a box of the shapes\' aspect inside the room, in the middle, and sets the ramp under it', () => {
     const wide = run(map, 346).scene, boxed = run(map, 346, 160).scene, most = run(map, 700).scene;
     expect([wide.plot!.w, wide.height]).toEqual([346, Math.ceil(346 / ASPECT + 24)]);
-    expect([boxed.plot!.h, boxed.height, boxed.nodes.some((n) => n.key.startsWith('ramp:'))]).toEqual([160, 160, false]);
+    // In a box the ramp's line comes out of the map's height, as a strip under the `guides` rule's need.
+    expect([boxed.plot!.h, boxed.height, boxed.nodes.some((n) => n.key.startsWith('ramp:'))]).toEqual([160 - 24, 160, true]);
     expect(most.plot!.w).toBe(480);
     const us = (s: typeof wide) => s.nodes.find((n) => n.key === 'primary:geo:US') as unknown as { d: string; tx?: number; fill: boolean };
-    expect([us(wide).tx, us(most).tx, us(boxed).tx]).toEqual([undefined, 110, (346 - 160 * ASPECT) / 2]);
+    expect([us(wide).tx, us(most).tx, us(boxed).tx]).toEqual([undefined, 110, (346 - (160 - 24) * ASPECT) / 2]);
     // The same path, at 3.46 times the size.
     const at = (d: string) => d.match(/[\d.]+/g)!.map(Number), d0 = at(shapes(run(map, 346).ratio).find((n) => n.row === 'US')!.d!);
     at(us(wide).d).forEach((n, i) => expect(n).toBeCloseTo(d0[i]! * 3.46, 1));
@@ -210,8 +212,8 @@ describe('geo, with a symbol for each region', () => {
     expect([shapes(ratio).filter((n) => /seq\.\d+/.test(n.paint)).length, dots(ratio).length]).toEqual([15, 15]);
     expect(plan.dropped).toEqual([]);
     const narrow = run(both, 300);
-    expect(narrow.ratio.parts).toEqual(['plot', 'points']);
-    expect(narrow.plan.dropped).toEqual(['the colour ramp and the key to sizes']);
+    expect(narrow.ratio).toMatchObject({ parts: ['plot', 'points', 'ramp', 'size'], short: ['ramp', 'size'] });
+    expect(narrow.plan.dropped).toEqual(['the colour ramp, down to a strip and the key to sizes, down to its largest step']);
   });
 });
 
@@ -242,14 +244,16 @@ describe('rows the map has no shape for', () => {
   it('says nothing when every row has a shape', () => {
     for (const spec of [map, symbols, both]) { const { ratio, scene } = run(spec, 346); expect([note(ratio), note(scene), ratio.parts.includes('note')]).toEqual([undefined, undefined, false]); }
   });
-  it('the note goes with the keys, so it takes no room from a small map, and is never beside the list, which has every row', () => {
+  it('the note stays with the keys as long as the map does, its line out of the map\'s height, and is never beside the list, which has every row', () => {
     const at = (w: number, h: number | null = null) => { const { plan, ratio, scene } = run(unmapped, w, h); return [plan.layout, ratio.parts.join(' '), note(scene)]; };
     expect(at(700)).toEqual(['geo', 'plot note ramp', '4 countries not shown']);
     expect(at(320)).toEqual(['geo', 'plot note ramp', '4 countries not shown']);
     expect(at(346, 170)).toEqual(['geo', 'plot note ramp', '4 countries not shown']);
     expect(run(unmapped, 346, 170).scene.plot!.h).toBe(170 - 18 - 24);
-    expect(at(319)).toEqual(['geo', 'plot', undefined]);
-    expect(at(346, 169)).toEqual(['geo', 'plot', undefined]);
+    // A map that cannot draw four of its rows says so at every size it is a map.
+    expect(at(319)).toEqual(['geo', 'plot note ramp', '4 countries not shown']);
+    expect(at(346, 169)).toEqual(['geo', 'plot note ramp', '4 countries not shown']);
+    expect(run(unmapped, 346, 169).scene.plot!.h).toBe(169 - 18 - 24);
     expect(at(279)).toEqual(['rows', 'rows', undefined]);
     // The list it becomes holds the rows the map could not draw.
     expect(run(unmapped, 250).ratio.rows).toEqual(run(unmapped, 346).result.rows.map((r) => r.visitor_country));
@@ -302,10 +306,13 @@ describe('the painter\'s half, as strings', () => {
     expect([geoPainter.layout, geoPainter.rules]).toEqual(['geo', undefined]);
     expect(geoPainter.css).toContain('.uav[data-layout="geo"] .uav-plot { flex: none; align-self: center; inline-size: min(100%, 480px); aspect-ratio: var(--uav-aspect, 2);');
   });
-  it('its rules compile to the keys going, and then to the swap for the ranked list, by width and by height', () => {
+  it('its rules compile to the keys in their shorter forms, and then to the swap for the ranked list, by width and by height', () => {
     const css = compileFitRules(GEO_RULES, { geo: geoPainter.fit ?? {} }), fig = (keep: string) => '.uav[data-layout="geo"]:not([data-keep~="' + keep + '"])';
-    expect(css).toContain('@container uav-view (inline-size < 319.5px) {\n  ' + fig('guides') + ' :is(.uav-ramp, .uav-size, .uav-note) { display: none; }\n}');
-    expect(css).toContain('@container uav-view (block-size < 169.5px) {\n  ' + fig('guides') + ' :is(.uav-ramp, .uav-size, .uav-note) { display: none; }\n}');
+    const shorter = ['  ' + fig('guides') + ' { --uav-ramp: strip; --uav-size-key: most; }', '  ' + fig('guides') + ' .uav-ramp { gap: 0; }', '  ' + fig('guides') + ' .uav-ramp i { --uav-swatch-i: 7px; --uav-swatch-r: 0px; }',
+      '  ' + fig('guides') + ' .uav-ramp :is([data-key="ramp:none"], [data-key="ramp:none:label"]) { display: none; }', '  ' + fig('guides') + ' .uav-size > :not(:first-child):not(:nth-last-child(-n+2)) { display: none; }', '}'].join('\n');
+    expect(css).toContain('@container uav-view (inline-size < 319.5px) {\n' + shorter);
+    expect(css).toContain('@container uav-view (block-size < 169.5px) {\n' + shorter);
+    expect(css).not.toContain('.uav-note');
     const swap = '  ' + fig('marks') + ':has(~ .uav-fallback[data-rule="marks"]) { display: none; }\n  ' + fig('marks') + ' ~ .uav-fallback[data-rule="marks"] { display: block; }\n}';
     expect(css).toContain('@container uav-view (inline-size < 279.5px) {\n' + swap);
     expect(css).toContain('@container uav-view (block-size < 119.5px) {\n' + swap);

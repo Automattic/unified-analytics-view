@@ -72,8 +72,8 @@ const CHAR = 6;       // px a character of a label takes, near enough, where not
  * fill is the one that applies (core's fallbackRule). With two dimensions it is `pair-list`, registered below, since
  * `bar-list` has one dimension to its rows and would leave the other undrawn. With one it is `bar-list`. */
 export const PARTITION_RULES: FitRule[] = [
-  { id: 'guides', layout: 'partition', container: 'view', needs: { inline: 320, block: 170 },     // the ramp, where a metric is on color
-    hide: ['ramp', 'size'], keep: 'guides' },
+  { id: 'guides', layout: 'partition', container: 'view', needs: { inline: 320, block: 170 },     // the ramp, where a metric is on color: under this a thin strip, which stays as long as the boxes
+    hide: [], set: { ramp: 'strip' }, keep: 'guides' },
   { id: 'marks',  layout: 'partition', container: 'view', needs: { inline: 280, block: 120 },     // boxes too small to tell apart, or to name
     hide: [], fallback: 'pair-list', keep: 'marks' },
   { id: 'marks-flat', layout: 'partition', container: 'view', needs: { inline: 280, block: 120 }, // the same room, for a query by one dimension

@@ -46,12 +46,15 @@ describe('a row divided by a second dimension', () => {
     expect(ratio.nodes.filter((n) => n.part === 'legend').map((n) => [n.key, n.paint])).toEqual([['swatch:Desktop', 'series.1'], ['legend:Desktop', 'ink'], ['swatch:Mobile', 'series.2'], ['legend:Mobile', 'ink'], ['swatch:Tablet', 'series.3'], ['legend:Tablet', 'ink']]);
     expect(ratio.nodes.find((n) => n.key === 'legend-top')).toMatchObject({ part: 'legend-top', text: 'Desktop 50%', paint: 'series.1', series: 'Desktop' });
   });
-  it('steps its legend down as a band\'s: to the one line, and then to nothing, before the rows go', () => {
+  it('steps its legend down as a band\'s: to the one line, and then to rows of one colour, before the rows go', () => {
     const at = (w: number, h: number | null) => { const { plan, ratio, scene } = run(split(), w, h); return [ratio.parts, plan.rowLimit, scene.height, plan.dropped]; };
     expect(at(346, null)).toEqual([['rows', 'legend'], null, 6 * 32 - 4 + 26, []]);
     expect(at(346, 160)).toEqual([['rows', 'legend'], 4, 150, ['rows 5 to 6']]);
     expect(at(346, 100)).toEqual([['rows', 'legend-top'], 2, 84, ['rows 3 to 6', 'the legend, except the series with the most']]);
-    expect(at(346, 60)).toEqual([['rows'], 2, 60, ['rows 3 to 6', 'the legend']]);
+    expect(at(346, 60)).toEqual([['rows'], 2, 60, ['rows 3 to 6', 'the legend, and the colours it was the key to']]);
+    // With no key the pieces of a row are one colour, and a row reads as its total. They were three colours once.
+    const pieces = (h: number) => [...new Set(run(split(), 346, h).ratio.nodes.filter((n) => n.part === 'rows' && n.kind === 'rect').map((n) => n.paint))];
+    expect([pieces(100), pieces(60)]).toEqual([['series.1', 'series.2', 'series.3'], ['series.1']]);
     expect(run({ ...split(), keep: ['guides'] }, 346, 100).ratio.parts).toEqual(['rows', 'legend']);
     // The legend of a narrow list wraps, and the rows give up what it takes.
     expect(run(split(), 250, 160).scene.nodes.filter((n) => n.key.startsWith('legend:')).length).toBe(3);
@@ -199,8 +202,9 @@ describe('points coloured by a second dimension', () => {
     expect([ratio.rows!.length, ratio.series]).toEqual([24, ['Pricing', 'How to', 'Privacy']]);
     expect(plan.text).toMatch(/^Across 24 search terms in the last 28 days/);
   });
-  it('steps down as any plot of points: the legend, and then the number alone', () => {
-    expect(run({ query: q, layers: [dot] }, 300).plan).toMatchObject({ layout: 'cartesian', guides: { x: true }, dropped: ['the legend'] });
+  it('steps down as any plot of points: the legend stays with the axes, and then the number alone', () => {
+    // A dot has no line end for a label to stand at, so nothing takes the legend while the axes are there.
+    expect(run({ query: q, layers: [dot] }, 300).plan).toMatchObject({ layout: 'cartesian', guides: { x: true, legend: 'full' }, dropped: [] });
     expect(run({ query: q, layers: [dot] }, 234).plan.layout).toBe('none');
   });
 });
@@ -243,7 +247,7 @@ describe('size on a bar: a column as wide as its share', () => {
   it('is placed in pixels by its own ratios, and steps down as any plot does', () => {
     const { scene } = run(mekko()), a = of<{ x: number; w: number }>(scene.nodes, 'primary:bar:Search:')[0]!, b = of<{ x: number; w: number }>(scene.nodes, 'primary:bar:Direct:')[0]!;
     expect(a.x + a.w).toBeCloseTo(b.x, 9);
-    expect(run(mekko(), 250).plan).toMatchObject({ layout: 'cartesian', side: true, dropped: ['axes and grid (added the number to make up for them)'] });
+    expect(run(mekko(), 250).plan).toMatchObject({ layout: 'cartesian', side: true, dropped: ['axes and grid (added the number to make up for them)', 'the colours the legend was the key to'] });
     expect(run(mekko(), 120).plan.layout).toBe('none');
   });
   it('is refused where the plot is not one of shares, and where the engine gives no total to be a share of', () => {

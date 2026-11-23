@@ -469,7 +469,7 @@ export class Keys {
     const lines = pair ? null : this.#lines[i];
     say(tip, !lines ? says : [el('b', lines.head), ...lines.lines.flatMap((l) => {
       const swatch = document.createElement('i'); swatchOf(swatch, String(SWATCH.readout));
-      prop(swatch, '--uav-paint', paintVar(this.#paints.get(l.series) ?? 'series.1'));
+      prop(swatch, '--uav-paint', paintVar(this.#paints.get(l.series) ?? 'series.1')); swatch.setAttribute('data-legend', '');   // a series' colour, plain where its marks are
       return [swatch, el('span', l.name), el('span', l.value)];
     })]);
     // Over the arc of a second ring where one is chosen, and else over the row's point.

@@ -25,20 +25,24 @@ describe('the sweep', () => {
       expect(all.filter((k) => keys.includes(k)), 'placed keys: ' + at).toEqual(keys);
     }
   });
-  it('resolves in every data state, and steps down: the ramp goes, then the grid for the number, then the prose', () => {
+  it('resolves in every data state, and steps down: the ramp to a thin strip, then the grid for the number, then the prose', () => {
     expect(view(heatmap), JSON.stringify(view.errors)).toBe(true);
     for (const sc of scenarios) {
       const at = (w: number, h: number | null = null) => { const { plan, ratio } = run(heatmap, w, h, sc); return [plan.layout, ratio.parts.join(' '), plan.dropped.join('; ')]; };
       if (sc === 'empty') { expect([346, 234, 120, 10].map((w) => at(w)[0])).toEqual(['notice', 'notice', 'none', 'prose']); continue; }
       expect(at(700)).toEqual(['matrix', 'y-axis plot x-axis ramp', '']);
       expect(at(346)).toEqual(['matrix', 'y-axis plot x-axis ramp', '']);
-      expect(at(234)).toEqual(['matrix', 'y-axis plot x-axis', 'the colour ramp']);
-      expect(at(346, 149)).toEqual(['matrix', 'y-axis plot x-axis', 'the colour ramp']);
+      // The ramp is the key to the colours, so it stays as long as the grid: under its own need as a strip.
+      expect(at(234)).toEqual(['matrix', 'y-axis plot x-axis ramp', 'the colour ramp, down to a strip']);
+      expect(at(346, 149)).toEqual(['matrix', 'y-axis plot x-axis ramp', 'the colour ramp, down to a strip']);
+      expect([run(heatmap, 346, null, sc).ratio.short, run(heatmap, 234, null, sc).ratio.short, run(heatmap, 346, 90, sc).ratio.short]).toEqual([undefined, ['ramp'], ['ramp']]);
+      // Its line comes out of the grid's height, down to the least the two stand in.
+      expect(run(heatmap, 346, 90, sc).scene.height).toBe(90);
       // A grid has no bare form beside the number: under its `marks` need it is the number alone.
-      expect(at(149)).toEqual(['none', 'number', 'the colour ramp; all marks (kept the number)']);
+      expect(at(149)).toEqual(['none', 'number', 'the colour ramp, down to a strip; all marks (kept the number)']);
       expect(at(346, 89)[0]).toBe('none');
       expect(at(10)[0]).toBe('prose');
-      // A ramp the spec keeps stays, and the grid with it, down to the grid's own need.
+      // A ramp the spec keeps stays whole, and the grid with it, down to the grid's own need.
       expect([234, 150, 149].map((w) => run({ ...heatmap, keep: ['guides'] }, w, null, sc).ratio.parts.join(' '))).toEqual(['y-axis plot x-axis ramp', 'y-axis plot x-axis ramp', 'number']);
     }
   });
@@ -167,8 +171,10 @@ describe('the grids of the Uncommon types', () => {
     expect(Math.max(...placed.map((n) => n.r))).toBe(12);
     expect(scene.height).toBe(184 + 24 + 28);
     expect(scene.nodes.find((n) => n.key === 'size:title')).toMatchObject({ y: 14, ty: 184 + 24 });
-    // The two keys go together where there is no room, and the grid stays.
-    expect([run(grids.circles!, 234).ratio.parts.join(' '), run(grids.circles!, 234).plan.dropped]).toEqual(['y-axis plot x-axis', ['the colour ramp and the key to sizes']]);
+    // The two keys step down together where there is no room, and stay as long as the grid: a strip, and the largest step alone.
+    const small = run(grids.circles!, 234);
+    expect([small.ratio.parts.join(' '), small.ratio.short, small.plan.dropped]).toEqual(['y-axis plot x-axis ramp size', ['ramp', 'size'], ['the colour ramp, down to a strip and the key to sizes, down to its largest step']]);
+    expect(small.scene.nodes.filter((n) => n.key.startsWith('size:')).map((n) => (n as { text?: string }).text ?? 'dot')).toEqual(['Correlation', 'dot', '1']);
   });
   it('a dot over a cell is sized by its own metric in its own paint, shrinks to its cell, and a pair with no value has the least dot in the paint of no value', () => {
     const over: Spec = { spec: 'view/0', query: { metrics: ['visitors', 'pageviews'], by: ['weekday', 'hour'], range: '28d' },
@@ -255,14 +261,17 @@ describe('the ramp, and the labels', () => {
     const whole = { ...result, rows: result.rows.map((r) => ({ ...r, visitors: r.visitors ?? 12 })) };
     expect(run(heatmap, 700, null, 'typical', 'svg', { result: whole }).ratio.nodes.some((n) => n.key.startsWith('ramp:none'))).toBe(false);
   });
-  it('the scene holds the ramp whether or not the plan shows it, and place() draws it under the grid only when it does', () => {
-    const wide = run(heatmap, 346), narrow = run(heatmap, 234);
+  it('the scene holds every step of the ramp, and place() draws it under the grid: whole, or as a strip of slivers with no swatch for no value', () => {
+    const wide = run(heatmap, 346), narrow = run(heatmap, 234), steps = (r: typeof wide) => r.scene.nodes.filter((n) => /^ramp:\d+$/.test(n.key)) as unknown as { x: number; y: number; ty: number; w: number }[];
     expect(narrow.ratio.nodes.filter((n) => n.part === 'ramp').length).toBe(14);
-    expect([wide.scene.height, narrow.scene.height]).toEqual([184 + 24, 184]);
-    expect(narrow.scene.nodes.some((n) => n.key.startsWith('ramp:'))).toBe(false);
-    const swatches = wide.scene.nodes.filter((n) => /^ramp:\d+$/.test(n.key)) as unknown as { x: number; y: number; ty: number; w: number }[];
-    expect(swatches.map((n) => n.x)).toEqual(Array.from({ length: 10 }, (_, i) => 2 * 6.6 + 6 + i * 15));
-    expect(swatches[0]).toMatchObject({ y: 8, ty: 184, w: 14 });
+    expect([wide.scene.height, narrow.scene.height]).toEqual([184 + 24, 184 + 24]);
+    expect(steps(wide).map((n) => n.x)).toEqual(Array.from({ length: 10 }, (_, i) => 2 * 6.6 + 6 + i * 15));
+    expect(steps(wide)[0]).toMatchObject({ y: 8, ty: 184, w: 14 });
+    // The strip: the same ten steps, edge to edge at half the width, between the same two ends.
+    expect(steps(narrow).map((n) => n.x)).toEqual(Array.from({ length: 10 }, (_, i) => 2 * 6.6 + 6 + i * 7));
+    expect(steps(narrow)[0]).toMatchObject({ y: 8, ty: 184, w: 7 });
+    const keys = (r: typeof wide) => r.scene.nodes.filter((n) => n.key.startsWith('ramp:')).map((n) => n.key);
+    expect(keys(wide).filter((k) => !keys(narrow).includes(k))).toEqual(['ramp:none', 'ramp:none:label']);
   });
   it('every label is in the scene, ranked, and place() thins them by rank where they would meet', () => {
     const { ratio } = run(heatmap, 700), rank = (prefix: string) => ratio.nodes.filter((n) => n.key.startsWith(prefix)).map((n) => n.rank ?? 0);

@@ -1,5 +1,5 @@
 import type { CircleNode, PathNode, TextNode } from '@unified-analytics/core';
-import { DRAWN, FOCUS, HOVER, IN_BOX, IS, STATE, attr, ensure, heldBy, hits, hold, holdShape, keyed, lineOf, paintRamp, paintSize, prop, registerPainter, svg as svgOf, text, token, type LayoutPainter } from '@unified-analytics/dom';
+import { DRAWN, FOCUS, HOVER, IN_BOX, IS, STATE, attr, ensure, heldBy, hits, hold, holdShape, keyed, lineOf, paintRamp, paintSize, prop, RAMP_STRIP, SIZE_MOST, registerPainter, svg as svgOf, text, token, type LayoutPainter } from '@unified-analytics/dom';
 import { MAP, NOTE, eachGeoName } from './index.ts';
 
 /* The `geo` mark's half for the DOM: the painter of its layout, for registerPainter().
@@ -128,6 +128,8 @@ function group(svg: Element, cls: string): SVGElement {
 export const geoPainter: LayoutPainter = {
   layout: 'geo',
   css,
+  // The two keys in their shorter forms, under the mark's `guides` rule: they stay as long as the map does.
+  fit: { guides: { ...RAMP_STRIP, ...SIZE_MOST } },
 
   paint(body, scene) {
     const part = ensure(body, 'div', 'uav-plot'), aspect = scene.aspect ?? 2;

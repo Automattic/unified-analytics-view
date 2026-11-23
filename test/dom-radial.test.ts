@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FIT_RULES } from '@unified-analytics/core';
-import { compileFitRules } from '@unified-analytics/dom';
+import { SPLIT_PLAIN, compileFitRules } from '@unified-analytics/dom';
 import { LAYOUTS } from '../packages/dom/src/layouts/index.ts';
 import { radial } from '../packages/dom/src/layouts/radial.ts';
 
@@ -14,10 +14,12 @@ describe('the radial layout', () => {
     expect(radial.css).toContain('aspect-ratio: var(--uav-aspect, 1); container: uav-plot / inline-size;');
     expect(css).toContain('@container uav-plot (inline-size < 119.5px) {\n  .uav[data-layout="radial"] .uav-hole { display: none; }\n}');
   });
-  it('steps the legend down as the band does, then to nothing, then to the number alone, in that order', () => {
+  it('steps the legend down as the band does, then to arcs of one colour, then to the number alone, in that order', () => {
     expect(css).toContain(['@container uav-view (inline-size < 169.5px) {', '  ' + fig('guides') + ' { --uav-legend: top; }',
       '  ' + fig('guides') + ' .uav-legend { display: none; }', '  ' + fig('guides') + ' .uav-legend-top { display: block; max-block-size: none; }', '}'].join('\n'));
-    expect(css).toContain('@container uav-view (block-size < 87.5px) {\n  ' + fig('guides') + ' :is(.uav-legend, .uav-legend-top) { display: none; }\n}');
+    // The rule that takes the legend takes the colours it was the key to: what it painted is the first series' colour.
+    expect(css).toContain(['@container uav-view (block-size < 87.5px) {', '  ' + fig('guides') + ' :is(.uav-legend, .uav-legend-top) { display: none; }', '  ' + fig('guides') + ' { --uav-split: plain; }',
+      ...Object.entries(SPLIT_PLAIN).map(([sel, decl]) => '  ' + fig('guides') + ' ' + sel + ' { ' + decl + ' }'), '}'].join('\n'));
     const alone = ['  ' + fig('marks') + ' :is(.uav-radial, .uav-legend, .uav-legend-top) { display: none; }', '  ' + fig('marks') + ' .uav-number { display: block; }',
       '  ' + fig('marks') + ' { grid-template: "number" auto / minmax(0, 1fr); }', '  ' + fig('marks') + ' .uav-body { display: none; }', '  ' + fig('marks') + ' .uav-number { align-self: start; margin: 0; }', '}'].join('\n');
     expect(css).toContain('@container uav-view (inline-size < 71.5px) {\n' + alone);

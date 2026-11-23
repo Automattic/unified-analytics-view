@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildScene, expand, makeContainer, place, resolve, type Catalog, type PainterName, type Result, type Spec } from '@unified-analytics/core';
+import { FIT_RULES, buildScene, expand, makeContainer, place, resolve, type Catalog, type PainterName, type Result, type Spec } from '@unified-analytics/core';
 import { catalog, moreSamples, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
 import { err, ofUnbounded, run, validView as view } from './helpers.ts';
 
@@ -244,14 +244,23 @@ describe('detail splits a plot into series and paints none apart', () => {
 describe('a split plot\'s legend', () => {
   const series = specs.series!;
   const key = (w: number, h: number | null = null, spec = series) => { const { plan, ratio, scene } = run(spec, w, h); return { legend: plan.guides.legend, parts: ratio.parts, dropped: plan.dropped, scene, ratio }; };
-  it('is every series at first, then a label at the end of each line, then nothing', () => {
+  it('is every series at first, then a label at the end of each line, and with neither the marks are one colour', () => {
+    const paints = (r: ReturnType<typeof key>) => [...new Set(r.ratio.nodes.filter((n) => n.layer === 'data' && n.part === 'plot').map((n) => n.paint))];
     expect(key(346)).toMatchObject({ legend: 'full', parts: ['y-axis', 'plot', 'x-axis', 'legend'], dropped: ['the middle date label'] });
     expect(key(300)).toMatchObject({ legend: 'labels', parts: ['y-axis', 'plot', 'labels', 'x-axis'], dropped: ['the legend (kept a label at the end of each line)', 'the middle date label'] });
     expect(key(346, 170)).toMatchObject({ legend: 'labels' });
-    expect(key(250)).toMatchObject({ legend: undefined, parts: ['number', 'plot'] });
-    // Bars have no end to label.
+    expect(paints(key(300))).toEqual(['series.1', 'series.2', 'series.3']);
+    // Bare beside the number, nothing says which colour is which. They were three colours with no key once; now the
+    // marks are one, and the number is of them all.
+    const bare = key(250);
+    expect(bare).toMatchObject({ legend: undefined, parts: ['number', 'plot'], dropped: ['axes and grid (added the number to make up for them)', 'the colours the legend was the key to'] });
+    expect(paints(bare)).toEqual(['series.1']);
+    // Bars have no end to label, so their legend stays for as long as the axes do. It left at 320 px once, with
+    // nothing in its place.
     const bars: Spec = { ...series, layers: [{ mark: 'bar', encode: series.layers![0]!.encode }] };
-    expect(key(300, null, bars)).toMatchObject({ legend: undefined, parts: ['y-axis', 'plot', 'x-axis'], dropped: ['the legend', 'the middle date label'] });
+    expect(key(300, null, bars)).toMatchObject({ legend: 'full', parts: ['y-axis', 'plot', 'x-axis', 'legend'], dropped: ['the middle date label'] });
+    expect(key(346, 170, bars).scene).toMatchObject({ width: 346, height: 170 });
+    expect(paints(key(250, null, bars))).toEqual(['series.1']);
     expect(key(300, null, { ...series, keep: ['guides'] }).legend).toBe('full');
   });
   it('the scene carries both forms, each in its own part, and place() draws the one the plan names', () => {
@@ -446,13 +455,23 @@ describe('a scale per unit', () => {
     // Beside a split by color the colours are the series', and the legend is theirs.
     expect(run(specs.grouped!, 346).ratio.nodes.filter((n) => n.part === 'legend' && n.kind === 'text').map((n) => n.series)).toEqual(run(specs.grouped!, 346).ratio.series);
   });
-  it('the second axis is given up before the first, and the marks keep their scale', () => {
+  it('the second axis is the key to what is measured on it: it stays as long as the first, and in the bare plot its layers go with it', () => {
     const wide = run(dual, 346), narrow = run(dual, 300), marks = (r: typeof wide) => r.ratio.nodes.filter((n) => n.layer === 'data' && n.part === 'plot');
-    expect(narrow.plan).toMatchObject({ guides: { x: true, y: true, grid: true }, dropped: ['the legend (kept a label at the end of each line)', 'the second y axis', 'the middle date label'] });
-    expect(narrow.ratio.parts).toEqual(['y-axis', 'plot', 'labels', 'x-axis']);
+    // It went under 340 px once, and left the line in dollars to be read against the axis of visitors.
+    expect(narrow.plan).toMatchObject({ guides: { x: true, y: true, y2: true, grid: true }, dropped: ['the legend (kept a label at the end of each line)', 'the middle date label'] });
+    expect(narrow.ratio.parts).toEqual(['y-axis', 'plot', 'y-axis-2', 'labels', 'x-axis']);
     expect(marks(narrow)).toEqual(marks(wide));
-    expect(run({ ...dual, keep: ['guides'] }, 300).plan.guides.y2).toBe(true);
-    expect(run(dual, 250).plan.guides).toEqual({ x: false, y: false, grid: false });
+    // What is drawn on the second scale says so, and the rule that takes the axes takes it with them.
+    expect([...new Set(marks(wide).map((n) => n.key.split(':')[1] + ' ' + (n.axis ?? 1)))]).toEqual(['bar 1', 'line 2']);
+    expect(FIT_RULES.find((r) => r.layout === 'cartesian' && r.id === 'axes')!.hide).toEqual(['x-axis', 'y-axis', 'y-axis-2', 'grid', 'axis:2', 'size']);
+    expect(FIT_RULES.some((r) => r.id === 'axis-2')).toBe(false);
+    // Under the axes' need the plot is bare beside the number, and of one unit, which is the number's.
+    const bare = run(dual, 250);
+    expect(bare.plan).toMatchObject({ guides: { x: false, y: false, grid: false }, dropped: ['axes and grid (added the number to make up for them)', 'the layers measured on the second axis', 'the colours the legend was the key to'] });
+    expect(bare.plan.layers.map((l) => l.mark)).toEqual(['bar']);
+    expect(bare.ratio.nodes.some((n) => n.axis === 2)).toBe(false);
+    // Placed, a node is where it is, and says no more of its axis.
+    expect(wide.scene.nodes.some((n) => 'axis' in n)).toBe(false);
   });
   it('place() gives the second axis a gutter of its own', () => {
     const { scene } = run(dual, 346), tick = scene.nodes.find((n) => n.key === 'ytick:usd:1000') as { x: number; y: number }, last = scene.nodes.filter((n) => n.key.startsWith('primary:bar:')).pop() as { x: number; w: number };

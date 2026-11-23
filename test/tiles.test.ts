@@ -44,8 +44,8 @@ describe('the sweep', () => {
         if (sc === 'empty') { expect([346, 250, 120, 10].map((w) => at(w)[0])).toEqual(['notice', 'notice', 'none', 'prose']); continue; }
         expect(at(700)).toEqual([layout, 'plot ramp', '']);
         expect(at(346)).toEqual([layout, 'plot ramp', '']);         // dashboard width
-        expect(at(319)).toEqual([layout, 'plot', 'the colour ramp']);
-        expect(at(280)).toEqual([layout, 'plot', 'the colour ramp']);
+        expect(at(319)).toEqual([layout, 'plot ramp', 'the colour ramp, down to a strip']);
+        expect(at(280)).toEqual([layout, 'plot ramp', 'the colour ramp, down to a strip']);
         expect(at(279)).toEqual(['rows', 'rows', fell]);
         expect(at(250)).toEqual(['rows', 'rows', fell]);            // sidebar width
         expect(at(346, 119)).toEqual(['rows', 'rows', fell + '; rows 4 to 15']);

@@ -99,16 +99,21 @@ describe('a rose: a dimension on angle and a metric on radius', () => {
     expect((ratio.nodes.find((n) => n.key === 'sub') as TextNode).text).toBe('Top: 11am');
     expect(plan.share).toBe(false);
   });
-  it('the labels are a guide: the `rim` rule gives them up, the circle takes its margin back, and place() thins the ones that would meet', () => {
+  it('the labels are the key to the slices: under the `rim` rule\'s need they thin to the ones with no rank, the circle keeps its margin, and place() gives up one that would meet another or leave the view', () => {
     const rule = FIT_RULES.find((r) => r.layout === 'radial' && r.id === 'rim')!;
-    expect(rule).toMatchObject({ needs: { inline: 230, block: 120 }, hide: ['rim'], keep: 'guides' });
+    expect(rule).toMatchObject({ needs: { inline: 230, block: 120 }, hide: ['rim.ranked'], keep: 'guides' });
     const wide = run(rose!, 346), narrow = run(rose!, 229), seg = (r: typeof wide) => r.scene.nodes.find((n) => n.key === 'primary:arc:11am')!, node = wide.ratio.nodes.find((n): n is ArcNode => n.key === 'primary:arc:11am')!;
     expect(wide.plan).toMatchObject({ guides: { rim: true }, dropped: [], needs: { width: 230 } });
     expect(seg(wide)).toMatchObject({ kind: 'path', tx: 173, ty: 80, d: arcD(node, 66) });
-    expect(narrow.plan).toMatchObject({ guides: {}, dropped: ['the labels round the rim'] });
-    expect(narrow.ratio.parts).toEqual(['radial']);
-    expect(seg(narrow)).toMatchObject({ tx: 114.5, ty: 80, d: arcD(node, 80) });
-    expect(run(rose!, 346, 119).plan.dropped).toEqual(['the labels round the rim']);
+    // They all went once, and left 24 slices with nothing to say which hour was which.
+    expect(narrow.plan).toMatchObject({ guides: { rim: 'few' }, dropped: ['the labels round the rim, all but about four'] });
+    expect(narrow.ratio).toMatchObject({ parts: ['radial', 'rim'], short: ['rim'] });
+    expect(seg(narrow)).toMatchObject({ tx: 114.5, ty: 80, d: arcD(node, 66) });
+    const names = (r: typeof wide) => r.scene.nodes.filter((n) => n.key.startsWith('rim:')).map((n) => n.key.slice(4));
+    expect(names(narrow)).toEqual(['12am', '6am', '12pm', '6pm']);
+    expect(run(rose!, 346, 119).plan.dropped).toEqual(['the labels round the rim, all but about four']);
+    // Too narrow for a name to either side, the two at the top and the foot still say where the circle starts.
+    expect(names(run(rose!, 100))).toEqual(['12am', '12pm']);
     expect(run({ ...rose!, keep: ['guides'] }, 229).plan.layout).toBe('none');
     // The four that are not ranked always stand, and no two that stand are closer than a label is wide.
     const placed = wide.scene.nodes.filter((n) => n.key.startsWith('rim:')).map((n) => n.key.slice(4));
@@ -244,9 +249,10 @@ describe('the prose ranks rows by comparing them, whatever order they came in', 
 // String work only, as test/dom-radial.test.ts. What the browser makes of it is checked on the bench.
 describe('the radial layout paints the new forms', () => {
   const css = compileFitRules(FIT_RULES.filter((r) => r.layout === 'radial'), { radial: radial.fit! }), fig = '.uav[data-layout="radial"]:not([data-keep~="guides"])';
-  it('the `rim` rule takes the labels away and gives the circle its margin back, before the legend steps down', () => {
+  it('the `rim` rule thins the labels to the ones with no rank and leaves the circle its margin, before the legend steps down', () => {
     for (const need of ['inline-size < 229.5px', 'block-size < 119.5px'])
-      expect(css).toContain('@container uav-view (' + need + ') {\n  ' + fig + ' .uav-rim { display: none; }\n  ' + fig + ' .uav-radial { --uav-rim: 0px; }\n}');
+      expect(css).toContain('@container uav-view (' + need + ') {\n  ' + fig + ' .uav-rim [data-rank] { display: none; }\n}');
+    expect(css).not.toContain('--uav-rim: 0px');
     expect(css.indexOf('inline-size < 229.5px')).toBeLessThan(css.indexOf('inline-size < 71.5px'));
   });
   it('the circle gives up a margin to the labels only where the plan shows them, and has a measured pass to thin them', () => {

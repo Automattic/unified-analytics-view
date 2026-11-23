@@ -16,9 +16,9 @@ describe('the rows layout', () => {
     ]);
   });
 
-  it('gives up its headers in a short box, unless the spec keeps its guides', () => {
-    expect(compileFitRules(FIT_RULES.filter((r) => r.layout === 'rows' && r.id === 'columns'), { rows: rows.fit! }))
-      .toBe('/* rows columns */\n@container uav-view (block-size < 79.5px) {\n  .uav[data-layout="rows"]:not([data-keep~="guides"]) .uav-columns { display: none; }\n}');
+  it('keeps its headers in a short box: no rule takes them, and the rows under them are clipped to whole rows', () => {
+    expect(compileFitRules(FIT_RULES.filter((r) => r.layout === 'rows'), { rows: rows.fit! })).not.toContain('.uav-columns');
+    expect(rows.css).toContain('.uav-rows { max-block-size: calc(round(down, 100% + var(--uav-row-gap), var(--uav-row-block) + var(--uav-row-gap)) - var(--uav-row-gap)); }');
   });
 
   it('sets no column\'s width: the headers and the rows are subgrids, and a ranked column goes by a need written on its cell', () => {

@@ -1,4 +1,4 @@
-import { SERIES, applies, declutter, formatDimension, isDim, isMetric, layerKeys, registerMark, registerPreset, roleOf, rowKeys, ruleFor, tooManySeries } from '@unified-analytics/core';
+import { SERIES, declutter, formatDimension, isDim, isMetric, layerKeys, registerMark, registerPreset, roleOf, rowKeys, ruleFor, tooManySeries } from '@unified-analytics/core';
 import type { CustomMark, FitRule, Part, PathNode, PlacedNode, RectNode, Row, SceneNode, TextNode } from '@unified-analytics/core';
 
 /* The `link` mark: a ribbon from a value of one dimension to a value of another, as a custom mark (core's marks.ts).
@@ -23,12 +23,12 @@ export const NODE = 8;
 export const LABEL = 6;
 const LINE = 14;        // px a label's line takes, for a painter that cannot measure one
 
-/* Labels go first, and then the view is not a smaller Sankey: it becomes the grid of the same pairs, which reads at any
- * width. The first dimension is down its side and the second across, so the sources are its rows and the targets its columns. */
+/* A node's name is the key to it, and a Sankey with no names says only that things flow. So the names stay as long as
+ * the ribbons do, and short of the room they need the view is not a smaller Sankey: it becomes the grid of the same
+ * pairs, which reads at any width. The first dimension is down its side and the second across, so the sources are its
+ * rows and the targets its columns. */
 export const LINK_RULES: FitRule[] = [
-  { id: 'guides', layout: 'link', container: 'view', needs: { inline: 320, block: 140 },      // a label inside each column, and ribbons between
-    hide: ['labels'], keep: 'guides' },
-  { id: 'marks',  layout: 'link', container: 'view', needs: { inline: 280, block: 120 },      // ribbons too short, or nodes too thin, to follow
+  { id: 'marks',  layout: 'link', container: 'view', needs: { inline: 320, block: 140 },      // a name inside each column, and ribbons between
     hide: [], fallback: 'heatmap', keep: 'marks' },
 ];
 
@@ -96,8 +96,7 @@ export const linkMark: CustomMark = {
   place(scene, W, room, container) {
     const rule = (id: string) => ruleFor(container.rules.fit.concat(LINK_RULES), scene.layout, id);
     const h = room == null ? container.rules.axes.height : Math.max(rule('marks')?.needs.block ?? 0, Math.min(container.rules.axes.height, room));
-    // Core asks a custom mark's `guides` rule only for a ramp or a key to sizes, so the labels' room is asked here.
-    const guides = rule('guides'), labelled = scene.parts.includes('labels') && !(guides && applies(guides, { view: { inline: W, block: room } }));
+    const labelled = scene.parts.includes('labels');
     const kx = (W - 2 * NODE) / 100, ky = h / 100, nodes: PlacedNode[] = [], labels: TextNode[] = [];
     for (const n of scene.nodes) {
       if (n.part === 'plot' && n.kind === 'path') nodes.push({ key: n.key, kind: 'path', d: n.d!.replace(/([\d.]+),([\d.]+)/g, (_, x: string, y: string) => round(NODE + Number(x) * kx) + ',' + round(Number(y) * ky)), fill: true, paint: n.paint, layer: n.layer, ...(n.opacity != null && { opacity: n.opacity }) });

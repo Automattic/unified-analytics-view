@@ -18,8 +18,9 @@ export const CHROME_CSS = LABEL_CSS + SWATCH_CSS + AXES_CSS + LEGEND_CSS + RAMP_
 export { paintAxes, thinAxis } from './axes.ts';
 export { ANCHOR, LABEL, cut, type Anchor } from './label.ts';
 export { paintLegend } from './legend.ts';
-export { paintRamp } from './ramp.ts';
-export { paintSize } from './size.ts';
+export { RAMP_STRIP, paintRamp } from './ramp.ts';
+export { SPLIT_PLAIN } from './legend.ts';
+export { SIZE_MOST, paintSize } from './size.ts';
 export { swatch } from './swatch.ts';
 export { paintUnitKey } from './unit.ts';
 export { centred, say, tip } from './tip.ts';

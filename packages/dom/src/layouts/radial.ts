@@ -1,5 +1,5 @@
 import { CONTAINER_RULES, SEATS_LEAST, arcD, declutter, ruleFor, type ArcNode, type CircleNode, type TextNode } from '@unified-analytics/core';
-import { LEGEND_FIT, LEGEND_SWAP, hideCutLegends, legendBlock, legendTop, paintLegend } from '../chrome/legend.ts';
+import { LEGEND_FIT, LEGEND_SWAP, SPLIT_PLAIN, hideCutLegends, legendBlock, legendTop, paintLegend } from '../chrome/legend.ts';
 import { attr, ensure, hits, keyed, svg, paintVar, prop, text } from '../dom.ts';
 import { FROM_TOP, IN_BOX, NUMBER_ALONE, holdShape, type LayoutPainter } from '../layout.ts';
 import { FOCUS, HOVER, token } from '../tokens.ts';
@@ -110,8 +110,8 @@ export const radial: LayoutPainter = {
   fit: {
     // As the band's: the rule's data only sets a switch, and this is the swap.
     legend: LEGEND_FIT,
-    // The circle takes back the margin it gave the labels.
-    rim: { '.uav-radial': '--uav-rim: 0px;' },
+    // With no legend left, the segments are in one paint, parted by their gaps.
+    'legend-top': SPLIT_PLAIN,
     // The number alone. The body goes whole, and so does its grid row.
     marks: NUMBER_ALONE,
   },
@@ -149,7 +149,12 @@ export const radial: LayoutPainter = {
   // Labels round the rim that would meet: the one of higher rank is hidden, and keeps its box. Read where they stand:
   // a label moves only when the slices change, and the pass runs again when they have.
   measure(body) {
-    thinLabels(body, '.uav-rim > span:not([data-exit])', (labels) => declutter(labels.map((el) => { const r = el.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height, rank: Number(el.dataset.rank) || 0 }; })));
+    // Those that would meet, and those to either side that the view is too narrow to hold: a name is whole or gone.
+    const view = body.getBoundingClientRect();
+    thinLabels(body, '.uav-rim > span:not([data-exit])', (labels) => {
+      const boxes = labels.map((el) => el.getBoundingClientRect()), met = declutter(boxes.map((r, i) => ({ x: r.left, y: r.top, w: r.width, h: r.height, rank: Number(labels[i]!.dataset.rank) || 0 })));
+      return boxes.map((r, i) => met[i]! || r.left < view.left - 0.5 || r.right > view.right + 0.5);
+    });
     hideCutLegends(body);
   },
 };

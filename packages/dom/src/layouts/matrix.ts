@@ -6,8 +6,8 @@ import { emptyTable, fieldLabel, tableRow, valueText, type Cell } from '../table
 import { ARROWS, IS } from '../rove.ts';
 import { AXES_HEIGHT, NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
 import { paintAxes, thinAxis } from '../chrome/axes.ts';
-import { paintRamp } from '../chrome/ramp.ts';
-import { paintSize } from '../chrome/size.ts';
+import { RAMP_STRIP, paintRamp } from '../chrome/ramp.ts';
+import { SIZE_MOST, paintSize } from '../chrome/size.ts';
 import { DOT, NO_SIZE } from '../chrome/swatch.ts';
 
 /* A dimension on x, another on y, a metric on colour: a grid of cells. The cells are a CSS grid, each set in its
@@ -78,8 +78,9 @@ function bind(cells: HTMLElement): void {
 export const matrix: LayoutPainter = {
   layout: 'matrix',
   css,
-  // The number alone. The body goes whole, so kept axes do not stand with no grid between them.
-  fit: { marks: NUMBER_ALONE },
+  // The two keys in their shorter forms, which stay as long as the grid. Then the number alone: the body goes whole, so
+  // kept axes do not stand with no grid between them.
+  fit: { ramp: { ...RAMP_STRIP, ...SIZE_MOST }, marks: NUMBER_ALONE },
 
   // Labels that would meet, by their real sizes, along each axis (chrome/axes.ts). A grid's are not anchored to stay inside
   // it, so one that would run past the far edge goes first, and down the side they may stand line on line.

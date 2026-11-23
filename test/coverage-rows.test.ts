@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildScene, columnRooms, expand, formatValue, makeContainer, resolve, type Spec } from '@unified-analytics/core';
+import { FIT_RULES, buildScene, columnRooms, expand, formatValue, makeContainer, resolve, type Spec } from '@unified-analytics/core';
 import { catalog, moreSamples, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
 import { at, err, ofUnbounded, run, validView as view } from './helpers.ts';
 
@@ -101,11 +101,12 @@ describe('columns', () => {
     const narrow = run(conversions, 300).scene;
     expect(at<{ text: string }>(narrow.nodes, 'primary:text:Newsletter signup').text).toBe('Newsletter sig…');
   });
-  it('headers are a guide: a view under 80 px tall gives them up, and rows are trimmed to what is left under them', () => {
+  it('headers are a key to the columns under them: they stay as long as two columns do, and a short view gives up rows instead', () => {
     expect(run(conversions, 346, 100)).toMatchObject({ plan: { guides: { columns: true }, rowLimit: 2, dropped: ['rows 3 to 6'] }, scene: { height: 80 } });
-    expect(run(conversions, 346, 79)).toMatchObject({ plan: { guides: {}, rowLimit: 2, dropped: ['rows 3 to 6', 'the column headers'] }, scene: { height: 60 } });
-    expect(run({ ...conversions, keep: ['guides'] }, 346, 79).plan).toMatchObject({ guides: { columns: true }, rowLimit: 1 });
-    expect(run(conversions, 346, 79).ratio.parts).toEqual(['rows']);
+    // Under 80 px tall the headers went once, and left two columns of values with nothing to say which was which.
+    expect(run(conversions, 346, 79)).toMatchObject({ plan: { guides: { columns: true }, rowLimit: 1, dropped: ['rows 2 to 6'] }, scene: { height: 48 } });
+    expect(run(conversions, 346, 79).ratio.parts).toEqual(['columns', 'rows']);
+    expect(FIT_RULES.some((r) => r.layout === 'rows' && r.hide.includes('columns'))).toBe(false);
   });
 });
 

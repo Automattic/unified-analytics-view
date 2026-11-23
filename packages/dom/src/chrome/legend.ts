@@ -1,6 +1,6 @@
 import { lineOf } from '../layout.ts';
-import type { Scene, TextNode } from '@unified-analytics/core';
-import { attr, ensure, keyed, pageWay, paintVar, prop, text } from '../dom.ts';
+import { TINT, type Scene, type TextNode } from '@unified-analytics/core';
+import { attr, ensure, keyed, nodePaint, pageWay, paintVar, prop, text } from '../dom.ts';
 import { SWATCH, swatch as asSwatch } from './swatch.ts';
 
 /* The legend: what each colour is. One component, in the two forms a scene asks for, told apart by its nodes.
@@ -34,6 +34,14 @@ export const LEGEND_CSS = `
 .uav-legend[data-names] { display: flex; flex-wrap: wrap; gap: 0 14px; margin-block-start: 6px; }
 .uav-legend[data-names] span { line-height: var(--uav-legend-line); }
 .uav-legend[data-names] span::before { margin-inline-end: 6px; vertical-align: -1px; }`;
+
+/** A view with no legend left and nothing in its place, for a layout's `fit` under the rule that sets `split: plain`:
+ * every mark whose colour the legend was the key to is in the first series' paint, over what each wrote on itself, and
+ * a tint among them in that paint's tint. The series are still parted, by their gaps and their lines. */
+export const SPLIT_PLAIN: Record<string, string> = {
+  '[data-legend]:not([data-tone])': '--uav-paint: ' + paintVar('series.1') + ' !important;',
+  '[data-legend][data-tone]': '--uav-paint: ' + nodePaint({ paint: 'series.1', kind: 'rect', tone: TINT.tone, opacity: TINT.opacity }) + ' !important;',
+};
 
 /** Both legends, after whatever the body holds already: the full one in the form its nodes ask for, and the one line.
  * Each is there, empty, where the scene has none, and reads the way the page does whichever way the body is set. */

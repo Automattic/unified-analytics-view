@@ -1,8 +1,8 @@
 import { BARE_PAD, PLOT_TOP, POINT_INSET, SHORT_PLOT, X_AXIS_BLOCK, type LineNode, type PathNode, type RectNode, type SceneNode, type TextNode } from '@unified-analytics/core';
 import { ensure, ensureSvg, keyed, prop, text } from '../dom.ts';
 import { paintAxes, thinAxis } from '../chrome/axes.ts';
-import { paintLegend } from '../chrome/legend.ts';
-import { paintSize } from '../chrome/size.ts';
+import { SPLIT_PLAIN, paintLegend } from '../chrome/legend.ts';
+import { SIZE_MOST, paintSize } from '../chrome/size.ts';
 import { RULE } from '../chrome/rule.ts';
 import { token } from '../tokens.ts';
 import { LABEL, cut } from '../chrome/label.ts';
@@ -10,7 +10,7 @@ import { hitNodes } from '../keys.ts';
 import { AXES_HEIGHT, BARE_HEIGHT, FROM_TOP, IN_BOX, NUMBER_ALONE, NUMBER_SMALL, type LayoutPainter } from '../layout.ts';
 import { apart, thinLabels } from '../measure.ts';
 import { morph, once } from '../motion.ts';
-import { POINTS_CSS, POINTS_FIT, measurePoints, paintPoints } from './points.ts';
+import { ONE_SIZE, POINTS_CSS, POINTS_FIT, measurePoints, paintPoints } from './points.ts';
 import { RANGES_CSS, paintRanges } from './ranges.ts';
 import { paintUnitKey } from '../chrome/unit.ts';
 
@@ -85,17 +85,22 @@ export const cartesian: LayoutPainter = {
     // Without its axes the plot is a sparkline beside the number, which takes its short forms and gives up its note.
     // A number the measured pass has set carries data-fit and is left to it: that is the number alone, under `marks`.
     axes: {
-      '': `--uav-plot-block: calc(${BARE_HEIGHT} - ${2 * BARE_PAD}px); grid-template: "number body" minmax(0, 1fr) / auto minmax(0, 1fr); column-gap: 12px;`,
+      // A view with a key to sizes states its body's height, for the key's line. Bare, it has no key, and is as tall as its plot.
+      '': `--uav-plot-block: calc(${BARE_HEIGHT} - ${2 * BARE_PAD}px); --uav-body-block: initial; grid-template: "number body" minmax(0, 1fr) / auto minmax(0, 1fr); column-gap: 12px;`,
       '.uav-body': `grid-template: "plot" var(--uav-plot-block) / minmax(0, 1fr); padding-block: ${BARE_PAD}px;`,
-      // Its own rule asks only for width, so in a short box it would stand with no column to stand in.
-      '.uav-y-axis-2': 'display: none;',
       '.uav-number': 'align-self: center; margin: 0;',
+      // With no key to say what a size is, every dot is one size.
+      '.uav-dots i': ONE_SIZE,
       '.uav-number:not([data-fit]) .uav-f-display': NUMBER_SMALL,
       '.uav-number:not([data-fit]) :is(.uav-full, [data-rank])': 'display: none;',
       '.uav-number:not([data-fit]) .uav-short': 'display: inline;',
     },
     // `show` compiles to a block, and the labels are a grid, as the axes are.
-    legend: { '.uav-labels': 'display: grid;' },
+    legend: { '.uav-labels': 'display: grid;' }, 'legend-area': { '.uav-labels': 'display: grid;' },
+    // With the axes go the legend and the labels, and with those the colours they were the key to.
+    labels: SPLIT_PLAIN,
+    // The key to sizes as its largest step alone.
+    size: SIZE_MOST,
     'y-ticks': { '.uav-y-axis-2 [data-rank]': 'display: none;' },
     // The number alone. The body goes whole, so kept axes do not stand with no plot between them.
     marks: NUMBER_ALONE,

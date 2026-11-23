@@ -33,7 +33,7 @@ describe('the sweep', () => {
       }
     }
   });
-  it('one spec is a Sankey with room, gives up its labels, and then is the grid of the same pairs: then the number, then the prose', () => {
+  it('one spec is a Sankey with room for its names, and under it the grid of the same pairs: then the number, then the prose', () => {
     expect(view(sankey), JSON.stringify(view.errors)).toBe(true);
     const fell = 'the link marks (drawn as "heatmap")';
     for (const sc of scenarios) {
@@ -41,15 +41,14 @@ describe('the sweep', () => {
       if (sc === 'empty') { expect([346, 250, 120, 10].map((w) => at(w)[0])).toEqual(['notice', 'notice', 'none', 'prose']); continue; }
       expect(at(700)).toEqual(['link', 'plot labels', '', true]);
       expect(at(346)).toEqual(['link', 'plot labels', '', true]);       // dashboard width
-      // Core asks a custom mark's `guides` rule only for a ramp or a key to sizes, so the plan does not say the labels
-      // went: place() leaves them out by the rule, as the stylesheet does.
-      expect(at(319)).toEqual(['link', 'plot labels', '', false]);
-      expect(at(346, 139)).toEqual(['link', 'plot labels', '', false]);
-      expect(at(280)).toEqual(['link', 'plot labels', '', false]);
-      expect(at(279)).toEqual(['matrix', 'y-axis plot x-axis ramp', fell, false]);
+      // A node's name is the key to it, so the names never go while the ribbons stay: short of their room the view is the grid.
+      expect(at(320)).toEqual(['link', 'plot labels', '', true]);
+      expect(at(346, 140)).toEqual(['link', 'plot labels', '', true]);
+      expect(at(319)).toEqual(['matrix', 'y-axis plot x-axis ramp', fell, false]);
+      expect(at(346, 139)[0]).toBe('matrix');
       expect(at(250)).toEqual(['matrix', 'y-axis plot x-axis ramp', fell, false]);      // sidebar width
       expect(at(346, 119)[0]).toBe('matrix');
-      expect(at(120)).toEqual(['none', 'number', fell + '; the colour ramp; all marks (kept the number)', false]);
+      expect(at(120)).toEqual(['none', 'number', fell + '; the colour ramp, down to a strip; all marks (kept the number)', false]);
       expect(at(10)[0]).toBe('prose');
     }
   });
@@ -68,7 +67,8 @@ describe('the sweep', () => {
 });
 
 describe('golden scenes', () => {
-  for (const [w, h] of [[346, null], [300, null], [250, null]] as [number, number | null][]) it(`sankey at ${w} by ${h ?? 'any'}`, () => expect(run(sankey, w, h).scene).toMatchSnapshot());
+  // With room, at the least room its names have, and under it, where it is the grid.
+  for (const [w, h] of [[346, null], [320, null], [250, null]] as [number, number | null][]) it(`sankey at ${w} by ${h ?? 'any'}`, () => expect(run(sankey, w, h).scene).toMatchSnapshot());
 });
 
 describe('the fixture: visitors from channel to landing', () => {
@@ -206,11 +206,11 @@ describe('the painter\'s half, as strings', () => {
     expect(linkPainter.css).toContain('.uav[data-layout="link"] .uav-plot svg { inset-inline: 8px; inline-size: calc(100% - 16px); }');
     expect(linkPainter.css).not.toMatch(/#[0-9a-f]{3,8}\b|rgb\(/i);
   });
-  it('its rules compile to the labels going, and then to the swap for the grid, by width and by height', () => {
+  it('its one rule compiles to the swap for the grid, by width and by height, and nothing takes the names alone', () => {
     const css = compileFitRules(LINK_RULES);
-    expect(css).toContain('@container uav-view (inline-size < 319.5px) {\n  .uav[data-layout="link"]:not([data-keep~="guides"]) .uav-labels { display: none; }');
-    expect(css).toContain('@container uav-view (inline-size < 279.5px) {\n  .uav[data-layout="link"]:not([data-keep~="marks"]):has(~ .uav-fallback[data-rule="marks"]) { display: none; }\n  .uav[data-layout="link"]:not([data-keep~="marks"]) ~ .uav-fallback[data-rule="marks"] { display: block; }');
-    expect(css).toContain('@container uav-view (block-size < 119.5px)');
-    expect(LINK_RULES.map((r) => [r.id, r.fallback])).toEqual([['guides', undefined], ['marks', 'heatmap']]);
+    expect(css).not.toContain('.uav-labels');
+    expect(css).toContain('@container uav-view (inline-size < 319.5px) {\n  .uav[data-layout="link"]:not([data-keep~="marks"]):has(~ .uav-fallback[data-rule="marks"]) { display: none; }\n  .uav[data-layout="link"]:not([data-keep~="marks"]) ~ .uav-fallback[data-rule="marks"] { display: block; }');
+    expect(css).toContain('@container uav-view (block-size < 139.5px)');
+    expect(LINK_RULES.map((r) => [r.id, r.fallback])).toEqual([['marks', 'heatmap']]);
   });
 });

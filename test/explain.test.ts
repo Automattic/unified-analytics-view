@@ -24,6 +24,16 @@ describe('explain', () => {
     expect(lines(of('pages', { inline: 80 }))).toMatchSnapshot();
     expect(lines(of('dual', { inline: 480, block: 100 }))).toMatchSnapshot();
   });
+  it('says a key\'s shorter form, and what went with a key that could not stay', () => {
+    const what = (name: string, room: ExplainRoom, part: string) => of(name, room).entries.find((b) => b.part === part && b.rule)?.what;
+    expect(what('heatmap', { inline: 220, block: 130 }, 'ramp')).toBe('shown as a thin strip');
+    expect(what('bubble', { inline: 300, block: 150 }, 'size')).toBe('shown as its largest step');
+    expect(what('rose', { inline: 200, block: 110 }, 'rim')).toBe('thinned to about four');
+    expect(what('series', { inline: 250 }, 'labels')).toBe('hidden, and the marks it keyed drawn in one colour');
+    expect(what('donut', { inline: 170, block: 80 }, 'legend')).toBe('hidden, and the marks it keyed drawn in one colour');
+    // Bars have no line end to label, so no rule acts on their legend while the axes are there.
+    expect(what('grouped', { inline: 300 }, 'legend')).toBeUndefined();
+  });
   it('says a part the spec keeps is kept, and how to let it go', () => {
     const spec = { ...all.trend!.spec, keep: ['guides' as const] }, e = of('trend', { inline: 250 }, undefined, spec);
     expect(e.entries.find((b) => b.what === 'kept')).toMatchObject({ from: 'keep', lever: 'remove "guides" from keep to let it go here' });

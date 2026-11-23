@@ -10,22 +10,18 @@ function gaveUp(r: FitRule, plan: Plan, unbounded: Plan): boolean | null {
   const here = plan.layout === r.layout;
   if (r.id === 'axes') return !(here && plan.guides.x);
   // A plot has a legend, and labels at its line ends, only where it is split into series.
-  if (r.id === 'legend') return unbounded.guides.legend ? !(here && plan.guides.legend === 'full') : null;
+  // It gives way to those labels only in a view with a line or an area in it: bars have no ends, and keep it.
+  if (r.id === 'legend' || r.id === 'legend-area') return unbounded.guides.legend && (r.layout !== 'cartesian' || unbounded.layers.some((l) => l.mark === r.mark)) ? !(here && plan.guides.legend === 'full') : null;
   if (r.id === 'labels' || r.id === 'legend-top') return unbounded.guides.legend ? !(here && !!plan.guides.legend) : null;   // and a list its one line only where its rows are divided
-  // And a second y axis only where its layers measure in two units.
-  if (r.id === 'axis-2') return unbounded.guides.y2 ? !(here && !!plan.guides.y2) : null;
   // Labels on points, a key to sizes, and the rung a plot of points has in place of a bare plot: only where a view has them.
   if (r.id === 'point-labels') return unbounded.guides.pointLabels ? !(here && !!plan.guides.pointLabels) : null;
   if (r.id === 'size') return unbounded.guides.size ? !(here && !!plan.guides.size) : null;
   if (r.id === 'points') return unbounded.layers.some((l) => String(l.encode?.x) in catalog.metrics) && !unbounded.layers.some((l) => String(l.encode?.x) in catalog.dimensions) ? !here : null;
-  // Rows have headers only where they have more than one column of values.
-  if (r.id === 'columns') return unbounded.guides.columns ? !(here && !!plan.guides.columns) : null;
   if (r.id === 'mid-tick') return here && plan.guides.x ? plan.dropped.includes('the middle date label') : null;
   if (r.id === 'secondary') return here && unbounded.layers.some((l) => l.role !== 'primary') ? plan.layers.every((l) => l.role === 'primary') : null;
   // And a track that stands beside its label only where a row's marks are read by where they are.
   if (r.id === 'track') return unbounded.layers.some((l) => ['rule', 'tick', 'dot'].includes(l.mark) || l.encode?.x2 != null) ? !here : null;
-  // The key to a unit's glyphs, and the preset a unit's form gives way to: only where a view holds the mark.
-  if (r.id === 'unit-key') return unbounded.guides.unitKey ? !(here && !!plan.guides.unitKey) : null;
+  // The preset a unit's form gives way to: only where a view holds the mark.
   if (r.mark) return unbounded.layers.some((l) => l.mark === r.mark) ? plan.preset !== unbounded.preset : null;
   return !here;
 }

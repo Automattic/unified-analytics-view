@@ -109,13 +109,16 @@ describe('arcs', () => {
 describe('fit rules', () => {
   const rule = (id: string) => FIT_RULES.find((r) => r.layout === 'radial' && r.id === id)!;
   const at = (spec: Spec, w: number, h: number | null = null) => { const { plan, ratio, scene } = run(spec, w, h); return { layout: plan.layout, parts: ratio.parts, dropped: plan.dropped, hole: scene.nodes.some((n) => n.key === 'hole'), plot: scene.plot }; };
-  it('the legend steps down as the band\'s does, and then to nothing', () => {
+  it('the legend steps down as the band\'s does, and then to arcs of one colour', () => {
     const steps = (spec: Spec, sizes: [number, number | null][]) => sizes.map(([w, h]) => { const g = run(spec, w, h).plan; return g.layout === 'radial' || g.layout === 'band' ? g.guides.legend ?? 'none' : g.layout; });
     expect(steps(donut!, [[346, null], [169, null], [346, 100], [346, 87], [346, 63]])).toEqual(['full', 'top', 'top', 'none', 'none']);
     // The share bar at the same widths, which has no step with no legend.
     expect(steps(samples.mix!.spec, [[346, null], [169, null]])).toEqual(['full', 'top']);
     expect(at(donut!, 169).dropped).toEqual(['the legend, except the largest segment']);
-    expect(at(pie!, 346, 87)).toMatchObject({ parts: ['radial'], dropped: ['the legend'], plot: { w: 87, h: 87 } });
+    expect(at(pie!, 346, 87)).toMatchObject({ parts: ['radial'], dropped: ['the legend, and the colours it was the key to'], plot: { w: 87, h: 87 } });
+    // With no key the arcs are one colour: the gaps between them still say how the whole divides.
+    const arcs = (h: number) => [...new Set(run(pie!, 346, h).ratio.nodes.filter((n) => n.part === 'radial' && n.kind === 'arc').map((n) => n.paint))];
+    expect([arcs(100).length > 1, arcs(87)]).toEqual([true, ['series.1']]);
     for (const [w, h] of [[346, null], [169, null], [346, 100], [346, 87], [100, 70]] as [number, number | null][]) {
       const { parts } = at(donut!, w, h);
       expect(parts.includes('legend') && applies(rule('legend'), { view: { inline: w, block: h } }), 'legend ' + w + ' ' + h).toBe(false);
@@ -140,7 +143,7 @@ describe('fit rules', () => {
     expect(run(donut!, 346, null, 'typical', 'dots').scene.nodes.some((n) => n.key === 'hole')).toBe(false);
   });
   it('below the marks need the number alone, and then the prose', () => {
-    expect(at(donut!, 346, 63)).toMatchObject({ layout: 'none', dropped: ['the legend', 'all marks (kept the number)'] });
+    expect(at(donut!, 346, 63)).toMatchObject({ layout: 'none', dropped: ['the legend, and the colours it was the key to', 'all marks (kept the number)'] });
     expect(at(donut!, 71, 200).layout).not.toBe('radial');
     expect(at(donut!, 10).layout).toBe('prose');
     expect(at({ ...donut!, keep: ['guides'] }, 346, 100).layout).toBe('none');   // the legend is kept, so the marks go with it

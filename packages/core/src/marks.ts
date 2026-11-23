@@ -21,7 +21,9 @@ export interface CustomMark {
    * as it does for core's marks: one a mark does not read is drawn without. A mark that says nothing here is not asked. */
   reads?: Reads;
   /** The fit rules of its layout. A context's own rules for the layout come before these. Two ids are asked for by
-   * `resolve()`: `guides` is the room its `ramp` and `size` parts need, and `marks` the room the marks do. */
+   * `resolve()`: `guides` is the room its `ramp` and `size` parts need whole, and `marks` the room the marks do. Short
+   * of `guides` a key the rule sets a shorter form for stays in that form (`set: { ramp: 'strip' }`, `'size-key': 'most'`),
+   * and one it hides goes. A key may not go while the marks it keys are drawn (test/guides.test.ts). */
   rules: FitRule[];
   /** Its scene, in ratios, with stable keys and paint tokens: every node, whatever the plan shows, and in `parts` the
    * ones it does. A plan starts with the guides `ramp` and `size` on, and they go together. `rows` are the dimension

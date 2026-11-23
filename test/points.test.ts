@@ -107,13 +107,32 @@ describe('size', () => {
     expect(scene.height).toBe(184 + 28);
     expect(scene.nodes.find((n) => n.key === 'size:4')).toMatchObject({ kind: 'circle', r: 12, cy: 14, ty: 184 });
   });
-  it('the key goes before the axes do, by its rule, and the dots keep their sizes', () => {
-    expect(run(bubble!, 319).plan).toMatchObject({ layout: 'cartesian', dropped: ['the key to sizes'] });
-    expect(run(bubble!, 319).ratio.parts).toEqual(['y-axis', 'plot', 'points', 'x-axis']);
-    expect(run(bubble!, 319).scene.nodes.some((n) => n.key.startsWith('size:'))).toBe(false);
-    expect(run(bubble!, 346, 159).plan.guides.size).toBe(undefined);
+  it('the key is the key to the dots\' sizes: by its rule it steps down to its largest step, and it stays as long as the dots do', () => {
+    const small = run(bubble!, 319), said = (r: typeof small) => r.scene.nodes.filter((n) => n.key.startsWith('size:')).map((n) => (n as { text?: string }).text ?? 'dot');
+    expect(small.plan).toMatchObject({ layout: 'cartesian', guides: { size: 'most' }, dropped: ['the key to sizes, down to its largest step'] });
+    expect(small.ratio).toMatchObject({ parts: ['y-axis', 'plot', 'points', 'x-axis', 'size'], short: ['size'] });
+    // Whole, it is the metric's name and a dot for each step. Stepped down, the name, the biggest dot and the most it stands for.
+    expect(said(run(bubble!, 346)).length).toBeGreaterThan(3);
+    expect(said(small)).toEqual([said(run(bubble!, 346))[0], 'dot', said(run(bubble!, 346)).at(-1)]);
+    expect(run(bubble!, 346, 159).plan.guides.size).toBe('most');
+    // Its line comes out of the plot's height, down to the least a plot of points stands in.
+    expect(run(bubble!, 346, 120)).toMatchObject({ plan: { layout: 'cartesian', guides: { size: 'most' } }, scene: { height: 120 } });
     expect(run({ ...bubble!, keep: ['guides'] }, 319).plan.guides.size).toBe(true);
-    expect((run(bubble!, 319).scene.nodes.find((n) => n.key === 'primary:dot:/') as any).r).toBe(12);
+    expect((small.scene.nodes.find((n) => n.key === 'primary:dot:/') as any).r).toBe(12);
+    // Under that the dots go, and the key with them.
+    expect(run(bubble!, 279).ratio.parts).toEqual(['number']);
+  });
+  it('dots on a time axis keep their sizes while the key says what a size is, and in the bare plot they are one size', () => {
+    const spec: Spec = { query: { metrics: ['visitors', 'pageviews'], by: ['date.day'], range: '28d' }, layers: [{ mark: 'dot', encode: { x: 'date.day', y: 'visitors', size: 'pageviews' } }] };
+    const wide = run(spec, 346), bare = run(spec, 250), dots = (r: typeof wide) => r.ratio.nodes.filter((n) => n.kind === 'circle' && n.part === 'plot') as { size?: number; opacity?: number }[];
+    expect(wide.ratio.parts).toEqual(['y-axis', 'plot', 'x-axis', 'size']);
+    expect(new Set(dots(wide).map((n) => n.size)).size).toBeGreaterThan(1);
+    // Bare beside the number there is no room for the key, so no dot is said to be bigger than another.
+    expect(bare.plan).toMatchObject({ guides: { x: false }, dropped: ['axes and grid (added the number to make up for them)', 'the sizes of the dots'] });
+    expect(bare.ratio.parts).toEqual(['number', 'plot']);
+    expect(dots(bare).length).toBe(dots(wide).length);
+    expect(dots(bare).every((n) => n.size == null && n.opacity == null)).toBe(true);
+    expect(bare.scene.height).toBe(46);
   });
   it('takes a metric, and the error names the fix', () => {
     expect(err({ ...bubble!, layers: [{ mark: 'dot', encode: { x: 'visitors', y: 'page_conversion', size: 'page' } }] }))

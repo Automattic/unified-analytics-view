@@ -16,15 +16,15 @@ describe('compileFitRules', () => {
     expect(css).toBe([
       '/* cartesian axes */',
       '@container uav-view (inline-size < 279.5px) {',
-      '  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) :is(.uav-x-axis, .uav-y-axis, .uav-y-axis-2, .uav-grid) { display: none; }',
+      '  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) :is(.uav-x-axis, .uav-y-axis, .uav-y-axis-2, .uav-grid, [data-axis="2"], .uav-size) { display: none; }',
       '  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) .uav-number { display: block; }',
-      '  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) { --uav-arrange: side; }',
+      '  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) { --uav-arrange: side; --uav-dots: one; }',
       '}',
       '/* cartesian axes */',
       '@container uav-view (block-size < 119.5px) {',
-      '  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) :is(.uav-x-axis, .uav-y-axis, .uav-y-axis-2, .uav-grid) { display: none; }',
+      '  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) :is(.uav-x-axis, .uav-y-axis, .uav-y-axis-2, .uav-grid, [data-axis="2"], .uav-size) { display: none; }',
       '  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) .uav-number { display: block; }',
-      '  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) { --uav-arrange: side; }',
+      '  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) { --uav-arrange: side; --uav-dots: one; }',
       '}',
     ].join('\n'));
     expect(compileFitRules(FIT_RULES)).not.toMatch(/\bor\b/);

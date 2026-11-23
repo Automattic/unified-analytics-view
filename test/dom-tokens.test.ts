@@ -38,7 +38,10 @@ describe('the public tokens', () => {
   });
   it('are the only properties of the page\'s that a stylesheet of the element reads', () => {
     const read = [...new Set([...css.matchAll(/--ua-charts-([a-z0-9-]+)/g)].map((m) => m[1]!))];
-    expect(read.filter((name) => !Object.hasOwn(TOKENS, name))).toEqual([]);
+    // The first series' colour is the one a scene's name for a paint that a stylesheet reads: a plot with no key to
+    // its colours is drawn in it.
+    expect(read.filter((name) => !Object.hasOwn(TOKENS, name))).toEqual(['color-series-1', 'color-series-1-soft']);
+    expect(read.filter((name) => !Object.hasOwn(TOKENS, name) && !NAMED.test(name))).toEqual([]);
     // Each is read with a fallback, so a page that loads no tokens still gets a view.
     expect(css.match(/var\(--ua-charts-[a-z0-9-]+\)/g)).toBeNull();
   });

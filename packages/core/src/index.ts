@@ -9,7 +9,7 @@ export { COLUMNS_BLOCK, columnRooms, declutter, inColumn, place, type LabelBox }
 export { arcD, pathD, type PathBox } from './path.ts';
 export { gridProse, many, most, notShownNote, partialNote, plural, tldrProse } from './prose.ts';
 export { UNITS, formatBin, formatDimension, formatUnit, formatValue, orList, rangeLabel } from './format.ts';
-export { SERIES, SIZES, seqScale, sizeKey, sizeStep, tooManySeries } from './scene.ts';
+export { SERIES, SIZES, TINT, seqScale, sizeKey, sizeStep, tooManySeries } from './scene.ts';
 export { radius as dotRadius } from './place.ts';
 export { fallbackRule, gaveWay } from './fit.ts';
 export { customMarks, registerMark, type CustomMark, type MarkView } from './marks.ts';

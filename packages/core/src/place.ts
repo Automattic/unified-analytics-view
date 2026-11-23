@@ -211,10 +211,12 @@ function placeRamp(scene: Scene, W: number): Block {
   const nodes: PlacedNode[] = [];
   let x = 0;
   // The swatch that zero is said beside stands a little clear of the arm before it, so the two read as a pair, as no value's do.
-  scene.nodes.filter((n) => n.part === 'ramp').forEach((n, i, ramp) => {
-    const w = n.kind === 'text' ? n.text.length * CHAR_W + 6 : 15, lead = n.key === 'ramp:none' ? 10 : (n.kind === 'text' && x) || ramp[i + 1]?.key === 'ramp:zero' ? 5 : 0;
+  // As a strip every step is a sliver, edge to edge, and there is no swatch for no value: the two ends and what lies between.
+  const strip = !!scene.short?.includes('ramp'), step = strip ? 7 : 14;
+  scene.nodes.filter((n) => n.part === 'ramp' && !(strip && n.key.startsWith('ramp:none'))).forEach((n, i, ramp) => {
+    const w = n.kind === 'text' ? n.text.length * CHAR_W + 6 : strip ? step : step + 1, lead = n.key === 'ramp:none' ? 10 : (n.kind === 'text' && x) || ramp[i + 1]?.key === 'ramp:zero' ? 5 : 0;
     if (x + lead + w > W) return;
-    if (n.kind === 'rect') nodes.push(rect(n, x + lead, 8, 14, 10, 1)); else if (n.kind === 'text') nodes.push(text(n, x + lead, 13));
+    if (n.kind === 'rect') nodes.push(rect(n, x + lead, 8, step, 10, strip ? 0 : 1)); else if (n.kind === 'text') nodes.push(text(n, x + lead, 13));
     x += lead + w;
   });
   return { nodes, height: 24 };
@@ -231,10 +233,11 @@ const keysUnder = (scene: Scene, W: number): Block[] => [scene.parts.includes('r
 
 // The key to sizes, in one line: the metric's name, then each step's dot and the most it stands for.
 function placeSize(scene: Scene): Block {
-  const nodes: PlacedNode[] = [], mid = 14;
+  const nodes: PlacedNode[] = [], mid = 14, all = scene.nodes.filter((n) => n.part === 'size');
+  // In its shorter form: the metric's name, and the largest step with what it stands for.
+  const shown = scene.short?.includes('size') && all.length > 3 ? [all[0]!, ...all.slice(-2)] : all;
   let x = 0;
-  scene.nodes.forEach((n) => {
-    if (n.part !== 'size') return;
+  shown.forEach((n) => {
     if (n.kind === 'circle') { const r = radius(n.size); nodes.push(circle(n, x + r, mid)); x += 2 * r + 4; }
     else if (n.kind === 'text') { nodes.push(text(n, x, mid)); x += n.text.length * CHAR_W + 10; }
   });
@@ -352,11 +355,13 @@ function placeRadial(scene: Scene, W: number, room: number | null, container: Co
   const { w: D, h, left } = heldBox(W, room, aspect, seats ? SEATS : RADIAL, seats ? SEATS_LEAST : least, under), plot = { w: D, h };
   const nodes: PlacedNode[] = [], R = D / 2 - (scene.parts.includes('rim') ? RIM : 0);
   let r0 = 1;
-  const tags = (scene.parts.includes('rim') ? scene.nodes.filter((n): n is TextNode => n.part === 'rim' && n.kind === 'text') : []).map((n) => {
+  const few = !!scene.short?.includes('rim');
+  const tags = (scene.parts.includes('rim') ? scene.nodes.filter((n): n is TextNode => n.part === 'rim' && n.kind === 'text' && !(few && n.rank)) : []).map((n) => {
     const w = n.text.length * TICK_W, x = W / 2 + (R + 4) * (2 * n.x! - 1);
     return { n, x, y: D / 2 - (R + 8) * (2 * n.t! - 1), box: { x: n.anchor === 'start' ? x : n.anchor === 'end' ? x - w : x - w / 2, w } };
   });
-  const lost = declutter(tags.map((a) => ({ ...a.box, y: a.y - LABEL_LINE / 2, h: LABEL_LINE, rank: a.n.rank })));
+  // One that would meet another goes, the higher rank first, and so does one the view is too narrow to hold whole.
+  const met = declutter(tags.map((a) => ({ ...a.box, y: a.y - LABEL_LINE / 2, h: LABEL_LINE, rank: a.n.rank }))), lost = tags.map((a, i) => met[i]! || a.box.x < 0 || a.box.x + a.box.w > W);
   scene.nodes.forEach((n) => {
     if (n.kind === 'arc') {
       // An arc is drawn about the origin, and moved to the centre: the middle of a circle, and of the foot of a half.
@@ -412,7 +417,8 @@ export function place(scene: Scene, container: Container): PlacedScene {
       const least = ruleFor(rules.fit, 'cartesian', 'axes')?.needs.block ?? 0;
       // The key to sizes goes under the legend, and both come out of the plot's height.
       const legend = stackAll([scene.parts.includes('size') && placeSize(scene), placeUnitKey(scene)].filter((b): b is Block => !!b), placeLegend(scene, W));
-      const ph = !guided ? rules.bare.height : H ? Math.max(least, Math.min(rules.axes.height, H - above - legend.height)) : rules.axes.height;
+      // A key's line comes out of the least the plot stands in: the rule's need is the view's, keys and all.
+      const ph = !guided ? rules.bare.height : H ? Math.max(least - legend.height, Math.min(rules.axes.height, H - above - legend.height)) : rules.axes.height;
       body = { nodes: placePlot(scene, W, ph, narrow).concat(shift(legend.nodes, 0, ph)), height: ph + legend.height }; plot = { w: W, h: ph };
     } else if (scene.layout === 'matrix') {
       // A grid has no bare form. The least it is built to is its `marks` rule's block need, and its ramp is set under it.
@@ -420,7 +426,7 @@ export function place(scene: Scene, container: Container): PlacedScene {
       const ramp = stackAll(keysUnder(scene, W));
       // One row of cells is as tall as a cell, with its labels under it, where nothing says how tall the view is.
       const strip = scene.ys?.length === 1 && scene.ys[0] === '';
-      const ph = H ? Math.max(least, Math.min(rules.axes.height, H - above - ramp.height)) : strip ? STRIP : rules.axes.height;
+      const ph = H ? Math.max(least - ramp.height, Math.min(rules.axes.height, H - above - ramp.height)) : strip ? STRIP : rules.axes.height;
       body = { nodes: placeMatrix(scene, W, ph).concat(shift(ramp.nodes, 0, ph)), height: ph + ramp.height };
     } else if (scene.layout === 'rows') {
       body = stack(placeRows(scene, W, rules.rows), placeLegend(scene, W));
@@ -429,8 +435,11 @@ export function place(scene: Scene, container: Container): PlacedScene {
       body = radial; plot = radial.plot;
     } else if (customMarks().has(scene.layout)) {
       // A custom mark places its own parts. Its ramp and its key to sizes are set under them, as a grid's and a plot's are.
-      const keys = stackAll(keysUnder(scene, W));
-      const own = customMarks().get(scene.layout)!.place(scene, W, H ? H - above - keys.height : null, container);
+      // The keys' lines come out of the least its marks stand in, as a grid's do: the mark is handed its own `marks` rule
+      // less that much, as a context's rule for its layout, which comes before the mark's own.
+      const keys = stackAll(keysUnder(scene, W)), mark = customMarks().get(scene.layout)!, least = ruleFor(rules.fit.concat(mark.rules), scene.layout, 'marks');
+      const within = least?.needs.block && keys.height ? { ...container, rules: { ...rules, fit: [{ ...least, needs: { ...least.needs, block: least.needs.block - keys.height } }, ...rules.fit] } } : container;
+      const own = mark.place(scene, W, H ? H - above - keys.height : null, within);
       body = stack(own, keys);
       if (own.plot) plot = own.plot;
     } else if (scene.aspect) {
@@ -441,8 +450,8 @@ export function place(scene: Scene, container: Container): PlacedScene {
     }
     out = hd ? stack({ nodes: hd.nodes, height: above }, body) : body;
   }
-  // A pixel painter draws a tint as the paint at the node's opacity, so `tone` stops here.
-  const placed: PlacedScene = { width: W, height: Math.ceil(out.height), nodes: out.nodes.map((n) => { const { tone: _tone, ...rest } = n as PlacedNode & { tone?: string }; return rest; }) };
+  // A pixel painter draws a tint as the paint at the node's opacity, so `tone` stops here. So does which y axis a mark is on, and whether its paint is a legend's: it is placed, and painted.
+  const placed: PlacedScene = { width: W, height: Math.ceil(out.height), nodes: out.nodes.map((n) => { const { tone: _tone, axis: _axis, legend: _legend, ...rest } = n as PlacedNode & { tone?: string; axis?: number; legend?: boolean }; return rest; }) };
   if (plot) placed.plot = plot;
   return placed;
 }

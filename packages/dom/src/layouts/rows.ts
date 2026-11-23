@@ -1,5 +1,5 @@
 import { COLUMNS_BLOCK, columnRooms, inColumn, ruleFor, type RowNode, type Scene, type SceneNode, type TextNode } from '@unified-analytics/core';
-import { paintLegend } from '../chrome/legend.ts';
+import { SPLIT_PLAIN, paintLegend } from '../chrome/legend.ts';
 import { attr, ensure, keyed, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { IN_BOX, NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
@@ -75,7 +75,8 @@ export const rows: LayoutPainter = {
   css: css + TRACK_CSS,
   // The number alone. The body goes whole, so the gap its grid row would hold goes with it.
   // `show` compiles to a block, which the one line of a legend is. The legend it stands in for is a row that wraps.
-  fit: { marks: NUMBER_ALONE, 'marks-block': NUMBER_ALONE, ...TRACK_FIT },
+  // And with no legend left, a divided row's series are in one paint, parted by their gaps.
+  fit: { marks: NUMBER_ALONE, 'marks-block': NUMBER_ALONE, 'legend-top': SPLIT_PLAIN, ...TRACK_FIT },
   // The wrap clips whole rows, so a box shorter than one row shows none, and with no number above it shows nothing at
   // all. Under a row's height the list goes and the number stands in, as it does under the width the `marks` rule needs.
   // ponytail: core's `marks` rule for rows has no block need, so this asks the view, as the band's does. Right while

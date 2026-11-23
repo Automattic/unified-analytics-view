@@ -22,11 +22,11 @@ describe('a unit\'s glyphs in the DOM', () => {
     expect(UNIT_CSS).toContain('.uav-unit-key { display: none;');
     expect(UNIT_CSS).toContain('.uav[data-parts~="unit-key"] .uav-unit-key { display: block; }');
   });
-  it('the rules compile to the key going by height, and to the swap for the rule\'s own view beside the figure', () => {
+  it('the rules compile to the swap for the rule\'s own view beside the figure, and none takes the key alone', () => {
     const css = compileFitRules(FIT_RULES.filter((r) => r.id.startsWith('unit')));
-    expect(css).toContain('/* cartesian unit-key */\n@container uav-view (block-size < 159.5px) {\n  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) .uav-unit-key { display: none; }\n}');
+    expect(css).not.toContain('.uav-unit-key');
     const fig = '.uav[data-layout="band"]:not([data-keep~="marks"])', swap = (id: string) => '  ' + fig + ':has(~ .uav-fallback[data-rule="' + id + '"]) { display: none; }\n  ' + fig + ' ~ .uav-fallback[data-rule="' + id + '"] { display: block; }\n}';
     expect(css).toContain('/* band unit */\n@container uav-view (inline-size < 279.5px) {\n' + swap('unit'));
-    expect(css).toContain('/* band unit-alone */\n@container uav-view (block-size < 179.5px) {\n' + swap('unit-alone'));
+    expect(css).toContain('/* band unit-alone */\n@container uav-view (block-size < 219.5px) {\n' + swap('unit-alone'));
   });
 });

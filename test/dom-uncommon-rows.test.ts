@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FIT_RULES, buildScene, expand, resolve, unboundedContainer, type Spec } from '@unified-analytics/core';
-import { compileFitRules, paintVar } from '@unified-analytics/dom';
+import { SPLIT_PLAIN, compileFitRules, paintVar } from '@unified-analytics/dom';
 import { catalog, moreSamples, runQuery } from '@unified-analytics/fixtures';
 import { KEYS_CSS, hitNodes, readout, readoutAt, rowsAt, stepSeries } from '../packages/dom/src/keys.ts';
 import { rows as painter } from '../packages/dom/src/layouts/rows.ts';
@@ -52,7 +52,10 @@ describe('a list whose rows are divided into series', () => {
     const css = compileFitRules(FIT_RULES.filter((r) => r.layout === 'rows'), { rows: painter.fit ?? {} });
     expect(css).toContain('/* rows legend */\n@container uav-view (inline-size < 169.5px) {\n  .uav[data-layout="rows"]:not([data-keep~="guides"]) .uav-legend { display: none; }\n  .uav[data-layout="rows"]:not([data-keep~="guides"]) .uav-legend-top { display: block; }\n}');
     expect(css).toContain('/* rows legend */\n@container uav-view (block-size < 149.5px) {');
-    expect(css).toContain('/* rows legend-top */\n@container uav-view (block-size < 83.5px) {\n  .uav[data-layout="rows"]:not([data-keep~="guides"]) :is(.uav-legend, .uav-legend-top) { display: none; }\n}');
+    // With both gone the pieces of a row are one colour, by the same rule.
+    const fig = '.uav[data-layout="rows"]:not([data-keep~="guides"])';
+    expect(css).toContain(['/* rows legend-top */', '@container uav-view (block-size < 83.5px) {', '  ' + fig + ' :is(.uav-legend, .uav-legend-top) { display: none; }', '  ' + fig + ' { --uav-split: plain; }',
+      ...Object.entries(SPLIT_PLAIN).map(([sel, decl]) => '  ' + fig + ' ' + sel + ' { ' + decl + ' }'), '}'].join('\n'));
     expect(css.indexOf('rows legend-top')).toBeGreaterThan(css.indexOf('rows legend */'));
     expect(painter.css).toContain('.uav[data-layout="rows"] :is(.uav-legend, .uav-legend-top) { grid-column: 1 / -1; grid-row: 3; }');
   });

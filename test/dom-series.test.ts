@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CONTAINER_RULES, expand, pathD, type PathNode, type RectNode } from '@unified-analytics/core';
 import { catalog, moreSamples, runQuery, type Scenario } from '@unified-analytics/fixtures';
 import { compileFitRules } from '../packages/dom/src/compile.ts';
-import { LEGEND_CSS } from '../packages/dom/src/chrome/legend.ts';
+import { LEGEND_CSS, SPLIT_PLAIN } from '../packages/dom/src/chrome/legend.ts';
 import { cartesian } from '../packages/dom/src/layouts/cartesian.ts';
 import { KEYS_CSS, hitNodes, readout, readoutAt, readoutLines, rowsAt, stepSeries } from '../packages/dom/src/keys.ts';
 import { apart, thinLabels } from '../packages/dom/src/measure.ts';
@@ -64,17 +64,34 @@ describe('the cartesian layout\'s guides', () => {
   const rules = (id: string) => CONTAINER_RULES.fit.filter((r) => r.layout === 'cartesian' && r.id === id);
   const fig = '.uav[data-layout="cartesian"]:not([data-keep~="guides"])';
 
-  it('swaps the legend for the labels at the line ends, as a grid, and then gives those up', () => {
+  it('swaps the legend for the labels at the line ends, as a grid, where there are ends to label', () => {
+    // Bars and dots have none, so the rule asks for a line (or, by its twin, an area) and their legend stays.
+    // The condition is in :where(), which weighs nothing: a rule further down the ladder still overrides this one.
+    const lines = fig.replace(':not', ':where([data-marks~="line"]):not');
     expect(compileFitRules(rules('legend'), { cartesian: cartesian.fit! }).split('\n').slice(0, 6)).toEqual([
       '/* cartesian legend */', '@container uav-view (inline-size < 319.5px) {',
-      '  ' + fig + ' .uav-legend { display: none; }', '  ' + fig + ' .uav-labels { display: block; }', '  ' + fig + ' .uav-labels { display: grid; }', '}',
+      '  ' + lines + ' .uav-legend { display: none; }', '  ' + lines + ' .uav-labels { display: block; }', '  ' + lines + ' .uav-labels { display: grid; }', '}',
     ]);
-    const css = compileFitRules(CONTAINER_RULES.fit, { cartesian: cartesian.fit! });
-    expect(css.indexOf(fig + ' .uav-labels { display: none; }')).toBeGreaterThan(css.lastIndexOf(fig + ' .uav-labels { display: grid; }'));
+    expect(compileFitRules(rules('legend-area'), { cartesian: cartesian.fit! })).toBe(compileFitRules(rules('legend'), { cartesian: cartesian.fit! }).replaceAll('"line"', '"area"').replaceAll('legend */', 'legend-area */'));
+    expect(CONTAINER_RULES.fit.filter((r) => r.layout === 'cartesian' && r.hide.includes('legend')).map((r) => [r.id, r.mark ?? 'any'])).toEqual([['legend', 'line'], ['legend-area', 'area'], ['labels', 'any']]);
   });
-  it('gives up the second axis before the first, and with it whenever the axes go', () => {
-    expect(compileFitRules(rules('axis-2'))).toBe('/* cartesian axis-2 */\n@container uav-view (inline-size < 339.5px) {\n  ' + fig + ' .uav-y-axis-2 { display: none; }\n}');
-    expect(compileFitRules(rules('axes'), { cartesian: cartesian.fit! })).toContain(fig + ' .uav-y-axis-2 { display: none; }');
+  it('gives both up with the axes, and with them the colours they were the key to', () => {
+    const css = compileFitRules(CONTAINER_RULES.fit, { cartesian: cartesian.fit! });
+    expect(css.indexOf(fig + ' :is(.uav-labels, .uav-legend) { display: none; }')).toBeGreaterThan(css.lastIndexOf(' .uav-labels { display: grid; }'));
+    expect(css.match(/\[data-layout="cartesian"\]\[data-marks/)).toBeNull();
+    expect(compileFitRules(rules('labels'), { cartesian: cartesian.fit! }).split('\n').slice(0, 7)).toEqual([
+      '/* cartesian labels */', '@container uav-view (inline-size < 279.5px) {', '  ' + fig + ' :is(.uav-labels, .uav-legend) { display: none; }', '  ' + fig + ' { --uav-split: plain; }',
+      ...Object.entries(SPLIT_PLAIN).map(([sel, decl]) => '  ' + fig + ' ' + sel + ' { ' + decl + ' }'), '}',
+    ]);
+    // What a legend keyed is the first series' colour, and a tint of it where the mark was a tint.
+    expect(SPLIT_PLAIN).toEqual({
+      '[data-legend]:not([data-tone])': '--uav-paint: var(--ua-charts-color-series-1, currentColor) !important;',
+      '[data-legend][data-tone]': '--uav-paint: var(--ua-charts-color-series-1-soft, color-mix(in srgb, var(--ua-charts-color-series-1, currentColor) 14%, transparent)) !important;',
+    });
+  });
+  it('keeps the second axis as long as the first, and takes what is drawn on it when the axes go', () => {
+    expect(rules('axis-2')).toEqual([]);
+    expect(compileFitRules(rules('axes'), { cartesian: cartesian.fit! })).toContain(fig + ' :is(.uav-x-axis, .uav-y-axis, .uav-y-axis-2, .uav-grid, [data-axis="2"], .uav-size) { display: none; }');
   });
   it('keeps the labels out until a rule brings them in, and the legend out of a plot that is not split', () => {
     expect(cartesian.css).toContain('.uav-labels { grid-area: labels; display: none; }');

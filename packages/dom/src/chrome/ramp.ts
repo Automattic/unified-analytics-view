@@ -13,6 +13,14 @@ export const RAMP_CSS = `
 /* Zero is said beside its own swatch, the neutral one, which stands a little clear of the arm before it. */
 .uav-ramp i:has(+ [data-key="ramp:zero"]) { margin-inline-start: 4px; }`;
 
+/** The ramp as a thin strip: every step a sliver, edge to edge, between its two ends, and no swatch for no value. Its
+ * shorter form, for a layout's `fit` under the rule that sets `ramp: strip`: it is still the whole key, in the same line. */
+export const RAMP_STRIP: Record<string, string> = {
+  '.uav-ramp': 'gap: 0;',
+  '.uav-ramp i': '--uav-swatch-i: 7px; --uav-swatch-r: 0px;',
+  '.uav-ramp :is([data-key="ramp:none"], [data-key="ramp:none:label"])': 'display: none;',
+};
+
 /** The ramp, after whatever the body holds already. It says again what each mark's name says whole, so it is hidden
  * from assistive technology, and it is a legend, so it reads the way the page does. */
 export function paintRamp(body: HTMLElement, scene: Scene): void {

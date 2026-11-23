@@ -40,8 +40,10 @@ export const NOTE = 18;
 /* Below the room a map needs it is not a smaller map: the view becomes the ranked list of the same query. The note goes
  * with the keys, before that, so it never takes the room of a small map, and is never beside the list, which has every row. */
 export const geoRules = (layout: string): FitRule[] => [
-  { id: 'guides', layout, container: 'view', needs: { inline: 320, block: 170 },      // the ramp, and the key to sizes
-    hide: ['ramp', 'size', 'note'], keep: 'guides' },
+  // The ramp and the key to sizes are the keys to a map's fills and its symbols, so they stay as long as the map: under
+  // this each is in its shorter form. The note of what the map could not draw stays with them.
+  { id: 'guides', layout, container: 'view', needs: { inline: 320, block: 170 },
+    hide: [], set: { ramp: 'strip', 'size-key': 'most' }, keep: 'guides' },
   { id: 'marks',  layout, container: 'view', needs: { inline: 280, block: 120 },      // regions too small to tell apart
     hide: [], fallback: 'bar-list', keep: 'marks' },
 ];

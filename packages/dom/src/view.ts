@@ -411,6 +411,7 @@ export class UaView extends Base {
       painting = true;
       this.#root.adoptedStyleSheets = [sheet(doc, allStyles()), sheet(doc, FALLBACK_CSS), fit];
       fig.dataset.layout = scene.layout; fig.dataset.keep = (spec.keep || []).join(' '); fig.dataset.parts = scene.parts.join(' ');
+      fig.dataset.marks = [...new Set(plan.layers.map((l) => l.mark))].join(' ');
       if (spec.title) fig.setAttribute('aria-label', spec.title); else fig.removeAttribute('aria-label');
       // The plot's natural heights are the context's, read by the stylesheet. The painter hard-codes neither.
       fig.style.setProperty('--uav-axes-height', rules.axes.height + 'px'); fig.style.setProperty('--uav-bare-height', rules.bare.height + 'px');

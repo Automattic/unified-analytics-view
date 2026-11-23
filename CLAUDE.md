@@ -2,6 +2,10 @@
 
 The charting and UI layer for the analytics MVP. A view is described once, as JSON, in marks, encodings and roles; the container it lands in decides how to present it. Tracking, storage and retrieval are built elsewhere, and this repo starts at the query result.
 
+What follows is the vision, from `docs/vision.md`. Weigh every decision about scope or architecture against it, and where a rule below disagrees with it, raise that and do not settle it silently.
+
+@docs/vision.md
+
 Read `docs/view-grammar-reference.md` before changing the grammar, and `docs/milestones.md` for the course. `docs/chart-coverage-plan.md` is the plan that added the marks and layouts beyond the prototype's, and section 8 of it records what building each step found. `docs/uncommon-coverage-plan.md` is the plan that followed it, for the Uncommon chart types, and its section 7 is the same record. Sections of the reference are labelled Proven, Proposed or Open.
 
 ## Commands

@@ -2,6 +2,8 @@
 
 As of October 7, 2026. Working name only; rename freely.
 
+`docs/vision.md` says what the project is for. Every Decided and Open item here is weighed against it.
+
 This is the reference for building an analytics view system in which a view is described once, as data, and the container it lands in decides how to present it. It compiles the design work so far and the lessons from a working prototype (`prototype/prototype-bench.js`, 815 lines, plus `prototype-bench.html` and `prototype-test.js`).
 
 **How to read the status labels.** Each section is marked one of:

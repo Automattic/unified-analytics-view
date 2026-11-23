@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { buildScene, makeContainer, place, resolve, unitsOf, type Layer, type PainterName, type Result, type Spec } from '@unified-analytics/core';
+import { buildScene, resolve, unitsOf, type Layer, type Result, type Spec } from '@unified-analytics/core';
 import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
-import { errOf, run as runAt, startingWith as of, validView as view } from './helpers.ts';
+import { errOf, run as runAt, shown, startingWith as of, validView as view } from './helpers.ts';
 
 // Step 4 of docs/uncommon-coverage-plan.md: what rows, bars, ticks and rules take that they refused. Each part of the
 // step has its facts here. The samples are swept, and have their golden scenes, at the foot of this file.
-const run = (spec: Spec, w = 346, h: number | null = null, result?: Result) => runAt(spec, w, h, 'typical', 'svg', { result });
+const run = (spec: Spec, w = 346, h: number | null = null, result?: Result) => runAt(spec, w, h, 'typical', { result });
 const err = (spec: Spec, result?: Result) => errOf(() => run(spec, 346, null, result));
 const label = (y: string): Layer => ({ mark: 'text', encode: { y, text: y } });
 const S = (name: string) => moreSamples[name]!.spec;
@@ -42,29 +42,20 @@ describe('a row divided by a second dimension', () => {
   it('has a legend in the series\' order, and one line for the series with the most, in its colour', () => {
     const { ratio, plan } = run(split());
     expect(ratio.parts).toEqual(['rows', 'legend']);
-    expect(plan.guides).toEqual({ legend: 'full' });
+    expect(plan.guides).toEqual({ legend: true });
     expect(ratio.nodes.filter((n) => n.part === 'legend').map((n) => [n.key, n.paint])).toEqual([['swatch:Desktop', 'series.1'], ['legend:Desktop', 'ink'], ['swatch:Mobile', 'series.2'], ['legend:Mobile', 'ink'], ['swatch:Tablet', 'series.3'], ['legend:Tablet', 'ink']]);
     expect(ratio.nodes.find((n) => n.key === 'legend-top')).toMatchObject({ part: 'legend-top', text: 'Desktop 50%', paint: 'series.1', series: 'Desktop' });
   });
   it('steps its legend down as a band\'s: to the one line, and then to rows of one colour, before the rows go', () => {
-    const at = (w: number, h: number | null) => { const { plan, ratio, scene } = run(split(), w, h); return [ratio.parts, plan.rowLimit, scene.height, plan.dropped]; };
-    expect(at(346, null)).toEqual([['rows', 'legend'], null, 6 * 32 - 4 + 26, []]);
-    expect(at(346, 160)).toEqual([['rows', 'legend'], 4, 150, ['rows 5 to 6']]);
-    expect(at(346, 100)).toEqual([['rows', 'legend-top'], 2, 84, ['rows 3 to 6', 'the legend, except the series with the most']]);
-    expect(at(346, 60)).toEqual([['rows'], 2, 60, ['rows 3 to 6', 'the legend, and the colours it was the key to']]);
-    // With no key the pieces of a row are one colour, and a row reads as its total. They were three colours once.
-    const pieces = (h: number) => [...new Set(run(split(), 346, h).ratio.nodes.filter((n) => n.part === 'rows' && n.kind === 'rect').map((n) => n.paint))];
-    expect([pieces(100), pieces(60)]).toEqual([['series.1', 'series.2', 'series.3'], ['series.1']]);
-    expect(run({ ...split(), keep: ['guides'] }, 346, 100).ratio.parts).toEqual(['rows', 'legend']);
-    // The legend of a narrow list wraps, and the rows give up what it takes.
-    expect(run(split(), 250, 160).scene.nodes.filter((n) => n.key.startsWith('legend:')).length).toBe(3);
-  });
-  it('is placed end to end in pixels, each bar as long as its share and no longer', () => {
-    const { scene } = run(split()), px = of<{ x: number; w: number; y: number; h: number }>(scene.nodes, 'primary:bar:Social:');
-    expect(px[0]!.x + px[0]!.w).toBeCloseTo(px[1]!.x, 9);
-    expect(px[1]!.x + px[1]!.w).toBeCloseTo(px[2]!.x, 9);
-    expect(px.every((n) => n.h === 12)).toBe(true);
-    expect(scene.nodes.find((n) => n.key === 'legend:Desktop')).toMatchObject({ y: 16, ty: 6 * 32 - 4 });
+    const at = (w: number, h: number | null, spec = split()) => { const { parts, set, rules } = shown(run(spec, w, h)); return [parts, set, rules]; };
+    expect(at(346, null)).toEqual([['rows', 'legend'], {}, []]);
+    expect(at(346, 160)).toEqual([['rows', 'legend'], {}, []]);
+    expect(at(346, 100)).toEqual([['rows', 'legend-top'], {}, ['legend']]);
+    // With no key the pieces of a row are one colour, and a row reads as its total.
+    expect(at(346, 60)).toEqual([['rows'], { split: 'plain' }, ['legend', 'legend-top']]);
+    expect(at(346, 100, { ...split(), keep: ['guides'] })).toEqual([['rows', 'legend'], {}, ['kept:legend']]);
+    // A narrow list keeps the whole legend while it has the width and the height for it.
+    expect(at(250, 160)).toEqual([['rows', 'legend'], {}, []]);
   });
   it('is held to the six series colours, and to a result with the engine\'s totals by row', () => {
     const many: Spec = { query: { metrics: ['visitors'], by: ['device', 'country'] }, layers: [{ mark: 'bar', encode: { y: 'device', x: 'visitors', color: 'country' }, stack: 'zero' }, label('device')] };
@@ -171,9 +162,9 @@ describe('several marks to a row, by detail', () => {
   it('says who leads each dimension, from the engine\'s totals, and sums no row', () => {
     expect(run(strip()).plan.text).toBe('Search is the largest channel at 41% of visitors, and United States the largest country at 33%.');
   });
-  it('gives up rows under a height limit, and the list for the number where a track has no room', () => {
-    expect(run(strip(), 346, 100).plan).toMatchObject({ layout: 'rows', rowLimit: 3, dropped: ['rows 4 to 6'] });
-    expect(run(strip(), 150).plan.layout).toBe('none');
+  it('gives up the list for the number where a track has no room', () => {
+    expect(shown(run(strip(), 160)).parts).toEqual(['rows']);
+    expect(shown(run(strip(), 150)).parts).toEqual(['number']);
   });
   it('refuses a bar or a rule there, which would lie one over another, and names the fix', () => {
     expect(err(strip('rule'))).toBe('Layer 1 is a "rule" in rows with "country" on detail, which would lay one over another in each row, all in one paint. Use "dot" or "tick" for a mark at each value, or remove "detail".');
@@ -204,8 +195,9 @@ describe('points coloured by a second dimension', () => {
   });
   it('steps down as any plot of points: the legend stays with the axes, and then the number alone', () => {
     // A dot has no line end for a label to stand at, so nothing takes the legend while the axes are there.
-    expect(run({ query: q, layers: [dot] }, 300).plan).toMatchObject({ layout: 'cartesian', guides: { x: true, legend: 'full' }, dropped: [] });
-    expect(run({ query: q, layers: [dot] }, 234).plan.layout).toBe('none');
+    expect(run({ query: q, layers: [dot] }, 300).plan).toMatchObject({ layout: 'cartesian', guides: { x: true, legend: true }, dropped: [] });
+    expect(shown(run({ query: q, layers: [dot] }, 300)).parts).toEqual(['y-axis', 'plot', 'points', 'x-axis', 'legend']);
+    expect(shown(run({ query: q, layers: [dot] }, 234)).parts).toEqual(['number']);
   });
 });
 
@@ -234,21 +226,18 @@ describe('size on a bar: a column as wide as its share', () => {
     expect(last.x + last.w).toBeCloseTo(result.totalsBy!.channel!.reduce((s, r) => s + (r.visitors as number), 0) / result.totals.visitors!, 12);
     expect(last.x + last.w).toBeLessThan(0.9);
   });
-  it('labels each column under its middle, ranked by width, and a pixel painter leaves out the ones that would meet a wider column\'s', () => {
-    const { ratio, scene } = run(mekko()), ticks = of<{ key: string; x: number; rank?: number }>(ratio.nodes, 'xtick:');
+  it('labels each column under its middle, ranked by width, for a surface to leave out the ones that would meet a wider column\'s', () => {
+    const { ratio } = run(mekko()), ticks = of<{ key: string; x: number; rank?: number; row?: string }>(ratio.nodes, 'xtick:');
     expect(ticks.map((n) => [n.key, n.rank])).toEqual([['xtick:Search', undefined], ['xtick:Direct', 1], ['xtick:Social', 2], ['xtick:AI assistants', 3], ['xtick:Email', 4], ['xtick:Other', 5]]);
     const bar = of<{ x: number; w: number }>(ratio.nodes, 'primary:bar:Direct:')[0]!;
     expect(ticks[1]!.x).toBeCloseTo(bar.x + bar.w / 2, 12);
-    expect(of(scene.nodes, 'xtick:').map((n: any) => n.key)).toEqual(['xtick:Search', 'xtick:Direct', 'xtick:Social', 'xtick:Email']);
-    expect(of(run(mekko(), 700).scene.nodes, 'xtick:').map((n: any) => n.key)).toEqual(['xtick:Search', 'xtick:Direct', 'xtick:Social', 'xtick:AI assistants', 'xtick:Other']);
-    // The rule that gives up a middle date is not these labels': under 380 px they are still thinned by what meets.
+    // The rule that gives up a middle date is not these labels': each is its own column's, which its row on a linear x says.
+    expect([ratio.scale, ticks.every((n) => n.row != null)]).toEqual(['linear', true]);
     expect(run(mekko(), 346).plan.dropped).toEqual([]);
   });
-  it('is placed in pixels by its own ratios, and steps down as any plot does', () => {
-    const { scene } = run(mekko()), a = of<{ x: number; w: number }>(scene.nodes, 'primary:bar:Search:')[0]!, b = of<{ x: number; w: number }>(scene.nodes, 'primary:bar:Direct:')[0]!;
-    expect(a.x + a.w).toBeCloseTo(b.x, 9);
-    expect(run(mekko(), 250).plan).toMatchObject({ layout: 'cartesian', side: true, dropped: ['axes and grid (added the number to make up for them)', 'the colours the legend was the key to'] });
-    expect(run(mekko(), 120).plan.layout).toBe('none');
+  it('steps down as any plot does', () => {
+    expect(shown(run(mekko(), 250))).toMatchObject({ parts: ['number', 'plot'], set: { arrange: 'side', split: 'plain' } });
+    expect(shown(run(mekko(), 120)).parts).toEqual(['number']);
   });
   it('is refused where the plot is not one of shares, and where the engine gives no total to be a share of', () => {
     const fix = 'which makes each column as wide as its share of the engine\'s total. That is read in a plot of shares: a dimension on x, the query\'s other dimension on color, and stack: "normalize". Add what is missing, or remove "size".';
@@ -265,23 +254,19 @@ describe('a tick at the foot of a plot of points, and half a tick', () => {
   const rug = (x = 'embed_x', first = false): Spec => { const dot: Layer = { mark: 'dot', encode: { x: 'embed_x', y: 'embed_y' } }, tick: Layer = { mark: 'tick', encode: { x } }; return { query: q, layers: first ? [tick, dot] : [dot, tick] }; };
 
   it('with a metric on x and nothing on y is a short stroke for each row, where its dot is along x: the rug', () => {
-    const { ratio, scene, plan } = run(rug()), strokes = of<{ x: number; x2: number; t: number; t2: number; row: string; opacity: number; paint: string; width?: number }>(ratio.nodes, 'primary:tick:');
+    const { ratio, plan } = run(rug()), strokes = of<{ x: number; x2: number; t: number; t2: number; row: string; opacity: number; paint: string; width?: number }>(ratio.nodes, 'primary:tick:');
     const dots = of<{ x: number; row: string }>(ratio.nodes, 'primary:dot:');
     expect(strokes.length).toBe(24);
     strokes.forEach((n, i) => expect([n.x, n.x2, n.t, n.t2, n.row, n.paint, n.opacity, n.width]).toEqual([dots[i]!.x, dots[i]!.x, 0, 0.05, dots[i]!.row, 'ink', 0.5, undefined]));
     expect(strokes.every((n) => (n as any).part === 'plot')).toBe(true);
     expect([plan.layout, ratio.parts, ratio.scale]).toEqual(['cartesian', ['y-axis', 'plot', 'points', 'x-axis'], 'linear']);
-    // In pixels it stands on the foot of the plot, under its row's dot.
-    const px = of<{ x1: number; x2: number; y1: number; y2: number }>(scene.nodes, 'primary:tick:')[0]!, dot = of<{ cx: number }>(scene.nodes, 'primary:dot:')[0]!;
-    expect([px.x1, px.x2, px.y1]).toEqual([dot.cx, dot.cx, 162]);
-    expect(px.y1 - px.y2).toBeCloseTo(152 * 0.05, 9);
   });
   it('changes nothing else of the plot: the same scale, the same sentence, the same steps down', () => {
     const plain: Spec = { query: q, layers: [rug().layers![0]!] }, a = run(rug()), b = run(plain);
     expect(of(a.ratio.nodes, 'xtick:')).toEqual(of(b.ratio.nodes, 'xtick:'));
     expect(of(a.ratio.nodes, 'primary:dot:')).toEqual(of(b.ratio.nodes, 'primary:dot:'));
     expect(a.plan.text).toBe(b.plan.text);
-    expect(run(rug(), 234).plan.layout).toBe('none');
+    expect(shown(run(rug(), 234)).parts).toEqual(['number']);
     expect(of(run(rug('embed_x', true)).ratio.nodes, 'primary:tick:').length).toBe(24);
   });
   it('is refused at a metric the plot\'s x does not measure, and with a metric on y it is still no rug', () => {
@@ -336,7 +321,7 @@ describe('a rule from a number, and a rule across a plot', () => {
     expect(two({ y: 0, y2: 'response_time@max' }).length).toBe(2);
   });
   it('with numbers at both ends on both axes is one line across a plot of points, drawn as a reference is', () => {
-    const { ratio, scene, plan } = run({ query: scatter, layers: [{ mark: 'rule', encode: { x: 0, y: 0, x2: 2000, y2: 4 } }, dot] }), line = ratio.nodes.find((n) => n.key === 'reference:rule') as any;
+    const { ratio, plan } = run({ query: scatter, layers: [{ mark: 'rule', encode: { x: 0, y: 0, x2: 2000, y2: 4 } }, dot] }), line = ratio.nodes.find((n) => n.key === 'reference:rule') as any;
     const ticks = (k: string) => of<{ text: string; x?: number; t?: number }>(ratio.nodes, k), x2k = ticks('xtick:').find((n) => n.text === '2k')!.x!, y4 = ticks('ytick:').find((n) => n.text === '4%')!.t!;
     expect(line).toMatchObject({ kind: 'path', part: 'plot', paint: 'rule', dash: '5 3', width: 1.5, role: 'reference', layer: 'data' });
     expect(line.points).toEqual([{ row: '', x: ticks('xtick:').find((n) => n.text === '0')!.x, v: 0 }, { row: '', x: x2k, v: y4 }]);
@@ -344,8 +329,7 @@ describe('a rule from a number, and a rule across a plot', () => {
     // It is a place on each scale, so the scales hold it, as they hold a rule at one number.
     const far = run({ query: scatter, layers: [{ mark: 'rule', encode: { x: 0, y: 0, x2: 9000, y2: 30 } }, dot] }).ratio;
     expect([of<{ text: string }>(far.nodes, 'xtick:').pop()!.text, of<{ text: string }>(far.nodes, 'ytick:').pop()!.text]).toEqual(['10k', '30%']);
-    // In pixels it is a straight stroke between the two places, and the plot is read by its points as before.
-    expect((scene.nodes.find((n) => n.key === 'reference:rule') as any).d).toMatch(/^M[\d.]+,[\d.]+L[\d.]+,[\d.]+$/);
+    // The plot is read by its points as before.
     expect(plan.text).toBe(run({ query: scatter, layers: [dot] }).plan.text);
     expect(ratio.rows!.length).toBe(8);
   });
@@ -370,19 +354,15 @@ describe('the range behind a row\'s marks, divided at the catalog\'s bands', () 
   const q = { metrics: ['signups'], by: ['device'], range: '28d' };
   const bullet: Spec = { query: q, use: 'bullet' };
   const withMetric = (def: Partial<(typeof catalog.metrics)[string]>) => ({ ...catalog, metrics: { ...catalog.metrics, signups: { label: 'Sign-ups', unit: 'count', polarity: 'up' as const, ...def } } });
-  const bands = (cat = catalog, spec: Spec = bullet) => { const container = makeContainer(346, null, 'svg', 8), result = runQuery(q), plan = resolve(spec, result, container, cat), ratio = buildScene(plan, q, result, cat); return { ratio, scene: place(ratio, container) }; };
+  const bands = (cat = catalog, spec: Spec = bullet) => { const result = runQuery(q), plan = resolve(spec, result, cat), ratio = buildScene(plan, q, result, cat); return { ratio }; };
 
   it('a bar with nothing on x is the metric\'s domain in every row, a part for each band, in paints of their own', () => {
-    const { ratio, scene } = bands(), parts = of<{ key: string; v: number; v0?: number; paint: string; layer: string; role: string; row: string }>(ratio.nodes, 'context:bar:Mobile:');
+    const { ratio } = bands(), parts = of<{ key: string; v: number; v0?: number; paint: string; layer: string; role: string; row: string }>(ratio.nodes, 'context:bar:Mobile:');
     expect(parts.map((n) => [n.key, n.v0 ?? 0, n.v, n.paint])).toEqual([['context:bar:Mobile:1', 0, 0.4, 'band.1'], ['context:bar:Mobile:2', 0.4, 0.8, 'band.2'], ['context:bar:Mobile:3', 0.8, 1, 'band.3']]);
     expect(parts.every((n) => n.layer === 'guide' && n.role === 'context' && n.row === 'Mobile')).toBe(true);
-    // They come before the bar and the tick, so a painter that draws in order has them behind, and they are as tall as the row.
+    // They come before the bar and the tick, so a painter that draws in order has them behind.
     const keys = ratio.nodes.map((n) => n.key);
     expect(keys.indexOf('context:bar:Mobile:3')).toBeLessThan(keys.indexOf('primary:bar:Mobile'));
-    const px = of<{ x: number; w: number; y: number; h: number }>(scene.nodes, 'context:bar:Mobile:'), bar = scene.nodes.find((n) => n.key === 'primary:bar:Mobile') as any;
-    expect(px.map((n) => [n.y, n.h])).toEqual([[32, 28], [32, 28], [32, 28]]);
-    expect([bar.y, bar.h]).toEqual([40, 12]);
-    expect(px[0]!.x + px[0]!.w).toBeCloseTo(px[1]!.x, 9);
     expect(ratio.track).toBe('beside');
   });
   it('holds the track to the whole domain, so a value is read against it', () => {
@@ -471,8 +451,10 @@ describe('the samples of step 4', () => {
     expect([stroke.t, stroke.t2, open.t, close.t]).toEqual([v('min'), v('max'), v('open'), v('close')]);
     expect([open.x2, close.x]).toEqual([stroke.x, stroke.x]);
     expect(stroke.x - open.x).toBeCloseTo(close.x2 - stroke.x, 12);
-    // Every mark is the central one, so a short plot keeps them all, and the sentence says the range they run over.
-    expect(run(S('ohlc'), 250).plan.dropped).toEqual(['axes and grid (added the number to make up for them)']);
+    // Every mark is the central one, so a short plot keeps them all: a bare plot of 40 px has no role to give up.
+    const bare = shown(runAt(S('ohlc'), 250, null, 'typical', { plot: { inline: 162, block: 40 } }));
+    expect(bare).toMatchObject({ parts: ['number', 'plot'], set: { arrange: 'side' } });
+    expect([bare.rules.includes('secondary'), bare.hidden.filter((t) => t.startsWith('role:'))]).toEqual([false, []]);
     expect(plan.text).toBe('Response time: 436ms in the last 28 days.');
   });
   it('a Q-Q plot: a point for each quantile, and the line they would lie on were the times normal', () => {
@@ -485,37 +467,42 @@ describe('the samples of step 4', () => {
 });
 
 describe('the sweep, for the samples of step 4', () => {
-  // The layout each has at 346, 250, 120 and 10 px. A plot of points has no bare form, and a track beside its label gives way under 160 px.
-  const samples: Record<string, string[]> = {
-    pyramid: ['rows', 'rows', 'none', 'prose'], likert: ['rows', 'rows', 'none', 'prose'], strip: ['rows', 'rows', 'none', 'prose'],
-    marimekko: ['cartesian', 'cartesian', 'none', 'prose'], ohlc: ['cartesian', 'cartesian', 'none', 'prose'],
+  // The layout each has, and whether it is its number alone at 346, 250 and 120 px. A plot of points has no bare form,
+  // and a track beside its label gives way under 160 px.
+  const samples: Record<string, [layout: string, alone: boolean[]]> = {
+    pyramid: ['rows', [false, false, true]], likert: ['rows', [false, false, true]], strip: ['rows', [false, false, true]],
+    marimekko: ['cartesian', [false, false, true]], ohlc: ['cartesian', [false, false, true]],
     // Neither has a total, so the number that stands in for the plot is a dash.
-    rug: ['cartesian', 'none', 'none', 'prose'], qq: ['cartesian', 'none', 'none', 'prose'],
+    rug: ['cartesian', [false, true, true]], qq: ['cartesian', [false, true, true]],
   };
-  const painters: PainterName[] = ['svg', 'dots'], heights = [null, 300, 160, 100, 60, 40], widths = [54, 80, 120, 170, 250, 290, 346, 500, 700];
-  const at = (name: string, w: number, h: number | null, sc: (typeof scenarios)[number], painter: PainterName = 'svg') => runAt(S(name), w, h, sc, painter);
-  for (const [name, layouts] of Object.entries(samples)) {
-    it(name + ': unique keys, no NaN, nothing taller than the container allows, and ratios from 0 to 1', () => {
-      for (const sc of scenarios) for (const p of painters) for (const h of heights) for (const w of widths) {
-        const where = [name, sc, p, w, h].join(' '), { plan, ratio, scene } = at(name, w, h, sc, p);
-        const keys = scene.nodes.map((n) => n.key), all = ratio.nodes.map((n) => n.key);
-        expect(new Set(keys).size, 'duplicate keys: ' + where).toBe(keys.length);
-        expect(new Set(all).size, 'duplicate keys in the ratio scene: ' + where).toBe(all.length);
-        expect(JSON.stringify([scene, ratio], (_, v) => (typeof v === 'number' && isNaN(v) ? 'NaN' : v)), 'NaN: ' + where).not.toMatch(/NaN/);
-        if (h != null && plan.layout !== 'prose') expect(scene.height, 'too tall: ' + where).toBeLessThanOrEqual(h);
+  const heights = [null, 300, 160, 100, 60, 40], widths = [54, 80, 120, 170, 250, 290, 346, 500, 700];
+  const at = (name: string, w: number, h: number | null, sc: (typeof scenarios)[number]) => runAt(S(name), w, h, sc);
+  for (const [name, [layout, alone]] of Object.entries(samples)) {
+    it(name + ': unique keys, no NaN, ratios from 0 to 1, and at every room parts the scene has', () => {
+      for (const sc of scenarios) for (const h of heights) for (const w of widths) {
+        const where = [name, sc, w, h].join(' '), { ratio, fit } = at(name, w, h, sc);
+        const all = ratio.nodes.map((n) => n.key);
+        expect(new Set(all).size, 'duplicate keys: ' + where).toBe(all.length);
+        expect(JSON.stringify(ratio, (_, v) => (typeof v === 'number' && isNaN(v) ? 'NaN' : v)), 'NaN: ' + where).not.toMatch(/NaN/);
         for (const n of ratio.nodes as any[]) for (const f of ['x', 'x2', 'w', 'v', 'v0', 't', 't2']) if (n[f] != null) expect(n[f] >= 0 && n[f] <= 1, f + ': ' + where + ' ' + n.key).toBe(true);
-        expect(all.filter((k) => keys.includes(k)), 'placed keys: ' + where).toEqual(keys);
+        expect(fit.parts.filter((p) => !ratio.nodes.some((n) => n.part === p)), 'parts with nothing in them: ' + where).toEqual([]);
       }
     });
     it(name + ': is in the schema, resolves in every data state, and steps down to the number', () => {
       expect(view(S(name)), JSON.stringify(view.errors)).toBe(true);
       for (const sc of scenarios) {
-        expect([346, 250, 120, 10].map((w) => at(name, w, null, sc).plan.layout), sc).toEqual(sc === 'empty' ? ['notice', 'notice', 'none', 'prose'] : layouts);
-        expect(at(name, 700, null, sc).plan.dropped, sc).toEqual([]);
+        expect(at(name, 346, null, sc).plan.layout, sc).toBe(sc === 'empty' ? 'notice' : layout);
+        expect([346, 250, 120].map((w) => at(name, w, null, sc).fit.parts.join() === 'number'), sc).toEqual(sc === 'empty' ? [false, false, true] : alone);
+        const wide = at(name, 700, null, sc);
+        expect([wide.plan.dropped, shown(wide).rules], sc).toEqual([[], []]);
       }
     });
   }
   it('golden scenes', () => {
-    for (const name of Object.keys(samples)) for (const [w, h] of [[346, null], [234, null], [346, 100]] as const) expect(at(name, w, h, 'typical').scene).toMatchSnapshot(`${name} at ${w} by ${h ?? 'any'}`);
+    const sizes: [number, number | null][] = [[346, null], [234, null], [346, 100]];
+    for (const name of Object.keys(samples)) {
+      expect(at(name, 346, null, 'typical').ratio).toMatchSnapshot(name);
+      expect(sizes.map(([w, h]) => [w, h, shown(at(name, w, h, 'typical'))])).toMatchSnapshot(name + ', at each room');
+    }
   });
 });

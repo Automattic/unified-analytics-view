@@ -7,7 +7,7 @@ import { paintUnitKey } from '../chrome/unit.ts';
 
 /* One band, split by colour, and its legend. Segments are flex items that grow by their share, so the band needs no
  * width. The scene holds both legends: the full one is a grid of swatch, label and share, the one-line one a line of
- * text (chrome/legend.ts). The stylesheet here shows one of them. Sizes are the pixel painter's: a 24 px bar and 24 px
+ * text (chrome/legend.ts). The stylesheet here shows one of them. Sizes are core's (sizes.ts): a 24 px bar and 24 px
  * to a legend row, of which 20 are the line's where a label is 13 px. */
 const shape = holdShape('160px', 1);
 const css = `
@@ -29,7 +29,7 @@ ${IN_BOX} {
   .uav[data-layout="band"]:not([data-keep~="guides"]) .uav-legend { ${LEGEND_SWAP.full} }
   .uav[data-layout="band"]:not([data-keep~="guides"]) .uav-legend-top { ${LEGEND_SWAP.top} }
   /* In a box the grid gives way to the height, down to nothing, and its width follows, as a circle of arcs does. The
-   * full legend stays while the grid has 100 px under it, which is the least place() builds it to. */
+   * full legend stays while the grid has 100 px under it, which is the least it is built to. */
   .uav[data-layout="band"] .uav-body:has(> .uav-band[data-unit]) { display: flex; flex-direction: column; --uav-legend-block: ${legendBlock(GRID_LEAST)}; }
   .uav-band[data-unit] { ${shape.box} margin-inline: 0; }
   .uav[data-layout="band"] .uav-body:has(> .uav-band[data-unit]) > :is(.uav-legend, .uav-legend-top) { flex: none; }
@@ -43,11 +43,7 @@ export const band: LayoutPainter = {
     legend: LEGEND_FIT,
     // The number alone. The body goes whole, the one-line legend with it, and so does its grid row.
     marks: NUMBER_ALONE,
-    'marks-block': NUMBER_ALONE,
   },
-  // ponytail: core's `marks` rule for a band has no block need, so this holds the bar and the one-line legend, 24 px
-  // each. Wrong when the number is above the band. A block need on core's rule would say it properly.
-  rules: () => [{ id: 'marks-block', layout: 'band', container: 'view', needs: { block: 48 }, hide: ['band', 'legend'], show: ['number'], keep: 'marks' }],
 
   paint(body, scene) {
     const rows = scene.rows ?? [], nodes = (part: string) => scene.nodes.filter((n) => n.part === part);

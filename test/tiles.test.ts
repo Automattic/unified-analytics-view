@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { customMarks, customPresets, expand, place, type CircleNode, type PainterName, type Spec } from '@unified-analytics/core';
+import { customMarks, customPresets, expand, type CircleNode, type Spec } from '@unified-analytics/core';
 import { compileFitRules } from '@unified-analytics/dom';
 import { countries, moreSamples, scenarios, tiles } from '@unified-analytics/fixtures';
 import { GEO_RULES, geoMark, geoNames, geoRules, registerGeo } from '@unified-analytics/geo';
 import { geoPainter, geoPainterAs, registerGeoPainters } from '@unified-analytics/geo/dom';
 import { painterOf } from '../packages/dom/src/layouts/index.ts';
-import { run, shapes, validView as view } from './helpers.ts';
+import { run, shapes, shown, validView as view } from './helpers.ts';
 
 // Step 10 of docs/uncommon-coverage-plan.md: tile maps. No new mark: the `geo` mark, registered again by the fixtures
 // under a name for each of two files of tiles. The mark itself is held in test/geo.test.ts, and what is held here is
@@ -19,54 +19,54 @@ const LAYOUT = { tiles: 'geo-tiles', hexes: 'geo-hexes' };
 
 describe('the sweep', () => {
   for (const [name, spec] of Object.entries({ tiles: grid, hexes: hex })) {
-    it(name + ': unique keys, no NaN, nothing taller than the container allows, and a part that holds its shape', () => {
-      for (const sc of scenarios) for (const p of ['svg', 'dots'] as PainterName[]) for (const h of [null, 300, 160, 100, 60, 40]) for (const w of [54, 80, 120, 170, 250, 290, 346, 500, 700]) {
-        const at = [name, sc, p, w, h].join(' ');
-        const { plan, ratio, scene } = run(spec, w, h, sc, p);
-        const keys = scene.nodes.map((n) => n.key), all = ratio.nodes.map((n) => n.key);
-        expect(new Set(keys).size, 'duplicate keys: ' + at).toBe(keys.length);
-        expect(new Set(all).size, 'duplicate keys in the ratio scene: ' + at).toBe(all.length);
-        expect(JSON.stringify([scene, ratio], (_, v) => (typeof v === 'number' && isNaN(v) ? 'NaN' : v)), 'NaN: ' + at).not.toMatch(/NaN/);
-        if (h != null && plan.layout !== 'prose') expect(scene.height, 'too tall: ' + at).toBeLessThanOrEqual(h);
+    it(name + ': unique keys, no NaN, a sheet of its own shape, and at every room parts the scene has', () => {
+      for (const sc of scenarios) for (const h of [null, 300, 160, 100, 60, 40]) for (const w of [54, 80, 120, 170, 250, 290, 346, 500, 700]) {
+        const at = [name, sc, w, h].join(' ');
+        const { plan, ratio, fit } = run(spec, w, h, sc);
+        const all = ratio.nodes.map((n) => n.key);
+        expect(new Set(all).size, 'duplicate keys: ' + at).toBe(all.length);
+        expect(JSON.stringify(ratio, (_, v) => (typeof v === 'number' && isNaN(v) ? 'NaN' : v)), 'NaN: ' + at).not.toMatch(/NaN/);
+        expect(fit.parts.filter((p) => !ratio.nodes.some((n) => n.part === p)), 'parts with nothing in them: ' + at).toEqual([]);
         if (plan.layout !== LAYOUT[name as 'tiles']) continue;
         expect(ratio.aspect, at).toBeCloseTo(ASPECT[name as 'tiles'], 2);
-        expect(scene.plot!.w / scene.plot!.h, 'shape: ' + at).toBeCloseTo(ratio.aspect!, 9);
-        expect(scene.plot!.w, 'width: ' + at).toBeLessThanOrEqual(Math.min(w, 480));
       }
     });
   }
   it('one spec is a tile map with room and the ranked list of its query without, at the widths and heights a map of countries turns at', () => {
     for (const [spec, layout] of [[grid, 'geo-tiles'], [hex, 'geo-hexes']] as [Spec, string][]) {
       expect(view(spec), JSON.stringify(view.errors)).toBe(true);
-      const fell = 'the ' + layout + ' marks (drawn as "bar-list")';
       for (const sc of scenarios) {
-        const at = (w: number, h: number | null = null) => { const { plan, ratio } = run(spec, w, h, sc); return [plan.layout, ratio.parts.join(' '), plan.dropped.join('; ')]; };
-        if (sc === 'empty') { expect([346, 250, 120, 10].map((w) => at(w)[0])).toEqual(['notice', 'notice', 'none', 'prose']); continue; }
-        expect(at(700)).toEqual([layout, 'plot ramp', '']);
-        expect(at(346)).toEqual([layout, 'plot ramp', '']);         // dashboard width
-        expect(at(319)).toEqual([layout, 'plot ramp', 'the colour ramp, down to a strip']);
-        expect(at(280)).toEqual([layout, 'plot ramp', 'the colour ramp, down to a strip']);
-        expect(at(279)).toEqual(['rows', 'rows', fell]);
-        expect(at(250)).toEqual(['rows', 'rows', fell]);            // sidebar width
-        expect(at(346, 119)).toEqual(['rows', 'rows', fell + '; rows 4 to 15']);
-        expect(at(120)).toEqual(['none', 'number', fell + '; all marks (kept the number)']);
-        expect(at(10)[0]).toBe('prose');
+        // The layout drawn, the parts that show, the ramp's form, and what the view gave way from to be drawn so.
+        const at = (w: number, h: number | null = null) => { const r = run(spec, w, h, sc), f = shown(r); return [r.plan.layout, f.parts.join(' '), f.set.ramp ?? 'whole', r.gave.join()]; };
+        if (sc === 'empty') { expect([346, 250, 120].map((w) => at(w).slice(0, 2))).toEqual([['notice', 'notice'], ['notice', 'notice'], ['notice', 'number']]); continue; }
+        expect(at(700)).toEqual([layout, 'plot ramp', 'whole', '']);
+        expect(at(346)).toEqual([layout, 'plot ramp', 'whole', '']);         // dashboard width
+        expect(at(319)).toEqual([layout, 'plot ramp', 'strip', '']);
+        expect(at(280)).toEqual([layout, 'plot ramp', 'strip', '']);
+        expect(at(279)).toEqual(['rows', 'rows', 'whole', layout]);
+        expect(at(250)).toEqual(['rows', 'rows', 'whole', layout]);          // sidebar width
+        expect(at(346, 119)).toEqual(['rows', 'rows', 'whole', layout]);
+        // The list it became gives way to the number by its own rule.
+        expect(at(89)).toEqual(['rows', 'number', 'whole', layout]);
       }
     }
   });
   it('the list it becomes is the bar-list of the same query, to the node: the one the map of countries becomes', () => {
-    const list: Spec = { spec: 'view/0', title: grid.title, use: 'bar-list', query: grid.query };
+    const list: Spec = { spec: 'view/0', title: grid.title, use: 'bar-list', query: grid.query }, of = (spec: Spec, w: number, h: number | null) => { const r = run(spec, w, h); return [r.ratio, shown(r)]; };
     for (const spec of [grid, hex]) for (const [w, h] of [[250, null], [170, null], [346, 100], [80, null]] as [number, number | null][]) {
-      expect(run(spec, w, h).scene, w + ' ' + h).toEqual(run(list, w, h).scene);
-      expect(run(spec, w, h).scene).toEqual(run(map, w, h).scene);
+      expect(of(spec, w, h), w + ' ' + h).toEqual(of(list, w, h));
+      expect(of(spec, w, h)).toEqual(of(map, w, h));
     }
     expect(run(grid, 346).plan.text).toBe(run(map, 346).plan.text);
   });
 });
 
 describe('golden scenes', () => {
-  for (const [w, h] of [[346, null], [300, null], [250, null]] as [number, number | null][]) it(`tiles at ${w} by ${h ?? 'any'}`, () => expect(run(grid, w, h).scene).toMatchSnapshot());
-  for (const [w, h] of [[346, null], [346, 160]] as [number, number | null][]) it(`hexes at ${w} by ${h ?? 'any'}`, () => expect(run(hex, w, h).scene).toMatchSnapshot());
+  const rooms = { tiles: [[346, null], [300, null], [250, null]], hexes: [[346, null], [346, 160]] } as Record<string, [number, number | null][]>;
+  for (const [name, spec] of Object.entries({ tiles: grid, hexes: hex })) {
+    it(name, () => expect(run(spec, 346).ratio).toMatchSnapshot());
+    it(name + ', at each room', () => expect(rooms[name]!.map(([w, h]) => [w, h, shown(run(spec, w, h))])).toMatchSnapshot());
+  }
 });
 
 describe('the fixture: the countries as tiles', () => {
@@ -100,14 +100,12 @@ describe('the fixture: the countries as tiles', () => {
 });
 
 describe('tiles are drawn as they are, with no map projection', () => {
-  it('a square is a square and every one the same size, in the box and in pixels', () => {
-    const { ratio, scene } = run(grid, 346), side = 100 / 22;
+  it('a square is a square and every one the same size, in the box', () => {
+    const { ratio } = run(grid, 346), side = 100 / 22;
     expect(shapes(ratio).length).toBe(122);
     for (const n of shapes(ratio)) { expect(corners(n.d!).length, n.key).toBe(4); for (const s of sides(n.d!).slice(0, 4)) expect(s, n.key).toBeCloseTo(side, 1); }
     // Greenland's tile is the sixth along the top row of the sheet, and it is where the file puts it.
     expect(corners(shapes(ratio).find((n) => n.key === 'primary:geo-tiles:GL')!.d!)[0]!.map((v) => +(v / side).toFixed(2))).toEqual((tiles.square.features.find((f) => f.id === 'GL')!.geometry!.coordinates as number[][][])[0]![0]);
-    const placed = scene.nodes.filter((n) => n.kind === 'path') as unknown as { d: string }[];
-    for (const n of placed) for (const s of sides(n.d).slice(0, 4)) expect(s).toBeCloseTo(346 / 22, 1);
   });
   it('a hexagon is regular: six sides of one length, and as wide as a square tile is', () => {
     const { ratio } = run(hex, 346), across = 100 / 22.5;
@@ -117,13 +115,6 @@ describe('tiles are drawn as they are, with no map projection', () => {
       for (const s of sides(n.d!).slice(0, 6)) expect(s, n.key).toBeCloseTo(across / Math.sqrt(3), 1);
       expect(Math.max(...xs) - Math.min(...xs), n.key).toBeCloseTo(across, 1);
     }
-  });
-  it('the box is the sheet\'s own shape, and place() never stretches it', () => {
-    for (const [spec, name] of [[grid, 'tiles'], [hex, 'hexes']] as [Spec, 'tiles' | 'hexes'][]) for (const [w, h] of [[346, null], [700, null], [346, 160], [500, 200]] as [number, number | null][]) {
-      const { scene } = run(spec, w, h);
-      expect(scene.plot!.w / scene.plot!.h, name + ' ' + w + ' ' + h).toBeCloseTo(ASPECT[name], 2);
-    }
-    expect(run(grid, 700).scene.plot!.w).toBe(480);
   });
   it('is filled as a map is: the ten steps of the ramp, a ramp under it, tokens and never a colour', () => {
     for (const spec of [grid, hex]) {
@@ -168,7 +159,7 @@ describe('the same mark under another name', () => {
   });
   it('the painter is the map\'s, as the layout of that name, one for each name the fixtures registered: its sheet says the name, and nothing of `geo`', () => {
     const painter = geoPainterAs('geo-tiles');
-    expect([painter.layout, painter.paint, painter.rules]).toEqual(['geo-tiles', geoPainter.paint, undefined]);
+    expect([painter.layout, painter.paint]).toEqual(['geo-tiles', geoPainter.paint]);
     expect([...geoNames()].slice(0, 3)).toEqual(['geo', 'geo-tiles', 'geo-hexes']);
     expect(painter.css).toBe(geoPainter.css.split('[data-layout="geo"]').join('[data-layout="geo-tiles"]'));
     expect(painter.css).not.toContain('"geo"');
@@ -190,15 +181,13 @@ describe('the painters of the names', () => {
 describe('what a tile could hold, and does not', () => {
   // Symbols by size, with the layers written out: there is no preset for it.
   const spec: Spec = { ...grid, use: undefined, layers: [{ mark: 'geo-tiles', encode: { x: 'country', size: 'visitors' } }] };
-  it('a symbol stands in the middle of its tile, and the largest is wider than the tile it stands on', () => {
-    const { ratio, scene } = run(spec, 346), dots = (ratio.nodes as CircleNode[]).filter((n) => n.part === 'points' && n.kind === 'circle');
+  it('a symbol stands in the middle of its tile', () => {
+    const { ratio } = run(spec, 346), dots = (ratio.nodes as CircleNode[]).filter((n) => n.part === 'points' && n.kind === 'circle');
     expect([ratio.parts, dots.length]).toEqual([['plot', 'points', 'size'], 15]);
     for (const n of dots) {
       const c = corners(shapes(ratio).find((s) => s.row === n.row)!.d!).slice(0, 4);
       [n.x! * 100, (1 - n.t!) * 100 / ratio.aspect!].forEach((v, i) => expect(v, n.key).toBeCloseTo(c.reduce((s, p) => s + p[i]!, 0) / 4, 1));
     }
-    const us = scene.nodes.find((n) => n.key === 'primary:geo-tiles:US:symbol') as unknown as { r: number };
-    expect([us.r * 2, +(346 / 22).toFixed(1)]).toEqual([24, 15.7]);
   });
   it('no node names a region: a tile has no label', () => {
     expect(run(grid, 700).ratio.nodes.some((n) => n.kind === 'text' && /^[A-Z]{2}$/.test((n as { text: string }).text))).toBe(false);

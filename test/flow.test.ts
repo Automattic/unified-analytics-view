@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { PRESETS, declutter, customMarks, customPresets, expand, makeContainer, place, resolve, type PainterName, type PathNode, type Result, type Spec, type TextNode } from '@unified-analytics/core';
+import { PRESETS, declutter, customMarks, customPresets, expand, resolve, type PathNode, type Result, type Spec, type TextNode } from '@unified-analytics/core';
 import { compileFitRules } from '@unified-analytics/dom';
 import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
-import { LINK_RULES, NODE } from '@unified-analytics/flow';
+import { LINK_RULES } from '@unified-analytics/flow';
 import { linkPainter } from '@unified-analytics/flow/dom';
-import { errOf as err, rects, run, validView as view } from './helpers.ts';
+import { errOf as err, rects, run, shown, validView as view } from './helpers.ts';
 
 // Step 8 of docs/uncommon-coverage-plan.md: the `link` mark, a custom mark the fixtures register, and the Sankey of one
 // step it draws. No prototype knows it, so it is held to a sweep, facts and golden scenes of its own.
@@ -15,60 +15,58 @@ const layered = (encode: Record<string, string | number>, query = sankey.query):
 const GAP = 0.02, ROOM = 1 - GAP * 5;      // six sources, so five gaps: what is left of the plot's height is the nodes'
 
 describe('the sweep', () => {
-  it('sankey: unique keys, no NaN, nothing taller than the container allows, and everything inside the box', () => {
-    for (const sc of scenarios) for (const p of ['svg', 'dots'] as PainterName[]) for (const h of [null, 300, 160, 100, 60, 40]) for (const w of [54, 80, 120, 170, 250, 290, 346, 500, 700]) {
-      const at = [sc, p, w, h].join(' '), { plan, ratio, scene } = run(sankey, w, h, sc, p);
-      const keys = scene.nodes.map((n) => n.key), all = ratio.nodes.map((n) => n.key);
-      expect(new Set(keys).size, 'duplicate keys: ' + at).toBe(keys.length);
-      expect(new Set(all).size, 'duplicate keys in the ratio scene: ' + at).toBe(all.length);
-      expect(JSON.stringify([scene, ratio], (_, v) => (typeof v === 'number' && isNaN(v) ? 'NaN' : v)), 'NaN: ' + at).not.toMatch(/NaN/);
-      if (h != null && plan.layout !== 'prose') expect(scene.height, 'too tall: ' + at).toBeLessThanOrEqual(h);
-      expect(all.filter((k) => keys.includes(k)), 'placed keys: ' + at).toEqual(keys);
+  it('sankey: unique keys, no NaN, at every room parts the scene has, and every node inside the box', () => {
+    for (const sc of scenarios) for (const h of [null, 300, 160, 100, 60, 40]) for (const w of [54, 80, 120, 170, 250, 290, 346, 500, 700]) {
+      const at = [sc, w, h].join(' '), { plan, ratio, fit } = run(sankey, w, h, sc);
+      const all = ratio.nodes.map((n) => n.key);
+      expect(new Set(all).size, 'duplicate keys: ' + at).toBe(all.length);
+      expect(JSON.stringify(ratio, (_, v) => (typeof v === 'number' && isNaN(v) ? 'NaN' : v)), 'NaN: ' + at).not.toMatch(/NaN/);
+      expect(fit.parts.filter((p) => !ratio.nodes.some((n) => n.part === p)), 'parts with nothing in them: ' + at).toEqual([]);
       if (plan.layout !== 'link') continue;
       for (const n of rects(ratio)) expect(n.y! >= 0 && n.h! > 0 && n.y! + n.h! <= 1 + 1e-9 && (n.x === 0 || n.x === 1), 'node: ' + at + ' ' + n.key).toBe(true);
-      for (const n of scene.nodes) {
-        if (n.kind === 'rect') expect(n.x >= 0 && n.x + n.w <= w && n.y >= 0 && n.y + n.h <= scene.height + 0.01, 'outside: ' + at + ' ' + n.key).toBe(true);
-        if (n.kind === 'text') expect(n.y >= 7 && n.y <= scene.height - 7, 'label outside: ' + at + ' ' + n.key).toBe(true);
-        if (n.kind === 'path') for (const [, x, y] of n.d!.matchAll(/([\d.]+),([\d.]+)/g)) expect(+x! >= NODE && +x! <= w - NODE + 0.01 && +y! <= scene.height + 0.01, 'ribbon outside: ' + at + ' ' + n.key).toBe(true);
-      }
     }
   });
-  it('one spec is a Sankey with room for its names, and under it the grid of the same pairs: then the number, then the prose', () => {
+  it('one spec is a Sankey with room for its names, and under it the grid of the same pairs: then the number', () => {
     expect(view(sankey), JSON.stringify(view.errors)).toBe(true);
-    const fell = 'the link marks (drawn as "heatmap")';
     for (const sc of scenarios) {
-      const at = (w: number, h: number | null = null) => { const { plan, ratio, scene } = run(sankey, w, h, sc); return [plan.layout, ratio.parts.join(' '), plan.dropped.join('; '), scene.nodes.filter((n) => n.key.startsWith('label:')).length > 0]; };
-      if (sc === 'empty') { expect([346, 250, 120, 10].map((w) => at(w)[0])).toEqual(['notice', 'notice', 'none', 'prose']); continue; }
-      expect(at(700)).toEqual(['link', 'plot labels', '', true]);
-      expect(at(346)).toEqual(['link', 'plot labels', '', true]);       // dashboard width
+      // The layout of the view that shows, the parts of it that do, and what it gave way from.
+      const at = (w: number, h: number | null = null) => { const { plan, fit, gave } = run(sankey, w, h, sc); return [plan.layout, fit.parts.join(' '), gave.join('; ')]; };
+      if (sc === 'empty') { expect([346, 250, 120].map((w) => at(w))).toEqual([['notice', 'notice', ''], ['notice', 'notice', ''], ['notice', 'number', '']]); continue; }
+      expect(at(700)).toEqual(['link', 'plot labels', '']);
+      expect(at(346)).toEqual(['link', 'plot labels', '']);       // dashboard width
       // A node's name is the key to it, so the names never go while the ribbons stay: short of their room the view is the grid.
-      expect(at(320)).toEqual(['link', 'plot labels', '', true]);
-      expect(at(346, 140)).toEqual(['link', 'plot labels', '', true]);
-      expect(at(319)).toEqual(['matrix', 'y-axis plot x-axis ramp', fell, false]);
+      expect(at(320)).toEqual(['link', 'plot labels', '']);
+      expect(at(346, 140)).toEqual(['link', 'plot labels', '']);
+      expect(at(319)).toEqual(['matrix', 'y-axis plot x-axis ramp', 'link']);
       expect(at(346, 139)[0]).toBe('matrix');
-      expect(at(250)).toEqual(['matrix', 'y-axis plot x-axis ramp', fell, false]);      // sidebar width
+      expect(at(250)).toEqual(['matrix', 'y-axis plot x-axis ramp', 'link']);      // sidebar width
       expect(at(346, 119)[0]).toBe('matrix');
-      expect(at(120)).toEqual(['none', 'number', fell + '; the colour ramp, down to a strip; all marks (kept the number)', false]);
-      expect(at(10)[0]).toBe('prose');
+      // And the grid steps down by its own rules: its ramp to a strip, and under its marks' need the number alone.
+      expect(at(120)).toEqual(['matrix', 'number', 'link']);
+      expect(shown(run(sankey, 120, null, sc))).toMatchObject({ set: { ramp: 'strip' }, rules: ['ramp', 'marks'] });
     }
   });
   it('the grid it becomes is the heatmap of the same query, to the node, with the sources down the side and the targets across', () => {
     const grid: Spec = { spec: 'view/0', title: sankey.title, use: 'heatmap', query: sankey.query };
     for (const [w, h] of [[250, null], [170, null], [346, 100], [80, null]] as [number, number | null][]) {
-      expect(run(sankey, w, h).scene, w + ' ' + h).toEqual(run(grid, w, h).scene);
-      expect(run(sankey, w, h).plan.preset).toBe('heatmap');
+      const fell = run(sankey, w, h), own = run(grid, w, h);
+      expect([fell.ratio, fell.fit], w + ' ' + h).toEqual([own.ratio, own.fit]);
+      expect([fell.plan.preset, fell.gave]).toEqual(['heatmap', ['link']]);
     }
     const { ratio, result } = run(sankey, 250);
     expect(ratio.ys).toEqual(result.totalsBy!.channel!.map((r) => r.channel));
     expect(ratio.rows).toEqual(result.totalsBy!.landing!.map((r) => r.landing));
-    // `keep` switches the rule off, so there is no grid, and the Sankey stays where it has the room.
+    // `keep` switches the rule off, so there is no grid, and the Sankey stays, with the room and without it.
     expect(run({ ...sankey, keep: ['marks'] }, 346).plan).toMatchObject({ layout: 'link', preset: 'sankey', dropped: [] });
+    const kept = run({ ...sankey, keep: ['marks'] }, 250);
+    expect([kept.plan.layout, kept.gave, shown(kept)]).toEqual(['link', [], { parts: ['plot', 'labels'], set: {}, hidden: [], rules: ['kept:marks'] }]);
   });
 });
 
 describe('golden scenes', () => {
+  it('sankey', () => expect(run(sankey, 346).ratio).toMatchSnapshot());
   // With room, at the least room its names have, and under it, where it is the grid.
-  for (const [w, h] of [[346, null], [320, null], [250, null]] as [number, number | null][]) it(`sankey at ${w} by ${h ?? 'any'}`, () => expect(run(sankey, w, h).scene).toMatchSnapshot());
+  it('sankey, at each room', () => expect(([[346, null], [320, null], [250, null]] as [number, number | null][]).map(([w, h]) => { const r = run(sankey, w, h); return [w, h, r.plan.layout, r.gave, shown(r)]; })).toMatchSnapshot());
 });
 
 describe('the fixture: visitors from channel to landing', () => {
@@ -92,7 +90,7 @@ describe('link: two columns of nodes and a ribbon for each row', () => {
     expect(PRESETS).not.toHaveProperty('sankey');
     expect(expand(sankey).layers).toEqual([{ mark: 'link', encode: { x: 'channel', y: 'landing', size: 'visitors' } }]);
     const written: Spec = { ...sankey, use: undefined, layers: expand(sankey).layers };
-    for (const w of [346, 300, 250, 120]) expect(run(sankey, w).scene, String(w)).toEqual(run(written, w).scene);
+    for (const w of [346, 300, 250, 120]) { const a = run(sankey, w), b = run(written, w); expect([a.ratio, a.fit, a.gave], String(w)).toEqual([b.ratio, b.fit, b.gave]); }
     expect(err(() => expand({ ...sankey, query: { metrics: ['visitors'], by: ['channel'] } }))).toBe('The "sankey" preset needs two dimensions in query.by: the one on the axis, then the one to split by.');
   });
   it('a node for each value, in the engine\'s order, as tall as the engine\'s total for it and never a sum of the rows', () => {
@@ -108,8 +106,8 @@ describe('link: two columns of nodes and a ribbon for each row', () => {
     }
     // The rows a view receives may stop short of the whole. The nodes do not change with them.
     const fewer = { ...result, rows: result.rows.slice(0, 7) };
-    expect(rects(run(sankey, 346, null, 'typical', 'svg', { result: fewer }).ratio)).toEqual(nodes);
-    expect(ribbons(run(sankey, 346, null, 'typical', 'svg', { result: fewer }).ratio).length).toBe(7);
+    expect(rects(run(sankey, 346, null, 'typical', { result: fewer }).ratio)).toEqual(nodes);
+    expect(ribbons(run(sankey, 346, null, 'typical', { result: fewer }).ratio).length).toBe(7);
   });
   it('a ribbon for each row, as wide at each end as the row\'s share of the node it meets, lying in the other column\'s order', () => {
     const paths = ribbons(ratio), nodes = rects(ratio);
@@ -130,14 +128,14 @@ describe('link: two columns of nodes and a ribbon for each row', () => {
     expect(first[4]!.y0 + first[4]!.w0).toBeCloseTo(nodes[0]!.h! * 100, 1);
   });
   it('a pair with no value, or a value of zero, draws no ribbon, and is still a row of the result', () => {
-    const holed = { ...result, rows: result.rows.map((r, i) => (i === 1 ? { ...r, visitors: null } : i === 2 ? { ...r, visitors: 0 } : r)) }, scene = run(sankey, 346, null, 'typical', 'svg', { result: holed }).ratio;
+    const holed = { ...result, rows: result.rows.map((r, i) => (i === 1 ? { ...r, visitors: null } : i === 2 ? { ...r, visitors: 0 } : r)) }, scene = run(sankey, 346, null, 'typical', { result: holed }).ratio;
     expect(ribbons(scene).length).toBe(28);
     expect(scene.nodes.some((n) => n.key === 'primary:link:Search:Blog' || n.key === 'primary:link:Search:Docs')).toBe(false);
     expect(scene.rows!.slice(0, 3)).toEqual(['Search:Home', 'Search:Blog', 'Search:Docs']);
     expect(rects(scene)).toEqual(rects(ratio));
   });
   it('a pair the result says twice has a key and a ribbon for each', () => {
-    const twice = { ...result, rows: [...result.rows, { ...result.rows[0]!, visitors: 5 }] }, scene = run(sankey, 346, null, 'typical', 'svg', { result: twice }).ratio;
+    const twice = { ...result, rows: [...result.rows, { ...result.rows[0]!, visitors: 5 }] }, scene = run(sankey, 346, null, 'typical', { result: twice }).ratio;
     expect(scene.rows!.slice(-1)).toEqual(['Search#2:Home']);
     expect(new Set(scene.nodes.map((n) => n.key)).size).toBe(scene.nodes.length);
   });
@@ -146,7 +144,7 @@ describe('link: two columns of nodes and a ribbon for each row', () => {
     for (const n of rects(ratio)) expect(n.paint, n.key).toBe(n.x ? 'ink.muted' : 'series.' + (order.indexOf(n.key.slice('node:channel:'.length)) + 1));
     for (const n of ribbons(ratio)) expect([n.paint, n.tone], n.key).toEqual(['series.' + (order.indexOf(n.row!.split(':')[0]!) + 1), 'soft']);
     expect(ratio.nodes.every((n) => /^(series\.[1-6]|ink(\.muted)?)$/.test(n.paint))).toBe(true);
-    expect(JSON.stringify(run(sankey, 346).scene)).not.toMatch(/#[0-9a-f]{3,8}\b|rgb\(/i);
+    expect(JSON.stringify(ratio)).not.toMatch(/#[0-9a-f]{3,8}\b|rgb\(/i);
   });
   it('with a limit the totals still cover what it left out, so a column stops short of the foot and a node of its ribbons', () => {
     const spec: Spec = { ...sankey, query: { ...sankey.query, limit: 3 } }, { ratio: cut, result: r } = run(spec, 346);
@@ -156,20 +154,15 @@ describe('link: two columns of nodes and a ribbon for each row', () => {
     expect(rects(cut).find((n) => n.key === 'node:channel:Search')!.h).toBeCloseTo((r.totalsBy!.channel![0]!.visitors as number) / r.totals.visitors! * (1 - GAP * 2), 9);
   });
   it('where the engine gives no total the plot is as tall as the taller column, and no value is made of that', () => {
-    const none = { ...result, totals: { visitors: null } }, scene = run(sankey, 346, null, 'typical', 'svg', { result: none }).ratio, left = rects(scene).filter((n) => n.x === 0);
+    const none = { ...result, totals: { visitors: null } }, scene = run(sankey, 346, null, 'typical', { result: none }).ratio, left = rects(scene).filter((n) => n.x === 0);
     expect(left.reduce((s, n) => s + n.h!, 0)).toBeCloseTo(ROOM, 9);
     expect(ribbons(scene).length).toBe(30);
   });
-  it('a label for each node, ranked by its size, and place() sets each inside its column and leaves out one that would meet a larger node\'s', () => {
+  it('a label for each node, ranked by its size, for a surface to thin by: core\'s declutter in one dimension', () => {
     expect(labels(ratio).map((n) => [n.text, n.x, n.anchor, n.rank])).toEqual([
       ['Search', 0, 'start', 1], ['Direct', 0, 'start', 2], ['Social', 0, 'start', 3], ['AI assistants', 0, 'start', 4], ['Email', 0, 'start', 5], ['Other', 0, 'start', 6],
       ['Home', 1, 'end', 1], ['Blog', 1, 'end', 2], ['Docs', 1, 'end', 3], ['Pricing', 1, 'end', 4], ['Changelog', 1, 'end', 5]]);
-    const { scene } = run(sankey, 346), placed = scene.nodes.filter((n) => n.kind === 'text');
-    expect(placed.map((n) => n.text)).toEqual(['Search', 'Direct', 'Social', 'AI assistants', 'Email', 'Home', 'Blog', 'Docs', 'Pricing', 'Changelog']);
-    expect(placed.map((n) => n.x)).toEqual([...Array(5).fill(NODE + 6), ...Array(5).fill(346 - NODE - 6)]);
-    expect([scene.height, scene.plot]).toEqual([184, { w: 346, h: 184 }]);
-    expect(run(sankey, 346, 160).scene.height).toBe(160);
-    // A column's labels a line of 14 apart about their middles, by rank: core's declutter in one dimension.
+    // A column's labels a line of 14 apart about their middles, by rank.
     expect(declutter([10, 20, 34, 40].map((at, i) => ({ x: 0, w: 1, y: at - 7, h: 14, rank: [2, 1, 3, 4][i] })), 0)).toEqual([true, false, false, true]);
   });
 });
@@ -181,7 +174,7 @@ describe('prose and errors', () => {
     expect(run(sankey, 346, null, 'empty').plan.text).toBe('Visitors: nothing recorded in the last 28 days.');
   });
   it('errors name the fix: a wrong encoding, no totals from the engine, too many sources, a second layer, and x2', () => {
-    const result = runQuery(sankey.query), at = (spec: Spec, r: Result = result) => err(() => resolve(spec, r, makeContainer(346), catalog));
+    const result = runQuery(sankey.query), at = (spec: Spec, r: Result = result) => err(() => resolve(spec, r, catalog));
     expect(at(layered({ x: 'channel', y: 'visitors', size: 'visitors' }))).toBe('The query is by "landing", and no layer encodes it, so its rows would be drawn over each other. Encode it on color, for a colour and a legend entry each, or on detail, for a series each in one paint, or remove it from query.by.');
     expect(at({ ...layered({ x: 'channel', y: 'landing', color: 'visitors' }) })).toBe('A "link" layer needs the metric each ribbon is as wide as on size, and this one has undefined there. Encode one of the query\'s metrics: visitors.');
     expect(at({ query: sankey.query, layers: [{ mark: 'link', encode: { x: 'channel', color: 'landing', size: 'visitors' } }] })).toBe('A "link" layer runs from the values of one dimension to the values of another, the source on x and the target on y, and this one has "channel" on x and undefined on y. Encode "channel" on x and "landing" on y.');
@@ -202,7 +195,7 @@ describe('prose and errors', () => {
 
 describe('the painter\'s half, as strings', () => {
   it('is the layout of the mark\'s name, whose rules are the mark\'s alone, and reads no colour but a node\'s paint', () => {
-    expect([linkPainter.layout, linkPainter.rules]).toEqual(['link', undefined]);
+    expect(linkPainter.layout).toBe('link');
     expect(linkPainter.css).toContain('.uav[data-layout="link"] .uav-plot svg { inset-inline: 8px; inline-size: calc(100% - 16px); }');
     expect(linkPainter.css).not.toMatch(/#[0-9a-f]{3,8}\b|rgb\(/i);
   });

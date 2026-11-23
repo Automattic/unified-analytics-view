@@ -8,16 +8,16 @@ describe('the rows layout', () => {
   it('gives up its body with its marks, so the number stands alone', () => {
     const css = compileFitRules(FIT_RULES.filter((r) => r.layout === 'rows' && r.id === 'marks'), { rows: rows.fit! });
     const fig = '.uav[data-layout="rows"]:not([data-keep~="marks"])';
-    expect(css.split('\n')).toEqual([
+    expect(css.split('\n').slice(0, 8)).toEqual([
       '/* rows marks */', '@container uav-view (inline-size < 89.5px) {',
-      '  ' + fig + ' .uav-rows { display: none; }', '  ' + fig + ' .uav-number { display: block; }',
+      '  ' + fig + ' :is(.uav-rows, .uav-columns, .uav-legend, .uav-legend-top, .uav-unit-key) { display: none; }', '  ' + fig + ' .uav-number { display: block; }',
       '  ' + fig + ' { grid-template: "number" auto / minmax(0, 1fr); }', '  ' + fig + ' .uav-body { display: none; }', '  ' + fig + ' .uav-number { align-self: start; margin: 0; }',
       '}',
     ]);
   });
 
-  it('keeps its headers in a short box: no rule takes them, and the rows under them are clipped to whole rows', () => {
-    expect(compileFitRules(FIT_RULES.filter((r) => r.layout === 'rows'), { rows: rows.fit! })).not.toContain('.uav-columns');
+  it('keeps its headers in a short box: no rule takes them but the ones that take the rows, and the rows under them are clipped to whole rows', () => {
+    expect(compileFitRules(FIT_RULES.filter((r) => r.layout === 'rows' && !r.hide.includes('rows')), { rows: rows.fit! })).not.toContain('.uav-columns');
     expect(rows.css).toContain('.uav-rows { max-block-size: calc(round(down, 100% + var(--uav-row-gap), var(--uav-row-block) + var(--uav-row-gap)) - var(--uav-row-gap)); }');
   });
 
@@ -27,15 +27,10 @@ describe('the rows layout', () => {
     expect(rows.css).not.toMatch(/\bch\b/);
   });
 
-  it('gives up the list for the number in a box shorter than one row, at the context\'s row height', () => {
-    const css = (rowHeight: number) => compileFitRules(rows.rules!({ ...CONTAINER_RULES, rows: { ...CONTAINER_RULES.rows, rowHeight } }), { rows: rows.fit! });
-    const fig = '.uav[data-layout="rows"]:not([data-keep~="marks"])';
-    expect(css(28).split('\n').slice(0, 5)).toEqual([
-      '/* rows marks-block */', '@container uav-view (block-size < 27.5px) {',
-      '  ' + fig + ' .uav-rows { display: none; }', '  ' + fig + ' .uav-number { display: block; }',
-      '  ' + fig + ' { grid-template: "number" auto / minmax(0, 1fr); }',
-    ]);
-    expect(css(40)).toContain('@container uav-view (block-size < 39.5px) {');
+  it('gives up the list for the number in a box shorter than one row, by the same rule', () => {
+    const [wide, tall] = compileFitRules(FIT_RULES.filter((r) => r.layout === 'rows' && r.id === 'marks'), { rows: rows.fit! }).split('/* rows marks */\n').filter(Boolean).map((block) => block.trim().split('\n'));
+    expect([wide![0], tall![0]]).toEqual(['@container uav-view (inline-size < 89.5px) {', '@container uav-view (block-size < ' + (CONTAINER_RULES.rows.rowHeight - 0.5) + 'px) {']);
+    expect(tall!.slice(1)).toEqual(wide!.slice(1));
   });
 
   it('takes its row height and gap from the rule set, never from its stylesheet', () => {

@@ -25,7 +25,7 @@ import { glyph } from '../chrome/unit.ts';
  * `data-track`, so a list of bars behind their labels is not touched. */
 const along = '(100% - 2 * var(--uav-row-gap))';
 const at = (x: string) => `calc(var(--uav-row-gap) + ${x} * ${along})`;
-/** What a unit's glyph keeps clear of its row's top and foot, in px, as place() does. */
+/** What a unit's glyph keeps clear of its row's top and foot, in px. */
 const GLYPH_INSET = 4;
 const dot = glyph(`min(var(--uav-w) * ${along}, var(--uav-row-block) - ${2 * GLYPH_INSET}px)`);
 export const TRACK_CSS = `

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { FIT_RULES, buildScene, columnRooms, expand, formatValue, makeContainer, resolve, type Spec } from '@unified-analytics/core';
+import { FIT_RULES, buildScene, columnRooms, expand, formatValue, resolve, type Spec } from '@unified-analytics/core';
 import { catalog, moreSamples, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
-import { at, err, ofUnbounded, run, validView as view } from './helpers.ts';
+import { at, err, ofUnbounded, run, shown, validView as view } from './helpers.ts';
 
 // Rows as tracks (docs/chart-coverage-plan.md, step 2): columns of values, a change per row, a signed track and the
 // funnel. The sweep and the golden scenes of these samples are in test/coverage.test.ts, with the rest of `moreSamples`.
@@ -64,49 +64,20 @@ describe('columns', () => {
     expect(ratio.parts).toEqual(['rows']);
     expect(ratio.nodes.some((n) => n.part === 'columns' || (n.part === 'rows' && n.rank != null))).toBe(false);
   });
-  it('a row short of room gives up its columns from the right, in every data state, and then its marks', () => {
-    const shown = (w: number, sc: (typeof scenarios)[number]) => { const { plan, scene } = run(conversions, w, null, sc); return [plan.layout, texts(scene.nodes, /^column:primary/).length || texts(scene.nodes, /^primary:text.*:Purchase$/).length - 1, plan.dropped] as const; };
+  it('a row short of room is its number, in every data state: its columns go by their own widths, which a surface measures', () => {
     for (const sc of ['typical', 'no-prior'] as const) {
-      // The label needs 90 px, by the `marks` rule. The columns need 77.8, 101 and 53.6 px: a header or a value, and 14 px.
-      expect(shown(700, sc), sc).toEqual(['rows', 3, []]);
-      expect(shown(323, sc), sc).toEqual(['rows', 3, []]);
-      expect(shown(322, sc), sc).toEqual(['rows', 2, ['the "Value" column']]);
-      expect(shown(269, sc), sc).toEqual(['rows', 2, ['the "Value" column']]);
-      // With one column left there is no header, so it needs only its widest value: 5 characters.
-      expect(shown(268, sc), sc).toEqual(['rows', 1, ['the "Value" column', 'the "Conversion rate" column']]);
-      expect(shown(137, sc), sc).toEqual(['rows', 1, ['the "Value" column', 'the "Conversion rate" column']]);
-      expect(shown(136, sc)[0], sc).toBe('none');
-      expect(run(conversions, 315, null, sc).plan.needs.width, sc).toBeCloseTo(90 + 77.8 + 101, 9);
+      expect(shown(run(conversions, 700, null, sc)).parts, sc).toEqual(['columns', 'rows']);
+      // The label needs 90 px, by the `marks` rule, and the headers go with the rows they stand over.
+      expect([90, 89].map((w) => shown(run(conversions, w, null, sc)).parts), sc).toEqual([['columns', 'rows'], ['number']]);
     }
-    expect([700, 250, 120, 10].map((w) => run(conversions, w, null, 'empty').plan.layout)).toEqual(['notice', 'notice', 'none', 'prose']);
-    // What is left at each step is the columns before it, under the same keys.
-    const keys = (w: number) => run(conversions, w).ratio.nodes.filter((n) => n.part === 'rows').map((n) => n.key);
-    expect(keys(346).filter((k) => !/^primary:text#4:/.test(k))).toEqual(keys(300));
-    expect(keys(300).filter((k) => !/^primary:text#3:/.test(k))).toEqual(keys(200));
+    expect([700, 250, 120].map((w) => shown(run(conversions, w, null, 'empty')).parts)).toEqual([['notice'], ['notice'], ['number']]);
   });
-  it('place() sets each column to its widest text, the track behind the label and the first, and the rest beyond its end', () => {
-    const { ratio, scene } = run(conversions, 346), px = <T,>(k: string) => at<T>(scene.nodes, k);
-    expect(columnRooms(ratio).map((n) => +n.toFixed(1))).toEqual([77.8, 101, 53.6]);
-    // The track ends 154.6 px short of the right edge. The longest bar fills it, and the first column's text ends 8 px inside it.
-    expect(px<{ x: number; w: number }>('primary:bar:Add to cart')).toMatchObject({ x: 0, w: 346 - 154.6 });
-    expect(['primary:text#2:Purchase', 'primary:text#3:Purchase', 'primary:text#4:Purchase'].map((k) => px<{ x: number }>(k).x)).toEqual([346 - 154.6 - 8, 346 - 53.6 - 8, 346 - 8]);
-    // And one more over the labels, for what the rows are, set from the start where they are.
-    expect(texts(scene.nodes, /^column:primary/).length).toBe(3);
-    expect(px<{ x: number; y: number; anchor: string }>('column:event')).toMatchObject({ x: 8, y: 10, anchor: 'start' });
-    expect(['column:primary:text#2', 'column:primary:text#3', 'column:primary:text#4'].map((k) => px<{ x: number; y: number }>(k))).toMatchObject([{ x: 346 - 154.6 - 8, y: 10 }, { x: 346 - 53.6 - 8, y: 10 }, { x: 338, y: 10 }]);
-    // Headers take 20 px, and each row is 28 px with 4 px between.
-    expect(px<{ y: number }>('primary:bar:Add to cart').y).toBe(20);
-    expect(scene.height).toBe(20 + 6 * 28 + 5 * 4);
-    // A label is clipped to the track, less the first column's room.
-    const narrow = run(conversions, 300).scene;
-    expect(at<{ text: string }>(narrow.nodes, 'primary:text:Newsletter signup').text).toBe('Newsletter sig…');
+  it('each column asks for the room of its widest text, a header among them', () => {
+    expect(columnRooms(run(conversions, 346).ratio).map((n) => +n.toFixed(1))).toEqual([77.8, 101, 53.6]);
   });
-  it('headers are a key to the columns under them: they stay as long as two columns do, and a short view gives up rows instead', () => {
-    expect(run(conversions, 346, 100)).toMatchObject({ plan: { guides: { columns: true }, rowLimit: 2, dropped: ['rows 3 to 6'] }, scene: { height: 80 } });
-    // Under 80 px tall the headers went once, and left two columns of values with nothing to say which was which.
-    expect(run(conversions, 346, 79)).toMatchObject({ plan: { guides: { columns: true }, rowLimit: 1, dropped: ['rows 2 to 6'] }, scene: { height: 48 } });
-    expect(run(conversions, 346, 79).ratio.parts).toEqual(['columns', 'rows']);
-    expect(FIT_RULES.some((r) => r.layout === 'rows' && r.hide.includes('columns'))).toBe(false);
+  it('headers are a key to the columns under them: no rule takes them but the one that takes the rows', () => {
+    expect(shown(run(conversions, 346, 79)).parts).toEqual(['columns', 'rows']);
+    expect(FIT_RULES.filter((r) => r.layout === 'rows' && r.hide.includes('columns')).every((r) => r.hide.includes('rows'))).toBe(true);
   });
 });
 
@@ -120,7 +91,7 @@ describe('a delta per row', () => {
     expect(texts(ratio.nodes, /^column:/)).toEqual(['Page', 'Page views', 'Change']);
     // A metric that is better when it falls turns the paint, and one with no better way has none.
     const down = { ...catalog, metrics: { ...catalog.metrics, pageviews: { ...catalog.metrics.pageviews!, polarity: 'down' as const } } }, result = runQuery(league.query);
-    const turned = buildScene(resolve(league, result, makeContainer(346), down), league.query, result, down);
+    const turned = buildScene(resolve(league, result, down), league.query, result, down);
     expect(at<{ paint: string }>(turned.nodes, 'primary:text#3:/').paint).toBe('delta.bad');
   });
   it('is left out when the query has no compare, and dropped when there is nothing to compare with', () => {
@@ -157,15 +128,12 @@ describe('the track', () => {
   });
   it('covers what is below zero: every bar starts at zero, and one below it lies to the left of there', () => {
     const result = runQuery(bars.query), signed = { ...result, rows: result.rows.map((r, i) => ({ ...r, net_subscribers: [60, 30, -20, -40, 10, 0][i]! })) };
-    const { ratio, scene } = run(bars, 346, null, 'typical', 'svg', { result: signed }), rects = ratio.nodes.filter((n) => n.kind === 'rect') as { v: number; v0: number }[];
+    const { ratio } = run(bars, 346, null, 'typical', { result: signed }), rects = ratio.nodes.filter((n) => n.kind === 'rect') as { v: number; v0: number }[];
     expect(rects.map((n) => n.v0)).toEqual(Array(6).fill(0.4));
     expect(rects.map((n) => n.v)).toEqual([1, 0.7, 0.2, 0, 0.5, 0.4]);
-    // In pixels zero is 40% of the way along a track 346 px wide. A bar is never under 3 px.
-    const px = scene.nodes.filter((n) => n.kind === 'rect') as { x: number; w: number }[];
-    [[138.4, 207.6], [138.4, 103.8], [69.2, 69.2], [0, 138.4], [138.4, 34.6], [138.4, 3]].forEach(([x, w], i) => { expect(px[i]!.x).toBeCloseTo(x!, 9); expect(px[i]!.w).toBeCloseTo(w!, 9); });
     // Nothing but values below zero, and the scale ends there.
     const down = { ...result, rows: result.rows.map((r, i) => ({ ...r, net_subscribers: -10 * (i + 1) })) };
-    expect((run(bars, 346, null, 'typical', 'svg', { result: down }).ratio.nodes.filter((n) => n.kind === 'rect') as { v0: number }[]).every((n) => n.v0 === 1)).toBe(true);
+    expect((run(bars, 346, null, 'typical', { result: down }).ratio.nodes.filter((n) => n.kind === 'rect') as { v0: number }[]).every((n) => n.v0 === 1)).toBe(true);
   });
   it('errors name the fix: marks in two units, and a mark the track has no rule for', () => {
     const two: Spec = { query: conversions.query, layers: [...conversions.layers!, { mark: 'bar', encode: { y: 'event', x: 'conversion_value' } }] };
@@ -186,7 +154,7 @@ describe('the funnel preset', () => {
     expect(texts(ratio.nodes, /^primary:text#3:/)).toEqual(['100%', '16%', '6.2%', '3.9%']);
     // The rate shown is the row's own field. Nothing here divides one count by another.
     const told = { ...result, rows: result.rows.map((r) => ({ ...r, conversion_rate: 0.5 })) };
-    expect(texts(run(funnel, 346, null, 'typical', 'svg', { result: told }).ratio.nodes, /^primary:text#3:/)).toEqual(['50%', '50%', '50%', '50%']);
+    expect(texts(run(funnel, 346, null, 'typical', { result: told }).ratio.nodes, /^primary:text#3:/)).toEqual(['50%', '50%', '50%', '50%']);
     expect((ratio.nodes.filter((n) => n.kind === 'rect') as { v: number }[]).map((n) => +n.v.toFixed(3))).toEqual([1, 0.162, 0.062, 0.039]);
   });
   it('needs a second metric, and says so', () => {

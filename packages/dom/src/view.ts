@@ -1,4 +1,4 @@
-import { CONTAINER_RULES, DELTA_FULL, NOTE_LEAST, NUMBER_SHORT, buildScene, customMarks, expand, explain, fallbackRule, fills, gaveWay, resolve, unboundedContainer } from '@unified-analytics/core';
+import { CONTAINER_RULES, DELTA_FULL, NOTE_LEAST, NUMBER_SHORT, buildScene, customMarks, expand, explain, fallbackRule, fills, gaveWay, hasOf, resolve } from '@unified-analytics/core';
 import type { Because, Catalog, ContainerRules, Explanation, Layout, Result, SceneNode, Spec } from '@unified-analytics/core';
 import { compileFitRules } from './compile.ts';
 import { LEGEND_LINE } from './chrome/legend.ts';
@@ -86,7 +86,7 @@ ${shortForm('.uav-number[data-fit~="short"] > .uav-f-display', '.uav-number[data
 .uav-number[data-fit~="small"] > .uav-f-display { ${NUMBER_SMALL} }
 .uav-number[data-fit~="no-note"] > .uav-f-tick { display: none; }
 /* A number the pass has not set carries no data-fit: one beside a bare plot, which its layout sets, or any number
- * where the pass does not run. For that one the widths at which place() takes the shorter forms stand in. */
+ * where the pass does not run. For that one core's widths for the shorter forms stand in (sizes.ts). */
 @container uav-view (inline-size < ${DELTA_FULL}px) { ${shortForm('.uav-number:not([data-fit]) > .uav-f-value')} }
 @container uav-view (inline-size < ${NUMBER_SHORT}px) {
   ${shortForm('.uav-number:not([data-fit]) > .uav-f-display')}
@@ -398,19 +398,18 @@ export class UaView extends Base {
       const rules = rulesOver(this.#input('rules', false) as Partial<ContainerRules> | undefined);
       check(spec, result, catalog);
       if (!Array.isArray(rules.fit)) throw new Error('The rules need "fit", an array of fit rules. Leave it out to use the defaults.');
-      if (!Array.isArray(rules.order)) throw new Error('The rules need "order", a list of reductions such as ["drop-guides", "prose"]. Leave it out to use the defaults.');
       // Every painter's extras and rules, the built-in ones' and those registered since this module loaded, for custom
       // marks. A custom mark's rules are its own, as core holds them (marks.ts); a painter's `rules` stand in where no
       // mark of its name gives any.
       const doc = this.ownerDocument, all = Object.values(LAYOUTS);
-      const fits = [...rules.fit, ...all.flatMap((p) => customMarks().get(p.layout)?.rules ?? p.rules?.(rules) ?? [])];
+      const fits = [...rules.fit, ...all.flatMap((p) => customMarks().get(p.layout)?.rules ?? [])];
       const fit = sheet(doc, compileFitRules(fits, Object.fromEntries(all.map((p) => [p.layout, p.fit ?? {}]))));
-      const plan = resolve(spec, result, { ...unboundedContainer(), rules }, catalog);
+      const plan = resolve(spec, result, catalog, rules);
       const scene = buildScene(plan, spec.query, result, catalog), fig = this.#fig;
 
       painting = true;
       this.#root.adoptedStyleSheets = [sheet(doc, allStyles()), sheet(doc, FALLBACK_CSS), fit];
-      fig.dataset.layout = scene.layout; fig.dataset.keep = (spec.keep || []).join(' '); fig.dataset.parts = scene.parts.join(' ');
+      fig.dataset.layout = scene.layout; fig.dataset.keep = (spec.keep || []).join(' '); fig.dataset.parts = scene.parts.join(' '); fig.dataset.has = hasOf(scene).join(' ');
       fig.dataset.marks = [...new Set(plan.layers.map((l) => l.mark))].join(' ');
       if (spec.title) fig.setAttribute('aria-label', spec.title); else fig.removeAttribute('aria-label');
       // The plot's natural heights are the context's, read by the stylesheet. The painter hard-codes neither.
@@ -425,7 +424,7 @@ export class UaView extends Base {
       if (!this.hasAttribute('table')) this.#table.replaceChildren();
       else if (painter?.table) painter.table(this.#table, spec.title, scene, data); else paintTable(this.#table, spec.title, data.query, result, catalog, plan.layers);
       this.#keys.paint(scene, expand(spec).query, result, catalog, plan.layers);
-      // The rule this view gives way under, if one is for what it holds and its query can fill the rule's preset: as resolve() asks.
+      // The rule this view gives way under, if one is for what it holds and its query can fill the rule's preset: as fitTo() asks.
       const swap = fallbackRule(fits, scene.layout, spec.keep, this.via, { marks: plan.layers.map((l) => l.mark), fills: (use) => fills(use, data.query) }), { layers: _layers, ...rest } = spec;
       if (swap) {
         const beside = this.#fallback ??= this.#root.appendChild(Object.assign(document.createElement(this.localName) as UaView, { className: 'uav-fallback' }));

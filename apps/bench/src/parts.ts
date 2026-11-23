@@ -1,4 +1,4 @@
-import { buildScene, expand, resolve, unboundedContainer } from '@unified-analytics/core';
+import { buildScene, expand, hasOf, resolve } from '@unified-analytics/core';
 import { UaView } from '@unified-analytics/dom';
 import { catalog, runQuery, type Scenario } from '@unified-analytics/fixtures';
 import { el } from './page.ts';
@@ -96,8 +96,9 @@ if (!embed) {
   const { sample, part, scenario, height } = state(), spec = samples[sample]!.spec;
   // What the view plans with no limits: its layout and every part it can show. The capture keeps it beside the frames, for the checker.
   try {
-    const result = runQuery(spec.query, scenario), plan = resolve(spec, result, unboundedContainer(), catalog);
-    Object.assign(window, { benchPlan: { layout: plan.layout, parts: buildScene(plan, spec.query, result, catalog).parts, keep: expand(spec).keep ?? [], marks: (expand(spec).layers ?? []).map((l) => l.mark) } });
+    const result = runQuery(spec.query, scenario), plan = resolve(spec, result, catalog), scene = buildScene(plan, spec.query, result, catalog);
+    // And what a fit rule may ask of the scene: what kind of view it is, and which parts it has anything for.
+    Object.assign(window, { benchPlan: { layout: plan.layout, parts: scene.parts, keep: expand(spec).keep ?? [], marks: (expand(spec).layers ?? []).map((l) => l.mark), has: hasOf(scene), drawn: [...new Set(scene.nodes.map((n) => n.part))] } });
   } catch { /* the frames say what went wrong */ }
   const strip = el('div', 'strip');
   for (const w of [...WIDTHS, 0]) {

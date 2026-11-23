@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildScene, formatDimension, formatValue, place, resolve, tldrProse, makeContainer, type Spec } from '@unified-analytics/core';
+import { buildScene, formatDimension, formatValue, resolve, tldrProse, type Spec } from '@unified-analytics/core';
 import { adapt, type ApiResult } from '@unified-analytics/spacefast';
 import trends from './fixtures/spacefast/trends.response.json';
 import breakdowns from './fixtures/spacefast/breakdowns.response.json';
@@ -75,7 +75,7 @@ describe('one answer of the Spacefast query API, as a view takes it', () => {
     const bins: ApiResult = { ...answer('countries'), columns: [{ kind: 'dimension', id: 'scroll_depth_bucket', label: 'Deepest scroll', valueType: 'scroll_bucket' }, answer('countries').columns[1]!], rows: [{ scroll_depth_bucket: '0', page_views: 40 }, { scroll_depth_bucket: '90', page_views: 25 }, { scroll_depth_bucket: '10', page_views: 12 }] };
     const { query, result, catalog } = adapt(bins);
     const spec = { spec: 'view/0', query, layers: [{ mark: 'cell', encode: { y: 'scroll_depth_bucket', color: 'page_views' } }] } as Spec;
-    const plan = resolve(spec, result, makeContainer(346), catalog), scene = buildScene(plan, spec.query, result, catalog);
+    const plan = resolve(spec, result, catalog), scene = buildScene(plan, spec.query, result, catalog);
     expect(plan.layout).toBe('matrix');
     const cells = scene.nodes.filter((n) => n.part === 'plot') as { x: number; w: number; pair: string[] }[];
     expect(cells.map((c) => [c.x, c.w, c.pair])).toEqual([[0, 1, ['', '0']], [0, 1, ['', '10']], [0, 1, ['', '90']]]);
@@ -86,7 +86,7 @@ describe('one answer of the Spacefast query API, as a view takes it', () => {
     const catalog = { metrics: { arrivals: { label: 'Arrivals', unit: 'count' as const, polarity: 'none' as const } }, dimensions: { ago: { label: 'Seconds from now', type: 'number' as const } } };
     const query = { metrics: ['arrivals'], by: ['ago'] }, result = { rows: [{ ago: -30, 'ago@end': -20, arrivals: 0 }, { ago: -20, 'ago@end': -10, arrivals: 2 }, { ago: -10, 'ago@end': 0, arrivals: 1 }], totals: { arrivals: 3 }, meta: { range: 'now', compare: null, notes: [] } };
     const spec = { spec: 'view/0', query, layers: [{ mark: 'cell', encode: { x: 'ago', color: 'arrivals' } }] } as Spec;
-    const plan = resolve(spec, result, makeContainer(346), catalog), scene = buildScene(plan, query, result, catalog);
+    const plan = resolve(spec, result, catalog), scene = buildScene(plan, query, result, catalog);
     expect(plan.layout).toBe('matrix');
     expect((scene.nodes.filter((n) => n.part === 'plot') as { y: number; h: number; pair: string[] }[]).map((c) => [c.y, c.h, c.pair])).toEqual([[0, 1, ['-30', '']], [0, 1, ['-20', '']], [0, 1, ['-10', '']]]);
     expect((scene.nodes.filter((n) => n.part === 'x-axis') as { text: string; x: number }[]).map((n) => [n.text, n.x])).toEqual([['-30', 0], ['-20', 1 / 3], ['-10', 2 / 3], ['0', 1]]);
@@ -137,9 +137,9 @@ describe('one answer of the Spacefast query API, as a view takes it', () => {
 describe('the adapted answers draw', () => {
   const draw = (id: string, use: string, metric: string) => {
     const { query, result, catalog } = adapt(answer(id));
-    const spec = { spec: 'view/0', title: id, use, query: { ...query, metrics: [metric] } } as Spec, container = makeContainer(346);
-    const plan = resolve(spec, result, container, catalog);
-    return { scene: place(buildScene(plan, spec.query, result, catalog), container), prose: tldrProse(spec.query, result, false, catalog) };
+    const spec = { spec: 'view/0', title: id, use, query: { ...query, metrics: [metric] } } as Spec;
+    const plan = resolve(spec, result, catalog);
+    return { scene: buildScene(plan, spec.query, result, catalog), prose: tldrProse(spec.query, result, false, catalog) };
   };
   it('a trend of page views, dashed in from the day the range starts inside and out to the one still filling', () => {
     const { scene, prose } = draw('traffic', 'line', 'page_views');
@@ -162,8 +162,8 @@ describe('the adapted answers draw', () => {
   });
   it('the number carries its metric\'s definition, for a painter to show when it is pointed at', () => {
     const { query, result, catalog } = adapt(answer('headline'));
-    const spec = { spec: 'view/0', title: 'Visitors', query: { ...query, metrics: ['unique_visitors_range'] }, layers: [] } as unknown as Spec, container = makeContainer(346);
-    const scene = buildScene(resolve(spec, result, container, catalog), spec.query, result, catalog), value = scene.nodes.find((n) => n.key === 'value') as { text: string; note?: string };
+    const spec = { spec: 'view/0', title: 'Visitors', query: { ...query, metrics: ['unique_visitors_range'] }, layers: [] } as unknown as Spec;
+    const scene = buildScene(resolve(spec, result, catalog), spec.query, result, catalog), value = scene.nodes.find((n) => n.key === 'value') as { text: string; note?: string };
     expect(value.text).toBe('134');
     expect(value.note).toMatch(/consented visitors only/);
   });

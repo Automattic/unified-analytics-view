@@ -1,6 +1,6 @@
 import type { FitRule } from '@unified-analytics/core';
 
-/* The fit-rule compiler: the same data resolve() evaluates, as container queries.
+/* The fit-rule compiler: the same data core's fitTo() reads, as container queries.
  * Pure string work, so it runs and is tested with no DOM. */
 
 /** What else changes when a rule applies, which its data cannot say: layout, then rule id, then a selector
@@ -44,7 +44,8 @@ export function compileFitRules(rules: FitRule[], extras: FitExtras = {}): strin
     // A rule for one mark is for a view that holds it, which the figure says of itself. One with a `fallback` needs no
     // such word: the view beside the figure is there only where the rule is this view's (view.ts). The word is in
     // :where(), which weighs nothing: rules override one another by their order, and one for a mark is no heavier.
-    const fig = '.uav[data-layout="' + r.layout + '"]' + (r.mark && !r.fallback ? ':where([data-marks~="' + name(r.mark, r, 'the mark') + '"])' : '') + (r.keep ? ':not([data-keep~="' + name(r.keep, r, 'the keep entry') + '"])' : '');
+    // A rule for a kind of view (`has`) asks the same way, of what the figure says it has (core's hasOf).
+    const fig = '.uav[data-layout="' + r.layout + '"]' + (r.mark && !r.fallback ? ':where([data-marks~="' + name(r.mark, r, 'the mark') + '"])' : '') + (r.has ? ':where([data-has~="' + name(r.has, r, 'what the view has') + '"])' : '') + (r.keep ? ':not([data-keep~="' + name(r.keep, r, 'the keep entry') + '"])' : '');
     const more = extras[r.layout]?.[r.id] ?? {};
     const own = Object.entries(r.set ?? {}).map(([k, v]) => '--uav-' + name(k, r, 'the switch') + ': ' + name(v, r, 'the switch value') + ';').concat(more[''] ?? []).join(' ');
     const body = [

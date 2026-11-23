@@ -13,7 +13,7 @@ import { IS } from '../rove.ts';
  * a view box of that shape and the default preserveAspectRatio, so where a box leaves the part some other shape the
  * arcs sit in the middle of it and are not stretched. Paths are core's, drawn about the origin at a radius of 50.
  * The part is the `plot` container, which is what the `hole` rule asks about: the number sits over the hole of a
- * donut, and at the foot of a half circle. Sizes are the pixel painter's.
+ * donut, and at the foot of a half circle. Sizes are core's (sizes.ts).
  *
  * A circle's points are one arc for each of its rows, in the SVG that carries `data-hits`. Arcs that are no point of
  * their own lie in a second SVG under it, \`.uav-under\`: the whole ring behind a ring's value, and the arcs of a second
@@ -72,7 +72,7 @@ ${IN_BOX} {
   .uav[data-layout="radial"] :is(.uav-legend, .uav-legend-top) { flex: none; }
   .uav[data-layout="radial"]:not([data-keep~="guides"]) .uav-legend { ${LEGEND_SWAP.full} }
   .uav[data-layout="radial"][data-parts~="legend"]:not([data-keep~="guides"]) .uav-legend-top { ${LEGEND_SWAP.top} }
-  /* Seats keep 80 px of height under the full legend, the least place() builds them to, where arcs keep 64. */
+  /* Seats keep 80 px of height under the full legend, the least they are built to, where arcs keep 64. */
   .uav[data-layout="radial"] .uav-body:has(.uav-dots > [data-unit]) { --uav-legend-block: ${legendBlock(SEATS_LEAST / 2)}; }
 }`;
 

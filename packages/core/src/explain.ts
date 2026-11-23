@@ -1,9 +1,8 @@
-import { CONTAINER_RULES, makeContainer, unboundedContainer } from './container.ts';
-import { applies, type FitRule, type Room } from './fit.ts';
+import { CONTAINER_RULES } from './container.ts';
+import { fitTo, type FitRule, type Room } from './fit.ts';
 import { GUIDE_CHANNEL } from './guides.ts';
 import { customMarks } from './marks.ts';
-import { place } from './place.ts';
-import { PRESETS, expand, usesPrevious } from './presets.ts';
+import { PRESETS, expand, fills, usesPrevious } from './presets.ts';
 import { layoutOf, resolve } from './plan.ts';
 import { buildScene, layerKeys, measuresOf } from './scene.ts';
 import { baseOf } from './types.ts';
@@ -13,7 +12,7 @@ import type { Catalog, Layout, PresetLibrary, Result, Spec } from './types.ts';
  * and the lever that changes it, where the spec has one. A decision with no lever is a default, and the rules are
  * where it is fixed.
  *
- * It explains what `<ua-view>` does: the view planned once with no limits, the parts that plan has, and the fit rules
+ * It explains what a surface does, `<ua-view>` among them: the view planned once, the parts that plan has, and the fit rules
  * that hold at a given room. What the measured pass decides at the real size (labels thinned, the number's shorter
  * forms) is the element's to say: `UaView.explain()` adds it. */
 
@@ -52,7 +51,7 @@ export function explain(spec0: Spec, result: Result, catalog: Catalog, room?: Ex
   const spec = expand(spec0, presets), layers = spec.layers ?? [], q = spec.query;
   // A layer of a preset is named through it, as the preset's own layers[i].
   const at = (i: number) => (spec0.layers ? '' : 'use "' + spec0.use + '": ') + 'layers[' + i + ']';
-  const plan = resolve(spec0, result, unboundedContainer(), catalog, presets), scene = buildScene(plan, q, result, catalog);
+  const plan = resolve(spec0, result, catalog, CONTAINER_RULES, presets), scene = buildScene(plan, q, result, catalog);
   const out: Because[] = [];
 
   // A plan's layers are copies, with their roles: each is found again in the spec by what it is.
@@ -97,16 +96,12 @@ export function explain(spec0: Spec, result: Result, catalog: Catalog, room?: Ex
 
   // At this room: each fit rule of the layout that holds, and what it does to the parts the plan has.
   const custom = customMarks().get(plan.layout), rules = CONTAINER_RULES.fit.concat(custom ? custom.rules : []).filter((r) => r.layout === plan.layout);
-  const keep = new Set(spec.keep ?? []), marks = plan.layers.map((l) => l.mark);
-  const plot = room.plot !== undefined ? room.plot : (() => { const b = place(scene, makeContainer(room.inline, room.block)).plot; return b ? { inline: b.w, block: b.h } : null; })();
-  const rooms = { view: { inline: room.inline, block: room.block ?? null }, plot };
+  // Which rules hold is the reader's to say (fitTo), as it is for any surface. A plot nobody measured is asked nothing.
+  const rooms = { view: { inline: room.inline, block: room.block ?? null }, ...(room.plot !== undefined && { plot: room.plot }) };
+  const fit = fitTo(scene, rooms, rules, { keep: spec.keep ?? [], marks: plan.layers.map((l) => l.mark), fills: (use) => fills(use, q, presets) });
   const gone = new Set<string>(), placed = new Set<string>(), said = (r: FitRule) => 'rule "' + r.id + '" needs ' + need(r) + ' of the ' + r.container + ', and it has ' + has(rooms[r.container]);
-  for (const r of rules) {
-    if (r.mark && !marks.includes(r.mark)) continue;
-    // A rule on the plot holds when there is no plot left: what sits in it has gone with it.
-    const holds = applies(r, rooms) || (r.container === 'plot' && (!plot || gone.has('plot')));
-    if (!holds) continue;
-    if (r.keep && keep.has(r.keep)) {
+  for (const { rule: r, kept } of fit.held) {
+    if (kept) {
       out.push({ part: r.hide.filter((p) => parts.includes(p as never)).join(' ') || undefined, what: 'kept', from: 'keep', why: said(r), rule: r.id, lever: 'remove "' + r.keep + '" from keep to let it go here' });
       continue;
     }
@@ -129,6 +124,13 @@ export function explain(spec0: Spec, result: Result, catalog: Catalog, room?: Ex
     }
     // What a rule shows takes the place of what it hid, so it is said only where the rule hid something.
     if (acted) for (const p of r.show ?? []) if (!gone.has(p) && !out.some((b) => b.part === p && b.what === 'shown in its place')) { placed.add(p); out.push({ part: p, what: 'shown in its place', from: source(p).from, why: said(r), rule: r.id }); }
+  }
+  // A rule on the plot, where the room says nothing of the plot, is not asked. It is said so where the view has what
+  // the rule would take, so no reader takes its silence for the part staying.
+  if (room.plot === undefined) for (const r of rules) {
+    if (r.container !== 'plot' || (r.mark && !plan.layers.some((l) => l.mark === r.mark)) || fit.held.some((h) => h.rule === r)) continue;
+    const of = r.hide.filter((t) => (parts.includes(t as never) && !gone.has(t)) || plan.layers.some((l) => t === 'role:' + l.role));
+    if (of.length) out.push({ part: of.filter((t) => parts.includes(t as never)).join(' ') || undefined, what: 'not asked', from: 'the room', why: 'rule "' + r.id + '" needs ' + need(r) + ' of the plot, and the room says nothing of the plot: give its size as the room\'s "plot" to ask', rule: r.id });
   }
   // A part shown and then hidden is said once, as hidden: one the plan shows, and one a rule put in another's place.
   return { layout: plan.layout, entries: out.filter((b) => !((b.what === 'shown' || b.what === 'shown in its place') && gone.has(b.part!))) };

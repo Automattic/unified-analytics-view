@@ -73,7 +73,7 @@ describe('the cartesian layout\'s guides', () => {
       '  ' + lines + ' .uav-legend { display: none; }', '  ' + lines + ' .uav-labels { display: block; }', '  ' + lines + ' .uav-labels { display: grid; }', '}',
     ]);
     expect(compileFitRules(rules('legend-area'), { cartesian: cartesian.fit! })).toBe(compileFitRules(rules('legend'), { cartesian: cartesian.fit! }).replaceAll('"line"', '"area"').replaceAll('legend */', 'legend-area */'));
-    expect(CONTAINER_RULES.fit.filter((r) => r.layout === 'cartesian' && r.hide.includes('legend')).map((r) => [r.id, r.mark ?? 'any'])).toEqual([['legend', 'line'], ['legend-area', 'area'], ['labels', 'any']]);
+    expect(CONTAINER_RULES.fit.filter((r) => r.layout === 'cartesian' && r.hide.includes('legend') && !r.hide.includes('plot')).map((r) => [r.id, r.mark ?? 'any'])).toEqual([['legend', 'line'], ['legend-area', 'area'], ['labels', 'any']]);
   });
   it('gives both up with the axes, and with them the colours they were the key to', () => {
     const css = compileFitRules(CONTAINER_RULES.fit, { cartesian: cartesian.fit! });

@@ -124,19 +124,19 @@ export interface Guides {
   /** The second y axis, on the far side, where the layers measure in two units. */
   y2?: boolean;
   grid?: boolean;
-  /** On a band, `top` is the largest segment's label. On a split plot, `labels` is a label at the end of each line.
-   * On rows divided into series, `top` is one line that names the series with the most. */
-  legend?: 'full' | 'top' | 'labels';
-  /** Under a grid of cells: the steps of the colour scale, with its low and its high value. `strip` is the same steps, each a sliver. */
-  ramp?: boolean | 'strip';
+  /** The key to a view's series. Its shorter forms are a fit rule's to choose at a room: a label at the end of each
+   * line of a split plot, the one line that names the largest of a band, a circle or a divided row. */
+  legend?: boolean;
+  /** Under a grid of cells: the steps of the colour scale, with its low and its high value. */
+  ramp?: boolean;
   /** The labels a `text` layer sets on the points of a plot. */
   pointLabels?: boolean;
-  /** The key to the sizes of a plot's dots. `most` is its largest step alone. */
-  size?: boolean | 'most';
+  /** The key to the sizes of a plot's dots. */
+  size?: boolean;
   /** The headers over a row's columns, where it has more than one column of values. */
   columns?: boolean;
-  /** The labels round a circle that a dimension on `angle` divides: which slice is which. `few` is the ones with no rank, about four. */
-  rim?: boolean | 'few';
+  /** The labels round a circle that a dimension on `angle` divides: which slice is which. */
+  rim?: boolean;
   /** Under a `unit`'s glyphs: what one of them is worth. A scene has none where that is one. */
   unitKey?: boolean;
 }
@@ -150,62 +150,42 @@ export interface Spec {
 }
 export type PresetLibrary = Record<string, { layers: Layer[] }>;
 
-/* Container: wherever a view renders. It owns sizes, and its rules are the
- * durable behaviour a context hands to every container it holds. */
-export type ReductionId = 'drop-guides' | 'drop-secondary' | 'trim-rows' | 'collapse' | 'prose';
+/* The rules a context hands to every container it holds: the durable behaviour of the views in it. A container owns
+ * its own size, and no plan is told it. */
 export interface ContainerRules {
   /** The room each part needs, and what is given up without it. */
   fit: FitRule[];
-  /* Sizes the pixel scene is built to. */
+  /* The natural heights a surface builds a plot and a row to, in px. */
   axes: { height: number };
   bare: { height: number; numberWidth: number };
   rows: { rowHeight: number; gap: number };
   /** When the tldr value sits above the marks while there is room for both. */
   tldrValue: { above: 'instant' | 'always' };
-  order: ReductionId[];
-}
-export type PainterName = 'svg' | 'dots';
-export interface Container {
-  width: number;
-  height: number | null;
-  painter: PainterName;
-  cell: number;
-  rules: ContainerRules;
-  /** Metrics of the tldr value's face at this length and available width. */
-  display(len: number, avail: number, small?: boolean): { h: number; cell?: number };
-  displayWidth(len: number): number;
 }
 
-/* Plan: what will be drawn at this size, and what was dropped. */
+/* Plan: what a spec asks to have drawn, with no size. */
 /** The layouts core builds. A custom mark is laid out by its own code, under its own name, which so cannot be one of these. */
 export const LAYOUTS = ['cartesian', 'rows', 'band', 'radial', 'matrix', 'none', 'notice', 'prose'] as const;
 export type Layout = (typeof LAYOUTS)[number] | (string & {});
-export interface Reduction {
-  id: ReductionId;
-  state: 'not needed' | 'applied' | 'kept by the spec' | 'nothing to drop';
-}
 /** The part of a plan the scene builders read. */
 export interface PlanShape {
   layout: Layout;
   layers: Layer[];
   guides: Guides;
   tldrValue: boolean;
-  side: boolean;
-  rowLimit: number | null;
   share: boolean;
   text: string;
 }
 export interface Plan extends PlanShape {
   preset: string | null;
   layers: (Layer & { role: Role })[];
-  reductions: Reduction[];
+  /** What the spec asked for and the result has no data to draw: a comparison with no period before. */
   dropped: string[];
-  needs: { width: number; height: number };
 }
 
 /* Scene: a flat list of shapes with stable keys and paint tokens, in ratios.
  * Every node names its part, and its coordinates run 0 to 1 within that part's
- * box. A scene needs no size to exist. Pixel painters get theirs from place(). */
+ * box. A scene needs no size to exist. */
 export type Part = 'number' | 'plot' | 'x-axis' | 'y-axis' | 'y-axis-2' | 'labels' | 'columns' | 'rows' | 'band' | 'legend' | 'legend-top' | 'radial' | 'hole' | 'ramp' | 'notice'
   /* `points` holds the dots of a plot that sets one metric against another, and `point-labels` the labels on a plot's
    * points. Both lie over the plot and share its box. `size` is the key to the sizes of its dots. */
@@ -280,7 +260,7 @@ export interface CircleNode extends NodeBase { kind: 'circle'; pulse: boolean; x
   /** A dot of a grid: the two dimension values it stands at, as a cell's. It has no `row`. */
   pair?: [x: string, y: string];
 }
-/** One row of the `rows` part: the thing a painter keys and a reader chooses. It draws nothing itself, and place() leaves it out. */
+/** One row of the `rows` part: the thing a painter keys and a reader chooses. It draws nothing itself. */
 export interface RowNode extends NodeBase { kind: 'row'; row: string }
 /** Text in the number, rows, legend and notice parts is set in order and carries no position. In `labels` it sits beside the plot at height `t`.
  * In `point-labels` it sits on the point at `x` and `t`, and its `rank` is its place among them, the largest point first.
@@ -308,16 +288,10 @@ export interface ArcNode extends NodeBase { kind: 'arc'; a0: number; a1: number;
 export type SceneNode = RectNode | PathNode | LineNode | CircleNode | TextNode | ArcNode | RowNode;
 export interface Scene {
   layout: Layout;
-  /** The parts the plan shows. The number's nodes are in the scene either way, so a fit rule can show it in compensation.
-   * So are both forms of a band's legend, `legend` and `legend-top`, and of a split plot's, `legend` and `labels`, so a rule can swap them.
-   * place() draws only the parts named here. */
+  /** The parts the plan shows, with all the room they ask for. The number's nodes are in the scene either way, so a fit
+   * rule can show it in compensation. So are both forms of a band's legend, `legend` and `legend-top`, and of a split
+   * plot's, `legend` and `labels`, so a rule can swap them. Which of them show at a room is `fitTo`'s to say. */
   parts: Part[];
-  /** The number sits beside a bare plot. */
-  side?: boolean;
-  /** The keys the plan shows in their shorter form: the names round a rim thinned to the ones with no rank, a ramp as a
-   * thin strip, a key to sizes as its largest step. Every node is in the scene either way. This is for a painter with
-   * no fit rules to step a key down by: place() reads it, and the DOM's rules do the same without it. */
-  short?: Part[];
   /** Dimension values in order: the x domain, the rows or the segments. Of a circle: its segments, slices or rings. */
   rows?: string[];
   /** The colour dimension's values in its own order, where a plot is split into series. A series' paint is its place here. */
@@ -338,39 +312,4 @@ export interface Scene {
   aspect?: number;
   nodes: SceneNode[];
   text?: string;
-}
-
-/* Placed scene: the same nodes in pixels, for painters with no CSS. */
-interface PlacedBase {
-  key: string;
-  paint: string;
-  layer: 'data' | 'guide';
-  opacity?: number;
-  tx?: number;
-  ty?: number;
-  note?: string;
-}
-export interface PlacedRect extends PlacedBase { kind: 'rect'; x: number; y: number; w: number; h: number; rx: number }
-export interface PlacedPath extends PlacedBase { kind: 'path'; d: string | null; fill?: boolean; width?: number; dash?: string | null }
-export interface PlacedLine extends PlacedBase { kind: 'line'; x1: number; y1: number; x2: number; y2: number; width?: number; dash?: string }
-export interface PlacedCircle extends PlacedBase { kind: 'circle'; cx: number; cy: number; r: number; pulse: boolean }
-export interface PlacedText extends PlacedBase {
-  kind: 'text';
-  x: number;
-  y: number;
-  text: string;
-  anchor: 'start' | 'middle' | 'end';
-  baseline?: 'middle';
-  font: 'tick' | 'label' | 'value' | 'display';
-  h?: number;
-  cell?: number | undefined;
-  halo?: boolean;
-}
-export type PlacedNode = PlacedRect | PlacedPath | PlacedLine | PlacedCircle | PlacedText;
-export interface PlacedScene {
-  width: number;
-  height: number;
-  nodes: PlacedNode[];
-  plot?: { w: number; h: number };
-  text?: string | undefined;
 }

@@ -26,7 +26,8 @@ const base = server.resolvedUrls!.local[0]!;
 // Reduced motion: the element then draws each state at once, so what is taken is where it ends, not a step on the way.
 const browser = await chromium.launch(), context = await browser.newContext({ viewport: VIEWPORT, reducedMotion: 'reduce', deviceScaleFactor: 2 });
 
-export interface Plan { layout: string; parts: string[]; keep: string[]; marks: string[] }
+/** What the view plans, and what a fit rule may ask of its scene: `has` is core's hasOf, and `drawn` the parts the scene has anything for. A capture taken before the two were kept has neither. */
+export interface Plan { layout: string; parts: string[]; keep: string[]; marks: string[]; has?: string[]; drawn?: string[] }
 export interface Record { sample: string; plan?: Plan; theme: string; height: string; width: string; error?: string; measure: FrameMeasure; frame: string; parts: { [part: string]: string } }
 const records: Record[] = [];
 

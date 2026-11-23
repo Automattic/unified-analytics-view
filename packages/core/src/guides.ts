@@ -8,7 +8,7 @@ import type { Catalog, Channel, Guides, Layer, Layout, Part } from './types.ts';
  * layers must encode for it to have one.
  *
  * It says that a view has a guide. Which form the guide takes at a size, and when it goes, is the fit rules' to say
- * (fit.ts), and resolve() asks them. A guide that is built is added here, and the plan, explain() and the check on the
+ * (fit.ts), which fitTo() reads. A guide that is built is added here, and the plan, explain() and the check on the
  * fit rules have it from here. */
 
 export interface GuideView { layout: Layout; layers: Layer[]; catalog: Catalog }
@@ -63,7 +63,7 @@ export const GUIDES: Record<keyof Guides, Guide> = {
 export function guidesOf(layout: Layout, layers: Layer[], catalog: Catalog): Guides {
   if (customMarks().has(layout)) return { ramp: true, size: true };
   const view = { layout, layers, catalog }, out: Record<string, unknown> = {};
-  for (const [name, guide] of Object.entries(GUIDES)) if (guide.from(view)) out[name] = name === 'legend' ? 'full' : true;
+  for (const [name, guide] of Object.entries(GUIDES)) if (guide.from(view)) out[name] = true;
   return out as Guides;
 }
 

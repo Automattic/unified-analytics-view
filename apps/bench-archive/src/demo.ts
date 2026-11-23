@@ -1,4 +1,4 @@
-import { resolve, unboundedContainer, type Spec } from '@unified-analytics/core';
+import { resolve, type Spec } from '@unified-analytics/core';
 import { UaView, defineUaView, surfaceSheet } from '@unified-analytics/dom';
 import { catalog, runQuery, samples, type Scenario } from '@unified-analytics/fixtures';
 
@@ -149,7 +149,7 @@ function update() {
   for (const b of picks.children) b.setAttribute('aria-pressed', String(samples[(b as HTMLElement).dataset.sample!]!.spec === hero));
   try {
     const spec = ranged(hero, s.range), result = runQuery(spec.query, s.scenario);
-    $('prose').textContent = resolve(spec, result, unboundedContainer(), catalog).text;
+    $('prose').textContent = resolve(spec, result, catalog).text;
     note.className = 'note'; note.textContent = 'Valid. The range comes from the page, as it will from a panel.';
   } catch (e) {
     note.className = 'note error'; note.textContent = (e as Error).message;

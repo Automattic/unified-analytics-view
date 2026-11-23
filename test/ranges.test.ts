@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { expand, place, resolve, unboundedContainer, type Catalog, type PainterName, type Spec } from '@unified-analytics/core';
+import { CONTAINER_RULES, FIT_RULES, expand, resolve, type Catalog, type Room, type Spec } from '@unified-analytics/core';
 import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
 import { hitNodes } from '../packages/dom/src/keys.ts';
-import { at, err, run, validView as view } from './helpers.ts';
+import { at, err, run, shown, validView as view } from './helpers.ts';
 
 // Ranges and `tick` (docs/chart-coverage-plan.md, step 3): companion fields, a second end on a bar, a rule and an
 // area, a rule with fields, the tick, dots in a row's track, and paint by direction. Nothing here has a prototype to
@@ -14,9 +14,10 @@ const league = moreSamples.league!.spec;
 // What step 0 of docs/uncommon-coverage-plan.md added of these: dots, rules and ranged bars in a row's track, and a fan of two bands.
 const swept: Record<string, Spec> = { ...specs, ...Object.fromEntries(['cleveland', 'lollipop', 'tornado', 'fans'].map((k) => [k, moreSamples[k]!.spec])) };
 const marks = (nodes: any[]) => nodes.filter((n) => n.layer === 'data' && n.part !== 'number' && n.kind !== 'row' && n.kind !== 'text');
-const painters: PainterName[] = ['svg', 'dots'];
 const heights = [null, 300, 160, 100, 60, 40];
 const widths = [54, 80, 120, 170, 250, 290, 346, 500, 700];
+/** A bare plot's box, which a surface measures: the rules on the plot are asked nothing without one. It is as tall as the context builds it. */
+const BARE: Room = { inline: 92, block: CONTAINER_RULES.bare.height };
 
 describe('the fixture engine: companions', () => {
   it('returns a page\'s quantiles and the interval of its mean with the metric, as it states them', () => {
@@ -120,31 +121,29 @@ describe('presets', () => {
 
 describe('the sweep', () => {
   for (const [name, spec] of Object.entries(swept)) {
-    it(name + ': unique keys, no NaN, nothing taller than the container allows, and ratios from 0 to 1', () => {
-      for (const sc of scenarios) for (const p of painters) for (const h of heights) for (const w of widths) {
-        const where = [name, sc, p, w, h].join(' ');
-        const { plan, ratio, scene } = run(spec, w, h, sc, p);
-        const keys = scene.nodes.map((n) => n.key), all = ratio.nodes.map((n) => n.key);
-        expect(new Set(keys).size, 'duplicate keys: ' + where).toBe(keys.length);
-        expect(new Set(all).size, 'duplicate keys in the ratio scene: ' + where).toBe(all.length);
-        expect(JSON.stringify([scene, ratio], (_, v) => (typeof v === 'number' && isNaN(v) ? 'NaN' : v)), 'NaN: ' + where).not.toMatch(/NaN/);
-        if (h != null && plan.layout !== 'prose') expect(scene.height, 'too tall: ' + where).toBeLessThanOrEqual(h);
+    it(name + ': unique keys, no NaN, ratios from 0 to 1, and at every room parts the scene has', () => {
+      for (const sc of scenarios) for (const h of heights) for (const w of widths) {
+        const where = [name, sc, w, h].join(' ');
+        const { ratio, fit } = run(spec, w, h, sc);
+        const all = ratio.nodes.map((n) => n.key);
+        expect(new Set(all).size, 'duplicate keys: ' + where).toBe(all.length);
+        expect(JSON.stringify(ratio, (_, v) => (typeof v === 'number' && isNaN(v) ? 'NaN' : v)), 'NaN: ' + where).not.toMatch(/NaN/);
         for (const n of ratio.nodes as any[]) for (const f of ['x', 'x2', 'w', 'v', 'v0', 't', 't2']) if (n[f] != null) expect(n[f] >= 0 && n[f] <= 1, f + ': ' + where + ' ' + n.key).toBe(true);
-        // Placing changes no key and no order. It only leaves out what the size has no room for.
-        expect(all.filter((k) => keys.includes(k)), 'placed keys: ' + where).toEqual(keys);
-        // Nothing is placed outside the view.
-        for (const n of scene.nodes as any[]) for (const f of ['x', 'x1', 'x2', 'cx']) if (n[f] != null && n.kind !== 'text') expect(n[f] + (n.tx || 0) >= -0.001 && n[f] + (n.tx || 0) <= w + 0.001, f + ' outside: ' + where + ' ' + n.key).toBe(true);
+        expect(fit.parts.filter((p) => !ratio.nodes.some((n) => n.part === p)), 'parts with nothing in them: ' + where).toEqual([]);
       }
     });
-    it(name + ': resolves in every data state, and steps down to the number and then the prose', () => {
+    it(name + ': resolves in every data state, and steps down to the number', () => {
       for (const sc of scenarios) {
-        const layouts = [346, 250, 120, 10].map((w) => run(spec, w, null, sc).plan.layout), marks = run(spec, 700).plan.layout;
-        expect(layouts, sc).toEqual(sc === 'empty' ? ['notice', 'notice', 'none', 'prose'] : [marks, marks, 'none', 'prose']);
-        if (marks === 'cartesian') expect(run(spec, 250, null, sc).plan.dropped[0], sc).toBe(sc === 'empty' ? undefined : 'axes and grid (added the number to make up for them)');
-        // With room for everything, all that is missing is what there is no prior period to say.
+        const marks = run(spec, 700).plan.layout;
+        expect(run(spec, 346, null, sc).plan.layout, sc).toBe(sc === 'empty' ? 'notice' : marks);
+        // With room for everything no rule holds, and all that is missing is what there is no prior period to say.
+        expect(shown(run(spec, 700, null, sc)).rules, sc).toEqual([]);
         expect(run(spec, 700, null, sc).plan.dropped, sc).toEqual(sc === 'no-prior' && spec.query.compare ? ['comparison series (no prior data)'] : []);
-        const result = runQuery(spec.query, sc);
-        expect(resolve(spec, result, unboundedContainer(), catalog).dropped, sc).toEqual(sc === 'no-prior' && spec.query.compare ? ['comparison series (no prior data)'] : []);
+        expect(resolve(spec, runQuery(spec.query, sc), catalog).dropped, sc).toEqual(sc === 'no-prior' && spec.query.compare ? ['comparison series (no prior data)'] : []);
+        // A plot short of the room its axes need stands bare beside the number. A notice has no such rung.
+        if (marks === 'cartesian') expect(shown(run(spec, 250, null, sc)), sc).toMatchObject(sc === 'empty' ? { parts: ['notice'], set: {} } : { parts: ['number', 'plot'], set: { arrange: 'side' } });
+        // Under the room its marks need a view is its number, and so is a notice under its own.
+        expect(shown(run(spec, 120, null, sc)).parts, sc).toEqual(['number']);
       }
     });
   }
@@ -152,30 +151,24 @@ describe('the sweep', () => {
 
 describe('golden scenes', () => {
   const sizes: [number, number | null][] = [[346, null], [234, null], [346, 100]];
-  for (const name of Object.keys(swept)) for (const [w, h] of sizes) {
-    it(`${name} at ${w} by ${h ?? 'any'}`, () => expect(run(swept[name]!, w, h).scene).toMatchSnapshot());
+  for (const name of Object.keys(swept)) {
+    it(name, () => expect(run(swept[name]!, 346).ratio).toMatchSnapshot());
+    it(name + ', at each room', () => expect(sizes.map(([w, h]) => [w, h, shown(run(swept[name]!, w, h))])).toMatchSnapshot());
   }
 });
 
 describe('a second end in the plot', () => {
   it('a bar runs from one of the engine\'s values to another, and the scale holds both', () => {
-    const { ratio, scene, result } = run(box!, 346), r = result.rows[1]!, bar = at(ratio.nodes, 'context:bar:/blog/launch-notes');
+    const { ratio, result } = run(box!, 346), r = result.rows[1]!, bar = at(ratio.nodes, 'context:bar:/blog/launch-notes');
     // The most of any row is 2,600, so the scale is rounded to 3,000.
     expect(bar).toMatchObject({ kind: 'rect', part: 'plot', v0: (r['response_time@p25'] as number) / 3000, v: (r['response_time@p75'] as number) / 3000, row: '/blog/launch-notes', role: 'context' });
-    // In pixels the plot runs from 162 up to 10.
-    const px = at(scene.nodes, 'context:bar:/blog/launch-notes');
-    expect(px.y).toBeCloseTo(162 - 152 * 800 / 3000, 9);
-    expect(px.h).toBeCloseTo(152 * (800 - 430) / 3000, 9);
   });
   it('a rule with fields is a segment for each row, standing at the middle of its band', () => {
-    const { ratio, scene } = run(box!, 346), rule = at(ratio.nodes, 'context:rule:/blog/launch-notes'), bar = at(ratio.nodes, 'context:bar:/blog/launch-notes');
+    const { ratio } = run(box!, 346), rule = at(ratio.nodes, 'context:rule:/blog/launch-notes'), bar = at(ratio.nodes, 'context:bar:/blog/launch-notes');
     expect(rule).toMatchObject({ kind: 'line', part: 'plot', t: 180 / 3000, t2: 2350 / 3000, row: '/blog/launch-notes', paint: 'ink', layer: 'data', role: 'context' });
     expect(rule.x).toBeCloseTo(bar.x + bar.w / 2, 12);
     expect(rule.x2).toBe(rule.x);
     expect(rule.dash).toBe(undefined);
-    const px = at(scene.nodes, 'context:rule:/blog/launch-notes'), pb = at(scene.nodes, 'context:bar:/blog/launch-notes');
-    expect(px.x1).toBeCloseTo(pb.x + pb.w / 2, 9);
-    expect([px.x2, px.y1, px.y2].map((n) => +n.toFixed(6))).toEqual([+px.x1.toFixed(6), +(162 - 152 * 180 / 3000).toFixed(6), +(162 - 152 * 2350 / 3000).toFixed(6)]);
     // With one end it stands up from zero: the stem of a lollipop.
     const stem = run({ query: box!.query, layers: [{ mark: 'rule', encode: { x: 'page', y: 'response_time' } }, { mark: 'dot', encode: { x: 'page', y: 'response_time' } }] }, 346).ratio;
     expect(at(stem.nodes, 'reference:rule:/')).toMatchObject({ t: 0, t2: 412 / 800 });
@@ -191,7 +184,7 @@ describe('a second end in the plot', () => {
   });
   it('a row with either end missing has no mark', () => {
     const result = runQuery(box!.query), holed = { ...result, rows: result.rows.map((r, i) => (i === 1 ? { ...r, 'response_time@max': null } : i === 2 ? { ...r, 'response_time@p25': null } : r)) };
-    const { ratio } = run(box!, 346, null, 'typical', 'svg', { result: holed });
+    const { ratio } = run(box!, 346, null, 'typical', { result: holed });
     expect(ratio.nodes.filter((n) => n.key.startsWith('context:rule:')).length).toBe(7);
     expect(ratio.nodes.filter((n) => n.key.startsWith('context:bar:')).length).toBe(7);
     expect(ratio.nodes.filter((n) => n.key.startsWith('primary:tick:')).length).toBe(8);
@@ -200,11 +193,9 @@ describe('a second end in the plot', () => {
 
 describe('tick', () => {
   it('is a short stroke across its band at a value, and gives a plot a band scale as a bar does', () => {
-    const { ratio, scene } = run(box!, 346), tick = at(ratio.nodes, 'primary:tick:/blog/launch-notes'), bar = at(ratio.nodes, 'context:bar:/blog/launch-notes');
+    const { ratio } = run(box!, 346), tick = at(ratio.nodes, 'primary:tick:/blog/launch-notes'), bar = at(ratio.nodes, 'context:bar:/blog/launch-notes');
     expect(tick).toMatchObject({ kind: 'line', part: 'plot', t: 590 / 3000, t2: 590 / 3000, width: 2, paint: 'ink', row: '/blog/launch-notes', role: 'primary' });
     expect([tick.x, tick.x2 - tick.x]).toEqual([bar.x, bar.w]);
-    const px = at(scene.nodes, 'primary:tick:/blog/launch-notes'), pb = at(scene.nodes, 'context:bar:/blog/launch-notes');
-    expect([px.x1, px.x2, px.y1, px.y2].map((n) => +n.toFixed(6))).toEqual([pb.x, pb.x + pb.w, 162 - 152 * 590 / 3000, 162 - 152 * 590 / 3000].map((n) => +n.toFixed(6)));
     const alone = run({ query: box!.query, layers: [{ mark: 'tick', encode: { x: 'page', y: 'response_time@p50' } }] }, 346);
     expect(alone.ratio.scale).toBe('band');
     expect(hitNodes(alone.ratio).length).toBe(8);
@@ -216,7 +207,7 @@ describe('tick', () => {
 });
 
 describe('paint by direction and polarity', () => {
-  const paints = (spec: Spec, cat: Catalog = catalog) => { const { ratio, result } = run(spec, 700, null, 'typical', 'svg', { catalog: cat }); return { result, paints: ratio.nodes.filter((n) => n.kind === 'rect' && n.part === 'plot').map((n) => n.paint) }; };
+  const paints = (spec: Spec, cat: Catalog = catalog) => { const { ratio, result } = run(spec, 700, null, 'typical', { catalog: cat }); return { result, paints: ratio.nodes.filter((n) => n.kind === 'rect' && n.part === 'plot').map((n) => n.paint) }; };
   const turned = (m: string, polarity: 'up' | 'down' | 'none'): Catalog => ({ ...catalog, metrics: { ...catalog.metrics, [m]: { ...catalog.metrics[m]!, polarity } } });
   it('a bar whose end is below its start is bad and any other good, for a metric that is better when it rises', () => {
     const { result, paints: got } = paints(waterfall!);
@@ -270,8 +261,8 @@ describe('paint by direction and polarity', () => {
     });
     expect(new Set(ratio.nodes.map((n) => n.key)).size).toBe(ratio.nodes.length);
     // A metric that is better when it falls turns every piece, and one with no better way has one area in the layer's own paint.
-    expect(run(spec, 700, null, 'typical', 'svg', { catalog: turned('revenue', 'down') }).ratio.nodes.filter((n) => n.kind === 'path' && n.fill).map((n) => n.paint)).toEqual(pieces.map((n) => (n.paint === 'delta.good' ? 'delta.bad' : 'delta.good')));
-    expect(run(spec, 700, null, 'typical', 'svg', { catalog: turned('revenue', 'none') }).ratio.nodes.filter((n) => n.kind === 'path' && n.fill).map((n) => [n.key, n.paint])).toEqual([['context:area', 'series.1']]);
+    expect(run(spec, 700, null, 'typical', { catalog: turned('revenue', 'down') }).ratio.nodes.filter((n) => n.kind === 'path' && n.fill).map((n) => n.paint)).toEqual(pieces.map((n) => (n.paint === 'delta.good' ? 'delta.bad' : 'delta.good')));
+    expect(run(spec, 700, null, 'typical', { catalog: turned('revenue', 'none') }).ratio.nodes.filter((n) => n.kind === 'path' && n.fill).map((n) => [n.key, n.paint])).toEqual([['context:area', 'series.1']]);
     // With no paint it is the fan's band, whole. With no period before there is nothing to run from, and the layer goes.
     expect(run({ ...spec, layers: [{ ...spec.layers![0]!, paint: undefined }, spec.layers![1]!] }, 700).ratio.nodes.filter((n) => n.kind === 'path' && n.fill).map((n) => [n.key, n.paint])).toEqual([['context:area', 'series.1']]);
     expect(run(spec, 700, null, 'no-prior').plan.dropped).toEqual([]);
@@ -294,35 +285,35 @@ describe('paint by direction and polarity', () => {
 });
 
 describe('fit rules', () => {
+  /** The marks of the layers a room leaves drawn: those of no role a rule hides there. */
+  const left = (spec: Spec, w: number, plot: Room, sc: (typeof scenarios)[number] = 'typical') => { const r = run(spec, w, null, sc, { plot }), gone = shown(r).hidden; return r.plan.layers.filter((l) => !gone.includes('role:' + l.role)).map((l) => l.mark); };
   it('ranges are context and go with the secondary rule: a box plot at 180 px wide is its medians alone', () => {
     for (const sc of ['typical', 'no-prior'] as const) {
-      const { plan, ratio, scene } = run(box!, 180, null, sc);
-      expect(plan).toMatchObject({ layout: 'cartesian', side: true, dropped: ['axes and grid (added the number to make up for them)', 'context fill'] });
-      expect(plan.layers.map((l) => l.mark)).toEqual(['tick']);
-      expect(marks(ratio.nodes).map((n) => n.key)).toEqual(ratio.rows!.map((r) => 'primary:tick:' + r));
-      expect(marks(scene.nodes).every((n) => n.kind === 'line' && n.y1 === n.y2 && n.x2 > n.x1)).toBe(true);
-      expect(marks(scene.nodes).length).toBe(8);
+      const r = run(box!, 180, null, sc, { plot: BARE });
+      expect(shown(r)).toMatchObject({ parts: ['number', 'plot'], set: { arrange: 'side' }, hidden: expect.arrayContaining(['role:context']) });
+      expect(left(box!, 180, BARE, sc)).toEqual(['tick']);
+      expect(marks(r.ratio.nodes).filter((n) => n.role !== 'context').map((n) => n.key)).toEqual(r.ratio.rows!.map((row) => 'primary:tick:' + row));
     }
     expect(run(box!, 180, null, 'empty').plan.layout).toBe('notice');
   });
   it('the central mark stays in each: the bar of an error bar and of a candlestick, the line of a fan', () => {
-    expect([errors!, candlestick!, fan!, waterfall!].map((s) => run(s, 180).plan.layers.map((l) => l.mark))).toEqual([['bar'], ['bar'], ['line'], ['bar']]);
-    // The plot is 180 px wide from 346 down to 280, where the axes go.
-    expect(run(box!, 280).plan.layers.length).toBe(3);
+    expect([errors!, candlestick!, fan!, waterfall!].map((s) => left(s, 180, BARE))).toEqual([['bar'], ['bar'], ['line'], ['bar']]);
+    // The rule is on the plot's own box, 180 by 90, whatever the view has.
+    expect([{ inline: 180, block: 90 }, { inline: 179, block: 90 }, { inline: 180, block: 89 }].map((plot) => left(box!, 346, plot).length)).toEqual([3, 1, 1]);
+    // A plot nobody measured is asked nothing.
+    expect(shown(run(box!, 180)).hidden).not.toContain('role:context');
   });
-  it('a track beside its label has a rule of its own: the label\'s room and the track\'s, and the value\'s as it is measured', () => {
-    // 160 px by the rule, and 47 for the widest value, "4,820", and its 14 px.
-    expect([208, 207, 206].map((w) => run(dumbbell!, w).plan.layout)).toEqual(['rows', 'rows', 'none']);
-    expect(run(dumbbell!, 206).plan.needs.width).toBeCloseTo(73, 9);
-    expect(run(dumbbell!, 207).plan.needs.width).toBeCloseTo(160 + 5 * 6.6 + 14, 9);
+  it('a track beside its label has a rule of its own: the label\'s room and the track\'s', () => {
+    // 160 px by the rule. Under it the view is its number.
+    expect([160, 159].map((w) => shown(run(dumbbell!, w)).parts)).toEqual([['rows'], ['number']]);
     // The bar list is behind its label, and needs what it did.
     expect(run(moreSamples.funnel!.spec, 346).ratio.track).toBe(undefined);
   });
-  it('rows give nothing up by role: a short box trims rows, and each keeps its rule and both dots', () => {
-    const { plan, ratio } = run(dumbbell!, 346, 100);
-    expect(plan).toMatchObject({ layout: 'rows', rowLimit: 3, dropped: ['rows 4 to 8'] });
-    expect(plan.reductions.find((r) => r.id === 'drop-secondary')).toEqual({ id: 'drop-secondary', state: 'nothing to drop' });
-    expect(marks(ratio.nodes).map((n) => n.key.split(':').slice(0, 2).join(':'))).toEqual(Array(3).fill(['context:rule', 'comparison:dot', 'primary:dot']).flat());
+  it('rows give nothing up by role: no rule of a list names one, and each row keeps its rule and both dots', () => {
+    const r = run(dumbbell!, 346, 100);
+    expect(FIT_RULES.filter((f) => f.layout === 'rows').flatMap((f) => f.hide).filter((t) => t.startsWith('role:'))).toEqual([]);
+    expect(shown(r)).toMatchObject({ parts: ['rows'], hidden: [] });
+    expect(marks(r.ratio.nodes).slice(0, 9).map((n) => n.key.split(':').slice(0, 2).join(':'))).toEqual(Array(3).fill(['context:rule', 'comparison:dot', 'primary:dot']).flat());
   });
 });
 
@@ -336,8 +327,8 @@ describe('a row\'s track', () => {
     expect(at(ratio.nodes, 'primary:dot:/blog/launch-notes')).toMatchObject({ x: 2105 / top, paint: 'series.1', role: 'primary' });
     // The scale holds the second end and the previous period, not only the first metric: a row that fell from further out is inside it.
     const far = { ...result, rows: result.rows.map((row, i) => (i === 7 ? { ...row, 'pageviews@previous': 9640 } : row)) };
-    expect(at(run(dumbbell!, 346, null, 'typical', 'svg', { result: far }).ratio.nodes, 'comparison:dot:/contact').x).toBe(1);
-    expect(at(run(dumbbell!, 346, null, 'typical', 'svg', { result: far }).ratio.nodes, 'primary:dot:/').x).toBe(0.5);
+    expect(at(run(dumbbell!, 346, null, 'typical', { result: far }).ratio.nodes, 'comparison:dot:/contact').x).toBe(1);
+    expect(at(run(dumbbell!, 346, null, 'typical', { result: far }).ratio.nodes, 'primary:dot:/').x).toBe(0.5);
   });
   it('a row with no value before has its dot alone, and with no prior period every row has', () => {
     const { ratio } = run(dumbbell!, 346);
@@ -347,47 +338,32 @@ describe('a row\'s track', () => {
     expect(none.plan.layers.map((l) => l.mark)).toEqual(['dot', 'text', 'text']);
     expect(marks(none.ratio.nodes).length).toBe(8);
   });
-  it('stands beside the label where its marks are read by their place, and place() sets it between the label and the value', () => {
-    const { ratio, scene } = run(dumbbell!, 346), px = (k: string) => at(scene.nodes, k);
-    expect(ratio.track).toBe('beside');
-    // The label has 14 characters at most, and the value's column 47 px. A mark keeps 4 px inside each end of the track.
-    const from = 8 + 14 * 6.6 + 12, to = 346 - 47 - 4;
-    expect(px('primary:dot:/')).toMatchObject({ kind: 'circle', r: 3, cy: 14 });
-    expect(px('primary:dot:/').cx).toBeCloseTo(to, 9);
-    expect(px('context:rule:/pricing')).toMatchObject({ kind: 'line', y1: 46, y2: 46 });
-    expect(px('context:rule:/pricing').x1).toBeCloseTo(from + (to - from) * 2310 / 4820, 9);
-    expect(px('context:rule:/pricing').x2).toBeCloseTo(from + (to - from) * 2960 / 4820, 9);
-    expect(px('primary:text:/blog/analytics-without-cookies')).toMatchObject({ x: 8, text: '/blog/analyti…' });
-    expect(px('primary:text#2:/')).toMatchObject({ x: 338, anchor: 'end' });
-    expect(scene.height).toBe(8 * 28 + 7 * 4);
-    // No mark lies under a label or a value.
-    for (const n of marks(scene.nodes)) expect(Math.min(n.cx ?? n.x1, n.x2 ?? Infinity)).toBeGreaterThanOrEqual(from - 0.001);
+  it('stands beside the label where its marks are read by their place', () => {
+    expect(run(dumbbell!, 346).ratio.track).toBe('beside');
   });
   it('a bar takes a second end, runs from one to the other and with paint: "direction" is painted by which way it goes', () => {
     const plain: Spec = { query: dumbbell!.query, layers: [{ mark: 'bar', encode: { y: 'page', x: 'pageviews@previous', x2: 'pageviews' } }, { mark: 'text', encode: { y: 'page', text: 'page' } }] };
     const moved: Spec = { ...plain, layers: [{ ...plain.layers![0]!, paint: 'direction' }, plain.layers![1]!] };
     expect(new Set(run(plain, 346).ratio.nodes.filter((n) => n.kind === 'rect').map((n) => n.paint))).toEqual(new Set(['series.1']));
-    const { ratio, scene } = run(moved, 346), bars = ratio.nodes.filter((n) => n.kind === 'rect') as any[];
+    const { ratio } = run(moved, 346), bars = ratio.nodes.filter((n) => n.kind === 'rect') as any[];
     expect(bars.length).toBe(7);
     expect(bars[1]).toEqual({ key: 'primary:bar:/pricing', part: 'rows', kind: 'rect', v: 2960 / 4820, v0: 2310 / 4820, row: '/pricing', paint: 'delta.good', layer: 'data', role: 'primary' });
     expect(bars.map((b) => b.paint)).toEqual(['delta.good', 'delta.good', 'delta.good', 'delta.bad', 'delta.bad', 'delta.good', 'delta.bad']);
-    // Beside its label a bar is a band through the middle of the row, and nothing is behind it to tint for.
-    expect(at(scene.nodes, 'primary:bar:/pricing')).toMatchObject({ y: 32 + 8, h: 12 });
+    // Beside its label nothing is behind a bar to tint for.
     expect(bars.every((b) => b.opacity === undefined)).toBe(true);
   });
   it('a tick stands across the row at its value, and one that is a reference at the metric\'s catalog target', () => {
-    const { ratio, scene, result } = run(bullet!, 346), top = catalog.metrics.signups!.target!;
+    const { ratio, result } = run(bullet!, 346), top = catalog.metrics.signups!.target!;
     expect(result.rows.map((r) => r.signups)).toEqual([158, 124, 21]);
     // The track holds the metric's whole domain since the range is drawn behind the marks (uncommon plan, step 4): it ran to the target, the most there was.
     const [, most] = catalog.metrics.signups!.domain!;
     expect(at(ratio.nodes, 'reference:tick:Mobile')).toEqual({ key: 'reference:tick:Mobile', part: 'rows', kind: 'line', x: top / most, x2: top / most, t: 0, t2: 1, row: 'Mobile', paint: 'ink', width: 2, layer: 'data', role: 'reference' });
     expect(at(ratio.nodes, 'primary:bar:Mobile')).toMatchObject({ v: 124 / most, paint: 'series.1' });
-    expect(at(scene.nodes, 'reference:tick:Mobile')).toMatchObject({ kind: 'line', y1: 32 + 28, y2: 32 });
     // A tick of its own value, and a metric with no target: no mark, and no error.
     const own: Spec = { query: bullet!.query, layers: [{ mark: 'tick', encode: { y: 'device', x: 'signups' } }, { mark: 'text', encode: { y: 'device', text: 'device' } }] };
     expect(marks(run(own, 346).ratio.nodes).map((n) => n.x)).toEqual([1, 124 / 158, 21 / 158]);
     const bare: Catalog = { ...catalog, metrics: { ...catalog.metrics, signups: { label: 'Sign-ups', unit: 'count', polarity: 'up' } } };
-    expect(marks(run(bullet!, 346, null, 'typical', 'svg', { catalog: bare }).ratio.nodes).map((n) => n.kind)).toEqual(['rect', 'rect', 'rect']);
+    expect(marks(run(bullet!, 346, null, 'typical', { catalog: bare }).ratio.nodes).map((n) => n.kind)).toEqual(['rect', 'rect', 'rect']);
   });
   it('the catalog\'s bands are drawn behind the marks, as a guide: the marks are the bar and the tick, as they were', () => {
     expect(catalog.metrics.signups!.bands).toEqual([200, 400]);
@@ -402,17 +378,13 @@ describe('a row\'s track', () => {
 
 describe('the league table\'s rank', () => {
   it('is a column from the engine\'s companion, set before the label', () => {
-    const { ratio, scene, plan } = run(league, 346);
+    const { ratio, plan } = run(league, 346);
     expect(plan.dropped).toEqual([]);
     expect(ratio.nodes.filter((n) => n.key.startsWith('context:text:')).map((n) => (n as any).text)).toEqual(['1', '2', '3', '4', '5', '6', '7', '8']);
     expect(at(ratio.nodes, 'context:text:/pricing')).toMatchObject({ part: 'rows', font: 'label', anchor: 'start', role: 'context' });
     expect(at(ratio.nodes, 'context:text:/pricing').rank).toBe(undefined);
-    // The rank takes one character and 8 px, and the label starts after it.
-    expect(at(scene.nodes, 'context:text:/pricing')).toMatchObject({ x: 8, text: '2' });
-    expect(at(scene.nodes, 'primary:text:/pricing')).toMatchObject({ x: 8 + 6.6 + 8, text: '/pricing' });
     expect(ratio.track).toBe(undefined);
-    // It stays in a short box, where rows are trimmed, and with no prior period.
-    expect(run(league, 346, 100).ratio.nodes.filter((n) => n.key.startsWith('context:text:')).length).toBe(2);
+    // It stays with no prior period.
     expect(run(league, 346, null, 'no-prior').ratio.nodes.filter((n) => n.key.startsWith('context:text:')).length).toBe(8);
   });
   it('is the engine\'s to give: with no compare the fixture returns none, and the error says so', () => {
@@ -432,6 +404,5 @@ describe('tldr prose for a metric with a range', () => {
     expect(text(waterfall!)).toBe('Net subscribers: 180 in the last 28 days.');
     expect(text(dumbbell!)).toBe('Top pages by page views, last 28 days: / (4,820), /pricing (2,960), /blog/launch-notes (2,105).');
     expect(text(box!, 'empty')).toBe('Response time: nothing recorded in the last 28 days.');
-    expect(run(box!, 10).plan).toMatchObject({ layout: 'prose', text: text(box!) });
   });
 });

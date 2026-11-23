@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { expand, place, type PathNode, type Result, type Spec } from '@unified-analytics/core';
+import { CONTAINER_RULES, expand, type PathNode, type Result, type Room, type Spec } from '@unified-analytics/core';
 import { catalog, moreSamples, runQuery } from '@unified-analytics/fixtures';
-import { errOf, run as runAt, startingWith as of } from './helpers.ts';
+import { errOf, run as runAt, shown, startingWith as of } from './helpers.ts';
 
 // Step 0 of docs/uncommon-coverage-plan.md: the Uncommon types that today's marks already say, each as a sample, and
 // what running them found (section 7 of that note). The samples are swept, and have their golden scenes, with the
@@ -9,7 +9,11 @@ import { errOf, run as runAt, startingWith as of } from './helpers.ts';
 // and where the grammar stops short of it. A fact marked "for step N" is a hole that step is to close, held so that
 // closing it is a change made on purpose.
 const S = (name: string) => moreSamples[name]!.spec;
-const run = (spec: Spec, w = 700, result?: Result) => runAt(spec, w, null, 'typical', 'svg', { result });
+const run = (spec: Spec, w = 700, result?: Result, plot?: Room) => runAt(spec, w, null, 'typical', { result, plot });
+/** A bare plot's box, which a surface measures: the rules on the plot are asked nothing without one. It is as tall as the context builds it. */
+const BARE: Room = { inline: 124, block: CONTAINER_RULES.bare.height };
+/** The roles a room hides. */
+const roles = (r: ReturnType<typeof run>) => shown(r).hidden.filter((t) => t.startsWith('role:'));
 const err = (spec: Spec, result?: Result) => errOf(() => run(spec, 700, result));
 const paths = (nodes: { kind: string }[]) => nodes.filter((n): n is PathNode => n.kind === 'path');
 
@@ -96,7 +100,7 @@ describe('dots and stems in rows: Cleveland dot plot, ordered dot plot, lollipop
     // Step 4: written from the number it is the same stroke, its two ends named the other way round. It was refused.
     const back = of<{ x: number; x2: number }>(run(from({ y: 'channel', x: 1000, x2: 'visitors' })).ratio.nodes, 'context:rule:');
     expect(back.map((s) => [s.x2, s.x])).toEqual(stems.map((s) => [s.x, s.x2]));
-    expect(run(from({ y: 'channel', x: 1000, x2: 'visitors' })).scene.nodes.map((n) => ({ ...n, x1: 0, x2: 0 }))).toEqual(run(from({ y: 'channel', x: 'visitors', x2: 1000 })).scene.nodes.map((n) => ({ ...n, x1: 0, x2: 0 })));
+    expect(run(from({ y: 'channel', x: 1000, x2: 'visitors' })).ratio.nodes.map((n) => ({ ...n, x: 0, x2: 0 }))).toEqual(run(from({ y: 'channel', x: 'visitors', x2: 1000 })).ratio.nodes.map((n) => ({ ...n, x: 0, x2: 0 })));
   });
   it('the same marks stand on an axis: a stem up from zero under each dot', () => {
     const up: Spec = { query: S('lollipop').query, layers: [{ mark: 'rule', encode: { x: 'channel', y: 'visitors' }, role: 'context' }, { mark: 'dot', encode: { x: 'channel', y: 'visitors' } }] };
@@ -107,18 +111,16 @@ describe('dots and stems in rows: Cleveland dot plot, ordered dot plot, lollipop
 
 describe('bars in rows: tornado, bullet', () => {
   it('a tornado is two bars a row that meet at zero, the loss to one side and the gain to the other', () => {
-    const { ratio, scene, plan } = run(S('tornado'), 346), low = of<{ v: number; v0: number; paint: string }>(ratio.nodes, 'primary:bar:'), high = of<{ v: number; v0: number; paint: string }>(ratio.nodes, 'primary:bar#2:');
+    const { ratio, plan } = run(S('tornado'), 346), low = of<{ v: number; v0: number; paint: string }>(ratio.nodes, 'primary:bar:'), high = of<{ v: number; v0: number; paint: string }>(ratio.nodes, 'primary:bar#2:');
     const zero = 6200 / (6200 + 7800);
     expect(ratio.track).toBe('beside');
     // Each runs from zero, which is a number on its first end, out to its value.
     for (const [i, n] of low.entries()) { expect(n.v0).toBeCloseTo(zero, 12); expect(high[i]!.v0).toBeCloseTo(zero, 12); expect(n.v).toBeLessThan(zero); expect(high[i]!.v).toBeGreaterThan(zero); }
     expect([low[0]!.v, high[0]!.v]).toEqual([0, 1]);
     expect([...new Set(low.map((n) => n.paint)), ...new Set(high.map((n) => n.paint))]).toEqual(['delta.bad', 'delta.good']);
-    const px = (key: string) => scene.nodes.find((n) => n.key === key) as unknown as { x: number; w: number };
-    expect(px('primary:bar:Traffic').x + px('primary:bar:Traffic').w).toBeCloseTo(px('primary:bar#2:Traffic').x, 9);
     // There is no total of effects, so the number is a dash.
     expect(plan.text).toBe('Top factors by effect on revenue, last 28 days: Conversion rate ($800), Traffic ($250), Average order ($250).');
-    expect(run(S('tornado'), 100).scene.nodes.find((n) => n.key === 'value')).toMatchObject({ text: '–' });
+    expect(ratio.nodes.find((n) => n.key === 'value')).toMatchObject({ text: '–' });
   });
   it('a bar with two ends and no paint is in its layer\'s own: the rule that painted every such bar by direction is gone', () => {
     const plain: Spec = { ...S('tornado'), layers: S('tornado').layers!.map(({ paint: _paint, ...l }) => l) }, { ratio } = run(plain);
@@ -174,10 +176,10 @@ describe('lines and areas: Pareto, sparkline, fan, streamgraph, slopegraph, cumu
   });
   it('a sparkline is a line where there is no room for its axes: bare, beside the number', () => {
     const wide = run(S('sparkline'), 346), narrow = run(S('sparkline'), 234);
-    expect(wide.ratio.parts).toEqual(['y-axis', 'plot', 'x-axis']);
-    expect([narrow.ratio.parts, narrow.ratio.side, narrow.scene.height]).toEqual([['number', 'plot'], true, 46]);
-    expect(narrow.ratio.nodes.filter((n) => n.part === 'plot').map((n) => n.key)).toEqual(['primary:line', 'primary:line:partial']);
-    expect(narrow.plan.dropped).toEqual(['axes and grid (added the number to make up for them)']);
+    expect(shown(wide)).toMatchObject({ parts: ['y-axis', 'plot', 'x-axis'], set: {} });
+    expect(shown(narrow)).toMatchObject({ parts: ['number', 'plot'], set: { arrange: 'side' } });
+    expect(narrow.fit.hidden).toEqual(expect.arrayContaining(['x-axis', 'y-axis', 'grid']));
+    expect(narrow.ratio.nodes.filter((n) => n.part === 'plot' && n.layer === 'data').map((n) => n.key)).toEqual(['primary:line', 'primary:line:partial']);
   });
   it('a fan of two bands is two areas, one inside the other, about the line', () => {
     const { ratio, plan } = run(S('fans'), 346), [outer, inner, line] = paths(ratio.nodes) as [PathNode, PathNode, PathNode];
@@ -186,7 +188,8 @@ describe('lines and areas: Pareto, sparkline, fan, streamgraph, slopegraph, cumu
     expect([outer.opacity, inner.opacity, outer.paint, inner.paint]).toEqual([0.14, 0.14, 'series.1', 'series.1']);
     // The sentence says the first range the layers give, which is the wider.
     expect(plan.text).toBe('Response time: 436ms in the last 28 days. Between 199ms and 631ms across 28 days.');
-    expect(run(S('fans'), 234).plan.dropped).toEqual(['axes and grid (added the number to make up for them)', 'context fill']);
+    // Bare, the bands go and the line is left: a bare plot is short of what the layers about the central mark need.
+    expect(roles(run(S('fans'), 234, undefined, BARE))).toEqual(['role:context']);
   });
   it('a streamgraph is areas stacked about the middle, read by how thick each is: it has no value axis and no grid', () => {
     const { ratio } = run(S('streamgraph'), 346), areas = paths(ratio.nodes).filter((n) => !n.note), first = areas[0]!, last = areas[areas.length - 1]!;
@@ -205,11 +208,12 @@ describe('lines and areas: Pareto, sparkline, fan, streamgraph, slopegraph, cumu
     expect(lines.map((n) => [n.key, n.points.length])).toEqual(['Search', 'Direct', 'Social', 'AI assistants', 'Email', 'Other'].map((s) => ['primary:line:' + s, 2]));
     expect(lines.every((n) => n.points[0]!.x === 0 && n.points[1]!.x === 1)).toBe(true);
     expect(of<{ text: string }>(ratio.nodes, 'xtick:').map((n) => n.text)).toEqual(['Sep 21', 'Sep 28']);
-    expect(ratio.parts).toEqual(['y-axis', 'plot', 'labels', 'x-axis']);
+    // At 300 px the legend has given way to a name at each line's end.
+    expect(shown(run(S('slopegraph'), 300))).toMatchObject({ parts: ['y-axis', 'plot', 'x-axis', 'labels'], hidden: [] });
     expect(of<{ text: string }>(ratio.nodes, 'label:').map((n) => n.text)).toEqual(lines.map((n) => n.series));
     expect(plan.text).toBe('Search is the largest channel at 43% of visitors in the last 14 days, and leads on all 2 weeks.');
-    // Two points have no middle, and the plan says it gave one up.
-    expect(plan.dropped).toEqual(['the legend (kept a label at the end of each line)', 'the middle date label']);
+    // Two points have no middle, so the rule that takes the middle date has none to take.
+    expect(of<{ rank?: number }>(ratio.nodes, 'xtick:').some((n) => n.rank)).toBe(false);
   });
   it('two days are no slopegraph: the range ends on the unfinished day, so each line is a point and a dashed stroke', () => {
     const days: Spec = { ...S('slopegraph'), query: { ...S('slopegraph').query, by: ['date.day', 'channel'], range: '2d' }, layers: [{ mark: 'line', encode: { x: 'date.day', y: 'visitors', color: 'channel' } }] };
@@ -249,7 +253,7 @@ describe('what a line and an area take beyond the trend: connected scatterplot, 
     // The path through time: where it set out and where the last finished day left it.
     expect(plan.text).toBe('From Sep 8 to Oct 4, visitors went from 416 to 310 and sign-ups from 15 to 9. Sep 25 is highest on both.');
     // No bare form, as any plot of points: below the room its axes need it is the number.
-    expect([run(S('connected'), 234).plan.layout, run(S('connected'), 234).plan.dropped]).toEqual(['none', ['all marks (kept the number)']]);
+    expect(shown(run(S('connected'), 234)).parts).toEqual(['number']);
   });
   it('an ECDF is a line of the share held so far, stepped over the bins, on a scale that runs to the whole', () => {
     const { ratio, result } = run(S('ecdf'), 346), [line] = paths(ratio.nodes);
@@ -263,7 +267,8 @@ describe('what a line and an area take beyond the trend: connected scatterplot, 
     expect([at[0]![0], at[31]]).toEqual([0, [100, 0]]);
     at.forEach((c, i) => { if (i) expect(c[0] === at[i - 1]![0] || c[1] === at[i - 1]![1], String(i)).toBe(true); });
     expect(of<{ text: string }>(ratio.nodes, 'ytick:').map((n) => n.text)).toEqual(['0%', '20%', '40%', '60%', '80%', '100%']);
-    expect(run(S('ecdf'), 234).ratio.nodes.filter((n) => n.part === 'plot').map((n) => n.key)).toEqual(['primary:line']);
+    expect(shown(run(S('ecdf'), 234)).parts).toEqual(['number', 'plot']);
+    expect(ratio.nodes.filter((n) => n.part === 'plot' && n.layer === 'data').map((n) => n.key)).toEqual(['primary:line']);
   });
   it('a bump chart is a line for each page by its place in each week, first at the top', () => {
     const { ratio, plan } = run(S('bump'), 346), lines = paths(ratio.nodes);
@@ -273,7 +278,7 @@ describe('what a line and an area take beyond the trend: connected scatterplot, 
     expect(ratio.series).toEqual(lines.map((n) => n.series));
     expect(plan.text).toBe('In the last 28 days, / is first by visitors on all 4 weeks. Places changed along the way, and each page ended where it began.');
     // Bare, the lines still cross where the places changed.
-    expect(run(S('bump'), 234).ratio.parts).toEqual(['number', 'plot']);
+    expect(shown(run(S('bump'), 234)).parts).toEqual(['number', 'plot']);
   });
   it('a difference chart is the area between revenue and the period before, a gain where it is ahead and a loss where it is behind', () => {
     const { ratio, plan } = run(S('difference'), 700), areas = paths(ratio.nodes).filter((n) => n.fill);
@@ -287,7 +292,7 @@ describe('what a line and an area take beyond the trend: connected scatterplot, 
     expect([paths(alone.ratio.nodes).map((n) => n.key), alone.plan.dropped, alone.plan.text]).toEqual([['primary:line', 'primary:line:partial'], ['comparison series (no prior data)'], 'Revenue: $63.5k in the last 28 days, with no prior period to compare.']);
     expect(expand({ ...S('difference'), query: { ...S('difference').query, compare: undefined } }).layers!.map((l) => l.mark)).toEqual(['line']);
     // Short of room the fill and the period before go together, and the line is left beside the number.
-    expect(run(S('difference'), 234).plan.dropped).toEqual(['axes and grid (added the number to make up for them)', 'context fill, comparison series']);
+    expect(roles(run(S('difference'), 234, undefined, BARE))).toEqual(['role:comparison', 'role:context']);
   });
   it('the spaghetti sample is its preset: a line for each value of the split, by detail', () => {
     expect(expand(S('spaghetti')).layers).toEqual([{ mark: 'line', encode: { x: 'date.day', y: 'visitors', detail: 'country' } }]);
@@ -309,7 +314,8 @@ describe('points and text: embedding scatter, stem-and-leaf', () => {
     expect(['xtick:', 'ytick:'].map((k) => of<{ text: string }>(ratio.nodes, k).map((n) => n.text))).toEqual([['-1', '-0.5', '0', '0.5', '1'], ['-1', '-0.5', '0', '0.5', '1']]);
     expect(plan.text).toBe('Across 24 search terms in the last 28 days, the range of first component is -0.7 to 0.73 and of second component is -0.64 to 0.65. getting started is highest on first component and sso setup on second component.');
     // A place has no total, so what is left where the plot has no room is a dash, over a note that calls the first row the top one.
-    expect(run(S('embedding'), 234).scene.nodes.map((n) => [n.key, (n as { text?: string }).text])).toEqual([['value', '–'], ['sub', 'Top: getting started']]);
+    expect(ratio.nodes.filter((n) => n.part === 'number').map((n) => [n.key, (n as { text?: string }).text])).toEqual([['value', '–'], ['sub', 'Top: getting started']]);
+    expect(shown(run(S('embedding'), 234)).parts).toEqual(['number']);
   });
   it('its points are coloured by a second dimension with that one on color and the points\' own on detail; with neither a text layer nor detail to name them, they are refused', () => {
     const q = { ...S('embedding').query, by: ['term', 'intent'] }, dot = { mark: 'dot' as const, encode: { x: 'embed_x', y: 'embed_y', color: 'intent' } };
@@ -324,21 +330,20 @@ describe('points and text: embedding scatter, stem-and-leaf', () => {
     expect(ratio.parts).toEqual(['y-axis', 'plot', 'points', 'point-labels', 'x-axis', 'legend']);
   });
   it('a stem-and-leaf display is two texts a row: the stem, and its leaves set from one place', () => {
-    const { ratio, scene } = run(S('stem'), 346), leaves = of<{ x: number; text: string }>(scene.nodes, 'primary:text#2:');
+    const { ratio } = run(S('stem'), 346), leaves = of<{ anchor: string; text: string }>(ratio.nodes, 'primary:text#2:');
     expect(ratio.parts).toEqual(['rows']);
-    expect(of<{ text: string }>(scene.nodes, 'primary:text:').map((n) => n.text)).toEqual(['0', '1', '2', '3', '4', '5', '6']);
+    expect(of<{ text: string }>(ratio.nodes, 'primary:text:').map((n) => n.text)).toEqual(['0', '1', '2', '3', '4', '5', '6']);
     expect(leaves.map((n) => n.text.split(' ').length)).toEqual([5, 9, 12, 7, 4, 2, 1]);
-    expect(new Set(leaves.map((n) => n.x)).size).toBe(1);
-    expect(leaves[0]!.x).toBeGreaterThan(8 + 6.6);
+    // Each is set from its start, so the leaves line up down the list.
+    expect(new Set(leaves.map((n) => n.anchor))).toEqual(new Set(['start']));
   });
-  it('leaves are a companion of the dimension: as one of a metric a string is refused, and short of room they are cut', () => {
+  it('leaves are a companion of the dimension: as one of a metric a string is refused', () => {
     const stem = S('stem'), result = runQuery(stem.query), wrong = { ...result, rows: result.rows.map((r) => ({ ...r, 'requests@leaves': r['load_stem@leaves']! })) };
     expect(err({ ...stem, layers: [stem.layers![0]!, { mark: 'text', encode: { y: 'load_stem', text: 'requests@leaves' } }] }, wrong))
       .toBe('The result has "requests@leaves": "4 6 7 8 9" in row 1, and a metric\'s value is a finite number or null. Send null from the query layer where there is no figure: it is drawn as a gap and written as a dash.');
-    // For step 4: a row's last label is clipped to its room, and a leaf that is cut is a request not shown.
+    // Its marks' rule needs the label's 90 px, so at 120 the rows are still there.
     const narrow = run(stem, 120);
-    expect(narrow.plan.layout).toBe('rows');
-    expect(of<{ text: string }>(narrow.scene.nodes, 'primary:text#2:').map((n) => n.text)[2]).toMatch(/…$/);
+    expect(shown(narrow).parts).toEqual(['rows']);
     // The sentence ranks rows that are in the dimension's own order.
     expect(narrow.plan.text).toBe('Top whole seconds by requests, last 28 days: 2 (12), 1 (9), 3 (7).');
   });

@@ -1,4 +1,4 @@
-import { BARE_PAD, PLOT_TOP, POINT_INSET, SHORT_PLOT, X_AXIS_BLOCK, type LineNode, type PathNode, type RectNode, type SceneNode, type TextNode } from '@unified-analytics/core';
+import { BARE_PAD, PLOT_TOP, POINT_INSET, X_AXIS_BLOCK, type LineNode, type PathNode, type RectNode, type SceneNode, type TextNode } from '@unified-analytics/core';
 import { ensure, ensureSvg, keyed, prop, text } from '../dom.ts';
 import { paintAxes, thinAxis } from '../chrome/axes.ts';
 import { SPLIT_PLAIN, paintLegend } from '../chrome/legend.ts';
@@ -20,7 +20,7 @@ import { paintUnitKey } from '../chrome/unit.ts';
  * A second unit's axis and the labels at the line ends are columns on the far side, each as wide as its content and
  * no wider than nothing when it is empty or hidden. The legend of a split plot is a row under it all.
  * The height stated is the plot's and not the body's (--uav-plot-block, not --uav-body-block), so a legend adds its own
- * lines to a view of natural height, as place() adds them. What comes off it is the 10 px above the plot and the x axis,
+ * lines to a view of natural height. What comes off it is the 10 px above the plot and the x axis,
  * which is 22 px where a tick is 11 px and follows the tick's face from there (--uav-x-axis-block, view.ts).
  * In a box the plot takes what is left, and the legend's lines come out of it. */
 const css = `
@@ -106,10 +106,6 @@ export const cartesian: LayoutPainter = {
     marks: NUMBER_ALONE,
     ...POINTS_FIT,
   },
-  // ponytail: no rule in core carries the 120 px under which place() drops ranked y ticks, and the y axis sits outside the
-  // plot container, so this asks the view: 120 for the plot, 10 above it and 22 for the x axis. Wrong when the number
-  // is above the plot. A `plot` rule in core, and the y axis inside that container, would say it properly.
-  rules: () => [{ id: 'y-ticks', layout: 'cartesian', container: 'view', needs: { block: SHORT_PLOT + PLOT_TOP + X_AXIS_BLOCK }, hide: ['y-tick.ranked'] }],
 
   // X labels that would collide, by their real widths (chrome/axes.ts).
   // ponytail: a label at a line's end is set from where it is going, at once, while its line morphs there.

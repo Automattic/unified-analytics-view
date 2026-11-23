@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { PRESETS, customMarks, customPresets, expand, makeContainer, place, registerMark, registerPreset, resolve, seqScale } from '@unified-analytics/core';
+import { PRESETS, customMarks, customPresets, expand, registerMark, registerPreset, resolve, seqScale } from '@unified-analytics/core';
 import type { CustomMark, FitRule, Part, PresetLibrary, RectNode, Spec } from '@unified-analytics/core';
 import { catalog, runQuery, samples } from '@unified-analytics/fixtures';
-import { errOf as err, run, validView as view } from './helpers.ts';
+import { errOf as err, run, shown, validView as view } from './helpers.ts';
 
 // Step 8 of docs/chart-coverage-plan.md, part 1: the registry of custom marks. Held here with a mark made for the
 // test, so nothing in it depends on a map. The `geo` mark is in test/geo.test.ts, and `fallback` in test/fallback.test.ts.
@@ -19,7 +19,6 @@ const toy: CustomMark = {
     const parts: Part[] = guides.ramp ? ['plot', 'ramp'] : ['plot'];
     return { nodes: [...tiles, ...seq.ramp(false)], rows: rows.map((r) => String(r[x])), parts };
   },
-  place: (scene, W) => ({ height: 40, nodes: scene.nodes.filter((n): n is RectNode => n.part === 'plot' && n.kind === 'rect').map((n) => ({ key: n.key, kind: 'rect', x: n.x! * W, y: 0, w: n.w! * W, h: 40, rx: 0, paint: n.paint, layer: n.layer })) }),
 };
 registerMark('toy', toy);
 
@@ -56,22 +55,14 @@ describe('a custom mark in a view', () => {
     expect(ratio.nodes.filter((n) => n.part === 'number').map((n) => n.key)).toEqual(['value', 'sub']);
     expect(plan.text).toBe('Top pages by page views, last 28 days: / (4,820), /pricing (2,960), /blog/launch-notes (2,105).');
   });
-  it('place() asks the mark for its own parts, and sets its ramp under them', () => {
-    const { scene } = run(tiles, 346), at = (k: string) => scene.nodes.find((n) => n.key === k) as unknown as Record<string, number>;
-    expect(scene.height).toBe(40 + 24);
-    expect(at('primary:toy:/pricing')).toMatchObject({ x: 346 / 8, w: 346 / 8, h: 40 });
-    expect(at('ramp:1')).toMatchObject({ ty: 40, y: 8 });
-    expect(run({ ...tiles, layers: tiles.layers }, 180).scene.height).toBe(40);
-  });
-  it('gives up its guides under its `guides` rule, or where the scene is too tall with them', () => {
-    const at = (w: number, h: number | null = null, keep?: Spec['keep']) => { const { plan, ratio } = run({ ...tiles, keep }, w, h); return [plan.layout, ratio.parts.join(' '), plan.dropped.join('; ')]; };
+  it('gives up its guides under its `guides` rule, unless the spec keeps them', () => {
+    const at = (w: number, h: number | null = null, keep?: Spec['keep']) => { const r = run({ ...tiles, keep }, w, h); return [r.plan.layout, r.fit.parts.join(' '), shown(r).rules.join(' ')]; };
     expect(at(200)).toEqual(['toy', 'plot ramp', '']);
-    expect(at(199)).toEqual(['toy', 'plot', 'the colour ramp']);
-    expect(at(199, null, ['guides'])).toEqual(['toy', 'plot ramp', '']);
-    // Kept marks do not fall back. Under their need the steps that are left are tried, as for any layout.
-    expect(at(149, null, ['marks'])).toEqual(['prose', '', 'the colour ramp; the number (kept the sentence)']);
-    // No rule says how tall its keys are: the scene is measured, as every layout's is.
-    expect(at(346, 60)).toEqual(['toy', 'plot', 'the colour ramp']);
+    expect(at(199)).toEqual(['toy', 'plot', 'guides']);
+    expect(at(199, null, ['guides'])).toEqual(['toy', 'plot ramp', 'kept:guides']);
+    // Kept marks do not fall back: under their need the view is still the mark's, and its other rules are read as before.
+    expect(at(149, null, ['marks'])).toEqual(['toy', 'plot', 'guides kept:marks']);
+    expect(run({ ...tiles, keep: ['marks'] }, 149).gave).toEqual([]);
   });
   it('draws its layers alone', () => {
     expect(err(() => run({ ...tiles, layers: [...tiles.layers!, { mark: 'text', encode: { y: 'page', text: 'page' } }] }, 346)))
@@ -83,8 +74,9 @@ describe('a custom mark whose rule names a fallback', () => {
   it('under the rule\'s need the view is that preset, planned again from the same query: the bar list a spec that asked for one would get, to the node', () => {
     const wide = run(tiles, 150), narrow = run(tiles, 149), pages = run(samples.pages!.spec, 149);
     expect(wide.plan.layout).toBe('toy');
-    expect(narrow.plan).toMatchObject({ layout: 'rows', preset: 'bar-list', dropped: ['the toy marks (drawn as "bar-list")'] });
-    expect(narrow.scene).toEqual(pages.scene);
+    expect(narrow.plan).toMatchObject({ layout: 'rows', preset: 'bar-list' });
+    expect([wide.gave, narrow.gave]).toEqual([[], ['toy']]);
+    expect([narrow.ratio, narrow.fit]).toEqual([pages.ratio, pages.fit]);
     expect(narrow.plan.layers).toEqual(pages.plan.layers);
     expect(run(tiles, 346, 49).plan).toMatchObject({ layout: 'rows', preset: 'bar-list' });
   });
@@ -140,8 +132,8 @@ describe('the registry of presets', () => {
     const own: PresetLibrary = { 'toy-strip': { layers: [{ mark: 'text', encode: { y: '$by', text: '$by' } }] } }, spec: Spec = { use: 'toy-strip', query: tiles.query };
     expect(expand(spec, own).layers).toEqual([{ mark: 'text', encode: { y: 'page', text: 'page' } }]);
     expect(expand(spec, {}).layers).toEqual(tiles.layers);
-    expect(resolve(spec, runQuery(spec.query), makeContainer(346), catalog, own).layout).toBe('rows');
-    expect(resolve(spec, runQuery(spec.query), makeContainer(346), catalog, {}).layout).toBe('toy');
+    expect(resolve(spec, runQuery(spec.query), catalog, undefined, own).layout).toBe('rows');
+    expect(resolve(spec, runQuery(spec.query), catalog, undefined, {}).layout).toBe('toy');
   });
   it('an unknown name is an error that lists the library and the registry, and how to add to it', () => {
     registerPreset('toy-strip', strip);
@@ -151,7 +143,7 @@ describe('the registry of presets', () => {
     expect(err(() => run({ ...tiles, layers: undefined, use: 'nope' }, 346))).toBe('Unknown preset "nope". The library has: ' + core + '. Registered: ' + registered() + fix);
     expect(err(() => expand({ use: 'nope', query: tiles.query }, {}))).toBe('Unknown preset "nope". The library has: none. Registered: ' + registered() + fix);
     // A spec with a dimension and nothing to draw it with is told every name it may use: the library's, then the registered ones it does not have.
-    const bare = (presets?: PresetLibrary) => err(() => resolve({ query: tiles.query }, runQuery(tiles.query), makeContainer(346), catalog, presets));
+    const bare = (presets?: PresetLibrary) => err(() => resolve({ query: tiles.query }, runQuery(tiles.query), catalog, undefined, presets));
     expect(bare()).toBe('This spec has a dimension but no layers, so there is nothing to draw it with. Add "layers", or "use" one of: ' + core + ', ' + registered() + '.');
     expect(bare({ 'toy-strip': strip, mine: strip })).toBe('This spec has a dimension but no layers, so there is nothing to draw it with. Add "layers", or "use" one of: ' + ['toy-strip', 'mine', ...[...customPresets().keys()].filter((n) => n !== 'toy-strip')].join(', ') + '.');
   });
@@ -161,10 +153,11 @@ describe('a registered preset in a view', () => {
   const { layers: _layers, ...rest } = tiles, used: Spec = { ...rest, use: 'toy-strip' };
   it('is the view its layers written out would be, to the node, and the plan says which preset it came from', () => {
     registerPreset('toy-strip', strip);
-    for (const [w, h] of [[346, null], [199, null], [346, 60], [149, null], [80, null]] as [number, number | null][]) expect(run(used, w, h).scene, w + ' ' + h).toEqual(run(tiles, w, h).scene);
+    for (const [w, h] of [[346, null], [199, null], [346, 60], [149, null], [80, null]] as [number, number | null][]) { const a = run(used, w, h), b = run(tiles, w, h); expect([a.ratio, a.fit, a.gave], w + ' ' + h).toEqual([b.ratio, b.fit, b.gave]); }
     expect(run(used, 346).plan).toMatchObject({ layout: 'toy', preset: 'toy-strip', layers: [{ mark: 'toy', encode: { x: 'page', color: 'pageviews' } }] });
     // Its mark's own fallback is still asked: the registered name gives way to the library's.
-    expect(run(used, 149).plan).toMatchObject({ layout: 'rows', preset: 'bar-list', dropped: ['the toy marks (drawn as "bar-list")'] });
+    expect(run(used, 149).plan).toMatchObject({ layout: 'rows', preset: 'bar-list' });
+    expect(run(used, 149).gave).toEqual(['toy']);
   });
   it('the schema takes its name, as it takes any: resolve() checks it', () => {
     expect(view(used), JSON.stringify(view.errors)).toBe(true);
@@ -179,10 +172,11 @@ describe('a registered preset in a view', () => {
     const written: Spec = { ...tiles, layers: [{ mark: 'toy-2', encode: { x: 'page', color: 'pageviews' } }] }, asked: Spec = { ...rest, use: 'toy-list' };
     expect(run(written, 150).plan).toMatchObject({ layout: 'toy-2', preset: null });
     for (const spec of [written, { ...rest, use: 'toy-strip-2' }]) {
-      const { plan, scene } = run(spec, 149);
-      expect(plan).toMatchObject({ layout: 'rows', preset: 'toy-list', dropped: ['the toy-2 marks (drawn as "toy-list")'] });
+      const { plan, ratio, fit, gave } = run(spec, 149), own = run(asked, 149);
+      expect(plan).toMatchObject({ layout: 'rows', preset: 'toy-list' });
+      expect(gave).toEqual(['toy-2']);
       expect(plan.layers.map((l) => l.mark)).toEqual(['bar', 'text']);
-      expect(scene).toEqual(run(asked, 149).scene);
+      expect([ratio, fit]).toEqual([own.ratio, own.fit]);
     }
     // A fallback no one registered is expand()'s error, with the registry in it.
     registerMark('toy-3', { ...toy, rules: [{ id: 'marks', layout: 'toy-3', container: 'view', needs: { inline: 150 }, hide: [], fallback: 'toy-gone', keep: 'marks' }] });

@@ -1,4 +1,4 @@
-import { expand, resolve, unboundedContainer, type Spec } from '@unified-analytics/core';
+import { expand, resolve, type Spec } from '@unified-analytics/core';
 import { UaView } from '@unified-analytics/dom';
 import { catalog, runQuery, type Scenario } from '@unified-analytics/fixtures';
 import { resizable } from './resizer.ts';
@@ -49,7 +49,7 @@ function apply() {
   try {
     const result = runQuery(spec.query, scenario);
     // Planned here first, so a spec the core refuses says why in the status line, and the last good view stays up.
-    const p = resolve(spec, result, unboundedContainer(), catalog);
+    const p = resolve(spec, result, catalog);
     view.spec = spec; view.result = result;
     // A preset is shorthand for layers: core's expand() writes them out, as the plan does before it reads them.
     written = spec.use ? expand(spec) : undefined;

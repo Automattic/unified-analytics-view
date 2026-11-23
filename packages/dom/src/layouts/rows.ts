@@ -12,7 +12,7 @@ import { paintUnitKey } from '../chrome/unit.ts';
  * the first column, and short of the ranked columns beyond it.
  *
  * A ranked column is given up when the view is narrower than the label's room and every column's up to it. That
- * need is the one resolve() measures, in characters, written on the cell, and a clamp on the cell's width answers
+ * need is core's own (columnRooms), in characters, written on the cell, and a clamp on the cell's width answers
  * it: a container query cannot hold a number that depends on the data. Only the need is estimated, never a width.
  *
  * Under a height limit only whole rows show: the list is as tall as the rows that fit, rounded down.
@@ -76,12 +76,9 @@ export const rows: LayoutPainter = {
   // The number alone. The body goes whole, so the gap its grid row would hold goes with it.
   // `show` compiles to a block, which the one line of a legend is. The legend it stands in for is a row that wraps.
   // And with no legend left, a divided row's series are in one paint, parted by their gaps.
-  fit: { marks: NUMBER_ALONE, 'marks-block': NUMBER_ALONE, 'legend-top': SPLIT_PLAIN, ...TRACK_FIT },
-  // The wrap clips whole rows, so a box shorter than one row shows none, and with no number above it shows nothing at
-  // all. Under a row's height the list goes and the number stands in, as it does under the width the `marks` rule needs.
-  // ponytail: core's `marks` rule for rows has no block need, so this asks the view, as the band's does. Right while
-  // the list has the view's whole height, which is where it matters: a number above the list already stands alone.
-  rules: (context) => [{ id: 'marks-block', layout: 'rows', container: 'view', needs: { block: context.rows.rowHeight }, hide: ['rows'], show: ['number'], keep: 'marks' }],
+  // The wrap clips whole rows, so a box shorter than one row shows none: under a row's height the list goes and the
+  // number stands in, as it does under the width. Both are the `marks` rule's needs, in core.
+  fit: { marks: NUMBER_ALONE, 'legend-top': SPLIT_PLAIN, ...TRACK_FIT },
 
   paint(body, scene, rules) {
     const head = ensure(body, 'div', 'uav-columns'), list = ensure(body, 'div', 'uav-rows'), by = new Map<string, SceneNode[]>();

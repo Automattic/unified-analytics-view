@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildScene, pathD, resolve, unboundedContainer, type PathNode } from '@unified-analytics/core';
+import { buildScene, pathD, resolve, type PathNode } from '@unified-analytics/core';
 import { catalog, moreSamples, runQuery, samples } from '@unified-analytics/fixtures';
 import { MOTION_CSS, mix, resample } from '../packages/dom/src/motion.ts';
 
@@ -8,7 +8,7 @@ import { MOTION_CSS, mix, resample } from '../packages/dom/src/motion.ts';
 
 function paths(range: string, scenario: 'typical' | 'no-prior' = 'typical'): PathNode[] {
   const spec = { ...samples.trend!.spec, query: { ...samples.trend!.spec.query, range } }, result = runQuery(spec.query, scenario);
-  return buildScene(resolve(spec, result, unboundedContainer(), catalog), spec.query, result, catalog).nodes.filter((n): n is PathNode => n.kind === 'path');
+  return buildScene(resolve(spec, result, catalog), spec.query, result, catalog).nodes.filter((n): n is PathNode => n.kind === 'path');
 }
 
 describe('resample and mix', () => {
@@ -40,7 +40,7 @@ describe('resample and mix', () => {
 });
 
 describe('steps over bins', () => {
-  const steps = (range: string) => { const spec = { ...moreSamples.density!.spec, query: { ...moreSamples.density!.spec.query, range } }, result = runQuery(spec.query); return buildScene(resolve(spec, result, unboundedContainer(), catalog), spec.query, result, catalog).nodes.filter((n): n is PathNode => n.kind === 'path'); };
+  const steps = (range: string) => { const spec = { ...moreSamples.density!.spec, query: { ...moreSamples.density!.spec.query, range } }, result = runQuery(spec.query); return buildScene(resolve(spec, result, catalog), spec.query, result, catalog).nodes.filter((n): n is PathNode => n.kind === 'path'); };
   it('a path is flat across each point\'s width and upright between two, with no curve: the bins\' own edges', () => {
     expect(pathD([{ x: 0.25, v: 0.5, w: 0.5 }, { x: 0.75, v: 1, w: 0.5 }], 'step')).toBe('M0,50L50,50L50,0L100,0');
     expect(pathD([{ x: 0.25, v: 0.5, w: 0.5 }, { x: 0.75, v: 1, w: 0.5 }], 'step', true)).toBe('M0,50L50,50L50,0L100,0L100,100L50,100L50,100L0,100Z');

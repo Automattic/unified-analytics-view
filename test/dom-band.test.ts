@@ -6,7 +6,7 @@ import { band } from '../packages/dom/src/layouts/band.ts';
 
 // String work only, as in dom-compile.test.ts. What the browser makes of it is checked on the bench.
 const fig = (keep: string) => '.uav[data-layout="band"]:not([data-keep~="' + keep + '"])';
-const css = compileFitRules([...FIT_RULES.filter((r) => r.layout === 'band'), ...band.rules!(CONTAINER_RULES)], { band: band.fit! });
+const css = compileFitRules(FIT_RULES.filter((r) => r.layout === 'band'), { band: band.fit! });
 
 describe('the band layout', () => {
   it('hides the one-line legend until a rule or the plan asks for it', () => {
@@ -30,7 +30,7 @@ describe('the band layout', () => {
 
   it('gives up the body and its grid row with the marks, by width and by height, after the swap', () => {
     const alone = [
-      '  ' + fig('marks') + ' :is(.uav-band, .uav-legend) { display: none; }',
+      '  ' + fig('marks') + ' :is(.uav-band, .uav-legend, .uav-legend-top, .uav-unit-key) { display: none; }',
       '  ' + fig('marks') + ' .uav-number { display: block; }',
       '  ' + fig('marks') + ' { grid-template: "number" auto / minmax(0, 1fr); }',
       '  ' + fig('marks') + ' .uav-body { display: none; }',

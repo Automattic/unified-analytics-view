@@ -8,6 +8,7 @@ exports[`explain > says which rule hides a part at a room, what it needs and wha
   "x-axis | hidden | use "line": layers[0].encode.x | rule "axes" needs 280 px wide and 120 px tall of the view, and it has 250 × natural height | add "guides" to keep to hold it, or give the view 280 px wide",
   "y-axis | hidden | use "line": layers[0].encode.y | rule "axes" needs 280 px wide and 120 px tall of the view, and it has 250 × natural height | add "guides" to keep to hold it, or give the view 280 px wide",
   "number | shown in its place | query.metrics[0] | rule "axes" needs 280 px wide and 120 px tall of the view, and it has 250 × natural height | ",
+  "- | not asked | the room | rule "secondary" needs 180 px wide and 90 px tall of the plot, and the room says nothing of the plot: give its size as the room's "plot" to ask | ",
 ]
 `;
 
@@ -25,8 +26,9 @@ exports[`explain > says which rule hides a part at a room, what it needs and wha
   "radial",
   "- | the layout is radial | use "donut": layers[0] | something is on angle, so it is drawn about a centre | change what that layer puts on x, y, color or angle",
   "radial | shown | use "donut": layers[0] | arc marks | ",
+  "hole | shown | query.metrics[0] | the total of "visitors", from the engine | ",
   "legend | shown as one line | use "donut": layers[0].encode.color | rule "legend" needs 170 px wide of the view, and it has 120 × 100 | add "guides" to keep to hold it, or give the view 170 px wide",
-  "hole | hidden | query.metrics[0] | rule "hole" needs 120 px wide of the plot, and it has 64 × 64 | ",
+  "hole | not asked | the room | rule "hole" needs 120 px wide of the plot, and the room says nothing of the plot: give its size as the room's "plot" to ask | ",
 ]
 `;
 
@@ -34,8 +36,8 @@ exports[`explain > says which rule hides a part at a room, what it needs and wha
 [
   "rows",
   "- | the layout is rows | use "bar-list": layers[0] | a dimension on y | change what that layer puts on x, y, color or angle",
-  "rows | hidden | use "bar-list": layers[0], layers[1], layers[2] | rule "marks" needs 90 px wide of the view, and it has 80 × natural height | add "marks" to keep to hold it, or give the view 90 px wide",
-  "number | shown in its place | query.metrics[0] | rule "marks" needs 90 px wide of the view, and it has 80 × natural height | ",
+  "rows | hidden | use "bar-list": layers[0], layers[1], layers[2] | rule "marks" needs 90 px wide and 28 px tall of the view, and it has 80 × natural height | add "marks" to keep to hold it, or give the view 90 px wide",
+  "number | shown in its place | query.metrics[0] | rule "marks" needs 90 px wide and 28 px tall of the view, and it has 80 × natural height | ",
 ]
 `;
 

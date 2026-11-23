@@ -1,6 +1,6 @@
 import { geoEqualEarth, geoIdentity, geoPath, type ExtendedFeatureCollection, type GeoProjection } from 'd3-geo';
-import { dotRadius, heldBox, isDim, isMetric, layerKeys, metricOf, notShownNote, registerMark, registerPreset, roleOf, ruleFor, seqScale, sizeKey, sizeStep } from '@unified-analytics/core';
-import type { CircleNode, CustomMark, FitRule, Part, PathNode, PlacedNode, Row, SceneNode, TextNode } from '@unified-analytics/core';
+import { isDim, isMetric, layerKeys, metricOf, notShownNote, registerMark, registerPreset, roleOf, seqScale, sizeKey, sizeStep } from '@unified-analytics/core';
+import type { CircleNode, CustomMark, FitRule, Part, PathNode, Row, SceneNode } from '@unified-analytics/core';
 
 /* The `geo` mark: a map of regions, as a custom mark (core's marks.ts). This is its half for core: a scene in ratios
  * and its place in pixels, with no DOM. The painter is in dom.ts.
@@ -56,7 +56,6 @@ export const GEO_RULES: FitRule[] = geoRules('geo');
 export interface GeoOptions { name?: string; projection?: GeoProjection }
 
 /** A path drawn in the scene's box, at `k` times the size. Paths here are moves and lines to absolute points, so every number in one is a length. */
-const scaled = (d: string, k: number) => d.replace(/-?\d+(?:\.\d+)?/g, (n) => String(Math.round(Number(n) * k * 100) / 100));
 
 /** The geo mark for a set of boundary shapes. They are fitted to the box whole, so the map is of the shapes handed in:
  * the world, one country's regions, or a sheet of tiles. */
@@ -117,20 +116,6 @@ export function geoMark(shapes: Shapes, { name = 'geo', projection }: GeoOptions
       return { nodes, rows: rows.map((r) => String(r[dim])), aspect, parts };
     },
 
-    // A box of the shapes' own aspect: as wide as the view up to MAP, no taller than the room, and in the middle of the width.
-    // The note is a line under it, at the start of the width as the keys are, and the room it takes is not the map's.
-    place(scene, W, room, container) {
-      const least = ruleFor(container.rules.fit.concat(rules), scene.layout, 'marks')?.needs.block ?? 0;
-      const note = scene.parts.includes('note') ? scene.nodes.find((n): n is TextNode => n.part === 'note' && n.kind === 'text') : undefined, under = note ? NOTE : 0;
-      const { w, h, left } = heldBox(W, room, scene.aspect!, MAP, least * scene.aspect!, under);
-      const nodes: PlacedNode[] = [];
-      for (const n of scene.nodes) {
-        if (n.part === 'plot' && n.kind === 'path') nodes.push({ key: n.key, kind: 'path', d: scaled(n.d!, w / BOX), fill: true, paint: n.paint, layer: n.layer, ...(left && { tx: left }) });
-        else if (n.part === 'points' && n.kind === 'circle') nodes.push({ key: n.key, kind: 'circle', cx: left + n.x! * w, cy: (1 - n.t!) * h, r: dotRadius(n.size), pulse: false, paint: n.paint, layer: n.layer, ...(n.opacity != null && { opacity: n.opacity }) });
-      }
-      if (note) nodes.push({ key: note.key, kind: 'text', x: 0, y: h + NOTE / 2 + 2, text: note.text, anchor: note.anchor, ...(note.baseline && { baseline: note.baseline }), font: note.font, paint: note.paint, layer: note.layer });
-      return { nodes, height: h + under, plot: { w, h } };
-    },
   };
 }
 

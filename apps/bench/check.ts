@@ -2,7 +2,8 @@
  * so two runs on the same capture say the same thing, and a capture held against an earlier one shows what moved.
  *
  * What a part promises at each size is the fit rules' (packages/core/src/fit.ts): the room it needs, and what hides or
- * shows without it. The rules are read, not restated. Around them, five promises every part keeps:
+ * shows without it. The rules are read, not restated, and by core's own reader (fitTo), so a frame where the element and
+ * the reader disagree is a finding. Around them, five promises every part keeps:
  *
  *   cut       whole or gone: nothing reaches past the frame, nothing is clipped by its own box.
  *   overlap   parts do not cross, but for the pairs drawn one over the other on purpose (OVERLAPS).
@@ -19,7 +20,7 @@
  * With no capture, the latest. Writes check.json and check.md into the capture; with `against`, says what is new and
  * what is gone since that one. */
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { FIT_RULES, applies, type FitRule } from '@unified-analytics/core';
+import { FIT_RULES, fitTo, type FitRule, type KeepPart } from '@unified-analytics/core';
 import type { Record } from './capture.ts';
 
 /** Pairs drawn one over the other on purpose: labels on their points, and the ring's labels and its number on the ring. */
@@ -71,25 +72,27 @@ function check(records: Record[]): Finding[] {
   return out;
 }
 
-/** The fit rules for the frame's room, against what shows. A view a rule would hand to another preset is that preset's
- * to answer for, and the plan here is not its plan, so those frames are passed over. */
+/** The fit rules for the frame's room, against what shows. The rules are read by core's own reader, fitTo(), from what
+ * the capture kept of the scene, so the checker has no reading of its own. A view a rule would hand to another preset
+ * is that preset's to answer for, and the plan here is not its plan, so those frames are passed over. */
 function rules(r: Record, say: (r: Record, check: string, part: string, detail: string) => void): void {
-  const plan = r.plan!, { parts, width, height } = r.measure, keep = new Set(plan.keep);
+  const plan = r.plan!, { parts, width, height } = r.measure;
   const room = { view: { inline: width, block: r.height === 'natural' ? null : height }, plot: box(parts[plan.layout === 'radial' ? 'radial' : 'plot']?.box) };
-  const mine = FIT_RULES.filter((f) => f.layout === plan.layout && !(f.keep && keep.has(f.keep)) && (!f.mark || plan.marks.includes(f.mark)));
   // A layout with no rules here is a custom mark's, which fits itself in its own package.
-  if (!mine.length || mine.some((f) => f.fallback && applies(f, room))) return;
-  // A rule on the plot's room holds when there is no plot: what sits in it has gone with it.
-  const hiding = new Map<string, FitRule>();
-  const holds = (f: FitRule) => applies(f, room) || (f.container === 'plot' && !room.plot);
+  if (!FIT_RULES.some((f) => f.layout === plan.layout)) return;
+  // An older capture kept less of the scene: every part is taken to have something in it, and a track beside its label goes unsaid.
+  const has = plan.has ?? plan.parts, scene = { layout: plan.layout, parts: plan.parts, ...(has.includes('track') && { track: 'beside' }), nodes: (plan.drawn ?? [...PARTS]).map((part) => ({ part })) };
+  const fit = fitTo(scene, room, FIT_RULES, { keep: plan.keep as KeepPart[], marks: plan.marks, fills: () => true });
+  if (fit.fallback) return;
   // A rule that sets the legend at the top hides the full one: `legend-top` takes its place.
-  for (const f of mine) if (!f.fallback && holds(f)) for (const p of [...f.hide, ...(f.set?.legend === 'top' ? ['legend'] : [])]) if (PARTS.has(p)) hiding.set(p, f);
+  const top = fit.set.legend === 'top', expected = new Set(fit.parts.filter((p) => !(top && p === 'legend')));
+  const took = (p: string) => [...fit.held].reverse().find((h) => !h.kept && (h.rule.hide.includes(p) || (p === 'legend' && h.rule.set?.legend === 'top')))?.rule;
   const need = (f: FitRule) => `"${f.id}" needs ${[f.needs.inline && f.needs.inline + ' wide', f.needs.block && f.needs.block + ' tall'].filter(Boolean).join(', ')} of the ${f.container}`;
-  for (const [p, f] of hiding) if (parts[p]) say(r, 'hidden', p, `shown, but ${need(f)} and has ${room[f.container]?.inline ?? '?'}×${room[f.container]?.block ?? 'natural'}`);
+  for (const p of Object.keys(parts)) { const f = PARTS.has(p) && !expected.has(p) && took(p); if (f) say(r, 'hidden', p, `shown, but ${need(f)} and has ${room[f.container]?.inline ?? '?'}×${room[f.container]?.block ?? 'natural'}`); }
   // Down to the number alone, the view has collapsed, by a rule or by the measured pass, and every other part went with it.
   if (Object.keys(parts).every((p) => p === 'number' || p === 'notice')) return;
   // The number is in every scene and shown in compensation, so its absence says nothing.
-  for (const p of plan.parts) if (PARTS.has(p) && p !== 'number' && !hiding.has(p) && !parts[p]) {
+  for (const p of plan.parts) if (PARTS.has(p) && p !== 'number' && expected.has(p) && !parts[p]) {
     say(r, 'shown', p, `the plan has it and no fit rule hides it at ${width}×${r.height === 'natural' ? 'natural' : height}`);
   }
 }

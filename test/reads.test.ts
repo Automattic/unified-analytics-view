@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { FIELDS, NEEDS, READS, customMarks, expand, isDim, isMetric, layoutOf, makeContainer, resolve, type Layer, type Reads, type Result, type Spec } from '@unified-analytics/core';
+import { FIELDS, NEEDS, READS, customMarks, expand, isDim, isMetric, layoutOf, resolve, type Layer, type Reads, type Result, type Spec } from '@unified-analytics/core';
 import { catalog, moreSamples, runQuery, samples } from '@unified-analytics/fixtures';       // registers the `geo`, `link` and `partition` marks
 import { err, errOf, ofUnbounded } from './helpers.ts';
 
@@ -70,7 +70,7 @@ describe('what each mark reads', () => {
     // A layer of the period before is left out where the query does not compare. It is still the spec's.
     expect(err({ query: byDay, layers: [{ mark: 'line', encode: { x: 'date.day', y: 'visitors' } }, { ...sized.layers![0]!, series: 'previous' }] })).toBe(SIZED.replace('Layer 1', 'Layer 2'));
     const glyphs: Spec = { query: byPage, layers: [{ mark: 'unit', encode: { x: 'page', y: 'pageviews', size: 'pageviews' } }] };
-    expect(errOf(() => resolve(glyphs, runQuery(byPage), makeContainer(200), catalog))).toMatch(/^Layer 1 encodes "pageviews" on size, and the "unit" mark in a "cartesian" layout reads no size\./);
+    expect(errOf(() => resolve(glyphs, runQuery(byPage), catalog))).toMatch(/^Layer 1 encodes "pageviews" on size, and the "unit" mark in a "cartesian" layout reads no size\./);
   });
 
   it('leaves the scene its say first: what it refuses of a form, it refuses in its own words', () => {

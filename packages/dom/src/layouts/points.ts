@@ -31,6 +31,9 @@ export const POINTS_CSS = `
 /* The holder of points lies over the plot's own hit targets, so only its dots take the pointer. */
 .uav-dots, .uav-points, .uav-point-labels { pointer-events: none; }
 .uav-points i { pointer-events: auto; }
+/* A plot with no points has the holder and nothing in it, and a holder of nothing takes no box: the rule that takes
+ * the points is for a plot that has them (core's \`points\` rule, \`has\`), and is not asked of this one. */
+.uav-points:empty { display: none; }
 /* A point of a line that has no dot drawn on it: there to be pointed at and stepped to, and it wears only the outline. */
 .uav-points i[data-bare] { background: none; }
 :is(.uav-dots, .uav-points) i { position: absolute; inset-inline-start: calc(var(--uav-x) * 100%); inset-block-start: ${FROM_TOP}; translate: -50% -50%;

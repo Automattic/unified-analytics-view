@@ -50,7 +50,7 @@ describe('compileFitRules', () => {
     const fig = '.uav[data-layout="cartesian"]:not([data-keep~="marks"])';
     expect(css.split('\n').slice(0, 6)).toEqual([
       '/* cartesian marks */', '@container uav-view (inline-size < 151.5px) {',
-      '  ' + fig + ' .uav-plot { display: none; }', '  ' + fig + ' .uav-number { display: block; }',
+      '  ' + fig + ' :is(.uav-plot, .uav-points, .uav-point-labels, .uav-x-axis, .uav-y-axis, .uav-y-axis-2, .uav-labels, .uav-legend, .uav-size, .uav-unit-key) { display: none; }', '  ' + fig + ' .uav-number { display: block; }',
       '  ' + fig + ' { grid-template: none; }', '  ' + fig + ' .uav-body { display: none; }',
     ]);
   });
@@ -58,7 +58,7 @@ describe('compileFitRules', () => {
   // A page may name a container of its own "view" or "plot". Ours are `uav-view` and `uav-plot`, so its does not answer our queries.
   it('names its containers uav-view and uav-plot wherever one is declared or queried', () => {
     const painters = [...Object.values(LAYOUTS).filter((p) => p.layout !== 'geo'), geoPainter];
-    const compiled = compileFitRules([...FIT_RULES, ...GEO_RULES, ...painters.flatMap((p) => p.rules?.(CONTAINER_RULES) ?? [])], Object.fromEntries(painters.map((p) => [p.layout, p.fit ?? {}])));
+    const compiled = compileFitRules([...FIT_RULES, ...GEO_RULES], Object.fromEntries(painters.map((p) => [p.layout, p.fit ?? {}])));
     const css = [BASE_CSS, FALLBACK_CSS, ...painters.map((p) => p.css), compiled].join('\n');
     expect(css).toContain(':host { display: block; container: uav-view / inline-size;');
     expect(css).toContain('container: uav-plot / size;');

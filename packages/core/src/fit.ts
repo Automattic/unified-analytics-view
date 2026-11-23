@@ -1,7 +1,7 @@
 import type { KeepPart, Layout } from './types.ts';
 
 /* Fit rules: one declaration per part. Each names a container, the room the part
- * needs in it, and what happens otherwise. `resolve()` evaluates them in code;
+ * needs in it, and what happens otherwise. `fitTo()` reads them in code, for any surface;
  * a browser container compiles the same data to container queries. */
 export interface FitRule {
   /** Unique within a layout: 'axes', 'secondary', 'legend', 'marks', … */
@@ -22,7 +22,7 @@ export interface FitRule {
   /** The spec's `keep` entry that disables this rule. */
   keep?: KeepPart;
   /** A preset the view becomes under the same condition: the same query, drawn another way. It takes the place of the
-   * whole view, so `hide` and `show` have nothing left to act on. `resolve()` plans again with it. A browser container
+   * whole view, so `hide` and `show` have nothing left to act on. `viewAt()` plans again with it. A browser container
    * paints both, and the compiled rule shows one. */
   fallback?: string;
   /** The mark a view's layers must hold for the rule to be its: a legend gives way to labels at line ends only where
@@ -30,14 +30,23 @@ export interface FitRule {
    * shares its layout with others, so a rule for one of its forms names it: a band of glyphs gives way to the share
    * bar, and the share bar, in the same layout, gives way to nothing. A custom mark's layout is its own, and needs none. */
   mark?: string;
+  /** What a view must have for the rule to be its (`hasOf`): a part its scene shows, or `track`, where a row's track
+   * stands beside its label. A plot of points has no bare form, and a row read by where its marks are needs more room
+   * than a bar behind its label: each has a rule of its own, under the room the others keep their marks in. */
+  has?: string;
 }
 
 /** The room a container has. A view that takes its natural height has no `block`. */
 export interface Room { inline: number; block?: number | null }
 
 /* The defaults. A context passes its containers a different set, as `rules.fit`.
- * What these cannot say is measured in `resolve()`: the width of the number,
- * the width of a row's value and of each column after it, and anything that depends on how tall the content is. */
+ * What these cannot say is a surface's to measure: the width of the number, the width of a row's value and of each
+ * column after it, and anything that depends on how tall the content is (reference, section 10.2).
+ * A rule names every part it takes, one that stands inside another among them: a reader with no browser has no
+ * nesting to go by, and test/fit.test.ts holds a view to be its number alone wherever a rule takes its marks. */
+/** Every part of a plot's body, and of a list's: what a rule takes where the view is its number alone. */
+const PLOT = ['plot', 'points', 'point-labels', 'x-axis', 'y-axis', 'y-axis-2', 'labels', 'legend', 'size', 'unit-key'];
+const ROWS = ['rows', 'columns', 'legend', 'legend-top', 'unit-key'];
 export const FIT_RULES: FitRule[] = [
   // A plot with axes. The second y axis is the key to what is measured in a second unit, which is read against nothing
   // else: it stays as long as the first does, and what is drawn on it goes when it goes. A bare plot is of one unit.
@@ -57,23 +66,28 @@ export const FIT_RULES: FitRule[] = [
     hide: ['point-labels'], keep: 'guides' },
   { id: 'size',      layout: 'cartesian', container: 'view', needs: { inline: 320, block: 160 },      // then the key to the sizes of dots, down to its largest step: it stays as long as sized dots do
     hide: [], set: { 'size-key': 'most' }, keep: 'guides' },
-  { id: 'points',    layout: 'cartesian', container: 'view', needs: { inline: 280, block: 120 },      // a plot of points has no sparkline form: under the axes' need it is the number alone
-    hide: ['points'], show: ['number'], keep: 'marks' },
+  { id: 'points',    layout: 'cartesian', has: 'points', container: 'view', needs: { inline: 280, block: 120 },   // a plot of points has no sparkline form: under the axes' need it is the number alone
+    hide: PLOT, show: ['number'], keep: 'marks' },
   { id: 'mid-tick',  layout: 'cartesian', container: 'view', needs: { inline: 380 }, hide: ['x-tick.mid'] },
+  // A short plot keeps its unranked y ticks: 120 px for the plot, 10 above it and 22 for the x axis.
+  // ponytail: it asks the view, since the y axis stands outside the plot's container. Wrong when the number is above
+  // the plot. A rule on the plot, and the y axis inside that container, would say it properly.
+  { id: 'y-ticks',   layout: 'cartesian', container: 'view', needs: { block: 152 }, hide: ['y-tick.ranked'] },
   { id: 'secondary', layout: 'cartesian', container: 'plot', needs: { inline: 180, block: 90 },       // comparison and reference layers stay legible above this
     hide: ['role:comparison', 'role:reference', 'role:context'], keep: 'secondary' },
   { id: 'marks',     layout: 'cartesian', container: 'view', needs: { inline: 152, block: 46 },       // 76 for the number, a 12 px gap and a 64 px bare plot
-    hide: ['plot'], show: ['number'], keep: 'marks' },
-  { id: 'marks',     layout: 'rows',      container: 'view', needs: { inline: 90 },                   // the label; the value's room is measured, and each ranked column's
-    hide: ['rows'], show: ['number'], keep: 'marks' },
+    hide: PLOT, show: ['number'], keep: 'marks' },
   { id: 'legend',     layout: 'rows',     container: 'view', needs: { inline: 170, block: 150 },      // a divided row's legend becomes one line, as the band's does, and where the rows have under three of their own
     hide: ['legend'], show: ['legend-top'], keep: 'guides' },
   { id: 'legend-top', layout: 'rows',     container: 'view', needs: { block: 84 },                    // and that line goes where it would leave no two rows, and the series' colours with it
     hide: ['legend', 'legend-top'], set: { split: 'plain' }, keep: 'guides' },
+  // After the legend's rules, as every layout's is: where two rules say otherwise of a part the later one wins, and the one that takes the marks has the last word.
+  { id: 'marks',     layout: 'rows',      container: 'view', needs: { inline: 90, block: 28 },        // the label, and one row: a surface shows whole rows, so a box shorter than one shows none. The value's room is measured, and each ranked column's
+    hide: ROWS, show: ['number'], keep: 'marks' },
   { id: 'legend',    layout: 'band',      container: 'view', needs: { inline: 170 },                  // the full legend becomes the largest segment's label
     hide: [], set: { legend: 'top' }, keep: 'guides' },
-  { id: 'marks',     layout: 'band',      container: 'view', needs: { inline: 110 },
-    hide: ['band', 'legend'], show: ['number'], keep: 'marks' },
+  { id: 'marks',     layout: 'band',      container: 'view', needs: { inline: 110, block: 48 },       // the bar and the one-line legend, 24 px each
+    hide: ['band', 'legend', 'legend-top', 'unit-key'], show: ['number'], keep: 'marks' },
   { id: 'legend',     layout: 'radial', container: 'view', needs: { inline: 170 },                    // as the band's
     hide: [], set: { legend: 'top' }, keep: 'guides' },
   { id: 'legend-top', layout: 'radial', container: 'view', needs: { block: 88 },                      // the least circle, and one line under it. Under that the legend goes, and the segments' colours with it
@@ -84,8 +98,8 @@ export const FIT_RULES: FitRule[] = [
     hide: ['rim.ranked'], keep: 'guides' },
   { id: 'hole',       layout: 'radial', container: 'plot', needs: { inline: 120 },                    // the number sits in a donut's hole while the circle is this wide
     hide: ['hole'] },
-  { id: 'marks',      layout: 'radial', container: 'view', needs: { inline: 72, block: 64 },          // the least circle
-    hide: ['radial', 'legend', 'legend-top'], show: ['number'], keep: 'marks' },
+  { id: 'marks',      layout: 'radial', container: 'view', needs: { inline: 72, block: 64 },          // the least circle, and what stands in it and round it
+    hide: ['radial', 'hole', 'rim', 'legend', 'legend-top', 'unit-key'], show: ['number'], keep: 'marks' },
   // A grid has no bare form. Its ramp is the key to its colours and its key to sizes to its dots, so neither goes before
   // the grid: under this each is in its shorter form, the ramp a thin strip of every step and the sizes their largest alone.
   { id: 'ramp',      layout: 'matrix',    container: 'view', needs: { inline: 240, block: 150 },
@@ -94,8 +108,8 @@ export const FIT_RULES: FitRule[] = [
     hide: ['plot', 'x-axis', 'y-axis', 'ramp', 'size'], show: ['number'], keep: 'marks' },
   { id: 'notice',    layout: 'notice',    container: 'view', needs: { inline: 150, block: 40 },
     hide: ['notice'], show: ['number'], keep: 'marks' },
-  { id: 'track',     layout: 'rows',      container: 'view', needs: { inline: 160 },                  // a track beside its label: the label's 90 px and 70 to read a mark's place in. The value's room is measured
-    hide: ['track'], keep: 'marks' },
+  { id: 'track',     layout: 'rows',      has: 'track', container: 'view', needs: { inline: 160 },    // a track beside its label: the label's 90 px and 70 to read a mark's place in. The value's room is measured
+    hide: ROWS, show: ['number'], keep: 'marks' },
   /* The `unit` mark, in each layout it draws in. Glyphs are counted, so under the room that takes they are not drawn
    * smaller: the view becomes the preset of the same query that needs less, whole, and that one steps down to the
    * number by its own rules. What a glyph is worth is said in a line under the glyphs, and that line is the key to
@@ -128,6 +142,64 @@ export function applies(rule: FitRule, room: { view: Room; plot?: Room | null })
   const c = room[rule.container];
   const short = (need?: number, has?: number | null) => need != null && has != null && has < need;
   return !!c && (short(rule.needs.inline, c.inline) || short(rule.needs.block, c.block));
+}
+
+/** The rooms a view's rules ask about: its own, and its plot's. A plot nobody has measured is left out, and no rule on
+ * it is asked. `null` says there is no plot to measure, and what sits in one has gone with it. */
+export interface Rooms { view: Room; plot?: Room | null }
+
+/** What the fit rules make of a view at a room. */
+export interface Fit {
+  /** The parts that show: the view's own, less the ones a rule hides, with the ones a rule shows in their place. */
+  parts: string[];
+  /** Every target a rule hides here, parts among them. The rest name marks or labels inside a part: by role
+   * (`role:comparison`), by axis (`axis:2`), a rim's ranked names (`rim.ranked`), a tick (`x-tick.mid`). */
+  hidden: string[];
+  /** The switches set here: a key's shorter form, the number beside the plot, a drawing without an encoding. */
+  set: Record<string, string>;
+  /** The rule under which the view gives way, whole, to a preset. Nothing of this view shows then: `parts` is empty. */
+  fallback?: FitRule;
+  /** Each rule that holds here, in order: whether the spec's `keep` held it off, the parts it took that were showing,
+   * and the ones it put in their place. */
+  held: { rule: FitRule; kept: boolean; hid: string[]; showed: string[] }[];
+}
+
+/** What a view holds, as its rules ask of it: its scene, the spec's `keep`, its layers' marks, and whether its query
+ * fills a preset a rule would have it become. `via` is what it has given way from already (`gaveWay`). */
+export interface FitView { keep?: KeepPart[]; marks?: string[]; fills?: (preset: string) => boolean; via?: string[] }
+
+/** What a view has, for a rule that is for one kind of view (`has`): each part its scene shows, and `track` where a
+ * row's track stands beside its label. A surface says the same of its figure, for the compiled rules to ask. */
+export const hasOf = (scene: { parts: string[]; track?: string | undefined }): string[] => (scene.track ? [...scene.parts, 'track'] : scene.parts);
+
+/** A view at a room, read off its fit rules with no browser. It is the reading a stylesheet compiled from the same
+ * rules gives (`compileFitRules` in packages/dom): every rule of the layout whose container is short of its need
+ * holds, each on its own, and where two say otherwise of one part the later one wins. A rule for a mark is asked only
+ * of a view that holds it, one for a kind of view (`has`) only of that kind, and one the spec's `keep` names is held off. `rules` are the context's, with a custom
+ * mark's own after them. Pure, and it measures nothing: what depends on the content is the surface's to see to. */
+export function fitTo(scene: { layout: Layout; parts: string[]; track?: string | undefined; nodes: { part: string }[] }, room: Rooms, rules: FitRule[], view: FitView = {}): Fit {
+  const keep = view.keep ?? [], marks = view.marks ?? [], has = hasOf(scene);
+  const swap = fallbackRule(rules, scene.layout, keep, view.via, view.fills && { marks, fills: view.fills });
+  const fit: Fit = { parts: scene.parts.slice(), hidden: [], set: {}, held: [] }, gone = new Set<string>();
+  for (const r of rules) {
+    if (r.layout !== scene.layout || (r.mark && !marks.includes(r.mark)) || (r.has && !has.includes(r.has))) continue;
+    // A rule on the plot holds when there is no plot left: what sits in it has gone with it.
+    if (!applies(r, room) && !(r.container === 'plot' && (room.plot === null || gone.has('plot')))) continue;
+    if (r.keep && keep.includes(r.keep)) { fit.held.push({ rule: r, kept: true, hid: [], showed: [] }); continue; }
+    if (r.fallback) {
+      if (r !== swap) continue;                                             // a preset the query cannot fill is no fallback of this view's
+      fit.held.push({ rule: r, kept: false, hid: fit.parts, showed: [] });
+      return { ...fit, parts: [], fallback: r };
+    }
+    const hid = r.hide.filter((t) => fit.parts.includes(t)), showed = (r.show ?? []).filter((t) => !fit.parts.includes(t) && scene.nodes.some((n) => n.part === t));
+    r.hide.forEach((t) => gone.add(t)); (r.show ?? []).forEach((t) => gone.delete(t));
+    // The number leads where it shows, as it does in a scene. The rest stand after what is there.
+    fit.parts = [...showed.filter((t) => t === 'number'), ...fit.parts.filter((p) => !hid.includes(p)), ...showed.filter((t) => t !== 'number')];
+    Object.assign(fit.set, r.set);
+    fit.held.push({ rule: r, kept: false, hid, showed });
+  }
+  fit.hidden = [...gone];
+  return fit;
 }
 
 /** What a view gives up under a rule's `fallback`, as `via` holds it: the rule's layout, and with it the mark where the rule is for one. */

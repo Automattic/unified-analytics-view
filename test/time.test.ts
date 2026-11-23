@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDimension, resolve, unboundedContainer, type Result } from '@unified-analytics/core';
+import { formatDimension, resolve, type Result } from '@unified-analytics/core';
 import { catalog, runQuery, samples } from '@unified-analytics/fixtures';
 import { adapt, type ApiResult } from '@unified-analytics/spacefast';
 import trends from './fixtures/spacefast/trends.response.json';
@@ -55,7 +55,7 @@ describe('a time, as its string writes it', () => {
 });
 
 describe('where a time is read', () => {
-  const trend = samples.trend!.spec, result = runQuery(trend.query), plan = (r: Result) => resolve(trend, r, unboundedContainer(), catalog);
+  const trend = samples.trend!.spec, result = runQuery(trend.query), plan = (r: Result) => resolve(trend, r, catalog);
   it('every day the fixture engine sends reads as its own month and day', () => {
     expect(result.rows.length).toBeGreaterThan(0);
     const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

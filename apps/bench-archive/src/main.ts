@@ -1,4 +1,4 @@
-import { buildScene, resolve, unboundedContainer } from '@unified-analytics/core';
+import { buildScene, resolve } from '@unified-analytics/core';
 import { UaView, defineUaView, registerPainter, surfaceSheet } from '@unified-analytics/dom';
 import { catalog, moreSamples, runQuery, samples as known, type Scenario } from '@unified-analytics/fixtures';
 import { linkPainter } from '@unified-analytics/flow/dom';
@@ -41,7 +41,7 @@ function paint(frame: HTMLElement) {
     // Planned once, with no limits. Nothing here runs when the frame is resized, so the caption says only what the plan holds.
     const view = (frame.firstElementChild as UaView | null) ?? frame.appendChild(new UaView());
     view.spec = spec; view.result = result; view.catalog = catalog;
-    const plan = resolve(spec, result, unboundedContainer(), catalog), scene = buildScene(plan, spec.query, result, catalog);
+    const plan = resolve(spec, result, catalog), scene = buildScene(plan, spec.query, result, catalog);
     caption.textContent = 'planned with no limits: ' + plan.layout + ', parts ' + scene.parts.join(', ') + ' · CSS decides what shows at this size · ' + plan.text;
   } catch (e) {
     caption.className = 'meta error';

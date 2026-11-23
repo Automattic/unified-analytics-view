@@ -52,7 +52,7 @@ export function roleOf(l: Layer): Role {
 }
 /* A layer's key names it by role and mark, and does not count the layers before it, so it holds when another layer
  * drops. Two layers of one role and mark are told apart by a count among themselves alone: `primary:text`, then
- * `primary:text#2`. Layers of the previous series, and of a row's delta, are counted last. A reduction drops whole roles, and missing prior
+ * `primary:text#2`. Layers of the previous series, and of a row's delta, are counted last. A rule takes whole roles, and missing prior
  * data drops the whole previous series, so neither can move a count. */
 export function layerKeys(layers: Layer[]): string[] {
   const seen: Record<string, number> = {}, keys: string[] = [];
@@ -68,7 +68,7 @@ export function isDim(catalog: Catalog, f: unknown): f is string { return typeof
 /** A metric, or a companion the engine returns with one, such as "pageviews@density". */
 export const isMetric = (catalog: Catalog, f: unknown): f is string => typeof f === 'string' && baseOf(f) in catalog.metrics;
 
-/** How a plot shares x among its rows. The scene uses it on 0 to 1 and place() in pixels, so both divide the room the same way. */
+/** How a plot shares x among its rows, on 0 to 1. */
 export function xScale(rows: string[], scale: 'band' | 'point', lo: number, hi: number) {
   const band = scaleBand<string>().domain(rows).range([lo, hi]).paddingInner(0.26).paddingOuter(0.1);
   const point = scalePoint<string>().domain(rows).range([lo, hi]);
@@ -333,14 +333,6 @@ function measureOf(catalog: Catalog, l: Layer): string | null {
 export function measuresOf(catalog: Catalog, layers: Layer[]): string[] {
   return [...new Set(layers.map((l) => measureOf(catalog, l)).filter((m): m is string => m != null))];
 }
-/** Whether a plot's layers are told apart by colour, and so have a legend: split into series that are painted apart,
- * or measuring several metrics. And whether one of those is a line or an area, which has an end to label. A split by
- * `detail` paints none apart, and is not one of these. */
-export function seriesOf(catalog: Catalog, layers: Layer[]): { lines: boolean } | null {
-  const x = xDimOf(catalog, layers), split = layers.filter((l) => paintedOf(catalog, l, x)), ended = (ls: Layer[]) => ls.some((l) => l.mark === 'line' || l.mark === 'area');
-  if (split.length) return { lines: ended(split) };
-  return measuresOf(catalog, layers).length > 1 ? { lines: ended(layers.filter((l) => l.series !== 'previous' && measureOf(catalog, l) != null)) } : null;
-}
 /** The dimension a layer is split into series by and painted apart by: the one on `color`, unless it is the one on x. */
 function paintedOf(catalog: Catalog, l: Layer, xField?: string): string | null {
   const c = l.encode && l.encode.color;
@@ -577,7 +569,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   if (painted) {
     // Both keys to the series, each in its own part, as a band has. The plan names one in `parts`; a fit rule swaps them.
     // A label sits beside the plot at the height its line ends. Two lines that end close have labels that collide:
-    // that is the painter's to see to, as place() does, since only it knows how tall a label is (reference, Open 5).
+    // that is the painter's to see to, since only it knows how tall a label is (reference, Open 5).
     series.forEach((s, j) => {
       if (ends.has(s)) nodes.push({ key: 'label:' + s, part: 'labels', kind: 'text', series: s, t: ends.get(s)!, text: s, anchor: 'start', baseline: 'middle', font: 'tick', paint: 'series.' + (j + 1), layer: 'guide' });
     });
@@ -636,15 +628,9 @@ function cellOf(catalog: Catalog, l: Layer, r: Row): { text: string; paint: stri
 export const TICK_W = CHAR_W - 0.8;   // rough advance of the 11px tick face, which a column's header is set in
 /** The gap after a row's column of values. */
 export const COLUMN_PAD = 14;
-/** The room a column of values takes: its widest value, or its header where it has one and that is wider, and the gap after it. Measured in characters, as place() sets them. */
+/** The room a column of values takes: its widest value, or its header where it has one and that is wider, and the gap after it. Measured in characters. */
 export const columnRoom = (valueChars: number, headerChars = 0) => Math.max(valueChars * CHAR_W, headerChars * TICK_W) + COLUMN_PAD;
 
-/** Room a row's columns need between them: for each, its widest value, or its header where there are headers.
- * Measured in characters, as place() sets them. */
-export function valueRoomOf(catalog: Catalog, layers: Layer[], rows: Row[]): number {
-  const cols = columnsOf(catalog, layers);
-  return cols.reduce((room, l) => room + columnRoom(max(rows, (r) => cellOf(catalog, l, r).text.length) || 0, cols.length > 1 ? columnLabel(catalog, l).length : 0), 0);
-}
 
 /* What a mark in a row's track is drawn with: its layer's key, role and paint, the row's key, its value and its second end, and the track's scale. */
 interface Track {
@@ -717,11 +703,6 @@ function listOf(catalog: Catalog, layers: Layer[], result: Result): { dim: strin
   const total = new Map((totals || []).map((t) => [str(t, dim), t]));
   return { dim, split, own, items: [...new Set(rows.map((r) => own.get(r)!))].map((k) => { const pairs = rows.filter((r) => own.get(r) === k); return { k, row: total.get(str(pairs[0]!, dim)) || { [dim]: pairs[0]![dim] }, pairs }; }) };
 }
-/** The rows a list has, as what each one's text reads: the result's rows, or the engine's totals for the first
- * dimension where a layer divides the rows by the second. For whatever counts or measures a list's rows. */
-export function listRows(catalog: Catalog, layers: Layer[], result: Result): Row[] {
-  return listOf(catalog, layers, result).items.map((i) => i.row);
-}
 
 // A dimension on y: a row for each of its values, with a track that has a metric on x. The ranked bar list is the first of these.
 // The track's scale is derived here, once, from what its layers put on x. It is linear and holds zero and whatever is on
@@ -730,9 +711,9 @@ export function listRows(catalog: Catalog, layers: Layer[], result: Result): Row
 // its values, in that dimension's own order, which is the engine's: paint follows it, and there is a legend.
 // With it on the detail of a dot or a tick, a row has one for each of its pairs, all in one paint and with no legend.
 // `told` is whether the plan shows a legend: without one a divided row's series are in one paint, parted by their gaps.
-function sceneRows(catalog: Catalog, layers: Layer[], result: Result, limit: number | null, told = true): Body {
+function sceneRows(catalog: Catalog, layers: Layer[], result: Result, told = true): Body {
   const nodes: SceneNode[] = [];
-  const { dim, split, own, items: all } = listOf(catalog, layers, result), items = all.slice(0, limit || all.length), rows = items.map((i) => i.row), shown = items.flatMap((i) => i.pairs);
+  const { dim, split, own, items: all } = listOf(catalog, layers, result), items = all, rows = items.map((i) => i.row), shown = items.flatMap((i) => i.pairs);
   // A bar with nothing on x is no mark of a value: it is the range the row's marks are read against, as an arc with
   // nothing on angle is a gauge's. It is the catalog `domain` of the metric the other marks put on the track, divided
   // where the catalog's `bands` divide it. The track's scale holds it whole.
@@ -1168,74 +1149,64 @@ function checkValues(result: Result, catalog: Catalog): void {
   for (const d in result.totalsBy) result.totalsBy[d]!.forEach((r, i) => check(r, 'row ' + (i + 1) + ' of totalsBy["' + d + '"]'));
 }
 
-/** Which of a whole's two legends the plan shows: all of it, or the one line. */
-const legendPart = (legend: Guides['legend']): Part => (legend === 'top' ? 'legend-top' : 'legend');
-/** The scene for a plan, in ratios. It takes no size: plan for a container with no limits and this is everything the spec asks for. */
+/** The scene for a plan, in ratios. Neither takes a size, so this is everything the spec asks for. */
 export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Catalog): Scene {
   checkValues(result, catalog);
-  if (p.layout === 'prose') return { layout: 'prose', parts: [], nodes: [], text: p.text };
   const number = sceneNumber(catalog, q, result, p.share);
   const parts: Part[] = p.tldrValue || p.layout === 'none' ? ['number'] : [];
-  let body: Body = { nodes: [] }, side = false;
-  const short: Part[] = [];
+  let body: Body = { nodes: [] };
   // The key to a unit's glyphs, where the plan shows it and the scene has one: a glyph worth one has none.
   const unitKeyed = () => { if (p.guides.unitKey && body.nodes.some((n) => n.part === 'unit-key')) parts.push('unit-key'); };
-  // A ramp or a key to sizes, where the plan shows it and the scene has one, and whether in its shorter form.
-  const keyTo = (part: 'ramp' | 'size', guide: boolean | string | undefined, shorter: string) => { if (guide && body.nodes.some((n) => n.part === part)) { parts.push(part); if (guide === shorter) short.push(part); } };
+  // A ramp or a key to sizes, where the plan shows it and the scene has one.
+  const keyTo = (part: 'ramp' | 'size', guide: boolean | undefined) => { if (guide && body.nodes.some((n) => n.part === part)) parts.push(part); };
   if (p.layout === 'notice') {
     parts.push('notice');
     body.nodes.push({ key: 'notice', part: 'notice', kind: 'text', text: emptyNote(catalog.metrics[q.metrics[0]!]!, true), anchor: 'middle', baseline: 'middle', font: 'label', paint: 'ink.muted', layer: 'guide' });
   } else if (p.layout === 'cartesian') {
-    side = p.side;                                                          // a bare plot, set beside the number
-    if (side && !parts.length) parts.push('number');
     body = sceneCartesian(catalog, p.layers, p.guides, result, (q.by || [])[0]);
-    const key = body.nodes.some((n) => n.part === 'legend') ? p.guides.legend : undefined;   // layers that were told apart may have been given up
     if (p.guides.y && body.nodes.some((n) => n.part === 'y-axis')) parts.push('y-axis');   // a stack about the middle has no value axis
     parts.push('plot');
     if (body.nodes.some((n) => n.part === 'points')) parts.push('points');
     if (p.guides.pointLabels && body.nodes.some((n) => n.part === 'point-labels')) parts.push('point-labels');
     if (body.nodes.some((n) => n.part === 'y-axis-2')) parts.push('y-axis-2');
-    if (key === 'labels') parts.push('labels');
     if (p.guides.x) parts.push('x-axis');
-    if (key === 'full') parts.push('legend');
-    keyTo('size', p.guides.size, 'most');
+    if (p.guides.legend && body.nodes.some((n) => n.part === 'legend')) parts.push('legend');
+    keyTo('size', p.guides.size);
     unitKeyed();
   } else if (p.layout === 'matrix') {
     body = sceneMatrix(catalog, p.layers, result);
-    if (p.guides.y) parts.push('y-axis');
+    if (p.guides.y && body.nodes.some((n) => n.part === 'y-axis')) parts.push('y-axis');   // one row of cells has no label down its side
     parts.push('plot');
     if (p.guides.x) parts.push('x-axis');
-    keyTo('ramp', p.guides.ramp, 'strip');
-    keyTo('size', p.guides.size, 'most');
+    keyTo('ramp', p.guides.ramp);
+    keyTo('size', p.guides.size);
   } else if (p.layout === 'rows') {
     if (p.guides.columns) parts.push('columns');
     parts.push('rows');
-    body = sceneRows(catalog, p.layers, result, p.rowLimit, !!p.guides.legend);
+    body = sceneRows(catalog, p.layers, result, !!p.guides.legend);
     unitKeyed();
-    // The key to a divided row's series, under the rows: all of it, or the one line.
-    if (body.series && p.guides.legend) parts.push(legendPart(p.guides.legend));
+    // The key to a divided row's series, under the rows.
+    if (body.series && p.guides.legend) parts.push('legend');
   } else if (p.layout === 'band') {
     // A unit there is a grid of cells in the band's part, where a bar is the band itself.
     const unit = p.layers.findIndex((l) => l.mark === 'unit');
     body = unit < 0 ? sceneBand(catalog, p.layers[0]!, result.rows, result.totals) : sceneGrid(catalog, p.layers[unit]!, layerKeys(p.layers)[unit]!, result);
     parts.push('band');
     unitKeyed();
-    if (p.guides.legend) parts.push(legendPart(p.guides.legend));
+    if (p.guides.legend) parts.push('legend');
   } else if (p.layout === 'radial') {
     body = sceneRadial(catalog, p.layers, q, result, !!p.guides.legend);
     parts.push('radial');
     // A number above the circle is not said again inside it.
     if (!parts.includes('number') && body.nodes.some((n) => n.part === 'hole')) parts.push('hole');
-    if (p.guides.rim && body.nodes.some((n) => n.part === 'rim')) { parts.push('rim'); if (p.guides.rim === 'few') short.push('rim'); }
+    if (p.guides.rim && body.nodes.some((n) => n.part === 'rim')) parts.push('rim');
     unitKeyed();
-    if (p.guides.legend) parts.push(legendPart(p.guides.legend));
+    if (p.guides.legend) parts.push('legend');
   } else if (customMarks().has(p.layout)) {
     // A custom mark builds its own scene, and says which of its parts the plan shows.
     const { parts: own, ...rest } = customMarks().get(p.layout)!.scene({ layers: p.layers, guides: p.guides, query: q, result, catalog });
     parts.push(...own);
     body = rest;
-    if (p.guides.ramp === 'strip' && own.includes('ramp')) short.push('ramp');
-    if (p.guides.size === 'most' && own.includes('size')) short.push('size');
   }
-  return { layout: p.layout, parts, ...(side && { side }), ...(short.length && { short }), ...body, nodes: number.concat(body.nodes) };
+  return { layout: p.layout, parts, ...body, nodes: number.concat(body.nodes) };
 }

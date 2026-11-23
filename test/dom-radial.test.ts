@@ -20,7 +20,7 @@ describe('the radial layout', () => {
     // The rule that takes the legend takes the colours it was the key to: what it painted is the first series' colour.
     expect(css).toContain(['@container uav-view (block-size < 87.5px) {', '  ' + fig('guides') + ' :is(.uav-legend, .uav-legend-top) { display: none; }', '  ' + fig('guides') + ' { --uav-split: plain; }',
       ...Object.entries(SPLIT_PLAIN).map(([sel, decl]) => '  ' + fig('guides') + ' ' + sel + ' { ' + decl + ' }'), '}'].join('\n'));
-    const alone = ['  ' + fig('marks') + ' :is(.uav-radial, .uav-legend, .uav-legend-top) { display: none; }', '  ' + fig('marks') + ' .uav-number { display: block; }',
+    const alone = ['  ' + fig('marks') + ' :is(.uav-radial, .uav-hole, .uav-rim, .uav-legend, .uav-legend-top, .uav-unit-key) { display: none; }', '  ' + fig('marks') + ' .uav-number { display: block; }',
       '  ' + fig('marks') + ' { grid-template: "number" auto / minmax(0, 1fr); }', '  ' + fig('marks') + ' .uav-body { display: none; }', '  ' + fig('marks') + ' .uav-number { align-self: start; margin: 0; }', '}'].join('\n');
     expect(css).toContain('@container uav-view (inline-size < 71.5px) {\n' + alone);
     expect(css).toContain('@container uav-view (block-size < 63.5px) {\n' + alone);

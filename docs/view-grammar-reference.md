@@ -34,10 +34,10 @@ Build the front-end foundation for analytics views: a small grammar of marks, a 
 ```
             catalog ──────────────┐
                                   ▼
-spec ──► expand ──► plan ──► scene ──► painter
- ▲        (presets)  ▲  (fit the container)   (DOM, dot grid, canvas…)
+spec ──► expand ──► plan ──► scene ──► fit ──► painter
+ ▲        (presets)  ▲   (no size)   (a room)   (DOM first; any surface)
  │                   │
- └─ query ──► result ┘        container: width, height, painter, type metrics, rules
+ └─ query ──► result ┘        container: its own size, and the rules a context hands it
 ```
 
 | Step | Input | Output | Owns | Status |
@@ -45,9 +45,10 @@ spec ──► expand ──► plan ──► scene ──► painter
 | **Catalog** | — | Metric and dimension definitions | What names mean; units, polarity, additivity | Proven (as a stub) |
 | **Query** | `spec.query` | `{ rows, totals, meta }` | Fetching. Stubbed with fixtures today | Proven (fixtures only) |
 | **Expand** | Spec with `use` | Spec with `layers` | Preset library | Proven |
-| **Plan** | Expanded spec, result, container | A plan: layout, layers with roles, guides, what was dropped, the tldr prose | Fitting the view to the container | Proven for the central reducer; the per-element approach in section 10 is Proposed |
-| **Scene** | Plan, result, container | Flat list of positioned shapes with stable keys | Geometry | Proven |
-| **Painter** | Scene | Pixels | Appearance | Proven: SVG and dot grid |
+| **Plan** | Expanded spec, result, the context's rules | A plan: layout, layers with roles, guides, the tldr prose. It takes no size | What a spec asks to have drawn | Proven |
+| **Scene** | Plan, result | Flat list of shapes in ratios of their part, with stable keys | What is drawn | Proven |
+| **Fit** | Scene, a room, the fit rules | The parts that show there, what else is hidden, the switches set | How a view gives way when room is short (section 10) | Proven: `fitTo` in core, and the same rules compiled to container queries |
+| **Painter** | Scene, fit | Pixels | Appearance, and where each part is placed | Proven: HTML and CSS (`packages/dom`). SVG and dot grid in the prototype only |
 
 Everything up to and including the scene is pure and has no DOM. d3 is used only for scales (`d3-scale`), path geometry (`d3-shape`) and array helpers (`d3-array`). No chart library.
 
@@ -69,9 +70,9 @@ Everything up to and including the scene is pure and has no DOM. d3 is used only
 | **Guide** | Anything derived from scales, never authored: axes, grid, legend, tick labels |
 | **Tldr value** | The numerical tl;dr of a view: the primary metric's total from the engine, an optional delta, an optional note. Formerly "headline" |
 | **Preset** | A named, saved fragment of a spec that expands into layers |
-| **Container** | Wherever a view renders. It supplies width, height, painter, type metrics and the rules a view is fitted by. Formerly "host" |
+| **Container** | Wherever a view renders. It owns its size, and is handed the rules a view is fitted by. Formerly "host" |
 | **Context** | The surface that holds containers: a panel, a toolbar, a dashboard, an agent. It lays its containers out by a scheme of its own, and hands them a durable rule set once, as it hands them a token set |
-| **Plan** | The resolved description of what will be drawn at this size, and what was dropped |
+| **Plan** | What a spec asks to have drawn, with no size: layout, layers with roles, guides and the sentence |
 | **Scene** | A flat JSON list of positioned shapes with stable keys and paint tokens |
 | **Painter** | Code that draws a scene |
 | **Tldr prose** | The prose tl;dr of a view: the text sibling every view has, derived from the query and transforms. Formerly "sentence" |
@@ -269,7 +270,7 @@ A value is rounded to whole glyphs, and a value above nothing has one at least. 
 
 A mark carries only its shape and those constraints. Relationships between marks (stacked, overlaid, normalized) are transforms or layering, never part of the mark.
 
-A custom mark registered in code and referenced by name is the escape hatch for anything the grammar cannot express (maps, Sankeys). Keep the spec small; do not let it grow an expression language. The registry is `registerMark` in `packages/core/src/marks.ts`. There are two: `geo`, in `packages/geo`, and `link`, in `packages/flow`. A custom mark says which channels it reads, in `reads` beside its fit rules, and is held to that as core's marks are (below).
+A custom mark registered in code and referenced by name is the escape hatch for anything the grammar cannot express (maps, Sankeys). Keep the spec small; do not let it grow an expression language. The registry is `registerMark` in `packages/core/src/marks.ts`. There are two: `geo`, in `packages/geo`, and `link`, in `packages/flow`. A custom mark says which channels it reads, in `reads` beside its fit rules, and is held to that as core's marks are (below). What it gives core is a scene in ratios and its fit rules, and what it gives a surface is a painter: it places nothing in pixels itself (Decided 43).
 
 ### What each mark reads
 
@@ -398,7 +399,7 @@ With `stack: "diverge"` and two series that is a population pyramid; with five i
 - **Guides** are derived from scales. Axes, grid, tick labels and legends are never authored, and a spec cannot switch them on or off. They start on (both axes and the grid on a cartesian layout, the full legend on a band), and the container's rules decide when they go. One scale has no axis to show: a stack set about the middle (`stack: "center"`) is read by how thick each band is, and a scale that counts away from the middle says nothing true of that, so it has no y ticks, no grid and no gutter for them, and its bands take the height of the plot (decided October 12). Thickness is said by the readout, the legend's order and the table. Which encoding each comes from is said once, in `GUIDES` in `packages/core/src/guides.ts`: the plan reads a view's guides off its layers from that table, whatever its layout, and `explain()` and the check on the fit rules have it from there. An axis: a plot's positions and a grid's. A legend: a dimension on `color`, or in a plot the several metrics its layers measure. A ramp: a metric on `color`. A key to sizes: a metric on `size`, but for a bar's, which is its column's width. A rim: a dimension on `angle`. (Built November 20; until then each layout set its own.)
 - **A guide is a key or a frame.** A key says what an encoding means: the legend, the ramp, the key to sizes, what a glyph is worth, the second y axis, a row's column headers, the names round a rim. The marks it keys cannot be read without it. An axis and a grid frame marks that still read by their shape, which is why a plot may give them up and stand bare beside the number. So no fit rule takes a key while the marks it keys are drawn, unless it puts a shorter form of the same guide in its place or has the marks drawn without the encoding. Eighteen rules did, and that was the audit's finding F2. All are closed (November 23), each by one of three answers: the key stays as long as its marks, a shorter form of it does, or the marks give up the encoding when the key goes. `test/guides.test.ts` holds every rule to it, core's and each custom mark's, and names the window a new rule would open.
   - **The second y axis** stays as long as the first. It went under 340 px once, and left a line in one unit to be read against the axis of another. Where the axes go and the plot stands bare beside the number, what is drawn on the second axis goes with it: a bare plot is of one unit, which is the number's. A scene's node says which axis it is on (`axis: 2`), and the `axes` rule takes `axis:2` with the axes.
-  - **What a glyph is worth** stays as long as the glyphs. No rule takes the line, and no reduction does. The room a `unit` form needs is its glyphs' and the line's together, and short of it the form becomes its plainer preset: a stack 160 px tall, a run 120, a grid read against a range 220, seats 200.
+  - **What a glyph is worth** stays as long as the glyphs. No rule takes the line but one that leaves the number alone. The room a `unit` form needs is its glyphs' and the line's together, and short of it the form becomes its plainer preset: a stack 160 px tall, a run 120, a grid read against a range 220, seats 200.
   - **A row's column headers** stay as long as two columns do. Short of height a list gives up rows, and never the names of the columns it still shows.
   - **A Sankey's node names** stay as long as its ribbons: the view becomes its grid at the size the names need (section 7).
 
@@ -407,7 +408,7 @@ With `stack: "diverge"` and two series that is a population pyramid; with five i
   - **The key to sizes** is cut to its largest step (`size-key: most`): the metric's name, the biggest dot and the most it stands for. A plot has it under 320 by 160, and a grid and a map with their ramp. In the bare plot the dots are one size (`dots: one`), since nothing there says what a size means.
   - **The names round a rim** are thinned to about four (the fit target `rim.ranked`, under 230 by 120): the scene ranks them, about four spaced evenly round with no rank, and the rule takes the ranked ones. Four names are enough to read the rest by their place.
 
-  A key cut down in place is still the key, so a plan says so in `guides` (`ramp: "strip"`, `size: "most"`, `rim: "few"`) and a scene in `short`, and `place()` draws that form.
+  A key cut down in place is still the key. The rule says so with a switch (`ramp: strip`, `size-key: most`) or a target inside the part (`rim.ranked`), `fitTo` reports it, and a surface draws that form.
 - **A `unit`'s key** is a line under the glyphs that says what one is worth, "Each is 500", in the metric's own format. It is the part `unit-key`. There is none where a glyph is worth one, or a hundredth of a whole. It is the key to the glyphs, so it stays as long as they do: the glyphs give way to their plainer preset at the height the two need together (above).
 - **The tldr value** is the primary metric's total from the engine, a delta if the query compares, and a derived note:
   - time dimension: the range-total caveat, such as "Sum of daily counts"
@@ -545,6 +546,8 @@ The layouts and their CSS are in `docs/dom-painter-plan.md`, section 4.2.
 
 ### 10.1 What the prototype does (Proven)
 
+The port ran this reducer too, until November 23 (Decided 43). Core no longer does: a plan takes no size, and how a view gives way is the rules of 10.2, read at a room by `fitTo`. This section stays as the record of what the prototype does and of where the ladder came from.
+
 A central reducer. The plan starts with everything the spec asks for, checks whether it fits, and if not applies the container's reductions in a fixed order until it does:
 
 1. **Drop guides.** Axes and grid go; the tldr value is added beside a bare plot to make up for them. A full legend becomes the largest segment's label.
@@ -608,12 +611,25 @@ A sketch, untested. The worked rules are in `docs/dom-painter-plan.md`, section 
 - Label placement on points and lines. Source or build properly; an occupancy-bitmap approach is the usual technique.
 - Any threshold that depends on the data, such as how many ticks there are or how long the labels run.
 
-**Tier 3: the resolver.** For what changes the data, and for containers with no CSS.
+**Tier 3: the reader, for surfaces with no CSS.** `fitTo(scene, room, rules)` in core reads the rules at a room and says the parts that show, what else is hidden and the switches set. `viewAt(spec, result, catalog, room)` gives the plan and scene with it, and follows a rule's `fallback` to the view the spec gives way to. An agent, a canvas or dot-grid painter and a native shell read a view's fit this way. It measures nothing.
 
-- Top-N plus "other", coarser grain (daily to weekly), and downsampling to pixel resolution. These need new data, not new styles.
-- The tldr prose for an agent, a canvas or dot-grid painter, and a native shell cannot read container queries.
+Changing the data is a resolver's work and is not built: Top-N plus "other", coarser grain (daily to weekly), and downsampling to pixel resolution need new data, not new styles.
 
-**One source of truth.** Declare the per-element rules as data. Compile them to container queries for browser containers, and evaluate the same rules in code everywhere else. This rule set is what a context passes to its containers. A format is Proposed in `docs/dom-painter-plan.md`, section 2, and evaluated in code by `packages/core/src/fit.ts`: one declaration per part, naming a container, the room the part needs in width and height, and what is hidden or shown otherwise.
+**One source of truth.** The per-element rules are data (`FIT_RULES` in `packages/core/src/fit.ts`): one declaration per part, naming a container, the room the part needs in width and height, and what is hidden, shown or switched otherwise. A rule may be for a view that holds one mark (`mark`) or for one kind of view (`has`: a plot of points, a row whose track stands beside its label). They compile to container queries for a browser, and `fitTo` reads the same rules in code. This rule set is what a context passes to its containers. Three things hold the two readings together:
+
+- `test/fit.test.ts` holds the reader to the rules, and every sample at every room of the sweep to what the rules promise: a view always shows something, it is its number alone wherever a rule takes its marks, and no key goes while its marks stay.
+- A rule names every part it takes, one that stands inside another among them, because a reader with no browser has no nesting to go by. A layout's painter may add CSS under a rule for how what is left is arranged, and never for which parts show.
+- The bench's `check` reads each captured frame's room through `fitTo` and reports a frame where the element shows otherwise.
+
+**What the rules do not say yet (Open 19).** The element settles these in its stylesheet or its measured pass. A surface with no browser has to see to them itself until each is a rule:
+
+- whole rows trimmed to a height, and a ranked column given up by the width of its values;
+- the number's shorter forms (under 160, 200 and 120 px, in `sizes.ts`), its note, and the prose rung where the number itself does not fit;
+- a number wider than the hole of its donut;
+- labels thinned where they would meet: ticks, line ends, points, the names round a rim, a Sankey's columns, a treemap's names;
+- a legend that wraps out of its room, and anything else that depends on how tall the content is.
+
+The rules on the plot (`secondary` and `hole`) ask for the plot's own box, which only a surface that has laid the view out knows. `fitTo` passes over them where the room gives no plot, and `explain()` says they were not asked.
 
 ### 10.3 Constraints to design around
 
@@ -625,7 +641,7 @@ A sketch, untested. The worked rules are in `docs/dom-painter-plan.md`, section 
 
 ### 10.4 Why a view looks as it does (Proven)
 
-A spec that does not come out as its author expected is fixed in the spec, so the view says what it decided in the spec's own words. `explain(spec, result, catalog, room)` in core returns the layout and why the layers asked for it, every part the plan has and the place in the spec it comes from (`layers[0].encode.color`, `query.metrics[0]`, or `use "donut": layers[0]` for a preset's), and at a room each fit rule that holds: what it hides or shows, what it needs and what the room has, its id, and the lever where the spec has one (`keep`, a field, `compare`). A key a rule cuts down is said in its shorter form ("shown as a thin strip", "shown as its largest step", "thinned to about four"), and one it takes says what went with it ("hidden, and the marks it keyed drawn in one colour"). An entry with no lever is a default, and the rules are where it is fixed. `UaView.explain()` asks it at the element's own size and adds what the measured pass decided there: labels given up or cut short, the number's shorter forms, the prose rung.
+A spec that does not come out as its author expected is fixed in the spec, so the view says what it decided in the spec's own words. `explain(spec, result, catalog, room)` in core returns the layout and why the layers asked for it, every part the plan has and the place in the spec it comes from (`layers[0].encode.color`, `query.metrics[0]`, or `use "donut": layers[0]` for a preset's), and at a room each fit rule that holds: what it hides or shows, what it needs and what the room has, its id, and the lever where the spec has one (`keep`, a field, `compare`). A key a rule cuts down is said in its shorter form ("shown as a thin strip", "shown as its largest step", "thinned to about four"), and one it takes says what went with it ("hidden, and the marks it keyed drawn in one colour"). A rule on the plot is said to be "not asked" where the room gives no plot to measure. An entry with no lever is a default, and the rules are where it is fixed. `UaView.explain()` asks it at the element's own size and adds what the measured pass decided there: labels given up or cut short, the number's shorter forms, the prose rung.
 
 The fit rules are the contract it reads, so a part the element hides that no rule names is a gap in the rules. Building it found two: the `axes` rule now names `y-axis-2`, and the grid's `marks` rule its axes and keys.
 
@@ -633,7 +649,7 @@ The fit rules are the contract it reads, so a part the element hides that no rul
 
 ## 11. The scene
 
-**Status: Proven in pixels. The ratio form is built: `buildScene` returns it and `place(scene, container)` makes the pixel scene from it, held to the sweep and the golden scenes. `<ua-view>` in `packages/dom` paints from the ratios. What follows describes the placed scene; the ratio fields are in `packages/core/src/types.ts`.**
+**Status: the ratio form is Proven. `buildScene` returns it, `<ua-view>` in `packages/dom` paints from it, and the golden scenes hold it; its fields are in `packages/core/src/types.ts`. What follows describes the placed scene, which is the prototype's. Core made one with `place()` until November 23 (Decided 43) and no longer does: this stays as the record of what a placed node holds, for the surface that next needs one.**
 
 A placed scene is `{ width, height, nodes, plot? }`. Nodes are flat and drawn in order.
 
@@ -661,13 +677,15 @@ Paint tokens in use: `ink`, `ink.muted`, `grid`, `axis`, `series.1` to `series.6
 
 **Decided October 7: one scene, in ratios.** A pixel scene needs a size before it can exist, which is the opposite of intrinsic. Every node gets a `part` and coordinates from 0 to 1 within that part's box. The DOM painter lets CSS turn them into pixels. The dot-grid and canvas painters get today's pixel scene from a pure function, `place(scene, size)`, which is held to the existing golden scenes. Keys, paint tokens, roles and `layer` are identical in both. Detail is in `docs/dom-painter-plan.md`, section 3.
 
+**Amended November 23 (Decided 43).** No painter read the pixel scene: the element paints the ratios, and the dot-grid and canvas painters are not started. `place()` was a second layout engine written by hand for each layout, and each new form had to be written in it as well as in the scene and the stylesheet. It is parked. A surface with no CSS gets the scene and what the fit rules make of it at a room (`fitTo`), and places the parts itself. One generic placer is the thing to write when a pixel painter is wanted, once every node is a ratio of its part's box (Open 20).
+
 One consequence, also agreed: a scene with no size cannot choose its tick count by height, so the y scale always rounds to 4 ticks and a rule thins them on short plots. This departs from the prototype, which rounds to 2 under 120 px, and the parity test changes with it on purpose.
 
 ---
 
 ## 12. Painters
 
-**Status: SVG and dot grid Proven. An HTML and CSS painter is Proposed and comes first in the build.**
+**Status: the HTML and CSS painter is Proven (`packages/dom`). SVG and dot grid are Proven in the prototype only: core places nothing since November 23 (Decided 43).**
 
 - **Two layers per view.** Data marks go to whichever renderer fits. Axes, labels, tooltips, brush and focus rings always stay in the DOM, so text stays crisp, tokens apply through CSS and keyboard access survives.
 - **Tokens, not colours.** A painter maps paint tokens to CSS custom properties, using the `@automattic/charts` token names under our own prefix (`series.1` becomes `--ua-charts-color-series-1`, for its `--a8c-charts-color-series-1`). Which custom property each paint token reads is `PAINT` in `packages/dom/src/dom.ts`, and `docs/dom-painter-plan.md` section 4.1 says where the rest of the map is. Light and dark are token sets.
@@ -847,7 +865,7 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 17. `keep` stays, provisionally, as the author's one lever. Uses are counted during testing and the field is removed if the defaults make it unnecessary. (October 7)
 18. Names: tldr value (was headline), tldr prose (was sentence), container (was host). The read-only prototype keeps the old names, and the parity test maps them. (October 7)
 19. Intrinsic behaviour is the default. A surface lays its containers out by its own scheme; a container fills the room it is handed and does not know where it is. With nothing said it fills the width and takes its natural height; a layout that hands out a box opts its children into filling it. (October 7)
-20. One scene, in ratios, with a `part` on every node. Pixel painters go through `place(scene, size)`. (October 7)
+20. One scene, in ratios, with a `part` on every node. Pixel painters go through `place(scene, size)`. (October 7) The second sentence is amended by 43.
 21. Y ticks always round to 4, thinned by a rule on short plots. A deliberate departure from the prototype. (October 7)
 22. In the DOM, bars are HTML and lines and areas are a stretched SVG. (October 7)
 23. Layouts stay, as arrangements of parts that fit rules and painters hang on. A channel's scale comes from its field; `rows` becomes a track per row; `radial` is added for `arc`. Detail and the build order are in `docs/chart-coverage-plan.md`. (October 7)
@@ -870,10 +888,11 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 40. A guide is read off a scale, and which encoding each comes from is one table, `GUIDES`. A guide is a key or a frame, and a key leaves no sooner than the marks it keys. (November 20)
 41. A key with no shorter form stays as long as its marks, or its marks give way with it. The second y axis stays as long as the first, and in the bare plot what is drawn on it goes too. What a glyph is worth stays as long as the glyphs, which give way to their plainer preset at the height the two need. A row's column headers stay as long as two columns do, and a list gives up rows instead. A Sankey becomes its grid at the size its node names need. (November 23)
 42. Where a key cannot stay whole it is cut down, or the marks give up what it was the key to. A legend with nothing to stand in for it takes the colours with it, and its marks are drawn in one paint; bars and dots, which have no line end to label, keep theirs as long as the axes. The ramp becomes a thin strip of every step between its two ends, chosen over its two ends alone when both were looked at. The key to sizes becomes its largest step, and dots are one size in the bare plot. The names round a rim are thinned to about four. With that no rule takes a key from marks that are still drawn. (November 23)
+43. A plan takes no size, and core places nothing. How a view gives way when room is short is the fit rules, as data, and one function reads them at a room with no browser: `fitTo`, with `viewAt` to follow a rule's `fallback`. The reducer in `resolve()`, `place()` and each custom mark's `place` are parked: nothing shipped read them, and they were a second reading of the rules and a second layout engine, both written by hand for each layout. Parity with the prototype is held for what takes no size: the engine's answer, the plan, the sentence and what each scene holds, node for node. Where a node is placed is no longer compared, and the tag `prototype-parity` marks the last commit that did. Two conditions joined the rule format so that the data says what the element does: a rule names every part it takes, and may be for one kind of view (`has`). The rules the DOM's painters had made for themselves are core's now. (November 23)
 
 ### Open
 
-1. The format for per-element fit rules, such that they compile to container queries and also run in code. Proposed in `docs/dom-painter-plan.md`, section 2. Step 1 of that plan built it (`packages/core/src/fit.ts`) and it holds for running in code: `resolve()` reads the rules with no change to any plan. It stays here until the rules are compiled, and until the differences step 1 found are settled: the view's block needs when the number sits above the plot, and what `keep` means to a compiled rule.
+1. The format for per-element fit rules, such that they compile to container queries and also run in code. Proposed in `docs/dom-painter-plan.md`, section 2. Built: the rules are compiled (`packages/dom/src/compile.ts`) and read in code by `fitTo` (Decided 43), and `keep` holds a rule off in both. One difference step 1 of that plan found is still open: a rule on the view cannot say the plot's room when the number sits above the plot, which is why the `y-ticks` rule carries a note and Open 19 its last sentence.
 2. Settled October 7: see Decided 20. The number is kept so later items keep theirs.
 3. How a preset pins a hand-tuned form.
 4. Settled October 7: see Decided 23. Built October 8.
@@ -891,6 +910,8 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 16. What building the chart coverage plan left to decide. Listed in `docs/chart-coverage-plan.md`, section 9.
 17. Time zone, grain and locale on the time axis. A time is said as its string writes it (section 4), which needs no zone while an engine names buckets by its own clock: the fixtures send bare dates, and Spacefast's API cuts in UTC and says so. Its contract says site time zones come later. When they do, either the adapter rewrites each instant as the site's clock time, or a zone reaches the formatter as a new input on the result. The first is recommended, since it adds nothing to the grammar. A stated grain would let the midnight bucket of an hourly result say its hour and a week say that it is one. Dates are written in `en-US` throughout.
 18. Settled November 23: see Decided 41 and 42. Built that day.
+19. What the fit rules do not say (section 10.2 lists it): rows trimmed to a height, columns given up by width, the number's shorter forms and the prose rung, a number too wide for its hole, labels that would meet, and anything that depends on the content's height. The element measures these, and the reader is silent on them. Recommendation: write each as a rule where its need can be stated in px, starting with the number's forms and whole rows, and leave label collision to the surface (Open 5). The two rules on the plot need the plot's box, which a rule on the view could state where the plot's share of the view is known.
+20. A placer for surfaces with no CSS. Recommendation: one generic function, written when a pixel painter is wanted and after the layouts share one coordinate space, so that it maps a ratio and its part's box to pixels and knows no layout. Until then such a surface gets the scene and `fitTo`.
 
 ---
 

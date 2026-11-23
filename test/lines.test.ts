@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { buildScene, formatUnit, makeContainer, metricOf, resolve, unitsOf, type Catalog, type PathNode, type Result, type Spec } from '@unified-analytics/core';
+import { buildScene, formatUnit, metricOf, resolve, unitsOf, type Catalog, type PathNode, type Result, type Spec } from '@unified-analytics/core';
 import { catalog as fixtures, runQuery } from '@unified-analytics/fixtures';
 import { crossMarks, hitNodes, readout, rowsAt, step } from '../packages/dom/src/keys.ts';
 import { pathTargets } from '../packages/dom/src/layouts/points.ts';
 import { mix, pairUp } from '../packages/dom/src/motion.ts';
-import { errOf } from './helpers.ts';
+import { errOf, run, shown } from './helpers.ts';
 
 // Step 3 of docs/uncommon-coverage-plan.md: what a line and an area take that they refused. Here, on a catalog and
 // results of its own, is what a companion's unit is and how a scale of ranks runs. The samples that use them, and what
@@ -30,7 +30,7 @@ const bySource: Result = {
   rows: [{ source: 'Search', hits: 850, 'hits@share': 0.438, 'hits@p50': 300 }, { source: 'Direct', hits: 780, 'hits@share': 0.84, 'hits@p50': 250 }, { source: 'Social', hits: 310, 'hits@share': 1, 'hits@p50': 100 }],
   totals: { hits: 1940 }, meta: { range: '3d', compare: null, notes: [] },
 };
-const scene = (spec: Spec, result: Result, cat = catalog, w = 500) => { const plan = resolve(spec, result, makeContainer(w), cat); return { plan, scene: buildScene(plan, spec.query, result, cat) }; };
+const scene = (spec: Spec, result: Result, cat = catalog, w = 500) => { const plan = resolve(spec, result, cat); return { plan, scene: buildScene(plan, spec.query, result, cat) }; };
 const err = (spec: Spec, result: Result) => errOf(() => scene(spec, result));
 const ticks = (s: ReturnType<typeof scene>, part = 'y-axis') => s.scene.nodes.filter((n) => n.part === part && n.kind === 'text').map((n) => (n as { text: string }).text);
 const paths = (s: ReturnType<typeof scene>) => s.scene.nodes.filter((n): n is PathNode => n.kind === 'path');
@@ -109,7 +109,7 @@ describe('the unit rank', () => {
 describe('a line in a plot of points', () => {
   const q = { metrics: ['visitors', 'signups'], by: ['date.day'], range: '28d' }, at = { x: 'visitors', y: 'signups' };
   const joined: Spec = { spec: 'view/0', query: q, layers: [{ mark: 'line', encode: at }, { mark: 'dot', encode: at }] };
-  const of = (spec: Spec, w = 500) => { const result = runQuery(spec.query), container = makeContainer(w), plan = resolve(spec, result, container, fixtures); return { plan, result, scene: buildScene(plan, spec.query, result, fixtures), container }; };
+  const of = (spec: Spec) => { const result = runQuery(spec.query), plan = resolve(spec, result, fixtures); return { plan, result, scene: buildScene(plan, spec.query, result, fixtures) }; };
   it('joins the rows in the engine\'s order, straight from each to the next, in the points\' own part', () => {
     const { scene, result } = of(joined), [line, tail] = scene.nodes.filter((n): n is PathNode => n.kind === 'path'), dots = scene.nodes.filter((n) => n.kind === 'circle' && n.part === 'points') as any[];
     expect(scene.parts).toEqual(['y-axis', 'plot', 'points', 'x-axis']);
@@ -123,10 +123,10 @@ describe('a line in a plot of points', () => {
     expect(tail!.points.map((p) => p.row)).toEqual(result.rows.slice(-2).map((r) => r['date.day']));
   });
   it('is a plot of points to the fit rules: no bare form, and the number alone below the room its axes need', () => {
-    expect([500, 346, 250, 120, 10].map((w) => of(joined, w).plan.layout)).toEqual(['cartesian', 'cartesian', 'none', 'none', 'prose']);
-    expect(of(joined, 250).plan.dropped).toEqual(['all marks (kept the number)']);
-    const alone = of({ ...joined, layers: [joined.layers![0]!] }, 250);
-    expect([alone.plan.layout, alone.plan.dropped]).toEqual(['none', ['all marks (kept the number)']]);
+    const at = (spec: Spec, w: number) => shown(run(spec, w, null, 'typical', { catalog: fixtures })).parts;
+    expect([500, 346].map((w) => at(joined, w).includes('points'))).toEqual([true, true]);
+    expect([250, 120].map((w) => at(joined, w))).toEqual([['number'], ['number']]);
+    expect(at({ ...joined, layers: [joined.layers![0]!] }, 250)).toEqual(['number']);
   });
   it('has no target along x and no crosshair: its points are the targets, in the line\'s order, with or without a dot on each', () => {
     const { scene, result, plan } = of(joined), rows = rowsAt(scene, q, result);

@@ -10,7 +10,7 @@ import { ensure, keyed, pageWay, prop, text } from '../dom.ts';
  * A glyph holds its shape. The scene gives a dot the room it has, `w` across and `h` up, as ratios of two different
  * lengths, so it cannot say that the dot is round: the stylesheet does, by taking the lesser of the two in pixels for
  * the width and an aspect ratio of one for the height. Where the part itself holds a shape, the half circle of seats,
- * the two are one length and the width alone says it. A hairline parts a glyph from the next, as place() parts them.
+ * the two are one length and the width alone says it. A hairline parts a glyph from the next.
  *
  *   .uav-plot .uav-dots i[data-unit]      a stack's dot: its band's width, or its share of the plot's height
  *   .uav-row > i[data-mark="unit"]        a run's dot: its share of the track, or the row's height less 8 px (track.ts)
@@ -26,8 +26,8 @@ export const glyph = (room: string): string => `max(1px, calc(${room} - 1px))`;
 export const UNIT_CSS = `
 .uav-dots i[data-unit] { inline-size: ${glyph('var(--uav-w) * 100cqi')}; block-size: auto; aspect-ratio: 1; }
 .uav-plot .uav-dots i[data-unit] { inline-size: ${glyph('min(var(--uav-w) * 100cqi, var(--uav-h) * 100cqb)')}; }
-/* The key takes a line of its own under whatever the body holds, and the view is that much taller for it, as place()
- * makes it: 20 px where a tick is 11 px, and with the tick's face from there. In a list it is the row after the rows. */
+/* The key takes a line of its own under whatever the body holds, and the view is that much taller
+ * for it: 20 px where a tick is 11 px, and with the tick's face from there. In a list it is the row after the rows. */
 .uav-unit-key { display: none; grid-column: 1 / -1; flex: none; padding-block-start: 4px; overflow: hidden; white-space: nowrap; }
 .uav[data-parts~="unit-key"] .uav-unit-key { display: block; }
 .uav-unit-key span { display: block; overflow: hidden; text-overflow: ellipsis; line-height: ${lineOf('tick', 16)}; color: var(--uav-paint); }

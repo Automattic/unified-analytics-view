@@ -42,7 +42,7 @@ export const linkPainter: LayoutPainter = {
   layout: 'link',
   css,
 
-  // Labels that would meet, by their real sizes, in each column: the larger node's stands, as place() decides it by a line.
+  // Labels that would meet, by their real sizes, in each column: the larger node's stands.
   measure(body) {
     for (const side of ['start', 'end']) {
       thinLabels(body, '.uav-labels > span[data-anchor="' + side + '"]:not([data-exit])', (els) =>

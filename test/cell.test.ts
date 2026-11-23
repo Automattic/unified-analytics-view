@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { buildScene, expand, makeContainer, place, resolve, sizeStep, type CircleNode, type PainterName, type RectNode, type Spec } from '@unified-analytics/core';
+import { buildScene, expand, resolve, sizeStep, type CircleNode, type RectNode, type Spec } from '@unified-analytics/core';
 import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
-import { err, run, validView as view } from './helpers.ts';
+import { err, run, shown, validView as view } from './helpers.ts';
 
 // The `cell` mark and the grid it is laid out in (docs/chart-coverage-plan.md, step 5). No prototype knows it, so it
 // is held to a sweep, facts and golden scenes of its own, as test/coverage.test.ts holds step 1.
@@ -10,48 +10,45 @@ const cells = (ratio: { nodes: unknown[] }) => (ratio.nodes as RectNode[]).filte
 const dots = (ratio: { nodes: unknown[] }) => (ratio.nodes as CircleNode[]).filter((n) => n.part === 'plot' && n.kind === 'circle');
 const texts = (scene: { nodes: unknown[] }, prefix: string) => (scene.nodes as { key: string; kind: string; text: string }[]).filter((n) => n.kind === 'text' && n.key.startsWith(prefix)).map((n) => n.text);
 
+const nan = (_: string, v: unknown) => (typeof v === 'number' && isNaN(v) ? 'NaN' : v);
+const sizes: [number, number | null][] = [[346, null], [234, null], [346, 100]];
+
 describe('the sweep', () => {
-  it('unique keys, no NaN, nothing taller than the container allows, and ratios from 0 to 1', () => {
-    for (const sc of scenarios) for (const p of ['svg', 'dots'] as PainterName[]) for (const h of [null, 300, 160, 100, 60, 40]) for (const w of [54, 80, 120, 170, 250, 290, 346, 500, 700]) {
-      const at = [sc, p, w, h].join(' ');
-      const { plan, ratio, scene } = run(heatmap, w, h, sc, p);
-      const keys = scene.nodes.map((n) => n.key), all = ratio.nodes.map((n) => n.key);
-      expect(new Set(keys).size, 'duplicate keys: ' + at).toBe(keys.length);
-      expect(new Set(all).size, 'duplicate keys in the ratio scene: ' + at).toBe(all.length);
-      expect(JSON.stringify([scene, ratio], (_, v) => (typeof v === 'number' && isNaN(v) ? 'NaN' : v)), 'NaN: ' + at).not.toMatch(/NaN/);
-      if (h != null && plan.layout !== 'prose') expect(scene.height, 'too tall: ' + at).toBeLessThanOrEqual(h);
+  it('unique keys, no NaN, ratios from 0 to 1, and at every room parts the scene has', () => {
+    for (const sc of scenarios) for (const h of [null, 300, 160, 100, 60, 40]) for (const w of [54, 80, 120, 170, 250, 290, 346, 500, 700]) {
+      const at = [sc, w, h].join(' ');
+      const { ratio, fit } = run(heatmap, w, h, sc);
+      const all = ratio.nodes.map((n) => n.key);
+      expect(new Set(all).size, 'duplicate keys: ' + at).toBe(all.length);
+      expect(JSON.stringify(ratio, nan), 'NaN: ' + at).not.toMatch(/NaN/);
+      expect(fit.parts.filter((p) => !ratio.nodes.some((n) => n.part === p)), 'parts with nothing in them: ' + at).toEqual([]);
       for (const n of ratio.nodes as any[]) for (const f of ['x', 'w', 'y', 'h', 't']) if (n[f] != null) expect(n[f] >= 0 && n[f] <= 1, f + ': ' + at + ' ' + n.key).toBe(true);
-      for (const n of scene.nodes as any[]) if (n.kind === 'rect') expect(n.x >= 0 && n.x + n.w <= w + 1e-9 && n.y >= 0, 'outside: ' + at + ' ' + n.key).toBe(true);
-      expect(all.filter((k) => keys.includes(k)), 'placed keys: ' + at).toEqual(keys);
     }
   });
-  it('resolves in every data state, and steps down: the ramp to a thin strip, then the grid for the number, then the prose', () => {
+  it('resolves in every data state, and steps down: the ramp to a thin strip, then the grid for the number', () => {
     expect(view(heatmap), JSON.stringify(view.errors)).toBe(true);
     for (const sc of scenarios) {
-      const at = (w: number, h: number | null = null) => { const { plan, ratio } = run(heatmap, w, h, sc); return [plan.layout, ratio.parts.join(' '), plan.dropped.join('; ')]; };
-      if (sc === 'empty') { expect([346, 234, 120, 10].map((w) => at(w)[0])).toEqual(['notice', 'notice', 'none', 'prose']); continue; }
-      expect(at(700)).toEqual(['matrix', 'y-axis plot x-axis ramp', '']);
-      expect(at(346)).toEqual(['matrix', 'y-axis plot x-axis ramp', '']);
+      const at = (w: number, h: number | null = null, spec: Spec = heatmap) => { const { plan, ...r } = run(spec, w, h, sc), f = shown(r); return [plan.layout, f.parts.join(' '), f.set.ramp ?? 'whole']; };
+      if (sc === 'empty') { expect([346, 234, 120].map((w) => at(w).slice(0, 2))).toEqual([['notice', 'notice'], ['notice', 'notice'], ['notice', 'number']]); continue; }
+      expect(at(700)).toEqual(['matrix', 'y-axis plot x-axis ramp', 'whole']);
+      expect(at(346)).toEqual(['matrix', 'y-axis plot x-axis ramp', 'whole']);
+      expect(run(heatmap, 346, null, sc).fit.held).toEqual([]);
       // The ramp is the key to the colours, so it stays as long as the grid: under its own need as a strip.
-      expect(at(234)).toEqual(['matrix', 'y-axis plot x-axis ramp', 'the colour ramp, down to a strip']);
-      expect(at(346, 149)).toEqual(['matrix', 'y-axis plot x-axis ramp', 'the colour ramp, down to a strip']);
-      expect([run(heatmap, 346, null, sc).ratio.short, run(heatmap, 234, null, sc).ratio.short, run(heatmap, 346, 90, sc).ratio.short]).toEqual([undefined, ['ramp'], ['ramp']]);
-      // Its line comes out of the grid's height, down to the least the two stand in.
-      expect(run(heatmap, 346, 90, sc).scene.height).toBe(90);
+      expect(at(234)).toEqual(['matrix', 'y-axis plot x-axis ramp', 'strip']);
+      expect(at(346, 149)).toEqual(['matrix', 'y-axis plot x-axis ramp', 'strip']);
+      expect(at(346, 90)).toEqual(['matrix', 'y-axis plot x-axis ramp', 'strip']);
       // A grid has no bare form beside the number: under its `marks` need it is the number alone.
-      expect(at(149)).toEqual(['none', 'number', 'the colour ramp, down to a strip; all marks (kept the number)']);
-      expect(at(346, 89)[0]).toBe('none');
-      expect(at(10)[0]).toBe('prose');
+      expect(at(149).slice(0, 2)).toEqual(['matrix', 'number']);
+      expect(at(346, 89)[1]).toBe('number');
       // A ramp the spec keeps stays whole, and the grid with it, down to the grid's own need.
-      expect([234, 150, 149].map((w) => run({ ...heatmap, keep: ['guides'] }, w, null, sc).ratio.parts.join(' '))).toEqual(['y-axis plot x-axis ramp', 'y-axis plot x-axis ramp', 'number']);
+      expect([234, 150, 149].map((w) => at(w, null, { ...heatmap, keep: ['guides'] }).slice(1))).toEqual([['y-axis plot x-axis ramp', 'whole'], ['y-axis plot x-axis ramp', 'whole'], ['number', 'whole']]);
     }
   });
 });
 
 describe('golden scenes', () => {
-  for (const [w, h] of [[346, null], [234, null], [346, 100]] as [number, number | null][]) {
-    it(`heatmap at ${w} by ${h ?? 'any'}`, () => expect(run(heatmap, w, h).scene).toMatchSnapshot());
-  }
+  it('heatmap', () => expect(run(heatmap, 346).ratio).toMatchSnapshot());
+  it('heatmap, at each room', () => expect(sizes.map(([w, h]) => [w, h, shown(run(heatmap, w, h))])).toMatchSnapshot());
 });
 
 // The grids step 0 of docs/uncommon-coverage-plan.md added: a calendar, a strip of days and a square of pages. And
@@ -59,25 +56,22 @@ describe('golden scenes', () => {
 describe('the grids of the Uncommon types', () => {
   const grids = Object.fromEntries(['calendar', 'stripes', 'adjacency', 'correlogram', 'circles', 'bins2d'].map((k) => [k, moreSamples[k]!.spec]));
   for (const [name, spec] of Object.entries(grids)) {
-    it(name + ': unique keys, no NaN, nothing taller than the container allows, ratios from 0 to 1, and every data state', () => {
+    it(name + ': unique keys, no NaN, ratios from 0 to 1, parts the scene has at every room, and every data state', () => {
       expect(view(spec), JSON.stringify(view.errors)).toBe(true);
-      for (const sc of scenarios) for (const p of ['svg', 'dots'] as PainterName[]) for (const h of [null, 300, 160, 100, 60, 40]) for (const w of [54, 80, 120, 170, 250, 290, 346, 500, 700]) {
-        const at = [name, sc, p, w, h].join(' ');
-        const { plan, ratio, scene } = run(spec, w, h, sc, p);
-        const keys = scene.nodes.map((n) => n.key), all = ratio.nodes.map((n) => n.key);
-        expect(new Set(keys).size, 'duplicate keys: ' + at).toBe(keys.length);
-        expect(new Set(all).size, 'duplicate keys in the ratio scene: ' + at).toBe(all.length);
-        expect(JSON.stringify([scene, ratio], (_, v) => (typeof v === 'number' && isNaN(v) ? 'NaN' : v)), 'NaN: ' + at).not.toMatch(/NaN/);
-        if (h != null && plan.layout !== 'prose') expect(scene.height, 'too tall: ' + at).toBeLessThanOrEqual(h);
+      for (const sc of scenarios) for (const h of [null, 300, 160, 100, 60, 40]) for (const w of [54, 80, 120, 170, 250, 290, 346, 500, 700]) {
+        const at = [name, sc, w, h].join(' ');
+        const { ratio, fit } = run(spec, w, h, sc);
+        const all = ratio.nodes.map((n) => n.key);
+        expect(new Set(all).size, 'duplicate keys: ' + at).toBe(all.length);
+        expect(JSON.stringify(ratio, nan), 'NaN: ' + at).not.toMatch(/NaN/);
+        expect(fit.parts.filter((p) => !ratio.nodes.some((n) => n.part === p)), 'parts with nothing in them: ' + at).toEqual([]);
         for (const n of ratio.nodes as any[]) for (const f of ['x', 'w', 'y', 'h', 't']) if (n[f] != null) expect(n[f] >= 0 && n[f] <= 1, f + ': ' + at + ' ' + n.key).toBe(true);
-        for (const n of scene.nodes as any[]) if (n.kind === 'rect') expect(n.x >= 0 && n.x + n.w <= w + 1e-9 && n.y >= 0, 'outside: ' + at + ' ' + n.key).toBe(true);
-        expect(all.filter((k) => keys.includes(k)), 'placed keys: ' + at).toEqual(keys);
       }
-      for (const sc of scenarios) expect([346, 234, 120, 10].map((w) => run(spec, w, null, sc).plan.layout), sc).toEqual(sc === 'empty' ? ['notice', 'notice', 'none', 'prose'] : ['matrix', 'matrix', 'none', 'prose']);
+      // Under the room its marks need a grid is its number, and so is a notice under its own.
+      for (const sc of scenarios) expect([346, 234, 120].map((w) => { const { plan, fit } = run(spec, w, null, sc); return fit.parts.join() === 'number' ? 'number' : plan.layout; }), sc).toEqual(sc === 'empty' ? ['notice', 'notice', 'number'] : ['matrix', 'matrix', 'number']);
     });
-    for (const [w, h] of [[346, null], [234, null], [346, 100]] as [number, number | null][]) {
-      it(`${name} at ${w} by ${h ?? 'any'}`, () => expect(run(spec, w, h).scene).toMatchSnapshot());
-    }
+    it(name, () => expect(run(spec, 346).ratio).toMatchSnapshot());
+    it(name + ', at each room', () => expect(sizes.map(([w, h]) => [w, h, shown(run(spec, w, h))])).toMatchSnapshot());
   }
   it('a calendar is a row for each weekday and a column for each whole week, said as the Monday it starts on', () => {
     const { ratio, plan } = run(grids.calendar!, 700);
@@ -103,7 +97,7 @@ describe('the grids of the Uncommon types', () => {
     for (const n of [3, 7, 12, 16]) if (signed.includes(n) && signed.includes(-n)) expect(Number(days[signed.indexOf(n)]!.paint.slice(4)) - 5, String(n)).toBe(5 - Number(days[signed.indexOf(-n)]!.paint.slice(4)));
   });
   it('a colour scale is diverging only where its values, or the domain the catalog states, cross zero', () => {
-    const { result } = run(grids.stripes!, 700), with_ = (f: (v: number) => number, cat = catalog) => { const r = { ...result, rows: result.rows.map((row) => ({ ...row, net_subscribers: f(row.net_subscribers as number) })) }; return buildScene(resolve(grids.stripes!, r, makeContainer(700), cat), grids.stripes!.query, r, cat); };
+    const { result } = run(grids.stripes!, 700), with_ = (f: (v: number) => number, cat = catalog) => { const r = { ...result, rows: result.rows.map((row) => ({ ...row, net_subscribers: f(row.net_subscribers as number) })) }; return buildScene(resolve(grids.stripes!, r, cat), grids.stripes!.query, r, cat); };
     // All at or above zero, and all at or below it, are sequential, as they were.
     expect(cells(with_((v) => Math.abs(v))).every((n) => n.paint.startsWith('seq.'))).toBe(true);
     expect(cells(with_((v) => -Math.abs(v))).every((n) => n.paint.startsWith('seq.'))).toBe(true);
@@ -113,7 +107,7 @@ describe('the grids of the Uncommon types', () => {
     expect(texts(with_((v) => Math.abs(v), stated), 'ramp:')).toEqual(['-40', '0', '40']);
     expect(new Set(cells(with_((v) => Math.abs(v), stated)).map((n) => n.paint))).toEqual(new Set(['div.5', 'div.6', 'div.7']));
     // No value is the same token on either ramp: it is not zero.
-    const holed = { ...result, rows: result.rows.map((r, i) => (i ? r : { ...r, net_subscribers: null })) }, scene = buildScene(resolve(grids.stripes!, holed, makeContainer(700), catalog), grids.stripes!.query, holed, catalog);
+    const holed = { ...result, rows: result.rows.map((r, i) => (i ? r : { ...r, net_subscribers: null })) }, scene = buildScene(resolve(grids.stripes!, holed, catalog), grids.stripes!.query, holed, catalog);
     expect(cells(scene)[0]!.paint).toBe('seq.none');
     expect(scene.nodes.filter((n) => n.part === 'ramp').slice(-2).map((n) => [n.key, n.paint])).toEqual([['ramp:none', 'seq.none'], ['ramp:none:label', 'ink.muted']]);
   });
@@ -144,14 +138,14 @@ describe('the grids of the Uncommon types', () => {
     // The bottom left cell is the least of both, and the engine's order does not move it.
     const corner = cells(ratio).find((n) => n.pair![0] === '0' && n.pair![1] === '0')!;
     expect(corner).toMatchObject({ key: 'primary:cell:0:0', x: 0, y: 7 / 8 });
-    expect(cells(run(grids.bins2d!, 700, null, 'typical', 'svg', { result: { ...result, rows: result.rows.slice().reverse() } }).ratio)).toEqual(cells(ratio));
+    expect(cells(run(grids.bins2d!, 700, null, 'typical', { result: { ...result, rows: result.rows.slice().reverse() } }).ratio)).toEqual(cells(ratio));
     // A pair nothing fell in is a count of none, a step of the ramp, and not no value.
     expect(result.rows.some((r) => r.pageviews === 0)).toBe(true);
     expect(cells(ratio).every((n) => /^seq\.\d+$/.test(n.paint))).toBe(true);
     expect(plan.text).toBe('Most page views at page weight 1–1.5, load time 1.5–2 (1,770) in the last 28 days. 1.5–2 is the busiest page weight at 32% of page views, and 2–2.5 the busiest load time at 19%.');
   });
   it('a dot stands in each pair of a grid in place of its cell, sized by how far its value is from zero and painted by the same scale a cell is', () => {
-    const { ratio, plan, result, scene } = run(grids.circles!, 700), value = (n: CircleNode) => result.rows.find((r) => r.other_factor === n.pair![0] && r.factor === n.pair![1])!.correlation as number;
+    const { ratio, plan, result } = run(grids.circles!, 700), value = (n: CircleNode) => result.rows.find((r) => r.other_factor === n.pair![0] && r.factor === n.pair![1])!.correlation as number;
     expect(ratio).toMatchObject({ layout: 'matrix', parts: ['y-axis', 'plot', 'x-axis', 'ramp', 'size'] });
     expect([cells(ratio).length, dots(ratio).length]).toEqual([0, 36]);
     // In the middle of its pair, in the grid's reading order, keyed by the pair as a cell is.
@@ -165,22 +159,15 @@ describe('the grids of the Uncommon types', () => {
     expect(texts(ratio, 'ramp:')).toEqual(['-1', '0', '1']);
     expect(texts(ratio, 'size:')).toEqual(['Correlation', '0.1', '0.3', '0.6', '1']);
     expect(plan.text).toBe(run(grids.correlogram!, 700).plan.text);
-    // place() sets each no wider than its cell, the ramp under the grid and the key to sizes under the ramp.
-    const placed = scene.nodes.filter((n) => n.kind === 'circle' && /^primary:dot:/.test(n.key)) as unknown as { cx: number; cy: number; r: number }[];
-    expect(placed.length).toBe(36);
-    expect(Math.max(...placed.map((n) => n.r))).toBe(12);
-    expect(scene.height).toBe(184 + 24 + 28);
-    expect(scene.nodes.find((n) => n.key === 'size:title')).toMatchObject({ y: 14, ty: 184 + 24 });
     // The two keys step down together where there is no room, and stay as long as the grid: a strip, and the largest step alone.
-    const small = run(grids.circles!, 234);
-    expect([small.ratio.parts.join(' '), small.ratio.short, small.plan.dropped]).toEqual(['y-axis plot x-axis ramp size', ['ramp', 'size'], ['the colour ramp, down to a strip and the key to sizes, down to its largest step']]);
-    expect(small.scene.nodes.filter((n) => n.key.startsWith('size:')).map((n) => (n as { text?: string }).text ?? 'dot')).toEqual(['Correlation', 'dot', '1']);
+    expect(shown(run(grids.circles!, 234))).toMatchObject({ parts: ['y-axis', 'plot', 'x-axis', 'ramp', 'size'], set: { ramp: 'strip', 'size-key': 'most' }, rules: ['ramp'] });
+    expect(shown(run(grids.circles!, 346))).toMatchObject({ parts: ['y-axis', 'plot', 'x-axis', 'ramp', 'size'], set: {}, rules: [] });
   });
   it('a dot over a cell is sized by its own metric in its own paint, shrinks to its cell, and a pair with no value has the least dot in the paint of no value', () => {
     const over: Spec = { spec: 'view/0', query: { metrics: ['visitors', 'pageviews'], by: ['weekday', 'hour'], range: '28d' },
       layers: [{ mark: 'cell', encode: { y: 'weekday', x: 'hour', color: 'visitors' } }, { mark: 'dot', encode: { y: 'weekday', x: 'hour', size: 'pageviews' }, paint: 'ink' }] };
     expect(view(over), JSON.stringify(view.errors)).toBe(true);
-    const { ratio, scene, result } = run(over, 700), most = Math.max(...result.rows.map((r) => (r.pageviews as number) ?? 0));
+    const { ratio, result } = run(over, 700), most = Math.max(...result.rows.map((r) => (r.pageviews as number) ?? 0));
     expect(ratio.parts).toEqual(['y-axis', 'plot', 'x-axis', 'ramp', 'size']);
     expect([cells(ratio).length, dots(ratio).length]).toEqual([168, 168]);
     expect(cells(ratio)).toEqual(cells(run(heatmap, 700).ratio).map((n) => ({ ...n, key: n.key.replace('primary:cell', 'primary:cell') })));
@@ -188,11 +175,8 @@ describe('the grids of the Uncommon types', () => {
     expect(none.map((n) => [n.key, n.paint])).toEqual([['primary:dot:3am:Wed', 'seq.none'], ['primary:dot:4am:Wed', 'seq.none'], ['primary:dot:5am:Wed', 'seq.none']]);
     expect(dots(ratio).filter((n) => n.size != null).every((n) => n.paint === 'ink')).toBe(true);
     expect(dots(ratio).find((n) => n.pair!.join() === '11am,Wed')!.size).toBe(sizeStep(result.rows.find((r) => r.weekday === 'Wed' && r.hour === '11am')!.pageviews as number, most));
-    // Twenty-four columns in 700 px are narrower than a plot's largest dot, so each step is its share of the cell.
-    const cellW = (700 - (3 * 6.6 + 14)) / 24, placed = scene.nodes.filter((n) => n.kind === 'circle' && /^primary:dot:/.test(n.key)) as unknown as { r: number }[];
-    expect(Math.max(...placed.map((n) => n.r))).toBeCloseTo(Math.min(cellW, (184 - 22) / 7) / 2 - 0.5, 9);
-    // Every key is unique in both scenes, and the sweep holds: nothing taller than its box.
-    for (const [w, h] of [[346, null], [346, 160], [250, 100], [120, null]] as [number, number | null][]) { const s = run(over, w, h); expect(new Set(s.scene.nodes.map((n) => n.key)).size).toBe(s.scene.nodes.length); if (h != null && s.plan.layout !== 'prose') expect(s.scene.height).toBeLessThanOrEqual(h); }
+    // Every key is unique, with a cell and a dot in each pair.
+    expect(new Set(ratio.nodes.map((n) => n.key)).size).toBe(ratio.nodes.length);
   });
   it('a square of pages has the same values down the side as across', () => {
     const { ratio } = run(grids.adjacency!, 700);
@@ -222,9 +206,9 @@ describe('cell', () => {
     expect(cells(ratio)[25]).toMatchObject({ key: 'primary:cell:1am:Tue', pair: ['1am', 'Tue'], x: 1 / 24, w: 1 / 24, y: 1 / 7, h: 1 / 7, layer: 'data', role: 'primary' });
     expect(cells(ratio).every((n) => n.row == null)).toBe(true);
     const turned = { ...result, rows: result.rows.slice().reverse() };
-    expect(cells(run(heatmap, 700, null, 'typical', 'svg', { result: turned }).ratio)).toEqual(cells(ratio));
+    expect(cells(run(heatmap, 700, null, 'typical', { result: turned }).ratio)).toEqual(cells(ratio));
     // An engine that sends no totals by dimension leaves only the rows to order by, and it ranks them: Saturday is the quietest.
-    expect(run(heatmap, 700, null, 'typical', 'svg', { result: { ...turned, totalsBy: undefined } }).ratio.ys![0]).toBe('Sat');
+    expect(run(heatmap, 700, null, 'typical', { result: { ...turned, totalsBy: undefined } }).ratio.ys![0]).toBe('Sat');
   });
   it('quantizes its value to the ten steps of the ramp, between the least and the most of the cells drawn', () => {
     const value = (n: RectNode) => result.rows.find((r) => r.hour === n.pair![0] && r.weekday === n.pair![1])!.visitors as number | null;
@@ -239,14 +223,14 @@ describe('cell', () => {
     const none = cells(ratio).filter((n) => n.paint === 'seq.none').map((n) => n.key);
     expect(none).toEqual(['primary:cell:3am:Wed', 'primary:cell:4am:Wed', 'primary:cell:5am:Wed']);
     const holed = { ...result, rows: result.rows.filter((r) => !(r.weekday === 'Mon' && r.hour === '12am')) };
-    expect(cells(run(heatmap, 700, null, 'typical', 'svg', { result: holed }).ratio)[0]).toMatchObject({ key: 'primary:cell:12am:Mon', paint: 'seq.none' });
+    expect(cells(run(heatmap, 700, null, 'typical', { result: holed }).ratio)[0]).toMatchObject({ key: 'primary:cell:12am:Mon', paint: 'seq.none' });
   });
   it('measures from zero where every cell holds one value, and takes a domain the catalog states', () => {
-    const flat = (v: number) => run(heatmap, 700, null, 'typical', 'svg', { result: { ...result, rows: result.rows.map((r) => ({ ...r, visitors: v })) } }).ratio;
+    const flat = (v: number) => run(heatmap, 700, null, 'typical', { result: { ...result, rows: result.rows.map((r) => ({ ...r, visitors: v })) } }).ratio;
     expect([new Set(cells(flat(40)).map((n) => n.paint)), texts(flat(40), 'ramp:')]).toEqual([new Set(['seq.10']), ['0', '40']]);
     expect([new Set(cells(flat(0)).map((n) => n.paint)), texts(flat(0), 'ramp:')]).toEqual([new Set(['seq.1']), ['0', '1']]);
     const stated = { ...catalog, metrics: { ...catalog.metrics, visitors: { ...catalog.metrics.visitors!, domain: [0, 1000] as [number, number] } } };
-    const scene = buildScene(resolve(heatmap, result, makeContainer(700), stated), heatmap.query, result, stated);
+    const scene = buildScene(resolve(heatmap, result, stated), heatmap.query, result, stated);
     expect(texts(scene, 'ramp:')).toEqual(['0', '1k', 'No data']);
     expect(new Set(cells(scene).map((n) => n.paint))).toEqual(new Set(['seq.1', 'seq.2', 'seq.none']));
   });
@@ -259,39 +243,19 @@ describe('the ramp, and the labels', () => {
     expect(ramp.filter((n) => n.kind === 'rect').map((n) => n.paint)).toEqual([...Array.from({ length: 10 }, (_, i) => 'seq.' + (i + 1)), 'seq.none']);
     expect(texts(ratio, 'ramp:')).toEqual(['10', '158', 'No data']);
     const whole = { ...result, rows: result.rows.map((r) => ({ ...r, visitors: r.visitors ?? 12 })) };
-    expect(run(heatmap, 700, null, 'typical', 'svg', { result: whole }).ratio.nodes.some((n) => n.key.startsWith('ramp:none'))).toBe(false);
+    expect(run(heatmap, 700, null, 'typical', { result: whole }).ratio.nodes.some((n) => n.key.startsWith('ramp:none'))).toBe(false);
   });
-  it('the scene holds every step of the ramp, and place() draws it under the grid: whole, or as a strip of slivers with no swatch for no value', () => {
-    const wide = run(heatmap, 346), narrow = run(heatmap, 234), steps = (r: typeof wide) => r.scene.nodes.filter((n) => /^ramp:\d+$/.test(n.key)) as unknown as { x: number; y: number; ty: number; w: number }[];
+  it('the scene holds every step of the ramp at any room, and under the ramp\'s need the rules set it as a strip', () => {
+    const wide = run(heatmap, 346), narrow = run(heatmap, 234);
     expect(narrow.ratio.nodes.filter((n) => n.part === 'ramp').length).toBe(14);
-    expect([wide.scene.height, narrow.scene.height]).toEqual([184 + 24, 184 + 24]);
-    expect(steps(wide).map((n) => n.x)).toEqual(Array.from({ length: 10 }, (_, i) => 2 * 6.6 + 6 + i * 15));
-    expect(steps(wide)[0]).toMatchObject({ y: 8, ty: 184, w: 14 });
-    // The strip: the same ten steps, edge to edge at half the width, between the same two ends.
-    expect(steps(narrow).map((n) => n.x)).toEqual(Array.from({ length: 10 }, (_, i) => 2 * 6.6 + 6 + i * 7));
-    expect(steps(narrow)[0]).toMatchObject({ y: 8, ty: 184, w: 7 });
-    const keys = (r: typeof wide) => r.scene.nodes.filter((n) => n.key.startsWith('ramp:')).map((n) => n.key);
-    expect(keys(wide).filter((k) => !keys(narrow).includes(k))).toEqual(['ramp:none', 'ramp:none:label']);
+    expect([wide.fit.set.ramp, narrow.fit.set.ramp]).toEqual([undefined, 'strip']);
   });
-  it('every label is in the scene, ranked, and place() thins them by rank where they would meet', () => {
+  it('every label is in the scene, ranked, for a surface to thin where they would meet', () => {
     const { ratio } = run(heatmap, 700), rank = (prefix: string) => ratio.nodes.filter((n) => n.key.startsWith(prefix)).map((n) => n.rank ?? 0);
     expect(texts(ratio, 'ytick:')).toEqual(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
     expect(rank('ytick:')).toEqual([0, 2, 2, 1, 2, 2, 0]);
     expect(rank('xtick:').slice(0, 7)).toEqual([0, 2, 2, 1, 2, 2, 0]);
-    expect(texts(run(heatmap, 1000).scene, 'xtick:').length).toBe(24);
-    expect(texts(run(heatmap, 346).scene, 'xtick:')).toEqual(['12am', '3am', '6am', '9am', '12pm', '3pm', '6pm', '9pm']);
-    expect(texts(run(heatmap, 234).scene, 'xtick:')).toEqual(['12am', '6am', '12pm', '6pm']);
-    expect(texts(run(heatmap, 346).scene, 'ytick:').length).toBe(7);
-    expect(texts(run(heatmap, 346, 100).scene, 'ytick:')).toEqual(['Mon', 'Thu', 'Sun']);
-  });
-  it('place() sets the cells a hairline apart, beside a gutter as wide as the longest row label', () => {
-    const { scene } = run(heatmap, 346), at = (k: string) => scene.nodes.find((n) => n.key === k) as unknown as { x: number; y: number; w: number; h: number };
-    const ml = 3 * 6.6 + 14, pw = (346 - ml) / 24, ph = (184 - 22) / 7, first = at('primary:cell:12am:Mon'), next = at('primary:cell:1am:Tue');
-    expect(first).toMatchObject({ x: ml, y: 0, rx: 1 });
-    [[first.w, pw - 1], [first.h, ph - 1], [next.x, ml + pw], [next.y, ph]].forEach(([px, want]) => expect(px).toBeCloseTo(want!, 9));
-    expect(at('ytick:Mon')).toMatchObject({ x: ml - 6, anchor: 'end', baseline: 'middle' });
-    expect(at('ytick:Mon').y).toBeCloseTo(ph / 2, 9);
-    expect(at('xtick:12am')).toMatchObject({ x: ml + pw / 2, y: 184 - 5, anchor: 'middle' });
+    expect(texts(ratio, 'xtick:').length).toBe(24);
   });
 });
 

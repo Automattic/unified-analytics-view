@@ -22,7 +22,7 @@ pnpm --filter @unified-analytics/bench check     # hold the latest capture to th
 pnpm --filter @unified-analytics/tokens generate   # rewrite packages/tokens/generated from its config
 ```
 
-Packages export their TypeScript source and nothing is built for release yet. Vite serves the bench.
+Packages export their TypeScript source and nothing is built for release yet. Vite serves the bench. CI runs `pnpm typecheck` and `pnpm test` on every pull request and on `master` (`.github/workflows/test.yml`); `bench.yml` builds and deploys the bench from `master` and runs neither.
 
 ## Layout
 

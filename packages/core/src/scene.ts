@@ -685,16 +685,16 @@ export const COLUMN_PAD = 14;
 export const columnRoom = (valueChars: number, headerChars = 0) => Math.max(valueChars * CHAR_W, headerChars * TICK_W) + COLUMN_PAD;
 
 
-/* What a mark in a row's track is drawn with: its layer's key, role and paint, the row's key, its value and its second end, and the track's scale. */
+/* A row's track draws the plot's marks, turned (reference, Decided 51): a list is a plot on its side, so what a plot
+ * has up its height a track has along its length, and what a plot has across a band a track has up the row, from the
+ * top, where a row starts. A mark is one function, the plot's, handed one row and the track's scale, and what it makes
+ * is turned once, here. What a list alone does to a mark is said after the turn, in `inTrack`. */
+/** What a row hands a mark in its track: its layer's key, role and paint, the row, its value and its second end, and the track's scale. */
 interface Track {
-  id: string;
-  role: Role;
-  paint: string;
-  k: string;
-  /** The row's value on the track. */
-  at: number;
-  /** Its second end, where the layer has one. */
-  to?: number;
+  id: string; role: Role; paint: string; say: Draw['say'];
+  k: string; row: Row;
+  /** The row's value on the track, and its second end, where the layer has one. */
+  at: number; to?: number;
   /** A value on the track's x, as a ratio of its width. */
   v: (n: number) => number;
   /** The track stands beside the label, so its marks are not behind any text. */
@@ -708,30 +708,37 @@ interface Track {
   /** The series are in one paint, by `detail`, and lie over each other on the track: each lets the ones under it show, as a line of a mass does. */
   mass?: boolean;
 }
-const inRow = ({ id, k, series }: Track) => markOf(id, k, series);
-type TrackFn = (l: Layer, d: Track) => SceneNode[];
-
-// A bar runs from zero to its value, so one below zero lies to the left of where the others start. With a second end
-// it runs from its value to that, and where its layer says `paint: "direction"` it is painted by which way it goes. Behind a label it is a tint.
-const trackBar: TrackFn = (_l, d) => {
-  const { role, paint, at, to, v, beside, polarity } = d, v0 = v(to == null ? 0 : at), v1 = v(to ?? at);
-  return [{ ...inRow(d), part: 'rows', kind: 'rect', x: v1, ...(v0 && { x2: v0 }), paint: toned(polarity, v0, v1, paint), ...(!beside && { opacity: 0.2, tone: 'soft' as const }), layer: 'data', role }];
+/** A list's layer as the plot's functions read one: what it has on y is on x, and what it has on x and x2 is on y and
+ * y2. A rule with one end at a number lies from zero to it in each row, which a plot says with a second end at zero.
+ * A label is a plot's rule's: what a list's layer reads of its own fields is the reads table's to say (reads.ts). */
+const turnLayer = ({ label: _label, ...l }: Layer): Layer => {
+  const { x, y, x2, y2: _, ...rest } = l.encode || {};
+  return { ...l, encode: { ...rest, ...(y != null && { x: y }), ...(x != null && { y: x }), ...(x2 != null ? { y2: x2 } : l.mark === 'rule' && typeof x === 'number' && { y2: 0 }) } };
 };
-// A rule lies along the track from one of the row's values to another, or from zero where it has one end.
-const trackRule: TrackFn = (l, { id, role, k, at, to, v }) => [{ key: id + ':' + k, part: 'rows', kind: 'line', x: v(at), x2: v(to ?? 0), y: 0.5, row: k, paint: l.paint || 'ink', layer: 'data', role }];
-// A tick stands across the row at its value.
-// With `align` it is the half of that to one side of the row's middle: the start is the top of the row, where a page begins.
-const trackTick: TrackFn = (l, d) => [{ ...inRow(d), part: 'rows', kind: 'line', x: d.v(d.at), x2: d.v(d.at), y: l.align === 'start' ? 0.5 : 0, y2: l.align === 'end' ? 0.5 : 1, paint: l.paint || 'ink', width: 2, ...(d.mass && { opacity: MASS }), layer: 'data', role: d.role }];
-// A dot stands on the track at its value, half way up the row. With a dimension on detail the row has one for each of its pairs.
-const trackDot: TrackFn = (_l, d) => [{ ...inRow(d), part: 'rows', kind: 'circle', pulse: false, x: d.v(d.at), y: 0.5, paint: d.paint, ...(d.mass && { opacity: MASS }), layer: 'data', role: d.role }];
-// A run of glyphs along the track from where it has zero, one for each `worth`. A glyph has its own share of the track
-// and the height of the row, and is as large as the lesser of the two lets it be: that is the painter's (types.ts, CircleNode).
-const trackUnit: TrackFn = (_l, { id, role, paint, k, at, v, worth = 1 }) => {
-  const w = v(worth) - v(0);
-  return Array.from({ length: Math.round(at / worth) }, (_, j): SceneNode => ({ key: id + ':' + k + ':' + (j + 1), part: 'rows', kind: 'circle', pulse: false, x: v((j + 0.5) * worth), y: 0.5, w, h: 1, row: k, paint, layer: 'data', role }));
+/** A node of the plot's, in a row's track. A rect keeps no band: it is as tall as its row. A line's ends up the row are said from the lower. */
+const turn = (n: SceneNode): SceneNode => {
+  if (n.kind === 'rect') { const { x: _x, w: _w, y, y2, ...rest } = n; return { ...rest, part: 'rows', ...(y != null && { x: y }), ...(y2 != null && { x2: y2 }) }; }
+  if (n.kind === 'line') { const { x = 0, x2 = x, y, y2 = y, ...rest } = n, a = 1 - x, b = 1 - x2; return { ...rest, part: 'rows', x: y, x2: y2, y: Math.min(a, b), ...(a !== b && { y2: Math.max(a, b) }) }; }
+  if (n.kind === 'circle') { const { x = 0, y, w, h, ...rest } = n; return { ...rest, part: 'rows', x: y, y: 1 - x, ...(h != null && { w: h }), ...(w != null && { h: w }) }; }
+  return n;
 };
-/* The marks a row's track draws, by name. A new mark is a function here. Text is not among them: it is set in the row, not on the scale. */
-const TRACK_MARKS: Partial<Record<Mark, TrackFn>> = { bar: trackBar, rule: trackRule, tick: trackTick, dot: trackDot, unit: trackUnit };
+/* The marks a row's track draws, by name: the plot's own functions. A new mark is a function there. Text is not among them: it is set in the row, not on the scale. */
+const TRACK_MARKS: Partial<Record<Mark, MarkFn>> = { bar, rule, tick, dot, unit: unitStack };
+/** One row is a band of its own: the whole of its track's height. */
+const ROW = { x: () => 0, w: 1, cx: () => 0.5 };
+/** A mark in a row's track: the plot's, of this one row, turned. A bar runs from zero to its value, or from its value
+ * to its second end; a rule from its value to its second end, or to zero; and anything else stands at its value. */
+function inTrack(l: Layer, d: Track): SceneNode[] {
+  const { at, to, v } = d, ends: [number, number] = l.mark === 'bar' ? [v(to == null ? 0 : at), v(to ?? at)] : l.mark === 'rule' ? [v(at), v(to ?? 0)] : [v(0), v(at)];
+  const drawn = TRACK_MARKS[l.mark]!(turnLayer(l), { id: d.id, role: d.role, paint: d.paint, prev: false, rows: [d.row], k: () => d.k, unit: ROW, say: d.say, v, ends: () => ends, series: d.series, polarity: d.polarity, worth: d.worth }).map(turn);
+  for (const n of drawn) {
+    // What a list alone does. A bar is whole, since no row is an unfinished bucket, and behind its label it is a tint.
+    // A dot or a tick of a mass lets the ones under it show.
+    if (n.kind === 'rect') { delete n.opacity; if (!d.beside) Object.assign(n, { opacity: 0.2, tone: 'soft' }); }
+    else if (d.mass) n.opacity = MASS;
+  }
+  return drawn;
+}
 /** Whether a row's track is read by where its marks are, and so stands beside the label and not behind it: any mark but a bar from zero, a bar that is divided into a stack, the range behind the marks, and a line or an area down the list. */
 export function trackBeside(layers: Layer[]): boolean {
   return layers.some((l) => LIST_MARKS[l.mark] || (TRACK_MARKS[l.mark] && (l.mark !== 'bar' || !!l.stack || (l.encode && (l.encode.x2 != null || l.encode.x == null)))));
@@ -807,7 +814,7 @@ function sceneRows(catalog: Catalog, layers: Layer[], result: Result, told = tru
   const spans = new Map(tracked.filter((l) => divides(l) && l.stack).map((l) => { const f = l.encode!.x as string; return [l, stacked(shown, series, split!, (r) => own.get(r)!, f, l.stack, l.stack === 'normalize' ? (r) => (whole.get(r)![f] as number) || Infinity : () => 1)] as const; }));
   const vals = edges.concat(tracked.flatMap((l) => (spans.has(l) ? [...spans.get(l)!.values()].flat() : divides(l) ? shown.flatMap((r) => on(l, r) as number[]) : rows.flatMap((r) => on(l, r) as number[])))), beside = trackBeside(layers);
   const [lo, hi] = common(result, 'track', holdingZero(vals)), v = (n: number) => (n - lo) / (hi - lo);
-  const ids = layerKeys(layers), cols = columnsOf(catalog, layers);
+  const ids = layerKeys(layers), cols = columnsOf(catalog, layers), say = sayOf(catalog);
   // A column after the first is ranked by its place, so the last goes first. One column of values needs no header: the view's title says what it is.
   const rank = (l: Layer) => { const j = cols.indexOf(l); return j > 0 && { rank: j }; };
   // Where the columns are headed, so is what the rows are: the dimension's name over the labels, from the start.
@@ -830,16 +837,16 @@ function sceneRows(catalog: Catalog, layers: Layer[], result: Result, told = tru
         // By detail it is a mark at each pair's own value, all in the layer's paint.
         series.forEach((s, j) => pairs.forEach((p) => {
           if (str(p, split!) !== s) return;
-          const ends = span ? span.get(p) : on(l, p), d = { id: ids[li]!, role: roleOf(l), k, series: s, v, beside };
+          const ends = span ? span.get(p) : on(l, p), d = { id: ids[li]!, role: roleOf(l), say, k, row: p, series: s, v, beside };
           if (!ends || ends[0] == null) return;
-          const drawn = draw(l, span ? { ...d, paint: told ? 'series.' + (j + 1) : 'series.1', at: ends[0], to: ends[1]! } : { ...d, paint: paintOf(l, catalog, result) || shade(l, r) || 'series.1', at: ends[0], mass: true });
+          const drawn = inTrack(l, span ? { ...d, paint: told ? 'series.' + (j + 1) : 'series.1', at: ends[0], to: ends[1]! } : { ...d, paint: paintOf(l, catalog, result) || shade(l, r) || 'series.1', at: ends[0], mass: true });
           if (span) for (const n of drawn) n.legend = true;                 // a stacked piece is in its series' colour, which the legend is the key to
           nodes.push(...drawn);
         }));
       } else if (draw) {
         const [at, to] = on(l, r), two = l.encode!.x2 != null;
         if (at == null || (two && to == null)) return;                  // a row with nothing to mark has no mark
-        nodes.push(...draw(l, { id: ids[li]!, role: roleOf(l), paint: paintOf(l, catalog, result) || shade(l, r) || (l.series === 'previous' ? 'compare' : 'series.1'), k, at, ...(two && { to: to! }), v, beside, worth: worths.get(l),
+        nodes.push(...inTrack(l, { id: ids[li]!, role: roleOf(l), say, paint: paintOf(l, catalog, result) || shade(l, r) || (l.series === 'previous' ? 'compare' : 'series.1'), k, row: r, at, ...(two && { to: to! }), v, beside, worth: worths.get(l),
           ...(l.mark === 'bar' && two && l.paint === 'direction' && { polarity: metricOf(catalog, fieldOn(l))?.polarity }) }));
       } else if (l.mark === 'text') {
         const cell = cellOf(catalog, l, r);

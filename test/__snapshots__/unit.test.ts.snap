@@ -1461,7 +1461,7 @@ exports[`golden scenes > isotype 1`] = `
       "role": "primary",
       "row": "Search",
       "w": 0.1111111111111111,
-      "x": 0.3888888888888889,
+      "x": 0.38888888888888884,
       "y": 0.5,
     },
     {
@@ -1489,7 +1489,7 @@ exports[`golden scenes > isotype 1`] = `
       "role": "primary",
       "row": "Search",
       "w": 0.1111111111111111,
-      "x": 0.6111111111111112,
+      "x": 0.611111111111111,
       "y": 0.5,
     },
     {
@@ -1517,7 +1517,7 @@ exports[`golden scenes > isotype 1`] = `
       "role": "primary",
       "row": "Search",
       "w": 0.1111111111111111,
-      "x": 0.8333333333333334,
+      "x": 0.8333333333333333,
       "y": 0.5,
     },
     {
@@ -1621,7 +1621,7 @@ exports[`golden scenes > isotype 1`] = `
       "role": "primary",
       "row": "Direct",
       "w": 0.1111111111111111,
-      "x": 0.3888888888888889,
+      "x": 0.38888888888888884,
       "y": 0.5,
     },
     {
@@ -1649,7 +1649,7 @@ exports[`golden scenes > isotype 1`] = `
       "role": "primary",
       "row": "Direct",
       "w": 0.1111111111111111,
-      "x": 0.6111111111111112,
+      "x": 0.611111111111111,
       "y": 0.5,
     },
     {

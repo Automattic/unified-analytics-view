@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CONTAINER_RULES, FIT_RULES, type FitRule, type Spec } from '@unified-analytics/core';
-import { UaView, compileFitRules, defineUaView } from '@unified-analytics/dom';
+import { UaView, check as checked, compileFitRules, defineUaView } from '@unified-analytics/dom';
 import { catalog, moreSamples, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
 import { GEO_RULES } from '@unified-analytics/geo';
 import { geoPainter } from '@unified-analytics/geo/dom';
@@ -103,6 +103,9 @@ describe('defining <ua-view>', () => {
     defineUaView();
     expect(define).not.toHaveBeenCalled();
     expect(warn).not.toHaveBeenCalled();
+  });
+  it('and a host can check a view\'s inputs itself: the package gives the element\'s own check', () => {
+    expect(checked).toBe(check);
   });
 });
 

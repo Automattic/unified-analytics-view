@@ -2,7 +2,7 @@ import { max, min } from 'd3-array';
 import { scaleBand, scaleLinear, scalePoint, scaleQuantize } from 'd3-scale';
 import { CHAR_W, delta, fmtPct, fmtTime, formatBin, formatDimension, formatMetric, formatUnit, formatValue, orList } from './format.ts';
 import { arcD, pathD } from './path.ts';
-import { customMarks } from './marks.ts';
+import { customMarks, type CustomMark, type MarkView } from './marks.ts';
 import { NOW, crossesZero, emptyNote, endsOf, leader, portion } from './prose.ts';
 import { UNIT_CELLS, UNIT_MOST, UNIT_SEATS, unitCount, unitSeats, unitShares, unitWorth } from './unit.ts';
 import { baseOf } from './types.ts';
@@ -251,8 +251,9 @@ const dot: MarkFn = (l, { id, series, role, paint, rows, k, unit, ends, size, po
 // the ones that collide from the last, since only it knows how wide a label is (reference, Open 5).
 const label: MarkFn = (l, { id, series, role, rows, k, unit, ends, size, say, of, rank }) => {
   const { y, text: f } = l.encode || {};
-  if (typeof y !== 'string' || typeof f !== 'string') throw new Error('A "text" layer in a plot needs a field on y, for where each label sits, and one on text, for what it says: for example { "x": "<a metric>", "y": "<a metric>", "text": "<the dimension>" }.');
-  const by = size ? size.field : rank ?? y, order = rows.slice().sort((a, b) => num(b, by) - num(a, by));
+  // In a plot a label sits at its row's value on y. Where the space says what a mark is known by, it says where it stands as well.
+  if (typeof f !== 'string' || (!of && typeof y !== 'string')) throw new Error('A "text" layer in a plot needs a field on y, for where each label sits, and one on text, for what it says: for example { "x": "<a metric>", "y": "<a metric>", "text": "<the dimension>" }.');
+  const by = size ? size.field : rank ?? (y as string), order = rows.slice().sort((a, b) => num(b, by) - num(a, by));
   return rows.map((r): TextNode => ({ ...(of ? of(r) : markOf(id, k(r), series)), part: 'point-labels', kind: 'text', x: unit.cx(k(r)), t: ends(r)[1], text: say(r, f),
     anchor: 'middle', font: 'tick', paint: 'ink', halo: true, rank: order.indexOf(r) + 1, layer: 'guide', role }));
 };
@@ -1242,6 +1243,27 @@ const LIST_MARKS: Partial<Record<Mark, MarkFn>> = { line: path, area: path };
  * out from the middle what it has up y. A line runs round from each place to the next and closes, an area fills in
  * from it to the centre, and a dot stands at each place. */
 const ROUND_MARKS: Partial<Record<Mark, MarkFn>> = { line: path, area: path, dot };
+/* And the ones drawn over a custom mark, at the places it offers (CustomMark.places): a mark that stands at a place
+ * and needs no axis. A `text` says something at each value's place: the names or the values on a map. */
+const OVER_MARKS: Partial<Record<Mark, MarkFn>> = { text: label };
+/** The marks of the plot's that may lie over a custom mark that offers its places. */
+export const overMarks = (): string[] => Object.keys(OVER_MARKS);
+/** What is drawn over a custom mark: each layer that is not the mark's own, by the plot's function, handed the mark's places. */
+function sceneOver(layers: Layer[], name: string, mark: CustomMark, view: MarkView): SceneNode[] {
+  const at = layers.flatMap((l, i) => (l.mark === name ? [] : [i]));
+  if (!at.length || !mark.places) return [];
+  const ids = layerKeys(layers), dim = view.layers[0]?.encode?.x as string, place = mark.places(view), key = (r: Row) => String(r[dim]);
+  return at.flatMap((i) => {
+    const own = layers[i]!, n = 'Layer ' + (i + 1) + ' is a "' + own.mark + '" over a "' + name + '"', f = own.encode?.text, first = at.find((j) => layers[j]!.mark === own.mark)!;
+    if (own.encode?.x !== dim) throw new Error(n + ', whose places are the values of ' + JSON.stringify(dim) + '. Encode { "x": ' + JSON.stringify(dim) + ' } on it, as the "' + name + '" layer does.');
+    if (typeof f !== 'string') throw new Error(n + ' with nothing on text, so it has nothing to say. Encode what each place should say there, for example { "x": ' + JSON.stringify(dim) + ', "text": ' + JSON.stringify(view.query.metrics[0]) + ' }.');
+    if (first !== i) throw new Error(n + ', and layer ' + (first + 1) + ' is one already: a place has room for one. Remove one of the two.');
+    // A row says something where it has something to say and its value has a place.
+    const rows = view.result.rows.filter((r) => r[f] != null && r[dim] != null && place(key(r)));
+    return OVER_MARKS[own.mark]!(own, { id: ids[i]!, role: roleOf(own), paint: own.paint || 'ink', prev: false, rows, say: sayOf(view.catalog), v: (x) => x, k: key, rank: f,
+      unit: { x: (k) => place(k)!.x, w: 0, cx: (k) => place(k)!.x }, ends: (r) => { const t = place(key(r))!.t; return [t, t]; }, of: (r) => ({ key: ids[i] + ':' + key(r), row: key(r) }) });
+  });
+}
 const TURN = 2 * Math.PI;
 
 /** The scene for a plan, in ratios. Neither takes a size, so this is everything the spec asks for. */
@@ -1301,9 +1323,12 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
     if (p.guides.legend) parts.push('legend');
   } else if (customMarks().has(p.layout)) {
     // A custom mark builds its own scene, and says which of its parts the plan shows.
-    const { parts: own, ...rest } = customMarks().get(p.layout)!.scene({ layers: p.layers, guides: p.guides, query: q, result, catalog });
+    // What lies over it is the plot's, at the places the mark offers: its own layers are all its scene is handed.
+    const mark = customMarks().get(p.layout)!, view = { layers: p.layers.filter((l) => l.mark === p.layout), guides: p.guides, query: q, result, catalog };
+    const { parts: own, ...rest } = mark.scene(view), over = sceneOver(p.layers, p.layout, mark, view);
     parts.push(...own);
-    body = rest;
+    body = { ...rest, nodes: rest.nodes.concat(over) };
+    if (p.guides.pointLabels && over.some((n) => n.part === 'point-labels')) parts.push('point-labels');
   }
   return { layout: p.layout, parts, ...body, nodes: number.concat(body.nodes) };
 }

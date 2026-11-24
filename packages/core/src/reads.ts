@@ -77,6 +77,9 @@ export const FIELDS: Record<string, Record<string, readonly ('label' | 'align' |
   radial:    { arc: ['sweep'], unit: ['sweep'] },
 };
 
+/** What a mark of the plot's reads where it is drawn over a custom mark, at the places that mark offers (marks.ts, `places`). */
+const OVER: Record<string, Reads> = { text: { x: [D], text: [D, M, C] } };
+
 const A: Record<Held, string> = { dimension: 'a dimension', metric: 'a metric', number: 'a number', companion: 'a companion of a dimension' };
 const heldOf = (catalog: Catalog, f: string | number): Held => (typeof f === 'number' ? N : isDim(catalog, f) ? D : isMetric(catalog, f) ? M : C);
 const said = (reads: Reads) => Object.entries(reads).map(([ch, takes]) => ch + ' (' + orList(takes.map((h) => A[h])) + ')').join(', ');
@@ -91,7 +94,7 @@ const every = () => [
  * what it does not say that the mark is not drawn without. `why` is how the layout was chosen (layoutOf).
  * A custom mark is held to what it says it reads, and one that says nothing is not asked. */
 export function checkReads(layout: Layout, why: string, layers: Layer[], catalog: Catalog): void {
-  const own = customMarks().get(layout)?.reads, marks = own ? { [layout]: own } : READS[layout];
+  const custom = customMarks().get(layout), own = custom?.reads, marks = own ? { [layout]: own, ...(custom!.places && OVER) } : READS[layout];
   if (!marks) return;
   layers.forEach((l, i) => {
     const reads = marks[l.mark], n = 'Layer ' + (i + 1), there = 'the "' + l.mark + '" mark' + (own ? '' : ' in a "' + layout + '" layout');

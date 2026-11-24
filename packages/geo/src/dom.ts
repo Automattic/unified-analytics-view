@@ -1,5 +1,5 @@
 import type { CircleNode, PathNode, TextNode } from '@unified-analytics/core';
-import { DRAWN, FOCUS, HOVER, IN_BOX, IS, STATE, attr, ensure, heldBy, hits, hold, holdShape, keyed, lineOf, paintRamp, paintSize, prop, RAMP_STRIP, SIZE_MOST, registerPainter, svg as svgOf, text, token, type LayoutPainter } from '@unified-analytics/dom';
+import { DRAWN, FOCUS, HOVER, IN_BOX, IS, STATE, attr, ensure, heldBy, hits, hold, holdShape, keyed, lineOf, measurePoints, paintLabels, paintRamp, paintSize, prop, RAMP_STRIP, SIZE_MOST, registerPainter, svg as svgOf, text, token, type LayoutPainter } from '@unified-analytics/dom';
 import { MAP, NOTE, eachGeoName } from './index.ts';
 
 /* The `geo` mark's half for the DOM: the painter of its layout, for registerPainter().
@@ -44,6 +44,11 @@ const css = `
 .uav[data-layout="geo"] .uav-plot svg, .uav[data-layout="geo"] .uav-plot svg * { outline: none; }
 .uav[data-layout="geo"] .uav-plot:has(.uav-regions:focus-visible) { ${FOCUS.inside} }
 /* The symbols' holder lies over the regions, and only a symbol takes the pointer from them. */
+/* What each place says, where a \`text\` layer lies over the map: the plot's own labels (core's OVER_MARKS), each in the
+ * middle of its place. They are HTML over the picture, set by its whole box, so they stand down while the map is
+ * brought in to one region. */
+.uav[data-layout="geo"] .uav-point-labels span { translate: calc(-50% + var(--uav-nudge, 0px)) -50%; }
+.uav[data-layout="geo"] .uav-plot:has(svg[data-zoom]) .uav-point-labels { visibility: hidden; }
 .uav[data-layout="geo"] .uav-points { pointer-events: none; }
 .uav[data-layout="geo"] .uav-points i { pointer-events: auto; }
 .uav[data-layout="geo"] .uav-ramp:empty { display: none; }
@@ -131,6 +136,9 @@ export const geoPainter: LayoutPainter = {
   // The two keys in their shorter forms, under the mark's `guides` rule: they stay as long as the map does.
   fit: { guides: { ...RAMP_STRIP, ...SIZE_MOST } },
 
+  // Labels over the map that would meet: the one that says less goes, as on a plot's points.
+  measure(body) { measurePoints(body); },
+
   paint(body, scene) {
     const part = ensure(body, 'div', 'uav-plot'), aspect = scene.aspect ?? 2;
     let svg = part.querySelector<SVGSVGElement>(':scope > svg');
@@ -150,6 +158,7 @@ export const geoPainter: LayoutPainter = {
     keyed(regions, shapes.filter(listed), () => 'path', shape);
     keyed(points, symbols, () => 'i', (el, n) => { prop(el, '--uav-x', n.x); prop(el, '--uav-t', n.t); prop(el, '--uav-size', n.size); });
     hits(regions, shapes.some(listed) ? 'y' : null); hits(points, symbols.length ? 'y' : null);
+    paintLabels(part, scene);
     // The map stays where it was brought in to while its region is still in the list, and is whole otherwise.
     zoomTo(svg, zoom.at?.isConnected && zoom.at.closest('.uav-regions[data-hits]') ? zoom.at : null, true);
 

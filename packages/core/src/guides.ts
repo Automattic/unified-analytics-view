@@ -61,7 +61,7 @@ export const GUIDES: Record<keyof Guides, Guide> = {
 /** The guides a view has, by what its layers encode: each on, and the legend whole. A custom mark is asked nothing:
  * its two keys start on together, and its scene says which of them it has (marks.ts). */
 export function guidesOf(layout: Layout, layers: Layer[], catalog: Catalog): Guides {
-  if (customMarks().has(layout)) return { ramp: true, size: true };
+  if (customMarks().has(layout)) return { ramp: true, size: true, ...(layers.some((l) => l.mark === 'text') && { pointLabels: true }) };
   const view = { layout, layers, catalog }, out: Record<string, unknown> = {};
   for (const [name, guide] of Object.entries(GUIDES)) if (guide.from(view)) out[name] = true;
   return out as Guides;

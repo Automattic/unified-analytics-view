@@ -200,6 +200,42 @@ describe('geo, with a symbol for each region', () => {
   });
 });
 
+// Step 3 of the refinement plan, stage 5 (reference, Decided 44): a custom mark offers its places, and the plot's
+// `text` is drawn over it at them, by the plot's own function.
+describe('text over a map', () => {
+  const labelled = moreSamples.labelled!.spec, [geo, text] = labelled.layers!, q = labelled.query;
+  it('says something at each region the result has a row for, where the region\'s symbol would stand', () => {
+    const { ratio, plan, result } = run(labelled, 480), labels = ratio.nodes.filter((n) => n.part === 'point-labels') as any[];
+    expect(plan).toMatchObject({ layout: 'geo', guides: { ramp: true, pointLabels: true } });
+    expect(ratio.parts).toEqual(['plot', 'ramp', 'point-labels']);
+    // Under it the map is the map alone, node for node.
+    expect(ratio.nodes.filter((n) => n.part !== 'point-labels')).toEqual(run({ ...labelled, layers: [geo!] }, 480).ratio.nodes);
+    expect(labels.length).toBe(result.rows.length);
+    expect(labels.find((n) => n.row === 'US')).toMatchObject({ key: 'primary:text:US', kind: 'text', text: '3,265', anchor: 'middle', font: 'tick', paint: 'ink', halo: true, layer: 'guide', role: 'primary' });
+    // Its place is the mark's own: where a symbol stands on the same map.
+    const marks = run({ query: q, layers: [{ mark: 'geo', encode: { x: 'country', size: 'visitors' } }] }, 480).ratio.nodes.filter((n) => n.part === 'points') as any[];
+    for (const n of labels) { const m = marks.find((d) => d.row === n.row)!; expect([n.x, n.t], n.key).toEqual([m.x, m.t]); }
+    // Ranked by what it says, the largest first: where two would meet, a surface keeps the one that says more.
+    expect([...labels].sort((a, b) => a.rank - b.rank).map((n) => n.row).slice(0, 3)).toEqual([...result.rows].sort((a, b) => (b.visitors as number) - (a.visitors as number)).slice(0, 3).map((r) => r.country));
+    // It may say the region's own name, and a row with no place on the map says nothing.
+    expect((run({ query: q, layers: [geo!, { mark: 'text', encode: { x: 'country', text: 'country' } }] }, 480).ratio.nodes.find((n) => n.key === 'primary:text:US') as any).text).toBe('US');
+    const stray: Result = { ...result, rows: [...result.rows, { country: 'XX', visitors: 9 }] };
+    expect(run(labelled, 480, null, 'typical', { result: stray }).ratio.nodes.filter((n) => n.part === 'point-labels').length).toBe(result.rows.length);
+  });
+  it('gives way as the map does: under the room a map needs it is the list of the same query', () => {
+    expect(shown(run(labelled, 480))).toMatchObject({ parts: ['plot', 'ramp', 'point-labels'], rules: [] });
+    expect(run(labelled, 250)).toMatchObject({ plan: { layout: 'rows', preset: 'bar-list' }, gave: ['geo'] });
+  });
+  it('errors name the fix: a text on another dimension, with nothing to say, twice, and a mark that stands at no place', () => {
+    const of = (layers: Spec['layers']) => err(() => run({ query: { metrics: ['visitors', 'pageviews'], by: ['country'], range: '28d' }, layers } as Spec, 480));
+    expect(of([geo!, { mark: 'text', encode: { x: 'visitors', text: 'visitors' } }])).toBe('Layer 2 is a "text" over a "geo", whose places are the values of "country". Encode { "x": "country" } on it, as the "geo" layer does.');
+    expect(of([geo!, { mark: 'text', encode: { x: 'country' } }])).toBe('Layer 2 is a "text" over a "geo" with nothing on text, so it has nothing to say. Encode what each place should say there, for example { "x": "country", "text": "visitors" }.');
+    expect(of([geo!, text!, text!])).toBe('Layer 3 is a "text" over a "geo", and layer 2 is one already: a place has room for one. Remove one of the two.');
+    expect(of([geo!, { mark: 'text', encode: { x: 'country', text: 'visitors', color: 'country' } }])).toBe('Layer 2 encodes "country" on color, and the "text" mark reads no color. It reads: x (a dimension), text (a dimension, a metric or a companion of a dimension). Remove "color", or use a mark that reads it there: geo.');
+    expect(of([geo!, { mark: 'dot', encode: { x: 'country', y: 'visitors' } }])).toMatch(/^The "geo" mark is laid out by its own code, and layer 2 is a "dot"\. Over it a text may be drawn/);
+  });
+});
+
 describe('rows the map has no shape for', () => {
   const note = (s: { nodes: { key: string }[] }) => (s.nodes.find((n) => n.key === 'note:not-shown') as { text: string } | undefined)?.text;
   const withRows = (rows: Result['rows']) => { const result = runQuery(map.query); return run(map, 346, null, 'typical', { result: { ...result, rows: [...result.rows, ...rows] } }); };
@@ -261,7 +297,7 @@ describe('prose, the number and errors', () => {
     expect(shared.nodes.find((n) => n.key === 'primary:geo:FR')!.paint).not.toBe('seq.none');
     expect(of([{ mark: 'geo', encode: { x: 'country', size: 'country' } }])).toMatch(/^Layer 1 encodes "country" on size, and a size is a quantity\./);
     expect(of([...drawn, ...drawn])).toBe('A map draws one "geo" layer, and this view has 2. Put the metric to fill by on color and the metric for symbols on size, in one layer.');
-    expect(of([...drawn, { mark: 'bar', encode: { x: 'country', y: 'visitors' } }])).toBe('The "geo" mark is laid out by its own code, and layer 2 is a "bar". Keep the "geo" layers alone, and draw the others as a view of their own.');
+    expect(of([...drawn, { mark: 'bar', encode: { x: 'country', y: 'visitors' } }])).toBe('The "geo" mark is laid out by its own code, and layer 2 is a "bar". Over it a text may be drawn, at each of its places, and nothing else. Keep the "geo" layers alone, and draw the others as a view of their own.');
     expect(of([{ mark: 'geo', encode: { x: 'page', color: 'pageviews' } }], { metrics: ['pageviews'], by: ['page'] }))
       .toBe('None of the 8 values of "page" is the id of a boundary shape. The first is "/", and the shapes are keyed on ISO 3166-1 alpha-2 codes, in capitals: "TZ", "EH" and 120 more. Have the engine send those ids for "page", or hand geoMark() shapes whose ids are its values.');
   });
@@ -281,6 +317,10 @@ describe('prose, the number and errors', () => {
 describe('the painter\'s half, as strings', () => {
   it('is the layout of the mark\'s name, whose rules are the mark\'s alone, and its part holds the scene\'s aspect', () => {
     expect(geoPainter.layout).toBe('geo');
+    // What a `text` layer says over the map is the plot's label, in the middle of its place, and it stands down while the map is brought in.
+    expect(geoPainter.css).toContain('.uav[data-layout="geo"] .uav-point-labels span { translate: calc(-50% + var(--uav-nudge, 0px)) -50%; }');
+    expect(geoPainter.css).toContain('.uav[data-layout="geo"] .uav-plot:has(svg[data-zoom]) .uav-point-labels { visibility: hidden; }');
+    expect(typeof geoPainter.measure).toBe('function');
     expect(geoPainter.css).toContain('.uav[data-layout="geo"] .uav-plot { flex: none; align-self: center; inline-size: min(100%, 480px); aspect-ratio: var(--uav-aspect, 2);');
   });
   it('its rules compile to the keys in their shorter forms, and then to the swap for the ranked list, by width and by height', () => {

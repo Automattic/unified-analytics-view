@@ -28,6 +28,11 @@ export interface CustomMark {
    * The plan's guides say whether it has a `ramp` and a `size`. `rows` are the dimension values in the result's order,
    * one for each of its rows. */
   scene(view: MarkView): Pick<Scene, 'nodes' | 'rows' | 'aspect'> & { parts: Part[] };
+  /** The places its space has, for the plot's marks that stand at a place and need no axis (reference, Decided 44):
+   * where the value `key` of the dimension on its `x` is, across and up its `plot` part's box from 0 to 1, or null
+   * where that value has no place. A mark that gives this lets a `text` layer on the same `x` say something at each
+   * place, drawn by the plot's own function. One that does not is drawn alone, as before. */
+  places?(view: MarkView): (key: string) => { x: number; t: number } | null;
 }
 
 const REGISTERED = new Map<string, CustomMark>();

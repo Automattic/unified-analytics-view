@@ -116,6 +116,9 @@ export function geoMark(shapes: Shapes, { name = 'geo', projection }: GeoOptions
       return { nodes, rows: rows.map((r) => String(r[dim])), aspect, parts };
     },
 
+    // A region's place is where its symbol stands: the middle of its shape, in the map's box.
+    places: () => (key) => { const s = regions.find((r) => r.id === key); return s ? { x: s.x, t: s.t } : null; },
+
   };
 }
 

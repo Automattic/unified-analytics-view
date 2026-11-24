@@ -1,11 +1,11 @@
 import { CONTAINER_RULES } from './container.ts';
 import { fitTo, gaveWay, type Fit, type Rooms } from './fit.ts';
 import { guidesOf } from './guides.ts';
-import { fmtTime, rangeLabel } from './format.ts';
+import { fmtTime, orList, rangeLabel } from './format.ts';
 import { customMarks } from './marks.ts';
 import { PRESETS, expand, fills, presetNames, usesPrevious } from './presets.ts';
 import { checkReads } from './reads.ts';
-import { DETAIL_LAYOUTS, SERIES, isMetric, buildScene, columnsOf, isDim, metricOf, pointDimOf, roleOf, xDimOf } from './scene.ts';
+import { DETAIL_LAYOUTS, SERIES, isMetric, buildScene, columnsOf, isDim, metricOf, overMarks, pointDimOf, roleOf, xDimOf } from './scene.ts';
 import { differenceProse, gridProse, rangeProse, rankProse, tldrProse } from './prose.ts';
 import { MARKS, baseOf } from './types.ts';
 import type { Catalog, ContainerRules, Layer, Layout, Plan, PlanShape, PresetLibrary, Query, Result, Scene, Spec } from './types.ts';
@@ -29,8 +29,10 @@ const KIND_NAMES: Record<FieldKind, string> = { dimension: 'a dimension', metric
 
 export function layoutOf(catalog: Catalog, layers: Layer[]): LayoutChoice {
   // A custom mark is laid out by its own code, under its own name, and that code draws its layers alone.
-  const custom = layers.findIndex((l) => customMarks().has(l.mark)), other = custom >= 0 ? layers.find((l) => l.mark !== layers[custom]!.mark) : undefined;
-  if (other) throw new Error('The "' + layers[custom]!.mark + '" mark is laid out by its own code, and layer ' + (layers.indexOf(other) + 1) + ' is a "' + other.mark + '". Keep the "' + layers[custom]!.mark + '" layers alone, and draw the others as a view of their own.');
+  // But for the plot's marks that stand at a place, over a mark that offers its places (marks.ts, `places`).
+  const custom = layers.findIndex((l) => customMarks().has(l.mark)), offers = custom >= 0 && !!customMarks().get(layers[custom]!.mark)!.places;
+  const other = custom >= 0 ? layers.find((l) => l.mark !== layers[custom]!.mark && !(offers && overMarks().includes(l.mark))) : undefined;
+  if (other) throw new Error('The "' + layers[custom]!.mark + '" mark is laid out by its own code, and layer ' + (layers.indexOf(other) + 1) + ' is a "' + other.mark + '". ' + (offers ? 'Over it a ' + orList(overMarks()) + ' may be drawn, at each of its places, and nothing else. ' : '') + 'Keep the "' + layers[custom]!.mark + '" layers alone, and draw the others as a view of their own.');
   if (custom >= 0) return { layout: layers[custom]!.mark, layer: custom, why: 'the "' + layers[custom]!.mark + '" mark is registered in code and lays itself out' };
   const is = (kind: FieldKind, f: unknown) => kind === 'any' || (kind === 'metric' ? isMetric(catalog, f) : isDim(catalog, f));
   const find = (test: (l: Layer) => boolean) => layers.findIndex(test);

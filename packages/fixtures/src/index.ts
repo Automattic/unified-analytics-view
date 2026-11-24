@@ -543,6 +543,9 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
             layers: [{ mark: 'bar', encode: { y: 'page', x: 'pageviews' } }, { mark: 'line', encode: { y: 'page', x: 'pageviews' }, series: 'previous' }, { mark: 'text', encode: { y: 'page', text: 'page' } }, { mark: 'text', encode: { y: 'page', text: 'pageviews' }, align: 'end' }] } },
   bullet:  { label: 'Bullet: sign-ups by device, against the target', spec: { spec: 'view/0', title: 'Sign-ups against target', use: 'bullet', query: { metrics: ['signups'], by: ['device'], range: '28d' } } },
   map:     { label: 'A map: visitors by country', spec: { spec: 'view/0', title: 'Visitors by country', use: 'choropleth', query: { metrics: ['visitors'], by: ['country'], range: '28d' } } },
+  // The same map with each country's visitors said on it: the plot's `text`, drawn over a custom mark at the places it offers. Where two would meet, the one that says less goes.
+  labelled: { label: 'Map with its values on it: visitors by country, said on each', spec: { spec: 'view/0', title: 'Visitors by country', query: { metrics: ['visitors'], by: ['country'], range: '28d' },
+            layers: [{ mark: 'geo', encode: { x: 'country', color: 'visitors' } }, { mark: 'text', encode: { x: 'country', text: 'visitors' } }] } },
   symbols: { label: 'Symbols on a map: page views by country', spec: { spec: 'view/0', title: 'Page views by country', use: 'symbol-map', query: { metrics: ['pageviews'], by: ['country'], range: '28d' } } },
   // A split that spends no colour (docs/uncommon-coverage-plan.md, step 1): a line for each country, all in one paint.
   spaghetti: { label: 'Spaghetti: visitors by day, a line for each of fifteen countries', spec: { spec: 'view/0', title: 'Visitors by country, day by day', use: 'spaghetti', query: { metrics: ['visitors'], by: ['date.day', 'country'], range: '28d' } } },

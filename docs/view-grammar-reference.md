@@ -4,11 +4,11 @@ As of October 7, 2026. Working name only; rename freely.
 
 `docs/vision.md` says what the project is for. Every Decided and Open item here is weighed against it.
 
-This is the reference for building an analytics view system in which a view is described once, as data, and the container it lands in decides how to present it. It compiles the design work so far and the lessons from a working prototype (`prototype/prototype-bench.js`, 815 lines, plus `prototype-bench.html` and `prototype-test.js`).
+This is the reference for building an analytics view system in which a view is described once, as data, and the container it lands in decides how to present it. It compiles the design work so far and the lessons from a working prototype, which left the repository on November 24, 2026 (Decided 52).
 
 **How to read the status labels.** Each section is marked one of:
 
-- **Proven:** implemented in the prototype and exercised across views, widths, heights and data states.
+- **Proven:** built and exercised across views, widths, heights and data states.
 - **Proposed:** decided in design but not yet built. Treat as the plan, and say so if building it shows it is wrong.
 - **Open:** undecided. Do not settle these silently; raise them.
 
@@ -48,7 +48,7 @@ spec ──► expand ──► plan ──► scene ──► fit ──► pai
 | **Plan** | Expanded spec, result, the context's rules | A plan: layout, layers with roles, guides, the tldr prose. It takes no size | What a spec asks to have drawn | Proven |
 | **Scene** | Plan, result | Flat list of shapes in ratios of their part, with stable keys | What is drawn | Proven |
 | **Fit** | Scene, a room, the fit rules | The parts that show there, what else is hidden, the switches set | How a view gives way when room is short (section 10) | Proven: `fitTo` in core, and the same rules compiled to container queries |
-| **Painter** | Scene, fit | Pixels | Appearance, and where each part is placed | Proven: HTML and CSS (`packages/dom`). SVG and dot grid in the prototype only |
+| **Painter** | Scene, fit | Pixels | Appearance, and where each part is placed | Proven: HTML and CSS (`packages/dom`). SVG and dot grid were the prototype's, and are not built here |
 
 Everything up to and including the scene is pure and has no DOM. d3 is used only for scales (`d3-scale`), path geometry (`d3-shape`) and array helpers (`d3-array`). No chart library.
 
@@ -668,7 +668,7 @@ A page that registers the mark again for a set of tiles (section 7) names the pr
 All seven are working names, to check against `@automattic/charts`. A name must be letters, digits, `_` and `-`, and cannot be one the library has. A name already registered is replaced. `customPresets()` lists what is registered. The registry is a map and two functions, as the one for marks is, and a name in it is unknown until its package has been loaded: the error for an unknown preset lists the library and the registry, and names `registerPreset`.
 
 - The library ships the basics. Users and agents add their own presets to it.
-- A preset is named after the `@automattic/charts` component it replaces, where one exists: `line` for `LineChart`, `bar-list` for `BarListChart`. The prototype calls `line` by its earlier name, `trend`.
+- A preset is named after the `@automattic/charts` component it replaces, where one exists: `line` for `LineChart`, `bar-list` for `BarListChart`.
 - A `previous` layer is left out on expansion when the query has no `compare`.
 - **Proposed:** a preset may pin a hand-tuned form for a size where the derived result is not good enough. The format for this is Open.
 - **The health check for the whole approach:** count how many presets need pins or custom marks. If most do, this has become a chart-type library with extra steps.
@@ -689,9 +689,9 @@ This is the heart of the system and the part most in flux.
 
 The layouts and their CSS are in `docs/dom-painter-plan.md`, section 4.2.
 
-### 10.1 What the prototype does (Proven)
+### 10.1 What the prototype did
 
-The port ran this reducer too, until November 23 (Decided 43). Core no longer does: a plan takes no size, and how a view gives way is the rules of 10.2, read at a room by `fitTo`. This section stays as the record of what the prototype does and of where the ladder came from.
+The port ran this reducer too, until November 23 (Decided 43). Core no longer does: a plan takes no size, and how a view gives way is the rules of 10.2, read at a room by `fitTo`. This section stays as the record of what the prototype did and of where the ladder came from.
 
 A central reducer. The plan starts with everything the spec asks for, checks whether it fits, and if not applies the container's reductions in a fixed order until it does:
 
@@ -825,7 +825,7 @@ A placed scene is `{ width, height, nodes, plot? }`. Nodes are flat and drawn in
 
 Every node also has:
 
-- `key`: stable across renders, for example `primary:line`, `primary:bar:2026-09-08`, `seg:Search`. A layer's key is its role and mark, with `#2` for a second layer of the same role and mark; it does not count layers, so it holds when one drops. The prototype's keys do count them (`L2:line`), and the parity test maps them. Keys are what make transitions and keyboard navigation possible. Duplicate keys are a bug; the prototype test checks for them. A result that says a dimension value twice still gets a key for each row: the repeat is `Google#2` (`rowKeys`), and the axis, legend and readout say its value as it is. Which of the two is the second is the result's order, so a host that has ids hands those over, not labels.
+- `key`: stable across renders, for example `primary:line`, `primary:bar:2026-09-08`, `seg:Search`. A layer's key is its role and mark, with `#2` for a second layer of the same role and mark; it does not count layers, so it holds when one drops. Keys are what make transitions and keyboard navigation possible. Duplicate keys are a bug; the sweep in `test/core.test.ts` checks for them. A result that says a dimension value twice still gets a key for each row: the repeat is `Google#2` (`rowKeys`), and the axis, legend and readout say its value as it is. Which of the two is the second is the result's order, so a host that has ids hands those over, not labels.
 - `paint`: a token, never a colour.
 - `layer`: `data` or `guide`.
 - Optional `opacity`, `tx`, `ty`, `note`.
@@ -841,13 +841,13 @@ Paint tokens in use: `ink`, `ink.muted`, `grid`, `axis`, `series.1` to `series.6
 
 **Amended November 23 (Decided 43).** No painter read the pixel scene: the element paints the ratios, and the dot-grid and canvas painters are not started. `place()` was a second layout engine written by hand for each layout, and each new form had to be written in it as well as in the scene and the stylesheet. It is parked. A surface with no CSS gets the scene and what the fit rules make of it at a room (`fitTo`), and places the parts itself. One generic placer is the thing to write when a pixel painter is wanted, once every node is a ratio of its part's box (Open 20).
 
-One consequence, also agreed: a scene with no size cannot choose its tick count by height, so the y scale always rounds to 4 ticks and a rule thins them on short plots. This departs from the prototype, which rounds to 2 under 120 px, and the parity test changes with it on purpose.
+One consequence, also agreed: a scene with no size cannot choose its tick count by height, so the y scale always rounds to 4 ticks and a rule thins them on short plots. The prototype rounded to 2 under 120 px.
 
 ---
 
 ## 12. Painters
 
-**Status: the HTML and CSS painter is Proven (`packages/dom`). SVG and dot grid are Proven in the prototype only: core places nothing since November 23 (Decided 43).**
+**Status: the HTML and CSS painter is Proven (`packages/dom`). SVG and dot grid were the prototype's, and are not built here: core places nothing since November 23 (Decided 43).**
 
 - **Two layers per view.** Data marks go to whichever renderer fits. Axes, labels, tooltips, brush and focus rings always stay in the DOM, so text stays crisp, tokens apply through CSS and keyboard access survives.
 - **Tokens, not colours.** A painter maps paint tokens to CSS custom properties, using the `@automattic/charts` token names under our own prefix (`series.1` becomes `--ua-charts-color-series-1`, for its `--a8c-charts-color-series-1`). Which custom property each paint token reads is `PAINT` in `packages/dom/src/dom.ts`, and `docs/dom-painter-plan.md` section 4.1 says where the rest of the map is. Light and dark are token sets.
@@ -872,12 +872,12 @@ Related visual directions not yet built: segmented display type for large numera
 
 ## 13. States
 
-| State | Prototype behaviour | Status |
+| State | Behaviour | Status |
 |---|---|---|
-| Empty period | A notice in place of the marks, "Page views: nothing in this period yet"; a zero in the metric's unit and "Page views: nothing yet" when collapsed. Both lead with the metric's label, so where one is cut to its room the label is what stays. The prototype says "No visits" of every metric | Proven |
+| Empty period | A notice in place of the marks, "Page views: nothing in this period yet"; a zero in the metric's unit and "Page views: nothing yet" when collapsed. Both lead with the metric's label, so where one is cut to its room the label is what stays. | Proven |
 | No prior period | Comparison layer dropped and reported; delta reads "No prior period" | Proven |
 | Partial bucket (today) | Dashed tail on a line, faded bar, excluded from the area | Proven |
-| Instant metric at zero | "0" with "right now", and no pulse. The prototype says "Nobody is here right now" | Proven |
+| Instant metric at zero | "0" with "right now", and no pulse. | Proven |
 | Loading | — | Built in `<ua-view>`: a placeholder until an input it has not been handed comes, and until its turn to paint on a page of many views. A plot's natural height in a stack, the whole box in a row. It fades in after 150 ms, so a view that paints at once never shows it. A view already drawn stays drawn while new inputs are awaited. An input still missing after ten seconds is reported in the console with its fix, not shown as an error |
 | Stale or late data | — | To do. Freshness should be a visible state |
 | Filtered (bots, consent) | — | To do |
@@ -983,7 +983,7 @@ The tldr prose is the last rung of every view, the accessible description, and w
 
 ## 17. Acceptance set
 
-The six sample specs in the prototype are the first acceptance tests. Port them with their fixtures.
+The first six sample specs, `samples` in `packages/fixtures`, are the first acceptance tests.
 
 | Sample | Spec | Covers |
 |---|---|---|
@@ -996,9 +996,9 @@ The six sample specs in the prototype are the first acceptance tests. Port them 
 
 Fixture facts to assert: visitors total 10,531 against 9,437 previous (up 12%); page views 25,061 against 21,974 (up 14%); 28 daily rows, the last one partial; channel shares 41, 28, 14, 8, 6 and 3 percent; 7 people present across 4 pages.
 
-`prototype-test.js` sweeps every sample across three data states, two painters, six height limits and nine widths, and checks for duplicate keys, NaN values and scenes taller than the container allows. Port that sweep.
+`test/core.test.ts` sweeps each of them across three data states, six height limits and nine widths, and checks for duplicate keys, NaN values and a part shown that its scene does not have.
 
-The v1 product also needs primitives the prototype does not have yet: a delta badge as its own part, scope and filter chips, a compact date and compare control, a detail table, and loading and stale notices.
+The v1 product also needs primitives that are not built here yet: a delta badge as its own part, scope and filter chips, a compact date and compare control, a detail table, and loading and stale notices.
 
 ---
 
@@ -1023,10 +1023,7 @@ apps/
   bench/      the playground: spec editor, container width and height, data states, painter switch
 docs/
   view-grammar-reference.md
-prototype/    read-only reference: prototype-bench.js, prototype-bench.html, prototype-test.js
 ```
-
-Map from the prototype's sections to modules: catalog (1), fixtures and query (2), formatting (3), host context (4), presets (5), plan (6), scene (7), painters (8), bench UI (9).
 
 ---
 
@@ -1051,7 +1048,7 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 15. Presentation is intrinsic. A container fits a view by default rules, and a context that wants different behaviour passes its containers a durable rule set. (October 7)
 16. `headline` and `guides` are out of the spec. Whether the tldr value and the guides show is decided by the rules. (October 7)
 17. `keep` stays, provisionally, as the author's one lever. Uses are counted during testing and the field is removed if the defaults make it unnecessary. (October 7)
-18. Names: tldr value (was headline), tldr prose (was sentence), container (was host). The read-only prototype keeps the old names, and the parity test maps them. (October 7)
+18. Names: tldr value (was headline), tldr prose (was sentence), container (was host). The prototype kept the old names, and the parity test mapped them, until both went (Decided 52). (October 7)
 19. Intrinsic behaviour is the default. A surface lays its containers out by its own scheme; a container fills the room it is handed and does not know where it is. With nothing said it fills the width and takes its natural height; a layout that hands out a box opts its children into filling it. (October 7)
 20. One scene, in ratios, with a `part` on every node. Pixel painters go through `place(scene, size)`. (October 7) The second sentence is amended by 43.
 21. Y ticks always round to 4, thinned by a rule on short plots. A deliberate departure from the prototype. (October 7)
@@ -1076,7 +1073,7 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 40. A guide is read off a scale, and which encoding each comes from is one table, `GUIDES`. A guide is a key or a frame, and a key leaves no sooner than the marks it keys. (November 20)
 41. A key with no shorter form stays as long as its marks, or its marks give way with it. The second y axis stays as long as the first, and in the bare plot what is drawn on it goes too. What a glyph is worth stays as long as the glyphs, which give way to their plainer preset at the height the two need. A row's column headers stay as long as two columns do, and a list gives up rows instead. A Sankey becomes its grid at the size its node names need. (November 23)
 42. Where a key cannot stay whole it is cut down, or the marks give up what it was the key to. A legend with nothing to stand in for it takes the colours with it, and its marks are drawn in one paint; bars and dots, which have no line end to label, keep theirs as long as the axes. The ramp becomes a thin strip of every step between its two ends, chosen over its two ends alone when both were looked at. The key to sizes becomes its largest step, and dots are one size in the bare plot. The names round a rim are thinned to about four. With that no rule takes a key from marks that are still drawn. (November 23)
-43. A plan takes no size, and core places nothing. How a view gives way when room is short is the fit rules, as data, and one function reads them at a room with no browser: `fitTo`, with `viewAt` to follow a rule's `fallback`. The reducer in `resolve()`, `place()` and each custom mark's `place` are parked: nothing shipped read them, and they were a second reading of the rules and a second layout engine, both written by hand for each layout. Parity with the prototype is held for what takes no size: the engine's answer, the plan, the sentence and what each scene holds, node for node. Where a node is placed is no longer compared, and the tag `prototype-parity` marks the last commit that did. Two conditions joined the rule format so that the data says what the element does: a rule names every part it takes, and may be for one kind of view (`has`). The rules the DOM's painters had made for themselves are core's now. (November 23)
+43. A plan takes no size, and core places nothing. How a view gives way when room is short is the fit rules, as data, and one function reads them at a room with no browser: `fitTo`, with `viewAt` to follow a rule's `fallback`. The reducer in `resolve()`, `place()` and each custom mark's `place` are parked: nothing shipped read them, and they were a second reading of the rules and a second layout engine, both written by hand for each layout. Parity with the prototype is held for what takes no size: the engine's answer, the plan, the sentence and what each scene holds, node for node. Where a node is placed is no longer compared, and the tag `prototype-parity` marks the last commit that did. The rest of the parity went with the prototype on November 24 (Decided 52). Two conditions joined the rule format so that the data says what the element does: a rule names every part it takes, and may be for one kind of view (`has`). The rules the DOM's painters had made for themselves are core's now. (November 23)
 44. One space for the marks, which reopens 6 and narrows 23. A view's space is two axes, each a list of values (a dimension), a quantity (a metric or a binned number) or nothing, and it is flat or bent about a centre. A spec asks for the bend as `arc` does, by writing `angle` and `radius` where a flat view writes `x` and `y`, and says nothing else. A mark is one function of that space: on an axis that is a list it takes its value's place, and on one that is a quantity it is measured along it. A layout stays as what stands round the marks and how the view takes its size, and no longer says which marks may be drawn. It is built a layout at a time and held to the bench's capture, frame for frame, since a scene's nodes change shape on the way. Stage 1, the grid, is built: it draws the plot's `text` by the plot's function, handed a pair's place and what the pair is known by (`GRID_MARKS` and `Draw.of` in `scene.ts`), and the element paints it with the plot's label painter. Between two lists only `cell`, `dot` and `text` have a place. Stage 2, the list, is built: it draws the plot's `line` and `area` by the plot's function, on their side (`LIST_MARKS`), in a part of their own, `track`, that lies over the rows, and the element paints them with the plot's path painter in one SVG it turns. A row's own five marks are still the track's own functions (`TRACK_MARKS`): each is a line or two and belongs to its row's element, so making them the plot's would add more than it took away until a node says its place one way in every layout. Stage 4, the circle, is built: with a dimension on `angle` and a metric on `radius` it draws the plot's `line`, `area` and `dot` by the plot's functions (`ROUND_MARKS`), then bends them, on one scale out from the middle that slices share. A path about a centre is made where every path is (`pathD`, `curve: "radial"`). It was built before stage 3 because it is the one that adds diagrams. Stage 5 is built for the map: a custom mark may offer its places (`places`), and the plot's `text` is drawn over it at them by the plot's function (`OVER_MARKS`), so `geo` carries labels. Stage 3, the share bar as a list of one row, is not built: it would add no diagram. What the stages have not done is replace a layout's own marks with the plot's: a grid's cell and dot, a row's five, an arc and a map's symbol are still their layout's own functions, because a node says its place differently in each layout (`v` and `t` from the foot, a cell's `y` from the top, `row` against `pair`). Since Decided 51 a node says its place one way, and a row's five are the plot's, turned; a grid's cell and dot, an arc and a map's symbol are still their own. One way of saying it is the step that would let them be one, and it changes every painter. (November 23)
 45. A board holds views and what they share, and no layout: where each view stands is the surface's, as a view's size is its container's. That settles the part of Open 12 a facet waited for, so the facet is built first, since it shares only its scales and needs no params. A spec's `facet` names one of the query's dimensions, core's `facets` gives a view for each value with the engine's totals and one domain for every scale, and a surface lays them out; a spec says no columns. (November 23)
 46. A mark's place may be said as a value. What is on a channel is a field or a number, so a value of a list axis (a date, a category) had no way to be said: a string there is a field. The layer field `at` says it, first for a `rule` in a plot, which stands at that value of x. A value the axis does not have is not drawn, since a view must not break when its range moves past a date. (November 23)
@@ -1087,6 +1084,7 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 
 50. A view says what was activated and how, and core decides what that does to the selection. `ua-select` carries a proposal: the datum's filter, and `how`, which is `pick`, `toggle` or `extend` by the modifier held (none, Cmd or Ctrl, Shift), the same for a click and for Enter or Space. Core's `select` folds a proposal into the filter held, and `boardSelect` is that fold on a board, so it no longer asks which view proposed. The view keeps no anchor and no set, and no longer sends `null` to let a datum go: picking it again does that, in the fold. A set is a list on a dimension and a run is `from` and `to`, which a filter already held and a view already marked by. Extend is for a time or a number. There is no drag yet. What is selected is said to assistive technology. This settles how a set and an interval are picked, which Open 9 left. (November 24)
 51. One vocabulary for where a node is, begun. Every node says its place in the same fields, whatever its kind and its layout: `x` and `y` where it is, `x2` and `y2` its other end, `w` and `h` an extent (section 11). `v`, `v0`, `t` and `t2` are gone, and with them a list's bar that ran from `v0` to `v` beside a rule from `x` to `x2`. It is the step Decided 44 named as the one that would let each layout's own marks be the plot's. The first stage was the names alone: no number changed, which a comparison of every node of every sample's scene before and after holds, and the capture. The second made `y` count up everywhere: a grid's cell, a cell of a `unit`'s grid, a treemap's box and a Sankey's node had counted down from the top, and each now stands on `y` from the bottom, where it stood before. The third made a row's marks the plot's, turned. A list had five functions of its own, for a bar, a rule, a tick, a dot and a unit, each a copy of the plot's on its side. A row's track now draws the plot's own, handed one row and the track's scale, and each node is turned once: what was up the plot runs along the track, and what was across a band runs up the row, from the top. A list's layer is turned the same way going in, its `y` read as `x` and its `x` as `y`. What a list alone does is said after the turn: a bar behind its label is a tint and is never faded as an unfinished bucket is, a dot or a tick of a mass lets the ones under it show, and a rule with one end at a number lies from zero in each row. What it found: every node of every sample's scene is as it was, ten of them to the last digit of a float; a list already drew every mark a plot does, so it gained none; and the code is no shorter, seven lines longer. What it gives is one definition of each mark, so what is added to the plot's reaches a list where its painter draws it. Still to come, if they are wanted: the share bar as a list of one row, and a slice as a bar, bent. (November 24)
+52. The prototype is gone, and nothing is held to it. It was an artifact of development: the port was proven against it, and since Decided 43 it was held to less of it at each step. Its three files and the comparison in `test/core.test.ts` are removed, and git keeps them. The sweep holds what it held of its own, unique keys and no `NaN` in every data state, and each departure that was asserted against the prototype is asserted for itself. It is the first step of `docs/focus-plan.md`. (November 24)
 
 ### Open
 

@@ -536,7 +536,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   }));
   if (guides.x && keys.length && !xOn) {
     const last = keys.length - 1;
-    // First, middle and last, each once: one row has one tick. The prototype emits it twice, under one key.
+    // First, middle and last, each once: one row has one tick.
     const idx = isTime ? [...new Set([0, Math.floor(last / 2), last])] : keys.map((_, i) => i);
     // Under columns of unequal width a label is ranked by how wide its column is: the widest stays, and the rest are
     // given up from the narrowest where they would meet, which only a painter that knows how wide a label is can see.
@@ -672,7 +672,7 @@ export function columnLabel(catalog: Catalog, l: Layer): string {
 // What a text layer says in one row.
 function cellOf(catalog: Catalog, l: Layer, r: Row): { text: string; paint: string } {
   const f = l.encode!.text as string, M = catalog.metrics[f], D = catalog.dimensions[f];
-  // A dimension is said as the readout says it, so a day is "Sep 29". The prototype writes it raw: a deliberate departure.
+  // A dimension is said as the readout says it, so a day is "Sep 29".
   if (!M || l.series !== 'delta') return { text: M ? formatValue(num(r, f), M) : D ? formatDimension(r[f], D) : String(r[f]), paint: 'ink' };
   // The row's change, as the tldr value's delta says the total's. A row with nothing before it has a dash: a column has no room for the words.
   const d = delta(num(r, f), r[f + '@previous'] as number | null | undefined, M.polarity);
@@ -926,7 +926,7 @@ const legendEntry = (k: string, of: { row?: string; series?: string }, text: str
 const seriesLegend = (series: string[], name: (s: string) => string = (s) => s): SceneNode[] => series.flatMap((s, j) => legendEntry(s, { series: s }, name(s), 'series.' + (j + 1)));
 // The legends of a whole split by colour, for a band and for a circle of arcs: both of them, each in its own part.
 // The plan names one in `parts`; a fit rule swaps them.
-// A segment is named as the readout names it, so a day is "Sep 29". The prototype writes it raw: a deliberate departure.
+// A segment is named as the readout names it, so a day is "Sep 29".
 // `said` is what an entry says of its row in place of its share: rings that are read against a range say the value.
 function shareLegend(rows: Row[], k: (r: Row) => string, f: string, dim: DimensionDef, m: string, M: MetricDef, total: number | null | undefined, paint: (i: number) => string, said = (r: Row) => portion(num(r, m), total, M)): SceneNode[] {
   const nodes: SceneNode[] = [], name = (r: Row) => formatDimension(r[f], dim);
@@ -935,7 +935,7 @@ function shareLegend(rows: Row[], k: (r: Row) => string, f: string, dim: Dimensi
     nodes.push({ key: 'share:' + k(r), part: 'legend', kind: 'text', row: k(r), text: said(r), anchor: 'end', baseline: 'middle', font: 'value', paint: 'ink', layer: 'guide' });
   });
   // One line for the whole of it, so it names no row. Its key has no colon after `legend`, so no segment's entry can
-  // share it, whatever the segment is called. The prototype's is `legend:top`: a deliberate departure.
+  // share it, whatever the segment is called.
   if (rows.length) nodes.push({ key: 'legend-top', part: 'legend-top', kind: 'text', text: name(rows[0]!) + ' ' + said(rows[0]!), anchor: 'start', font: 'label', paint: 'ink', layer: 'guide' });
   return nodes;
 }

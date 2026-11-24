@@ -109,7 +109,7 @@ type Counts = { visitors: number; pageviews: number };
 type Daily = Counts & { net_subscribers: number; revenue: number; signups: number; response_time: number; responses: number };
 const DAY = 86400000, TODAY = Date.UTC(2026, 9, 5);
 const DAILY = (function () {
-  // The first is the prototype's, drawn from in its order. What the prototype does not know draws from the second.
+  // The first six samples draw from the first, in a fixed order. What came after them draws from the second, so adding to it moves none of their numbers.
   const rand = seeded(11), more = seeded(23), spend = seeded(37), join = seeded(41), slow = seeded(53);
   return Array.from({ length: 56 }, function (_, i) {
     const t = TODAY - (55 - i) * DAY, dow = new Date(t).getUTCDay();
@@ -491,7 +491,7 @@ export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
   // A categorical dimension is ranked by the first metric, and `limit` keeps its first values. Days and bins keep their own order.
   const top = (rs: Row[]) => { const ranked = rs.slice().sort((a, b) => (b[m0] as number) - (a[m0] as number)); return q.limit ? ranked.slice(0, q.limit) : ranked; };
   // A page's rank by page views is the engine's too, counted before any limit.
-  // ponytail: it comes only with a query that compares. A query has no way to ask for a companion, and the prototype's
+  // ponytail: it comes only with a query that compares. A query has no way to ask for a companion, and the first six
   // samples must come back as they were. When the contract can ask, this is asked for.
   const ranked = (rs: Row[]) => { if (by === 'page' && wantPrev && m0 === 'pageviews') rs.forEach((r, i) => { r['pageviews@rank'] = i + 1; }); return rs; };
   if (table && !table.ranked) {
@@ -556,7 +556,7 @@ export const boardSamples: Record<string, { label: string; board: Board }> = {
   ] } },
 };
 
-/* Samples the prototype does not know (docs/chart-coverage-plan.md). The parity sweep is held to `samples` and never
+/* Samples beyond the first six (docs/chart-coverage-plan.md). test/core.test.ts holds `samples` by name and never
  * meets these. They have a sweep and golden scenes of their own, in test/coverage.test.ts. */
 /** Specs with a `facet`: each is a view for every value of a dimension (core's `facets`), on the same scales. They are
  * apart from `moreSamples` because a facet has no one plan, and what sweeps the samples asks each for its plan. */

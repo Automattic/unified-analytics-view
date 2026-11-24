@@ -3,7 +3,7 @@ import { buildScene, expand, formatValue, resolve, sizeStep, type CircleNode, ty
 import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
 import { err, run, shown, validView as view } from './helpers.ts';
 
-// The `cell` mark and the grid it is laid out in (docs/chart-coverage-plan.md, step 5). No prototype knows it, so it
+// The `cell` mark and the grid it is laid out in (docs/chart-coverage-plan.md, step 5). It
 // is held to a sweep, facts and golden scenes of its own, as test/coverage.test.ts holds step 1.
 const heatmap = moreSamples.heatmap!.spec;
 const cells = (ratio: { nodes: unknown[] }) => (ratio.nodes as RectNode[]).filter((n) => n.part === 'plot' && n.kind === 'rect');

@@ -4,8 +4,8 @@ import type { Catalog, CircleNode, Layer, RectNode, Result, Spec, TextNode } fro
 import { catalog, moreSamples, scenarios } from '@unified-analytics/fixtures';
 import { err as shared, run, shown, validView as view } from './helpers.ts';
 
-// Step 6 of docs/uncommon-coverage-plan.md: the `unit` mark, which draws a value as counted glyphs. It has no prototype
-// to match, so it is held to its own sweep, facts and golden scenes, as test/radial.test.ts holds the arcs. The rules its
+// Step 6 of docs/uncommon-coverage-plan.md: the `unit` mark, which draws a value as counted glyphs. It
+// is held to its own sweep, facts and golden scenes, as test/radial.test.ts holds the arcs. The rules its
 // counts come from are tested where they are written, in test/unit-rules.test.ts.
 // Unlike the shared one, says so when there is no error.
 const err = (s: Spec, result?: Result, c?: Catalog) => shared(s, result, c) ?? 'no error';

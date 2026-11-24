@@ -7,7 +7,7 @@ import { linkPainter } from '@unified-analytics/flow/dom';
 import { errOf as err, rects, run, shown, validView as view } from './helpers.ts';
 
 // Step 8 of docs/uncommon-coverage-plan.md: the `link` mark, a custom mark the fixtures register, and the Sankey of one
-// step it draws. No prototype knows it, so it is held to a sweep, facts and golden scenes of its own.
+// step it draws. It is held to a sweep, facts and golden scenes of its own.
 const sankey = moreSamples.sankey!.spec;
 const ribbons = (ratio: { nodes: unknown[] }) => (ratio.nodes as PathNode[]).filter((n) => n.part === 'plot' && n.kind === 'path');
 const labels = (ratio: { nodes: unknown[] }) => (ratio.nodes as TextNode[]).filter((n) => n.part === 'labels');

@@ -3,8 +3,8 @@ import { FIT_RULES, buildScene, expand, resolve, type Catalog, type Result, type
 import { catalog, moreSamples, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
 import { err, ofUnbounded, run, shown, validView as view } from './helpers.ts';
 
-// What the grammar draws beyond the prototype's six samples (docs/chart-coverage-plan.md). Nothing here has a
-// prototype to match, so it is held to its own sweep, facts and golden scenes.
+// What the grammar draws beyond the first six samples (docs/chart-coverage-plan.md), held to its own sweep, facts and
+// golden scenes.
 // The engine refuses some queries itself. `q` is one it answers, for an error that is resolve()'s to make.
 
 // The plots and the rows among them. Another layout has a suite of its own: test/radial.test.ts, test/cell.test.ts.
@@ -16,7 +16,7 @@ const specs = Object.fromEntries(Object.entries(moreSamples).map(([k, s]) => [k,
 const heights = [null, 300, 160, 100, 60, 40];
 const widths = [54, 80, 120, 170, 250, 290, 346, 500, 700];
 
-describe('the sweep, for what the prototype does not know', () => {
+describe('the sweep, for the samples beyond the first six', () => {
   for (const [name, spec] of Object.entries(specs)) {
     it(name + ': unique keys, no NaN, ratios from 0 to 1, and at every room parts the scene has', () => {
       for (const sc of scenarios) for (const h of heights) for (const w of widths) {

@@ -10,7 +10,7 @@ const DAY = catalog.dimensions['date.day']!, time = (v: string) => formatDimensi
 
 describe('a time, as its string writes it', () => {
   it.each([
-    // The fixture engine's form, and the prototype's: a bare date.
+    // The fixture engine's form: a bare date.
     ['2026-09-08', 'Sep 8'],
     ['2026-10-05', 'Oct 5'],
     ['2026-01-01', 'Jan 1'],

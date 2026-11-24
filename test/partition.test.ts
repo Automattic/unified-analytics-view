@@ -6,8 +6,8 @@ import { PARTITION_RULES, squarify, type Box } from '@unified-analytics/partitio
 import { boxNames, nameFits, partitionPainter, stepBox } from '@unified-analytics/partition/dom';
 import { errOf as err, rects, run, shown, validView as view } from './helpers.ts';
 
-// Step 9 of docs/uncommon-coverage-plan.md: the `partition` mark, a custom mark that draws a treemap. No prototype
-// knows it, so it is held to a sweep, facts and golden scenes of its own.
+// Step 9 of docs/uncommon-coverage-plan.md: the `partition` mark, a custom mark that draws a treemap. It
+// is held to a sweep, facts and golden scenes of its own.
 const treemap = moreSamples.treemap!.spec, tiles = moreSamples.treemap1!.spec;
 const limited: Spec = { ...treemap, query: { ...treemap.query, limit: 3 } };
 const ramped: Spec = { spec: 'view/0', query: { metrics: ['pageviews', 'visitors'], by: ['section', 'page'], range: '28d' }, layers: [{ mark: 'partition', encode: { x: 'section', detail: 'page', size: 'pageviews', color: 'visitors' } }] };

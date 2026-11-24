@@ -7,7 +7,7 @@ import './theme.ts';
 
 /* What every page of the bench shares. */
 
-/** Every sample the fixtures have: the prototype's, then the rest. */
+/** Every sample the fixtures have: the first six, then the rest. */
 export const samples = { ...known, ...moreSamples };
 /** The specs with a `facet`. They are a view for each value and have no one plan, so the pages that read a sample's plan (parts, and the capture off it) do not hold them. */
 export const faceted = facetSamples;

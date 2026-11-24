@@ -5,8 +5,8 @@ import { hitNodes } from '../packages/dom/src/keys.ts';
 import { at, err, run, shown, validView as view } from './helpers.ts';
 
 // Ranges and `tick` (docs/chart-coverage-plan.md, step 3): companion fields, a second end on a bar, a rule and an
-// area, a rule with fields, the tick, dots in a row's track, and paint by direction. Nothing here has a prototype to
-// match, so it is held to its own sweep, facts and golden scenes.
+// area, a rule with fields, the tick, dots in a row's track, and paint by direction. All of it
+// is held to its own sweep, facts and golden scenes.
 const names = ['box', 'errors', 'waterfall', 'candlestick', 'fan', 'dumbbell', 'bullet'];
 const specs = Object.fromEntries(names.map((k) => [k, moreSamples[k]!.spec]));
 const { box, errors, waterfall, candlestick, fan, dumbbell, bullet } = specs as Record<string, Spec>;

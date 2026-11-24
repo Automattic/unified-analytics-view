@@ -298,10 +298,10 @@ Not built: the y axis on the first view of each row only (the coverage plan's st
 - **Params are the board's `query`.** There is no named variable, no reference and no expression. `range` and `compare` stand where a view states none, and a view that states its own keeps it.
 - **One rule combines the views, and no field changes it.** A view is filtered by every dimension of the board's `where` but the ones it draws, which are those in its own `by`. On one it draws it keeps every value and is told which to mark (`selected`). So a list shows what was picked among the rest, and every other view is of the pick. A view's own `where` is its own, and wins.
 - **A board has no state apart from itself.** Its `query` is its params at their values now. A surface that changes one, by a control or by a selection, holds a new board; the one it began with is how it resets.
-- **Core gives the views and fetches nothing.** `boardViews(board, catalog)` returns each view's `key` (its title), the `spec` to run and draw, and what it is to mark, `selected`. A surface runs each query with the function it was handed and draws each view as it draws any. `boardSelect(board, key, where)` is the board after the view of that key proposes a selection: the filter joins the board's `where`, one value of a dimension at a time, and `null` lets go of every dimension that view draws.
+- **Core gives the views and fetches nothing.** `boardViews(board, catalog)` returns each view's `key` (its title), the `spec` to run and draw, and what it is to mark, `selected`. A surface runs each query with the function it was handed and draws each view as it draws any. `boardSelect(board, proposal, catalog)` is the board after a view proposes a selection: the proposal folded into the board's `where` (`select`, section 13). Which view proposed it does not matter, since a datum's filter is of the dimensions its view draws.
 - **No layout.** Where each view stands is the surface's. `<ua-view>` does not draw a board: a board needs a query function and something to keep it, and the element has neither. The bench's Board page is the reference surface, in about twenty lines.
 
-Not built: a set or an interval picked by pointer or by keyboard (Open 9); a view that turns the board's `compare` off, which `compare` has no value for; and a board inside a board.
+Not built: a view that turns the board's `compare` off, which `compare` has no value for; and a board inside a board.
 
 
 **Several metrics on one plot** (built November 20). Each is a layer of its own, and the layers are told apart as the series of a split are. A metric has a series colour, in the order the layers first name them, and every layer of it that states no `paint` is drawn in it: the fill under a line with its line. A `paint` that is stated stands. Each metric has an entry in the legend, named by its catalog label and in the paint its layer is drawn in, and where the legend's rule gives it up, a label where its line ends. A companion is its metric's, so a box's quartiles are one quantity and have no legend; one with a catalog entry of its own (`pageviews@rank`) is a quantity of its own. A `rule`, a `tick` and a `text` are set in ink and count for none. More than six metrics that state no paint is an error. Beside a split by a dimension on `color` the colours are the series', and the legend is theirs. Metrics of one unit share the y axis, however far apart their values are. Metrics of two units get an axis each; three units is an error.
@@ -880,24 +880,37 @@ Set a task apart, the new spec meets the old result. The view checks the first r
 
 ### Selection (Built November 24)
 
-A datum the user picks stays picked: it is **Selected**, one of the states every atom has (`docs/component-states-plan.md`). A selection is a filter, as a query's `where` is one (Decided 49): what is picked is said by its values, never by pixels or row ids. The view does not keep it, because the host is what outlives a re-render. When the user activates a datum, with a click, Enter or Space, the view sends `ua-select`. Its `detail.where` is the filter that datum is, its value of each dimension it is of, and `detail.key` is its key in the view. Both are `null` where the datum was already selected, which lets it go. The host keeps the filter and sets it back:
+A datum the user picks stays picked: it is **Selected**, one of the states every atom has (`docs/component-states-plan.md`). A selection is a filter, as a query's `where` is one (Decided 49): what is picked is said by its values, never by pixels or row ids. The view does not keep it, because the host is what outlives a re-render, and the view decides nothing of what an activation does to it (Decided 50). When the user activates a datum the view sends `ua-select`, whose `detail` is a proposal: `where`, the filter that datum is, its value of each dimension it is of; `how`, how it was activated; and `key`, its key in the view. The host folds the proposal into the filter it keeps, with core's `select`, and sets the result back:
 
 ```js
-view.addEventListener('ua-select', (e) => { view.selected = e.detail.where; });
+view.addEventListener('ua-select', (e) => { view.selected = select(view.selected, e.detail, catalog); });
 ```
 
-In a board the host gives the proposal to core, and sets on each view what `boardViews` says it is to mark:
+In a board the fold is `boardSelect`, and the host sets on each view what `boardViews` says it is to mark:
 
 ```js
-surface.addEventListener('ua-select', (e) => { board = boardSelect(board, e.target.dataset.key, e.detail.where); draw(); });
+surface.addEventListener('ua-select', (e) => { board = boardSelect(board, e.detail, catalog); draw(); });
 ```
 
+| `how` | Click or tap | Keys | What `select` makes of it |
+|---|---|---|---|
+| `pick` | plain | Enter, Space | Each dimension is held to the datum's value alone. Where it already was, the datum is let go |
+| `toggle` | Cmd or Ctrl | Cmd or Ctrl with Enter | The value joins those the dimension is held to, or leaves them: a set. A run gives way to the value |
+| `extend` | Shift | Shift with Enter or Space | On a time or a number, a run from what is held to the value. It grows to take the value in, and a value inside it becomes its end. With nothing held it is a pick |
+
+- **Extend is for what has an order.** On a categorical dimension `extend` is a toggle: the order a list's rows are drawn in is their rank today, and no order of their values.
+- **A set of cells is a set on each dimension.** A proposal of two dimensions is folded one at a time, and dimensions are joined by "and", so two cells toggled are their columns and their rows.
+- **The modifiers take nothing from version 4's keyboard.** Its plots read Enter and Space whatever is held with them. Read from `xy-chart-tooltip.tsx` on Jetpack trunk, November 24.
+- **A touch has no modifier, so a tap is a pick.** The fold is the host's, so a surface that wants several picked by touch passes `toggle` for a plain activation: the bench's Board page has a switch that does.
 - **What a datum is.** A point of a plot or a row of a list is its value of the dimension along it. Where a series is chosen at a point, by the keys or on a ring, it is that series' mark: both dimensions. A grid's cell is both of its dimensions, a treemap's parent its own value, and a child both.
-- **What is marked.** `selected` takes any filter, and the view marks `data-selected` on every atom whose rows all hold it (`holds` in core). So a filter on the dimension along x marks every mark at a point; one on the split marks a whole series, its line and its legend entry with it; and one on both marks a single mark. A dimension the view does not draw marks nothing.
+- **What is marked.** `selected` takes any filter, and the view marks `data-selected` on every atom whose rows all hold it (`holds` in core). So a filter on the dimension along x marks every mark at a point; one on the split marks a whole series, its line and its legend entry with it; one on both marks a single mark; a list marks each of its values, and a run every value in it. A dimension the view does not draw marks nothing.
+- **It is said.** Each thing that can be chosen, an option, a grid's cell, a tree's item, says `aria-selected`, and its holder `aria-multiselectable`.
 - **It filters nothing.** `selected` paints nothing again and takes no row away. What a view is of is its query's `where`, and the host's to ask for.
 - **It stays.** A selection outlives a new result where its data do. Escape lets go of hover and focus, never of the selection. A spec says nothing of it: like a size, it is the container's.
 
-Selected has no look of its own yet; that is design's to set. The bench's Board page lends one so that a selection can be seen there.
+Not built: a drag along a plot for a run. Shift does the same by pointer and by keyboard, and a drag needs a band drawn as it moves. When it is built, the band is the view's own and transient, and letting go proposes the run, once.
+
+Selected has no look of its own yet; that is design's to set. The bench's Board page lends one so that a selection can be seen there: the rest set back, and a band over a run of days.
 
 ---
 
@@ -910,6 +923,7 @@ Write these once against the scene and the plan, not per preset.
 - **Keyboard navigation** over data marks, driven by keys and the row each mark came from. Announce the dimension value, the metric value in its catalog format, and the comparison if present.
 - A **canvas or dot-grid painter needs a hidden DOM mirror** carrying the same structure.
 - **Never colour alone.** Series must also differ by dash, pattern or direct label. The dot painter's dither patterns are one instance of this.
+- **What is selected is said**, not only shown: `aria-selected` on each thing that can be chosen, and `aria-multiselectable` on what holds them (section 13). Not yet heard through a screen reader.
 - Visible focus, sufficient contrast in both themes, and `prefers-reduced-motion` respected.
 - The Olli model (overview, then axes and legends, then intervals, then points) is the reference for the navigable tree.
 
@@ -1054,6 +1068,8 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 
 49. A board is views and what they share, and a selection is a filter. This settles the rest of Open 9's model and the board of Open 12. A board's `query` holds `range`, `compare` and `where`, laid under each view's own: those are its params, and there is no variable, reference or expression. Views are combined by one rule with no field: each is filtered by every dimension of the board's `where` but the ones it draws, and on those it marks what is held. A board has no layout and no state apart from itself, so a surface that changes a param holds a new board. Core gives the views (`boardViews`) and the board after a selection (`boardSelect`), and fetches nothing. `<ua-view>` proposes a selection as the filter the activated datum is (`ua-select`, `detail.where`) and marks by any filter set back on it (`selected`), which replaces the key it took before. It draws no board: that is a surface's, and the bench has the reference one. (November 24)
 
+50. A view says what was activated and how, and core decides what that does to the selection. `ua-select` carries a proposal: the datum's filter, and `how`, which is `pick`, `toggle` or `extend` by the modifier held (none, Cmd or Ctrl, Shift), the same for a click and for Enter or Space. Core's `select` folds a proposal into the filter held, and `boardSelect` is that fold on a board, so it no longer asks which view proposed. The view keeps no anchor and no set, and no longer sends `null` to let a datum go: picking it again does that, in the fold. A set is a list on a dimension and a run is `from` and `to`, which a filter already held and a view already marked by. Extend is for a time or a number. There is no drag yet. What is selected is said to assistive technology. This settles how a set and an interval are picked, which Open 9 left. (November 24)
+
 ### Open
 
 1. The format for per-element fit rules, such that they compile to container queries and also run in code. Proposed in `docs/dom-painter-plan.md`, section 2. Built: the rules are compiled (`packages/dom/src/compile.ts`) and read in code by `fitTo` (Decided 43), and `keep` holds a rule off in both. One difference step 1 of that plan found is still open: a rule on the view cannot say the plot's room when the number sits above the plot, which is why the `y-ticks` rule carries a note and Open 19 its last sentence.
@@ -1064,7 +1080,7 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 6. Bar list behaviour when narrow, and what a collapsed ranking should show.
 7. Whether a trend shows the tldr value above the plot by default. This is now the container rule `tldrValue.above` and not a spec field; the default says no.
 8. Whether deltas exclude the partial day.
-9. Params and selections. Settled in part November 24: see Decided 48 and 49. The filter, the board's shared query, a selection as a filter a view proposes and cross-filtering by one rule are built. Still open: how a set and an interval are selected by pointer and by keyboard, which is to be put before it is built (a filter already holds both, and a view already marks by both); and whether Spacefast's API takes a filter in this form, which its recorded answers do not show.
+9. Params and selections. Settled in part November 24: see Decided 48 and 49. The filter, the board's shared query, a selection as a filter a view proposes and cross-filtering by one rule are built. A set and an interval are picked with modifiers (Decided 50). Still open: a drag for a run, which waits for a look; whether a touch should pick several in the element itself, by a long press, where today the surface decides; how a screen reader reads what is selected; and whether Spacefast's API takes a filter in this form, which its recorded answers do not show.
 10. Settled October 7: see Decided 24. Built October 8.
 11. Catalog properties beyond the stub, and where polarity and thresholds are declared. Among them, what a metric counts, one and many ("person", "people"): without it an instant metric reads "Present now: 7 right now" and not "7 people are here right now". What this repo will propose to the API's owners is listed in `docs/chart-coverage-plan.md`, section 3.5: a `number` dimension type; `domain`, `target` and `bands` on a metric; a colour role per dimension value; and totals per split on the result. All but the colour role are built here and are in the schema, so a catalog may use them; what is open is whether the API will send them.
 12. Settled November 23 and 24: see Decided 45 and 49. A board holds views and no layout; the facet and the board are built.
@@ -1085,7 +1101,7 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 - **Query coordinator.** The layer that collects each view's request, merges duplicates, caches and routes to an engine.
 - **Local engine.** DuckDB-WASM slicing server results in the browser. An in-page panel should lean on the server tier because of download size.
 - **WebGPU and canvas renderers for dense data.**
-- **Brushing.** Cross-filtering by a picked value is built (Decided 49). A set and an interval, by pointer and by keyboard, are Open 9.
+- **A drag for a run.** Cross-filtering by a value, a set and a run is built (Decided 49 and 50), with modifiers. The drag is Open 9.
 - **Semantic compiler.** Turning catalog names into SQL is server-side.
 - **A board element.** The board is built as data and two functions (Decided 49), and the bench has the reference surface. An element that is handed a board and a query function, and keeps the board, is the shell's (`docs/shell-plan.md`).
 - **Agent surface.** Returning a view through an MCP server. The spec and the tldr prose are designed for it; nothing is built.

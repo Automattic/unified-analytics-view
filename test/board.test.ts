@@ -1,6 +1,6 @@
 import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { boardSelect, boardViews, holds, resolve, whereOf, type Board } from '@unified-analytics/core';
+import { boardSelect, boardViews, holds, resolve, select, whereOf, type Board, type Gesture, type Where } from '@unified-analytics/core';
 import boardSchema from '@unified-analytics/core/schema/board.schema.json';
 import viewSchema from '@unified-analytics/core/schema/view.schema.json';
 import { boardSamples, catalog, runQuery, scenarios } from '@unified-analytics/fixtures';
@@ -10,6 +10,7 @@ import { errOf } from './helpers.ts';
 // from itself: its query is its params as they stand, and a selection is a filter one of its views proposes.
 const { board } = boardSamples.traffic!;
 const of = (b: Board) => Object.fromEntries(boardViews(b, catalog).map((v) => [v.key, v]));
+const pick = (b: Board, where: Where, how?: Gesture) => boardSelect(b, { where, how }, catalog);
 
 describe('the views of a board', () => {
   it('each has the board\'s range and compare under its own query, and its title for a key', () => {
@@ -31,8 +32,8 @@ describe('the views of a board', () => {
     expect(own.Visitors!.spec.query.where).toEqual({ channel: 'Direct' });
   });
   it('every one draws, in every data state, with one selection and with two', () => {
-    const picked = boardSelect(boardSelect(board, 'Channels', { channel: 'Search' }), 'Devices', { device: 'Mobile' });
-    for (const b of [board, boardSelect(board, 'Channels', { channel: 'Search' }), picked, boardSelect(board, 'Visitors by day', { 'date.day': '2026-09-21' })])
+    const picked = pick(pick(board, { channel: 'Search' }), { device: 'Mobile' });
+    for (const b of [board, pick(board, { channel: 'Search' }), picked, pick(board, { 'date.day': '2026-09-21' }), pick(picked, { channel: 'Social' }, 'toggle'), pick(pick(board, { 'date.day': '2026-09-21' }), { 'date.day': '2026-09-27' }, 'extend')])
       for (const sc of scenarios) for (const v of boardViews(b, catalog)) expect(() => resolve(v.spec, runQuery(v.spec.query, sc), catalog), v.key + ' ' + sc + ' ' + JSON.stringify(b.query)).not.toThrow();
     // What a filtered view says is the filter the engine applied, and the list that made the selection is not filtered by it.
     const v = of(picked), text = (key: string) => resolve(v[key]!.spec, runQuery(v[key]!.spec.query), catalog).text;
@@ -50,19 +51,56 @@ describe('the views of a board', () => {
 });
 
 describe('a selection in a board', () => {
-  it('is a filter a view proposes: it joins the board\'s where, one value of a dimension at a time', () => {
-    const one = boardSelect(board, 'Channels', { channel: 'Search' });
+  it('is a proposal folded into the board\'s where, whichever view made it', () => {
+    const one = pick(board, { channel: 'Search' });
     expect(one.query).toEqual({ range: '28d', compare: 'previous', where: { channel: 'Search' } });
     expect(board.query).toEqual({ range: '28d', compare: 'previous' });                         // the board given is not changed
-    expect(boardSelect(one, 'Channels', { channel: 'Direct' }).query!.where).toEqual({ channel: 'Direct' });
-    expect(boardSelect(one, 'Devices', { device: 'Mobile' }).query!.where).toEqual({ channel: 'Search', device: 'Mobile' });
+    expect(pick(one, { channel: 'Direct' }).query!.where).toEqual({ channel: 'Direct' });
+    expect(pick(one, { device: 'Mobile' }).query!.where).toEqual({ channel: 'Search', device: 'Mobile' });
+    // Picked again it is let go, and with nothing left the board has no where.
+    expect(pick(pick(one, { device: 'Mobile' }), { channel: 'Search' }).query!.where).toEqual({ device: 'Mobile' });
+    expect(pick(one, { channel: 'Search' }).query).toEqual({ range: '28d', compare: 'previous' });
   });
-  it('is let go by the view that made it: null takes every dimension that view draws, and no other', () => {
-    const two = boardSelect(boardSelect(board, 'Channels', { channel: 'Search' }), 'Devices', { device: 'Mobile' });
-    expect(boardSelect(two, 'Channels', null).query!.where).toEqual({ device: 'Mobile' });
-    expect(boardSelect(boardSelect(two, 'Channels', null), 'Devices', null).query).toEqual({ range: '28d', compare: 'previous' });
-    expect(boardSelect(two, 'Visitors', null).query!.where).toEqual({ channel: 'Search', device: 'Mobile' });   // a number draws no dimension
-    expect(errOf(() => boardSelect(board, 'Chanels', null))).toMatch(/The board has no view titled "Chanels"\. It has: "Visitors", .*Name one of them\./);
+});
+
+describe('a proposal folded into the filter held', () => {
+  const fold = (held: Where | null, where: Where, how?: Gesture) => select(held, { where, how }, catalog);
+  it('pick: the datum alone, and again lets it go', () => {
+    expect(fold(null, { channel: 'Search' })).toEqual({ channel: 'Search' });
+    expect(fold({ channel: ['Search', 'Social'] }, { channel: 'Search' })).toEqual({ channel: 'Search' });     // one of several picked alone is that one
+    expect(fold({ channel: 'Search', device: 'Mobile' }, { channel: 'Search' })).toEqual({ device: 'Mobile' });
+    expect(fold({ channel: 'Search' }, { channel: 'Search' })).toBeNull();
+    // A cell is two dimensions: let go where both are held to it, and picked where either is not.
+    expect(fold({ weekday: 'Mon', hour: '9am' }, { weekday: 'Mon', hour: '9am' })).toBeNull();
+    expect(fold({ weekday: 'Mon', hour: '9am' }, { weekday: 'Mon', hour: '10am' })).toEqual({ weekday: 'Mon', hour: '10am' });
+    expect(fold({ channel: 'Search' }, {})).toEqual({ channel: 'Search' });                                    // a datum of no dimension proposes nothing
+  });
+  it('toggle: the value joins those held, or leaves them', () => {
+    const two = fold({ channel: 'Search' }, { channel: 'Social' }, 'toggle');
+    expect(two).toEqual({ channel: ['Search', 'Social'] });
+    expect(fold(two, { channel: 'Search' }, 'toggle')).toEqual({ channel: 'Social' });                         // a list of one is written as the value
+    expect(fold({ channel: 'Social' }, { channel: 'Social' }, 'toggle')).toBeNull();
+    expect(fold({ 'date.day': { from: '2026-09-21', to: '2026-09-27' } }, { 'date.day': '2026-09-30' }, 'toggle')).toEqual({ 'date.day': '2026-09-30' });   // a run gives way
+    // Two cells toggled are their columns and their rows: dimensions are joined by "and".
+    expect(fold({ weekday: 'Mon', hour: '9am' }, { weekday: 'Tue', hour: '10am' }, 'toggle')).toEqual({ weekday: ['Mon', 'Tue'], hour: ['9am', '10am'] });
+  });
+  it('extend: a run on a time or a number, which grows to take the value in, and whose end a value inside it becomes', () => {
+    const day = (d: number) => '2026-09-' + d, run = fold({ 'date.day': day(21) }, { 'date.day': day(27) }, 'extend');
+    expect(run).toEqual({ 'date.day': { from: day(21), to: day(27) } });
+    expect(fold({ 'date.day': day(21) }, { 'date.day': day(14) }, 'extend')).toEqual({ 'date.day': { from: day(14), to: day(21) } });
+    expect(fold(run, { 'date.day': day(29) }, 'extend')).toEqual({ 'date.day': { from: day(21), to: day(29) } });
+    expect(fold(run, { 'date.day': day(14) }, 'extend')).toEqual({ 'date.day': { from: day(14), to: day(27) } });
+    expect(fold(run, { 'date.day': day(24) }, 'extend')).toEqual({ 'date.day': { from: day(21), to: day(24) } });
+    expect(fold(run, { 'date.day': day(21) }, 'extend')).toEqual({ 'date.day': day(21) });                     // a run of one value is the value
+    expect(fold({ load_time: [1, 2.5] }, { load_time: 4 }, 'extend')).toEqual({ load_time: { from: 1, to: 4 } });   // from those listed
+    expect(fold({ device: 'Mobile' }, { 'date.day': day(21) }, 'extend')).toEqual({ device: 'Mobile', 'date.day': day(21) });   // with nothing held, a pick
+  });
+  it('extend on a categorical dimension is a toggle: the order it is drawn in is no order of its values', () => {
+    expect(fold({ channel: 'Search' }, { channel: 'Email' }, 'extend')).toEqual({ channel: ['Search', 'Email'] });
+  });
+  it('and every filter it makes is one a query may hold', () => {
+    const made = [fold({ channel: 'Search' }, { channel: 'Social' }, 'toggle')!, fold({ 'date.day': '2026-09-21' }, { 'date.day': '2026-09-27' }, 'extend')!];
+    for (const where of made) expect(() => runQuery({ metrics: ['visitors'], where })).not.toThrow();
   });
 });
 
@@ -85,7 +123,8 @@ describe('the board schema', () => {
   const valid = new Ajv({ allowUnionTypes: true }).addSchema(viewSchema).compile(boardSchema);
   it('holds the sample, a board after a selection, and the form of each part', () => {
     expect(valid(board), JSON.stringify(valid.errors)).toBe(true);
-    expect(valid(boardSelect(board, 'Channels', { channel: 'Search' })), JSON.stringify(valid.errors)).toBe(true);
+    expect(valid(pick(board, { channel: 'Search' })), JSON.stringify(valid.errors)).toBe(true);
+    expect(valid(pick(pick(board, { channel: 'Search' }), { channel: 'Social' }, 'toggle')), JSON.stringify(valid.errors)).toBe(true);
     for (const bad of [{ ...board, views: [] }, { ...board, query: { metrics: ['visitors'] } }, { ...board, layout: 'grid' }, { ...board, views: [{ spec: 'view/0', query: { metrics: ['visitors'] } }] }, { ...board, query: { where: { channel: [] } } }])
       expect(valid(bad), JSON.stringify(bad).slice(0, 120)).toBe(false);
   });

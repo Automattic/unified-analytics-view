@@ -1,11 +1,11 @@
-import { POINT_INSET, formatBin, formatDimension, formatValue, holds, layerKeys, many, metricOf, most, partialNote, rowKeys, unitsOf, whereOf, type Catalog, type Layer, type Query, type RectNode, type Result, type Row, type Scene, type Where } from '@unified-analytics/core';
+import { POINT_INSET, formatBin, formatDimension, formatValue, holds, layerKeys, many, metricOf, most, partialNote, rowKeys, unitsOf, whereOf, type Catalog, type Layer, type Query, type RectNode, type Result, type Row, type Scene, type Gesture, type Where } from '@unified-analytics/core';
 import { attr, ensure, paintVar, prop } from './dom.ts';
 import { centred, say, tip as chip } from './chrome/tip.ts';
 import { apart } from './measure.ts';
 import { FOCUS, HOVER, token } from './tokens.ts';
 import { SWATCH, swatch as swatchOf } from './chrome/swatch.ts';
 import { nearest } from './layouts/points.ts';
-import { IS, STATE, emphasise, hold, rove, type Emphasis, type How } from './rove.ts';
+import { IS, STATE, emphasise, gestureOf, hold, rove, type Emphasis, type How } from './rove.ts';
 import { FROM_TOP } from './layout.ts';
 
 /* Hit targets, the keyboard and the readout. A layout marks the element that holds its points with `data-hits`
@@ -361,7 +361,7 @@ export class Keys {
       // A click anywhere on the chosen row's point activates the series the keys chose there.
       under: (t, at) => t.row === at.row,
       choose: (t, how) => this.#show(t?.row ?? null, t?.series ?? null, how),
-      activate: (how) => this.#activate(how),
+      activate: (how, e) => this.#activate(how, e),
       holder: () => this.#box(),
       step: (e) => {
         const box = this.#box()!, points = this.#points(box), at = points.findIndex((el) => el.getAttribute('data-row') === this.#at);
@@ -393,7 +393,7 @@ export class Keys {
     this.#paints = split == null || !scene.series ? new Map() : new Map(scene.nodes.filter((n) => n.series != null && n.layer === 'data').reverse().map((n) => [n.series!, n.paint]));
     const box = this.#box();
     if (box) {
-      attr(box, 'role', 'listbox'); attr(box, 'aria-label', catalog.dimensions[x!]?.label);
+      attr(box, 'role', 'listbox'); attr(box, 'aria-multiselectable', 'true'); attr(box, 'aria-label', catalog.dimensions[x!]?.label);
       // Points in two dimensions have no one orientation, and the attribute has no value for both.
       attr(box, 'aria-orientation', box.dataset.hits === 'y' ? 'vertical' : box.dataset.hits === 'xy' ? null : 'horizontal');
     }
@@ -413,6 +413,11 @@ export class Keys {
   select(where: Where | null): void {
     const held = (this.#selected = where && Object.keys(where).length ? where : null);
     this.#body.querySelectorAll('[data-row], [data-series], [data-key]').forEach((el) => { const of = held ? this.#stands(el) : []; el.toggleAttribute(STATE.selected, of.length > 0 && of.every((r) => holds(r, held!))); });
+    this.#say();
+  }
+  /** Say what is selected to assistive technology: each thing that can be chosen says whether it is, as the state says to a stylesheet. */
+  #say(): void {
+    this.#body.querySelectorAll(CHOSEN).forEach((el) => attr(el, 'aria-selected', String(el.hasAttribute(STATE.selected))));
   }
   /** The rows an element stands for: what its holder says of it where its things are no rows (roveItems); the rows at
    * its point (`data-row`), of its series where it is one's (`data-series`); or every row of its series. */
@@ -436,7 +441,9 @@ export class Keys {
     for (const el of Array.from(box.children)) {
       const on = shown.has(el as HTMLElement), i = on ? this.#keys.indexOf(el.getAttribute('data-row')!) : -1;
       attr(el, 'role', on ? 'option' : 'presentation'); attr(el, 'id', on ? 'hit-' + i : null); attr(el, 'aria-label', on ? this.#says[i] : null);
+      if (!on) attr(el, 'aria-selected', null);
     }
+    this.#say();
   }
 
   #box(): HTMLElement | null { return this.#body.querySelector<HTMLElement>('[data-hits]'); }
@@ -551,15 +558,13 @@ export class Keys {
   /** `row` is the chosen series' at the point, or the point's first. `rows` is every row at the point. By a key, false
    * where no point on show is chosen. A click is on the row's own element, a legend's entry or a map's region among
    * them, whether or not the row has a point on show. */
-  #activate(how: How): boolean {
+  #activate(how: How, e?: Event): boolean {
     const box = this.#box();
     if (this.#at == null || (how === 'keys' && (!box || !this.#points(box).some((el) => el.getAttribute('data-row') === this.#at)))) return false;
     const i = this.#keys.indexOf(this.#at!), rows = this.#rows[i] ?? [], row = this.#pair(i) ?? rows[0];
     if (row) this.#host.dispatchEvent(new CustomEvent('ua-activate', { bubbles: true, composed: true, detail: { row, rows } }));
     // The datum is the point, or the chosen series' mark at it: its value along x, and of the split where a series is chosen.
-    const one = this.#pair(i), of = one ? [one] : rows, where = row ? whereOf(row, [this.#x, one ? this.#split : undefined]) : {};
-    const was = !!this.#selected && of.length > 0 && of.every((r) => holds(r, this.#selected!));
-    propose(this.#host, was ? null : this.#at, was || !Object.keys(where).length ? null : where);
+    if (row) propose(this.#host, this.#at, whereOf(row, [this.#x, this.#pair(i) ? this.#split : undefined]), gestureOf(e));
     return true;
   }
 }
@@ -577,11 +582,15 @@ export function chooseItem(holder: HTMLElement, el: HTMLElement | null, how: How
 }
 
 /** Propose a selection to the host: `where` is the filter the activated datum is, its value of each dimension it is
- * of, and `key` its key in the view. Both are null where it was already selected, which a second activation lets go.
- * The host keeps the filter, and sets it back on the view (`selected`), or on a board (core's boardSelect). */
-function propose(from: Element, key: string | null, where: Where | null): void {
-  from.dispatchEvent(new CustomEvent('ua-select', { bubbles: true, composed: true, detail: { key, where } }));
+ * of; `how` is how it was activated (gestureOf); and `key` is its key in the view. The view decides nothing of what
+ * that does to the selection: the host folds the proposal into the filter it keeps (core's select(), or boardSelect()
+ * for a board) and sets the result back on the view (`selected`). */
+function propose(from: Element, key: string | null, where: Where, how: Gesture): void {
+  from.dispatchEvent(new CustomEvent('ua-select', { bubbles: true, composed: true, detail: { key, where, how } }));
 }
+
+/* The things that can be chosen, by the role each has: what says whether it is selected. */
+const CHOSEN = '[role="option"], [role="gridcell"], [role="treeitem"]';
 
 /* What each thing of a holder bound by roveItems activates with, by the holder: read where a selection is marked, for the rows the thing stands for. */
 const stood = new WeakMap<Element, (el: HTMLElement) => object | undefined>();
@@ -599,12 +608,13 @@ export function roveItems(holder: HTMLElement, item: string, step: (e: KeyboardE
     hit: (e) => (e.target as Element).closest?.<HTMLElement>(item) ?? null,
     chosen,
     choose: (el, how) => chooseItem(holder, el, how),
-    activate: () => {
+    activate: (_, e) => {
       const on = chosen(), d = on && detail(on);
       // From the view's element where the holder is in its shadow root, and from the holder where it is not.
       const from = (holder.getRootNode() as Partial<ShadowRoot>).host ?? holder;
       if (d) from.dispatchEvent(new CustomEvent('ua-activate', { bubbles: true, composed: true, detail: d }));
-      if (on) { const was = on.hasAttribute(STATE.selected); propose(from, was ? null : on.getAttribute('data-key'), was ? null : (d as { where?: Where } | undefined)?.where ?? null); }
+      const where = (d as { where?: Where } | undefined)?.where;
+      if (on && where) propose(from, on.getAttribute('data-key'), where, gestureOf(e));
       return !!on;
     },
     step: (e) => step(e, chosen()),

@@ -148,7 +148,7 @@ export const partitionPainter: LayoutPainter = {
     });
     if (!trees.has(plot)) bind(plot);
     trees.set(plot, { rows: new Map([...names].map(([k, v]) => [k, { row: v.row, rows: v.rows, where: v.where }])) });
-    attr(plot, 'role', 'tree'); attr(plot, 'tabindex', parents.length ? 0 : null);
+    attr(plot, 'role', 'tree'); attr(plot, 'aria-multiselectable', 'true'); attr(plot, 'tabindex', parents.length ? 0 : null);
     attr(plot, 'aria-label', data.catalog.dimensions[(data.layers[0]?.encode?.x ?? '') as string]?.label);
     // A box that a data change took away takes the choice with it. One that is still here keeps it.
     const on = plot.querySelector<HTMLElement>(IS.held);

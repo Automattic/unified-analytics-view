@@ -114,7 +114,7 @@ export const matrix: LayoutPainter = {
     const at = new Map(data.result.rows.map((r) => [(xf ? r[xf] : '') + '\n' + (yf ? r[yf] : ''), r])), rows = new Map<string, Row>();
     grids.set(cells, { nx: xs.length, ny: ys.length, rows, dims: [xf, yf] });
     prop(cells, '--uav-nx', xs.length); prop(cells, '--uav-ny', ys.length);
-    attr(cells, 'role', 'grid'); attr(cells, 'tabindex', xs.length && ys.length ? 0 : null);
+    attr(cells, 'role', 'grid'); attr(cells, 'aria-multiselectable', 'true'); attr(cells, 'tabindex', xs.length && ys.length ? 0 : null);
     attr(cells, 'aria-label', [yf, xf].filter(Boolean).map((f) => dims[f!]!.label).join(' by '));
     // One row is as tall as a cell and no taller: the stylesheet gives a strip its own height.
     body.toggleAttribute('data-strip', !yf);

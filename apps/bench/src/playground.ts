@@ -1,4 +1,4 @@
-import { expand, facets, resolve, type Spec, type Where } from '@unified-analytics/core';
+import { expand, facets, resolve, select, type Proposal, type Spec } from '@unified-analytics/core';
 import { UaView } from '@unified-analytics/dom';
 import { catalog, runQuery, type Scenario } from '@unified-analytics/fixtures';
 import { resizable } from './resizer.ts';
@@ -23,10 +23,11 @@ const later = () => { clearTimeout(settle); settle = window.setTimeout(explainVi
 const view = frame.appendChild(new UaView());
 resizable(frame);
 view.catalog = catalog;
-// The host keeps the selection: the filter the view proposes is set back on it, and said here, since it has no look yet.
+// The host keeps the selection: what the view proposes is folded into the filter kept (core's select), which is set
+// back on the view and said here, since it has no look yet.
 const selected = $('#selected');
-view.addEventListener('ua-select', (e) => { view.selected = (e as CustomEvent<{ where: Where | null }>).detail.where; selected.textContent = view.selected == null ? 'Nothing selected. Activate a point, with a click or Enter, to select it; again to let it go.' : 'Selected: ' + JSON.stringify(view.selected); });
-view.dispatchEvent(new CustomEvent('ua-select', { detail: { key: null, where: null } }));
+view.addEventListener('ua-select', (e) => { view.selected = select(view.selected, (e as CustomEvent<Proposal>).detail, catalog); selected.textContent = view.selected == null ? 'Nothing selected. Activate a point, with a click or Enter, to select it, and again to let it go. With Cmd or Ctrl it joins those selected; with Shift a run of days or bins reaches to it.' : 'Selected: ' + JSON.stringify(view.selected); });
+view.dispatchEvent(new CustomEvent('ua-select', { detail: { key: null, where: {} } }));
 
 for (const [name, s] of Object.entries(samples)) picker.add(new Option(s.label, name));
 // What a query can ask for: every metric and dimension, by the name a spec uses.

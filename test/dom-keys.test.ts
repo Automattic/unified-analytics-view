@@ -232,16 +232,22 @@ describe('the mouse leaving', () => {
     v.send('keydown', { key: 'ArrowRight' });
     v.host.addEventListener('ua-select', (e) => proposed.push((e as CustomEvent).detail));
     v.send('keydown', { key: 'Enter' });
-    expect(proposed).toEqual([{ key: 'a', where: { letter: 'a' } }]);
+    expect(proposed).toEqual([{ key: 'a', where: { letter: 'a' }, how: 'pick' }]);
     v.keys.select({ letter: 'a' }); v.paint();
     expect(marked()).toEqual(['a']);
     // Escape lets go of focus, never of the selection.
     v.send('keydown', { key: 'Escape' });
     expect(v.points[0]!.hasAttribute('data-selected')).toBe(true);
+    // A second activation proposes the same datum: letting it go is the host's fold, not the view's.
     v.send('keydown', { key: 'ArrowRight' }); v.send('keydown', { key: 'Enter' });
-    expect(proposed[1]).toEqual({ key: null, where: null });
+    expect(proposed[1]).toEqual({ key: 'a', where: { letter: 'a' }, how: 'pick' });
+    // What is held with the key or the click says what the activation is for.
+    v.send('keydown', { key: 'ArrowRight' }); v.send('keydown', { key: 'Enter', metaKey: true }); v.send('keydown', { key: ' ', shiftKey: true });
+    expect(proposed.slice(2)).toEqual([{ key: 'b', where: { letter: 'b' }, how: 'toggle' }, { key: 'b', where: { letter: 'b' }, how: 'extend' }]);
     // A filter is of values, so it marks every point whose row holds it: a list of them, and none for a dimension the rows lack.
     v.keys.select({ letter: ['a', 'c'] }); expect(marked()).toEqual(['a', 'c']);
+    // And it is said to assistive technology, of every thing that can be chosen: whether it is selected.
+    expect(v.points.map((p) => p.getAttribute('aria-selected'))).toEqual(['true', 'false', 'true']);
     v.keys.select({ other: 'a' }); expect(marked()).toEqual([]);
     v.keys.select(null); expect(marked()).toEqual([]);
   });

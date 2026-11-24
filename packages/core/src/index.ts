@@ -20,4 +20,4 @@ export { COLUMN_PAD, columnRoom } from './scene.ts';
 export { BAND_BAR, BARE_PAD, DELTA_FULL, GRID_LEAST, NOTE_LEAST, NOTICE_HEIGHT, NUMBER_SHORT, PLOT_TOP, POINT_INSET, RAMP_BLOCK, SEATS_LEAST, SIZE_KEY_BLOCK, X_AXIS_BLOCK } from './sizes.ts';
 export { ruleFor } from './fit.ts';
 export { inProgressNote } from './prose.ts';
-export { boardSelect, boardViews, holds, whereOf, type Board, type BoardView, type Shared } from './board.ts';
+export { boardSelect, boardViews, holds, select, whereOf, type Board, type BoardView, type Gesture, type Proposal, type Shared } from './board.ts';

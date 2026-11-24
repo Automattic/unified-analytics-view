@@ -124,4 +124,6 @@ if (!embed) {
     new ResizeObserver(() => requestAnimationFrame(() => requestAnimationFrame(() => { focus(view, part); readout(frame, caption); }))).observe(frame);
   }
   main.append(strip);
+  // The capture asks for the frames on one line (parts.css, `.still`). The free one keeps the width a line of its own gives it.
+  if (params.has('still')) { strip.querySelector<HTMLElement>('.free')!.style.inlineSize = main.clientWidth + 'px'; document.body.classList.add('still'); }
 }

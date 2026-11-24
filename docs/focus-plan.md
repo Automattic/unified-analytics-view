@@ -255,7 +255,7 @@ Once the steps were built he went through every call made by judgement, twenty-t
 13. The two sketches in `prototype/` move to `sketches/`. Done.
 14. `keep` is removed: the spec field, the rules' `keep`, and what `explain` says of a lever. Done (reference, Decided 63). A spec that writes it is refused by name, and the lever `explain` gives for a fit rule is the room. The compiled rules lost a selector each, which could have changed which rule wins, and a capture of the bench differs on no frame.
 15. `description` on a spec. Done (reference, Decided 62): the figure is described by it and then by the derived sentence, it is drawn nowhere, and a facet says it once. Tried in a browser at a wide frame and at one that is its sentence alone.
-16. The parts page gives each frame a place that no other frame moves, so a capture can say which change moved a frame.
+16. The parts page gives each frame a place that no other frame moves, so a capture can say which change moved a frame. Done: for the capture the frames stand on one line (`still` in the page's URL), the free one last at the width it has on a line of its own, and the page people look at is as it was. 64 frames moved an axis by 1 px, once, for their new places, and nothing else moved. It also found that a part's picture was cut from the window's px and not the page's, so a part of a frame the page had scrolled to was cut from the wrong place: fixed.
 17. A fit rule's need in the type's own units, held to the capture at the default type, where nothing should move.
 18. A proposal for the API's owners: a metric's `by`, grains, whether a metric adds up, and the three states of an answer.
 19. The reference, rewritten as one concise document.

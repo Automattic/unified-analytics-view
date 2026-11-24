@@ -56,7 +56,8 @@ async function settled(page: Page): Promise<FrameMeasure[]> {
 
 async function take(page: Page, sample: string, theme: string, height: string): Promise<void> {
   const query = new URLSearchParams({ sample, part: '', scenario, height: height === 'natural' ? '' : height, theme });
-  await page.goto(`${base}parts.html?${query}&embed`);
+  // `still`: every frame on one line, so none moves another (src/parts.css).
+  await page.goto(`${base}parts.html?${query}&embed&still`);
   const measures = await settled(page), frames = page.locator('.frame');
   const plan = await page.evaluate(() => (window as unknown as { benchPlan?: Plan }).benchPlan);
   for (const [i, measure] of measures.entries()) {
@@ -65,7 +66,9 @@ async function take(page: Page, sample: string, theme: string, height: string): 
     const record: Record = { sample, plan, theme, height, width, ...(error && { error }), measure, frame: `frames/${sample}/${name}.png`, parts: {} };
     mkdirSync(out + `frames/${sample}`, { recursive: true });
     await frame.screenshot({ path: out + record.frame, animations: 'disabled' });
-    const at = (await frame.boundingBox())!;
+    // Where the frame is on the page, and not in the window: taking its picture may have scrolled the page to it, and a
+    // clip of the whole page is in the page's own px.
+    const at = await frame.evaluate((el) => { const r = el.getBoundingClientRect(); return { x: r.left + scrollX, y: r.top + scrollY }; });
     for (const [part, { box: [x, y, w, h] }] of Object.entries(measure.parts)) {
       if (w < 1 || h < 1) continue;
       mkdirSync(out + `parts/${part}`, { recursive: true });

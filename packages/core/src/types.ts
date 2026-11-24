@@ -57,7 +57,14 @@ export interface Query {
   range?: string;
   compare?: 'previous';
   limit?: number;
+  /** A filter: the answer is of the rows where every dimension named here holds what is said of it. The engine applies
+   * it and says so on its answer (`meta.where`): core filters no row. A dimension here need not be in `by`. */
+  where?: Where;
 }
+/** What a filter holds one dimension to: one of its values, any of a list of them, or every one from a value to
+ * another, both included, as the engine names and orders them. A run is of a time or a number. */
+export type Held = string | number | (string | number)[] | { from?: string | number; to?: string | number };
+export type Where = Record<string, Held>;
 export type Row = Record<string, string | number | boolean | null | undefined>;
 export interface Result {
   rows: Row[];
@@ -68,7 +75,9 @@ export interface Result {
   /** The domain each scale takes, by the scale's name, where this result is one view's of a facet: the widest any of
    * the facet's views would take alone, so they are read against one another. `facets` sets it; an engine does not send it. */
   domains?: Domains;
-  meta: { range?: string; compare: string | null; notes: string[]; empty?: boolean };
+  /** `where` is the filter the answer is of, as the query asked it: a view says it after its sentence, and `resolve`
+   * refuses an answer that is not of its query's. */
+  meta: { range?: string; compare: string | null; notes: string[]; empty?: boolean; where?: Where };
 }
 export type Domains = Record<string, [number, number]>;
 

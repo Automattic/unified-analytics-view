@@ -1,4 +1,4 @@
-import { inProgressNote, type Catalog, type Query, type Result, type Row, type Spec } from '@unified-analytics/core';
+import { inProgressNote, type Catalog, type Query, type Result, type Row, type Spec, type Where } from '@unified-analytics/core';
 import { registerLink } from '@unified-analytics/flow';
 import { registerGeo, type Shapes } from '@unified-analytics/geo';
 import { registerPartition } from '@unified-analytics/partition';
@@ -312,7 +312,49 @@ const binRow = (d: string, i: number): Row => { const w = d === 'load_time' ? LO
 /** The engine's total of each field over some rows: none where no row has a value of it, which is not a total of nothing. */
 const sumBy = (rows: Row[], fields: string[]): Row => Object.fromEntries(fields.map((f) => [f, rows.some((r) => r[f] != null) ? rows.reduce((s, r) => s + ((r[f] as number) || 0), 0) : null]));
 
+/** Whether a row holds what a filter says of each dimension it names. A run is by the order of the values as they are written: a day's, a bin's start. */
+const holds = (r: Row, where: Where) => Object.entries(where).every(([d, h]) => {
+  const v = r[d] as string | number;
+  return Array.isArray(h) || typeof h !== 'object' ? [h].flat().some((x) => String(x) === String(v)) : (h.from == null || v >= h.from) && (h.to == null || v <= h.to);
+});
+
+/* A query with `where`. The fixture counts no events, so it has none to filter, and it answers by the pairs it already
+ * makes: a dimension the query is not by is asked for beside the ones it is, the rows that hold are kept, and what is
+ * left is added up by what the query is by. So a filter agrees with the query by the same dimension, row for row.
+ * ponytail: two dimensions in all, by and where together, since the fixture makes pairs and no triples; and counts
+ * only, since a rate over some rows is no sum of theirs. An engine with events filters them, and has neither limit. */
+function filtered(q: Query, scenario: Scenario): Result {
+  const { where = {}, limit, ...rest } = q, by = rest.by || [], beyond = Object.keys(where).filter((d) => by.indexOf(d) < 0), dims = by.concat(beyond);
+  if (dims.length > 2) throw new Error('The fixture answers by two dimensions at most, by and where together, and this query has ' + dims.length + ': ' + dims.join(', ') + '. Remove "' + beyond[beyond.length - 1] + '" from where' + (by.length > 1 ? ', or a dimension from by' : '') + '.');
+  const flat = (rest.metrics || []).find((m) => catalog.metrics[m] && !catalog.metrics[m]!.rangeTotal);
+  if (flat) throw new Error('The fixture filters what adds up over rows, and "' + flat + '" does not: a rate, a time or a count of now over some rows is no sum of theirs. Query a count with "where", or remove "where".');
+  // A filter that holds for nothing is an answer of nothing, as an empty range is.
+  const none = (): Result => { const r = runQuery({ ...rest, limit }, 'empty'); return { ...r, meta: { ...r.meta, where } }; };
+  if (scenario === 'empty') return none();
+  let all: Result;
+  try { all = runQuery({ ...rest, by: dims }, scenario); } catch (e) {
+    if (!beyond.length) throw e;
+    throw new Error('The fixture cannot filter this query by "' + beyond.join('" and "') + '": it would answer by ' + dims.join(' and ') + ' together, and has no such answer (' + (e as Error).message + ') Remove "' + beyond[beyond.length - 1] + '" from where.');
+  }
+  const fields = Object.keys(all.totals), kept = all.rows.filter((r) => holds(r, where)), m0 = (rest.metrics || [])[0]!;
+  if (!kept.length) return none();
+  const totals = sumBy(kept, fields) as Result['totals'], meta = { ...all.meta, where };
+  // One row for each value of a dimension that a kept row has, in the engine's order, holding what the kept rows of it add up to.
+  const along = (d: string): Row[] => (all.totalsBy ? all.totalsBy[d]!.filter((o) => kept.some((r) => r[d] === o[d])).map((o) => ({ ...o, ...sumBy(kept.filter((r) => r[d] === o[d]), fields) })) : kept);
+  // The filter comes before the ranking and the limit: the first values are the first of what is left.
+  const most = (rs: Row[]) => rs.slice().sort((a, b) => ((b[m0] as number) || 0) - ((a[m0] as number) || 0)), categorical = (d: string) => catalog.dimensions[d]!.type === 'categorical';
+  const ranks = (d: string) => categorical(d) && OWN_ORDER.indexOf(d) < 0 && ORDERED.indexOf(d) < 0 && !(TABLES[d] && !TABLES[d]!.ranked);
+  if (by.length < 2) {
+    const rows = by.length ? (ranks(by[0]!) ? most(along(by[0]!)) : along(by[0]!)) : [];
+    return { rows: by.length && categorical(by[0]!) && limit ? rows.slice(0, limit) : rows, totals, meta };
+  }
+  const first = (d: string) => { const rs = along(d), names = categorical(d) && limit ? most(rs).slice(0, limit).map((r) => r[d]) : null; return names ? rs.filter((r) => names.indexOf(r[d]) >= 0) : rs; };
+  const totalsBy = { [by[0]!]: first(by[0]!), [by[1]!]: first(by[1]!) };
+  return { rows: kept.filter((r) => by.every((d) => totalsBy[d]!.some((o) => o[d] === r[d]))), totals, totalsBy, meta };
+}
+
 export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
+  if (q.where && Object.keys(q.where).length) return filtered(q, scenario);
   const metrics = q.metrics || [], dims = q.by || [], by = dims[0] || null;
   metrics.forEach((m) => { if (!catalog.metrics[m]) throw new Error('Unknown metric "' + m + '". The catalog has: ' + Object.keys(catalog.metrics).join(', ') + '.'); });
   dims.forEach((d) => { if (!catalog.dimensions[d]) throw new Error('Unknown dimension "' + d + '". The catalog has: ' + Object.keys(catalog.dimensions).join(', ') + '.'); });
@@ -565,6 +607,7 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
   // The plot's marks about a centre: a line round the circle from each day's place to the next, the fill in from it, a dot at each, and the period before as a second line.
   tinted:  { label: 'Bars painted by a second metric: visitors by page, and how each converts', spec: { spec: 'view/0', title: 'Visitors, and how they convert', query: { metrics: ['visitors', 'page_conversion'], by: ['page'], range: '28d', limit: 8 },
     layers: [{ mark: 'bar', encode: { x: 'page', y: 'visitors', color: 'page_conversion' } }] } },
+  filtered: { label: 'A filter: visitors by day, from one channel alone', spec: { spec: 'view/0', title: 'Visitors from search', use: 'line', query: { metrics: ['visitors'], by: ['date.day'], range: '28d', compare: 'previous', where: { channel: 'Search' } } } },
   launch:  { label: 'A day marked on a trend: visitors by day, and the day of a launch', spec: { spec: 'view/0', title: 'Visitors, and the launch', query: { metrics: ['visitors'], by: ['date.day'], range: '28d', compare: 'previous' },
     layers: [{ mark: 'area', encode: { x: 'date.day', y: 'visitors' }, role: 'context' }, { mark: 'line', encode: { x: 'date.day', y: 'visitors' } }, { mark: 'line', encode: { x: 'date.day', y: 'visitors' }, series: 'previous' }, { mark: 'rule', at: '2026-09-21', label: 'Launch' }] } },
   radar:   { label: 'Radar: visitors by day of the week, this period and the one before', spec: { spec: 'view/0', title: 'Visitors by weekday', query: { metrics: ['visitors'], by: ['weekday'], range: '28d', compare: 'previous' },

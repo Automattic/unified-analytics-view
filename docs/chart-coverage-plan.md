@@ -153,8 +153,9 @@ Statistics arrive as companion fields, the way `metric@previous` does today: `lo
 | `fallback` on a fit rule | Fit rules | Names the preset a view becomes below the rule's need |
 | A colour role on a dimension's values | Catalog | So "Search" is one colour in every view. Until it lands, paint follows the domain's order, not the row's |
 | Totals per split | Result | So a normalized stack divides by an engine total |
+| `where`, and `meta.where` on the answer | Query, result | Added November 24 with the reference's Decided 48: a filter by dimension, which the engine applies and carries back, so a view says what it is filtered to and refuses an answer of another filter |
 
-Nothing above is a size, a breakpoint or a presentation switch. The four catalog and result rows are proposals to the API's owners, as the rest of the seam is.
+Nothing above is a size, a breakpoint or a presentation switch. The catalog, query and result rows are proposals to the API's owners, as the rest of the seam is.
 
 ### 3.6 Scene
 

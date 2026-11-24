@@ -6,9 +6,9 @@ import { customMarks } from './marks.ts';
 import { PRESETS, expand, fills, presetNames, usesPrevious } from './presets.ts';
 import { checkReads } from './reads.ts';
 import { DETAIL_LAYOUTS, SERIES, isMetric, buildScene, widest, columnsOf, isDim, metricOf, overMarks, pointDimOf, roleOf, xDimOf } from './scene.ts';
-import { differenceProse, gridProse, rangeProse, rankProse, tldrProse } from './prose.ts';
+import { differenceProse, filterSaid, gridProse, rangeProse, rankProse, tldrProse } from './prose.ts';
 import { MARKS, baseOf } from './types.ts';
-import type { Catalog, ContainerRules, Layer, Layout, Plan, PlanShape, PresetLibrary, Query, Result, Scene, Spec } from './types.ts';
+import type { Catalog, ContainerRules, Layer, Layout, Plan, PlanShape, PresetLibrary, Query, Result, Scene, Spec, Where } from './types.ts';
 
 /* The layout a layer's fields ask for: what is on x, on y and on color, first match first. `any` asks nothing of its channel. */
 type FieldKind = 'dimension' | 'metric' | 'any';
@@ -118,6 +118,19 @@ function checkLayers(layers: Layer[], q: Query, catalog: Catalog, result: Result
   if (unused) throw new Error('The query is by "' + unused + '", and no layer encodes it, so its rows would be drawn over each other. Encode it on color, for a colour and a legend entry each, or on detail, for a series each in one paint, or remove it from query.by.');
 }
 
+/** A filter in one form, so that two are compared by what they hold: its dimensions in order, a value as a list of one, a list in order. */
+const filterOf = (w: Where = {}) => JSON.stringify(Object.keys(w).sort().map((d) => { const h = w[d]!; return [d, Array.isArray(h) || typeof h !== 'object' ? [h].flat().map(String).sort() : { from: h.from ?? null, to: h.to ?? null }]; }));
+/** A query's filter is refused where it holds a dimension to nothing or to a run it has no order for, and where the
+ * answer is not of it: a view would say one thing and show another. */
+function checkWhere(q: Query, result: Result, catalog: Catalog): void {
+  for (const [d, h] of Object.entries(q.where || {})) {
+    const at = 'query.where holds "' + d + '" to ' + JSON.stringify(h), run = !!h && typeof h === 'object' && !Array.isArray(h);
+    if (h == null || (Array.isArray(h) ? !h.length : run && h.from == null && h.to == null)) throw new Error(at + ', which is no value. Write one of its values, a list of them, or a run as { "from": …, "to": … }, or remove "' + d + '" from where.');
+    if (run && catalog.dimensions[d]!.type === 'categorical') throw new Error(at + ', and "' + d + '" is categorical: its values have no order to run from one to another. List the values it may take, or remove "' + d + '" from where.');
+  }
+  if (filterOf(q.where) !== filterOf(result.meta.where)) throw new Error('The query ' + (Object.keys(q.where || {}).length ? 'filters by where: ' + JSON.stringify(q.where) : 'has no "where"') + ', and the answer says it is of ' + (result.meta.where ? 'where: ' + JSON.stringify(result.meta.where) : 'everything, with no "where" in its meta') + '. An engine that filters says so on its answer, as meta.where. Pass what this query returned, or make query.where the same.');
+}
+
 /** The plan for a spec: its layout, its layers with their roles, its guides and its sentence. It takes no size, so
  * it is everything the spec asks for. What a room is short of is the fit rules' to say (`fitTo`, `viewAt`), and a
  * surface's to act on. `rules` are a context's own. Throws, with a message that names the fix, when the spec is invalid. */
@@ -126,8 +139,9 @@ export function resolve(spec0: Spec, result: Result, catalog: Catalog, rules: Co
   const spec = expand(spec0, presets), q = spec.query || ({} as Query);
   if (!q.metrics || !q.metrics.length) throw new Error('A view needs query.metrics, for example ["visitors"].');
   // A name the catalog does not carry is refused here, once, before anything reads its definition.
-  for (const [kind, where, has] of [['metric', 'metrics', catalog.metrics], ['dimension', 'by', catalog.dimensions]] as const) for (const f of q[where] || [])
+  for (const [kind, where, names, has] of [['metric', 'metrics', q.metrics, catalog.metrics], ['dimension', 'by', q.by || [], catalog.dimensions], ['dimension', 'where', Object.keys(q.where || {}), catalog.dimensions]] as const) for (const f of names)
     if (!Object.hasOwn(has, f)) throw new Error('The catalog has no ' + kind + ' "' + f + '". It has: ' + (Object.keys(has).join(', ') || 'none') + '. Add it to the catalog passed in, or correct the name in query.' + where + '.');
+  checkWhere(q, result, catalog);
   const m = q.metrics[0]!, M = catalog.metrics[m]!, by = (q.by || [])[0], dropped: string[] = [];
   let layers = (spec.layers || []).slice();
   if (!layers.length && by) throw new Error('This spec has a dimension but no layers, so there is nothing to draw it with. Add "layers", or "use" one of: ' + presetNames(presets).join(', ') + '.');
@@ -177,6 +191,9 @@ export function resolve(spec0: Spec, result: Result, catalog: Catalog, rules: Co
   // An area painted by direction is a surplus and a deficit: on how many rows its second end is above its first is said after the view's own sentence.
   const gap = p.layout === 'cartesian' ? layers.find((l) => l.mark === 'area' && l.paint === 'direction') : undefined;
   if (gap && !result.meta.empty) p.text += differenceProse(q, result, catalog, [gap.encode!.y as string, gap.encode!.y2!]);
+  // What the answer is filtered to is said last, of everything before it: a view of some rows never reads as one of all.
+  const only = filterSaid(result.meta.where, catalog);
+  if (only) p.text += ' Filtered to ' + only + '.';
   if (result.meta.empty || (M.instant && !result.rows.length)) {
     if (M.instant || !layers.length) { p.layout = 'none'; p.layers = []; p.tldrValue = true; p.guides = {}; }
     else { p.layout = 'notice'; p.layers = []; p.guides = {}; p.tldrValue = false; }

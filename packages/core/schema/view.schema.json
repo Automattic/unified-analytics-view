@@ -37,7 +37,16 @@
         "by": { "type": "array", "items": { "type": "string" }, "maxItems": 2, "uniqueItems": true, "description": "Zero, one or two catalog dimensions. With two, a layer must encode each: the second usually goes to color, to detail, or to the other axis of a grid of cells." },
         "range": { "type": "string", "description": "For example \"28d\"." },
         "compare": { "const": "previous" },
-        "limit": { "type": "integer", "minimum": 1, "description": "Top-N for each categorical dimension." }
+        "limit": { "type": "integer", "minimum": 1, "description": "Top-N for each categorical dimension." },
+        "where": {
+          "type": "object",
+          "description": "A filter, by catalog dimension: the answer is of the rows where every dimension named holds what is said of it. A dimension is held to one of its values, to any of a list of them, or to a run from one value to another, both included, which is for a time or a number. The engine applies it, and a dimension here need not be in by. The view says the filter after its sentence.",
+          "additionalProperties": { "anyOf": [
+            { "type": ["string", "number"] },
+            { "type": "array", "items": { "type": ["string", "number"] }, "minItems": 1, "uniqueItems": true },
+            { "type": "object", "additionalProperties": false, "minProperties": 1, "properties": { "from": { "type": ["string", "number"] }, "to": { "type": ["string", "number"] } } }
+          ] }
+        }
       }
     },
     "field": { "type": ["string", "number"], "description": "A dimension name, a metric name, a companion the result returns with one, written \"<metric>@<suffix>\", or a number (for a rule, on x or on y)." },

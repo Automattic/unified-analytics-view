@@ -4,6 +4,7 @@ import { GUIDE_CHANNEL } from './guides.ts';
 import { customMarks } from './marks.ts';
 import { PRESETS, expand, fills, usesPrevious } from './presets.ts';
 import { facets, layoutOf, resolve } from './plan.ts';
+import { filterSaid } from './prose.ts';
 import { buildScene, layerKeys, measuresOf } from './scene.ts';
 import { baseOf } from './types.ts';
 import type { Catalog, Layout, PresetLibrary, Result, Spec } from './types.ts';
@@ -75,6 +76,8 @@ export function explain(spec0: Spec, result: Result, catalog: Catalog, room?: Ex
     const choice = layoutOf(catalog, plan.layers);
     out.push({ what: 'the layout is ' + choice.layout, from: of(choice.layer), why: choice.why, lever: 'change what that layer puts on x, y, color or angle' });
   }
+  const only = filterSaid(result.meta.where, catalog);
+  if (only) out.push({ what: 'filtered to ' + only, from: 'query.where', why: 'the engine answered for the rows where this holds, so every number and mark here is of those alone', lever: 'remove it from "where" to draw the whole' });
   // Layers of the period before need it in the query and in the result.
   layers.forEach((l, i) => {
     if (!usesPrevious(l) || plan.layers.some((p) => p.series === l.series)) return;

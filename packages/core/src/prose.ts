@@ -1,5 +1,5 @@
-import { delta, fmtPct, formatBin, formatDimension, formatUnit, formatValue, rangeLabel } from './format.ts';
-import { baseOf, type Catalog, type MetricDef, type Query, type Result, type Row } from './types.ts';
+import { delta, fmtPct, formatBin, formatDimension, formatUnit, formatValue, orList, rangeLabel } from './format.ts';
+import { baseOf, type Catalog, type MetricDef, type Query, type Result, type Row, type Where } from './types.ts';
 
 /* What a view says of a metric with nothing to show, and of one that is read now. Each is made of the catalog's label
  * and nothing else, so it holds for a metric that counts no visits and for a host with no pages: core knows no name.
@@ -191,6 +191,17 @@ export function gridProse(q: Query, result: Result, catalog: Catalog): string | 
   }
   const busiest = (d: string, is: string, of = '') => { const top = leader(result, d, m)!; return say(catalog, d, top) + is + ' the busiest ' + catalog.dimensions[d]!.label.toLowerCase() + at(top[m] as number, result.totals[m], catalog.metrics[m]!, of); };
   return 'Most ' + name + ' at ' + say(catalog, a, peak, true) + ', ' + say(catalog, b, peak, true) + ' (' + formatValue(peak[m] as number, catalog.metrics[m]!) + ')' + over(result) + '. ' + busiest(a, ' is', ' of ' + name) + ', and ' + busiest(b, '') + '.';
+}
+
+/** What a filter holds each dimension to, in words: "channel Search or Social, and day from Sep 1 to Sep 7". A view
+ * says it after its sentence ("Filtered to …") and of itself (`explain`), read off the answer as its range is, so it
+ * says what it holds. Empty for an answer of everything. */
+export function filterSaid(where: Where | undefined, catalog: Catalog): string {
+  return Object.entries(where || {}).map(([d, held]) => {
+    const dim = catalog.dimensions[d]!, v = (x: string | number) => formatDimension(x, dim), label = dim.label.toLowerCase();
+    if (Array.isArray(held) || typeof held !== 'object') return label + ' ' + orList([held].flat().map(v));
+    return label + (held.from != null ? ' from ' + v(held.from) : '') + (held.to != null ? (held.from != null ? ' to ' : ' up to ') + v(held.to) : '');
+  }).join(', and ');
 }
 
 /** What follows a value from the unfinished bucket, as in "Visitors 175 so far". Empty for a finished one, so it also answers whether the row is partial. */

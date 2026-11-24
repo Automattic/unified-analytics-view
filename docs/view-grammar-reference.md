@@ -132,7 +132,8 @@ The v1 metric list the catalog must eventually cover: visitors, page views, uniq
 A query is written in catalog names:
 
 ```json
-{ "metrics": ["visitors"], "by": ["date.day"], "range": "28d", "compare": "previous", "limit": 8 }
+{ "metrics": ["visitors"], "by": ["date.day"], "range": "28d", "compare": "previous", "limit": 8,
+  "where": { "channel": "Search" } }
 ```
 
 | Field | Notes |
@@ -142,6 +143,28 @@ A query is written in catalog names:
 | `range` | `"28d"` style. Optional: where the answer's `meta.range` names none, the prose names none. A count of days, or `"now"` for an instant. Presets and custom ranges are Open: until they are settled, a value in another form is refused by name |
 | `compare` | `"previous"` or absent. Other modes (year over year, baseline) are Open |
 | `limit` | Top-N for categorical dimensions |
+| `where` | A filter, by dimension: the answer is of the rows where every dimension named holds what is said of it. See below |
+
+**A filter (`where`, Decided 48).** Each dimension is held to one of three things, and a dimension here need not be in `by`:
+
+```json
+{ "where": { "channel": "Search" } }
+{ "where": { "channel": ["Search", "Social"], "device": "Mobile" } }
+{ "where": { "date.day": { "from": "2026-09-21", "to": "2026-09-27" } } }
+```
+
+| Form | Holds for |
+|---|---|
+| A value | That value of the dimension |
+| A list of values | Any of them |
+| `{ "from", "to" }` | Every value from the one to the other, both included, as the engine names and orders them: a day, where a bin starts. Either end may be left out. For a time or a number, and refused on a categorical dimension, which has no order to run along |
+
+- **Dimensions are joined by "and".** There is no "or" between two dimensions, no "not", and no threshold on a metric. What needs one is a query for another tool.
+- **The engine applies it, and says so.** Its answer carries the filter back as `meta.where`. Core filters no row and sums none: a filtered total is the engine's, as every total is.
+- **An answer that is not of the query's filter is refused.** `resolve` compares `query.where` with `meta.where` by what they hold (a value is a list of one, and order does not count) and names both where they differ. Without it a spec that asked for some rows would be drawn from an answer of all of them, or the other way about, and the view would say one thing and show another. It is the stale answer of section 13, caught for a filter.
+- **The view says it.** After its sentence: "Filtered to channel Search or Social, and device Mobile." (section 16), and in what it says of itself (section 10.4). It paints no chip: a filter's control is chrome, and the surface's.
+- **The filter comes before the ranking and the limit:** the first values are the first of what is left.
+- **A filter that holds for nothing** is an answer of nothing, `meta.empty`, which still says its filter.
 
 A result is:
 
@@ -156,6 +179,8 @@ A result is:
 }
 ```
 
+An answer to a query with `where` has it in its `meta` too, as the query wrote it.
+
 - A comparison is delivered as a companion field, `metric@previous`, aligned row by row. It is null when there is no prior data.
 - Statistics arrive the same way, as companions the engine returns: `metric@p25`, `metric@lower`, `metric@running`, `metric@rank`, `metric@cumulative`, and `dimension@end` for a bin. One that is not in its metric's unit has a catalog entry of its own (section 4). Core computes none of them. A query cannot yet ask for one by name; that is Open.
 - A spec drawn against an answer that already exists names metrics that answer has, in any order and not necessarily all of them: the first named is the primary metric. Its `by`, `range` and `compare` are the answer's. Leaving `limit` out keeps every row the answer has.
@@ -165,6 +190,8 @@ A result is:
 - `meta.empty: true` marks a period with no data at all.
 
 The fixture engine has three data states: `typical`, `no-prior` (comparison requested, none available) and `empty`. Keep all three as test fixtures.
+
+It counts no events, so it has none to filter. It answers `where` from the pairs it already makes: a dimension the query is not by is asked for beside the ones it is, the rows that hold are kept, and what is left is added up. So a filter agrees with the query by the same dimension row for row, which `test/where.test.ts` holds. Its limits are its own and each is refused by name: two dimensions in all, `by` and `where` together, and metrics that add up over rows.
 
 ---
 
@@ -731,7 +758,7 @@ The rules on the plot (`secondary` and `hole`) ask for the plot's own box, which
 
 ### 10.4 Why a view looks as it does (Proven)
 
-A spec that does not come out as its author expected is fixed in the spec, so the view says what it decided in the spec's own words. `explain(spec, result, catalog, room)` in core returns the layout and why the layers asked for it, every part the plan has and the place in the spec it comes from (`layers[0].encode.color`, `query.metrics[0]`, or `use "donut": layers[0]` for a preset's), and at a room each fit rule that holds: what it hides or shows, what it needs and what the room has, its id, and the lever where the spec has one (`keep`, a field, `compare`). A key a rule cuts down is said in its shorter form ("shown as a thin strip", "shown as its largest step", "thinned to about four"), and one it takes says what went with it ("hidden, and the marks it keyed drawn in one colour"). A rule on the plot is said to be "not asked" where the room gives no plot to measure. An entry with no lever is a default, and the rules are where it is fixed. `UaView.explain()` asks it at the element's own size and adds what the measured pass decided there: labels given up or cut short, the number's shorter forms, the prose rung.
+A spec that does not come out as its author expected is fixed in the spec, so the view says what it decided in the spec's own words. `explain(spec, result, catalog, room)` in core returns the layout and why the layers asked for it, every part the plan has and the place in the spec it comes from (`layers[0].encode.color`, `query.metrics[0]`, or `use "donut": layers[0]` for a preset's), and at a room each fit rule that holds: what it hides or shows, what it needs and what the room has, its id, and the lever where the spec has one (`keep`, a field, `compare`). A key a rule cuts down is said in its shorter form ("shown as a thin strip", "shown as its largest step", "thinned to about four"), and one it takes says what went with it ("hidden, and the marks it keyed drawn in one colour"). A rule on the plot is said to be "not asked" where the room gives no plot to measure. A filtered answer is said straight after the layout ("filtered to channel Search"), from `query.where`, with the lever that draws the whole. An entry with no lever is a default, and the rules are where it is fixed. `UaView.explain()` asks it at the element's own size and adds what the measured pass decided there: labels given up or cut short, the number's shorter forms, the prose rung.
 
 The fit rules are the contract it reads, so a part the element hides that no rule names is a gap in the rules. Building it found two: the `axes` rule now names `y-axis-2`, and the grid's `marks` rule its axes and keys.
 
@@ -876,6 +903,7 @@ Derived from the query and transforms. No chart type is consulted.
 | An area painted by direction, after the view's own sentence | "Revenue: $63.5k in the last 28 days, up 8.1% on the previous period. Above the previous period on 17 of 27 days, and below it on 10." |
 | Two metrics joined through a time dimension | "From Sep 8 to Oct 4, visitors went from 416 to 310 and sign-ups from 15 to 9. Sep 25 is highest on both." |
 | Empty | "Visitors: nothing recorded in the last 28 days." |
+| A filtered answer, after everything else the view says | "Visitors: 4,454 in the last 28 days, up 11% on the previous period. Filtered to channel Search." A list is "channel Search or Social", a run "day from Sep 21 to Sep 27", and dimensions are joined by ", and". Read off the answer's `meta.where`, as the range is read off its `meta.range` |
 
 Every word is the catalog's or the query's: a metric is said by its label, a dimension by its label, and a value of one as a row says it, so a country's code is its name and no value is a dash. The words that are not, such as "right now" and "nothing … yet", are set in `packages/core/src/prose.ts` and nowhere else.
 
@@ -983,6 +1011,7 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 45. A board holds views and what they share, and no layout: where each view stands is the surface's, as a view's size is its container's. That settles the part of Open 12 a facet waited for, so the facet is built first, since it shares only its scales and needs no params. A spec's `facet` names one of the query's dimensions, core's `facets` gives a view for each value with the engine's totals and one domain for every scale, and a surface lays them out; a spec says no columns. (November 23)
 46. A mark's place may be said as a value. What is on a channel is a field or a number, so a value of a list axis (a date, a category) had no way to be said: a string there is a field. The layer field `at` says it, first for a `rule` in a plot, which stands at that value of x. A value the axis does not have is not drawn, since a view must not break when its range moves past a date. (November 23)
 47. A metric on `color` paints a plot's bars and dots off the ramp, as it paints a grid's cells, and the ramp is its key. A guide is read off a scale, so the ramp was already a view's wherever a metric is on `color`; a plot now draws it. One metric paints a plot, and not beside colours that tell series or metrics apart. The ramp leaves with the axes, and the marks are then in one paint. (November 23)
+48. A filter is part of the query, and a param is a part of the query that views share. That settles how Open 9 begins. A query's `where` holds a dimension to one of its values, to any of a list, or to a run from one to another: the three kinds Open 9 named, point, set and interval. Dimensions are joined by "and" and there is nothing else: no "or", no "not", no threshold. The engine applies it and carries it back as `meta.where`, a view says it after its sentence and of itself, and `resolve` refuses an answer that is not of its query's filter. Core filters no row. Proposed to the API's owners with it: `where` on the request and on the answer's `meta`. What follows from it and is not built: a board's `query` laid under each of its views' as their params, a selection as a `where` that a view proposes, and views combined by one rule with no field, each filtered by every dimension but the ones it draws, where it marks what is selected. (November 24)
 
 ### Open
 
@@ -994,7 +1023,7 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 6. Bar list behaviour when narrow, and what a collapsed ranking should show.
 7. Whether a trend shows the tldr value above the plot by default. This is now the container rule `tldrValue.above` and not a spec field; the default says no.
 8. Whether deltas exclude the partial day.
-9. Params and selections. Not started. The design intent: a selection is a filter predicate, not pixels or row IDs; three kinds (interval, point, set); several views combine by union, intersection or cross-filter; dragging is transient and local, releasing commits to the context.
+9. Params and selections. Settled in part November 24: see Decided 48. The filter is built, and the model for the rest is agreed and not built: a board's shared query, a selection as a filter a view proposes, and cross-filtering by one rule. Still open within it: how a set and an interval are selected by pointer and by keyboard, which is to be put before it is built; and whether Spacefast's API takes a filter in this form, which its recorded answers do not show.
 10. Settled October 7: see Decided 24. Built October 8.
 11. Catalog properties beyond the stub, and where polarity and thresholds are declared. Among them, what a metric counts, one and many ("person", "people"): without it an instant metric reads "Present now: 7 right now" and not "7 people are here right now". What this repo will propose to the API's owners is listed in `docs/chart-coverage-plan.md`, section 3.5: a `number` dimension type; `domain`, `target` and `bands` on a metric; a colour role per dimension value; and totals per split on the result. All but the colour role are built here and are in the schema, so a catalog may use them; what is open is whether the API will send them.
 12. Settled in part November 23: see Decided 45. A board holds views and no layout, and the facet is built. Still open: the board as a spec of several views, which waits for params (Open 9).

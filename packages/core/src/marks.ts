@@ -3,7 +3,9 @@ import type { Field, Reads } from './reads.ts';
 import { LAYOUTS, MARKS } from './types.ts';
 import type { Catalog, Guides, Layer, Part, Query, Result, Scene } from './types.ts';
 
-/* Custom marks: the escape hatch for what the grammar cannot express (reference, section 7). One is registered in
+/* Custom marks: where a form the grammar cannot say enters the system (reference, section 7). One is a candidate for
+ * the system, and not a way round it: it is held to what a core mark is held to (test/admission.test.ts), so that what
+ * proves itself can move into core as it stands. One is registered in
  * code under a name, and a spec refers to it by that name in `mark` and passes it encodings, nothing else. Whatever
  * else it draws from, such as the boundary shapes of a map, it was handed when it was made, as the catalog is handed in.
  *

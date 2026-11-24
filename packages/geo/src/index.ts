@@ -135,7 +135,7 @@ export function eachGeoName(f: (name: string) => void): void { NAMES.forEach((n)
  * Other shapes are the same mark registered again under a name of its own, and `presets` names the presets that draw
  * it: the one that fills each region on `color`, and the one that stands a symbol on each on `size`. Under `geo` there
  * is `choropleth`, and under another name there are only the ones given. A map of symbols is written as its layer.
- * Each name is a custom mark, and counts against the grammar as one. */
+ * Each name is a custom mark of its own, and is held to what any is (test/admission.test.ts). */
 export function registerGeo(shapes: Shapes, { presets, ...options }: GeoOptions & { presets?: { color?: string; size?: string } } = {}): void {
   const name = options.name ?? 'geo';
   registerMark(name, geoMark(shapes, options));

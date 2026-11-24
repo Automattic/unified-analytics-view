@@ -1,6 +1,6 @@
 # Focus plan
 
-As of November 24, 2026. **Status: steps 1 to 7 are built, and the first stage of step 8.** On November 24 David said to go ahead with the rest by best judgement, weighed against the vision, and to keep what wants his opinion for the end: it is under "For David, at the end".
+As of November 24, 2026. **Status: steps 1 to 7 and 9 are built, and the first stage of step 8.** On November 24 David said to go ahead with the rest by best judgement, weighed against the vision, and to keep what wants his opinion for the end: it is under "For David, at the end".
 
 ## Why
 
@@ -180,6 +180,13 @@ A custom mark is where something enters the system, far upstream, and not a way 
 
 **Done when** `geo`, `link` and `partition` pass the suite.
 
+**Built November 24** (reference, Decided 59): `test/admission.test.ts`, run for each of the five marks registered, the two sets of tiles among them. All pass. What it found:
+
+- Most of what a custom mark is held to was already held somewhere: its own suite, the scene schema, the guides. What was missing was one place that says so, and that a mark with no suite of its own is run through.
+- `link` and `partition` said the channels they read and no fields. Each says `fields: []` now, so a `paint` written on one is refused.
+- Two things the suite cannot see: that a mark's scales go through `common`, and that it paints. The first is read in its code, the second is the capture's.
+- What moves a mark into core is written in the reference's section 7 as a proposal. No mark has moved either way, so it is untested (For David, 13).
+
 ### 10. The catalog and the answer say more
 
 With the API's owners; this repo proposes and then reads what they accept.
@@ -232,3 +239,4 @@ Calls made by best judgement while building, each to confirm or turn over.
 10. **A spec, a query and a layer now refuse a field they do not take.** It is stricter than before for every surface, the element among them: a host that kept a field of its own on a spec object will be refused, by name.
 11. **`keep` stays.** The plan said to remove it, since no sample uses it. You said on November 24 that no system does without overrides in practice, and `keep` is the one a spec has. It is still provisional in the reference.
 12. **Step 8 stops at its first stage.** The needs are counted and named, and no number moved. The three stages proposed under step 8 each change what views do at some size, so I left them for you to see first.
+13. **What moves a custom mark into core** is four things I proposed in the reference's section 7: drawn in more than one product's views, takes the plot's marks over it, needs no new dependency, and gives way by ladders core has. They are a first guess with no case behind them.

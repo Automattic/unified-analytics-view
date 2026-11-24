@@ -367,7 +367,24 @@ A value is rounded to whole glyphs, and a value above nothing has one at least. 
 
 A mark carries only its shape and those constraints. Relationships between marks (stacked, overlaid, normalized) are transforms or layering, never part of the mark.
 
-A custom mark registered in code and referenced by name is the escape hatch for anything the grammar cannot express (maps, Sankeys). Keep the spec small; do not let it grow an expression language. The registry is `registerMark` in `packages/core/src/marks.ts`. There are two: `geo`, in `packages/geo`, and `link`, in `packages/flow`. A custom mark says which channels it reads, in `reads` beside its fit rules, and is held to that as core's marks are (below). What it gives core is a scene in ratios and its fit rules, and what it gives a surface is a painter: it places nothing in pixels itself (Decided 43).
+A custom mark, registered in code and referenced by name, is where a form the grammar cannot say enters the system (maps, Sankeys, treemaps). Keep the spec small; do not let it grow an expression language. The registry is `registerMark` in `packages/core/src/marks.ts`. There are two: `geo`, in `packages/geo`, and `link`, in `packages/flow`. A custom mark says which channels it reads, in `reads` beside its fit rules, and is held to that as core's marks are (below). What it gives core is a scene in ratios and its fit rules, and what it gives a surface is a painter: it places nothing in pixels itself (Decided 43).
+
+### A custom mark is a candidate
+
+**Decided 59, November 24.** A custom mark is where something enters the system, far upstream, and not a way round it. An author who wants a chart this system does not draw has other libraries for that. What a custom mark is for is a form that could become the system's: so it is held to what a core mark is held to from the day it is registered, and what proves itself can move into core as it stands.
+
+`test/admission.test.ts` is where it is held, one suite run for every mark registered:
+
+- it says the channels it reads (`reads`) and the layer fields (`fields`), so what a layer writes that it does not read is refused;
+- a sample in the bench draws it;
+- every scene it builds is valid against `scene/0`, in every data state: paint tokens, unique keys, and no field of its own;
+- at every room it shows something, and only parts its scene has;
+- it gives way: in the least room it is its number, or the view it gave way to is;
+- the places it offers, where it offers any, are in its box.
+
+That no key of its leaves before its marks is held with core's own rules (`test/guides.test.ts`), and that it paints as it promises by the bench's capture and check. That its scales go through `common` is read in its code: nothing checks it for a mark with no facet.
+
+**What moves a mark into core** is proposed, and not yet tested by a case: it is drawn in the views of more than one product; it takes the plot's marks over it (`places`), since a mark that must stand alone in its view is a chart type; it needs no dependency core does not have; and its fit rules are ladders of parts core already has. What moves a core mark out is the reverse, and `unit` is the one to watch: five forms, and five fit rules that are its alone.
 
 ### What each mark reads
 
@@ -499,7 +516,7 @@ A limit is backpressure: it says where the grammar ends, and a refusal that name
 { "query": { "metrics": ["visitors"], "by": ["country"] }, "layers": [{ "mark": "geo-tiles", "encode": { "x": "country", "color": "visitors" } }] }
 ```
 
-Each name is a custom mark to the health check of section 9. Below the room a map needs, a tile map is the same ranked list. A tile carries no label yet: the mark names a region in its readout and the table, and nowhere on the tile.
+Below the room a map needs, a tile map is the same ranked list. A tile carries no label yet: the mark names a region in its readout and the table, and nowhere on the tile.
 
 **The `link` mark** draws a Sankey of one step, and is the second custom mark (built October 12, in `packages/flow`, with no dependency but core). It takes one layer, alone in the view, of a query by two dimensions. `x` is the source dimension, `y` the target and `size` the metric. Two columns of nodes, the sources on the left: a node for each value, in the engine's order, as tall as the engine's total for it, so a result with no `totalsBy` is an error. A ribbon for each row, as wide at each end as the row's share of the node it meets; a row whose value is null or zero has none. A source takes a series colour, so more than six is an error that names `limit`; its ribbons are that colour as a tint, and a target is neutral. A node's name is the key to it, so the names stay as long as the ribbons do: short of the room they need, 320 by 140 px, the view becomes the `heatmap` of the same query, with the sources down the side.
 
@@ -654,7 +671,7 @@ A name must be letters, digits, `_` and `-`, and cannot be one the library has. 
 - A `previous` layer is left out on expansion when the query has no `compare`.
 - A companion is something the engine returns with a metric. A query cannot yet ask for one by name (section 5), so a preset that needs companions works only against a result that has them.
 - **Proposed:** a preset may pin a hand-tuned form for a size where the derived result is not good enough. The format for this is Open.
-- **The health check for the whole approach:** count how many presets need pins or custom marks. If most do, this has become a chart-type library with extra steps.
+- **The health check for the whole approach:** count how many presets need pins. If most do, this has become a chart-type library with extra steps. A custom mark is not counted against it: it is a candidate for the system (section 7), and the count of them is a queue.
 
 ---
 
@@ -1080,6 +1097,7 @@ docs/
 56. The scene has a schema, `scene/0`, a draft: `packages/core/schema/scene.schema.json`. It is the node vocabulary of Decided 51 as data, with an arc's own fields and the parts that carry no position said as such, and every scene a sample builds is held to it. Writing it found two things no type said: a `text` in a grid carries the `pair` it stands at, and the `partition` mark paints in a token of its own, `background`. It is the fifth step of `docs/focus-plan.md`. (November 24)
 57. The agent surface is a package of its own, `packages/agent`, that wraps core and adds no rule. `describe()` gives what can be said as data: the four schemas, what each mark reads, the guides, the fit rules and the presets. `check()` reads a spec with its answer and no browser, and gives the refusal, or what the view says, where each part comes from in the spec, and at each room the parts that show, each fit rule that holds and the lever that changes it. A server offers both over stdio as MCP tools, with a third that draws a spec by the bench's capture and returns pictures and the check's findings. A view is read on the answer it is handed, or on the fixture engine where it is handed none. Building it found that `resolve()` read past a field it had no use for, so a size in a spec or a filter under another name was drawn without: a spec, a query and a layer now refuse a field they do not take. It is the sixth and seventh steps of `docs/focus-plan.md`. (November 24)
 58. What the fit rules pick is said once. Every need is one of forty numbers, or a sum of them and of a surface's gutters, and the forty are in one table, `LEAST` in `packages/core/src/fit.ts`, each named for the part it is the least room of. No rule changed: the thirty are the same data. It is the first stage of the eighth step of `docs/focus-plan.md`, which goes on to work the needs out, from the type a part is set in first, and that is proposed there and not built. (November 24)
+59. A custom mark is a candidate for the system, and not a way round it. It is held to what a core mark is held to, in one suite run for every mark registered (`test/admission.test.ts`): it says what it reads, a sample draws it, its scenes are valid against `scene/0`, it shows something at every room and gives way in the least. So the count of custom marks is a queue of candidates, and no longer a mark against the grammar. What moves one into core is proposed in section 7. It is the ninth step of `docs/focus-plan.md`. (November 24)
 
 ### Open
 

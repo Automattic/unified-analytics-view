@@ -48,6 +48,14 @@ describe('the fixture engine filters by the pairs it makes', () => {
     expect(both.totals.visitors).toBe(both.rows.reduce((s, r) => s + (r.visitors as number), 0));
     expect(both.meta.where).toEqual({ channel: 'Search', device: 'Mobile' });
   });
+  it('carries the note of its own query, and not the one that came with the dimension it filtered by', () => {
+    const days = runQuery(byDay).rows, past = { from: String(days[2]!['date.day']), to: String(days[8]!['date.day']) };
+    expect(runQuery(byDay).meta.notes).toEqual(['Today is still in progress.']);
+    expect(runQuery({ ...byDay, where: { channel: 'Search' } }).meta.notes).toEqual(['Today is still in progress.']);     // by day, with today in it
+    expect(runQuery({ ...byDay, where: { 'date.day': past } }).meta.notes).toEqual([]);                                 // by day, and today is not in it
+    expect(runQuery({ metrics: ['visitors'], by: ['channel'], where: { 'date.day': past } }).meta.notes).toEqual([]);   // a list says nothing of today
+    expect(runQuery({ metrics: ['visitors'], where: { 'date.day': String(days[27]!['date.day']) } }).meta.notes).toEqual([]);
+  });
   it('says what it cannot filter, and the fix', () => {
     expect(errOf(() => runQuery({ metrics: ['page_conversion'], where: { page: '/' } }))).toMatch(/filters what adds up over rows, and "page_conversion" does not.*Query a count with "where", or remove "where"\./);
     expect(errOf(() => runQuery({ metrics: ['conversions'], by: ['event'], where: { channel: 'Search' } }))).toMatch(/cannot filter this query by "channel".*Remove "channel" from where\./);

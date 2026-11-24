@@ -340,7 +340,10 @@ function filtered(q: Query, scenario: Scenario): Result {
     kept = kept.map((r) => ({ ...r, ...Object.fromEntries(fields.map((f) => [f, r[f] == null || !whole[f] ? r[f] : Math.round((r[f] as number) * ((part[f] as number) || 0) / (whole[f] as number))])) }));
   }
   if (!kept.length || kept.every((r) => !r[m0])) return none();
-  const totals = sumBy(kept, fields) as Result['totals'], meta = { ...all.meta, where };
+  // A note is the query's own: "Today is still in progress" comes with an answer by day that holds today, and with no
+  // other. Asking by day beside the query's dimension, to filter by it, brings the note along, and it is left behind.
+  const notes = by.indexOf('date.day') >= 0 && kept.some((r) => r.partial) ? all.meta.notes : [];
+  const totals = sumBy(kept, fields) as Result['totals'], meta = { ...all.meta, notes, where };
   // One row for each value of a dimension that a kept row has, in the engine's order, holding what the kept rows of it add up to.
   const along = (d: string): Row[] => (all.totalsBy ? all.totalsBy[d]!.filter((o) => kept.some((r) => r[d] === o[d])).map((o) => ({ ...o, ...sumBy(kept.filter((r) => r[d] === o[d]), fields) })) : kept);
   // The filter comes before the ranking and the limit: the first values are the first of what is left.

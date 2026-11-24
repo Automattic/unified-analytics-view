@@ -296,7 +296,9 @@ export class UaView extends Base {
   explain(): Explanation {
     const { spec, result, catalog } = this;
     if (!spec || !result || !catalog) return { layout: 'none', entries: [{ what: 'not drawn', from: 'inputs', why: 'it waits for ' + (['spec', 'result', 'catalog'] as const).filter((k) => !this[k]).join(', ') }] };
-    const box = this.#room.getBoundingClientRect(), plot = this.#body.querySelector(':scope > :is(.uav-plot, .uav-radial)')?.getBoundingClientRect();
+    // A view that has given way to its fallback has no box of its own: the room is the one the fallback stands in.
+    const box = (this.#fallback && !this.#room.getClientRects().length ? this.#fallback.#room : this.#room).getBoundingClientRect();
+    const plot = this.#body.querySelector(':scope > :is(.uav-plot, .uav-radial)')?.getBoundingClientRect();
     let e: Explanation;
     try { e = explain(spec, result, catalog, { inline: box.width, block: box.height || null, plot: plot?.width ? { inline: plot.width, block: plot.height } : null }); }
     catch (err) { return { layout: 'none', entries: [{ what: 'not drawn', from: 'spec', why: (err as Error).message }] }; }
@@ -311,11 +313,12 @@ export class UaView extends Base {
     const forms: Record<string, string> = { short: 'its value set shorter', small: 'its value set smaller', 'delta-short': 'its change set shorter', 'no-note': 'shown without its note' };
     for (const f of fit) if (forms[f]) out.push({ part: 'number', what: forms[f]!, from: 'query.metrics[0]', why: 'measured: the fuller form is wider or taller than the room' });
     // Labels by the part they are in: the parts the explanation names, which have a class of their name.
-    const parts = [...new Set(e.entries.map((b) => b.part).filter((p): p is string => !!p))];
-    for (const p of parts) {
-      const el = this.#fig.querySelector<HTMLElement>('.uav-' + p);
+    // A label is its innermost part's: one in a part that stands inside another (a plot's labels, a circle's rim) is said once.
+    const parts = new Map([...new Set(e.entries.map((b) => b.part).filter((p): p is string => !!p))].map((p) => [p, this.#fig.querySelector<HTMLElement>('.uav-' + p)]));
+    for (const [p, el] of parts) {
       if (!el?.getClientRects().length) continue;
-      const labels = [...el.querySelectorAll<HTMLElement>('span, b, text')].filter((n) => n.getClientRects().length), thin = labels.filter((n) => n.hasAttribute('data-thin')).length;
+      const within = [...parts.values()].filter((q): q is HTMLElement => !!q && q !== el && el.contains(q));
+      const labels = [...el.querySelectorAll<HTMLElement>('span, b, text')].filter((n) => n.getClientRects().length && !within.some((q) => q.contains(n))), thin = labels.filter((n) => n.hasAttribute('data-thin')).length;
       const cut = labels.filter((n) => getComputedStyle(n).textOverflow === 'ellipsis' && n.scrollWidth > n.clientWidth + 1).length;
       if (thin) out.push({ part: p, what: thin + ' of ' + labels.length + ' labels given up', from: from(p), why: 'measured: they would meet the labels beside them' });
       if (cut) out.push({ part: p, what: cut + ' labels cut short', from: from(p), why: 'measured: they are longer than the room they are given' });

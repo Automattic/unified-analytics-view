@@ -281,8 +281,8 @@ describe('rows the map has no shape for', () => {
 });
 
 describe('prose, the number and errors', () => {
-  it('says what the ranked list says: the top regions by the metric', () => {
-    expect(run(map, 346).plan.text).toBe('Top countries by visitors, last 28 days: United States (3,265), India (1,264), United Kingdom (948).');
+  it('says what any view of one dimension says: the number, and the region that leads', () => {
+    expect(run(map, 346).plan.text).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. The top country is United States.');
     expect(run(map, 250).plan.text).toBe(run(map, 346).plan.text);
     expect(run(map, 346, null, 'empty').plan.text).toBe('Visitors: nothing recorded in the last 28 days.');
     expect((run(map, 120).ratio.nodes.find((n) => n.key === 'sub') as { text: string }).text).toBe('Top: United States');

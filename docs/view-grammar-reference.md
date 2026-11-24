@@ -487,7 +487,7 @@ Each name is a custom mark to the health check of section 9. Below the room a ma
 { "query": { "metrics": ["visitors"], "by": ["channel", "landing"] }, "layers": [{ "mark": "link", "encode": { "x": "channel", "y": "landing", "size": "visitors" } }] }
 ```
 
-The target is on `y` because a custom mark cannot add a channel, and `x2` is kept for a bar, a rule or an area. A view of it says the sentence any query by two dimensions says, who leads each dimension, and not its largest flow: a custom mark has no way to give the prose (`docs/uncommon-coverage-plan.md`, section 7).
+The target is on `y` because a custom mark cannot add a channel, and `x2` is kept for a bar, a rule or an area. A view of it says what any view says, the number and who leads its first dimension (section 16): a custom mark needs no sentence of its own.
 
 **The `partition` mark** draws a treemap: a box divided by area, nested once. It is a custom mark, in `packages/partition`, and takes one layer, alone in the view. `x` is the dimension the box is divided by and `size` the metric each part's area is its share of. A second dimension on `detail` divides each part again. A metric on `color` paints every box a step of the sequential ramp, with the ramp under it; without one each value on `x` has a series colour, its children are in that colour, and more than six is an error that names the fix. Every area is a share of a total the engine gives: the whole box is the metric's total, a parent is its row of `totalsBy`, and a child is its value against its parent's. So with a `limit` the boxes stop short and the rest is left unpainted, as a band stops short of its end. Two dimensions without `totalsBy` is an error. A name shows only where it fits its box, and a child's only where its parent's does. Below the room it needs the view becomes a list of the same query: `bar-list` with one dimension, `pair-list` with two.
 
@@ -961,21 +961,25 @@ Transitions are a first-class requirement and should be refined, not incidental.
 
 ## 16. The tldr prose
 
-Derived from the query and transforms. No chart type is consulted.
+The number block in words, and then the filter (Decided 53). Every view's sentence is of this one shape: no chart type and no layout is consulted, so a custom mark needs no sentence of its own.
 
-| Query shape | Tldr prose |
+| Part | Says | As in |
+|---|---|---|
+| Each metric the query asks for, the first with the range | Its total from the engine; its change, where the query compares; its share of its target, where the catalog gives one; and that it is a sum of daily counts, where it is | "Visitors: 10.5k in the last 28 days, up 12% on the previous period. This is a sum of daily counts, not a unique count." |
+| The leader, where the query's first dimension is categorical | The value the number's note names, with its share where the view is of shares. None where that value has no figure or no name | "The top page is /." "The top channel is Search, at 41%." |
+| The filter, after everything else | What the answer is filtered to, read off its `meta.where` as the range is read off its `meta.range` | "Filtered to channel Search." A list is "channel Search or Social", a run "day from Sep 21 to Sep 27", and dimensions are joined by ", and" |
+
+Three answers have a sentence of their own, each still of the number:
+
+| The answer | Tldr prose |
 |---|---|
-| Instant metric | "Present now: 7 right now; the top page is / (3)." With no dimension, or at zero: "Present now: 0 right now." |
-| Time dimension, or none | "Visitors: 10.5k in the last 28 days, up 12% on the previous period. This is a sum of daily counts, not a unique count." |
-| Categorical dimension | "Top pages by page views, last 28 days: / (4,820), /pricing (2,960), /blog/launch-notes (2,105)." |
-| Categorical with `stack: "normalize"` | "Search is the largest channel at 41% of visitors, followed by Direct at 28%." |
-| A plot of ranks, split by a dimension | "In the last 28 days, / is first by visitors on all 4 weeks. Places changed along the way, and each page ended where it began." Where places differ from the first row to the last: "Direct rose from 2nd to 1st, and Search fell from 1st to 2nd." |
-| An area painted by direction, after the view's own sentence | "Revenue: $63.5k in the last 28 days, up 8.1% on the previous period. Above the previous period on 17 of 27 days, and below it on 10." |
-| Two metrics joined through a time dimension | "From Sep 8 to Oct 4, visitors went from 416 to 310 and sign-ups from 15 to 9. Sep 25 is highest on both." |
+| An instant metric | "Present now: 7 right now." |
 | Empty | "Visitors: nothing recorded in the last 28 days." |
-| A filtered answer, after everything else the view says | "Visitors: 4,454 in the last 28 days, up 11% on the previous period. Filtered to channel Search." A list is "channel Search or Social", a run "day from Sep 21 to Sep 27", and dimensions are joined by ", and". Read off the answer's `meta.where`, as the range is read off its `meta.range` |
+| A total the engine does not give | "Correlation: no figure in the last 28 days." Under the number it is a dash, which a voice cannot say |
 
-Every word is the catalog's or the query's: a metric is said by its label, a dimension by its label, and a value of one as a row says it, so a country's code is its name and no value is a dash. The words that are not, such as "right now" and "nothing … yet", are set in `packages/core/src/prose.ts` and nowhere else.
+It is derived, and not written by a spec's author, because a view's data is live and an authored sentence is not: "up 12%" is false tomorrow. It says no more than the number because what a kind of view shows beyond it, who rose in a ranking, the busiest cell of a grid, how far a range runs, is for whoever reads the result to say in their own words, a person or an agent. The table and the readout say every row.
+
+Every word is the catalog's or the query's: a metric is said by its label, a dimension by its label, and a value of one as a row says it, so a country's code is its name. The words that are not, such as "right now", "nothing … yet" and "no figure", are set in `packages/core/src/prose.ts` and nowhere else.
 
 The tldr prose is the last rung of every view, the accessible description, and what an agent gets when it cannot render anything.
 
@@ -1085,6 +1089,7 @@ docs/
 50. A view says what was activated and how, and core decides what that does to the selection. `ua-select` carries a proposal: the datum's filter, and `how`, which is `pick`, `toggle` or `extend` by the modifier held (none, Cmd or Ctrl, Shift), the same for a click and for Enter or Space. Core's `select` folds a proposal into the filter held, and `boardSelect` is that fold on a board, so it no longer asks which view proposed. The view keeps no anchor and no set, and no longer sends `null` to let a datum go: picking it again does that, in the fold. A set is a list on a dimension and a run is `from` and `to`, which a filter already held and a view already marked by. Extend is for a time or a number. There is no drag yet. What is selected is said to assistive technology. This settles how a set and an interval are picked, which Open 9 left. (November 24)
 51. One vocabulary for where a node is, begun. Every node says its place in the same fields, whatever its kind and its layout: `x` and `y` where it is, `x2` and `y2` its other end, `w` and `h` an extent (section 11). `v`, `v0`, `t` and `t2` are gone, and with them a list's bar that ran from `v0` to `v` beside a rule from `x` to `x2`. It is the step Decided 44 named as the one that would let each layout's own marks be the plot's. The first stage was the names alone: no number changed, which a comparison of every node of every sample's scene before and after holds, and the capture. The second made `y` count up everywhere: a grid's cell, a cell of a `unit`'s grid, a treemap's box and a Sankey's node had counted down from the top, and each now stands on `y` from the bottom, where it stood before. The third made a row's marks the plot's, turned. A list had five functions of its own, for a bar, a rule, a tick, a dot and a unit, each a copy of the plot's on its side. A row's track now draws the plot's own, handed one row and the track's scale, and each node is turned once: what was up the plot runs along the track, and what was across a band runs up the row, from the top. A list's layer is turned the same way going in, its `y` read as `x` and its `x` as `y`. What a list alone does is said after the turn: a bar behind its label is a tint and is never faded as an unfinished bucket is, a dot or a tick of a mass lets the ones under it show, and a rule with one end at a number lies from zero in each row. What it found: every node of every sample's scene is as it was, ten of them to the last digit of a float; a list already drew every mark a plot does, so it gained none; and the code is no shorter, seven lines longer. What it gives is one definition of each mark, so what is added to the plot's reaches a list where its painter draws it. Still to come, if they are wanted: the share bar as a list of one row, and a slice as a bar, bent. (November 24)
 52. The prototype is gone, and nothing is held to it. It was an artifact of development: the port was proven against it, and since Decided 43 it was held to less of it at each step. Its three files and the comparison in `test/core.test.ts` are removed, and git keeps them. The sweep holds what it held of its own, unique keys and no `NaN` in every data state, and each departure that was asserted against the prototype is asserted for itself. It is the first step of `docs/focus-plan.md`. (November 24)
+53. The tldr prose is the number block in words, and then the filter: one shape for every view. It says each metric's total from the engine with its change and its target, and the value that leads the query's first dimension where the number's note names one. The sentences a kind of view had of its own are gone: for a ranking and for shares, for two dimensions, for a grid, for ranks, for a range, for a difference and for a path of points. A sentence stays derived, since a view's data is live and an authored one is not, and it stays the accessible description and the last rung. What a view shows beyond its number is for whoever reads the result to say. A total the engine does not give is said as "no figure". It is the second step of `docs/focus-plan.md`. (November 24)
 
 ### Open
 

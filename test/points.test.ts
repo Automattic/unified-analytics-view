@@ -229,15 +229,13 @@ describe('a numeric dimension', () => {
 
 describe('tldr prose', () => {
   const text = (spec: Spec, sc?: (typeof scenarios)[number]) => run(spec, 346, null, sc).plan.text;
-  it('for two metrics set against each other: the range of each, and the point furthest out on each by name', () => {
-    expect(text(scatter!)).toBe('Across 8 pages in the last 28 days, the range of visitors is 244 to 2,610 and of conversion rate is 0.9% to 5.8%. / is highest on visitors and /pricing on conversion rate.');
-    expect(text(bubble!)).toBe(text(scatter!));
+  it('says each metric the query asks for, and the value that leads its dimension', () => {
+    expect(text(scatter!)).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. Conversion rate: 2.6%. The top page is /.');
+    expect(text(bubble!)).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. Conversion rate: 2.6%. Page views: 25.1k. The top page is /.');
     expect(text(scatter!, 'empty')).toBe('Visitors: nothing recorded in the last 28 days.');
-    const flipped: Spec = { ...scatter!, query: { ...scatter!.query, metrics: ['visitors', 'pageviews'] }, layers: [{ mark: 'dot', encode: { x: 'visitors', y: 'pageviews' } }] };
-    expect(text(flipped)).toBe('Across 8 pages in the last 28 days, the range of visitors is 244 to 2,610 and of page views is 290 to 4,820. / is highest on both.');
   });
-  it('for a numeric dimension: the total, and the bin that holds the most', () => {
-    expect(text(histogram!)).toBe('Page views: 25.1k in the last 28 days. The most, 4,758, at a load time of 1.5 to 2.');
+  it('for a numeric dimension: the total, and no leader, since a bin is no name', () => {
+    expect(text(histogram!)).toBe('Page views: 25.1k in the last 28 days.');
     expect(text(density!)).toBe(text(histogram!));
   });
 });

@@ -380,11 +380,11 @@ describe('the prose is the query\'s, and names no glyph', () => {
     }
   });
   it('and it is true', () => {
-    expect(run(waffle!, 346).plan.text).toBe('Desktop is the largest device at 52% of visitors, followed by Mobile at 41%.');
-    expect(run(units!, 346).plan.text).toBe('Top weekdays by visitors, last 28 days: Tue (1,760), Wed (1,729), Mon (1,666).');
-    expect(run(wilkinson!, 346).plan.text).toBe('Page views: 25.1k in the last 28 days. The most, 4,758, at a load time of 1.5 to 2.');
-    expect(run(isotype!, 346).plan.text).toBe('Top channels by visitors, last 28 days: Search (4,318), Direct (2,949), Social (1,474).');
-    expect(run(parliament!, 346).plan.text).toBe('Search is the largest channel at 41% of visitors, followed by Direct at 28%.');
+    expect(run(waffle!, 346).plan.text).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. The top device is Desktop, at 52%.');
+    expect(run(units!, 346).plan.text).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. The top weekday is Tue.');
+    expect(run(wilkinson!, 346).plan.text).toBe('Page views: 25.1k in the last 28 days.');
+    expect(run(isotype!, 346).plan.text).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. The top channel is Search.');
+    expect(run(parliament!, 346).plan.text).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. The top channel is Search, at 41%.');
     expect(run(icons!, 346).plan.text).toBe('Sign-ups: 303 in the last 28 days, 76% of its target of 400.');
     // The sentence is the same where the form has given way.
     for (const name of NAMES) expect(run(specs[name]!, 250).plan.text, name).toBe(run(specs[name]!, 700).plan.text);

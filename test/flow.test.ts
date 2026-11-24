@@ -169,9 +169,9 @@ describe('link: two columns of nodes and a ribbon for each row', () => {
 });
 
 describe('prose and errors', () => {
-  it('says what a query by two dimensions says: who leads each, as a share of the engine\'s total. Core gives a custom mark no sentence of its own', () => {
-    expect(run(sankey, 346).plan.text).toBe('Search is the largest channel at 41% of visitors, and Home the largest landing at 30%.');
-    expect(run(sankey, 250).plan.text).toBe('Most visitors at Search, Home (1,378) in the last 28 days. Search is the busiest channel at 41% of visitors, and Home the busiest landing at 30%.');
+  it('says what any view says: the number, and the leader of the first dimension. A custom mark needs no sentence of its own', () => {
+    expect(run(sankey, 346).plan.text).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. The top channel is Search.');
+    expect(run(sankey, 250).plan.text).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. The top channel is Search.');
     expect(run(sankey, 346, null, 'empty').plan.text).toBe('Visitors: nothing recorded in the last 28 days.');
   });
   it('errors name the fix: a wrong encoding, no totals from the engine, too many sources, a second layer, and x2', () => {

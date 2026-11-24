@@ -6,7 +6,7 @@ import { customMarks } from './marks.ts';
 import { PRESETS, expand, fills, presetNames, usesPrevious } from './presets.ts';
 import { checkReads } from './reads.ts';
 import { DETAIL_LAYOUTS, SERIES, isMetric, buildScene, widest, columnsOf, isDim, metricOf, overMarks, pointDimOf, roleOf, xDimOf } from './scene.ts';
-import { differenceProse, filterSaid, gridProse, rangeProse, rankProse, tldrProse } from './prose.ts';
+import { filterSaid, tldrProse } from './prose.ts';
 import { MARKS, baseOf } from './types.ts';
 import type { Catalog, ContainerRules, Layer, Layout, Plan, PlanShape, PresetLibrary, Query, Result, Scene, Spec, Where } from './types.ts';
 
@@ -176,21 +176,9 @@ export function resolve(spec0: Spec, result: Result, catalog: Catalog, rules: Co
         + (xDim && ch === 'color' ? ' For a colour each, put "' + each + '" on y and the metric on x: a row is painted by its own dimension.' : ''));
     });
   }
-  const points = !!layers.length && isPoints(catalog, layers);
   // Glyphs with no dimension say how far along its range a metric is, and not what it is: the number stands above them.
   const p: PlanShape = { layout: laid, layers, guides: guidesOf(laid, layers, catalog), tldrValue: rules.tldrValue.above === 'always' || !!M.instant || !layers.length || (unit && !by),
-                         share, text: tldrProse(q, result, share, catalog, points && pointDimOf(catalog, layers, by), layers.some((l) => l.mark === 'line')) };
-  // A plot whose y is a place in an order says who is first and who moved, where it has a dimension to split by. A rank is known by its unit.
-  const ranked = p.layout === 'cartesian' && xDimOf(catalog, layers) ? layers.map((l) => (l.encode || {}).y).find((f): f is string => metricOf(catalog, f)?.unit === 'rank') : undefined;
-  if (ranked) p.text = rankProse(q, result, catalog, ranked, xDimOf(catalog, layers)!) ?? p.text;
-  if (p.layout === 'matrix') p.text = gridProse(q, result, catalog) ?? p.text;
-  // A range that supports the central mark is said after the view's own sentence: its least and its most. One that
-  // runs from the period before is the comparison, which is not a range.
-  const range = layers.filter((l) => roleOf(l) === 'context' && !usesPrevious(l)).map((l) => l.encode || {}).map((e) => (e.y2 != null ? [e.y, e.y2] : [e.x, e.x2])).find((ends): ends is [string, string] => ends.every((f) => typeof f === 'string'));
-  if (range) p.text += rangeProse(q, result, catalog, range);
-  // An area painted by direction is a surplus and a deficit: on how many rows its second end is above its first is said after the view's own sentence.
-  const gap = p.layout === 'cartesian' ? layers.find((l) => l.mark === 'area' && l.paint === 'direction') : undefined;
-  if (gap && !result.meta.empty) p.text += differenceProse(q, result, catalog, [gap.encode!.y as string, gap.encode!.y2!]);
+                         share, text: tldrProse(q, result, share, catalog) };
   // What the answer is filtered to is said last, of everything before it: a view of some rows never reads as one of all.
   const only = filterSaid(result.meta.where, catalog);
   if (only) p.text += ' Filtered to ' + only + '.';

@@ -66,10 +66,10 @@ describe('tldr prose', () => {
   const text = (name: string, sc?: (typeof scenarios)[number]) => run(specs[name]!, 346, null, sc).plan.text;
   it('is derived from the query', () => {
     expect(text('trend')).toBe('Visitors: 10.5k in the last 28 days, up 12% on the previous period. This is a sum of daily counts, not a unique count.');
-    expect(text('pages')).toBe('Top pages by page views, last 28 days: / (4,820), /pricing (2,960), /blog/launch-notes (2,105).');
-    expect(text('mix')).toBe('Search is the largest channel at 41% of visitors, followed by Direct at 28%.');
+    expect(text('pages')).toBe('Page views: 25.1k in the last 28 days. The top page is /.');
+    expect(text('mix')).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. The top channel is Search, at 41%.');
     expect(text('total')).toBe('Page views: 25.1k in the last 28 days, up 14% on the previous period.');
-    expect(text('live')).toBe('Present now: 7 right now; the top page is / (3).');
+    expect(text('live')).toBe('Present now: 7 right now.');
     expect(text('trend', 'empty')).toBe('Visitors: nothing recorded in the last 28 days.');
   });
 });
@@ -359,7 +359,7 @@ describe('the words are the catalog\'s label and the query\'s dimension', () => 
     expect(texts('trend', 'empty')[1]).toBe('Visitors: nothing in this period yet');
   });
   it('an instant metric is said by its label and the query\'s dimension', () => {
-    expect(texts('live', 'typical')).toEqual(['Present now: 7 right now; the top page is / (3).', 'right now']);
+    expect(texts('live', 'typical')).toEqual(['Present now: 7 right now.', 'right now']);
     expect(texts('live', 'empty')).toEqual(['Present now: 0 right now.', 'right now']);
   });
   it('a sum of daily counts is not called a count of people', () => {

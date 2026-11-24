@@ -272,10 +272,10 @@ describe('names, prose and errors', () => {
     const compared = { ...tiles.query, compare: 'previous' as const }, prior = runQuery(compared);
     expect(boxNames({ layers: tiles.layers!, query: compared, result: prior, catalog }).get('primary:partition:Search')!.says).toMatch(/^Search: Visitors 4,318, previous period [\d,]+$/);
   });
-  it('the prose names the largest parent and its share of the engine\'s total, and with one dimension it is the ranked sentence', () => {
-    expect(run(treemap, 346).plan.text).toBe('Marketing is the largest section at 42% of page views, and / the largest page at 21%.');
+  it('the prose is any view\'s: the number, and the parent that leads, from the engine\'s totals', () => {
+    expect(run(treemap, 346).plan.text).toBe('Page views: 25.1k in the last 28 days. The top section is Marketing.');
     expect(run(treemap, 250).plan.text).toBe(run(treemap, 346).plan.text);
-    expect(run(tiles, 346).plan.text).toBe('Top channels by visitors, last 28 days: Search (4,318), Direct (2,949), Social (1,474).');
+    expect(run(tiles, 346).plan.text).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. The top channel is Search.');
     expect(run(treemap, 346, null, 'empty').plan.text).toBe('Page views: nothing recorded in the last 28 days.');
   });
   it('errors name the fix', () => {

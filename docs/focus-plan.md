@@ -1,6 +1,6 @@
 # Focus plan
 
-As of November 24, 2026. **Status: step 1 is built. The rest is proposed.** The order is a recommendation, each step is approved before it starts, and the calls under "To decide" are David's.
+As of November 24, 2026. **Status: steps 1 and 2 are built.** On November 24 David said to go ahead with the rest by best judgement, weighed against the vision, and to keep what wants his opinion for the end: it is under "For David, at the end".
 
 ## Why
 
@@ -55,6 +55,13 @@ The sentence is the number block in words, then the filter. The number block alr
 - A list's sentence no longer names its second and third rows. The table and the readout say every row.
 
 **Done when** every sample in every data state says a sentence of the one shape, and the reference's section 16 is one row.
+
+**Built November 24** (reference, Decided 53). What it found:
+
+- Each metric the query asks for is still said, as it was, so a bubble chart's sentence has three totals where its scatter has two.
+- An instant metric's sentence lost its leader ("the top page is / (3)"): the number block of an instant metric names none.
+- A total the engine does not give was a dash in the sentence. It is now "no figure", and a leader with no name is not said.
+- 59 tests asserted the old sentences. Each now asserts the one shape, and the tests of the sentences that are gone went with them: 1,440 tests became 1,436.
 
 ### 3. Presets to the common ones
 
@@ -158,3 +165,11 @@ From `docs/positioning.md`'s list of what is not there: a live region, patterns 
 - The share bar as a list of one row, and a slice as a bar, bent. Left on November 24.
 - New chart types. A form that is wanted is a bench sample or a custom mark.
 - Packaging, a React binding and localisation (Open 17). Step 2 leaves far fewer words to translate, which changes Open 17's recommendation when it is taken up.
+
+## For David, at the end
+
+Calls made by best judgement while building, each to confirm or turn over.
+
+1. **"The top page is /."** The sentence names the leader with the number's own word, "top", whatever the metric's polarity: for response time the top page is the slowest. The note under the number has always said "Top:" the same way.
+2. **Every metric of the query is said,** not the first alone, though the number block shows only the first. It was so before, and a table of three metrics reads better for it.
+3. **A capture is not independent of where a frame stands on the page.** After step 2 the frames 40 px wide changed height, as they should: they show the sentence. That moved the frames at free width under them, and 28 of those set their x axis 1 px from where it was, because a plot is set on whole device px from its place on the page. Two captures of the same code still agree on every frame. The parts page could give each frame a place that no other frame moves.

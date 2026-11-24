@@ -65,7 +65,7 @@ describe('shares are of the engine\'s total', () => {
     const band = ratio.nodes.filter((n) => n.part === 'band').map((n) => (n as { w: number }).w);
     expect(band.map((v) => Math.round(v * 100))).toEqual([41, 28, 14]);
     expect(['share:Search', 'share:Direct', 'share:Social', 'legend-top', 'sub'].map(text)).toEqual(['41%', '28%', '14%', 'Search 41%', 'Search 41%']);
-    expect(plan.text).toBe('Search is the largest channel at 41% of visitors, followed by Direct at 28%.');
+    expect(plan.text).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. The top channel is Search, at 41%.');
   });
   it('the fixture\'s channels add up to its total at any range', () => {
     for (const range of ['7d', '14d', '28d']) {
@@ -215,8 +215,8 @@ describe('detail splits a plot into series and paints none apart', () => {
     expect('detail' in ratio).toBe(false);
     expect(paths.map((n) => [n.paint, n.opacity])).toEqual([['series.1', undefined], ['series.2', undefined], ['series.3', undefined]]);
   });
-  it('the prose says who leads, and nothing of a colour or a legend', () => {
-    expect(run(moreSamples.spaghetti!.spec, 700).plan.text).toBe('United States is the largest country at 32% of visitors in the last 28 days, and leads on all 28 days.');
+  it('the prose says nothing of a colour or a legend', () => {
+    expect(run(moreSamples.spaghetti!.spec, 700).plan.text).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count.');
   });
   it('the schema takes a dimension\'s name on detail, and no number', () => {
     expect(view(by('line')), JSON.stringify(view.errors)).toBe(true);
@@ -446,11 +446,11 @@ describe('a scale per unit', () => {
 
 describe('tldr prose for two dimensions and for two metrics', () => {
   const text = (name: string, sc?: (typeof scenarios)[number]) => run(specs[name]!, 346, null, sc).plan.text;
-  it('says who leads each dimension, as a share of the engine\'s total, and over time on how many days', () => {
-    expect(text('series')).toBe('Desktop is the largest device at 52% of visitors in the last 28 days, and leads on 26 of 28 days.');
+  it('says the number, and the leader of the first dimension where it is categorical', () => {
+    expect(text('series')).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count.');
     expect(text('stacked')).toBe(text('series'));
-    expect(text('area')).toBe('Search is the largest channel at 42% of page views in the last 28 days, and leads on all 28 days.');
-    expect(text('grouped')).toBe('Search is the largest channel at 41% of visitors, and Desktop the largest device at 50%.');
+    expect(text('area')).toBe('Page views: 25.1k in the last 28 days.');
+    expect(text('grouped')).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. The top channel is Search.');
     expect(text('grouped', 'empty')).toBe('Visitors: nothing recorded in the last 28 days.');
   });
   it('says each metric of two, the first with the range', () => {

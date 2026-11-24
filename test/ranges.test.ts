@@ -394,15 +394,12 @@ describe('the league table\'s rank', () => {
 
 describe('tldr prose for a metric with a range', () => {
   const text = (spec: Spec, sc?: (typeof scenarios)[number]) => run(spec, 346, null, sc).plan.text;
-  it('says the least and the most of the range, after the query\'s own sentence', () => {
-    expect(text(box!)).toBe('Top pages by response time, last 28 days: /blog/analytics-without-cookies (720ms), /blog/launch-notes (655ms), /docs/getting-started (530ms). Between 100ms and 2.6s across 8 pages.');
-    expect(text(errors!)).toBe('Top pages by response time, last 28 days: /blog/analytics-without-cookies (720ms), /blog/launch-notes (655ms), /docs/getting-started (530ms). Between 266ms and 792ms across 8 pages.');
-    expect(text(fan!)).toMatch(/^Response time: 436ms in the last 28 days\. Between \d+ms and \d+ms across 28 days\.$/);
-    expect(text(candlestick!)).toMatch(/^Response time: 436ms in the last 28 days\. Between \d+ms and \d+ms across 28 days\.$/);
-  });
-  it('is the range of a context layer: a waterfall has none, a dumbbell\'s is its comparison, and an empty result has no rows', () => {
+  it('is the query\'s own sentence, and says nothing of the range', () => {
+    expect(text(fan!)).toBe('Response time: 436ms in the last 28 days.');
+    expect(text(candlestick!)).toBe(text(fan!));
+    expect(text(box!)).toBe('Response time: 436ms in the last 28 days. The top page is /blog/analytics-without-cookies.');
+    expect(text(errors!)).toBe(text(box!));
     expect(text(waterfall!)).toBe('Net subscribers: 180 in the last 28 days.');
-    expect(text(dumbbell!)).toBe('Top pages by page views, last 28 days: / (4,820), /pricing (2,960), /blog/launch-notes (2,105).');
     expect(text(box!, 'empty')).toBe('Response time: nothing recorded in the last 28 days.');
   });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { rangeLabel, type Catalog, type Result, type Row, type Spec } from '@unified-analytics/core';
-import { inProgressNote, most, rangeProse, tldrProse } from '../packages/core/src/prose.ts';
+import { inProgressNote, most, notShownNote, tldrProse } from '../packages/core/src/prose.ts';
 import { ofUnbounded } from './helpers.ts';
 
 // query.range is optional in the schema, so an answer may name no range. A view then says nothing of one: no word is made up.
@@ -23,11 +23,11 @@ const cases: [string, Spec, Result, string][] = [
   ['an empty answer', { spec: 'view/0', query: { metrics: ['revenue'] } }, result([]), 'Revenue: nothing recorded.'],
   ['an empty answer, with marks', { spec: 'view/0', use: 'line', query: { metrics: ['revenue'], by: ['day'] } }, result([]), 'Revenue: nothing recorded.'],
   ['a total', { spec: 'view/0', query: { metrics: ['revenue'] } }, result([{ revenue: 300 }]), 'Revenue: $300.'],
-  ['a ranking', { spec: 'view/0', use: 'bar-list', query: { metrics: ['revenue'], by: ['sku'] } }, result(skus), 'Top skus by revenue: A ($200), B ($100).'],
-  ['a numeric dimension', { spec: 'view/0', layers: [{ mark: 'line', encode: { x: 'size', y: 'revenue' } }], query: { metrics: ['revenue'], by: ['size'] } }, result([{ size: 1, revenue: 200 }, { size: 2, revenue: 100 }]), 'Revenue: $300. The most, $200, at a size of 1.'],
-  ['two metrics as points', { spec: 'view/0', layers: [{ mark: 'dot', encode: { x: 'revenue', y: 'orders' } }], query: { metrics: ['revenue', 'orders'], by: ['sku'] } }, result(skus), 'Across 2 skus, the range of revenue is $100 to $200 and of orders is 10 to 20. A is highest on revenue and B on orders.'],
-  ['a split over time', { spec: 'view/0', layers: [{ mark: 'line', encode: { x: 'day', y: 'revenue', color: 'sku' } }], query: { metrics: ['revenue'], by: ['day', 'sku'] } }, result([{ day: '2026-10-01', sku: 'A', revenue: 200 }, { day: '2026-10-01', sku: 'B', revenue: 100 }], { totalsBy }), 'A is the largest sku at 67% of revenue, and leads on all 1 day.'],
-  ['a grid', { spec: 'view/0', layers: [{ mark: 'cell', encode: { x: 'hour', y: 'sku', color: 'revenue' } }], query: { metrics: ['revenue'], by: ['hour', 'sku'] } }, result(pairs, { totalsBy }), 'Most revenue at 9, A ($200). 9 is the busiest hour at 67% of revenue, and A the busiest sku at 67%.'],
+  ['a ranking', { spec: 'view/0', use: 'bar-list', query: { metrics: ['revenue'], by: ['sku'] } }, result(skus), 'Revenue: $300. The top sku is A.'],
+  ['a numeric dimension', { spec: 'view/0', layers: [{ mark: 'line', encode: { x: 'size', y: 'revenue' } }], query: { metrics: ['revenue'], by: ['size'] } }, result([{ size: 1, revenue: 200 }, { size: 2, revenue: 100 }]), 'Revenue: $300.'],
+  ['two metrics as points', { spec: 'view/0', layers: [{ mark: 'dot', encode: { x: 'revenue', y: 'orders' } }], query: { metrics: ['revenue', 'orders'], by: ['sku'] } }, result(skus), 'Revenue: $300. Orders: 30. The top sku is A.'],
+  ['a split over time', { spec: 'view/0', layers: [{ mark: 'line', encode: { x: 'day', y: 'revenue', color: 'sku' } }], query: { metrics: ['revenue'], by: ['day', 'sku'] } }, result([{ day: '2026-10-01', sku: 'A', revenue: 200 }, { day: '2026-10-01', sku: 'B', revenue: 100 }], { totalsBy }), 'Revenue: $300.'],
+  ['a grid', { spec: 'view/0', layers: [{ mark: 'cell', encode: { x: 'hour', y: 'sku', color: 'revenue' } }], query: { metrics: ['revenue'], by: ['hour', 'sku'] } }, result(pairs, { totalsBy }), 'Revenue: $300. The top hour is 9.'],
 ];
 
 describe('a view with no range names none', () => {
@@ -38,11 +38,10 @@ describe('a view with no range names none', () => {
   });
   it('and still names the one it has', () => {
     expect(said(cases[0]![1], result([], {}, '7d'))).toMatch(/^Revenue: nothing recorded in the last 7 days\./);
-    expect(said(cases[3]![1], result(skus, {}, '7d'))).toMatch(/^Top skus by revenue, last 7 days: /);
+    expect(said(cases[3]![1], result(skus, {}, '7d'))).toMatch(/^Revenue: \$300 in the last 7 days\. The top sku is A\./);
   });
   it('one day is said as one, and an instant as now', () => {
     expect(said(cases[2]![1], result([{ revenue: 300 }], {}, '1d'))).toMatch(/^Revenue: \$300 in the last day\./);
-    expect(said(cases[3]![1], result(skus, {}, '1d'))).toMatch(/^Top skus by revenue, last day: /);
     expect(rangeLabel('now')).toBe('right now');
   });
   // Presets and custom ranges are Open in the reference. Until they are settled, a form the prose cannot read is refused
@@ -52,20 +51,10 @@ describe('a view with no range names none', () => {
   });
 });
 
-// A label is made plural by one rule wherever the prose counts it, so a label ending in a consonant and "y" reads "-ies".
-describe('a count in the prose is pluralised as plural() does it', () => {
-  const ys: Catalog = { metrics: { revenue: { label: 'Revenue', unit: 'usd', polarity: 'up' } }, dimensions: { delivery: { label: 'Delivery', type: 'time' }, country: { label: 'Country', type: 'categorical' } } };
-  it('in the range a view of ranges says', () => {
-    const res = result([{ country: 'DE', 'revenue@p25': 10, 'revenue@p75': 20 }, { country: 'FR', 'revenue@p25': 5, 'revenue@p75': 30 }]);
-    expect(rangeProse({ metrics: ['revenue'], by: ['country'] }, res, ys, ['revenue@p25', 'revenue@p75'])).toBe(' Between $5 and $30 across 2 countries.');
-  });
-  it('in the days a split leads on', () => {
-    const res = result([{ delivery: '1', country: 'DE', revenue: 200 }, { delivery: '1', country: 'FR', revenue: 100 }], { totalsBy: { country: [{ country: 'DE', revenue: 200 }, { country: 'FR', revenue: 100 }] } });
-    expect(tldrProse({ metrics: ['revenue'], by: ['delivery', 'country'] }, res, false, ys)).toBe('DE is the largest country at 67% of revenue, and leads on all 1 delivery.');
-  });
-  it('in the points a view sets one metric against another', () => {
-    const res = result([{ country: 'DE', revenue: 200, orders: 10 }]);
-    expect(tldrProse({ metrics: ['revenue', 'orders'], by: ['country'] }, res, false, { ...ys, metrics: catalog.metrics }, true)).toMatch(/^Across 1 country, /);
+// A label is made plural by one rule wherever a view counts it, so a label ending in a consonant and "y" reads "-ies".
+describe('a count is pluralised as plural() does it', () => {
+  it('in what a view says of the rows it has no place for', () => {
+    expect([notShownNote(2, 'Country'), notShownNote(1, 'Country'), notShownNote(3, 'Page'), notShownNote(0, 'Page')]).toEqual(['2 countries not shown', '1 country not shown', '3 pages not shown', '']);
   });
 });
 
@@ -76,13 +65,9 @@ describe('the prose of rows with no figure, and of values with words of its own'
     expect(most([{ k: 'a', v: null }], 'v')).toEqual({ k: 'a', v: null });
     expect(most([], 'v')).toBeUndefined();
   });
-  it('says how far points run, and which is highest, of the points that have a figure', () => {
-    const res = result([{ sku: 'A', revenue: null, orders: -3 }, { sku: 'B', revenue: 100, orders: -1 }, { sku: 'C', revenue: 200, orders: null }]);
-    expect(tldrProse({ metrics: ['revenue', 'orders'], by: ['sku'] }, res, false, catalog, true)).toBe('Across 3 skus, the range of revenue is $100 to $200 and of orders is -3 to -1. C is highest on revenue and B on orders.');
-  });
-  it('leads with the value whole when it has "the" in it', () => {
-    const res = result([{ sku: 'About the team', hour: '9', revenue: 200 }], { totalsBy: { sku: [{ sku: 'About the team', revenue: 200 }], hour: [{ hour: '9', revenue: 200 }] } });
-    expect(tldrProse({ metrics: ['revenue'], by: ['sku', 'hour'] }, res, false, catalog)).toBe('About the team is the largest sku at 67% of revenue, and 9 the largest hour at 67%.');
+  it('names a leader whole when it has words of its own in it', () => {
+    const res = result([{ sku: 'About the team', revenue: 200 }]);
+    expect(tldrProse({ metrics: ['revenue'], by: ['sku'] }, res, false, catalog)).toBe('Revenue: $300. The top sku is About the team.');
   });
 });
 

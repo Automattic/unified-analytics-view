@@ -53,7 +53,7 @@ describe('a custom mark in a view', () => {
     expect(ratio.rows).toEqual(runQuery(tiles.query).rows.map((r) => r.page));
     expect(ratio.nodes.filter((n) => n.part === 'plot').map((n) => n.paint)).toEqual(['seq.10', 'seq.6', 'seq.5', 'seq.4', 'seq.2', 'seq.1', 'seq.1', 'seq.1']);
     expect(ratio.nodes.filter((n) => n.part === 'number').map((n) => n.key)).toEqual(['value', 'sub']);
-    expect(plan.text).toBe('Top pages by page views, last 28 days: / (4,820), /pricing (2,960), /blog/launch-notes (2,105).');
+    expect(plan.text).toBe('Page views: 25.1k in the last 28 days. The top page is /.');
   });
   it('gives up its guides under its `guides` rule, unless the spec keeps them', () => {
     const at = (w: number, h: number | null = null, keep?: Spec['keep']) => { const r = run({ ...tiles, keep }, w, h); return [r.plan.layout, r.fit.parts.join(' '), shown(r).rules.join(' ')]; };

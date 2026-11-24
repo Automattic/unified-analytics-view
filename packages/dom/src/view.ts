@@ -249,7 +249,9 @@ export class UaView extends Base {
   #frame = 0;
   /** What the views this one is the fallback of gave up, set by the view that holds it. A fallback that leads back to one of them is an error. */
   via: string[] = [];
-  // The one observer of the measured pass. It watches the room and the ruler, whose sizes nothing it writes can change.
+  // The one observer of the measured pass. It watches the room and the ruler, whose sizes nothing it writes can change,
+  // and everything the view stands in (connectedCallback), since a view is moved by what is round it and nothing says
+  // that a box has moved: what grows above it changes the size of something it stands in, and that is said.
   // It only asks for a frame. A write in its callback can resize something the page observes, and the browser then
   // reports a "ResizeObserver loop" error to the page's window. So a view that crosses a threshold paints one frame
   // in the old state. However many callbacks come before the frame, it reads once, then, and writes once.
@@ -352,6 +354,11 @@ export class UaView extends Base {
     if (Object.hasOwn(this, 'selected')) { const v = this.selected; delete (this as Partial<UaView>).selected; this.selected = v; }
     this.#children.observe(this, { childList: true, characterData: true, subtree: true });
     for (const el of [this.#room, ...this.#ruler]) this.#sizes?.observe(el);
+    // And what it stands in, out through any shadow root, to the document's root: when one of those changes size the
+    // view may have moved, and its plot is set on whole px again where it now is (pixels.ts). The pass reads the
+    // room too and stops there where that is as it was.
+    const out = (el: Element): Element | null => el.parentElement ?? (el.getRootNode() as Partial<ShadowRoot>).host ?? null;
+    for (let el = out(this); el; el = out(el)) this.#sizes?.observe(el);
     this.#queue();
   }
   disconnectedCallback(): void {

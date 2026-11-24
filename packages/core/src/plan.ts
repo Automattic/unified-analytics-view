@@ -87,6 +87,11 @@ function checkLayers(layers: Layer[], q: Query, catalog: Catalog, result: Result
     }
     if (l.series === 'delta' && !(l.mark === 'text' && isDim(catalog, l.encode && l.encode.y) && typeof (l.encode && l.encode.text) === 'string' && (l.encode!.text as string) in catalog.metrics))
       throw new Error('Layer ' + (i + 1) + ' has series: "delta", which is a row\'s change in a metric. Make it a text layer with the dimension on y and the metric on text.');
+    // The period before is of a metric. A layer that encodes none had nothing to take it of, and was drawn as it stood.
+    if (l.series === 'previous' && !Object.values(l.encode || {}).some((f) => isMetric(catalog, f))) throw new Error('Layer ' + (i + 1) + ' has series: "previous" and encodes no metric, so there is no period before to draw. Encode the metric it is the period before of, or remove "series".');
+    // A mark has one paint: the one its layer states, or a colour for each value of a dimension on color. With both, one was dropped.
+    const lp = l.encode?.color;
+    if (l.paint && l.paint !== 'direction' && isDim(catalog, lp)) throw new Error('Layer ' + (i + 1) + ' has the paint "' + l.paint + '" and encodes "' + lp + '" on color, and a mark has one paint: the one stated, or a colour for each "' + lp + '". Remove one of the two' + (by.indexOf(lp) >= 0 && lp !== l.encode?.x && lp !== l.encode?.y ? ', or put "' + lp + '" on detail to split the layer and draw every series in that paint.' : '.'));
     // A dimension on detail splits a layer and paints nothing apart. It is one of the query's dimensions, and no companion or number.
     const ld = l.encode?.detail;
     if (ld != null && by.indexOf(ld as string) < 0) throw new Error('Layer ' + (i + 1) + ' encodes ' + JSON.stringify(ld) + ' on detail, and detail splits a layer by one of the query\'s dimensions' + (by.length ? ': ' + by.join(', ') + '. Encode one of those' : ', of which it has none. Add one to query.by') + ', or remove "detail".');
@@ -159,10 +164,17 @@ export function resolve(spec0: Spec, result: Result, catalog: Catalog, rules: Co
   const unit = layers.some((l) => l.mark === 'unit'), divided = (l: Layer) => l.mark === 'unit' && isDim(catalog, l.encode?.color) && !isDim(catalog, l.encode?.x) && !isDim(catalog, l.encode?.y);
   const share = layers.some((l) => l.stack === 'normalize' || (l.mark === 'arc' && !isDim(catalog, l.encode?.angle) && !isDim(catalog, l.encode?.radius)) || divided(l));
   // A custom mark brings the rules of its own layout. A context's rules for that layout come first.
+  const all = spec.layers || [];
   const choice = layers.length ? layoutOf(catalog, layers) : null, laid = choice ? choice.layout : 'none', custom = customMarks().get(laid);
+  // A band is one bar divided by share, or one grid of glyphs. A second layer had no place in it and was dropped, and a
+  // bar was divided by share whatever its `stack` said.
+  if (laid === 'band' && all.length > 1 && all.every((l) => l.mark === 'bar' || l.mark === 'unit')) throw new Error('These layers are laid out as a band (' + choice!.why + '), which draws one layer, and there are ' + all.length + '. Keep one, or put a dimension on x or on y to lay them out as a plot or a list.');
+  const banded = laid === 'band' ? all.findIndex((l) => l.mark === 'bar' && l.stack && l.stack !== 'normalize') : -1;
+  if (banded >= 0) throw new Error('Layer ' + (banded + 1) + ' is a bar in a band with stack: "' + all[banded]!.stack + '", and a band is one bar divided by share. Write stack: "normalize", or remove "stack".');
   // What a layer encodes and nothing reads is refused (reads.ts): every layer the spec has, so a view is not valid with a
   // comparison and refused without one. It is asked once the scene has been built, below.
-  const read = () => { if (choice) checkReads(laid, choice.why, spec.layers || [], catalog); };
+  // Where every layer was of the period before and none is left, the layout is the one they would have had.
+  const read = () => { const c = choice ?? (all.length ? layoutOf(catalog, all) : null); if (c) checkReads(c.layout, c.why, all, catalog); };
   // A layout that does not read detail would draw its series over each other, and say nothing. A custom mark reads its own channels.
   const lost = custom || DETAIL_LAYOUTS.includes(laid) ? -1 : layers.findIndex((l) => l.encode?.detail != null);
   if (lost >= 0) throw new Error('Layer ' + (lost + 1) + ' encodes "' + layers[lost]!.encode!.detail + '" on detail, and these layers are laid out as "' + laid + '", which does not split a layer by detail. It is read in: ' + DETAIL_LAYOUTS.join(', ') + '. Put a dimension on x and a metric on y, or remove "detail".');

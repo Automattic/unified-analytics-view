@@ -370,53 +370,72 @@ A custom mark registered in code and referenced by name is the escape hatch for 
 
 ### What each mark reads
 
-**Built November 20.** What a mark reads depends on the layout it is drawn in, and this table is the whole of it: a row for each mark in each layout, with the channels it reads there and what each may hold, the ones it is not drawn without, and the fields of the layer it has a use for. It is data: `READS`, `NEEDS` and `FIELDS` in `packages/core/src/reads.ts`. The rows below are held to them by `test/reads.test.ts`, which also holds every cell to be true: a sample draws it, or a probe there writes that channel another way and gets another scene. A custom mark states the channels it reads beside its fit rules (`reads`), and its layout is its name.
+**Built November 20.** What a mark reads depends on the layout it is drawn in, and this table is the whole of it: a row for each mark in each layout, with the channels it reads there and what each may hold, the ones it is not drawn without, and the fields of the layer it has a use for. It is data: `READS`, `NEEDS` and `FIELDS` in `packages/core/src/reads.ts`. The rows below are held to them by `test/reads.test.ts`, which also holds every cell to be true: a sample draws it, or a probe there writes that channel another way and gets another scene. A custom mark states the channels it reads beside its fit rules (`reads`), and the fields (`fields`), and its layout is its name.
 
-`resolve()` refuses what a layer says that is not here, by name: a mark its layout does not draw, a channel the mark does not read there, a channel holding what the mark takes no account of, and a `label`, an `align` or a `sweep` on a mark with no use for it. It refuses a mark with nothing on a channel it needs. The error says what the mark does read, and where what was written is read. Until this was built each of these was dropped and the view drawn without it: a bar with a metric on `color` was drawn in one colour, a `text` beside a band's bar not at all, and a bar with nothing on `y` as a plot with no marks.
+`resolve()` refuses what a layer says that is not here, by name: a mark its layout does not draw, a channel the mark does not read there, a channel holding what the mark takes no account of, and a field of the layer on a mark with no use for it: a `label`, an `align`, a `sweep`, an `at`, a `paint`, a `series` or a `stack`. It refuses a mark with nothing on a channel it needs. The error says what the mark does read, and where what was written is read. Until this was built each of these was dropped and the view drawn without it: a bar with a metric on `color` was drawn in one colour, a `text` beside a band's bar not at all, and a bar with nothing on `y` as a plot with no marks.
 
 | Layout | Mark | Channels, the ones it needs in bold | Fields |
 |---|---|---|---|
-| `cartesian` | `line` | `x` dimension, metric; **`y`** metric; `color` dimension; `detail` dimension |  |
-| `cartesian` | `area` | `x` dimension; **`y`** metric; `y2` metric, number; `color` dimension; `detail` dimension |  |
-| `cartesian` | `bar` | `x` dimension; **`y`** metric, number; `y2` metric, number; `color` dimension, metric; `detail` dimension; `size` metric |  |
-| `cartesian` | `rule` | `x` dimension, metric, number; `y` metric, number; `x2` metric, number; `y2` metric, number; `detail` dimension | `label`, `at` |
-| `cartesian` | `dot` | `x` dimension, metric; **`y`** metric; `color` dimension, metric; `detail` dimension; `size` metric |  |
-| `cartesian` | `tick` | `x` dimension, metric; `y` metric; `detail` dimension | `align` |
+| `cartesian` | `line` | `x` dimension, metric; **`y`** metric; `color` dimension; `detail` dimension | `paint`, `series`, `stack` |
+| `cartesian` | `area` | `x` dimension; **`y`** metric; `y2` metric, number; `color` dimension; `detail` dimension | `paint`, `series`, `stack` |
+| `cartesian` | `bar` | `x` dimension; **`y`** metric, number; `y2` metric, number; `color` dimension, metric; `detail` dimension; `size` metric | `paint`, `series`, `stack` |
+| `cartesian` | `rule` | `x` dimension, metric, number; `y` metric, number; `x2` metric, number; `y2` metric, number; `detail` dimension | `label`, `at`, `paint`, `series` |
+| `cartesian` | `dot` | `x` dimension, metric; **`y`** metric; `color` dimension, metric; `detail` dimension; `size` metric | `paint`, `series` |
+| `cartesian` | `tick` | `x` dimension, metric; `y` metric; `detail` dimension | `align`, `paint` |
 | `cartesian` | `text` | `x` dimension, metric; **`y`** metric; **`text`** dimension, metric, companion; `detail` dimension |  |
-| `cartesian` | `unit` | `x` dimension; **`y`** metric |  |
-| `rows` | `bar` | `y` dimension; `x` metric, number; `x2` metric, number; `color` dimension, companion |  |
-| `rows` | `rule` | `y` dimension; **`x`** metric, number; `x2` metric, number |  |
-| `rows` | `tick` | `y` dimension; **`x`** metric, number; `detail` dimension | `align` |
-| `rows` | `dot` | `y` dimension; **`x`** metric, number; `color` dimension, companion; `detail` dimension |  |
-| `rows` | `unit` | `y` dimension; **`x`** metric; `color` dimension, companion |  |
-| `rows` | `text` | `y` dimension; **`text`** dimension, metric, companion | `align` |
-| `rows` | `line` | `y` dimension; **`x`** metric |  |
-| `rows` | `area` | `y` dimension; **`x`** metric |  |
-| `band` | `bar` | **`x`** metric; **`color`** dimension |  |
-| `band` | `unit` | **`x`** metric; `color` dimension |  |
-| `radial` | `arc` | `angle` dimension, metric, number; `radius` dimension, metric, number; `color` dimension; `detail` dimension | `sweep` |
+| `cartesian` | `unit` | `x` dimension; **`y`** metric | `paint` |
+| `rows` | `bar` | `y` dimension; `x` metric, number; `x2` metric, number; `color` dimension, companion | `paint`, `series`, `stack` |
+| `rows` | `rule` | `y` dimension; **`x`** metric, number; `x2` metric, number | `paint`, `series` |
+| `rows` | `tick` | `y` dimension; **`x`** metric, number; `detail` dimension | `align`, `paint` |
+| `rows` | `dot` | `y` dimension; **`x`** metric, number; `color` dimension, companion; `detail` dimension | `paint`, `series` |
+| `rows` | `unit` | `y` dimension; **`x`** metric; `color` dimension, companion | `paint` |
+| `rows` | `text` | `y` dimension; **`text`** dimension, metric, companion | `align`, `series` |
+| `rows` | `line` | `y` dimension; **`x`** metric | `paint`, `series` |
+| `rows` | `area` | `y` dimension; **`x`** metric | `paint`, `series` |
+| `band` | `bar` | **`x`** metric; **`color`** dimension | `stack` |
+| `band` | `unit` | **`x`** metric; `color` dimension | `paint`, `stack` |
+| `radial` | `arc` | `angle` dimension, metric, number; `radius` dimension, metric, number; `color` dimension; `detail` dimension | `sweep`, `paint`, `series` |
 | `radial` | `unit` | **`angle`** metric; **`color`** dimension | `sweep` |
-| `radial` | `line` | **`angle`** dimension; **`radius`** metric |  |
-| `radial` | `area` | **`angle`** dimension; **`radius`** metric |  |
-| `radial` | `dot` | **`angle`** dimension; **`radius`** metric |  |
+| `radial` | `line` | **`angle`** dimension; **`radius`** metric | `paint`, `series` |
+| `radial` | `area` | **`angle`** dimension; **`radius`** metric | `paint`, `series` |
+| `radial` | `dot` | **`angle`** dimension; **`radius`** metric | `paint`, `series` |
 | `matrix` | `cell` | `x` dimension; `y` dimension; **`color`** metric |  |
-| `matrix` | `dot` | **`x`** dimension; **`y`** dimension; `color` metric; **`size`** metric |  |
+| `matrix` | `dot` | **`x`** dimension; **`y`** dimension; `color` metric; **`size`** metric | `paint` |
 | `matrix` | `text` | `x` dimension; `y` dimension; **`text`** dimension, metric, companion |  |
-| `geo` | `geo` | `x` dimension; `color` metric; `size` metric |  |
+| `geo` | `geo` | `x` dimension; `color` metric; `size` metric | `paint` |
 | `link` | `link` | `x` dimension; `y` dimension; `size` metric |  |
-| `geo-tiles` | `geo-tiles` | `x` dimension; `color` metric; `size` metric |  |
-| `geo-hexes` | `geo-hexes` | `x` dimension; `color` metric; `size` metric |  |
+| `geo-tiles` | `geo-tiles` | `x` dimension; `color` metric; `size` metric | `paint` |
+| `geo-hexes` | `geo-hexes` | `x` dimension; `color` metric; `size` metric | `paint` |
 | `partition` | `partition` | `x` dimension; `detail` dimension; `size` metric; `color` metric |  |
 
 A `metric` is one of the catalog's, or a companion the engine returns with one (`visitors@p25`): a quantity, as its metric is. A `companion` is one returned with a dimension (`source@kind`). A `number` is a constant.
 
 The table says what one channel may hold. What a mark asks of several together is refused where the mark is drawn, in that code's own words: a second end that needs a first, a `size` on a bar that needs a plot of shares, a tick that needs a value on `y` unless it is a rug, a `label` on a rule for each row. Those errors come first: the table is asked once the scene has been built. One such rule is the plan's: the dimension a plot has a mark for each of, the one on x or under two metrics the one its points are keyed by, splits nothing on `color` and paints nothing, so it is refused there, and beside itself on `detail`. In rows that encoding is read, as a colour for each row. A mark, a channel or a field that is built is added to these tables in the same change.
 
-**What it does not catch yet.** Each of these was found while building it, and each is still drawn wrong or not at all with nothing said:
+**What was dropped, and is refused or drawn now** (built November 24; Decided 55). Each of these was found while the table was built, and was drawn wrong or not at all with nothing said:
 
-- Two layers that draw in one place are drawn over each other: a bar for each of two metrics on one x.
-- A band draws its first layer, and a second bar is dropped.
-- `paint`, `series` and `stack` are not in the tables. Each is refused in some forms where it is drawn, and elsewhere it may still be dropped: a `paint` on a `text` is, and a band's bar is divided by share whatever its `stack` says.
+- **Bars of several layers on one x** were drawn over each other. They sit side by side, as the bars of a split do, each metric in its series colour with its entry in the legend. A bar with two ends still lies over what it belongs to, as a box lies over its whiskers.
+- **A band drew its first layer and dropped a second.** A band of two layers is refused, and so is a bar there with a `stack` that is not `"normalize"`: it was divided by share whatever its `stack` said.
+- **`paint`, `series` and `stack` are in the table.** On a mark with no use for one it is refused: a `paint` on a `text`, a `series` on a `tick`, a `stack` on an `arc`. Two forms are refused by the plan, where the form is known: a `paint` beside a dimension on `color`, since a mark has one paint, and `series: "previous"` on a layer that encodes no metric. A custom mark says the fields it reads beside its channels (`fields`): `geo` reads a `paint`, for its symbols, and `link` and `partition` read none.
+- **A view was checked only where it had layers left.** One whose every layer was of the period before, with no period before in the answer, is held to the table as any other is, so a spec is not valid without a comparison and refused with one.
+
+`test/reads.test.ts` holds the fields as it holds the channels: each one listed is read by a sample or a spec there, and one that is not listed is refused wherever a sample would write it. A layer of the period before, where the query does not compare or the answer has no period before, is still left out and reported (`plan.dropped`), as it was.
+
+### Limits, and why each holds
+
+A limit is backpressure: it says where the grammar ends, and a refusal that names the next step is a signal an author can act on. Each is held for one of four reasons, and none is changed without that reason being answered.
+
+| The limit | Why it holds | In its place |
+|---|---|---|
+| Six series colours, six rings round a centre, six sources in a Sankey | What an eye can tell apart | `limit` on the query; `detail`, for a series each in one paint; a list |
+| Two units on one plot, and no third | What an eye can read against an axis | A view for each, on a board |
+| No sum of rows, no share worked out of them, no quantile, bin or running total | What keeps a number true: many metrics do not add up | The engine's totals and `totalsBy`; a companion field |
+| An answer that is not of its query, or of its filter, is refused | What keeps a number true | What the query returned, set with its spec in one step |
+| No expression, function, variable or reference in a spec; a string on a channel is a field | What keeps a spec data: a page can take one from an author it does not trust | `at`, for a value; a companion, for what is computed; a custom mark, for what is drawn another way |
+| No size, breakpoint or presentation switch in a spec | The vision: what a view looks like belongs to where it lands | The container's rules; `keep` |
+| One layer in a band; one custom mark to a view, with the plot's `text` over it | A layout is an arrangement of parts, and these have one place for marks | A plot or a list; `places` |
+| A query is by two dimensions at most; `where` joins dimensions by "and"; a range is a count of days or now | The engine's contract, which is Open with the API's owners | Another query; another tool |
+
 
 ### Transforms
 
@@ -1054,6 +1073,7 @@ docs/
 52. The prototype is gone, and nothing is held to it. It was an artifact of development: the port was proven against it, and since Decided 43 it was held to less of it at each step. Its three files and the comparison in `test/core.test.ts` are removed, and git keeps them. The sweep holds what it held of its own, unique keys and no `NaN` in every data state, and each departure that was asserted against the prototype is asserted for itself. It is the first step of `docs/focus-plan.md`. (November 24)
 53. The tldr prose is the number block in words, and then the filter: one shape for every view. It says each metric's total from the engine with its change and its target, and the value that leads the query's first dimension where the number's note names one. The sentences a kind of view had of its own are gone: for a ranking and for shares, for two dimensions, for a grid, for ranks, for a range, for a difference and for a path of points. A sentence stays derived, since a view's data is live and an authored one is not, and it stays the accessible description and the last rung. What a view shows beyond its number is for whoever reads the result to say. A total the engine does not give is said as "no figure". It is the second step of `docs/focus-plan.md`. (November 24)
 54. The library ships the common charts and no more: thirteen presets, the charts `@automattic/charts` has and the ones a fit rule falls back to. The twenty-five it had beyond them are gone from it, and so are three a custom mark's package registered: a form that is less common is more likely to be written to its case than taken whole, so it is written as its layers, and the bench keeps a sample of each. `use`, `registerPreset` and a library handed to `resolve()` are as they were. Every sample's scene is what it was, node for node. It is the third step of `docs/focus-plan.md`. (November 24)
+55. Nothing a layer says is dropped without a word. `paint`, `series` and `stack` join the table of what each mark reads, and are refused on a mark with no use for one; a custom mark says the fields it reads, in `fields`. A `paint` beside a dimension on `color` is refused, and so is `series: "previous"` on a layer that encodes no metric. A band is one layer, and its bar takes no `stack` but `"normalize"`. Bars of several layers on one x sit side by side, as the bars of a split do: of the ways to settle two bars in one place, that is the one that draws what was asked. Each limit of the grammar is listed with the reason it holds (section 7). It is the fourth step of `docs/focus-plan.md`. (November 24)
 
 ### Open
 

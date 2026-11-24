@@ -1,5 +1,5 @@
 import type { FitRule } from './fit.ts';
-import type { Reads } from './reads.ts';
+import type { Field, Reads } from './reads.ts';
 import { LAYOUTS, MARKS } from './types.ts';
 import type { Catalog, Guides, Layer, Part, Query, Result, Scene } from './types.ts';
 
@@ -20,6 +20,9 @@ export interface CustomMark {
   /** The channels it reads, and what each may hold (reads.ts). `resolve()` refuses an encoding that is not among them,
    * as it does for core's marks: one a mark does not read is drawn without. A mark that says nothing here is not asked. */
   reads?: Reads;
+  /** The layer fields it reads beside its channels, of those only some marks read (reads.ts, `FIELDS`): a `paint` for
+   * its symbols, say. One it does not name is refused on its layer, where it was once drawn without. */
+  fields?: readonly Field[];
   /** The fit rules of its layout, read as core's are (`fitTo`). A context's own rules for the layout come before these.
    * A key steps down to a shorter form by a switch (`set: { ramp: 'strip' }`, `'size-key': 'most'`), which its painter
    * draws. A key may not go while the marks it keys are drawn (test/guides.test.ts). */

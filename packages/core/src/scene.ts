@@ -565,6 +565,9 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   // A split plot's bars are painted by their series, and are not these.
   const diverges = (l: Layer) => { const y = l.encode!.y; return typeof y === 'string' && !splitOf(catalog, l, xField) && rows.some((r) => (r[y] as number) < 0); };
   const say = sayOf(catalog);
+  // Bars of several layers on one x sit side by side, as the bars of a split do: one drawn over another hid it.
+  // A bar with two ends floats, and is laid over what it belongs to: a box over its whiskers.
+  const beside = layers.flatMap((l, i) => (l.mark === 'bar' && l.encode!.y2 == null && !splitOf(catalog, l, xField) ? [i] : []));
   layers.forEach((l, i) => {
     const draw = PLOT_MARKS[l.mark], prev = l.series === 'previous', span = spans[i]!;
     if (!draw) throw new Error('The "' + l.mark + '" mark has no rule for a time or category axis yet. Use ' + orList(Object.keys(PLOT_MARKS)) + '.');
@@ -602,7 +605,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
       return drawn;
     };
     if (!splitOf(catalog, l, xField)) {
-      const drawn = shade(on(draw(l, d), m != null && !prev && !l.paint), d.rows), last = m == null || prev ? undefined : drawn.filter((n): n is PathNode => n.kind === 'path').map((n) => n.points[n.points.length - 1]!).pop();
+      const drawn = shade(on(draw(l, beside.length > 1 && beside.includes(i) ? { ...d, slot: [beside.indexOf(i), beside.length] } : d), m != null && !prev && !l.paint), d.rows), last = m == null || prev ? undefined : drawn.filter((n): n is PathNode => n.kind === 'path').map((n) => n.points[n.points.length - 1]!).pop();
       if (last) ends.set(m!, last.y);                                       // where the metric's line ends, for its label
       return nodes.push(...drawn);
     }

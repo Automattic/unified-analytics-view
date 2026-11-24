@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { FIELDS, NEEDS, READS, customMarks, expand, isDim, isMetric, layoutOf, resolve, type Layer, type Reads, type Result, type Spec } from '@unified-analytics/core';
+import { FIELDS, NEEDS, READS, customMarks, expand, isDim, isMetric, layerKeys, layoutOf, resolve, type Layer, type Reads, type Result, type Spec } from '@unified-analytics/core';
 import { catalog, moreSamples, runQuery, samples } from '@unified-analytics/fixtures';       // registers the `geo`, `link` and `partition` marks
 import { err, errOf, ofUnbounded } from './helpers.ts';
 
@@ -158,12 +158,108 @@ describe('every cell of the table is read', () => {
   });
 });
 
+/* `paint`, `series` and `stack` are in the table as `label`, `align`, `sweep` and `at` are (docs/focus-plan.md, step 4).
+ * Until they were, each could be written on a mark with no use for it and the view drawn as if it had not been. */
+describe('paint, series and stack', () => {
+  const byWeek = { metrics: ['visitors'], by: ['weekday', 'hour'] }, compared = { ...byPage, compare: 'previous' as const }, byDayChannel = { metrics: ['visitors'], by: ['date.day', 'channel'], range: '7d' };
+  it('are refused on a mark with no use for one, by name, with the marks of that layout that read it', () => {
+    expect(err({ query: byPage, layers: [row, { mark: 'text', encode: { y: 'page', text: 'page' }, paint: 'ink.muted' }] }))
+      .toBe('Layer 2 has "paint", and the "text" mark in a "rows" layout reads none. Remove it. In a "rows" layout it is read by: bar, rule, tick, dot, unit, line or area.');
+    expect(err({ query: compared, layers: [bars, { mark: 'tick', encode: { x: 'page', y: 'pageviews' }, series: 'previous' }] }))
+      .toBe('Layer 2 has "series", and the "tick" mark in a "cartesian" layout reads none. Remove it. In a "cartesian" layout it is read by: line, area, bar, rule or dot.');
+    expect(err({ query: byWeek, layers: [{ mark: 'cell', encode: { y: 'weekday', x: 'hour', color: 'visitors' }, paint: 'series.2' }] }))
+      .toBe('Layer 1 has "paint", and the "cell" mark in a "matrix" layout reads none. Remove it. In a "matrix" layout it is read by: dot.');
+    // No mark about a centre is stacked: a circle is divided by share as it is.
+    expect(err({ query: byChannel, layers: [{ mark: 'arc', encode: { angle: 'visitors', color: 'channel' }, stack: 'zero' }] }))
+      .toBe('Layer 1 has "stack", and the "arc" mark in a "radial" layout reads none. Remove it. It is read by: line in cartesian, area in cartesian, bar in cartesian, bar in rows, bar in band, unit in band.');
+  });
+  it('a custom mark says the fields it reads, and is held to them', () => {
+    const sankey = moreSamples.sankey!.spec.query, byCountry = { metrics: ['visitors'], by: ['country'], compare: 'previous' as const };
+    expect(err({ query: sankey, layers: [{ mark: 'link', encode: { x: 'channel', y: 'landing', size: 'visitors' }, paint: 'series.2' }] })).toBe('Layer 1 has "paint", and the "link" mark reads none. Remove it. It draws in paints of its own.');
+    expect(err({ query: byCountry, layers: [{ mark: 'geo', encode: { x: 'country', color: 'visitors' }, series: 'previous' }] })).toBe('Layer 1 has "series", and the "geo" mark reads none. Remove it. Of such fields it reads: paint.');
+    expect(err({ query: byCountry, layers: [{ mark: 'geo', encode: { x: 'country', size: 'visitors' }, paint: 'series.2' }] })).toBeUndefined();
+  });
+  it('are refused in a form that has no use for one, in that form\'s words', () => {
+    expect(err({ query: { ...byDay, compare: 'previous' }, layers: [{ mark: 'line', encode: { x: 'date.day', y: 'visitors' } }, { mark: 'rule', encode: { y: 300 }, series: 'previous' }] }))
+      .toBe('Layer 2 has series: "previous" and encodes no metric, so there is no period before to draw. Encode the metric it is the period before of, or remove "series".');
+    expect(err({ query: byDayChannel, layers: [{ mark: 'line', encode: { x: 'date.day', y: 'visitors', color: 'channel' }, paint: 'series.3' }] }))
+      .toBe('Layer 1 has the paint "series.3" and encodes "channel" on color, and a mark has one paint: the one stated, or a colour for each "channel". Remove one of the two, or put "channel" on detail to split the layer and draw every series in that paint.');
+    expect(err({ query: byPage, layers: [{ mark: 'bar', encode: { y: 'page', x: 'pageviews', color: 'page' }, paint: 'series.3' }] }))
+      .toBe('Layer 1 has the paint "series.3" and encodes "page" on color, and a mark has one paint: the one stated, or a colour for each "page". Remove one of the two.');
+  });
+  it('a band is one layer, divided by share: a second was dropped, and a bar was divided by share whatever its stack said', () => {
+    const band: Layer = { mark: 'bar', encode: { x: 'visitors', color: 'channel' }, stack: 'normalize' };
+    expect(err({ query: byChannel, layers: [band, { mark: 'bar', encode: { x: 'visitors', color: 'channel' } }] }))
+      .toBe('These layers are laid out as a band (a dimension on color), which draws one layer, and there are 2. Keep one, or put a dimension on x or on y to lay them out as a plot or a list.');
+    expect(err({ query: byChannel, layers: [{ ...band, stack: 'zero' }] })).toBe('Layer 1 is a bar in a band with stack: "zero", and a band is one bar divided by share. Write stack: "normalize", or remove "stack".');
+  });
+  it('bars of several layers on one x sit side by side, as the bars of a split do: one over another hid it', () => {
+    const { scene } = ofUnbounded({ query: byPage, layers: [bars, { mark: 'bar', encode: { x: 'page', y: 'visitors' } }] });
+    const at = (key: string) => scene.nodes.find((n) => n.key === key) as { x: number; w: number; paint: string };
+    const [a, b] = [at('primary:bar:/'), at('primary:bar#2:/')];
+    expect(b.x).toBeCloseTo(a.x + a.w, 10);
+    expect([a.w, a.paint, b.paint]).toEqual([b.w, 'series.1', 'series.2']);
+    expect(scene.parts).toContain('legend');
+    // A bar with two ends floats, and is laid over what it belongs to: it takes the whole of its band, as one bar does.
+    const over = ofUnbounded({ query: byPage, layers: [bars, { mark: 'bar', encode: { x: 'page', y: 'visitors', y2: 0 } }] }).scene.nodes.filter((n) => n.kind === 'rect' && n.part === 'plot' && n.row === '/') as { x: number; w: number }[];
+    expect(new Set(over.map((n) => n.x + ' ' + n.w)).size).toBe(1);
+  });
+
+  /* The table is true only if every cell is, as for the channels above: a field is read where writing it another way
+   * draws another scene. Another paint; a stack put on, taken off or changed; and for a series, what the layer itself
+   * draws with it and without, since the period before is not this one. A sample shows it, or one of the specs here does. */
+  const FIELDS3 = ['paint', 'series', 'stack'] as const;
+  const more: Spec[] = [
+    { query: compared, layers: [row, { mark: 'area', encode: { y: 'page', x: 'pageviews' } }] },                    // an area down a list, which no sample has
+    { query: byWeek, layers: [{ mark: 'dot', encode: { x: 'hour', y: 'weekday', size: 'visitors' } }] },             // dots in a grid by size alone: with a metric on color they are painted off the ramp
+  ];
+  const specs = [...Object.values({ ...samples, ...moreSamples }).map((s) => ({ ...expand(s.spec), use: undefined }) as Spec), ...more].filter((s) => s.layers?.length);
+  const drawn = (spec: Spec, result?: Result) => { try { return JSON.stringify(ofUnbounded(spec, result ?? runQuery(spec.query)).scene.nodes); } catch { return null; } };
+  const withLayer = (spec: Spec, i: number, change: Partial<Layer>, query = spec.query): Spec => ({ ...spec, query, layers: spec.layers!.map((l, j) => (j === i ? { ...l, ...change } : l)) });
+  /** What one layer draws, whatever its key: its nodes, in order, less the names that say which layer and role they are of. */
+  const ofLayer = (spec: Spec, i: number, result: Result) => {
+    try {
+      const { plan, scene } = ofUnbounded(spec, result), l = spec.layers![i]!, k = plan.layers.findIndex((p) => p.mark === l.mark && p.series === l.series && JSON.stringify(p.encode) === JSON.stringify(l.encode));
+      if (k < 0) return null;                                                // left out: the answer has no period before
+      const id = layerKeys(plan.layers)[k]!;
+      return JSON.stringify(scene.nodes.filter((n) => n.key === id || n.key.startsWith(id + ':')).map(({ key: _key, role: _role, ...n }) => n));
+    } catch { return null; }
+  };
+  const reads: Record<(typeof FIELDS3)[number], (spec: Spec, i: number) => boolean> = {
+    paint: (spec, i) => { const [a, b] = ['series.3', 'series.4'].map((paint) => drawn(withLayer(spec, i, { paint }))); return a != null && b != null && a !== b; },
+    stack: (spec, i) => { const a = drawn(spec); return a != null && ([undefined, 'zero', 'normalize'] as const).some((stack) => { const b = drawn(withLayer(spec, i, { stack })); return b != null && a !== b; }); },
+    series: (spec, i) => {
+      const q = { ...spec.query, compare: 'previous' as const }; let r: Result; try { r = runQuery(q); } catch { return false; }
+      const [a, b] = [spec.layers![i]!.series ?? 'previous', undefined].map((series) => ofLayer(withLayer(spec, i, { series }, q), i, r));
+      return a != null && b != null && a !== b;
+    },
+  };
+  const cells = (spec: Spec) => { let layout: string; try { layout = layoutOf(catalog, spec.layers!).layout; } catch { return []; } return spec.layers!.map((l, i) => ({ layout, mark: l.mark, i })); };
+  it('every field of the table is read: a sample shows it, or a spec here', () => {
+    const shown = new Set<string>();
+    for (const spec of specs) for (const { layout, mark, i } of cells(spec)) for (const f of FIELDS3) if ((FIELDS[layout]?.[mark] as readonly string[] | undefined)?.includes(f) && !shown.has([layout, mark, f].join(' ')) && reads[f](spec, i)) shown.add([layout, mark, f].join(' '));
+    const listed = Object.entries(FIELDS).flatMap(([layout, marks]) => Object.entries(marks).flatMap(([mark, fs]) => fs.filter((f) => (FIELDS3 as readonly string[]).includes(f)).map((f) => [layout, mark, f].join(' '))));
+    // A grid of glyphs divided by colour is shares of the whole as it is. "normalize" there says what is so, and is taken: nothing else is.
+    expect(listed.filter((c) => !shown.has(c) && c !== 'band unit stack'), 'fields of FIELDS that no sample and no spec here shows to be read').toEqual([]);
+  });
+  it('and one that is not in the table is refused wherever a sample or a spec here would write it', () => {
+    const change = { paint: { paint: 'series.3' }, series: { series: 'previous' as const }, stack: { stack: 'zero' as const } };
+    const drew: string[] = [];
+    for (const spec of specs) for (const { layout, mark, i } of cells(spec)) for (const f of FIELDS3) {
+      if (!READS[layout]?.[mark] || (FIELDS[layout]?.[mark] as readonly string[] | undefined)?.includes(f) || spec.layers![i]![f] != null) continue;
+      const q = f === 'series' ? { ...spec.query, compare: 'previous' as const } : spec.query; let r: Result; try { r = runQuery(q); } catch { continue; }
+      if (errOf(() => resolve(withLayer(spec, i, change[f], q), r, catalog)) === undefined) drew.push([layout, mark, f].join(' '));
+    }
+    expect([...new Set(drew)], 'a field written on a mark with no use for it, and drawn all the same').toEqual([]);
+  });
+});
+
 /* An agent writes specs from the reference, so the reference lists the tables as they are: a row for each mark in
  * each layout, and for each custom mark registered, written as `line` writes it. */
 it('the reference lists what each mark reads, needs and takes as fields, and nothing else', () => {
   const line = (layout: string, mark: string, reads: Reads) => '| `' + layout + '` | `' + mark + '` | '
     + Object.entries(reads).map(([ch, takes]) => (NEEDS[layout]?.[mark]?.includes(ch as 'x') ? '**`' + ch + '`**' : '`' + ch + '`') + ' ' + takes.join(', ')).join('; ')
-    + ' | ' + (FIELDS[layout]?.[mark] ?? []).map((f) => '`' + f + '`').join(', ') + ' |';
+    + ' | ' + (layout === mark ? customMarks().get(mark)?.fields ?? [] : FIELDS[layout]?.[mark] ?? []).map((f) => '`' + f + '`').join(', ') + ' |';
   const lines = [...Object.entries(READS).flatMap(([layout, marks]) => Object.entries(marks).map(([mark, reads]) => line(layout, mark, reads))),
     ...[...customMarks()].map(([mark, { reads }]) => line(mark, mark, reads!))];
   const reference = readFileSync(new URL('../docs/view-grammar-reference.md', import.meta.url), 'utf8');

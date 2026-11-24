@@ -1,6 +1,6 @@
 # Focus plan
 
-As of November 24, 2026. **Status: steps 1 to 3 are built.** On November 24 David said to go ahead with the rest by best judgement, weighed against the vision, and to keep what wants his opinion for the end: it is under "For David, at the end".
+As of November 24, 2026. **Status: steps 1 to 4 are built.** On November 24 David said to go ahead with the rest by best judgement, weighed against the vision, and to keep what wants his opinion for the end: it is under "For David, at the end".
 
 ## Why
 
@@ -88,6 +88,14 @@ The reference's section 7 lists what is still drawn wrong, or not at all, with n
 - Each limit that stays says why it holds and what to use in its place. Limits are backpressure: sort them first by reason (what an eye can tell apart, what keeps a number true, what keeps a spec data, what is the engine's), and change none without that.
 
 **Done when** that list in section 7 is empty, and `test/reads.test.ts` holds the three fields.
+
+**Built November 24** (reference, Decided 55). What it found:
+
+- No sample and no existing test relied on anything that is now refused: the suite passed as it stood once the table was in.
+- A probe over every sample said which marks read each field. It found two forms the table cannot say, a `paint` beside a dimension on `color` and a period before of no metric, and both are refused by the plan.
+- A view whose every layer was left out, for want of a period before, was never checked against the table. It is now.
+- Two bars on one x could have been refused or drawn. They are drawn side by side (For David, 6).
+- The limits are in the reference's section 7, sorted by the reason each holds: eight, of which only the last, the engine's contract, is open.
 
 ### 5. A scene schema
 
@@ -182,3 +190,5 @@ Calls made by best judgement while building, each to confirm or turn over.
 3. **A capture is not independent of where a frame stands on the page.** After step 2 the frames 40 px wide changed height, as they should: they show the sentence. That moved the frames at free width under them, and 28 of those set their x axis 1 px from where it was, because a plot is set on whole device px from its place on the page. Two captures of the same code still agree on every frame. The parts page could give each frame a place that no other frame moves.
 4. **The kept presets.** Thirteen, as recommended in step 3, and four that custom marks' packages register (`choropleth`, `sankey`, `treemap`, `pair-list`). `gauge` stays because an icon array falls back to it, not because it is common.
 5. **The archive is deleted,** with the test that swept its seventeen goal dashboards. The dashboards were the only record in the tree of which views serve which goal. One command brings it back (To decide, 7).
+6. **Two bar layers on one x sit side by side,** in place of one drawn over the other. The other answer was to refuse them. No sample has such a spec, so nothing drawn today changed.
+7. **A `text` layer takes no `paint`.** It was dropped, and is refused now. Letting a label be muted (`ink.muted`) is a small thing to build if it is wanted.

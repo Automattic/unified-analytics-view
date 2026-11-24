@@ -1,6 +1,6 @@
 # Positioning: the next version of `@automattic/charts`
 
-As of October 5, 2026, with what is not there yet brought up to date on November 20. A five-minute read.
+As of October 5, 2026, with what is not there yet brought up to date on November 24. A five-minute read.
 
 **How much to trust this.** The facts about the two existing codebases are in `design-inputs/4-a8c-charts-and-jetpack-stats.md`, read from `Automattic/jetpack` trunk at `a737864` (`@automattic/charts` 4.7.0, `jetpack-premium-analytics` 0.11.0). The dependency between them, the token names and the size of the Stats wrapper layer were checked directly. The descriptions of what the wrappers do come from a delegated read. Nothing was run. That Stats drove particular changes in the charts package is an inference. `design-inputs/5-jetpack-stats-gap.md` reads both again at `56174bc` (charts 4.10.0) and lists the gap in full.
 
@@ -47,7 +47,7 @@ The parts of `@automattic/charts` worth keeping are kept by name.
 
 - **The tokens.** Its names, under our own prefix until the two interoperate: `--ua-charts-color-series-1`, `-grid`, `-label`, `-annotation` and the rest, for its `--a8c-charts-*`, with their mapping onto the WordPress Design System. A page themed for version 4 themes the next version by aliasing each token across, name for name. Three tokens are new: a comparison colour, a live colour, and good and bad deltas, which default to the existing up and down colours.
 - **The keyboard model.** One tab stop per chart, arrows step through points, Enter activates, Escape leaves.
-- **The accessibility groundwork:** forced-colours support, patterns as a second channel, reduced motion, colour-blind-safe palettes, labels that keep their contrast on a fill.
+- **The accessibility groundwork:** forced-colours support, reduced motion, colour-blind-safe palettes, labels that keep their contrast on a fill. Patterns as a second channel are version 4's and are not built here: see what is not there yet.
 - **The time axis:** bucket inference, declared resolution, locale and time zone.
 - **The interaction designs:** tooltips, legends that toggle series, drag to zoom, annotations. Re-implemented, not redesigned.
 - **The chart names.** `LineChart` becomes the `line` preset, `BarListChart` the `bar-list` preset. A chart type stops being a component and becomes a saved combination of marks.
@@ -81,10 +81,13 @@ This is an honest list. Version 4 does each of these today. Tooltips, keyboard n
 
 - **Rows that carry links, media and drill-downs.** Every Stats leaderboard puts a link, an avatar or a drill button in its rows; the view has none.
 - **Locale, time zone and strings.** The view formats in `en-US` and UTC and writes its prose in English.
-- **Packaging and a React binding.** Nothing is built for release, and two copies on one page fail silently.
+- **Packaging and a React binding.** Nothing is built for release. Two copies on one page are now said: the second warns that it defines nothing, and names the fix. There is no version on the element to compare, since the packages have none.
 - **Interactive legends, zoom and annotations anchored to a point,** and extra lines in the readout.
 - **A WordPress token alias sheet,** and accessibility checked against version 4's.
-- **Facets, and maps below country level.**
+- **Patterns as a second channel beside colour.** Version 4 has them. A view tells its series apart by colour, by a dash for the period before and by labels at the ends of its lines, and draws no pattern.
+- **A live region, and a pass with a screen reader.** The keyboard's readout is each point's accessible name, so a screen reader has it to say as focus moves. But nothing is said where a name changes under the focus, there is no `aria-live` in the package, and none of it has been listened to through a screen reader.
+- **Maps below country level.** Facets are built (November 23).
+- **A size it is held to.** The vision says light, and nothing measures it. Measured November 24, as one minified bundle with core and d3 inlined: `<ua-view>` is 92.5 kB gzip (319 kB minified), and 112.7 kB with the map, the Sankey and the treemap, before any map's shapes. Core alone, with no element, is 51.3 kB. The Stats team's review measured `master` at 90 kB and 97 kB, against 70 kB of version 4's own code. Nothing has been done to make it smaller, and no build fails when it grows.
 
 None of these is in the Spacefast MVP. All of them are needed before Jetpack Stats could move, so version 4 stays maintained until the next version covers what Stats uses. `design-inputs/5-jetpack-stats-gap.md` gives the order they block in.
 

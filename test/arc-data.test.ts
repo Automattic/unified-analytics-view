@@ -241,10 +241,10 @@ describe('the prose finds the leader by comparing rows, whatever order they came
 describe('the radial layout paints the new forms', () => {
   const css = compileFitRules(FIT_RULES.filter((r) => r.layout === 'radial'), { radial: radial.fit! }), fig = '.uav[data-layout="radial"]';
   it('the `rim` rule thins the labels to the ones with no rank and leaves the circle its margin, before the legend steps down', () => {
-    for (const need of ['inline-size < 229.5px', 'block-size < 119.5px'])
+    for (const need of ['inline-size < calc(230em / 13.33 - 0.5px)', 'block-size < calc(120em / 13.33 - 0.5px)'])
       expect(css).toContain('@container uav-view (' + need + ') {\n  ' + fig + ' .uav-rim [data-rank] { display: none; }\n}');
     expect(css).not.toContain('--uav-rim: 0px');
-    expect(css.indexOf('inline-size < 229.5px')).toBeLessThan(css.indexOf('inline-size < 71.5px'));
+    expect(css.indexOf('inline-size < calc(230em / 13.33 - 0.5px)')).toBeLessThan(css.indexOf('inline-size < calc(72em / 13.33 - 0.5px)'));
   });
   it('the circle gives up a margin to the labels only where the plan shows them, and has a measured pass to thin them', () => {
     expect(radial.css).toContain('.uav[data-layout="radial"][data-parts~="rim"] .uav-radial { --uav-rim: 14px; }');

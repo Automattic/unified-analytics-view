@@ -26,7 +26,7 @@ export const run = (spec: Spec, w: number, h: number | null = null, scenario: (t
 };
 
 /** What the fit rules make of a view at a room, in short, from what `run` gives: the parts that show, the switches set,
- *  the ids of the rules that hold (`kept:` before one the spec's `keep` held off), and what else is hidden that is no
+ *  the ids of the rules that hold, and what else is hidden that is no
  *  part: marks of a role or on an axis, the grid, a part's ranked labels, the middle date. A fit names every rule that
  *  holds, every target it hides and every switch it sets. This leaves out the ones with nothing in this view to act
  *  on: a legend's one line where there is no legend, the ranked names of a rim there is none of. */

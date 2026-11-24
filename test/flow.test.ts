@@ -199,8 +199,8 @@ describe('the painter\'s half, as strings', () => {
   it('its one rule compiles to the swap for the grid, by width and by height, and nothing takes the names alone', () => {
     const css = compileFitRules(LINK_RULES);
     expect(css).not.toContain('.uav-labels');
-    expect(css).toContain('@container uav-view (inline-size < 319.5px) {\n  .uav[data-layout="link"]:has(~ .uav-fallback[data-rule="marks"]) { display: none; }\n  .uav[data-layout="link"] ~ .uav-fallback[data-rule="marks"] { display: block; }');
-    expect(css).toContain('@container uav-view (block-size < 139.5px)');
+    expect(css).toContain('@container uav-view (inline-size < calc(320em / 13.33 - 0.5px)) {\n  .uav[data-layout="link"]:has(~ .uav-fallback[data-rule="marks"]) { display: none; }\n  .uav[data-layout="link"] ~ .uav-fallback[data-rule="marks"] { display: block; }');
+    expect(css).toContain('@container uav-view (block-size < calc(140em / 13.33 - 0.5px))');
     expect(LINK_RULES.map((r) => [r.id, r.fallback])).toEqual([['marks', 'heatmap']]);
   });
 });

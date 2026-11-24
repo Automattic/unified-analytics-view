@@ -60,7 +60,7 @@ export const TOOLS: Tool[] = [
     } },
   { name: 'check_view',
     description: 'Read a spec with no browser. A spec that is refused comes back with the reason, which names the fix. One that is drawn comes back with its sentence, its layout and where in the spec each part comes from, and at each room the parts that show, what a fit rule hides or changes there, and the lever that would change it. It measures nothing: use draw_view to see it.',
-    inputSchema: { type: 'object', required: ['spec'], properties: { spec: VIEW, ...DATA, rooms: { type: 'array', description: 'The rooms to read it at, in px. Left out: a sidebar (346 wide), a tile (250 by 100) and a cell (120 by 60).', items: { type: 'object', required: ['inline'], properties: { inline: { type: 'number' }, block: { type: 'number' } } } } } },
+    inputSchema: { type: 'object', required: ['spec'], properties: { spec: VIEW, ...DATA, rooms: { type: 'array', description: 'The rooms to read it at, in px. Left out: a sidebar (346 wide), a tile (250 by 100) and a cell (120 by 60).', items: { type: 'object', required: ['inline'], properties: { inline: { type: 'number' }, block: { type: 'number' }, em: { type: 'number', description: 'The size of the view\'s type in px, its label face, where a theme sets one. A need of the view follows it.' } } } } } },
     run: (args) => {
       const spec = specOf(args), rooms = (args.rooms as Room[] | undefined) ?? ROOMS;
       // A board is its views, each on the board's shared query: every one is checked, under its title.

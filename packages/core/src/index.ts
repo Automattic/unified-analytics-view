@@ -1,6 +1,6 @@
 export * from './types.ts';
 export { CONTAINER_RULES } from './container.ts';
-export { FIT_RULES, applies, fitTo, hasOf, type Fit, type FitRule, type FitView, type Room, type Rooms } from './fit.ts';
+export { EM, FIT_RULES, applies, fitTo, hasOf, needAt, type Fit, type FitRule, type FitView, type Room, type Rooms } from './fit.ts';
 export { PRESETS, customPresets, expand, fills, registerPreset } from './presets.ts';
 export { facets, layoutOf, resolve, viewAt, type Facet, type LayoutChoice } from './plan.ts';
 export { explain, facetBecause, selectedBecause, type Because, type Explanation, type ExplainRoom } from './explain.ts';

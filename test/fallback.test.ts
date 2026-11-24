@@ -57,7 +57,7 @@ describe('fallback on a fit rule', () => {
   it('compiles to the swap: under the need the figure goes and the view beside it shows, ', () => {
     // Only where the view beside it is there and is this rule's: a rule for one mark leaves the layout's other views as they are.
     const fig = '.uav[data-layout="band"]', beside = '.uav-fallback[data-rule="swap"]', body = '  ' + fig + ':has(~ ' + beside + ') { display: none; }\n  ' + fig + ' ~ ' + beside + ' { display: block; }\n}';
-    expect(compileFitRules([swap])).toBe('/* band swap */\n@container uav-view (inline-size < 199.5px) {\n' + body + '\n/* band swap */\n@container uav-view (block-size < 59.5px) {\n' + body);
+    expect(compileFitRules([swap])).toBe('/* band swap */\n@container uav-view (inline-size < calc(200em / 13.33 - 0.5px)) {\n' + body + '\n/* band swap */\n@container uav-view (block-size < calc(60em / 13.33 - 0.5px)) {\n' + body);
   });
   it('a rule for one mark is for a view that holds it, so a built-in layout can give way to a preset of the same layout', () => {
     // The pages as rows of dots give way to the ranked list, which is rows too, and the list gives way to nothing.

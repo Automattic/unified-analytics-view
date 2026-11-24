@@ -20,7 +20,7 @@ describe('the band layout', () => {
 
   it('swaps the legends under the legend rule, which alone only sets a switch', () => {
     expect(css).toContain([
-      '@container uav-view (inline-size < 169.5px) {',
+      '@container uav-view (inline-size < calc(170em / 13.33 - 0.5px)) {',
       '  ' + fig('guides') + ' { --uav-legend: top; }',
       '  ' + fig('guides') + ' .uav-legend { display: none; }',
       '  ' + fig('guides') + ' .uav-legend-top { display: block; max-block-size: none; }',
@@ -37,8 +37,8 @@ describe('the band layout', () => {
       '  ' + fig('marks') + ' .uav-number { align-self: start; margin: 0; }',
       '}',
     ].join('\n');
-    expect(css).toContain('@container uav-view (inline-size < 109.5px) {\n' + alone);
-    expect(css).toContain('@container uav-view (block-size < 47.5px) {\n' + alone);
-    expect(css.indexOf('inline-size < 169.5px')).toBeLessThan(css.indexOf('inline-size < 109.5px'));
+    expect(css).toContain('@container uav-view (inline-size < calc(110em / 13.33 - 0.5px)) {\n' + alone);
+    expect(css).toContain('@container uav-view (block-size < calc(48em / 13.33 - 0.5px)) {\n' + alone);
+    expect(css.indexOf('inline-size < calc(170em / 13.33 - 0.5px)')).toBeLessThan(css.indexOf('inline-size < calc(110em / 13.33 - 0.5px)'));
   });
 });

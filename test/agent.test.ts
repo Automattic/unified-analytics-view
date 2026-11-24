@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { describe as group, expect, it } from 'vitest';
-import { FIELDS, FIT_RULES, PRESETS, READS, type Spec } from '@unified-analytics/core';
+import { EM, FIELDS, FIT_RULES, PRESETS, READS, type Spec } from '@unified-analytics/core';
 import { ROOMS, check, describe } from '@unified-analytics/agent';
 import { boardSamples, catalog, facetSamples, moreSamples, runQuery, samples } from '@unified-analytics/fixtures';
 import { TOOLS, handle } from '../packages/agent/src/server.ts';
@@ -13,7 +13,7 @@ const trend = samples.trend!.spec, on = (spec: Spec) => ({ spec, result: runQuer
 group('describe: what can be said, as data', () => {
   const said = describe(catalog);
   it('is core\'s own tables, the four schemas and the catalog it was handed', () => {
-    expect([said.reads, said.fields, said.fit, said.presets.library, said.catalog]).toEqual([READS, FIELDS, FIT_RULES, PRESETS, catalog]);
+    expect([said.reads, said.fields, said.fit, said.em, said.presets.library, said.catalog]).toEqual([READS, FIELDS, FIT_RULES, EM, PRESETS, catalog]);
     expect(Object.keys(said.schemas)).toEqual(['view', 'catalog', 'board', 'scene']);
     expect(Object.keys(said.presets.registered)).toEqual(['choropleth', 'sankey', 'treemap', 'pair-list']);
     expect(said.customMarks.geo).toMatchObject({ reads: { x: ['dimension'], color: ['metric'], size: ['metric'] }, fields: ['paint'] });
@@ -37,6 +37,9 @@ group('check: a spec read with no browser', () => {
     const c = check({ ...on(trend), rooms: [{ inline: 250 }] });
     expect(c.ok && c.views[0]!.rooms[0]).toMatchObject({ parts: ['number', 'plot'], set: { arrange: 'side' } });
     expect(c.ok && c.views[0]!.rooms[0]!.because.find((b) => b.part === 'x-axis')).toMatchObject({ what: 'hidden', rule: 'axes', lever: 'give the view 280 px wide' });
+    // A room may say the size of its type, and a need of the view follows it: 280 px at the default is 210 at a 10 px label.
+    const small = check({ ...on(trend), rooms: [{ inline: 250, em: 10 }] });
+    expect(small.ok && small.views[0]!.rooms[0]!.parts).toContain('x-axis');
   });
   it('a spec that is refused comes back with the message resolve() gives', () => {
     for (const spec of [{ ...trend, use: 'no-such-preset' }, { query: { metrics: ['visitors'], by: ['channel'] } }, { query: trend.query, layers: [{ mark: 'line', encode: { x: 'date.day', y: 'visitors', size: 'visitors' } }] }] as Spec[])

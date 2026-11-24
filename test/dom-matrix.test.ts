@@ -39,11 +39,11 @@ describe('the matrix layout', () => {
     // Neither key is taken: each is in its shorter form, and stays as long as the grid.
     const shorter = ['  ' + fig('guides') + ' { --uav-ramp: strip; --uav-size-key: most; }', '  ' + fig('guides') + ' .uav-ramp { gap: 0; }', '  ' + fig('guides') + ' .uav-ramp i { --uav-swatch-i: 7px; --uav-swatch-r: 0px; }',
       '  ' + fig('guides') + ' .uav-ramp :is([data-key="ramp:none"], [data-key="ramp:none:label"]) { display: none; }', '  ' + fig('guides') + ' .uav-size > :not(:first-child):not(:nth-last-child(-n+2)) { display: none; }', '}'].join('\n');
-    expect(css).toContain('@container uav-view (inline-size < 239.5px) {\n' + shorter);
-    expect(css).toContain('@container uav-view (block-size < 149.5px) {\n' + shorter);
+    expect(css).toContain('@container uav-view (inline-size < calc(240em / 13.33 - 0.5px)) {\n' + shorter);
+    expect(css).toContain('@container uav-view (block-size < calc(150em / 13.33 - 0.5px)) {\n' + shorter);
     const alone = ['  ' + fig('marks') + ' :is(.uav-plot, .uav-point-labels, .uav-x-axis, .uav-y-axis, .uav-ramp, .uav-size) { display: none; }', '  ' + fig('marks') + ' .uav-number { display: block; }',
       '  ' + fig('marks') + ' { grid-template: "number" auto / minmax(0, 1fr); }', '  ' + fig('marks') + ' .uav-body { display: none; }', '  ' + fig('marks') + ' .uav-number { align-self: start; margin: 0; }', '}'].join('\n');
-    expect(css).toContain('@container uav-view (inline-size < 149.5px) {\n' + alone);
-    expect(css).toContain('@container uav-view (block-size < 89.5px) {\n' + alone);
+    expect(css).toContain('@container uav-view (inline-size < calc(150em / 13.33 - 0.5px)) {\n' + alone);
+    expect(css).toContain('@container uav-view (block-size < calc(90em / 13.33 - 0.5px)) {\n' + alone);
   });
 });

@@ -69,7 +69,7 @@ describe('the cartesian layout\'s guides', () => {
     // The condition is in :where(), which weighs nothing: a rule further down the ladder still overrides this one.
     const lines = fig + ':where([data-marks~="line"])';
     expect(compileFitRules(rules('legend'), { cartesian: cartesian.fit! }).split('\n').slice(0, 6)).toEqual([
-      '/* cartesian legend */', '@container uav-view (inline-size < 319.5px) {',
+      '/* cartesian legend */', '@container uav-view (inline-size < calc(320em / 13.33 - 0.5px)) {',
       '  ' + lines + ' .uav-legend { display: none; }', '  ' + lines + ' .uav-labels { display: block; }', '  ' + lines + ' .uav-labels { display: grid; }', '}',
     ]);
     expect(compileFitRules(rules('legend-area'), { cartesian: cartesian.fit! })).toBe(compileFitRules(rules('legend'), { cartesian: cartesian.fit! }).replaceAll('"line"', '"area"').replaceAll('legend */', 'legend-area */'));
@@ -85,7 +85,7 @@ describe('the cartesian layout\'s guides', () => {
     expect(css.indexOf(fig + ' :is(.uav-labels, .uav-legend, .uav-ramp) { display: none; }')).toBeGreaterThan(css.lastIndexOf(' .uav-labels { display: grid; }'));
     expect(css.match(/\[data-layout="cartesian"\]\[data-marks/)).toBeNull();
     expect(compileFitRules(rules('labels'), { cartesian: cartesian.fit! }).split('\n').slice(0, 7)).toEqual([
-      '/* cartesian labels */', '@container uav-view (inline-size < 279.5px) {', '  ' + fig + ' :is(.uav-labels, .uav-legend, .uav-ramp) { display: none; }', '  ' + fig + ' { --uav-split: plain; }',
+      '/* cartesian labels */', '@container uav-view (inline-size < calc(280em / 13.33 - 0.5px)) {', '  ' + fig + ' :is(.uav-labels, .uav-legend, .uav-ramp) { display: none; }', '  ' + fig + ' { --uav-split: plain; }',
       ...Object.entries(SPLIT_PLAIN).map(([sel, decl]) => '  ' + fig + ' ' + sel + ' { ' + decl + ' }'), '}',
     ]);
     // What a legend keyed is the first series' colour, and a tint of it where the mark was a tint.

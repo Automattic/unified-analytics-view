@@ -726,7 +726,7 @@ A spec's `keep` stops a step from being applied. It is provisional (decided Octo
 
 - The bar list keeps every row down to about 140 px wide and then jumps straight to the tldr value. A hand-tuned version had a top-three step in between.
 - A collapsed bar list shows the metric total with "Top: /" as a note. For a view called "Top pages" that is arguably the wrong number.
-- The thresholds are still picked by hand. They moved from per chart type to per part, and since November 24 they are counted: forty, in one table (Decided 58).
+- The thresholds are still picked by hand. They moved from per chart type to per part, and since November 24 they are counted: forty, in one table (Decided 58), and a need of the view follows the type (Decided 64).
 - "Add the tldr value when the axes drop" is a hard-coded rule for one layout.
 - Everything switches at once. That is the model the next section replaces for browser containers.
 
@@ -760,7 +760,7 @@ A sketch, untested. The worked rules are in `docs/archive/dom-painter-plan.md`, 
 - Any threshold that depends on the data, such as how many ticks there are or how long the labels run.
 - The plot set on whole device px (`packages/dom/src/pixels.ts`), so that a pixel face and a hairline are sharp: CSS cannot know where on the page a view stands. The element reads it after each paint, when its room changes, and when anything it stands in changes size, which is how a view learns that what is above it has moved it. Until November 24 it read only the first two, so a view moved by a caption or a view above it kept a move made for where it had been, and stood a fraction of a px off. A plot half way between two device px goes to the one before it, nearer the top and the start, always: read back after a move it is a hair to either side, and plain rounding sent it up on one load and down on the next. Those two were why a capture differed from the last by 1 px on a few frames with nothing changed.
 
-**Tier 3: the reader, for surfaces with no CSS.** `fitTo(scene, room, rules)` in core reads the rules at a room and says the parts that show, what else is hidden and the switches set. `viewAt(spec, result, catalog, room)` gives the plan and scene with it, and follows a rule's `fallback` to the view the spec gives way to. An agent, a canvas or dot-grid painter and a native shell read a view's fit this way. It measures nothing.
+**Tier 3: the reader, for surfaces with no CSS.** `fitTo(scene, room, rules)` in core reads the rules at a room, and at the size of type the room says, and says the parts that show, what else is hidden and the switches set. `viewAt(spec, result, catalog, room)` gives the plan and scene with it, and follows a rule's `fallback` to the view the spec gives way to. An agent, a canvas or dot-grid painter and a native shell read a view's fit this way. It measures nothing.
 
 Changing the data is a resolver's work and is not built: Top-N plus "other", coarser grain (daily to weekly), and downsampling to pixel resolution need new data, not new styles.
 
@@ -769,6 +769,18 @@ Changing the data is a resolver's work and is not built: Top-N plus "other", coa
 - `test/fit.test.ts` holds the reader to the rules, and every sample at every room of the sweep to what the rules promise: a view always shows something, it is its number alone wherever a rule takes its marks, and no key goes while its marks stay.
 - A rule names every part it takes, one that stands inside another among them, because a reader with no browser has no nesting to go by. A layout's painter may add CSS under a rule for how what is left is arranged, and never for which parts show.
 - The bench's `check` reads each captured frame's room through `fitTo` and reports a frame where the element shows otherwise.
+
+**A need follows the type (Decided 64).** A need is written in px at the default type: the label face where no theme sets it, 13.33 px (`EM` in `fit.ts`). A need of the view is of what is set in the view's type, so it grows and shrinks with that type, whole. `needAt` is the one place that is said.
+
+- The element sets itself in its label face and asks a need of the view in `em`, which in a container query is the size of the container's own type. No script is in it.
+- A surface with no browser says the size with the room: `em` on the rooms `fitTo` and `viewAt` take, and on the room `explain` and the agent's `check` take. `explain` says a need as it stands there.
+- A need of the plot (`secondary`, `hole`) is of the plot's own box, where what is drawn is sized by the box, and stays in px.
+
+What it does not do:
+
+- A need scales whole. A part with no type in it, a bare plot or a circle, gives way a little early under larger type.
+- One size stands for the view's type. A theme that changes the ticks and not the label moves no need.
+- The em is the element's own. A label token that is fluid in `cqi` is read there against what the element stands in, or the viewport, and inside the view against the view. With the bench's theme the two differ by 7% at most.
 
 **What the rules do not say yet (Open 19).** The element settles these in its stylesheet or its measured pass. A surface with no browser has to see to them itself until each is a rule:
 
@@ -1086,6 +1098,7 @@ Removed November 24: it was a proposal of October, and what was built from it is
 61. A view says its sentence in a live region when new data changes it, and a draft of the alias sheet for a page themed by the WordPress Design System is in the token package (`packages/tokens/wpds.css`). These are the parts of the eleventh step of `docs/focus-plan.md` that need no eye. Patterns beside colour, a look for Selected and the visual design are design's, and a pass with a screen reader is still owed. (November 24)
 62. A spec may say what its view is for: `description`, one sentence in its author's words that does not change with the data. A surface says it before the tldr prose, which stays derived, and it is drawn nowhere. It is the one authored sentence a spec has, and David's call over a recommendation to add none. A facet says it once, of its views together. (November 24)
 63. `keep` is gone. It let a spec hold a part that a container would drop, and was provisional from the day it was kept (Decided 17): no sample used it, and a spec that says how it is shown is the one thing the vision rules out. A spec, a fit rule and `fitTo` have no `keep`, and a spec that writes one is refused by name. What `explain` gives as the lever of a fit rule's verdict is the room, which is the surface's to give. Where a default is wrong for a view, the answer is a better rule, or a rule set a context hands its containers. No frame of the bench's capture moved. (November 24)
+64. A need follows the type. It is written in px at the default type, the label face where no theme sets it (`EM`, 13.33 px), and a need of the view grows and shrinks with that face, whole (`needAt`). The element sets itself in its label face and asks the need in `em`, which a container query reads off its container, so nothing is measured and no script runs. A surface with no browser says the size with the room. A need of the plot stays in px: what is drawn there is sized by the box. It is narrower than what was proposed, a multiple of the face each part is set in: a query has one em, its container's, so the label stands for the view's type and a theme that changes its ticks alone moves no need. No frame of the bench's capture moved, since its theme's label is the default at the capture's width, and a view set in a 20 px label gives its axes up under 420 px where it did under 280. Section 10.2 has what it does not do. (November 24)
 
 ### Open
 

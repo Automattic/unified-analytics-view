@@ -1,4 +1,4 @@
-import type { FitRule } from '@unified-analytics/core';
+import { EM, type FitRule } from '@unified-analytics/core';
 
 /* The fit-rule compiler: the same data core's fitTo() reads, as container queries.
  * Pure string work, so it runs and is tested with no DOM. */
@@ -32,6 +32,9 @@ const anyOf = (sel: string[]) => (sel.length > 1 ? ':is(' + sel.join(', ') + ')'
 /** CSS for a set of fit rules. A rule names its container "view" or "plot"; in CSS they are `uav-view` and `uav-plot`, so a page's
  * own container named "view" does not answer these queries. Each need gets its own @container block: a query naming both axes is passed over
  * whole by a width-only container, so a rule's block need is simply inert until a layout hands the view a box.
+ * A need of the view is asked in em. The view is that query's container and is set in the label face for it (view.ts),
+ * so an em there is the size of the view's type, and the need follows it as core's `needAt` has it: at the default
+ * type it is the px the rule says. A need of the plot is of the plot's own box, and is asked in px.
  * A query asks for half a pixel under the need: at a fractional zoom a container laid out at exactly its need
  * measures a hair under it, and its part would go at the very size the rule says it fits.
  * Rules are written in order, so where two set the same thing the later one wins. */
@@ -60,7 +63,8 @@ export function compileFitRules(rules: FitRule[], extras: FitExtras = {}): strin
     ].filter(Boolean).map((line) => '  ' + line).join('\n');
     return Object.entries(r.needs ?? {}).filter(([, px]) => px != null).map(([axis, px]) => {
       if ((axis !== 'inline' && axis !== 'block') || !Number.isFinite(px)) throw new Error('Fit rule "' + r.id + '" needs ' + JSON.stringify(r.needs) + '. Give "inline" or "block" as a number of px.');
-      return '/* ' + r.layout + ' ' + r.id + ' */\n@container uav-' + r.container + ' (' + axis + '-size < ' + (px - 0.5) + 'px) {\n' + body + '\n}';
+      const under = r.container === 'view' ? 'calc(' + px + 'em / ' + EM + ' - 0.5px)' : (px - 0.5) + 'px';
+      return '/* ' + r.layout + ' ' + r.id + ' */\n@container uav-' + r.container + ' (' + axis + '-size < ' + under + ') {\n' + body + '\n}';
     }).join('\n');
   }).filter(Boolean).join('\n');
 }

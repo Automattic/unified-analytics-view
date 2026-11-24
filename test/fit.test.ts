@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, FIT_RULES, applies, fitTo, hasOf, type FitRule } from '@unified-analytics/core';
-import { moreSamples, samples, scenarios } from '@unified-analytics/fixtures';
+import { CONTAINER_RULES, EM, FIT_RULES, applies, explain, fitTo, hasOf, needAt, type FitRule } from '@unified-analytics/core';
+import { catalog, moreSamples, samples, scenarios } from '@unified-analytics/fixtures';
 import { heights, run, shown, specs, trend, widths } from './helpers.ts';
 
 /* How a view gives way when room is short is data, the fit rules, and one function reads them at a room with no
@@ -24,6 +24,34 @@ describe('applies', () => {
   it('reads the container the rule names', () => {
     expect(applies(secondary, { view: { inline: 700 }, plot: { inline: 179, block: 184 } })).toBe(true);
     expect(applies(secondary, { view: { inline: 100 }, plot: { inline: 180, block: 90 } })).toBe(false);
+  });
+});
+
+/* A need is written in px at the default type, and a need of the view follows the type: a surface says the size of
+ * its label face with the room, and the element asks the same in em (test/dom-compile.test.ts). */
+describe('a need follows the type', () => {
+  const axes = rule('cartesian', 'axes'), secondary = rule('cartesian', 'secondary');
+  it('is the px its rule says at the default type, and where no size is given', () => {
+    for (const r of FIT_RULES) { expect(needAt(r), r.layout + ' ' + r.id).toEqual({ inline: r.needs.inline, block: r.needs.block }); expect(needAt(r, EM)).toEqual(needAt(r)); }
+    expect(applies(axes, { view: { inline: 280, block: 120 }, em: EM })).toBe(false);
+  });
+  it('of the view grows and shrinks with it, whole', () => {
+    expect(needAt(axes, 2 * EM)).toEqual({ inline: 560, block: 240 });
+    expect(applies(axes, { view: { inline: 400, block: 300 }, em: 20 })).toBe(true);     // 280 at 13.33 is 420 at 20
+    expect(applies(axes, { view: { inline: 421, block: 300 }, em: 20 })).toBe(false);
+    expect(applies(axes, { view: { inline: 240, block: 110 }, em: 11 })).toBe(false);    // and 231 by 99 at 11
+  });
+  it('of the plot is of its own box, and stays', () => {
+    expect(needAt(secondary, 2 * EM)).toEqual(secondary.needs);
+    expect(applies(secondary, { view: { inline: 700 }, plot: { inline: 180, block: 90 }, em: 20 })).toBe(false);
+  });
+  it('is what fitTo reads, and what explain says the room is short of', () => {
+    const { ratio: scene, plan, result } = run(trend, 400), marks = plan.layers.map((l) => l.mark);
+    expect(fitTo(scene, { view: { inline: 400 } }, FIT_RULES, { marks }).parts).toContain('x-axis');
+    expect(fitTo(scene, { view: { inline: 400 }, em: 20 }, FIT_RULES, { marks }).parts).not.toContain('x-axis');
+    const because = explain(trend, result, catalog, { inline: 400, em: 20 }).entries.find((b) => b.rule === 'axes')!;
+    expect(because.why).toContain('needs 420.1 px wide');
+    expect(because.lever).toBe('give the view 420.1 px wide');
   });
 });
 

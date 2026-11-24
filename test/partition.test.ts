@@ -320,11 +320,11 @@ describe('the painter\'s half, as strings and plain functions', () => {
   });
   it('its rules compile to the ramp as a strip, and then to the swap for the list, by width and by height', () => {
     const css = compileFitRules(PARTITION_RULES, { partition: partitionPainter.fit ?? {} }), fig = (_was?: string) => '.uav[data-layout="partition"]';
-    expect(css).toContain('@container uav-view (inline-size < 319.5px) {\n  ' + fig('guides') + ' { --uav-ramp: strip; }\n  ' + fig('guides') + ' .uav-ramp { gap: 0; }\n  ' + fig('guides') + ' .uav-ramp i { --uav-swatch-i: 7px; --uav-swatch-r: 0px; }\n  '
+    expect(css).toContain('@container uav-view (inline-size < calc(320em / 13.33 - 0.5px)) {\n  ' + fig('guides') + ' { --uav-ramp: strip; }\n  ' + fig('guides') + ' .uav-ramp { gap: 0; }\n  ' + fig('guides') + ' .uav-ramp i { --uav-swatch-i: 7px; --uav-swatch-r: 0px; }\n  '
       + fig('guides') + ' .uav-ramp :is([data-key="ramp:none"], [data-key="ramp:none:label"]) { display: none; }\n}');
     const swap = '  ' + fig('marks') + ':has(~ .uav-fallback[data-rule="marks"]) { display: none; }\n  ' + fig('marks') + ' ~ .uav-fallback[data-rule="marks"] { display: block; }\n}';
-    expect(css).toContain('@container uav-view (inline-size < 279.5px) {\n' + swap);
-    expect(css).toContain('@container uav-view (block-size < 119.5px) {\n' + swap);
+    expect(css).toContain('@container uav-view (inline-size < calc(280em / 13.33 - 0.5px)) {\n' + swap);
+    expect(css).toContain('@container uav-view (block-size < calc(120em / 13.33 - 0.5px)) {\n' + swap);
   });
   it('a name fits where its box is as wide and as tall as it is', () => {
     expect([nameFits({ width: 40, height: 14 }, { width: 40.2, height: 16 }), nameFits({ width: 41, height: 14 }, { width: 40, height: 16 }), nameFits({ width: 30, height: 14 }, { width: 40, height: 9 })]).toEqual([true, false, false]);

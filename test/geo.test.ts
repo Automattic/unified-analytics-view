@@ -322,12 +322,12 @@ describe('the painter\'s half, as strings', () => {
     const css = compileFitRules(GEO_RULES, { geo: geoPainter.fit ?? {} }), fig = (_was?: string) => '.uav[data-layout="geo"]';
     const shorter = ['  ' + fig('guides') + ' { --uav-ramp: strip; --uav-size-key: most; }', '  ' + fig('guides') + ' .uav-ramp { gap: 0; }', '  ' + fig('guides') + ' .uav-ramp i { --uav-swatch-i: 7px; --uav-swatch-r: 0px; }',
       '  ' + fig('guides') + ' .uav-ramp :is([data-key="ramp:none"], [data-key="ramp:none:label"]) { display: none; }', '  ' + fig('guides') + ' .uav-size > :not(:first-child):not(:nth-last-child(-n+2)) { display: none; }', '}'].join('\n');
-    expect(css).toContain('@container uav-view (inline-size < 319.5px) {\n' + shorter);
-    expect(css).toContain('@container uav-view (block-size < 169.5px) {\n' + shorter);
+    expect(css).toContain('@container uav-view (inline-size < calc(320em / 13.33 - 0.5px)) {\n' + shorter);
+    expect(css).toContain('@container uav-view (block-size < calc(170em / 13.33 - 0.5px)) {\n' + shorter);
     expect(css).not.toContain('.uav-note');
     const swap = '  ' + fig('marks') + ':has(~ .uav-fallback[data-rule="marks"]) { display: none; }\n  ' + fig('marks') + ' ~ .uav-fallback[data-rule="marks"] { display: block; }\n}';
-    expect(css).toContain('@container uav-view (inline-size < 279.5px) {\n' + swap);
-    expect(css).toContain('@container uav-view (block-size < 119.5px) {\n' + swap);
+    expect(css).toContain('@container uav-view (inline-size < calc(280em / 13.33 - 0.5px)) {\n' + swap);
+    expect(css).toContain('@container uav-view (block-size < calc(120em / 13.33 - 0.5px)) {\n' + swap);
   });
 });
 

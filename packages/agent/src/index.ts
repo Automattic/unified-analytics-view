@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import Ajv, { type ErrorObject } from 'ajv';
-import { FIELDS, FIT_RULES, GUIDES, NEEDS, PRESETS, READS, customMarks, customPresets, explain, facets, viewAt, type Because, type Catalog, type Result, type Spec } from '@unified-analytics/core';
+import { EM, FIELDS, FIT_RULES, GUIDES, NEEDS, PRESETS, READS, customMarks, customPresets, explain, facets, viewAt, type Because, type Catalog, type Result, type Spec } from '@unified-analytics/core';
 
 /* The agent surface (docs/focus-plan.md, step 7): what an author who is not in this repository needs in order to
  * write a view and know what became of it. It wraps what core has and adds no rule. Two things, both plain data:
@@ -30,13 +30,15 @@ export function describe(catalog?: Catalog) {
     guides: Object.fromEntries(Object.entries(GUIDES).map(([name, { from: _from, ...guide }]) => [name, guide])),
     /** What each part needs, and what goes without it: how a view gives way when room is short. */
     fit: FIT_RULES,
+    /** The size of type a need is written at, in px. A need of the view is that much more or less where a room's `em` is another size. */
+    em: EM,
     presets: { library: PRESETS, registered: Object.fromEntries(customPresets()) },
     ...(catalog && { catalog }),
   };
 }
 
-/** The room a view has, in px: its width, and its height where it was handed one. */
-export interface Room { inline: number; block?: number | null }
+/** The room a view has, in px: its width, and its height where it was handed one. `em` is the size of its type, its label face, where a theme sets one. */
+export interface Room { inline: number; block?: number | null; em?: number }
 /** A view at one room: the parts that show, what else a rule hides, the switches set, what it gave way from, and why. */
 export interface AtRoom { room: Room; parts: string[]; hidden: string[]; set: Record<string, string>; gave: string[]; because: Because[] }
 /** One view checked: a spec's own, or each view of a facet under its value. */
@@ -70,7 +72,7 @@ export function check({ spec, result, catalog, rooms = ROOMS }: { spec: Spec; re
       return {
         ...('key' in v && { key: v.key }), layout: made.layout, sentence: first.plan.text, dropped: first.plan.dropped, made: made.entries,
         rooms: rooms.map((room): AtRoom => {
-          const at = viewAt(v.spec, v.result, catalog, { view: { inline: room.inline, block: room.block ?? null } });
+          const at = viewAt(v.spec, v.result, catalog, { view: { inline: room.inline, block: room.block ?? null }, ...(room.em != null && { em: room.em }) });
           return { room, parts: at.fit.parts, hidden: at.fit.hidden, set: at.fit.set, gave: at.gave, because: explain(at.spec, v.result, catalog, room).entries.filter((b) => b.rule) };
         }),
       };

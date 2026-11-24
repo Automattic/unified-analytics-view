@@ -9,7 +9,8 @@ export interface FitRule {
   id: string;
   layout: Layout;
   container: 'view' | 'plot';
-  /** In px. The part stays while the container has at least this in each. */
+  /** In px at the default type (`EM`). The part stays while the container has at least this in each. A need of the
+   * view is of what is set in its type, and follows it (`needAt`); one of the plot is of the plot's own box. */
   needs: { inline?: number; block?: number };
   /** Parts or roles given up otherwise, and `axis:2` for the marks drawn on the second y axis. */
   hide: string[];
@@ -38,6 +39,9 @@ export interface FitRule {
 /** The room a container has. A view that takes its natural height has no `block`. */
 export interface Room { inline: number; block?: number | null }
 
+/** The size of the type the needs below are written at, in px: the label face, where no theme sets it. */
+export const EM = 13.33;
+
 /* The defaults. A context passes its containers a different set, as `rules.fit`.
  * What these cannot say is a surface's to measure: the width of the number, the width of a row's value and of each
  * column after it, and anything that depends on how tall the content is (reference, section 10.2).
@@ -45,8 +49,8 @@ export interface Room { inline: number; block?: number | null }
  * nesting to go by, and test/fit.test.ts holds a view to be its number alone wherever a rule takes its marks. */
 /* What is picked (docs/focus-plan.md, step 8). Every need in the rules below is one of these, or a sum of them and of
  * the gutters a surface builds to (sizes.ts). Each was set by eye, for the part it is of, at the default type sizes,
- * and is in px: a theme that sets larger type moves none of them. They are what a need has yet to be worked out from,
- * and they are said here once, so that what is picked can be counted. */
+ * and is in px there. They are what a need has yet to be worked out from, and they are said here once, so that what is
+ * picked can be counted. */
 const LEAST = {
   /** A plot with its axes; with a legend under it; with a label on each point; with the whole key to its dots' sizes. */
   plot: { inline: 280, block: 120 }, plotLegend: { inline: 320, block: 180 }, plotPointLabels: { inline: 340, block: 180 }, plotSizeKey: { inline: 320, block: 160 },
@@ -163,17 +167,28 @@ export function ruleFor(rules: FitRule[], layout: Layout, id: string): FitRule |
   return rules.find((r) => r.layout === layout && r.id === id);
 }
 
+/** What a rule needs where the type is `em` px, in px. A need of the view grows and shrinks with the type, whole: a
+ * view set in type half as large again needs half as much room again. A need of the plot is of its own box, where what
+ * is drawn is sized by the box and no type is set, and stays as written.
+ * ponytail: a need scales whole, so a part with no type in it (a bare plot, a circle) gives way a little early under
+ * larger type. Write a need as its type and its px apart if that room is ever missed. */
+export function needAt(rule: FitRule, em: number = EM): FitRule['needs'] {
+  const k = rule.container === 'view' ? em / EM : 1, at = (px?: number) => (px == null ? undefined : px * k);
+  return { inline: at(rule.needs.inline), block: at(rule.needs.block) };
+}
+
 /** True when the rule's container is short of the room its part needs, so its `hide`, `show` and `set` take effect.
  * A size the container does not have never matches, as an unknown container query never does. */
-export function applies(rule: FitRule, room: { view: Room; plot?: Room | null }): boolean {
-  const c = room[rule.container];
+export function applies(rule: FitRule, room: Rooms): boolean {
+  const c = room[rule.container], need = needAt(rule, room.em);
   const short = (need?: number, has?: number | null) => need != null && has != null && has < need;
-  return !!c && (short(rule.needs.inline, c.inline) || short(rule.needs.block, c.block));
+  return !!c && (short(need.inline, c.inline) || short(need.block, c.block));
 }
 
 /** The rooms a view's rules ask about: its own, and its plot's. A plot nobody has measured is left out, and no rule on
- * it is asked. `null` says there is no plot to measure, and what sits in one has gone with it. */
-export interface Rooms { view: Room; plot?: Room | null }
+ * it is asked. `null` says there is no plot to measure, and what sits in one has gone with it. `em` is the size of the
+ * view's type in px, its label face, where that is not `EM`. */
+export interface Rooms { view: Room; plot?: Room | null; em?: number }
 
 /** What the fit rules make of a view at a room. */
 export interface Fit {

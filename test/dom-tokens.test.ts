@@ -108,10 +108,13 @@ describe('the faces', () => {
   it('are each set from their token where the view is their container, and read from there', () => {
     for (const face of FACES) expect(BASE_CSS).toContain(`--uav-font-${face}: var(--ua-charts-font-size-${face}, ${TOKENS['font-size-' + face]});`);
     expect(BASE_CSS).toContain('.uav, .uav-ruler, .uav-error, .uav-facets { --uav-font-tick:');
-    expect(css.match(/font-size: [^;]*--ua-charts-/g)).toBeNull();
+    // But for the view itself, which is set in its label face: it is the container its fit rules ask, and an em there
+    // is the size a need follows. Its children's faces are not there to be read.
+    expect(css.match(/font-size: [^;]*--ua-charts-[^;]*/g)).toEqual(['font-size: var(--ua-charts-font-size-label, ' + TOKENS['font-size-label'] + ')']);
+    expect(BASE_CSS).toContain(':host { display: block; container: uav-view / inline-size; font-size: var(--ua-charts-font-size-label, ');
   });
   it('are the only sizes text is set in, but for the number in a donut\'s hole, which follows its circle', () => {
-    const sized = [...new Set([...css.matchAll(/font-size: ([^;]+);/g)].map((m) => m[1]!))].filter((v) => !/^var\(--uav-font-[a-z-]+\)$/.test(v));
+    const sized = [...new Set([...css.matchAll(/font-size: ([^;]+);/g)].map((m) => m[1]!))].filter((v) => !/^var\(--uav-font-[a-z-]+\)$/.test(v) && !v.includes('--ua-charts-font-size-label'));
     expect(sized).toEqual(['clamp(14px, 18cqi, var(--uav-font-display-small))']);
   });
   it('carry their line with them: no line of text is a height in px', () => {

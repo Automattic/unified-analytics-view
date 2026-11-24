@@ -164,7 +164,7 @@ Not every threshold can go. A container query compares against a length, so some
 
 **Proposed for the next stage, and not built,** because each changes what a view looks like at some size and wants an eye on it:
 
-1. **A need in the type's own units.** The picked numbers become multiples of the face their part is set in, so a need follows the type scale. A container query can compare against `em`, to verify, and `fitTo` would take the face's size with the room.
+1. **A need in the type's own units.** The picked numbers become multiples of the face their part is set in, so a need follows the type scale. A container query can compare against `em`, to verify, and `fitTo` would take the face's size with the room. Built since, for the label face alone (step 17).
 2. **One ladder for a legend,** written once and applied to a band, a list and a circle, with each layout's least for its marks as the one thing that differs.
 3. **Glyphs as the last rule for one kind of view.** `unit` has five of the nine. Its forms give way to plainer presets by height, which is the only place a rule names a preset.
 
@@ -256,7 +256,14 @@ Once the steps were built he went through every call made by judgement, twenty-t
 14. `keep` is removed: the spec field, the rules' `keep`, and what `explain` says of a lever. Done (reference, Decided 63). A spec that writes it is refused by name, and the lever `explain` gives for a fit rule is the room. The compiled rules lost a selector each, which could have changed which rule wins, and a capture of the bench differs on no frame.
 15. `description` on a spec. Done (reference, Decided 62): the figure is described by it and then by the derived sentence, it is drawn nowhere, and a facet says it once. Tried in a browser at a wide frame and at one that is its sentence alone.
 16. The parts page gives each frame a place that no other frame moves, so a capture can say which change moved a frame. Done: for the capture the frames stand on one line (`still` in the page's URL), the free one last at the width it has on a line of its own, and the page people look at is as it was. 64 frames moved an axis by 1 px, once, for their new places, and nothing else moved. It also found that a part's picture was cut from the window's px and not the page's, so a part of a frame the page had scrolled to was cut from the wrong place: fixed.
-17. A fit rule's need in the type's own units, held to the capture at the default type, where nothing should move.
+17. A fit rule's need in the type's own units, held to the capture at the default type, where nothing should move. Done (reference, Decided 64), and narrower than proposed. What it found:
+    - **An em in a container query is the container's own.** That was the part marked "to verify", and it holds. The view is the container its rules ask, so the element is now set in its label face, and a need of the view is compiled to `em`. Nothing is measured.
+    - **So one face stands for the view's type, and not the face each part is set in.** A query has one em. A theme that sets a larger label moves every need of the view. One that changes the ticks alone moves none.
+    - **A need scales whole.** A part with no type in it, a bare plot or a circle, gives way a little early under larger type. Writing a need as its type and its px apart would be picking forty numbers again, and is left.
+    - **The two rules on the plot stay in px.** What is drawn there is sized by the box: the number in a donut's hole is 18% of its circle.
+    - **Nothing moved:** 0 of 2,720 frames, and the check has 0 new and 0 gone. The bench's label is fluid, from 12.44 to 13.33 px with the width of what it stands in. On the element that is the page, so it is 13.33 px in every frame, which is the default. Inside a view 250 px wide the same token is 12.44 px, so the unit is up to 7% larger than the type it stands for.
+    - **It does move where the type does.** On the bench's trend, with the label set to 20 px the frame 346 px wide gives up its axes, as 280 px is then 420. With it at 10 px the frame 250 px wide keeps them.
+    - `fitTo`, `viewAt`, `explain` and the agent's `check` take the size with the room, as `em`, and `explain` says a need as it stands there.
 18. A proposal for the API's owners: a metric's `by`, grains, whether a metric adds up, and the three states of an answer. Done: `docs/api-proposal.md`, one page that gathers everything asked of the catalog, the query and the answer, each with what a view does with it and whether it is built here. It is David's to send.
 19. The reference, rewritten as one concise document.
 20. A real MCP client connected to the server. Done: Claude Code 2.1, handed a one-off config that runs `packages/agent/src/server.ts`, started it over stdio, listed its tools and called `check_view`, and got the view's sentence and its parts at 250 px back. So the protocol as written is one a real client speaks. `draw_view` was not called through it.

@@ -29,7 +29,9 @@ const PULSE_MARGIN = [2, 8] as const;
 /* Everything the element owns, in one layer, so a compiled fit rule beats it whatever the specificity. Every painter's
  * styles, the built-in ones' and a custom mark's alike, come in one place in it: after the base, before the chrome. */
 const stylesOf = (painters: LayoutPainter[]) => `@layer uav {
-:host { display: block; container: uav-view / inline-size; line-height: 1.3; text-align: start; text-indent: 0; color: ${paintVar('ink')}; }
+/* The view is set in its label face, and is the container its fit rules ask: an em in one of their queries is this
+ * size, which is how a need follows the type (compile.ts). Nothing is drawn in it here: every part says its own face. */
+:host { display: block; container: uav-view / inline-size; font-size: ${token('font-size-label')}; line-height: 1.3; text-align: start; text-indent: 0; color: ${paintVar('ink')}; }
 :host([hidden]), [hidden] { display: none !important; }
 /* The faces, worked out here and nowhere else. A page's type tokens may be fluid, in cqi, and these are the view's
  * children: the view is their container, so a face is one size across the whole of it. Read inside the plot, which

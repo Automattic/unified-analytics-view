@@ -109,7 +109,7 @@ export type Role = (typeof ROLES)[number];
 export const KEEP_PARTS = ['guides', 'secondary', 'rows', 'marks'] as const;
 /** The fields a spec, its query and a layer take. One that is not among them is refused by name (resolve): a size or a
  * switch in a spec, or a filter written under another name, would otherwise be read past and the view drawn without it. */
-export const SPEC_FIELDS = ['spec', 'title', 'use', 'query', 'layers', 'keep', 'facet'] as const;
+export const SPEC_FIELDS = ['spec', 'title', 'description', 'use', 'query', 'layers', 'keep', 'facet'] as const;
 export const QUERY_FIELDS = ['metrics', 'by', 'range', 'compare', 'limit', 'where'] as const;
 export const LAYER_FIELDS = ['mark', 'encode', 'series', 'role', 'stack', 'sweep', 'label', 'at', 'align', 'paint'] as const;
 export type KeepPart = (typeof KEEP_PARTS)[number];
@@ -169,6 +169,10 @@ export interface Guides {
 export interface Spec {
   spec?: string;
   title?: string;
+  /** What the view is for, in its author's words: a sentence that does not change with the data. A surface says it
+   * before the tldr prose, which is derived and does, so a reader hears what they are looking at and then what it holds.
+   * It is drawn nowhere, as the title is not: a view's own words in the least room are its sentence. */
+  description?: string;
   query: Query;
   use?: string | undefined;
   layers?: Layer[];

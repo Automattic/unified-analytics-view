@@ -27,7 +27,7 @@ describe('a name the catalog does not carry', () => {
 describe('a field a spec, its query or a layer does not take', () => {
   const q = { metrics: ['revenue'], by: ['sku'] };
   it('a size in a spec', () => expect(refused({ spec: 'view/0', use: 'bar-list', query: q, width: 346 } as Spec))
-    .toBe('The spec has "width", which it does not take. It takes: spec, title, use, query, layers, keep, facet. A view says what to show and nothing of how: no size, breakpoint or switch.'));
+    .toBe('The spec has "width", which it does not take. It takes: spec, title, description, use, query, layers, keep, facet. A view says what to show and nothing of how: no size, breakpoint or switch.'));
   it('a filter under another name', () => expect(refused({ spec: 'view/0', use: 'bar-list', query: { ...q, filter: { sku: 'A' } } } as unknown as Spec))
     .toBe('The spec\'s query has "filter", which it does not take. It takes: metrics, by, range, compare, limit, where. A filter is "where".'));
   it('a colour on a layer', () => expect(refused({ spec: 'view/0', query: q, layers: [{ mark: 'bar', encode: { y: 'sku', x: 'revenue' } }, { mark: 'text', encode: { y: 'sku', text: 'sku' }, color: 'red' }] } as unknown as Spec))
@@ -48,6 +48,17 @@ describe('a metric asked by a dimension its catalog does not give it by', () => 
   it('by one it gives, and a metric that says nothing is asked by any', () => {
     expect(refused({ spec: 'view/0', use: 'bar-list', query: { metrics: ['revenue'], by: ['sku'] } }, some)).toBe('no error');
     expect(refused({ spec: 'view/0', use: 'bar-list', query: { metrics: ['revenue'], by: ['sku'] } })).toBe('no error');
+  });
+});
+
+// What a view is for, in its author's words (`description`). It is a field a spec takes, it changes nothing that is
+// drawn or said of the data, and a facet says it once, of its views together.
+describe('a description on a spec', () => {
+  const q = { metrics: ['revenue'], by: ['sku'] }, about = 'How each product sold.';
+  it('is taken, and the plan and its sentence are what they were without it', () => {
+    const spec: Spec = { spec: 'view/0', use: 'bar-list', query: q };
+    expect(refused({ ...spec, description: about })).toBe('no error');
+    expect(resolve({ ...spec, description: about }, result, catalog)).toEqual(resolve(spec, result, catalog));
   });
 });
 

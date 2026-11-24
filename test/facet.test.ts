@@ -156,3 +156,10 @@ describe('how many of a facet\'s views stand side by side', () => {
     expect(FACET_CSS).toContain('grid-template-columns: repeat(auto-fit, minmax(min(100%, ' + FACET_LEAST + 'px), 1fr)); gap: ' + FACET_GAP + 'px;');
   });
 });
+
+it('what a facet is for is said once, of its views together: no view of it carries the description', () => {
+  const about = 'Where visitors came from, channel by channel.', views = facets({ ...trend, description: about }, runQuery(trend.query), catalog);
+  expect(views.length).toBeGreaterThan(1);
+  expect(views.every((v) => v.spec.description === undefined)).toBe(true);
+});
+

@@ -213,6 +213,7 @@ It counts no events, so it has none to filter. It answers `where` from the pairs
 |---|---|---|
 | `spec` | string | Format version |
 | `title` | string | Shown by the container's frame, not drawn in the scene |
+| `description` | string | What the view is for, in its author's words. Said before the tldr prose, and drawn nowhere. See "A description", below |
 | `query` | object | Required. See section 5 |
 | `use` | string | A preset name. Expands into `layers`. Ignored if `layers` is present |
 | `layers` | array | Explicit layers. See below |
@@ -237,6 +238,8 @@ A layer:
 | `paint` | Override the paint token. `"delta"` is the paint of the metric's change over the range: good or bad by its polarity, and the layer's own where there is no change to judge. Built October 8, for the sidebar test case. `"direction"` is for a `bar` or an `area` with two ends, and is refused on anything else and beside a dimension on `color`: each bar is painted `delta.good` or `delta.bad` by which way it runs from its first end (`x` or `y`) to its second (`x2` or `y2`) and the metric's polarity, and an area is cut where its two ends cross and each piece painted so. Where the polarity is `none` the mark is in the layer's own paint. Nothing is painted by direction unless a layer says so. Built October 12 |
 
 Paint tokens an author may name: `series.1` to `series.6`, `compare`, `rule`, `ink`, `ink.muted`, `delta`, `delta.good` and `delta.bad`. `direction` is not a token: it is the one value of `paint` that asks for two, `delta.good` and `delta.bad`, mark by mark. A scene also names `band.1` to `band.3`, for the parts a metric's catalog `bands` divide its range into, the least first: three neutral steps, and not an author's to choose. A layer with no `paint` takes `series.1`, or `compare` for a `previous` series, or in a plot whose layers measure several metrics the series colour of its own metric, and that holds for a bar or an area with two ends too; a layer split by a dimension on `color` takes a series colour per value, and one split by `detail` keeps its own for every value. The steps of the two colour ramps, `seq.1` to `seq.10` and `div.1` to `div.9`, and `seq.none`, are the colour scale's and not an author's: a metric on `color` is quantized to them, and which ramp it is on is read from its values (decision 33).
+
+**A description** (built November 24; Decided 62). A view's sentence is derived, because its data is live and an authored sentence is not (section 16). What its author can say that the data cannot is what the view is for: "How many people came, day by day." That is `description`, and it is the one sentence in a spec. It says nothing the data would make false, no number, no date and no "up", since nothing rewrites it when the answer changes. A surface says it before the derived sentence: in `<ua-view>` a figure is described by the two together, and where a view is its sentence alone it is the derived one that shows. A facet says it once, of its views together, and core's `facets` gives no view of it a description. It changes nothing that is drawn, and the plan of a spec with one is the plan of the spec without.
 
 **A rule at a value** (built November 23; Decided 46). A reference line at a number stands on a scale: `{ "mark": "rule", "encode": { "y": 1000 } }`. A plot whose x is a list of values, a time or a category, has no number to stand at, and a string on a channel is always a field. So the place is said as a value, in the layer field `at`, and the rule encodes nothing:
 
@@ -938,7 +941,7 @@ Selected has no look of its own yet; that is design's to set. The bench's Board 
 
 Write these once against the scene and the plan, not per preset.
 
-- Every view exposes its **tldr prose** as its accessible name or description, and says it again, politely, when new data changes it: a view drawn again is not focused again, so nothing else would (built November 24). The first sentence is not said twice.
+- Every view exposes its **tldr prose** as its accessible description, after what its author says it is for where a spec has a `description`, and says it again, politely, when new data changes it: a view drawn again is not focused again, so nothing else would (built November 24). The first sentence is not said twice.
 - Every view offers the **same query as a table**. Chart and table read one result.
 - **Keyboard navigation** over data marks, driven by keys and the row each mark came from. Announce the dimension value, the metric value in its catalog format, and the comparison if present.
 - A **canvas or dot-grid painter needs a hidden DOM mirror** carrying the same structure.
@@ -1082,6 +1085,7 @@ Removed November 24: it was a proposal of October, and what was built from it is
 59. A custom mark is a candidate for the system, and not a way round it. It is held to what a core mark is held to, in one suite run for every mark registered (`test/admission.test.ts`): it says what it reads, a sample draws it, its scenes are valid against `scene/0`, it shows something at every room and gives way in the least. So the count of custom marks is a queue of candidates, and no longer a mark against the grammar. What moves one into core is proposed in section 7. It is the ninth step of `docs/focus-plan.md`. (November 24)
 60. A catalog may say which dimensions a metric is answered by, with `by` on the metric, and a query that asks it by another is refused before it is run. It is the one part of the tenth step of `docs/focus-plan.md` that is built, because it is the one with a reader here: `resolve()`. The rest is proposed to the API's owners and is Open 23. (November 24)
 61. A view says its sentence in a live region when new data changes it, and a draft of the alias sheet for a page themed by the WordPress Design System is in the token package (`packages/tokens/wpds.css`). These are the parts of the eleventh step of `docs/focus-plan.md` that need no eye. Patterns beside colour, a look for Selected and the visual design are design's, and a pass with a screen reader is still owed. (November 24)
+62. A spec may say what its view is for: `description`, one sentence in its author's words that does not change with the data. A surface says it before the tldr prose, which stays derived, and it is drawn nowhere. It is the one authored sentence a spec has, and David's call over a recommendation to add none. A facet says it once, of its views together. (November 24)
 
 ### Open
 

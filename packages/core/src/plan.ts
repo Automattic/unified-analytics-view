@@ -246,7 +246,8 @@ export interface Facet { key: string; label: string; spec: Spec; result: Result 
  * views are read against one another. Where they stand is the surface's: a spec says no columns. A result with no
  * value of the dimension is one view, of the whole, which says that it is empty. */
 export function facets(spec0: Spec, result: Result, catalog: Catalog, rules: ContainerRules = CONTAINER_RULES, presets: PresetLibrary = PRESETS): Facet[] {
-  const { facet: f, ...rest } = spec0, by = (rest.query && rest.query.by) || [];
+  // What the spec is for is said once, of the views together, and not again by each of them.
+  const { facet: f, description: _description, ...rest } = spec0, by = (rest.query && rest.query.by) || [];
   if (typeof f !== 'string' || !by.includes(f)) throw new Error('The spec\'s "facet" is ' + JSON.stringify(f) + ', and a facet is one of the query\'s dimensions: ' + (by.length ? by.map((d) => '"' + d + '"').join(' or ') : 'it has none in "by"') + '. ' + (by.length ? 'Name one of them' : 'Add the dimension to query.by and name it') + ', or remove "facet".');
   const dim = catalog.dimensions[f];
   if (!dim) throw new Error('The catalog has no dimension "' + f + '". It has: ' + (Object.keys(catalog.dimensions).join(', ') || 'none') + '. Add it to the catalog passed in, or correct the name in query.by.');

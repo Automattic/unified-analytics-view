@@ -9,6 +9,7 @@
   "properties": {
     "spec": { "const": "view/0" },
     "title": { "type": "string", "description": "Shown by the container's frame, not drawn in the scene." },
+    "description": { "type": "string", "description": "What the view is for, in its author's words. It does not change with the data, so say nothing here that the data would make false: no number, no date, no \"up\" or \"down\". A surface says it before the view's own sentence, which is derived from the answer. Not drawn." },
     "use": { "type": "string", "description": "A preset name. Expands into layers. Ignored if layers is present. The library ships: line, bar-list, share-bar, bar, grouped-bar, stacked-bar, stacked-area, pie, donut, pie-semi-circle, gauge, heatmap, funnel. Most take a dimension in query.by, and gauge takes none: resolve() says which a preset needs. A form the library does not ship is written as its layers. A custom mark's package registers the preset that draws it, in code, with registerPreset(): the geo package registers choropleth, the flow package registers sankey, and the partition package registers treemap and pair-list. A code base may also hand resolve() a library of its own. So this is not an enum: resolve() checks the name against the library and then the registry, and its error lists the presets there are." },
     "query": { "$ref": "#/definitions/query" },
     "layers": { "type": "array", "items": { "$ref": "#/definitions/layer" } },

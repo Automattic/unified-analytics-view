@@ -41,7 +41,7 @@ export interface Room { inline: number; block?: number | null }
 export interface AtRoom { room: Room; parts: string[]; hidden: string[]; set: Record<string, string>; gave: string[]; because: Because[] }
 /** One view checked: a spec's own, or each view of a facet under its value. */
 export interface Viewed { key?: string; layout: string; sentence: string; dropped: string[]; made: Because[]; rooms: AtRoom[] }
-export type Checked = { ok: false; error: string } | { ok: true; views: Viewed[] };
+export type Checked = { ok: false; error: string } | { ok: true; /** What the view is for, where its author said. */ description?: string; views: Viewed[] };
 
 /** The rooms a view is read at where none is asked for: a sidebar, a tile, and a cell of a table. */
 export const ROOMS: Room[] = [{ inline: 346 }, { inline: 250, block: 100 }, { inline: 120, block: 60 }];
@@ -75,6 +75,6 @@ export function check({ spec, result, catalog, rooms = ROOMS }: { spec: Spec; re
         }),
       };
     });
-    return validView({ spec: 'view/0', ...spec }) ? { ok: true, views } : { ok: false, error: refused(validView.errors ?? []) };
+    return validView({ spec: 'view/0', ...spec }) ? { ok: true, ...(spec.description && { description: spec.description }), views } : { ok: false, error: refused(validView.errors ?? []) };
   } catch (e) { return { ok: false, error: (e as Error).message }; }
 }

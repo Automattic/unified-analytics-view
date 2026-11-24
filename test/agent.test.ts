@@ -48,6 +48,12 @@ group('check: a spec read with no browser', () => {
     expect(err(kept)).toBeUndefined();
     expect(check(on(kept))).toEqual({ ok: false, error: 'spec.keep[0] must be equal to one of the allowed values: guides, secondary, rows, marks.' });
   });
+  it('says what the view is for, where its author did, beside what the view says of its data', () => {
+    const c = check(on({ ...trend, description: 'How many people came, day by day.' }));
+    expect(c).toMatchObject({ ok: true, description: 'How many people came, day by day.' });
+    expect(c.ok && c.views[0]!.sentence).toBe(check(on(trend)).ok && (check(on(trend)) as { views: { sentence: string }[] }).views[0]!.sentence);
+    expect('description' in check(on(trend))).toBe(false);
+  });
   it('a spec with a facet is each of its views, under its value', () => {
     const spec = Object.values(facetSamples)[0]!.spec, c = check(on(spec));
     expect(c.ok && c.views.length).toBeGreaterThan(1);

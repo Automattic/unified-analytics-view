@@ -254,7 +254,7 @@ Once the steps were built he went through every call made by judgement, twenty-t
 
 13. The two sketches in `prototype/` move to `sketches/`. Done.
 14. `keep` is removed: the spec field, the rules' `keep`, and what `explain` says of a lever.
-15. `description` on a spec.
+15. `description` on a spec. Done (reference, Decided 62): the figure is described by it and then by the derived sentence, it is drawn nowhere, and a facet says it once. Tried in a browser at a wide frame and at one that is its sentence alone.
 16. The parts page gives each frame a place that no other frame moves, so a capture can say which change moved a frame.
 17. A fit rule's need in the type's own units, held to the capture at the default type, where nothing should move.
 18. A proposal for the API's owners: a metric's `by`, grains, whether a metric adds up, and the three states of an answer.

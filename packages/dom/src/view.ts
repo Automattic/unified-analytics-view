@@ -1,4 +1,4 @@
-import { CONTAINER_RULES, DELTA_FULL, NOTE_LEAST, NUMBER_SHORT, buildScene, customMarks, expand, explain, fallbackRule, fills, gaveWay, hasOf, resolve } from '@unified-analytics/core';
+import { CONTAINER_RULES, DELTA_FULL, FACET_GAP, FACET_LEAST, NOTE_LEAST, NUMBER_SHORT, buildScene, customMarks, expand, explain, facetBecause, facets, fallbackRule, fills, gaveWay, hasOf, resolve } from '@unified-analytics/core';
 import type { Because, Catalog, ContainerRules, Explanation, Layout, Result, SceneNode, Spec } from '@unified-analytics/core';
 import { compileFitRules } from './compile.ts';
 import { LEGEND_LINE } from './chrome/legend.ts';
@@ -36,7 +36,7 @@ const stylesOf = (painters: LayoutPainter[]) => `@layer uav {
  * is a container itself, the same token would give another. They are registered as lengths (motion.ts), which is what
  * makes each a size here and not a formula handed down. Where that fails a part reads the token for itself.
  * What follows from a face is written from it: a line of the legend, and the x axis, are as tall as their text needs. */
-.uav, .uav-ruler, .uav-error { ${FACES.map((f) => `--uav-font-${f}: ${token('font-size-' + f)};`).join(' ')} font-size: var(--uav-font-tick);
+.uav, .uav-ruler, .uav-error, .uav-facets { ${FACES.map((f) => `--uav-font-${f}: ${token('font-size-' + f)};`).join(' ')} font-size: var(--uav-font-tick);
   --uav-legend-line: calc(var(--uav-font-label) * ${LEGEND_LINE} / ${DRAWN.label}); --uav-x-axis-block: ${X_AXIS_FACE}; }
 .uav { position: relative; box-sizing: border-box; block-size: 100%; margin: 0; display: grid; grid-template: "number" auto "body" minmax(0, 1fr) / minmax(0, 1fr); print-color-adjust: exact; }
 /* A bar, a segment, a swatch and a rule are backgrounds. A printer leaves those out unless told, and forced colours
@@ -155,6 +155,16 @@ ${IN_BOX} { .uav-fallback { block-size: 100%; container-type: size; } }
 :host([table]) .uav { display: block !important; }
 :host([table]) .uav-fallback { display: none !important; }
 }`;
+/* A spec with a `facet` is a small board (reference, Decided 26 and 45). This view then draws nothing of its own: it
+ * holds a view for each value, in a grid that wraps where one would have less than FACET_LEAST. Each is its own
+ * container, with its own rules, keyboard and measured pass, so nothing runs on resize. A view paints no title, so
+ * the name of its value stands over each. In a box the rows share its height, and each view is handed its part. */
+export const FACET_CSS = `@layer uav {
+.uav-facets { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, ${FACET_LEAST}px), 1fr)); gap: ${FACET_GAP}px; }
+.uav-facet { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 4px; min-inline-size: 0; }
+.uav-facet-name { font-size: var(--uav-font-label); color: ${paintVar('ink.muted')}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+${IN_BOX} { .uav-facets { block-size: 100%; grid-auto-rows: minmax(0, 1fr); } .uav-facet-view { block-size: 100%; container-type: size; } }
+}`;
 // One sheet per text and per document: a constructed sheet cannot be adopted outside the document it was made for,
 // and a view may be put into another one (a preview frame, a window opened from the page).
 const sheets = new WeakMap<Document, Map<string, CSSStyleSheet>>();
@@ -234,6 +244,8 @@ export class UaView extends Base {
   #room: HTMLElement; #ruler: HTMLElement[]; #seen = '';
   #keys: Keys;
   #fallback: UaView | null = null;
+  // The grid of a facet's views, while the spec has a facet.
+  #board: HTMLElement | null = null;
   #frame = 0;
   /** What the views this one is the fallback of gave up, set by the view that holds it. A fallback that leads back to one of them is an error. */
   via: string[] = [];
@@ -287,7 +299,7 @@ export class UaView extends Base {
   /** The key of the datum the host keeps selected, or null. The view proposes one with `ua-select` when the user
    * activates a datum, and marks every atom of the one set here. It is no input: setting it paints nothing again. */
   get selected(): string | null { return this.#selected; }
-  set selected(v: string | null) { this.#selected = v ?? null; this.#keys.select(this.#selected); }
+  set selected(v: string | null) { this.#selected = v ?? null; this.#keys.select(this.#selected); for (const view of this.#views()) view.selected = this.#selected; }
   #selected: string | null = null;
 
   /** Why the view looks as it does at the size it has now, in the words of its spec: core's explain() for this room,
@@ -296,6 +308,9 @@ export class UaView extends Base {
   explain(): Explanation {
     const { spec, result, catalog } = this;
     if (!spec || !result || !catalog) return { layout: 'none', entries: [{ what: 'not drawn', from: 'inputs', why: 'it waits for ' + (['spec', 'result', 'catalog'] as const).filter((k) => !this[k]).join(', ') }] };
+    // A facet is explained by its first view, which knows its own room, after what is said of them all.
+    const [first] = this.#views();
+    if (first) { const e = first.explain(); return { ...e, entries: [facetBecause(spec, catalog, this.#board!.children.length, first.spec?.title ?? ''), ...e.entries] }; }
     // A view that has given way to its fallback has no box of its own: the room is the one the fallback stands in.
     const box = (this.#fallback && !this.#room.getClientRects().length ? this.#fallback.#room : this.#room).getBoundingClientRect();
     const plot = this.#body.querySelector(':scope > :is(.uav-plot, .uav-radial)')?.getBoundingClientRect();
@@ -401,6 +416,8 @@ export class UaView extends Base {
       const rules = rulesOver(this.#input('rules', false) as Partial<ContainerRules> | undefined);
       check(spec, result, catalog);
       if (!Array.isArray(rules.fit)) throw new Error('The rules need "fit", an array of fit rules. Leave it out to use the defaults.');
+      if (spec.facet != null) return this.#facets(spec, result, catalog, rules);
+      this.#board?.remove(); this.#board = null;
       // Every painter's extras and rules, the built-in ones' and those registered since this module loaded, for custom
       // marks. A custom mark's rules are its own, as core holds them (marks.ts); a painter's `rules` stand in where no
       // mark of its name gives any.
@@ -440,6 +457,36 @@ export class UaView extends Base {
     } catch (e) { this.#fail(e, painting); return false; }
   }
 
+  #views(): UaView[] { return [...(this.#board?.querySelectorAll<UaView>(':scope > .uav-facet > .uav-facet-view') ?? [])]; }
+  /** A facet: a view of its own for each value, kept by its value where it was there before. Nothing of this view's is
+   * painted, so nothing of it is measured. The table is each view's own, and what is selected is marked in them all. */
+  #facets(spec: Spec, result: Result, catalog: Catalog, rules: ContainerRules): boolean {
+    const views = facets(spec, result, catalog, rules), doc = this.ownerDocument;
+    this.#root.adoptedStyleSheets = [sheet(doc, BASE_CSS), sheet(doc, FACET_CSS)];
+    const board = this.#board ??= this.#root.appendChild(Object.assign(doc.createElement('div'), { className: 'uav-facets' }));
+    board.setAttribute('role', 'group');
+    if (spec.title) board.setAttribute('aria-label', spec.title); else board.removeAttribute('aria-label');
+    const had = new Map([...board.children].map((c) => [(c as HTMLElement).dataset.key, c as HTMLElement]));
+    const cells = views.map((v) => {
+      let cell = had.get(v.key);
+      if (!cell) {
+        cell = Object.assign(doc.createElement('div'), { className: 'uav-facet' }); cell.dataset.key = v.key;
+        const name = Object.assign(doc.createElement('div'), { className: 'uav-facet-name' });
+        name.setAttribute('aria-hidden', 'true');                             // the view under it is labelled with the same words
+        cell.append(name, Object.assign(doc.createElement(this.localName), { className: 'uav-facet-view' }));
+      }
+      cell.firstElementChild!.textContent = v.label;
+      const view = cell.lastElementChild as UaView;
+      view.toggleAttribute('table', this.hasAttribute('table'));
+      Object.assign(view, { spec: v.spec, result: v.result, catalog, rules, selected: this.#selected });
+      return cell;
+    });
+    if (cells.length !== board.children.length || cells.some((c, i) => board.children[i] !== c)) board.replaceChildren(...cells);
+    this.#fallback?.remove(); this.#fallback = null;
+    this.#fig.hidden = true; this.#layout = null; this.#error.hidden = true; this.#loading.hidden = true; clearTimeout(this.#late);
+    return false;
+  }
+
   /** After every view queued with this one has painted: what reads sizes. */
   #finish(): void {
     try {
@@ -464,7 +511,7 @@ export class UaView extends Base {
     // view already drawn stays drawn until it comes. One that never comes is said in the console, with its fix.
     // ponytail: "long" is ten seconds, fixed; a host whose queries take longer is warned about a fetch still running.
     if (e instanceof Missing) {
-      this.#loading.hidden = this.#layout != null && !this.#fig.hidden; this.#error.hidden = true;
+      this.#loading.hidden = !!this.#board || (this.#layout != null && !this.#fig.hidden); this.#error.hidden = true;   // a facet's views stay up too
       clearTimeout(this.#late);
       this.#late = window.setTimeout(() => console.warn('<ua-view> is still waiting. ' + e.message, this), 10000);
       return;
@@ -473,7 +520,7 @@ export class UaView extends Base {
     // Never out of a lifecycle callback: the view says what is wrong where it would have drawn.
     // Inputs refused before anything was written leave the last view whole: it stays drawn, with what is wrong under it.
     const kept = !painting && this.#layout != null && !this.#fig.hidden;
-    if (!kept) { this.#root.adoptedStyleSheets = [sheet(doc, BASE_CSS)]; this.#fallback?.remove(); this.#fallback = null; }
+    if (!kept) { this.#root.adoptedStyleSheets = [sheet(doc, BASE_CSS)]; this.#fallback?.remove(); this.#fallback = null; this.#board?.remove(); this.#board = null; }
     this.#error.textContent = e instanceof Error ? e.message : String(e);
     this.#fig.hidden = !kept; this.#error.hidden = false;
   }

@@ -499,6 +499,15 @@ export const samples: Record<string, { label: string; spec: Spec }> = {
 
 /* Samples the prototype does not know (docs/chart-coverage-plan.md). The parity sweep is held to `samples` and never
  * meets these. They have a sweep and golden scenes of their own, in test/coverage.test.ts. */
+/** Specs with a `facet`: each is a view for every value of a dimension (core's `facets`), on the same scales. They are
+ * apart from `moreSamples` because a facet has no one plan, and what sweeps the samples asks each for its plan. */
+export const facetSamples: Record<string, { label: string; spec: Spec }> = {
+  multiples: { label: 'Small multiples: visitors by day, a view for each channel', spec: { spec: 'view/0', title: 'Visitors by channel', use: 'line', facet: 'channel', query: { metrics: ['visitors'], by: ['date.day', 'channel'], range: '28d', compare: 'previous' } } },
+  lists:     { label: 'A list for each device: top pages by visitors', spec: { spec: 'view/0', title: 'Top pages by device', use: 'bar-list', facet: 'device', query: { metrics: ['visitors'], by: ['page', 'device'], range: '28d', limit: 5 } } },
+  panel:     { label: 'An instrument panel: a number for each channel', spec: { spec: 'view/0', title: 'Visitors by channel', facet: 'channel', query: { metrics: ['visitors'], by: ['channel'], range: '28d', compare: 'previous' } } },
+  roses:     { label: 'A rose for each device: visitors by channel', spec: { spec: 'view/0', title: 'Channels by device', use: 'rose', facet: 'device', query: { metrics: ['visitors'], by: ['channel', 'device'], range: '28d' } } },
+};
+
 export const moreSamples: Record<string, { label: string; spec: Spec }> = {
   series: { label: 'Three series: visitors by device', spec: { spec: 'view/0', title: 'Visitors by device', query: { metrics: ['visitors'], by: ['date.day', 'device'], range: '28d' },
             layers: [{ mark: 'line', encode: { x: 'date.day', y: 'visitors', color: 'device' } }] } },

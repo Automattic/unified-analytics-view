@@ -3,7 +3,7 @@ import { fitTo, type FitRule, type Room } from './fit.ts';
 import { GUIDE_CHANNEL } from './guides.ts';
 import { customMarks } from './marks.ts';
 import { PRESETS, expand, fills, usesPrevious } from './presets.ts';
-import { layoutOf, resolve } from './plan.ts';
+import { facets, layoutOf, resolve } from './plan.ts';
 import { buildScene, layerKeys, measuresOf } from './scene.ts';
 import { baseOf } from './types.ts';
 import type { Catalog, Layout, PresetLibrary, Result, Spec } from './types.ts';
@@ -47,7 +47,19 @@ const DATA = new Set(['plot', 'points', 'rows', 'band', 'radial', 'track']);
 const need = (r: FitRule) => [r.needs.inline && r.needs.inline + ' px wide', r.needs.block && r.needs.block + ' px tall'].filter(Boolean).join(' and ');
 const has = (r?: Room | null) => (r ? Math.round(r.inline) + ' × ' + (r.block == null ? 'natural height' : Math.round(r.block)) : 'none');
 
+/** What is said of a facet before its views: how many there are, and of what. */
+export const facetBecause = (spec: Spec, catalog: Catalog, count: number, first: string): Because => ({
+  what: 'drawn as ' + count + ' view' + (count === 1 ? '' : 's') + ', one for each ' + (catalog.dimensions[spec.facet!]?.label ?? spec.facet).toLowerCase(), from: 'facet',
+  why: 'a facet is a view for each value of "' + spec.facet + '", every one on the same scales, and where they stand is the surface\'s. What follows is said of the first, "' + first + '", at its own room',
+  lever: 'remove "facet" to draw them as one view',
+});
+
 export function explain(spec0: Spec, result: Result, catalog: Catalog, room?: ExplainRoom, presets: PresetLibrary = PRESETS): Explanation {
+  // A facet is explained by its first view, at the room that view has, after what is said of them all.
+  if (spec0.facet != null) {
+    const views = facets(spec0, result, catalog, CONTAINER_RULES, presets), first = views[0]!, e = explain(first.spec, first.result, catalog, room, presets);
+    return { ...e, entries: [facetBecause(spec0, catalog, views.length, first.label), ...e.entries] };
+  }
   const spec = expand(spec0, presets), layers = spec.layers ?? [], q = spec.query;
   // A layer of a preset is named through it, as the preset's own layers[i].
   const at = (i: number) => (spec0.layers ? '' : 'use "' + spec0.use + '": ') + 'layers[' + i + ']';

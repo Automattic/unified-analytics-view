@@ -102,7 +102,7 @@ function read({ layers, query, result, catalog }: Omit<MarkView, 'guides'>) {
   const total = result.totals[size], shown = total ? tops.filter((r) => is(r[size])) : [];
   const drawn = two ? result.rows.filter((r) => is(r[size]) && shown.some((t) => of(t) === of(r))) : shown;
   // The colour scale runs over the boxes that are painted by it, as a grid's runs over its cells.
-  const fill = typeof color === 'string' ? seqScale(drawn.map((r) => r[color]).filter((v): v is number => typeof v === 'number'), metricOf(catalog, color)!) : null;
+  const fill = typeof color === 'string' ? seqScale(drawn.map((r) => r[color]).filter((v): v is number => typeof v === 'number'), metricOf(catalog, color)!, result) : null;
   if (!fill && shown.length > SERIES) throw new Error(tooManySeries('Dividing by "' + dim + '"', shown.length, 'boxes', ', or encode a metric on color to paint every box by the ramp'));
   // A key is made unique as it is given out: two rows of one value, or a value with the separator in it.
   const id = layerKeys(layers)[0]!, key = uniqueKeys();

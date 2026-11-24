@@ -1,11 +1,11 @@
 import { CONTAINER_RULES } from './container.ts';
 import { fitTo, gaveWay, type Fit, type Rooms } from './fit.ts';
 import { guidesOf } from './guides.ts';
-import { fmtTime, orList, rangeLabel } from './format.ts';
+import { fmtTime, formatDimension, orList, rangeLabel } from './format.ts';
 import { customMarks } from './marks.ts';
 import { PRESETS, expand, fills, presetNames, usesPrevious } from './presets.ts';
 import { checkReads } from './reads.ts';
-import { DETAIL_LAYOUTS, SERIES, isMetric, buildScene, columnsOf, isDim, metricOf, overMarks, pointDimOf, roleOf, xDimOf } from './scene.ts';
+import { DETAIL_LAYOUTS, SERIES, isMetric, buildScene, widest, columnsOf, isDim, metricOf, overMarks, pointDimOf, roleOf, xDimOf } from './scene.ts';
 import { differenceProse, gridProse, rangeProse, rankProse, tldrProse } from './prose.ts';
 import { MARKS, baseOf } from './types.ts';
 import type { Catalog, ContainerRules, Layer, Layout, Plan, PlanShape, PresetLibrary, Query, Result, Scene, Spec } from './types.ts';
@@ -122,6 +122,7 @@ function checkLayers(layers: Layer[], q: Query, catalog: Catalog, result: Result
  * it is everything the spec asks for. What a room is short of is the fit rules' to say (`fitTo`, `viewAt`), and a
  * surface's to act on. `rules` are a context's own. Throws, with a message that names the fix, when the spec is invalid. */
 export function resolve(spec0: Spec, result: Result, catalog: Catalog, rules: ContainerRules = CONTAINER_RULES, presets: PresetLibrary = PRESETS): Plan {
+  if (spec0.facet != null) throw new Error('This spec has "facet": ' + JSON.stringify(spec0.facet) + ', so it is a view for each value of that dimension and has no one plan. Ask facets(spec, result, catalog) for the views and resolve each, or remove "facet".');
   const spec = expand(spec0, presets), q = spec.query || ({} as Query);
   if (!q.metrics || !q.metrics.length) throw new Error('A view needs query.metrics, for example ["visitors"].');
   // A name the catalog does not carry is refused here, once, before anything reads its definition.
@@ -204,4 +205,33 @@ export function viewAt(spec: Spec, result: Result, catalog: Catalog, room: Rooms
   if (!fit.fallback) return { spec, plan, scene, fit, gave: via };
   const { layers: _layers, ...rest } = spec;
   return viewAt({ ...rest, use: fit.fallback.fallback! }, result, catalog, { view: room.view }, rules, presets, via.concat(gaveWay(fit.fallback)));
+}
+
+/** One view of a facet: what it is of, and the spec and result a surface draws it from, as it draws any view. */
+export interface Facet { key: string; label: string; spec: Spec; result: Result }
+/** The views of a spec with `facet`: a small board (reference, Decided 26 and 45). There is one for each value of the
+ * facet's dimension, in the engine's order. Each is the spec without the facet, asked of that value's rows alone, with
+ * the engine's totals for the value, and every scale as wide as the widest of them takes (`Result.domains`), so the
+ * views are read against one another. Where they stand is the surface's: a spec says no columns. A result with no
+ * value of the dimension is one view, of the whole, which says that it is empty. */
+export function facets(spec0: Spec, result: Result, catalog: Catalog, rules: ContainerRules = CONTAINER_RULES, presets: PresetLibrary = PRESETS): Facet[] {
+  const { facet: f, ...rest } = spec0, by = (rest.query && rest.query.by) || [];
+  if (typeof f !== 'string' || !by.includes(f)) throw new Error('The spec\'s "facet" is ' + JSON.stringify(f) + ', and a facet is one of the query\'s dimensions: ' + (by.length ? by.map((d) => '"' + d + '"').join(' or ') : 'it has none in "by"') + '. ' + (by.length ? 'Name one of them' : 'Add the dimension to query.by and name it') + ', or remove "facet".');
+  const dim = catalog.dimensions[f];
+  if (!dim) throw new Error('The catalog has no dimension "' + f + '". It has: ' + (Object.keys(catalog.dimensions).join(', ') || 'none') + '. Add it to the catalog passed in, or correct the name in query.by.');
+  const spec = { ...rest, query: { ...rest.query, by: by.filter((d) => d !== f) } };
+  (expand(spec, presets).layers || []).forEach((l, i) => Object.entries(l.encode || {}).forEach(([channel, held]) => {
+    if (held === f) throw new Error('Layer ' + (i + 1) + ' encodes "' + f + '" on ' + channel + ', and "' + f + '" is the facet: each view holds one value of it. Take it off the layer, or remove "facet" and keep it there.');
+  }));
+  // The engine's total for a value: its row of totalsBy where the query has a second dimension, and its own row where it has none.
+  const whole = result.totalsBy && result.totalsBy[f], values = [...new Set((whole || result.rows).map((r) => String(r[f])))];
+  if (!values.length) return [{ key: '', label: dim.label, spec, result }];
+  const views = values.map((v): Facet => {
+    const rows = result.rows.filter((r) => String(r[f]) === v), total = (by.length > 1 ? whole && whole.find((r) => String(r[f]) === v) : rows[0]) || {};
+    const totals = Object.fromEntries(Object.keys(result.totals).map((m) => [m, typeof total[m] === 'number' ? (total[m] as number) : null]));
+    return { key: v, label: formatDimension(v, dim), spec: { ...spec, title: formatDimension(v, dim) }, result: { rows, totals, meta: rows.length ? result.meta : { ...result.meta, empty: true } } };   // a value the result has no rows for says so
+  });
+  const domains = widest(() => views.forEach((v) => buildScene(resolve(v.spec, v.result, catalog, rules, presets), expand(v.spec, presets).query, v.result, catalog)));
+  for (const v of views) v.result.domains = domains;
+  return views;
 }

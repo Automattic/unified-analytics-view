@@ -1,5 +1,5 @@
 import { defineUaView, surfaceSheet, type UaView } from '@unified-analytics/dom';
-import { moreSamples, samples as known } from '@unified-analytics/fixtures';
+import { facetSamples, moreSamples, samples as known } from '@unified-analytics/fixtures';
 import { registerLinkPainter } from '@unified-analytics/flow/dom';
 import { registerGeoPainters } from '@unified-analytics/geo/dom';
 import { registerPartitionPainter } from '@unified-analytics/partition/dom';
@@ -9,6 +9,8 @@ import './theme.ts';
 
 /** Every sample the fixtures have: the prototype's, then the rest. */
 export const samples = { ...known, ...moreSamples };
+/** The specs with a `facet`. They are a view for each value and have no one plan, so the pages that read a sample's plan (parts, and the capture off it) do not hold them. */
+export const boards = facetSamples;
 
 /** `<ua-view>` and the painters of the custom marks, and the surface layouts, which the page adopts: it is the surface. */
 export function register(): void {

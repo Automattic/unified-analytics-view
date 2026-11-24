@@ -1,6 +1,6 @@
 # Uncommon chart coverage: plan
 
-As of October 12, 2026. **Status: steps 0 to 10 were built on October 12 and 13 and are merged on the branch `claude/uncommon-marks`. Step 11 (a facet down the rows) is not started; it waits for the board. Sections 1 to 6 are the plan as it was written, with its questions settled on October 12 (section 4). Section 7 is what building each step found.** It follows `docs/chart-coverage-plan.md`, which took the grammar to the 40 Common types, and it keeps that note's rules, its step format and its section 3.7 (what every new arrangement owes).
+As of October 12, 2026. **Status: steps 0 to 10 were built on October 12 and 13 and are merged on the branch `claude/uncommon-marks`. Step 11 (a facet down the rows) is not started; the facet it stands on was built on November 23 (reference, section 6, "A facet"). Sections 1 to 6 are the plan as it was written, with its questions settled on October 12 (section 4). Section 7 is what building each step found.** It follows `docs/chart-coverage-plan.md`, which took the grammar to the 40 Common types, and it keeps that note's rules, its step format and its section 3.7 (what every new arrangement owes).
 
 The catalog's 84 Uncommon types were read against the grammar as it stands on `master`: the two docs, the marks each layout accepts (`PLOT_MARKS`, `TRACK_MARKS`, `sceneRadial`, `sceneMatrix`) and the refusals in `plan.ts` and `scene.ts`. **No spec was run.** Step 0 exists to replace that reading with samples.
 

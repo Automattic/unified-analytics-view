@@ -65,8 +65,12 @@ export interface Result {
   /** With two dimensions in `by`: for each one, a row per value holding the metrics' totals over the other, in the
    * dimension's own order. A total covers the rows past `limit`. Proposed to the API's owners (chart-coverage-plan, section 3.5). */
   totalsBy?: Record<string, Row[]>;
+  /** The domain each scale takes, by the scale's name, where this result is one view's of a facet: the widest any of
+   * the facet's views would take alone, so they are read against one another. `facets` sets it; an engine does not send it. */
+  domains?: Domains;
   meta: { range?: string; compare: string | null; notes: string[]; empty?: boolean };
 }
+export type Domains = Record<string, [number, number]>;
 
 /* The view spec. */
 /** The marks core draws, and the name of any custom mark registered in code (marks.ts).
@@ -147,6 +151,9 @@ export interface Spec {
   use?: string | undefined;
   layers?: Layer[];
   keep?: KeepPart[];
+  /** One of the query's dimensions. The spec is then a view for each of its values, every one on the same scales, and
+   * the surface lays them out: a facet is a small board (reference, Decided 26 and 45). `facets` gives the views. */
+  facet?: string;
 }
 export type PresetLibrary = Record<string, { layers: Layer[] }>;
 

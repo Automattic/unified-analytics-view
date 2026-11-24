@@ -12,6 +12,11 @@ export const PLOT_TOP = 10, X_AXIS_BLOCK = 22, BARE_PAD = 3, BAND_BAR = 24, SIZE
 export const SEATS_LEAST = 160;
 /** The least a unit's grid of a hundred is built to: a cell of 9 px, a hairline apart. */
 export const GRID_LEAST = 100;
+/** A facet's views stand side by side while each has FACET_LEAST, with FACET_GAP between them, and wrap where they
+ * would have less. A spec says no columns: this is how a surface counts them. */
+export const FACET_LEAST = 200, FACET_GAP = 16;
+/** How many of a facet's `count` views stand side by side in a room `inline` px wide. The element's grid is the same sum, in CSS. */
+export const facetColumns = (inline: number, count: number): number => Math.max(1, Math.min(count, Math.floor((inline + FACET_GAP) / (FACET_LEAST + FACET_GAP))));
 /** A number's widths: under NUMBER_SHORT its value takes its short form, under DELTA_FULL its delta does, and
  * under NOTE_LEAST the note under it goes. */
 export const NUMBER_SHORT = 160, DELTA_FULL = 200, NOTE_LEAST = 120;

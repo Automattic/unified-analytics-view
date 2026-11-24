@@ -1,8 +1,11 @@
-import { expand, resolve, type Spec } from '@unified-analytics/core';
+import { expand, facets, resolve, type Spec } from '@unified-analytics/core';
 import { UaView } from '@unified-analytics/dom';
 import { catalog, runQuery, type Scenario } from '@unified-analytics/fixtures';
 import { resizable } from './resizer.ts';
-import { boxIn, focus, register, samples } from './setup.ts';
+import { boards, boxIn, focus, register, samples as plain } from './setup.ts';
+
+// Every sample, and after them the ones with a facet.
+const samples = { ...plain, ...boards };
 
 /* The playground: write a spec, see the view it makes on the fixture engine. The spec and the controls live in the
  * URL's hash, so a reload or a shared link keeps them. */
@@ -49,14 +52,15 @@ function apply() {
   try {
     const result = runQuery(spec.query, scenario);
     // Planned here first, so a spec the core refuses says why in the status line, and the last good view stays up.
-    const p = resolve(spec, result, catalog);
+    // A facet has no one plan: it is a view for each value, and the first of them is the one planned here.
+    const views = spec.facet != null ? facets(spec, result, catalog) : null, p = views ? resolve(views[0]!.spec, views[0]!.result, catalog) : resolve(spec, result, catalog);
     view.spec = spec; view.result = result;
     // A preset is shorthand for layers: core's expand() writes them out, as the plan does before it reads them.
     written = spec.use ? expand(spec) : undefined;
     expanded.hidden = !written;
     if (written) expanded.querySelector('pre')!.textContent = JSON.stringify(written.layers, null, 2);
     editor.removeAttribute('aria-invalid'); status.className = 'meta'; status.textContent = 'OK';
-    plan.textContent = 'planned with no limits: ' + p.layout + ' · ' + p.text;
+    plan.textContent = (views ? 'a facet: ' + views.length + ' views, one for each value of "' + spec.facet + '", on the same scales · the first ' : '') + 'planned with no limits: ' + p.layout + ' · ' + p.text;
     rows.textContent = JSON.stringify(result.rows, null, 1);
     later();
   } catch (e) { fail((e as Error).message); }

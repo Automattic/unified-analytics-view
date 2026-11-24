@@ -6,7 +6,7 @@ import { customMarks, type CustomMark, type MarkView } from './marks.ts';
 import { NOW, crossesZero, emptyNote, endsOf, leader, portion } from './prose.ts';
 import { UNIT_CELLS, UNIT_MOST, UNIT_SEATS, unitCount, unitSeats, unitShares, unitWorth } from './unit.ts';
 import { baseOf } from './types.ts';
-import type { ArcNode, Catalog, DimensionDef, Guides, Layer, Mark, MetricDef, Part, PathNode, PlanShape, Polarity, Query, RectNode, Result, Role, Row, Scene, SceneNode, TextNode } from './types.ts';
+import type { ArcNode, Catalog, DimensionDef, Domains, Guides, Layer, Mark, MetricDef, Part, PathNode, PlanShape, Polarity, Query, RectNode, Result, Role, Row, Scene, SceneNode, TextNode } from './types.ts';
 
 /* Node kinds: rect, path, line, circle, text. Every node has a stable key,
  * a part, a paint token (never a colour) and a layer: "data" or "guide".
@@ -24,6 +24,15 @@ const orderOf = (result: Result, f: string) => [...new Set(((result.totalsBy && 
  * with nothing above zero it ends at zero. */
 const holdingZero = (vals: number[]): [number, number] => { const lo = Math.min(0, min(vals) ?? 0); return [lo, Math.max(0, max(vals) ?? 0) || (lo ? 0 : 1)]; };
 /** Where a value lies along a range, least to most, as a ratio held to 0 to 1. A range of one value is measured as one wide. */
+/* The views of a facet share their scales. So every scale's domain goes through `common`: a view takes the one its
+ * result names (`Result.domains`), and tells what it would take alone while `widest` is asking the facet's views. */
+let asked: Domains | null = null;
+export const common = (result: Pick<Result, 'domains'>, name: string, own: [number, number]): [number, number] => {
+  if (asked) { const d = asked[name]; asked[name] = d ? [Math.min(d[0], own[0]), Math.max(d[1], own[1])] : own; }
+  return (result.domains && result.domains[name]) || own;
+};
+/** Every scale's domain as wide as any of the views built in `build` takes alone. */
+export function widest(build: () => void): Domains { const all: Domains = (asked = {}); try { build(); } finally { asked = null; } return all; }
 const along = ([least, most]: [number, number], v: number) => Math.min(1, Math.max(0, (v - least) / (most - least || 1)));
 /** The key of each row of a result: its value of `dim`, and for a row that says a value again, the value and which
  * time it is (`Google#2`). So no two rows share a key, a mark or a place, whatever a result repeats: a host that
@@ -283,8 +292,8 @@ const unitStack: MarkFn = (l, { id, role, paint, rows, k, unit, ends, v, worth }
 };
 /** What a layer's glyphs are worth where they are counted from one metric, row by row: the round number at which the
  * largest of `rows` is ten glyphs or fewer. A count's glyph is worth one thing at least. */
-function worthOf(catalog: Catalog, f: string, rows: Row[]): number {
-  return unitWorth(max(rows, (r) => r[f] as number) ?? 0, UNIT_MOST, metricOf(catalog, f)?.unit === 'count');
+function worthOf(catalog: Catalog, f: string, rows: Row[], result: Result): number {
+  return unitWorth(common(result, 'worth', [0, max(rows, (r) => r[f] as number) ?? 0])[1], UNIT_MOST, metricOf(catalog, f)?.unit === 'count');
 }
 /** What a channel holds, as an error says it. */
 const held = (f: unknown) => (f == null ? 'nothing' : JSON.stringify(f));
@@ -431,7 +440,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     if (typeof (l.encode && l.encode.y) !== 'string' || across(l)) return out;
     const f = yField(l), share = l.stack === 'normalize', y2 = l.encode!.y2;
     // A unit runs from nothing to the whole glyphs its value is drawn as, which is not quite its value.
-    if (l.mark === 'unit') { const worth = worths[i] = worthOf(catalog, f, rows); rows.forEach((r) => { if (r[f] != null) out.set(r, [0, unitCount(num(r, f), worth, valueOf(f, k(r))) * worth]); }); return out; }
+    if (l.mark === 'unit') { const worth = worths[i] = worthOf(catalog, f, rows, result); rows.forEach((r) => { if (r[f] != null) out.set(r, [0, unitCount(num(r, f), worth, valueOf(f, k(r))) * worth]); }); return out; }
     // A second end: the mark runs from one of the engine's values to another, and stands on nothing. A row with either missing has no mark.
     if (y2 != null) { rows.forEach((r) => { const to = typeof y2 === 'number' ? y2 : r[y2]; if (r[f] != null && to != null) out.set(r, [num(r, f), to as number]); }); return out; }
     // A tick that is a `reference` stands at its metric's catalog `target`, as a gauge's mark does. With no target there is none.
@@ -457,14 +466,14 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     // Ranks run from 1 at the top down to the last of them, with a tick for each, and for every few of them past ten.
     // The first and the last stay on a short plot. What is no rank (the zero a bar or an area starts from) is at the foot.
     if (u === 'rank') {
-      const last = Math.max(1, Math.ceil(max(vals) ?? 1)), every = Math.ceil(last / 10);
+      const last = common(result, 'y' + ui, [1, Math.max(1, Math.ceil(max(vals) ?? 1))])[1], every = Math.ceil(last / 10);
       const ticks = Array.from({ length: last }, (_, i) => i + 1).filter((n) => n === 1 || n === last || (n % every === 0 && last - n >= every / 2));
       return { v: (n: number) => (n < 1 ? 0 : last === 1 ? 1 : (last - n) / (last - 1)), ticks, coarse: [1, last], text: (t: number) => formatUnit(t, u, 'compact') };
     }
     // A stack set about the middle is read by how thick each band is, and a scale that counts away from the middle says
     // nothing true of that. So it has no ticks and no grid, and is not rounded: the bands take the height of the plot.
     const centred = layers.some((l, i) => l.stack === 'center' && spans[i]!.size > 0 && Math.max(0, units.indexOf(unitOf(catalog, l, xField)!)) === ui);
-    const share = u === 'share', [lo, most] = holdingZero(vals);
+    const share = u === 'share', [lo, most] = common(result, 'y' + ui, holdingZero(vals));
     const y = scaleLinear().domain([lo, share ? 1 : most]);
     if (guides.y && !centred) y.nice(4);
     const [bottom, top] = y.domain() as [number, number];
@@ -492,7 +501,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     const at = new Map(rows.map((r) => [k(r), r])), lo = (key: string) => num(at.get(key)!, xOn), hi = (key: string) => (at.get(key)![xOn + '@end'] as number | undefined) ?? lo(key);
     const vals = keys.flatMap((key) => [lo(key), hi(key)]).concat(layers.map((l) => l.encode && l.encode.x).filter((x): x is number => typeof x === 'number'))
       .concat(layers.filter(across).flatMap((l) => [l.encode!.x, l.encode!.x2].flatMap((f) => (typeof f === 'number' ? [f] : rows.map((r) => r[f!] as number).filter((n) => n != null)))));
-    const x = scaleLinear().domain(xDim ? [min(vals) ?? 0, max(vals) ?? 1] : holdingZero(vals));
+    const x = scaleLinear().domain(common(result, 'x', xDim ? [min(vals) ?? 0, max(vals) ?? 1] : holdingZero(vals)));
     if (guides.x && !xDim) x.nice(4);
     const [left, right] = x.domain() as [number, number], to = (n: number) => (n - left) / (right - left || 1);
     xv = to;
@@ -504,7 +513,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   }
   // One metric sizes the dots of a plot, whichever layers name it. On a bar it is the column's width, and has no key.
   const sizeBy = layers.map((l) => (l.mark === 'bar' ? undefined : l.encode && l.encode.size)).find((f): f is string => typeof f === 'string');
-  const size = sizeBy ? { field: sizeBy, top: max(rows, (r) => num(r, sizeBy)) || 1 } : undefined;
+  const size = sizeBy ? { field: sizeBy, top: common(result, 'size', [0, max(rows, (r) => num(r, sizeBy)) || 1])[1] } : undefined;
 
   if (guides.y) scales.forEach(({ v, ticks, coarse, text }, ui) => ticks.forEach((t) => {
     // A short plot keeps the ticks a count of 2 would give on this scale. The rest are ranked, to be given up there.
@@ -745,7 +754,7 @@ function sceneRows(catalog: Catalog, layers: Layer[], result: Result, told = tru
   const worths = new Map(tracked.filter((l) => l.mark === 'unit').map((l) => {
     const x = l.encode!.x;
     if (typeof x !== 'string' || !metricOf(catalog, x)) throw new Error('A "unit" in rows needs a metric on x to count its glyphs from, and this one has ' + held(x) + ' there. Encode { "y": "' + dim + '", "x": <a metric> }.');
-    return [l, worthOf(catalog, x, all.map((i) => i.row))];
+    return [l, worthOf(catalog, x, all.map((i) => i.row), result)];
   }));
   const keyOf = new Map(items.map((i) => [i.row, i.k]));
   const on = (l: Layer, r: Row): (number | null | undefined)[] => {
@@ -766,7 +775,7 @@ function sceneRows(catalog: Catalog, layers: Layer[], result: Result, told = tru
   const whole = new Map(items.flatMap((i) => i.pairs.map((r) => [r, i.row] as const)));
   const spans = new Map(tracked.filter((l) => divides(l) && l.stack).map((l) => { const f = l.encode!.x as string; return [l, stacked(shown, series, split!, (r) => own.get(r)!, f, l.stack, l.stack === 'normalize' ? (r) => (whole.get(r)![f] as number) || Infinity : () => 1)] as const; }));
   const vals = edges.concat(tracked.flatMap((l) => (spans.has(l) ? [...spans.get(l)!.values()].flat() : divides(l) ? shown.flatMap((r) => on(l, r) as number[]) : rows.flatMap((r) => on(l, r) as number[])))), beside = trackBeside(layers);
-  const [lo, hi] = holdingZero(vals), v = (n: number) => (n - lo) / (hi - lo);
+  const [lo, hi] = common(result, 'track', holdingZero(vals)), v = (n: number) => (n - lo) / (hi - lo);
   const ids = layerKeys(layers), cols = columnsOf(catalog, layers);
   // A column after the first is ranked by its place, so the last goes first. One column of values needs no header: the view's title says what it is.
   const rank = (l: Layer) => { const j = cols.indexOf(l); return j > 0 && { rank: j }; };
@@ -930,7 +939,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
   const reaching = layers.filter((l) => (l.mark === 'arc' || ROUND_MARKS[l.mark]) && isDim(catalog, l.encode?.angle) && typeof l.encode?.radius === 'string' && !!metricOf(catalog, l.encode.radius));
   const outBy = (l: Layer) => (l.series === 'previous' ? l.encode!.radius + '@previous' : (l.encode!.radius as string)), reached = [...new Set(reaching.map((l) => baseOf(l.encode!.radius as string)))];
   if (reached.length > 1) throw new Error('These layers reach out from the centre by ' + reached.length + ' metrics (' + reached.join(', ') + '), and a circle has one scale out from its middle. Keep the layers of one metric, or draw the other in a view of its own.');
-  const most = Math.max(0, ...reaching.flatMap((l) => result.rows.map((r) => (r[outBy(l)] as number | null | undefined) ?? 0))) || 1, byArea = reaching.some((l) => l.mark === 'arc');
+  const most = common(result, 'reach', [0, Math.max(0, ...reaching.flatMap((l) => result.rows.map((r) => (r[outBy(l)] as number | null | undefined) ?? 0))) || 1])[1], byArea = reaching.some((l) => l.mark === 'arc');
   const reach = (v: number) => (byArea ? Math.sqrt(Math.max(0, v) / most) : Math.max(0, v) / most), bent: SceneNode[] = [];
   // The names round the rim, one at the middle of each place. Where to thin them from: about four stay, then those half way between them, then the rest.
   const rimOf = (rows: Row[], one: string, k: (r: Row) => string) => {
@@ -960,7 +969,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
       if (rows.length > SERIES) throw new Error(tooManySeries('Splitting by "' + dim + '"', rows.length, 'groups of seats'));
       const own = rowKeys(rows, dim), k = (r: Row) => own.get(r)!, whole = M.unit === 'count';
       // With no total to read, the largest row is ten seats or fewer, as a stack's largest is ten glyphs.
-      const worth = total ? unitWorth(total, UNIT_SEATS, whole) : worthOf(catalog, m, rows);
+      const worth = total ? unitWorth(total, UNIT_SEATS, whole) : worthOf(catalog, m, rows, result);
       const counts = rows.map((r) => (r[m] == null ? 0 : unitCount(num(r, m), worth, valueOf(m, k(r))))), filled = counts.reduce((s, c) => s + c, 0);
       const rest = q.limit && total ? Math.max(0, Math.round(total / worth) - filled) : 0, { seats: at, pitch } = unitSeats(filled + rest);
       const seat = (key: string, more: Partial<SceneNode>) => {
@@ -1001,7 +1010,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
       const slices = one === angle, what = slices ? 'slice' : 'ring', dim = catalog.dimensions[one]!, rows = result.rows, own = rowKeys(rows, one), k = (r: Row) => own.get(r)!;
       if (l.sweep) throw new Error(n + ' has sweep: "half" and a ' + what + ' for each "' + one + '", which goes all the way round. Remove "sweep": it is for a circle divided by color, and for a gauge.');
       if (split) throw new Error(n + ' encodes "' + split + '" on detail and has a ' + what + ' for each "' + one + '". A second ring divides the segments of a circle that color has divided: put the metric on angle, "' + one + '" on color and "' + split + '" on detail, or remove "detail".');
-      const m = slices ? r0 : angle, M = metricOf(catalog, m), top = M ? Math.max(0, max(rows, (r) => num(r, m as string)) ?? 0) || 1 : 1;
+      const m = slices ? r0 : angle, M = metricOf(catalog, m), top = M ? common(result, 'ring', [0, Math.max(0, max(rows, (r) => num(r, m as string)) ?? 0) || 1])[1] : 1;
       if (slices && !M) throw new Error(n + ' has a slice for each "' + one + '" and ' + (enc.radius == null ? 'nothing' : JSON.stringify(enc.radius)) + ' on radius. Every slice is as wide as the next, so a metric on radius says how far each reaches: put one there. For a share each, put the metric on angle and "' + one + '" on color.');
       // ponytail: slices in one paint. A second dimension on color would stack each slice, and that is not built.
       if (slices && enc.color != null) throw new Error(n + ' encodes ' + JSON.stringify(enc.color) + ' on color and has a slice for each "' + one + '", and the slices are drawn in one paint. Remove "color", or set the layer\'s "paint".');
@@ -1090,8 +1099,8 @@ const DIV = 9;      // and from div.1 to div.9 where the values cross zero: four
  * on either ramp, and not a step of it: nothing is not a little, and it is not zero. `ramp` is the legend, set in
  * order: the low end, a swatch for each step, the high end, and with `none` the swatch for no value. A diverging
  * one says zero after its middle swatch, and its ends are the scale's, which are as far from zero as each other. */
-export function seqScale(vals: number[], metric?: MetricDef): { paint(v: number | null | undefined): string; ramp(none: boolean): SceneNode[] } {
-  const [lo, hi] = endsOf(vals, metric), say = (n: number) => formatMetric(n, metric, true);
+export function seqScale(vals: number[], metric?: MetricDef, result: Pick<Result, 'domains'> = {}): { paint(v: number | null | undefined): string; ramp(none: boolean): SceneNode[] } {
+  const [lo, hi] = common(result, 'color', endsOf(vals, metric)), say = (n: number) => formatMetric(n, metric, true);
   const far = Math.max(-lo, hi), div = crossesZero([lo, hi]), name = div ? 'div.' : 'seq.', n = div ? DIV : SEQ;
   // Values that are all one have no least and most. They are measured from zero.
   const ends = div ? [-far, far] : lo < hi ? [lo, hi] : [Math.min(lo, 0), Math.max(hi, lo ? 0 : 1)];
@@ -1143,9 +1152,9 @@ function sceneMatrix(catalog: Catalog, layers: Layer[], result: Result): Body {
   const held = (f: string) => new Map(result.rows.map((r) => [of(r, xf) + '\n' + of(r, yf), r[f] as number | null | undefined])), known = (at: Map<string, number | null | undefined>) => [...at.values()].filter((v): v is number => v != null);
   // The colour scale runs from the least to the most of the cells drawn. That is geometry, as the top of a y scale is,
   // and not a total, so it is read from the rows. A domain the catalog states for the metric comes before it.
-  const at = metric(m) ? held(m) : null, vals = at ? known(at) : [], seq = at && seqScale(vals, catalog.metrics[m as string]!);
+  const at = metric(m) ? held(m) : null, vals = at ? known(at) : [], seq = at && seqScale(vals, catalog.metrics[m as string]!, result);
   // A size is read the same way: the most a dot stands for is the value farthest from zero, or the farther end of a stated domain.
-  const sizes = metric(sized) ? held(sized) : null, top = sizes ? Math.max(...endsOf(known(sizes), catalog.metrics[sized as string]!).map(Math.abs)) || 1 : 1;
+  const sizes = metric(sized) ? held(sized) : null, top = sizes ? common(result, 'size', [0, Math.max(...endsOf(known(sizes), catalog.metrics[sized as string]!).map(Math.abs)) || 1])[1] : 1;
   const nodes: SceneNode[] = [], ids = layerKeys(layers), nx = xs.length, ny = ys.length;
   // Every sixth label stays, and the rest are ranked to be given up where they would meet: every third goes last.
   const rank = (i: number) => (i % 6 ? (i % 3 ? 2 : 1) : 0);

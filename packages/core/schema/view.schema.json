@@ -17,13 +17,14 @@
       "description": "Parts a container may not drop.",
       "items": { "enum": ["guides", "secondary", "rows", "marks"] },
       "uniqueItems": true
-    }
+    },
+    "facet": { "type": "string", "description": "One of the dimensions in query.by. The spec is then a view for each of its values, every one on the same scales, and the surface lays them out: no columns are said. The layers do not encode it." }
   },
   "allOf": [
     {
-      "description": "A dimension needs something to draw it with: layers, or a preset.",
+      "description": "A dimension needs something to draw it with: layers, or a preset. The one a facet takes needs neither: with no other, each of its views is a number.",
       "if": { "properties": { "query": { "type": "object", "required": ["by"], "properties": { "by": { "type": "array", "minItems": 1 } } } } },
-      "then": { "anyOf": [{ "required": ["use"] }, { "required": ["layers"] }] }
+      "then": { "anyOf": [{ "required": ["use"] }, { "required": ["layers"] }, { "required": ["facet"], "properties": { "query": { "properties": { "by": { "maxItems": 1 } } } } }] }
     }
   ],
   "definitions": {

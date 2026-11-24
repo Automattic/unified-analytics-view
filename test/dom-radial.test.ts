@@ -9,6 +9,15 @@ const fig = (keep: string) => '.uav[data-layout="radial"]:not([data-keep~="' + k
 const css = compileFitRules(FIT_RULES.filter((r) => r.layout === 'radial'), { radial: radial.fit! });
 
 describe('the radial layout', () => {
+  it('draws what the plot draws about a centre over the arcs, and gives a place with no slice its share of the circle to be pointed at', () => {
+    // The paths are the plot's, drawn by the plot's painter (points.ts) in an SVG of their own: a line is a stroke and an area a fill, and neither takes the pointer.
+    expect(radial.css).toContain('.uav-radial .uav-round path { fill: none; stroke: var(--uav-paint);');
+    expect(radial.css).toContain('.uav-radial .uav-round path[data-fill] { fill: var(--uav-paint); stroke: none; }');
+    // A dot is in the part's box as a seat is, inside the rim's margin, and only a seat is a target.
+    expect(radial.css).toContain('.uav-radial > .uav-dots { inset: var(--uav-rim, 0px); }');
+    expect(radial.css).toContain('.uav-radial > .uav-dots i:not([data-unit]) { pointer-events: none; }');
+    expect(radial.css).toContain('.uav-radial svg path[data-bare] { fill: transparent; stroke: none; }');
+  });
   it('is registered, holds its shape, and is the plot container the hole rule asks about', () => {
     expect(LAYOUTS.radial).toBe(radial);
     expect(radial.css).toContain('aspect-ratio: var(--uav-aspect, 1); container: uav-plot / inline-size;');

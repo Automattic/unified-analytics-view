@@ -1,4 +1,4 @@
-import { CONTAINER_RULES, SEATS_LEAST, arcD, declutter, ruleFor, type ArcNode, type CircleNode, type TextNode } from '@unified-analytics/core';
+import { CONTAINER_RULES, SEATS_LEAST, arcD, declutter, ruleFor, type ArcNode, type CircleNode, type PathNode, type TextNode } from '@unified-analytics/core';
 import { LEGEND_FIT, LEGEND_SWAP, SPLIT_PLAIN, hideCutLegends, legendBlock, legendTop, paintLegend } from '../chrome/legend.ts';
 import { attr, ensure, hits, keyed, svg, paintVar, prop, text } from '../dom.ts';
 import { FROM_TOP, IN_BOX, NUMBER_ALONE, holdShape, type LayoutPainter } from '../layout.ts';
@@ -7,6 +7,7 @@ import { paintUnitKey, unitDot } from '../chrome/unit.ts';
 import { LABEL } from '../chrome/label.ts';
 import { thinLabels } from '../measure.ts';
 import { IS } from '../rove.ts';
+import { paintPaths } from './points.ts';
 
 /* Arcs about one centre, and under them the legend a band has. The part holds its shape: it is as wide as the view up
  * to 160 px and its height follows from the scene's aspect, 1 for a circle and 2 for the top half of one. Its SVG has
@@ -38,7 +39,16 @@ const css = `
 /* Two SVGs lie one on the other, so neither takes the pointer for its empty box: only an arc does. */
 .uav-radial svg { pointer-events: none; }
 .uav-radial svg path { pointer-events: auto; }
-.uav-radial svg.uav-under { position: absolute; inset: var(--uav-rim, 0px); inline-size: auto; block-size: auto; }
+.uav-radial svg:is(.uav-under, .uav-round) { position: absolute; inset: var(--uav-rim, 0px); inline-size: auto; block-size: auto; }
+/* What the plot draws about a centre (core's ROUND_MARKS): a line round the circle and the fill in from it, drawn by the
+ * plot's painter over the arcs, and dots at their places in the part's box, as seats are. None takes the pointer: a
+ * place round the circle is chosen by its slice, or by the share of the circle that stands in for one. */
+.uav-radial .uav-round path { fill: none; stroke: var(--uav-paint); stroke-width: ${token('stroke-width-line')}; stroke-linejoin: round; stroke-linecap: round; pointer-events: none; }
+.uav-radial .uav-round path[data-fill] { fill: var(--uav-paint); stroke: none; }
+.uav-radial > .uav-dots { inset: var(--uav-rim, 0px); }
+.uav-radial > .uav-dots i:not([data-unit]) { pointer-events: none; }
+/* A place with no slice of its own is still a place to point at and step to: its share of the circle, with nothing painted but the outline of the one chosen. */
+.uav-radial svg path[data-bare] { fill: transparent; stroke: none; }
 /* An arc of a second ring that is chosen wears the outline, and its segment, chosen with it, gives its own up. */
 .uav-radial .uav-under path${IS.highlighted}${IS.focus} { ${FOCUS.stroke} }
 .uav-radial .uav-under path${IS.highlighted}${IS.hover} { ${HOVER.stroke} }
@@ -127,16 +137,26 @@ export const radial: LayoutPainter = {
     let below = part.querySelector<SVGSVGElement>(':scope > svg.uav-under');
     if (!below && under.length) { below = part.insertBefore(svg('svg'), own); below.setAttribute('class', 'uav-under'); below.setAttribute('aria-hidden', 'true'); }
     if (below) { below.setAttribute('viewBox', box); keyed(below, under, () => 'path', (el, n) => turn(el as SVGElement, n)); }
-    const seats = scene.nodes.filter((n): n is CircleNode => n.part === 'radial' && n.kind === 'circle');
+    const circles = scene.nodes.filter((n): n is CircleNode => n.part === 'radial' && n.kind === 'circle'), seats = circles.filter((n) => n.w != null);
+    // What the plot draws about the centre: its paths, in an SVG of their own over the arcs.
+    const lines = scene.nodes.filter((n): n is PathNode => n.part === 'radial' && n.kind === 'path');
+    let over = part.querySelector<SVGSVGElement>(':scope > svg.uav-round');
+    if (!over && lines.length) { over = part.appendChild(svg('svg')); over.setAttribute('class', 'uav-round'); over.setAttribute('aria-hidden', 'true'); }
+    if (over) { over.setAttribute('viewBox', box); paintPaths(over, lines); }
+    // Where no arc is a row's own, each row's share of the circle stands in for one: there is still a place to point at and step to.
+    const points = arcs.filter((n) => !under.includes(n)), bare: ArcNode[] = points.some((n) => n.row != null) || seats.length ? [] : rows.map((k, j) => {
+      const a = { a0: j / rows.length, a1: (j + 1) / rows.length, r0: 0, r1: 1 };
+      return { key: 'at:' + k, part: 'radial', kind: 'arc', ...a, d: arcD(a), row: k, paint: 'ink', layer: 'guide' };
+    });
     // Each segment is its own hit target. Arcs that read one value against a range have no row to step to, and
     // where a unit's seats stand there are no arcs: the seats are the targets, a group of them to a row (keys.ts).
     hits(own, rows.length && !seats.length ? 'x' : null);
     part.toggleAttribute('data-half', aspect !== 1);
     prop(part, '--uav-aspect', aspect); prop(body, '--uav-rows', rows.length); prop(part, '--uav-radial-most', seats.length ? '240px' : null);
-    keyed(own, arcs.filter((n) => !under.includes(n)), () => 'path', (el, n) => turn(el as SVGElement, n));
+    keyed(own, points.concat(bare), () => 'path', (el, n) => { turn(el as SVGElement, n); el.toggleAttribute('data-bare', bare.includes(n)); });
     const dots = ensure(part, 'div', 'uav-dots');
     attr(dots, 'data-hits', seats.length ? 'x' : null);
-    keyed(dots, seats, () => 'i', (el, n) => { prop(el, '--uav-x', n.x); prop(el, '--uav-t', n.t); unitDot(el, n); });
+    keyed(dots, circles, () => 'i', (el, n) => { prop(el, '--uav-x', n.x); prop(el, '--uav-t', n.t); unitDot(el, n); });
     const hole = ensure(part, 'b', 'uav-hole'), number = scene.nodes.find((n) => n.part === 'hole');
     if (number?.kind === 'text') { text(hole, number); prop(hole, '--uav-paint', paintVar(number.paint)); } else hole.textContent = '';
     const rim = ensure(part, 'div', 'uav-rim');

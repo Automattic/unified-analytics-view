@@ -205,6 +205,12 @@ describe('pathD: the one place a path string is made', () => {
     expect(pathD([{ x: 0, v: 0.5 }, { x: 1, v: 1 }], undefined, true)).toBe('M0,50L100,0L100,100L0,100Z');
     expect(pathD([])).toBe(null);
   });
+  it('draws points about a centre: round from the top, out from the middle, straight and closed, in the box an arc is drawn in', () => {
+    // A quarter turn each, at the rim, half way out, the rim and the middle: right, down, left, and the origin.
+    expect(pathD([{ x: 0, v: 1 }, { x: 0.25, v: 0.5 }, { x: 0.5, v: 1 }, { x: 0.75, v: 0 }], 'radial')).toBe('M0,-50L25,0L0,50L0,0Z');
+    expect(pathD([{ x: 0, v: 1 }, { x: 0.25, v: 1 }], 'radial', true)).toBe('M0,-50L50,0Z');
+    expect(pathD([], 'radial')).toBe(null);
+  });
 });
 
 describe('fitting the container (reference section 10.1)', () => {

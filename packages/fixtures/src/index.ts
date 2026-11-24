@@ -550,6 +550,10 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
   hexes:   { label: 'A hex tile map: visitors by country, each an equal hexagon', spec: { spec: 'view/0', title: 'Visitors by country', use: 'hex-tile-map', query: { metrics: ['visitors'], by: ['country'], range: '28d' } } },
   // An arc that reads data on angle and radius (docs/uncommon-coverage-plan.md, step 2). Swept, with golden scenes, in test/arc-data.test.ts.
   rose:    { label: 'A rose: visitors by hour of the day', spec: { spec: 'view/0', title: 'Visitors by hour', use: 'rose', query: { metrics: ['visitors'], by: ['hour'], range: '28d' } } },
+  // The plot's marks about a centre: a line round the circle from each day's place to the next, the fill in from it, a dot at each, and the period before as a second line.
+  radar:   { label: 'Radar: visitors by day of the week, this period and the one before', spec: { spec: 'view/0', title: 'Visitors by weekday', query: { metrics: ['visitors'], by: ['weekday'], range: '28d', compare: 'previous' },
+            layers: [{ mark: 'area', encode: { angle: 'weekday', radius: 'visitors' }, role: 'context' }, { mark: 'line', encode: { angle: 'weekday', radius: 'visitors' }, series: 'previous' },
+              { mark: 'line', encode: { angle: 'weekday', radius: 'visitors' } }, { mark: 'dot', encode: { angle: 'weekday', radius: 'visitors' } }] } },
   rings:   { label: 'Radial bars: visitors by channel', spec: { spec: 'view/0', title: 'Visitors by channel', use: 'radial-bar', query: { metrics: ['visitors'], by: ['channel'], range: '28d' } } },
   sunburst: { label: 'A sunburst: visitors by device, then by channel', spec: { spec: 'view/0', title: 'Visitors by device and channel', use: 'sunburst', query: { metrics: ['visitors'], by: ['device', 'channel'], range: '28d' } } },
   // The `partition` mark (docs/uncommon-coverage-plan.md, step 9). They are swept, and have their golden scenes, in test/partition.test.ts.

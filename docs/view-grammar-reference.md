@@ -300,6 +300,9 @@ A custom mark registered in code and referenced by name is the escape hatch for 
 | `band` | `unit` | **`x`** metric; `color` dimension |  |
 | `radial` | `arc` | `angle` dimension, metric, number; `radius` dimension, metric, number; `color` dimension; `detail` dimension | `sweep` |
 | `radial` | `unit` | **`angle`** metric; **`color`** dimension | `sweep` |
+| `radial` | `line` | **`angle`** dimension; **`radius`** metric |  |
+| `radial` | `area` | **`angle`** dimension; **`radius`** metric |  |
+| `radial` | `dot` | **`angle`** dimension; **`radius`** metric |  |
 | `matrix` | `cell` | `x` dimension; `y` dimension; **`color`** metric |  |
 | `matrix` | `dot` | **`x`** dimension; **`y`** dimension; `color` metric; **`size`** metric |  |
 | `matrix` | `text` | `x` dimension; `y` dimension; **`text`** dimension, metric, companion |  |

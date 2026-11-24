@@ -48,6 +48,9 @@ export const READS: Record<string, Record<string, Reads>> = {
   radial: {
     arc:  { angle: [D, M, N], radius: [D, M, N], color: [D], detail: [D] },
     unit: { angle: [M], color: [D] },
+    line: { angle: [D], radius: [M] },
+    area: { angle: [D], radius: [M] },
+    dot:  { angle: [D], radius: [M] },
   },
   matrix: {
     cell: { x: [D], y: [D], color: [M] },
@@ -62,7 +65,7 @@ export const NEEDS: Record<string, Record<string, readonly Channel[]>> = {
   cartesian: { line: ['y'], area: ['y'], bar: ['y'], dot: ['y'], text: ['y', 'text'], unit: ['y'] },
   rows:      { rule: ['x'], tick: ['x'], dot: ['x'], unit: ['x'], text: ['text'], line: ['x'], area: ['x'] },
   band:      { bar: ['x', 'color'], unit: ['x'] },
-  radial:    { unit: ['angle', 'color'] },
+  radial:    { unit: ['angle', 'color'], line: ['angle', 'radius'], area: ['angle', 'radius'], dot: ['angle', 'radius'] },
   matrix:    { cell: ['color'], dot: ['x', 'y', 'size'], text: ['text'] },
 };
 

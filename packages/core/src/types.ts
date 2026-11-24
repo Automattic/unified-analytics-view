@@ -240,12 +240,14 @@ export interface RectNode extends NodeBase {
 }
 /** `d` is drawn in a 100 by 100 box, for the painter to stretch. `points` are what it was drawn from. An area's point has `v0` where it starts above the bottom of the plot.
  * A point with no `row` is where the two ends of an area cross, between two rows. With `curve: "step"` a point is a flat run `w` wide about its `x`: its bin.
- * A path in `points` joins the points of two metrics in the order of their rows, straight from each to the next, and has no `curve`. */
+ * A path in `points` joins the points of two metrics in the order of their rows, straight from each to the next, and has no `curve`.
+ * With `curve: "radial"` it is about a centre, in a circle's part: a point's `x` is its place round the circle, in turns from the top, and its `v` how far out it
+ * reaches, and `d` is drawn about the origin at a radius of 50, closed, as an arc's is. */
 export interface PathNode extends NodeBase {
   kind: 'path';
   d: string | null;
   points: { row?: string; x: number; v: number; v0?: number; w?: number }[];
-  curve?: 'monotone' | 'step';
+  curve?: 'monotone' | 'step' | 'radial';
   fill?: boolean;
   width?: number;
   dash?: string | null;

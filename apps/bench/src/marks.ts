@@ -32,6 +32,7 @@ const delta = (catalog?: Catalog): State => ({ label: 'painted by its change: ' 
 
 const MARKS: Mark[] = [
   { name: 'line', note: 'The last day is part done, so its tail is dashed.', spec: line, series: true, states: [
+    { label: 'about a centre, with the fill in from it and a dot at each place', spec: S('radar') },
     { label: 'a point chosen', spec: line, active: true }, { label: 'with the period before', spec: S('trend') }, delta(), delta(worse), { label: 'no data', spec: line, scenario: 'empty' },
     { label: 'steps over bins', spec: S('ecdf') }, { label: 'joining points, day by day', spec: S('connected') }, { label: 'joining points, with no dots', spec: { ...S('connected'), use: undefined, layers: [{ mark: 'line', encode: { x: 'visitors', y: 'signups' } }] } },
     { label: 'by rank, first at the top', spec: S('bump') }, { label: 'a line each, in one paint', spec: S('spaghetti') }] },

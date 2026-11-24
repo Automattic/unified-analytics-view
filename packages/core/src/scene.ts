@@ -116,8 +116,10 @@ interface Draw {
   of?: (r: Row) => { key: string; row?: string; series?: string; pair?: [string, string] };
   /** The field labels are ranked by, the largest first, where that is not the one on y: in a grid y is a list, and a label is ranked by what it says. */
   rank?: string;
-  /** The part its marks are in, where that is not the plot: a list's `track`, where they are drawn on their side. */
+  /** The part its marks are in, where that is not the plot: a list's `track`, where they are drawn on their side, and a circle's own. */
   part?: Part;
+  /** The space is bent about a centre: along x is round the circle and up y is out from the middle, so a line runs round from each place to the next and closes. */
+  bend?: boolean;
 }
 type MarkFn = (l: Layer, d: Draw) => SceneNode[];
 /** What a row says of a field, in a catalog's terms. */
@@ -163,14 +165,15 @@ export const TINT = { opacity: 0.14, tone: 'soft' as const };
 const REFERENCE = { paint: 'rule', dash: '5 3', width: 1.5 };
 /** A reference rule's label, in the rule's paint, at `at` in the plot. */
 const ruleLabel = (id: string, text: string, role: Role, at: { x?: number; t: number }, anchor: TextNode['anchor']): TextNode => ({ key: id + ':label', part: 'plot', kind: 'text', ...at, text, anchor, font: 'tick', paint: 'rule', halo: true, layer: 'guide', role });
-const path: MarkFn = (l, { id: layer, series, mass, role: role0, paint, prev, rows: pts, k, unit, ends, polarity, step, points: joined, part: own }) => {
+const path: MarkFn = (l, { id: layer, series, mass, role: role0, paint, prev, rows: pts, k, unit, ends, polarity, step, points: joined, part: own, bend }) => {
   const id = series == null ? layer : layer + ':' + series, role = series == null ? { role: role0 } : { role: role0, series };
   const whole = pts.filter((r) => prev || !r.partial);
   if (!whole.length) return [];
   // Between rows a line is smoothed, with a curve that never leaves the values it joins. Not where it joins the points of
   // two metrics, which run in no order along x: straight from each to the next, since a curve there would say a path nobody
   // took. And not over bins, where a value holds across its bin and changes at its edge.
-  const curve = joined ? undefined : step ? 'step' as const : 'monotone' as const, part: Part = own ?? (joined ? 'points' : 'plot'), bent = curve && { curve };
+  // About a centre it runs straight from each place to the next and back to the first: a curve would bow out past the values it joins.
+  const curve = bend ? 'radial' as const : joined ? undefined : step ? 'step' as const : 'monotone' as const, part: Part = own ?? (joined ? 'points' : 'plot'), bent = curve && { curve };
   // An area's points say where it starts only when that is not the bottom of the plot.
   const points = (rs: Row[]): Pt[] => rs.map((r) => { const [v0, v] = ends(r); return { row: k(r), x: unit.cx(k(r)), v, ...(l.mark === 'area' && v0 && { v0 }), ...(step && { w: unit.span!(k(r)) }) }; });
   if (l.mark === 'area') {
@@ -238,9 +241,9 @@ export const SIZES = 4;    // the steps a value on `size` falls into. How big ea
 /** The step for a value, 1 to SIZES, by area: the square root of its share of the most. */
 export const sizeStep = (n: number, top: number) => Math.min(SIZES, Math.max(1, Math.ceil(Math.sqrt(Math.max(0, n) / top) * SIZES)));
 // A point for each row, at its values on x and y. One that is sized lets what is under it show.
-const dot: MarkFn = (l, { id, series, role, paint, rows, k, unit, ends, size, points }) => {
+const dot: MarkFn = (l, { id, series, role, paint, rows, k, unit, ends, size, points, part }) => {
   const sized = l.encode!.size != null && size;
-  return rows.map((r): SceneNode => ({ ...markOf(id, k(r), series), part: points ? 'points' : 'plot', kind: 'circle', pulse: false, x: unit.cx(k(r)), t: ends(r)[1],
+  return rows.map((r): SceneNode => ({ ...markOf(id, k(r), series), part: part ?? (points ? 'points' : 'plot'), kind: 'circle', pulse: false, x: unit.cx(k(r)), t: ends(r)[1],
     ...(sized && { size: sizeStep(num(r, sized.field), sized.top), opacity: 0.7 }), paint, layer: 'data', role }));
 };
 // A label on each row's point, in a part of its own over the plot, so a rule can give them all up. Each has its place
@@ -918,7 +921,25 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
   const hue = (j: number) => (told ? 'series.' + (j + 1) : 'series.1');
   const half = layers.some((l) => l.sweep === 'half'), from = half ? -0.25 : 0, span = half ? 0.5 : 1;
   const ids = layerKeys(layers), arcs: ArcNode[] = [], legend: SceneNode[] = [], rim: SceneNode[] = [], seats: SceneNode[] = [];
-  let keys: string[] | undefined, rings: string | undefined, detail: string[] | undefined;
+  let keys: string[] | undefined, rings: string | undefined, detail: string[] | undefined, around: string | undefined, sliced = false;
+  // What reaches out from the centre by a metric, at each place round a dimension on angle: a slice, and the plot's
+  // marks bent (ROUND_MARKS). They are on the circle's one scale out, from nothing at the middle to the most of them at
+  // the rim: by area where a slice reaches, since a slice is read by its area, and by distance where only lines and dots do.
+  // ponytail: one metric out from the centre. Several would need a colour and a legend entry each, as a plot's layers have.
+  const reaching = layers.filter((l) => (l.mark === 'arc' || ROUND_MARKS[l.mark]) && isDim(catalog, l.encode?.angle) && typeof l.encode?.radius === 'string' && !!metricOf(catalog, l.encode.radius));
+  const outBy = (l: Layer) => (l.series === 'previous' ? l.encode!.radius + '@previous' : (l.encode!.radius as string)), reached = [...new Set(reaching.map((l) => baseOf(l.encode!.radius as string)))];
+  if (reached.length > 1) throw new Error('These layers reach out from the centre by ' + reached.length + ' metrics (' + reached.join(', ') + '), and a circle has one scale out from its middle. Keep the layers of one metric, or draw the other in a view of its own.');
+  const most = Math.max(0, ...reaching.flatMap((l) => result.rows.map((r) => (r[outBy(l)] as number | null | undefined) ?? 0))) || 1, byArea = reaching.some((l) => l.mark === 'arc');
+  const reach = (v: number) => (byArea ? Math.sqrt(Math.max(0, v) / most) : Math.max(0, v) / most), bent: SceneNode[] = [];
+  // The names round the rim, one at the middle of each place. Where to thin them from: about four stay, then those half way between them, then the rest.
+  const rimOf = (rows: Row[], one: string, k: (r: Row) => string) => {
+    const dim = catalog.dimensions[one]!, every = Math.ceil(rows.length / 4), rank = (j: number) => (j % every ? { rank: every % 2 || j % (every / 2) ? 2 : 1 } : {});
+    rows.forEach((r, j) => {
+      const lo = j / rows.length, hi = (j + 1) / rows.length, mid = (lo + hi) * Math.PI;
+      rim.push({ key: 'rim:' + k(r), part: 'rim', kind: 'text', x: 0.5 + Math.sin(mid) / 2, t: 0.5 + Math.cos(mid) / 2, row: k(r), text: formatDimension(r[one], dim),
+        anchor: Math.sin(mid) > 0.2 ? 'start' : Math.sin(mid) < -0.2 ? 'end' : 'middle', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...rank(j) });
+    });
+  };
   const arc = (key: string, l: Layer, lo: number, hi: number, r0: number, paint: string, more?: Partial<ArcNode>, r1 = 1): ArcNode => {
     const a = { a0: from + lo * span, a1: from + hi * span, r0, r1 };
     return { key, part: 'radial', kind: 'arc', ...a, d: arcD(a), paint, layer: 'data', role: roleOf(l), ...more };
@@ -951,7 +972,23 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
       keys = rows.map(k);
       return;
     }
-    if (l.mark !== 'arc') throw new Error('The "' + l.mark + '" mark has no rule about a centre yet. Use arc or unit, or take "angle" off the other layers.');
+    // The plot's marks, bent: each by the plot's own function, handed a place round the circle where a plot has one
+    // along x and the reach out from the middle where it has a value up y. A dot is then set where the two put it in
+    // the part's box, as a seat is, and a path's `d` is drawn about the middle, as an arc's is (pathD).
+    const round = ROUND_MARKS[l.mark];
+    if (round) {
+      const f = enc.radius;
+      if (!isDim(catalog, angle) || typeof f !== 'string' || !metricOf(catalog, f)) throw new Error(n + ' is a "' + l.mark + '" about a centre, which stands at each value of a dimension round the circle and reaches out to its value, and it has ' + held(angle) + ' on angle and ' + held(f) + ' on radius. Put a dimension on angle and a metric on radius.');
+      if (keys && around !== angle) throw new Error(n + ' divides the circle again, by "' + angle + '", and a circle is divided once. Remove one of the layers that divide it.');
+      const rows = result.rows, own = rowKeys(rows, angle), k = (r: Row) => own.get(r)!, place = new Map(rows.map((r, j) => [k(r), j])), count = rows.length, prev = l.series === 'previous', by = outBy(l);
+      const drawn = round(l, { id: ids[i]!, role: roleOf(l), paint: paintOf(l, catalog, result) || (prev ? 'compare' : 'series.1'), prev, rows: rows.filter((r) => r[by] != null), k, say: sayOf(catalog), v: reach, part: 'radial', bend: true,
+        unit: { x: (key) => place.get(key)! / count, w: 1 / count, cx: (key) => (place.get(key)! + 0.5) / count }, ends: (r) => [0, reach(num(r, by))] });
+      bent.push(...drawn.map((node): SceneNode => (node.kind === 'circle' ? { ...node, x: 0.5 + node.t! * Math.sin(node.x! * TURN) / 2, t: 0.5 + node.t! * Math.cos(node.x! * TURN) / 2 } : node)));
+      if (!rim.length) rimOf(rows, angle, k);
+      keys = rows.map(k); around = angle; rings = '';
+      return;
+    }
+    if (l.mark !== 'arc') throw new Error('The "' + l.mark + '" mark has no rule about a centre yet. Use ' + orList(['arc', 'unit', ...Object.keys(ROUND_MARKS)]) + ', or take "angle" off the other layers.');
     if (typeof r0 === 'number' && !(r0 >= 0 && r0 < 1)) throw new Error(n + ' has ' + JSON.stringify(r0) + ' on radius. It takes a number from 0 up to 1, the inner radius as a share of the outer (0.6 makes a donut); a metric, with a dimension on angle, for how far each slice reaches; or a dimension, with a metric on angle, for a ring each.');
     // A slice or a ring for each row: one dimension, on angle or on radius, and the metric on the other.
     const one = isDim(catalog, angle) ? angle : isDim(catalog, r0) ? r0 : null;
@@ -969,18 +1006,17 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
       if (slices && enc.color != null) throw new Error(n + ' encodes ' + JSON.stringify(enc.color) + ' on color and has a slice for each "' + one + '", and the slices are drawn in one paint. Remove "color", or set the layer\'s "paint".');
       if (enc.color != null && enc.color !== one) throw new Error(n + ' has a ring for each "' + one + '" and encodes ' + JSON.stringify(enc.color) + ' on color. A ring is painted by its own dimension, for a colour and a legend entry each: encode "' + one + '" on color, or remove it.');
       // A circle is divided once. Rings of one dimension may be drawn by several layers: the whole ring, and the value on it.
-      if (keys && rings !== one) throw new Error(n + ' divides the circle again, by "' + one + '", and a circle is divided once. Remove one of the layers that divide it.');
+      // But for slices under the plot's marks at the same places: a line or dots over a rose.
+      if (keys && rings !== one && !(slices && around === one && !sliced)) throw new Error(n + ' divides the circle again, by "' + one + '", and a circle is divided once. Remove one of the layers that divide it.');
       if (!slices && rows.length > RINGS) throw new Error('A ring for each "' + one + '" makes ' + rows.length + ' rings, and a circle has room for ' + RINGS + '. Add "limit": ' + RINGS + ' to the query, or less.');
       if (slices) {
-        // Where to thin the labels from: about four stay, then those half way between them, then the rest.
-        const every = Math.ceil(rows.length / 4), rank = (j: number) => (j % every ? { rank: every % 2 || j % (every / 2) ? 2 : 1 } : {});
         rows.forEach((r, j) => {
-          const reach = r[m as string] == null ? 0 : Math.sqrt(Math.max(0, num(r, m as string)) / top), lo = j / rows.length, hi = (j + 1) / rows.length, mid = (lo + hi) * Math.PI;
+          const out = r[m as string] == null ? 0 : reach(num(r, m as string)), lo = j / rows.length, hi = (j + 1) / rows.length;
           // A row with no value, or none above zero, has no slice. It keeps its place and its label.
-          if (reach > 0) arcs.push(arc(ids[i] + ':' + k(r), l, lo, hi - (rows.length > 1 ? GAP : 0), 0, l.paint || 'series.1', { row: k(r) }, reach));
-          rim.push({ key: 'rim:' + k(r), part: 'rim', kind: 'text', x: 0.5 + Math.sin(mid) / 2, t: 0.5 + Math.cos(mid) / 2, row: k(r), text: formatDimension(r[one], dim),
-            anchor: Math.sin(mid) > 0.2 ? 'start' : Math.sin(mid) < -0.2 ? 'end' : 'middle', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...rank(j) });
+          if (out > 0) arcs.push(arc(ids[i] + ':' + k(r), l, lo, hi - (rows.length > 1 ? GAP : 0), 0, l.paint || 'series.1', { row: k(r) }, out));
         });
+        if (!rim.length) rimOf(rows, one, k);
+        sliced = true; around = one;
       } else {
         if (angle != null && (!M || isDim(catalog, angle))) throw new Error(n + ' has a ring for each "' + one + '" and ' + JSON.stringify(angle) + ' on angle. Put a metric on angle, which each ring\'s arc sweeps to, or leave angle out for the whole ring.');
         const [least, most] = (M && M.domain) || [0, top], pitch = (1 - INNER) / (rows.length || 1), shade = (j: number) => l.paint || (enc.color != null ? hue(j) : 'series.1'), keyed = enc.color != null && !l.paint && { legend: true as const };
@@ -1040,7 +1076,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
   // The number sits in the hole of a donut: the short form, which is what fits. Whether it shows is a fit rule's to say.
   const inner = arcs.filter((a) => a.role === 'primary').map((a) => a.r0), nodes: SceneNode[] = arcs;
   if (inner.length && Math.min(...inner) >= HOLE) nodes.push({ key: 'hole', part: 'hole', kind: 'text', text: tldrValueText(catalog, q, result, true), anchor: 'middle', font: 'display', paint: 'ink', layer: 'data' });
-  return { nodes: nodes.concat(rim, seats, legend), ...(keys && { rows: keys }), ...(detail && { detail }), aspect: half ? 2 : 1 };
+  return { nodes: nodes.concat(bent, rim, seats, legend), ...(keys && { rows: keys }), ...(detail && { detail }), aspect: half ? 2 : 1 };
 }
 
 const SEQ = 10;     // paint tokens run from seq.1 to seq.10, and seq.none is a cell with no value
@@ -1202,6 +1238,11 @@ const GRID_MARKS: Partial<Record<Mark, MarkFn>> = { text: label };
  * (TRACK_MARKS). A line runs down the list from each row's value to the next, and an area fills back to where the
  * track has nothing. */
 const LIST_MARKS: Partial<Record<Mark, MarkFn>> = { line: path, area: path };
+/* And the ones a circle draws, bent about its centre: a place round the circle is what a plot has along x, and how far
+ * out from the middle what it has up y. A line runs round from each place to the next and closes, an area fills in
+ * from it to the centre, and a dot stands at each place. */
+const ROUND_MARKS: Partial<Record<Mark, MarkFn>> = { line: path, area: path, dot };
+const TURN = 2 * Math.PI;
 
 /** The scene for a plan, in ratios. Neither takes a size, so this is everything the spec asks for. */
 export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Catalog): Scene {

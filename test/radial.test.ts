@@ -1,13 +1,13 @@
 import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, FIT_RULES, applies, arcD, buildScene, expand, resolve, type ArcNode, type Room, type Spec } from '@unified-analytics/core';
+import { CONTAINER_RULES, FIT_RULES, applies, arcD, buildScene, expand, pathD, resolve, type ArcNode, type Room, type Spec } from '@unified-analytics/core';
 import catalogSchema from '@unified-analytics/core/schema/catalog.schema.json';
 import { catalog, moreSamples, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
 import { err, round, run, shown, validView as view } from './helpers.ts';
 
 // Step 6 of docs/chart-coverage-plan.md: the `arc` mark and the `radial` layout. It has no prototype to match, so it
 // is held to its own sweep, facts and golden scenes, as test/coverage.test.ts holds the plots.
-const specs = Object.fromEntries(['donut', 'pie', 'half', 'gauge'].map((k) => [k, moreSamples[k]!.spec]));
+const specs = Object.fromEntries(['donut', 'pie', 'half', 'gauge', 'radar'].map((k) => [k, moreSamples[k]!.spec]));
 const { donut, pie, half, gauge } = specs as Record<string, Spec>;
 const arcs = (spec: Spec, w = 346) => run(spec, w).ratio.nodes.filter((n): n is ArcNode => n.kind === 'arc');
 
@@ -97,6 +97,67 @@ describe('arcs', () => {
   });
 });
 
+// Step 3 of the refinement plan, stage 4 (reference, Decided 44): the circle is the bend. It draws the plot's `line`,
+// `area` and `dot` by the plot's own functions: a place round the circle is what a plot has along x, and how far out
+// from the middle what it has up y.
+describe('the plot\'s marks about a centre', () => {
+  const radar = moreSamples.radar!.spec, q = radar.query, at = { angle: 'weekday', radius: 'visitors' };
+  const of = (...layers: NonNullable<Spec['layers']>) => run({ query: q, layers }, 346);
+  it('a line runs round from each place to the next and closes, an area fills in from it, and a dot stands at each place', () => {
+    const { ratio, plan, result } = run(radar, 346), n = result.rows.length, top = Math.max(...result.rows.flatMap((r) => [r.visitors as number, r['visitors@previous'] as number]));
+    expect(plan.layout).toBe('radial');
+    expect(ratio).toMatchObject({ parts: ['radial', 'rim'], aspect: 1, rows: result.rows.map((r) => r.weekday) });
+    const marks = ratio.nodes.filter((m) => m.part === 'radial') as any[], line = marks.find((m) => m.key === 'primary:line'), dots = marks.filter((m) => m.kind === 'circle');
+    expect(marks.filter((m) => m.kind === 'path').map((m) => [m.key, m.curve, m.paint, m.fill ?? false, m.dash ?? null])).toEqual([
+      ['context:area', 'radial', 'series.1', true, null], ['comparison:line', 'radial', 'compare', false, '3 3'], ['primary:line', 'radial', 'series.1', false, null]]);
+    expect(marks.find((m) => m.key === 'context:area')).toMatchObject({ opacity: 0.14, role: 'context' });
+    // A point for each row: its place round the circle, at the middle of its share, and its reach, by distance, on a scale from nothing at the middle to the most of all the layers at the rim.
+    expect(line.points.map((p: any) => [p.row, p.x])).toEqual(result.rows.map((r, j) => [r.weekday, (j + 0.5) / n]));
+    line.points.forEach((p: any, j: number) => expect(p.v, p.row).toBeCloseTo((result.rows[j]!.visitors as number) / top, 12));
+    // It is the path the one place a path is made draws of them, about the origin at a radius of 50, as an arc is: straight, and closed.
+    expect(line.d).toBe(pathD(line.points, 'radial'));
+    expect(line.d).toMatch(new RegExp('^M-?[\\d.]+,-?[\\d.]+(L-?[\\d.]+,-?[\\d.]+){' + (n - 1) + '}Z$'));
+    // A dot is where its place and its reach put it in the part's box, as a seat is: on the line's own corner.
+    expect(dots.map((d) => d.key)).toEqual(result.rows.map((r) => 'primary:dot:' + r.weekday));
+    const corners = line.d.slice(1, -1).split('L').map((c: string) => c.split(',').map(Number));
+    dots.forEach((d, j) => { expect(100 * (d.x - 0.5), d.key).toBeCloseTo(corners[j][0], 2); expect(-100 * (d.t - 0.5), d.key).toBeCloseTo(corners[j][1], 2); });
+    // The names round the rim are said once, whatever the number of layers, and the rows are the places, for the keys to step through.
+    expect(ratio.nodes.filter((m) => m.part === 'rim').map((m) => (m as any).text)).toEqual(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+    // With no period before there is no line of it.
+    expect(run(radar, 346, null, 'no-prior').ratio.nodes.some((m) => m.key === 'comparison:line')).toBe(false);
+  });
+  it('is on the circle\'s one scale out: by distance where only lines and dots reach, and by area under a rose\'s slices, which it then meets', () => {
+    const rose = { mark: 'arc' as const, encode: at }, line = { mark: 'line' as const, encode: at };
+    const reaches = (r: ReturnType<typeof of>) => (r.ratio.nodes.find((m) => m.key === 'primary:line') as any).points.map((p: any) => p.v);
+    const alone = of(line), top = Math.max(...alone.result.rows.map((r) => r.visitors as number));
+    alone.result.rows.forEach((r, j) => expect(reaches(alone)[j]).toBeCloseTo((r.visitors as number) / top, 12));
+    for (const both of [of(rose, line), of(line, rose)]) {
+      const arcs = both.ratio.nodes.filter((m) => m.kind === 'arc') as any[];
+      expect(arcs.length).toBe(7);
+      both.result.rows.forEach((r, j) => { expect(reaches(both)[j]).toBeCloseTo(Math.sqrt((r.visitors as number) / top), 12); expect(arcs[j].r1).toBeCloseTo(reaches(both)[j], 12); });
+      expect(both.ratio.nodes.filter((m) => m.part === 'rim').length).toBe(7);
+    }
+    // The slices alone are as they were: the rose's scene has not moved for it.
+    expect((of(rose).ratio.nodes.filter((m) => m.kind === 'arc') as any[]).map((a) => a.r1)).toEqual((of(rose, line).ratio.nodes.filter((m) => m.kind === 'arc') as any[]).map((a) => a.r1));
+  });
+  it('gives way as a rose does: the names thin, and under the room the circle needs it is its number', () => {
+    expect(shown(run(radar, 346))).toEqual({ parts: ['radial', 'rim'], set: {}, hidden: [], rules: [] });
+    expect(shown(run(radar, 200))).toMatchObject({ parts: ['radial', 'rim'], hidden: ['rim.ranked'], rules: ['rim'] });
+    expect(shown(run(radar, 346, 60)).parts).toEqual(['number']);
+  });
+  it('errors name the fix: what is on the two channels, a second metric, a second division, and a mark with no place', () => {
+    const e = (layers: NonNullable<Spec['layers']>, query = q) => err({ query, layers });
+    const what = (mark: string) => 'Layer 1 is a "' + mark + '" about a centre, which stands at each value of a dimension round the circle and reaches out to its value, and it has ';
+    expect(e([{ mark: 'line', encode: { angle: 'visitors' } }])).toBe(what('line') + '"visitors" on angle and nothing on radius. Put a dimension on angle and a metric on radius.');
+    expect(e([{ mark: 'dot', encode: { angle: 'weekday', radius: 'weekday' } }])).toBe(what('dot') + '"weekday" on angle and "weekday" on radius. Put a dimension on angle and a metric on radius.');
+    expect(e([{ mark: 'line', encode: at }, { mark: 'line', encode: { angle: 'weekday', radius: 'pageviews' } }], { ...q, metrics: ['visitors', 'pageviews'] }))
+      .toBe('These layers reach out from the centre by 2 metrics (visitors, pageviews), and a circle has one scale out from its middle. Keep the layers of one metric, or draw the other in a view of its own.');
+    expect(e([{ mark: 'arc', encode: at }, { mark: 'arc', encode: at }])).toBe('Layer 2 divides the circle again, by "weekday", and a circle is divided once. Remove one of the layers that divide it.');
+    expect(e([{ mark: 'line', encode: { ...at, color: 'weekday' } }])).toBe('Layer 1 encodes "weekday" on color, and the "line" mark in a "radial" layout reads no color. It reads: angle (a dimension), radius (a metric). Remove "color", or use a mark that reads it there: arc or unit.');
+    expect(e([{ mark: 'tick', encode: at }])).toBe('The "tick" mark has no rule about a centre yet. Use arc, unit, line, area or dot, or take "angle" off the other layers.');
+  });
+});
+
 describe('fit rules', () => {
   const rule = (id: string) => FIT_RULES.find((r) => r.layout === 'radial' && r.id === id)!;
   const at = (spec: Spec, w: number, h: number | null = null, plot?: Room) => shown(run(spec, w, h, 'typical', { plot }));
@@ -148,7 +209,7 @@ describe('validation', () => {
   it('errors name the fix', () => {
     expect(err(arc({ angle: 'visitors', color: 'channel', radius: 1.2 }))).toBe('Layer 1 has 1.2 on radius. It takes a number from 0 up to 1, the inner radius as a share of the outer (0.6 makes a donut); a metric, with a dimension on angle, for how far each slice reaches; or a dimension, with a metric on angle, for a ring each.');
     expect(err({ ...arc({ angle: 'visitors', color: 'channel' }), layers: [{ mark: 'arc', encode: { angle: 'visitors', color: 'channel' } }, { mark: 'bar', encode: { x: 'visitors' } }] }))
-      .toBe('The "bar" mark has no rule about a centre yet. Use arc or unit, or take "angle" off the other layers.');
+      .toBe('The "bar" mark has no rule about a centre yet. Use arc, unit, line, area or dot, or take "angle" off the other layers.');
     expect(err({ ...arc({ angle: 'visitors', color: 'page' }), query: { metrics: ['visitors'], by: ['page'] } }))
       .toBe('Splitting by "page" makes 8 segments, and there are 6 series colours. Add "limit": 6 to the query, or less.');
     expect(err({ spec: 'view/0', query: { metrics: ['visitors'] }, layers: [{ mark: 'arc', encode: { angle: 'visitors' } }] }))

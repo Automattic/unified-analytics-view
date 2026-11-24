@@ -10,10 +10,10 @@ import { glyph } from '../chrome/unit.ts';
  * Such a track is read by where its marks are, so the scene says it stands beside the label (`track: "beside"`) and
  * the body carries `data-track`. The label then has a column of its own, no wider than two fifths of the view, the
  * track is the column that takes what is left, and no mark lies under any text. A mark keeps a row gap's width
- * inside each end of the track, so a dot at either end is whole. A dot is 6 px across, as a dot in a plot is. A tick
+ * inside each end of the track, so a dot at either end is whole. A dot is 0.45 em across, as a dot in a plot is. A tick
  * and a dot are set back by half their width from where they stand, and not moved there, so a track reads from the
  * right where the page does. A glyph of a `unit` is a dot with room of its own: its share of the track across, and the
- * row's height less 4 px above and below. It is as wide as the lesser of the two, less a hairline, and as tall as it is
+ * row's height less 0.3 em above and below. It is as wide as the lesser of the two, less a hairline, and as tall as it is
  * wide (chrome/unit.ts).
  *
  * A bar divided into series is its parts end to end, parted by a line's width as a stack's are in a plot, and none
@@ -26,17 +26,17 @@ import { glyph } from '../chrome/unit.ts';
 const along = '(100% - 2 * var(--uav-row-gap))';
 const at = (x: string) => `calc(var(--uav-row-gap) + ${x} * ${along})`;
 /** What a unit's glyph keeps clear of its row's top and foot, in px. */
-const GLYPH_INSET = 4;
-const dot = glyph(`min(var(--uav-w) * ${along}, var(--uav-row-block) - ${2 * GLYPH_INSET}px)`);
+const GLYPH_INSET = 0.3;
+const dot = glyph(`min(var(--uav-w) * ${along}, var(--uav-row-block) - ${2 * GLYPH_INSET}em)`);
 export const TRACK_CSS = `
 .uav-body[data-track] .uav-row > .uav-f-label { max-inline-size: 40cqi; }
-.uav-body[data-track] .uav-row > i { inset-block: 8px; inset-inline-start: ${at('var(--uav-x, 0)')}; inline-size: max(3px, calc(var(--uav-v) * ${along})); }
+.uav-body[data-track] .uav-row > i { inset-block: 0.6em; inset-inline-start: ${at('var(--uav-x, 0)')}; inline-size: max(0.225em, calc(var(--uav-v) * ${along})); }
 .uav-body[data-track] .uav-row > i[data-mark] { border-radius: 0; inset-inline-start: ${at('min(var(--uav-x), var(--uav-x2))')}; }
 .uav-body[data-track] .uav-row > i[data-mark="rule"] { inset-block: calc(50% - ${RULE} / 2); inline-size: max(${RULE}, calc(max(var(--uav-x2) - var(--uav-x), var(--uav-x) - var(--uav-x2)) * ${along})); }
 .uav-body[data-track] .uav-row > i[data-series]:not([data-mark]) { border-radius: 0; inline-size: max(0px, calc(var(--uav-v) * ${along} - ${token('stroke-width-rule')})); }
 .uav-body[data-track] .uav-row > i[data-mark="band"] { inset-block: 0; inset-inline-start: ${at('var(--uav-x, 0)')}; inline-size: calc(var(--uav-v) * ${along}); }
 .uav-body[data-track] .uav-row > i[data-mark="tick"] { inset-block: calc((1 - var(--uav-t2)) * 100%) calc(var(--uav-t) * 100%); inline-size: ${RULE}; inset-inline-start: calc(${at('var(--uav-x)')} - ${RULE} / 2); }
-.uav-body[data-track] .uav-row > i[data-mark="dot"] { inset-block: calc(50% - ${dotRadius()}px); inline-size: ${2 * dotRadius()}px; border-radius: 50%; inset-inline-start: calc(${at('var(--uav-x)')} - ${dotRadius()}px); }
+.uav-body[data-track] .uav-row > i[data-mark="dot"] { inset-block: calc(50% - ${dotRadius()}em); inline-size: ${2 * dotRadius()}em; border-radius: 50%; inset-inline-start: calc(${at('var(--uav-x)')} - ${dotRadius()}em); }
 .uav-body[data-track] .uav-row > i[data-mark="unit"] { inset-block: 0; margin-block: auto; inline-size: ${dot}; block-size: auto; aspect-ratio: 1; border-radius: 50%; inset-inline-start: calc(${at('var(--uav-x)')} - ${dot} / 2); }`;
 
 export const TRACK_FIT: Record<string, Record<string, string>> = {

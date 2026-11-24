@@ -681,10 +681,10 @@ function cellOf(catalog: Catalog, l: Layer, r: Row): { text: string; paint: stri
   const d = delta(num(r, f), r[f + '@previous'] as number | null | undefined, M.polarity);
   return { text: d.state === 'none' ? '–' : d.text, paint: d.paint };
 }
-export const TICK_W = CHAR_W - 0.8;   // rough advance of the 11px tick face, which a column's header is set in
+export const TICK_W = CHAR_W - 0.06;   // rough advance of the tick face, which a column's header is set in
 /** The gap after a row's column of values. */
-export const COLUMN_PAD = 14;
-/** The room a column of values takes: its widest value, or its header where it has one and that is wider, and the gap after it. Measured in characters. */
+export const COLUMN_PAD = 1.05;
+/** The room a column of values takes: its widest value, or its header where it has one and that is wider, and the gap after it. Measured in characters, and given in em. */
 export const columnRoom = (valueChars: number, headerChars = 0) => Math.max(valueChars * CHAR_W, headerChars * TICK_W) + COLUMN_PAD;
 
 

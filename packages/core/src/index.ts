@@ -1,11 +1,11 @@
 export * from './types.ts';
 export { CONTAINER_RULES } from './container.ts';
-export { EM, FIT_RULES, applies, fitTo, hasOf, needAt, type Fit, type FitRule, type FitView, type Room, type Rooms } from './fit.ts';
+export { FIT_RULES, SLACK, applies, fitTo, hasOf, needAt, type Fit, type FitRule, type FitView, type Room, type Rooms } from './fit.ts';
 export { PRESETS, customPresets, expand, fills, registerPreset } from './presets.ts';
 export { facets, layoutOf, resolve, viewAt, type Facet, type LayoutChoice } from './plan.ts';
 export { explain, facetBecause, selectedBecause, type Because, type Explanation, type ExplainRoom } from './explain.ts';
 export { buildScene, detailOf, isDim, isMetric, layerKeys, metricOf, roleOf, rowKeys, uniqueKeys, unitsOf } from './scene.ts';
-export { COLUMNS_BLOCK, FACET_GAP, FACET_LEAST, columnRooms, declutter, facetColumns, inColumn, type LabelBox } from './sizes.ts';
+export { COLUMNS_BLOCK, EM, FACET_GAP, FACET_LEAST, columnRooms, declutter, facetColumns, inColumn, type LabelBox } from './sizes.ts';
 export { arcD, pathD, steady, type PathBox } from './path.ts';
 export { filterSaid, many, most, notShownNote, partialNote, plural, tldrProse } from './prose.ts';
 export { UNITS, formatBin, formatDimension, formatUnit, formatValue, orList, rangeLabel } from './format.ts';

@@ -30,6 +30,8 @@ export function register(): void {
   };
   registered = MOVED.every((name) => add(name, '<number>', false, '0'));
   for (const face of FACES) add('--uav-font-' + face, '<length>', true, '0px');
+  // The view's em, handed down as a size, for what is set in another face and must line up with the view (layout.ts).
+  add('--uav-em', '<length>', true, '0px');
   // How far a number in dots has run along its screen (dots.ts). A number, so that it moves and does not jump.
   add('--uav-s', '<number>', true, '0');
   add('--uav-e', '<number>', true, '0');

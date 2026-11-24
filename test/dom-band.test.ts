@@ -15,12 +15,12 @@ describe('the band layout', () => {
   });
 
   it('in a box, the full legend gives up its gap with its height, so the one-line legend is not pushed out', () => {
-    expect(band.css).toMatch(/\.uav-legend \{ overflow: hidden; max-block-size: max\(0px, [^;]+;\s+margin-block-start: clamp\(0px, [^;]+, 10px\); \}/);
+    expect(band.css).toMatch(/\.uav-legend \{ overflow: hidden; max-block-size: max\(0px, [^;]+;\s+margin-block-start: clamp\(0px, [^;]+, 0\.75em\); \}/);
   });
 
   it('swaps the legends under the legend rule, which alone only sets a switch', () => {
     expect(css).toContain([
-      '@container uav-view (inline-size < calc(170em / 13.33 - 0.5px)) {',
+      '@container uav-view (inline-size < calc(12.75em - 0.5px)) {',
       '  ' + fig('guides') + ' { --uav-legend: top; }',
       '  ' + fig('guides') + ' .uav-legend { display: none; }',
       '  ' + fig('guides') + ' .uav-legend-top { display: block; max-block-size: none; }',
@@ -37,8 +37,8 @@ describe('the band layout', () => {
       '  ' + fig('marks') + ' .uav-number { align-self: start; margin: 0; }',
       '}',
     ].join('\n');
-    expect(css).toContain('@container uav-view (inline-size < calc(110em / 13.33 - 0.5px)) {\n' + alone);
-    expect(css).toContain('@container uav-view (block-size < calc(48em / 13.33 - 0.5px)) {\n' + alone);
-    expect(css.indexOf('inline-size < calc(170em / 13.33 - 0.5px)')).toBeLessThan(css.indexOf('inline-size < calc(110em / 13.33 - 0.5px)'));
+    expect(css).toContain('@container uav-view (inline-size < calc(8.25em - 0.5px)) {\n' + alone);
+    expect(css).toContain('@container uav-view (block-size < calc(3.6em - 0.5px)) {\n' + alone);
+    expect(css.indexOf('inline-size < calc(12.75em - 0.5px)')).toBeLessThan(css.indexOf('inline-size < calc(8.25em - 0.5px)'));
   });
 });

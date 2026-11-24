@@ -4,7 +4,7 @@ import { MAP, NOTE, eachGeoName } from './index.ts';
 
 /* The `geo` mark's half for the DOM: the painter of its layout, for registerPainter().
  *
- * The part holds its shape: it is as wide as the view up to 480 px and its height follows from the scene's aspect. Its
+ * The part holds its shape: it is as wide as the view up to 36 em and its height follows from the scene's aspect. Its
  * SVG has a view box of that shape, so the regions are never stretched, and the symbols are HTML over it, placed by
  * ratios of the same box and sized in pixels, as a plot's dots are. Under it, the ramp a grid has and the key to
  * sizes a plot has, in their own styles (the element's chrome).
@@ -22,7 +22,7 @@ import { MAP, NOTE, eachGeoName } from './index.ts';
  * the map by direction.
  * Below the room a map needs, the `marks` rule's `fallback` shows the same query as a ranked list in its place. That
  * is the element's doing (view.ts), and nothing here knows of it. */
-const shape = holdShape(MAP + 'px', 'var(--uav-aspect, 2)');
+const shape = holdShape(MAP + 'em', 'var(--uav-aspect, 2)');
 const css = `
 .uav[data-layout="geo"] .uav-body { display: flex; flex-direction: column; }
 .uav[data-layout="geo"] .uav-plot { ${shape.part} container-type: inline-size; }
@@ -52,7 +52,7 @@ const css = `
 .uav[data-layout="geo"] .uav-points { pointer-events: none; }
 .uav[data-layout="geo"] .uav-points i { pointer-events: auto; }
 .uav[data-layout="geo"] .uav-ramp:empty { display: none; }
-.uav[data-layout="geo"] .uav-note { block-size: calc(var(--uav-font-tick) * ${NOTE} / ${DRAWN.tick}); line-height: ${lineOf('tick', NOTE)}; overflow: hidden; white-space: nowrap; }
+.uav[data-layout="geo"] .uav-note { font-size: var(--uav-font-tick); block-size: calc(var(--uav-font-tick) * ${NOTE} / ${DRAWN.tick}); line-height: ${lineOf('tick', NOTE)}; overflow: hidden; white-space: nowrap; }
 .uav[data-layout="geo"] .uav-note span { color: var(--uav-paint); }
 .uav[data-layout="geo"] .uav-note:empty { display: none; }
 /* In a box the part gives way to the height and its width follows, as a circle of arcs does. */

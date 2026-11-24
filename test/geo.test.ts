@@ -316,18 +316,18 @@ describe('the painter\'s half, as strings', () => {
     expect(geoPainter.css).toContain('.uav[data-layout="geo"] .uav-point-labels span { translate: calc(-50% + var(--uav-nudge, 0px)) -50%; }');
     expect(geoPainter.css).toContain('.uav[data-layout="geo"] .uav-plot:has(svg[data-zoom]) .uav-point-labels { visibility: hidden; }');
     expect(typeof geoPainter.measure).toBe('function');
-    expect(geoPainter.css).toContain('.uav[data-layout="geo"] .uav-plot { flex: none; align-self: center; inline-size: min(100%, 480px); aspect-ratio: var(--uav-aspect, 2);');
+    expect(geoPainter.css).toContain('.uav[data-layout="geo"] .uav-plot { flex: none; align-self: center; inline-size: min(100%, 36em); aspect-ratio: var(--uav-aspect, 2);');
   });
   it('its rules compile to the keys in their shorter forms, and then to the swap for the ranked list, by width and by height', () => {
     const css = compileFitRules(GEO_RULES, { geo: geoPainter.fit ?? {} }), fig = (_was?: string) => '.uav[data-layout="geo"]';
-    const shorter = ['  ' + fig('guides') + ' { --uav-ramp: strip; --uav-size-key: most; }', '  ' + fig('guides') + ' .uav-ramp { gap: 0; }', '  ' + fig('guides') + ' .uav-ramp i { --uav-swatch-i: 7px; --uav-swatch-r: 0px; }',
+    const shorter = ['  ' + fig('guides') + ' { --uav-ramp: strip; --uav-size-key: most; }', '  ' + fig('guides') + ' .uav-ramp { gap: 0; }', '  ' + fig('guides') + ' .uav-ramp i { --uav-swatch-i: calc(var(--uav-em) * 0.525); --uav-swatch-r: 0px; }',
       '  ' + fig('guides') + ' .uav-ramp :is([data-key="ramp:none"], [data-key="ramp:none:label"]) { display: none; }', '  ' + fig('guides') + ' .uav-size > :not(:first-child):not(:nth-last-child(-n+2)) { display: none; }', '}'].join('\n');
-    expect(css).toContain('@container uav-view (inline-size < calc(320em / 13.33 - 0.5px)) {\n' + shorter);
-    expect(css).toContain('@container uav-view (block-size < calc(170em / 13.33 - 0.5px)) {\n' + shorter);
+    expect(css).toContain('@container uav-view (inline-size < calc(24em - 0.5px)) {\n' + shorter);
+    expect(css).toContain('@container uav-view (block-size < calc(12.75em - 0.5px)) {\n' + shorter);
     expect(css).not.toContain('.uav-note');
     const swap = '  ' + fig('marks') + ':has(~ .uav-fallback[data-rule="marks"]) { display: none; }\n  ' + fig('marks') + ' ~ .uav-fallback[data-rule="marks"] { display: block; }\n}';
-    expect(css).toContain('@container uav-view (inline-size < calc(280em / 13.33 - 0.5px)) {\n' + swap);
-    expect(css).toContain('@container uav-view (block-size < calc(120em / 13.33 - 0.5px)) {\n' + swap);
+    expect(css).toContain('@container uav-view (inline-size < calc(21em - 0.5px)) {\n' + swap);
+    expect(css).toContain('@container uav-view (block-size < calc(9em - 0.5px)) {\n' + swap);
   });
 });
 

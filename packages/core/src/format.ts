@@ -8,7 +8,7 @@ const MF = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric', t
 // A time's fields, as fmtTime reads them. The offset is matched and left where it is.
 const TIME = /^(\d{4})-(\d\d)(?:-(\d\d)(?:[T ](\d\d):(\d\d)(?::(\d\d)(?:\.\d+)?)?(?:Z|[+-]\d\d(?::?\d\d)?)?)?)?$/, WEEK = /^(\d{4})-W(\d\d)$/;
 const RN = new Intl.DisplayNames('en-US', { type: 'region' });                                                        // US: United States
-export const CHAR_W = 6.6; // rough advance of the 13px label face, for clipping
+export const CHAR_W = 0.495; // rough advance of a character of the label face, in em of it
 
 export function fmt(v: number | null | undefined, compact?: boolean): string {
   if (v == null) return '–';

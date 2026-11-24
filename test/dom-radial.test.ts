@@ -21,19 +21,19 @@ describe('the radial layout', () => {
   it('is registered, holds its shape, and is the plot container the hole rule asks about', () => {
     expect(LAYOUTS.radial).toBe(radial);
     expect(radial.css).toContain('aspect-ratio: var(--uav-aspect, 1); container: uav-plot / inline-size;');
-    expect(css).toContain('@container uav-plot (inline-size < 119.5px) {\n  .uav[data-layout="radial"] .uav-hole { display: none; }\n}');
+    expect(css).toContain('@container uav-plot (inline-size < calc(9em - 0.5px)) {\n  .uav[data-layout="radial"] .uav-hole { display: none; }\n}');
   });
   it('steps the legend down as the band does, then to arcs of one colour, then to the number alone, in that order', () => {
-    expect(css).toContain(['@container uav-view (inline-size < calc(170em / 13.33 - 0.5px)) {', '  ' + fig('guides') + ' { --uav-legend: top; }',
+    expect(css).toContain(['@container uav-view (inline-size < calc(12.75em - 0.5px)) {', '  ' + fig('guides') + ' { --uav-legend: top; }',
       '  ' + fig('guides') + ' .uav-legend { display: none; }', '  ' + fig('guides') + ' .uav-legend-top { display: block; max-block-size: none; }', '}'].join('\n'));
     // The rule that takes the legend takes the colours it was the key to: what it painted is the first series' colour.
-    expect(css).toContain(['@container uav-view (block-size < calc(88em / 13.33 - 0.5px)) {', '  ' + fig('guides') + ' :is(.uav-legend, .uav-legend-top) { display: none; }', '  ' + fig('guides') + ' { --uav-split: plain; }',
+    expect(css).toContain(['@container uav-view (block-size < calc(6.6em - 0.5px)) {', '  ' + fig('guides') + ' :is(.uav-legend, .uav-legend-top) { display: none; }', '  ' + fig('guides') + ' { --uav-split: plain; }',
       ...Object.entries(SPLIT_PLAIN).map(([sel, decl]) => '  ' + fig('guides') + ' ' + sel + ' { ' + decl + ' }'), '}'].join('\n'));
     const alone = ['  ' + fig('marks') + ' :is(.uav-radial, .uav-hole, .uav-rim, .uav-legend, .uav-legend-top, .uav-unit-key) { display: none; }', '  ' + fig('marks') + ' .uav-number { display: block; }',
       '  ' + fig('marks') + ' { grid-template: "number" auto / minmax(0, 1fr); }', '  ' + fig('marks') + ' .uav-body { display: none; }', '  ' + fig('marks') + ' .uav-number { align-self: start; margin: 0; }', '}'].join('\n');
-    expect(css).toContain('@container uav-view (inline-size < calc(72em / 13.33 - 0.5px)) {\n' + alone);
-    expect(css).toContain('@container uav-view (block-size < calc(64em / 13.33 - 0.5px)) {\n' + alone);
-    const at = ['inline-size < calc(170em / 13.33 - 0.5px)', 'block-size < calc(88em / 13.33 - 0.5px)', 'inline-size < 119.5px', 'inline-size < calc(72em / 13.33 - 0.5px)'].map((s) => css.indexOf(s));
+    expect(css).toContain('@container uav-view (inline-size < calc(5.4em - 0.5px)) {\n' + alone);
+    expect(css).toContain('@container uav-view (block-size < calc(4.8em - 0.5px)) {\n' + alone);
+    const at = ['inline-size < calc(12.75em - 0.5px)', 'block-size < calc(6.6em - 0.5px)', 'inline-size < calc(9em - 0.5px)', 'inline-size < calc(5.4em - 0.5px)'].map((s) => css.indexOf(s));
     expect(at).toEqual([...at].sort((a, b) => a - b));
   });
 });

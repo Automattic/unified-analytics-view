@@ -6,7 +6,7 @@ import { FOCUS, HOVER, token } from './tokens.ts';
 import { SWATCH, swatch as swatchOf } from './chrome/swatch.ts';
 import { nearest } from './layouts/points.ts';
 import { IS, STATE, emphasise, gestureOf, hold, rove, type Emphasis, type How } from './rove.ts';
-import { FROM_TOP } from './layout.ts';
+import { FROM_TOP, em } from './layout.ts';
 
 /* Hit targets, the keyboard and the readout. A layout marks the element that holds its points with `data-hits`
  * ("x" where they run across, "y" where they run down), and each point is a child carrying `data-row`. Bars in a
@@ -224,13 +224,13 @@ svg[data-hits] path${IS.focus} { ${FOCUS.stroke} }
 :is(.uav-bars, .uav-dots, .uav-points, .uav-band, .uav-cells) ${IS.hover} { ${HOVER.around} }
 svg[data-hits] path${IS.hover} { ${HOVER.stroke} }
 /* The readout is a tooltip chip at a point (chrome/tip.ts), as wide as its words up to a width of its own. */
-.uav-readout { z-index: 1; left: 0; top: 0; inline-size: max-content; max-inline-size: min(320px, 100%); }
+.uav-readout { z-index: 1; left: 0; top: 0; inline-size: max-content; max-inline-size: min(40em, 100%); }
 /* At a point of a split plot it is a head and a line to each series: a swatch of its paint, its name, and its value at the end. */
-.uav-readout[data-lines] { display: grid; grid-template-columns: ${SWATCH.readout}px minmax(0, 1fr) auto; column-gap: 4px; align-items: center; min-inline-size: min(160px, 100%); }
+.uav-readout[data-lines] { display: grid; grid-template-columns: ${em(SWATCH.readout)} minmax(0, 1fr) auto; column-gap: 0.5em; align-items: center; min-inline-size: min(20em, 100%); }
 .uav-readout[data-lines] > b { grid-column: 1 / -1; font-weight: inherit; }
 .uav-readout[data-lines] > span:nth-of-type(2n) { text-align: end; }
 /* In the top layer it is placed on the screen, over whatever holds the view, and is as wide as its words up to a width of its own. */
-.uav-readout[popover] { position: fixed; inset: auto; margin: 0; border: 0; overflow: visible; max-inline-size: min(320px, 100vw - 8px); }
+.uav-readout[popover] { position: fixed; inset: auto; margin: 0; border: 0; overflow: visible; max-inline-size: min(40em, 100vw - 1em); }
 /* A line is read against the axes, so at a point of one the readout is a crosshair: the rule that stands at the point,
  * one that lies at each line's value there, and that value said on the axis it is read from, with the point's own
  * name on the x axis. It is drawn in the plot's box and its words stand over the tick labels they are among. A value
@@ -241,7 +241,7 @@ svg[data-hits] path${IS.hover} { ${HOVER.stroke} }
 .uav-plot:has(> .uav-cross) { z-index: 2; }
 .uav-cross { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
 .uav-cross i { position: absolute; inset-inline: 0; inset-block-start: calc(${FROM_TOP} - var(--uav-rule) / 2); block-size: var(--uav-rule); background: var(--uav-rule-paint); }
-.uav-cross-x { inset-block-start: calc(100% + 3px); unicode-bidi: plaintext; }
+.uav-cross-x { inset-block-start: calc(100% + 0.375em); unicode-bidi: plaintext; }
 .uav-cross-y { translate: 0 -50%; text-align: end; }
 .uav-cross-y[data-side="1"] { text-align: start; }
 /* A row that says its own value has told the reader what the readout would, so there the readout waits, as a tooltip
@@ -252,7 +252,7 @@ svg[data-hits] path${IS.hover} { ${HOVER.stroke} }
 .uav:has(.uav-row > .uav-f-value) > .uav-readout { transition: visibility 0s ${token('motion-delay-tooltip')}; }
 @starting-style { .uav:has(.uav-row > .uav-f-value) > .uav-readout { visibility: hidden; } }
 .uav-hits { position: absolute; inset: 0; }
-.uav-body[data-scale="point"] .uav-hits { inset-inline: ${POINT_INSET}px; }
+.uav-body[data-scale="point"] .uav-hits { inset-inline: ${POINT_INSET}em; }
 .uav-hits i { position: absolute; inset-block: 0; inset-inline-start: calc(var(--uav-x) * 100%); inline-size: calc(var(--uav-w) * 100%); }
 /* Hit targets are not marks. On a data change they take their new places at once, and one whose row has gone
  * goes at once: motion.ts keeps a leaving node only while --uav-leaving is set. */
@@ -487,7 +487,7 @@ export class Keys {
     if (row && (point as Element).classList?.contains('uav-row') && written((point as Element).textContent ?? '', row, this.#q!, this.#catalog!, this.#layers)) { hideReadout(tip); return; }
     const lines = pair ? null : this.#lines[i];
     say(tip, !lines ? says : [el('b', lines.head), ...lines.lines.flatMap((l) => {
-      const swatch = document.createElement('i'); swatchOf(swatch, String(SWATCH.readout));
+      const swatch = document.createElement('i'); swatchOf(swatch, 'readout');
       prop(swatch, '--uav-paint', paintVar(this.#paints.get(l.series) ?? 'series.1')); swatch.setAttribute('data-legend', '');   // a series' colour, plain where its marks are
       return [swatch, el('span', l.name), el('span', l.value)];
     })]);

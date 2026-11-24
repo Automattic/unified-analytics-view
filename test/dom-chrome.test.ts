@@ -50,7 +50,7 @@ describe('chrome', () => {
   });
   it('styles both forms of the legend in its own sheet, and a layout says only where it stands and what it does in a box', () => {
     expect(CHROME_CSS).toContain(LEGEND_CSS);
-    for (const p of Object.values(LAYOUTS)) expect(p.css).not.toMatch(/(^|\n)\.uav-legend\b|\.uav-legend span|flex-wrap: wrap; gap: 0 14px/);
+    for (const p of Object.values(LAYOUTS)) expect(p.css).not.toMatch(/(^|\n)\.uav-legend\b|\.uav-legend span|flex-wrap: wrap; gap: 0 1\.05em/);
     // What keys.ts marks the chosen entry by is a span in either form.
     expect(LEGEND_CSS).toContain('.uav-legend[data-names] span::before {');
     expect(LEGEND_CSS).toContain('.uav-legend span, .uav-legend-top span {');
@@ -64,7 +64,7 @@ describe('chrome', () => {
   });
   it('styles the key to sizes in its own sheet, with a plot\'s dot, and a layout says only where it stands', () => {
     expect(CHROME_CSS).toContain(SIZE_CSS);
-    expect(SWATCH_CSS).toContain('[data-swatch~="dot"] { --uav-swatch-i: calc(4px + var(--uav-size, 0.4) * 5px);');
+    expect(SWATCH_CSS).toContain('[data-swatch~="dot"] { --uav-swatch-i: calc(var(--uav-em) * (0.3 + var(--uav-size, 0.4) * 0.375));');
     for (const p of Object.values(LAYOUTS)) expect(p.css).not.toMatch(/(^|\n)\.uav-size\b/);
     expect(LAYOUTS.cartesian!.css).toContain('.uav[data-layout="cartesian"] .uav-size { grid-column: 1 / -1; }');
     expect(LAYOUTS.matrix!.css).toContain('.uav[data-layout="matrix"] .uav-size { grid-area: size; }');

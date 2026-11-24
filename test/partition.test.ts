@@ -315,16 +315,16 @@ describe('a layout with a fallback for each shape of query', () => {
 describe('the painter\'s half, as strings and plain functions', () => {
   it('is the layout of the mark\'s name, whose rules are the mark\'s alone, and its part holds the scene\'s aspect', () => {
     expect(partitionPainter.layout).toBe('partition');
-    expect(partitionPainter.css).toContain('.uav[data-layout="partition"] .uav-plot { flex: none; align-self: center; inline-size: min(100%, 480px); aspect-ratio: var(--uav-aspect, 1.6);');
+    expect(partitionPainter.css).toContain('.uav[data-layout="partition"] .uav-plot { flex: none; align-self: center; inline-size: min(100%, 36em); aspect-ratio: var(--uav-aspect, 1.6);');
     expect(partitionPainter.css).not.toMatch(/#[0-9a-f]{3,6}\b|rgb\(/i);
   });
   it('its rules compile to the ramp as a strip, and then to the swap for the list, by width and by height', () => {
     const css = compileFitRules(PARTITION_RULES, { partition: partitionPainter.fit ?? {} }), fig = (_was?: string) => '.uav[data-layout="partition"]';
-    expect(css).toContain('@container uav-view (inline-size < calc(320em / 13.33 - 0.5px)) {\n  ' + fig('guides') + ' { --uav-ramp: strip; }\n  ' + fig('guides') + ' .uav-ramp { gap: 0; }\n  ' + fig('guides') + ' .uav-ramp i { --uav-swatch-i: 7px; --uav-swatch-r: 0px; }\n  '
+    expect(css).toContain('@container uav-view (inline-size < calc(24em - 0.5px)) {\n  ' + fig('guides') + ' { --uav-ramp: strip; }\n  ' + fig('guides') + ' .uav-ramp { gap: 0; }\n  ' + fig('guides') + ' .uav-ramp i { --uav-swatch-i: calc(var(--uav-em) * 0.525); --uav-swatch-r: 0px; }\n  '
       + fig('guides') + ' .uav-ramp :is([data-key="ramp:none"], [data-key="ramp:none:label"]) { display: none; }\n}');
     const swap = '  ' + fig('marks') + ':has(~ .uav-fallback[data-rule="marks"]) { display: none; }\n  ' + fig('marks') + ' ~ .uav-fallback[data-rule="marks"] { display: block; }\n}';
-    expect(css).toContain('@container uav-view (inline-size < calc(280em / 13.33 - 0.5px)) {\n' + swap);
-    expect(css).toContain('@container uav-view (block-size < calc(120em / 13.33 - 0.5px)) {\n' + swap);
+    expect(css).toContain('@container uav-view (inline-size < calc(21em - 0.5px)) {\n' + swap);
+    expect(css).toContain('@container uav-view (block-size < calc(9em - 0.5px)) {\n' + swap);
   });
   it('a name fits where its box is as wide and as tall as it is', () => {
     expect([nameFits({ width: 40, height: 14 }, { width: 40.2, height: 16 }), nameFits({ width: 41, height: 14 }, { width: 40, height: 16 }), nameFits({ width: 30, height: 14 }, { width: 40, height: 9 })]).toEqual([true, false, false]);

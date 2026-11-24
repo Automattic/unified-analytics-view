@@ -17,17 +17,17 @@ import type { CustomMark, FitRule, Part, PathNode, RectNode, Row, SceneNode, Tex
  * It depends on core alone, and on the DOM package for its painter. One step is two stacks and a curve between them. */
 
 const GAP = 0.02;       // of the plot's height, between one node and the next
-/** px across a node. A scene has no pixels, so this is each painter's, as a dot's radius is. */
-export const NODE = 8;
-/** px between a node and its label. */
-export const LABEL = 6;
+/** How far across a node is, in em of the view's type. A scene has no sizes, so this is each painter's, as a dot's radius is. */
+export const NODE = 0.6;
+/** What stands between a node and its label, in em. */
+export const LABEL = 0.45;
 
 /* A node's name is the key to it, and a Sankey with no names says only that things flow. So the names stay as long as
  * the ribbons do, and short of the room they need the view is not a smaller Sankey: it becomes the grid of the same
  * pairs, which reads at any width. The first dimension is down its side and the second across, so the sources are its
  * rows and the targets its columns. */
 export const LINK_RULES: FitRule[] = [
-  { id: 'marks',  layout: 'link', container: 'view', needs: { inline: 320, block: 140 },      // a name inside each column, and ribbons between
+  { id: 'marks',  layout: 'link', container: 'view', needs: { inline: 24, block: 10.5 },      // a name inside each column, and ribbons between
     hide: [], fallback: 'heatmap' },
 ];
 

@@ -11,10 +11,10 @@ import { token } from '../tokens.ts';
  *    laid out by the readout's own rules in keys.ts.
  * Figma: the `Tooltip` component set, Tone × Content × Anchor, with no Secondary at Anchor=Point, as code draws none. */
 export const TIP_CSS = `
-.uav-tip { position: absolute; box-sizing: border-box; padding: 2px 6px; border-radius: ${token('border-radius-tooltip')}; pointer-events: none;
+.uav-tip { position: absolute; box-sizing: border-box; padding: 0.25em 0.75em; border-radius: ${token('border-radius-tooltip')}; pointer-events: none;
   font-family: ${token('font-family-tick')}; font-size: var(--uav-font-tick); font-optical-sizing: none; font-variant-numeric: tabular-nums;
   color: ${token('color-label-inverse')}; background: ${token('color-tooltip-surface')}; box-shadow: ${token('elevation-tooltip')}; }
-.uav-tip[data-anchor="axis"] { padding: 1px 5px; white-space: nowrap; }
+.uav-tip[data-anchor="axis"] { padding: 0.125em 0.625em; white-space: nowrap; }
 .uav-tip[data-tone="secondary"] { background: ${token('color-tooltip-surface-secondary')}; }`;
 
 /** Make an element a tooltip chip, at a point or on an axis, in the primary tone or the secondary. */

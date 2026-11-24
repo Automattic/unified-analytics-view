@@ -193,14 +193,14 @@ describe('prose and errors', () => {
 describe('the painter\'s half, as strings', () => {
   it('is the layout of the mark\'s name, whose rules are the mark\'s alone, and reads no colour but a node\'s paint', () => {
     expect(linkPainter.layout).toBe('link');
-    expect(linkPainter.css).toContain('.uav[data-layout="link"] .uav-plot svg { inset-inline: 8px; inline-size: calc(100% - 16px); }');
+    expect(linkPainter.css).toContain('.uav[data-layout="link"] .uav-plot svg { inset-inline: 0.6em; inline-size: calc(100% - 1.2em); }');
     expect(linkPainter.css).not.toMatch(/#[0-9a-f]{3,8}\b|rgb\(/i);
   });
   it('its one rule compiles to the swap for the grid, by width and by height, and nothing takes the names alone', () => {
     const css = compileFitRules(LINK_RULES);
     expect(css).not.toContain('.uav-labels');
-    expect(css).toContain('@container uav-view (inline-size < calc(320em / 13.33 - 0.5px)) {\n  .uav[data-layout="link"]:has(~ .uav-fallback[data-rule="marks"]) { display: none; }\n  .uav[data-layout="link"] ~ .uav-fallback[data-rule="marks"] { display: block; }');
-    expect(css).toContain('@container uav-view (block-size < calc(140em / 13.33 - 0.5px))');
+    expect(css).toContain('@container uav-view (inline-size < calc(24em - 0.5px)) {\n  .uav[data-layout="link"]:has(~ .uav-fallback[data-rule="marks"]) { display: none; }\n  .uav[data-layout="link"] ~ .uav-fallback[data-rule="marks"] { display: block; }');
+    expect(css).toContain('@container uav-view (block-size < calc(10.5em - 0.5px))');
     expect(LINK_RULES.map((r) => [r.id, r.fallback])).toEqual([['marks', 'heatmap']]);
   });
 });

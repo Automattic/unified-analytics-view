@@ -5,8 +5,8 @@ import type { ContainerRules } from './types.ts';
  * These are the defaults; a context passes its containers a different set. */
 export const CONTAINER_RULES: ContainerRules = {
   fit:       FIT_RULES,
-  axes:      { height: 184 },                                  // a plot with axes: its natural height. Its least is the `axes` rule's block need
-  bare:      { height: 46, numberWidth: 76 },                  // a plot with no guides, set beside the number, and the least width that number is given
-  rows:      { rowHeight: 28, gap: 4 },
+  axes:      { height: 13.8 },                                  // a plot with axes: its natural height. Its least is the `axes` rule's block need
+  bare:      { height: 3.45, numberWidth: 5.7 },                  // a plot with no guides, set beside the number, and the least width that number is given
+  rows:      { rowHeight: 2.1, gap: 0.3 },
   tldrValue: { above: 'instant' },                             // above the marks only for an instant metric
 };

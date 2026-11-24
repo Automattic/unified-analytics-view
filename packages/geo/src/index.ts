@@ -32,19 +32,19 @@ import type { CircleNode, CustomMark, FitRule, Part, PathNode, Row, SceneNode } 
 export interface Shapes { type: string; keys?: string; planar?: boolean; features: { type: string; id?: string | number; properties?: { name?: string } | null; geometry: { type: string; coordinates: unknown[] } | null }[] }
 
 const BOX = 100;      // the width of the box paths are drawn in. Its height follows from the shapes
-/** px across a map that has room to spare. The painter's part holds to it too. */
-export const MAP = 480;
-/** px the line of the note takes under the map, here and in the painter. */
-export const NOTE = 18;
+/** How far across a map with room to spare is, in em of the view's type. The painter's part holds to it too. */
+export const MAP = 36;
+/** The line the note takes under the map, in em, here and in the painter. */
+export const NOTE = 1.35;
 
 /* Below the room a map needs it is not a smaller map: the view becomes the ranked list of the same query. The note goes
  * with the keys, before that, so it never takes the room of a small map, and is never beside the list, which has every row. */
 export const geoRules = (layout: string): FitRule[] => [
   // The ramp and the key to sizes are the keys to a map's fills and its symbols, so they stay as long as the map: under
   // this each is in its shorter form. The note of what the map could not draw stays with them.
-  { id: 'guides', layout, container: 'view', needs: { inline: 320, block: 170 },
+  { id: 'guides', layout, container: 'view', needs: { inline: 24, block: 12.75 },
     hide: [], set: { ramp: 'strip', 'size-key': 'most' } },
-  { id: 'marks',  layout, container: 'view', needs: { inline: 280, block: 120 },      // regions too small to tell apart
+  { id: 'marks',  layout, container: 'view', needs: { inline: 21, block: 9 },      // regions too small to tell apart
     hide: [], fallback: 'bar-list' },
 ];
 /** The rules of the mark under its own name, `geo`. Under another name they are `geoRules(name)`: a rule names its layout. */

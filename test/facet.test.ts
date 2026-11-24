@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildScene, expand, explain, facetColumns, facets, resolve, viewAt, FACET_GAP, FACET_LEAST, type ArcNode, type Facet, type RectNode, type Spec } from '@unified-analytics/core';
+import { buildScene, expand, explain, facetColumns, facets, resolve, viewAt, EM, FACET_GAP, FACET_LEAST, type ArcNode, type Facet, type RectNode, type Spec } from '@unified-analytics/core';
 import { catalog, facetSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
 import { FACET_CSS } from '../packages/dom/src/view.ts';
 import { errOf, validView as view } from './helpers.ts';
@@ -145,15 +145,18 @@ describe('every sample with a facet', () => {
 
 describe('how many of a facet\'s views stand side by side', () => {
   it('as many as have FACET_LEAST each with FACET_GAP between, one at least, and no more than there are', () => {
-    const two = 2 * FACET_LEAST + FACET_GAP;
+    // The two are in em, and a room is in px: on a page of 16 px type two views and the gap between them are 416 px.
+    const two = (2 * FACET_LEAST + FACET_GAP) * EM;
+    expect(Math.round(two)).toBe(416);
     expect(facetColumns(100, 6)).toBe(1);
     expect(facetColumns(two - 1, 6)).toBe(1);
     expect(facetColumns(two, 6)).toBe(2);
+    expect([facetColumns(500, 6, 20), facetColumns(624, 6, 20)]).toEqual([1, 2]);     // and where the type is 20 px, 624
     expect(facetColumns(5000, 6)).toBe(6);
     expect(facetColumns(5000, 1)).toBe(1);
   });
   it('and the element\'s grid is that sum, in CSS', () => {
-    expect(FACET_CSS).toContain('grid-template-columns: repeat(auto-fit, minmax(min(100%, ' + FACET_LEAST + 'px), 1fr)); gap: ' + FACET_GAP + 'px;');
+    expect(FACET_CSS).toContain('grid-template-columns: repeat(auto-fit, minmax(min(100%, ' + FACET_LEAST + 'em), 1fr)); gap: ' + FACET_GAP + 'em;');
   });
 });
 

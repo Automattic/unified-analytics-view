@@ -14,7 +14,7 @@ import { LAYOUTS, painterOf, registered } from './layouts/index.ts';
 import { NUMBER_FITS, fitNumber, readNumber } from './measure.ts';
 import { MOTION_CSS, begin, register, settle, still } from './motion.ts';
 import { FACES, token } from './tokens.ts';
-import { DISPLAY_LINE, DRAWN, IN_BOX, NUMBER_SMALL, SHOWN, VISUALLY_HIDDEN, lineOf, shortForm, type LayoutPainter } from './layout.ts';
+import { DISPLAY_LINE, DRAWN, IN_BOX, NUMBER_SMALL, SHOWN, VISUALLY_HIDDEN, em, lineOf, shortForm, type LayoutPainter } from './layout.ts';
 
 /* <ua-view>: one view, in whatever room it is handed. It plans once per data change, for a container with no
  * limits, builds the ratio scene and paints it. The stylesheet fits it. On resize only the measured pass runs
@@ -24,13 +24,17 @@ import { DISPLAY_LINE, DRAWN, IN_BOX, NUMBER_SMALL, SHOWN, VISUALLY_HIDDEN, line
  * layout that hands out a box makes it `container-type: size`, and the body fills what is left. */
 
 /** The space before the pulse beside the number, and between it and the number, in px. */
-const PULSE_MARGIN = [2, 8] as const;
+const PULSE_MARGIN = [0.15, 0.6] as const;
 
 /* Everything the element owns, in one layer, so a compiled fit rule beats it whatever the specificity. Every painter's
  * styles, the built-in ones' and a custom mark's alike, come in one place in it: after the base, before the chrome. */
 const stylesOf = (painters: LayoutPainter[]) => `@layer uav {
-/* The view is set in its label face, and is the container its fit rules ask: an em in one of their queries is this
- * size, which is how a need follows the type (compile.ts). Nothing is drawn in it here: every part says its own face. */
+/* The view is set in its label face, and every part of it that holds no text of its own inherits that: an em is the
+ * size of the view's type, in a fit rule's query (compile.ts) and in every size these stylesheets set. A text says its
+ * own face, and a size on it is in that face's em. Where a part in one face must line up with one in another, both
+ * take the view's em as a size handed down: --uav-em, a registered length (motion.ts), written em() (layout.ts).
+ * ponytail: a block that holds a line of text in a smaller face is as tall as the view's own line unless it is set
+ * in that face too, as a map's note is (packages/geo). Look for that first where a line of small text sits low. */
 :host { display: block; container: uav-view / inline-size; font-size: ${token('font-size-label')}; line-height: 1.3; text-align: start; text-indent: 0; color: ${paintVar('ink')}; }
 :host([hidden]), [hidden] { display: none !important; }
 /* The faces, worked out here and nowhere else. A page's type tokens may be fluid, in cqi, and these are the view's
@@ -38,7 +42,7 @@ const stylesOf = (painters: LayoutPainter[]) => `@layer uav {
  * is a container itself, the same token would give another. They are registered as lengths (motion.ts), which is what
  * makes each a size here and not a formula handed down. Where that fails a part reads the token for itself.
  * What follows from a face is written from it: a line of the legend, and the x axis, are as tall as their text needs. */
-.uav, .uav-ruler, .uav-error, .uav-facets { ${FACES.map((f) => `--uav-font-${f}: ${token('font-size-' + f)};`).join(' ')} font-size: var(--uav-font-tick);
+.uav, .uav-ruler, .uav-error, .uav-facets { ${FACES.map((f) => `--uav-font-${f}: ${token('font-size-' + f)};`).join(' ')} --uav-em: 1em;
   --uav-legend-line: calc(var(--uav-font-label) * ${LEGEND_LINE} / ${DRAWN.label}); --uav-x-axis-block: ${X_AXIS_FACE}; }
 .uav { position: relative; box-sizing: border-box; block-size: 100%; margin: 0; display: grid; grid-template: "number" auto "body" minmax(0, 1fr) / minmax(0, 1fr); print-color-adjust: exact; }
 /* A bar, a segment, a swatch and a rule are backgrounds. A printer leaves those out unless told, and forced colours
@@ -54,7 +58,7 @@ const stylesOf = (painters: LayoutPainter[]) => `@layer uav {
 /* Loading: until the view has an input it has not been handed, or until its turn to paint has come. A plot's natural
  * height in a stack, and the whole of a box it is handed. It comes in only after a moment, so a view that paints at
  * once never shows it, and then breathes on its opacity alone, which asks nothing of the page's style. */
-.uav-loading { block-size: ${CONTAINER_RULES.axes.height}px; border-radius: ${token('border-radius-bar')}; background: ${token('color-grid')};
+.uav-loading { block-size: ${CONTAINER_RULES.axes.height}em; border-radius: ${token('border-radius-bar')}; background: ${token('color-grid')};
   animation: uav-loading-in .2s .15s both, uav-loading 1.2s .35s ease-in-out infinite alternate; }
 ${IN_BOX} { .uav-loading { block-size: 100%; } }
 @keyframes uav-loading-in { from { opacity: 0; } }
@@ -76,16 +80,16 @@ ${IN_BOX} { .uav-loading { block-size: 100%; } }
  * plan names it or a fit rule brings it in. */
 .uav-number { grid-area: number; display: none; white-space: nowrap; }
 .uav[data-parts~="number"] .uav-number { display: block; }
-.uav[data-parts~="number"]:not([data-layout="none"]) .uav-number { margin-block-end: 16px; }
+.uav[data-parts~="number"]:not([data-layout="none"]) .uav-number { margin-block-end: 1.2em; }
 .uav-number > * { color: var(--uav-paint); }
 .uav-number > b { display: inline-block; vertical-align: middle; max-inline-size: 100%; }
 /* A number in dots is a block, so its screen has the number's whole width to fill. The ruler's is as wide as its glyphs. */
 :not(.uav-ruler) > .uav-number > b:has(.uav-glyphs) { display: block; }
 /* Beside a pulse it is what the pulse and its margins leave. */
-:not(.uav-ruler) > .uav-number > .uav-pulse + b:has(.uav-glyphs) { display: inline-block; inline-size: calc(100% - ${SWATCH.pulse + PULSE_MARGIN[0] + PULSE_MARGIN[1]}px); }
-.uav-number > span { display: block; line-height: ${lineOf('label', 18)}; overflow: hidden; text-overflow: ellipsis; }
-.uav-number > .uav-f-tick { line-height: ${lineOf('tick', 16)}; }
-.uav-pulse { vertical-align: middle; margin-inline: ${PULSE_MARGIN[0]}px ${PULSE_MARGIN[1]}px; }
+:not(.uav-ruler) > .uav-number > .uav-pulse + b:has(.uav-glyphs) { display: inline-block; inline-size: calc(100% - ${em(SWATCH.pulse + PULSE_MARGIN[0] + PULSE_MARGIN[1])}); }
+.uav-number > span { display: block; line-height: ${lineOf('label', 1.35)}; overflow: hidden; text-overflow: ellipsis; }
+.uav-number > .uav-f-tick { line-height: ${lineOf('tick', 1.2)}; }
+.uav-pulse { vertical-align: middle; margin-inline: ${PULSE_MARGIN[0]}em ${PULSE_MARGIN[1]}em; }
 .uav-short { display: none; }
 /* What the measured pass found, as data-fit on the number: its size, its forms, and whether its note fits. */
 ${shortForm('.uav-number[data-fit~="short"] > .uav-f-display', '.uav-number[data-fit~="delta-short"] > .uav-f-value')}
@@ -93,12 +97,12 @@ ${shortForm('.uav-number[data-fit~="short"] > .uav-f-display', '.uav-number[data
 .uav-number[data-fit~="no-note"] > .uav-f-tick { display: none; }
 /* A number the pass has not set carries no data-fit: one beside a bare plot, which its layout sets, or any number
  * where the pass does not run. For that one core's widths for the shorter forms stand in (sizes.ts). */
-@container uav-view (inline-size < ${DELTA_FULL}px) { ${shortForm('.uav-number:not([data-fit]) > .uav-f-value')} }
-@container uav-view (inline-size < ${NUMBER_SHORT}px) {
+@container uav-view (inline-size < ${DELTA_FULL}em) { ${shortForm('.uav-number:not([data-fit]) > .uav-f-value')} }
+@container uav-view (inline-size < ${NUMBER_SHORT}em) {
   ${shortForm('.uav-number:not([data-fit]) > .uav-f-display')}
   .uav-number:not([data-fit]) > .uav-f-display { ${NUMBER_SMALL} }
 }
-@container uav-view (inline-size < ${NOTE_LEAST}px) { .uav-number:not([data-fit]) > .uav-f-tick { display: none; } }
+@container uav-view (inline-size < ${NOTE_LEAST}em) { .uav-number:not([data-fit]) > .uav-f-tick { display: none; } }
 
 /* What the measured pass reads. The room takes the view's width, and its height only when the view was handed a
  * box, so nothing the pass writes can resize it. The ruler holds the number set in each of its forms, clipped to
@@ -127,9 +131,9 @@ ${IN_BOX} { .uav-body { block-size: auto; } }
 
 /* The same result as a table, in place of the marks. The switch is public: the surface that offers it is outside the shadow root. */
 .uav-table { display: none; inline-size: 100%; border-collapse: collapse; font-size: var(--uav-font-tick); font-variant-numeric: tabular-nums; }
-.uav-table :is(th, td) { padding: 2px 8px 2px 0; text-align: start; font-weight: 400; border-block-end: 1px solid ${paintVar('grid')}; }
+.uav-table :is(th, td) { padding: 0.25em 1em 0.25em 0; text-align: start; font-weight: 400; border-block-end: 1px solid ${paintVar('grid')}; }
 .uav-table :is(thead th, tfoot td, tfoot th) { font-weight: ${token('font-weight-heading')}; }
-.uav-table [data-num] { text-align: end; padding-inline: 8px 0; }
+.uav-table [data-num] { text-align: end; padding-inline: 1em 0; }
 :host([table]) .uav > :not(.uav-table, .uav-prose, .uav-room) { display: none !important; }
 :host([table]) .uav { display: block; overflow: auto; }
 :host([table]) .uav-table { display: table; }
@@ -142,8 +146,8 @@ const allStyles = () => (styled === registered ? styles : ((styled = registered)
 
 /** The two surface layouts of docs/archive/dom-painter-plan.md section 4.2. The surface owns them; they are here so that a
  * surface which is itself a custom element can adopt them into its shadow root. */
-export const SURFACE_CSS = `.ua-stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--ua-space-s, 12px); }
-.ua-row { display: flex; gap: var(--ua-space-s, 12px); }
+export const SURFACE_CSS = `.ua-stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--ua-space-s, 0.75rem); }
+.ua-row { display: flex; gap: var(--ua-space-s, 0.75rem); }
 .ua-row > ua-view { flex: 1 1 0; min-inline-size: 0; block-size: 100%; container-type: size; }`;
 export function surfaceSheet(): CSSStyleSheet {
   const sheet = new CSSStyleSheet();
@@ -156,6 +160,10 @@ export function surfaceSheet(): CSSStyleSheet {
  * rules, keyboard and measured pass. The compiled rule shows one of the two, so nothing runs on resize. The table is
  * the same query's either way, so it is this view's. */
 export const FALLBACK_CSS = `@layer uav {
+/* A view that stands inside this one, the one it gives way to or a facet's, takes this view's em and not one of its
+ * own: a label token that is fluid would be read there against this view's width, and the same list would be set
+ * smaller as a fallback than it is alone. A rule from outside a view is heard over the view's own. */
+.uav-fallback, .uav-facet-view { font-size: inherit; }
 .uav-fallback { display: none; }
 ${IN_BOX} { .uav-fallback { block-size: 100%; container-type: size; } }
 :host([table]) .uav { display: block !important; }
@@ -166,8 +174,8 @@ ${IN_BOX} { .uav-fallback { block-size: 100%; container-type: size; } }
  * container, with its own rules, keyboard and measured pass, so nothing runs on resize. A view paints no title, so
  * the name of its value stands over each. In a box the rows share its height, and each view is handed its part. */
 export const FACET_CSS = `@layer uav {
-.uav-facets { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, ${FACET_LEAST}px), 1fr)); gap: ${FACET_GAP}px; }
-.uav-facet { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 4px; min-inline-size: 0; }
+.uav-facets { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, ${FACET_LEAST}em), 1fr)); gap: ${FACET_GAP}em; }
+.uav-facet { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 0.3em; min-inline-size: 0; }
 .uav-facet-name { font-size: var(--uav-font-label); color: ${paintVar('ink.muted')}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 ${IN_BOX} { .uav-facets { block-size: 100%; grid-auto-rows: minmax(0, 1fr); } .uav-facet-view { block-size: 100%; container-type: size; } }
 }`;
@@ -222,7 +230,7 @@ export function rulesOver(given: Partial<ContainerRules> = {}): ContainerRules {
 
 function paintNumber(el: HTMLElement, nodes: SceneNode[]): void {
   keyed(el, nodes, (n) => (n.kind === 'circle' ? 'i' : n.kind === 'text' && n.font === 'display' ? 'b' : 'span'), (c, n) => {
-    if (n.kind === 'text') { text(c, n); (c as HTMLElement).title = n.note ?? ''; } else { c.classList.add('uav-pulse'); swatch(c, SWATCH.pulse + ' circle'); }      // what the number counts, when it is pointed at
+    if (n.kind === 'text') { text(c, n); (c as HTMLElement).title = n.note ?? ''; } else { c.classList.add('uav-pulse'); swatch(c, 'pulse circle'); }      // what the number counts, when it is pointed at
   });
 }
 
@@ -454,7 +462,7 @@ export class UaView extends Base {
       fig.dataset.marks = [...new Set(plan.layers.map((l) => l.mark))].join(' ');
       if (spec.title) fig.setAttribute('aria-label', spec.title); else fig.removeAttribute('aria-label');
       // The plot's natural heights are the context's, read by the stylesheet. The painter hard-codes neither.
-      fig.style.setProperty('--uav-axes-height', rules.axes.height + 'px'); fig.style.setProperty('--uav-bare-height', rules.bare.height + 'px');
+      fig.style.setProperty('--uav-axes-height', rules.axes.height + 'em'); fig.style.setProperty('--uav-bare-height', rules.bare.height + 'em');
       begin(fig, changed && this.#layout === scene.layout);
       // The figure is described by both: what it is for, where its author said, and then what it holds.
       this.#about.textContent = spec.description ? spec.description + ' ' : ''; this.#sentence.textContent = plan.text;

@@ -60,8 +60,8 @@ describe('a key leaves no sooner than the marks it keys', () => {
   });
 
   it('and one that did would be named, with its window', () => {
-    const bare = { id: 'bare', layout: 'cartesian', container: 'view', needs: { inline: 400 }, hide: ['legend'], keep: 'guides' } as FitRule;
-    expect(windows([...FIT_RULES, bare])).toEqual(['cartesian bare: legend under 400 × 0, marks to 152 × 46']);
+    const bare = { id: 'bare', layout: 'cartesian', container: 'view', needs: { inline: 30 }, hide: ['legend'] } as FitRule;
+    expect(windows([...FIT_RULES, bare])).toEqual(['cartesian bare: legend under 30 × 0, marks to 11.4 × 3.45']);
     // The same rule is honest once it says the marks are then one paint.
     expect(windows([...FIT_RULES, { ...bare, set: { split: 'plain' } }])).toEqual([]);
   });

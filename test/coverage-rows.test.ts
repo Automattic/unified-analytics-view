@@ -73,7 +73,7 @@ describe('columns', () => {
     expect([700, 250, 120].map((w) => shown(run(conversions, w, null, 'empty')).parts)).toEqual([['notice'], ['notice'], ['number']]);
   });
   it('each column asks for the room of its widest text, a header among them', () => {
-    expect(columnRooms(run(conversions, 346).ratio).map((n) => +n.toFixed(1))).toEqual([77.8, 101, 53.6]);
+    expect(columnRooms(run(conversions, 346).ratio).map((n) => +n.toFixed(3))).toEqual([5.835, 7.575, 4.02]);   // in em: 77.8, 101 and 53.6 px on a page of 16 px type
   });
   it('headers are a key to the columns under them: no rule takes them but the one that takes the rows', () => {
     expect(shown(run(conversions, 346, 79)).parts).toEqual(['columns', 'rows']);

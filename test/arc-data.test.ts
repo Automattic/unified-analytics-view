@@ -100,7 +100,7 @@ describe('a rose: a dimension on angle and a metric on radius', () => {
   });
   it('the labels are the key to the slices: under the `rim` rule\'s need they thin to the ones with no rank, and stay as long as the circle', () => {
     const rule = FIT_RULES.find((r) => r.layout === 'radial' && r.id === 'rim')!;
-    expect(rule).toMatchObject({ needs: { inline: 230, block: 120 }, hide: ['rim.ranked'] });
+    expect(rule).toMatchObject({ needs: { inline: 17.25, block: 9 }, hide: ['rim.ranked'] });
     const wide = run(rose!, 346), narrow = run(rose!, 229);
     expect(wide.plan.guides.rim).toBe(true);
     expect(shown(wide)).toMatchObject({ parts: ['radial', 'rim'], hidden: [], rules: [] });
@@ -241,13 +241,13 @@ describe('the prose finds the leader by comparing rows, whatever order they came
 describe('the radial layout paints the new forms', () => {
   const css = compileFitRules(FIT_RULES.filter((r) => r.layout === 'radial'), { radial: radial.fit! }), fig = '.uav[data-layout="radial"]';
   it('the `rim` rule thins the labels to the ones with no rank and leaves the circle its margin, before the legend steps down', () => {
-    for (const need of ['inline-size < calc(230em / 13.33 - 0.5px)', 'block-size < calc(120em / 13.33 - 0.5px)'])
+    for (const need of ['inline-size < calc(17.25em - 0.5px)', 'block-size < calc(9em - 0.5px)'])
       expect(css).toContain('@container uav-view (' + need + ') {\n  ' + fig + ' .uav-rim [data-rank] { display: none; }\n}');
     expect(css).not.toContain('--uav-rim: 0px');
-    expect(css.indexOf('inline-size < calc(230em / 13.33 - 0.5px)')).toBeLessThan(css.indexOf('inline-size < calc(72em / 13.33 - 0.5px)'));
+    expect(css.indexOf('inline-size < calc(17.25em - 0.5px)')).toBeLessThan(css.indexOf('inline-size < calc(5.4em - 0.5px)'));
   });
   it('the circle gives up a margin to the labels only where the plan shows them, and has a measured pass to thin them', () => {
-    expect(radial.css).toContain('.uav[data-layout="radial"][data-parts~="rim"] .uav-radial { --uav-rim: 14px; }');
+    expect(radial.css).toContain('.uav[data-layout="radial"][data-parts~="rim"] .uav-radial { --uav-rim: 1.05em; }');
     expect(radial.css).toContain('.uav[data-layout="radial"]:not([data-parts~="rim"]) .uav-rim { display: none; }');
     expect(typeof radial.measure).toBe('function');
   });

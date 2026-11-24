@@ -1,4 +1,4 @@
-import { AXES_HEIGHT, FROM_TOP } from '../layout.ts';
+import { AXES_HEIGHT, FROM_TOP, em } from '../layout.ts';
 import { POINT_INSET, RAMP_BLOCK, SIZE_KEY_BLOCK, declutter, dotRadius, type CircleNode, type PathNode, type Scene, type SceneNode, type TextNode } from '@unified-analytics/core';
 import { attr, ensure, keyed, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
@@ -16,7 +16,7 @@ import { ARROWS } from '../rove.ts';
  * cartesian.ts adds POINTS_CSS and POINTS_FIT to its own and calls paintPoints, the key's painter and measurePoints.
  *
  * Dots are HTML placed by custom properties, as bars are. A dot's size is a step in the scene. How big a step is, in
- * pixels, is core's (dotRadius), which DOT reads back: 9 px across at the first and 5 more with each, and 6 for a dot with no size.
+ * pixels, is core's (dotRadius), which DOT reads back: 0.675 em across at the first and 0.375 more with each, and 0.45 for a dot with no size.
  *
  *   .uav-plot
  *     .uav-dots              dots on a time or category axis. The plot's own hit targets step through them
@@ -25,10 +25,10 @@ import { ARROWS } from '../rove.ts';
  *     .uav-point-labels      a label on each point. The measured pass hides the ones that collide
  *   .uav-size                the key to sizes, under the plot (chrome/size.ts) */
 /** How far a point's label stands clear of its dot, in px. */
-const CLEAR = 2;
+const CLEAR = 0.15;
 export const POINTS_CSS = `
 .uav-dots, .uav-points, .uav-point-labels { position: absolute; inset: 0; }
-.uav-body[data-scale="point"] :is(.uav-dots, .uav-point-labels) { inset-inline: ${POINT_INSET}px; }
+.uav-body[data-scale="point"] :is(.uav-dots, .uav-point-labels) { inset-inline: ${POINT_INSET}em; }
 /* The holder of points lies over the plot's own hit targets, so only its dots take the pointer. */
 .uav-dots, .uav-points, .uav-point-labels { pointer-events: none; }
 .uav-points i { pointer-events: auto; }
@@ -42,15 +42,15 @@ export const POINTS_CSS = `
   inline-size: ${DOT}; block-size: ${DOT}; border-radius: 50%; background: var(--uav-paint); }
 /* A label sits above its point, clear of the dot. --uav-nudge is the measured pass's: what keeps it inside the plot. */
 .uav-point-labels span { position: absolute; inset-inline-start: calc(var(--uav-x) * 100%); inset-block-start: ${FROM_TOP};
-  translate: calc(${ANCHOR.middle} + var(--uav-nudge, 0px)) calc(-100% - ${CLEAR}px - ${DOT} / 2); ${LABEL} ${cut('14ch')} }
+  translate: calc(${ANCHOR.middle} + var(--uav-nudge, 0px)) calc(-100% - ${em(CLEAR)} - ${DOT} / 2); ${LABEL} ${cut('14ch')} }
 /* A rule at a value on x stands the height of the plot, and its label sits beside it at the top. */
 .uav-line[data-upright] { inset-block: 0; inset-inline: calc(var(--uav-x) * 100%) auto; inline-size: ${RULE}; block-size: auto; translate: -50%; --uav-rule-way: 0deg; }
-.uav-refs span[data-upright] { inset-inline: calc(var(--uav-x) * 100%) auto; translate: 4px 0; padding: 0; }
-.uav-refs span[data-upright][data-anchor="end"] { translate: calc(${ANCHOR.end} - 4px) 0; }
+.uav-refs span[data-upright] { inset-inline: calc(var(--uav-x) * 100%) auto; translate: 0.5em 0; padding: 0; }
+.uav-refs span[data-upright][data-anchor="end"] { translate: calc(${ANCHOR.end} - 0.5em) 0; }
 /* The key to sizes takes a row of its own under whatever else the body holds, and the view is that much taller for it. */
-.uav[data-layout="cartesian"][data-parts~="size"] { --uav-body-block: calc(${AXES_HEIGHT} + ${SIZE_KEY_BLOCK}px); }
+.uav[data-layout="cartesian"][data-parts~="size"] { --uav-body-block: calc(${AXES_HEIGHT} + ${SIZE_KEY_BLOCK}em); }
 /* And by the ramp's line as well, where dots are painted by one metric and sized by another. */
-.uav[data-layout="cartesian"][data-parts~="size"][data-parts~="ramp"] { --uav-body-block: calc(${AXES_HEIGHT} + ${SIZE_KEY_BLOCK + RAMP_BLOCK}px); }
+.uav[data-layout="cartesian"][data-parts~="size"][data-parts~="ramp"] { --uav-body-block: calc(${AXES_HEIGHT} + ${+(SIZE_KEY_BLOCK + RAMP_BLOCK).toFixed(4)}em); }
 .uav[data-layout="cartesian"] .uav-size { grid-column: 1 / -1; }`;
 
 /* A plot of points has no sparkline form. Under its `points` rule the body goes whole, and the number that the rule
@@ -93,12 +93,13 @@ export function measurePoints(body: HTMLElement): void {
   const holder = body.querySelector<HTMLElement>('.uav-point-labels');
   if (!holder) return;
   thinLabels(holder, ':scope > span:not([data-exit])', (labels) => {
-    const room = holder.getBoundingClientRect();
+    // The holder is set in the view's face, so its font size is the view's em: what a dot and the gap over it are in.
+    const room = holder.getBoundingClientRect(), unit = parseFloat(getComputedStyle(holder).fontSize);
     return declutter(labels.map((el) => {
       const r = el.getBoundingClientRect(), c = num(el, '--uav-x') * room.width, mid = c - r.width / 2, x = centred(c, r.width, 0, room.width);
       prop(el, '--uav-nudge', x - mid + 'px');
-      return { x, y: (1 - num(el, '--uav-t')) * room.height - CLEAR - dotRadius(num(el, '--uav-size') || undefined) - r.height, w: r.width, h: r.height, rank: Number(el.dataset.rank) || 0 };
-    }));
+      return { x, y: (1 - num(el, '--uav-t')) * room.height - (CLEAR + dotRadius(num(el, '--uav-size') || undefined)) * unit - r.height, w: r.width, h: r.height, rank: Number(el.dataset.rank) || 0 };
+    }), CLEAR * unit);
   });
 }
 

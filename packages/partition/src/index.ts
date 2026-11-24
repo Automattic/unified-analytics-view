@@ -57,13 +57,13 @@ export function squarify(values: number[], w: number, h: number, total = 0): Box
 /* What the scene sets and the painter's stylesheet sets again, so both are read from here. */
 /** The part's width over its height. */
 export const ASPECT = 1.6;
-/** px across a treemap that has room to spare. */
-export const MAX = 480;
-/** px a parent's name takes at the top of its box, over its children, and the most of the box's height it takes. */
-export const HEAD = 16, HEAD_MOST = 0.3;
-/** px a label's line takes. */
-export const LINE = 14;
-/** px between two parents, and between two children: a parent stands half its gap in from the part's edge all round. */
+/** How far across a treemap with room to spare is, in em of the view's type. */
+export const MAX = 36;
+/** What a parent's name takes at the top of its box, over its children, in em, and the most of the box's height it takes. */
+export const HEAD = 1.2, HEAD_MOST = 0.3;
+/** The line a label takes, in em. */
+export const LINE = 1.05;
+/** The hairlines between two parents, and between two children, in px as a border is: a parent stands half its gap in from the part's edge all round. */
 export const GAP = 2, KID_GAP = 1;
 
 /* Below the room a treemap needs it is not a smaller treemap: the view becomes a list of the same query. Which list
@@ -71,11 +71,11 @@ export const GAP = 2, KID_GAP = 1;
  * fill is the one that applies (core's fallbackRule). With two dimensions it is `pair-list`, registered below, since
  * `bar-list` has one dimension to its rows and would leave the other undrawn. With one it is `bar-list`. */
 export const PARTITION_RULES: FitRule[] = [
-  { id: 'guides', layout: 'partition', container: 'view', needs: { inline: 320, block: 170 },     // the ramp, where a metric is on color: under this a thin strip, which stays as long as the boxes
+  { id: 'guides', layout: 'partition', container: 'view', needs: { inline: 24, block: 12.75 },     // the ramp, where a metric is on color: under this a thin strip, which stays as long as the boxes
     hide: [], set: { ramp: 'strip' } },
-  { id: 'marks',  layout: 'partition', container: 'view', needs: { inline: 280, block: 120 },     // boxes too small to tell apart, or to name
+  { id: 'marks',  layout: 'partition', container: 'view', needs: { inline: 21, block: 9 },     // boxes too small to tell apart, or to name
     hide: [], fallback: 'pair-list' },
-  { id: 'marks-flat', layout: 'partition', container: 'view', needs: { inline: 280, block: 120 }, // the same room, for a query by one dimension
+  { id: 'marks-flat', layout: 'partition', container: 'view', needs: { inline: 21, block: 9 }, // the same room, for a query by one dimension
     hide: [], fallback: 'bar-list' },
 ];
 

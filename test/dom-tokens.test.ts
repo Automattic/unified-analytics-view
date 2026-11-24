@@ -63,6 +63,28 @@ describe('the public tokens', () => {
   });
 });
 
+describe('sizes', () => {
+  // A size is in em, of the view's type or of the face it stands by, or in a unit of its container: a view set in
+  // larger type is larger throughout, and gives way sooner. What is in px is what a px is for.
+  it('are in px only where a px is what is meant: a stroke, a hairline, nothing, and the dots of a number', () => {
+    // A token's fallback is the token's own (TOKENS): a stroke's width, a radius, a shadow.
+    const own = css.replace(/var\(--ua-charts-[a-z0-9-]+, (?:[^()]|\((?:[^()]|\([^()]*\))*\))*\)/g, 'token');
+    const px = [...new Set([...own.matchAll(/[0-9.]+px/g)].map((m) => m[0]))].sort((x, y) => parseFloat(x) - parseFloat(y));
+    // Nothing (0px), the hair that tips a comparison one way (0.01px), the half px a query is read under, a hairline,
+    // and the cell of a number set in dots, which is a grid of pixels. A custom mark's painter is held to the same by
+    // its own constants: a treemap keeps a hairline between its boxes, and nothing else, in px.
+    expect(px).toEqual(['0px', '0.01px', '0.5px', '1px', '4px']);
+    const where = (v: string) => [...new Set([...own.matchAll(new RegExp('([a-z-]+): [^;{}]*?(?<![0-9.])' + v + '[^;{}]*', 'g'))].map((m) => m[1]!))].sort();
+    expect(where('4px')).toEqual(['--uav-u']);
+  });
+  it('are of the view\'s own em where one face must line up with another', () => {
+    // A registered length, set where the view's face is and handed down as a size (motion.ts): a cell's padding under a
+    // header in another face, a swatch beside text of any size, a dot under its label.
+    expect(BASE_CSS).toContain('--uav-em: 1em;');
+    expect(css).toContain('padding-inline: calc(var(--uav-em) * 0.6);');
+  });
+});
+
 describe('the focus outline', () => {
   // The holder that has focus and the mark chosen in it wear one outline, in every layout. Only where it sits differs.
   it('and the pointer\'s hairline are the only outlines any stylesheet of the element draws', () => {
@@ -115,7 +137,8 @@ describe('the faces', () => {
   });
   it('are the only sizes text is set in, but for the number in a donut\'s hole, which follows its circle', () => {
     const sized = [...new Set([...css.matchAll(/font-size: ([^;]+);/g)].map((m) => m[1]!))].filter((v) => !/^var\(--uav-font-[a-z-]+\)$/.test(v) && !v.includes('--ua-charts-font-size-label'));
-    expect(sized).toEqual(['clamp(14px, 18cqi, var(--uav-font-display-small))']);
+    // A view inside another is set in that one's face (view.ts), and the hole's least is in the view's em.
+    expect(sized).toEqual(['clamp(1.05em, 18cqi, var(--uav-font-display-small))', 'inherit']);
   });
   it('carry their line with them: no line of text is a height in px', () => {
     expect(css.match(/line-height: [^;]*px/g)).toBeNull();

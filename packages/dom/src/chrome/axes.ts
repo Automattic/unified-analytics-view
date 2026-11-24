@@ -15,14 +15,14 @@ import { token } from '../tokens.ts';
  * the page (cartesian.ts), which is the layout's to say, as is where each axis sits in its body. */
 /** The space above the x axis's labels, in px. Its height at the tick face's own size is core's gutter under a plot
  * (X_AXIS_BLOCK), and the view works its height out from the face (X_AXIS_FACE). */
-export const X_AXIS_PAD = 5;
+export const X_AXIS_PAD = 0.375;
 /** The x axis's height at the face the view has: the pad, and the line the labels take, scaled from the token's own size. */
-export const X_AXIS_FACE = `calc(${X_AXIS_PAD}px + var(--uav-font-tick) * ${X_AXIS_BLOCK - X_AXIS_PAD} / ${DRAWN.tick})`;
+export const X_AXIS_FACE = `calc(${X_AXIS_PAD}em + var(--uav-font-tick) * ${X_AXIS_BLOCK - X_AXIS_PAD} / ${DRAWN.tick})`;
 export const AXES_CSS = `
 .uav-y-axis, .uav-y-axis-2, .uav-x-axis { display: grid; white-space: nowrap; font-variant-numeric: tabular-nums; }
-:is(.uav-y-axis, .uav-y-axis-2) span { grid-area: 1 / 1; align-self: start; justify-self: end; position: relative; inset-block-start: ${FROM_TOP}; translate: 0 -50%; padding-inline-end: 6px; ${LABEL} color: ${token('color-label-axis')}; box-sizing: border-box; ${cut('100%')} }
-.uav-y-axis-2 span { justify-self: start; padding-inline: 6px 0; }
-.uav-x-axis { box-sizing: border-box; block-size: var(--uav-x-axis-block); padding-block-start: ${X_AXIS_PAD}px; }
+:is(.uav-y-axis, .uav-y-axis-2) span { grid-area: 1 / 1; align-self: start; justify-self: end; position: relative; inset-block-start: ${FROM_TOP}; translate: 0 -50%; padding-inline-end: 0.75em; ${LABEL} color: ${token('color-label-axis')}; box-sizing: border-box; ${cut('100%')} }
+.uav-y-axis-2 span { justify-self: start; padding-inline: 0.75em 0; }
+.uav-x-axis { box-sizing: border-box; block-size: var(--uav-x-axis-block); padding-block-start: ${X_AXIS_PAD}em; }
 .uav-x-axis span { grid-area: 1 / 1; justify-self: start; position: relative; inset-inline-start: calc(var(--uav-x) * 100%); translate: ${ANCHOR.middle}; ${LABEL} color: ${token('color-label-axis')}; }
 .uav-x-axis [data-anchor="start"] { translate: ${ANCHOR.start}; }
 .uav-x-axis [data-anchor="end"] { translate: ${ANCHOR.end}; }
@@ -54,18 +54,19 @@ export function paintAxes(body: HTMLElement, scene: Scene, far = false): HTMLEle
  * so is one that is leaving. Each is placed from its ratio, not read where it stands: a label may be on its way.
  * `inside` gives up a label that would run past the axis's far edge before the rest are thinned, for a layout whose
  * labels are not anchored to stay in: whatever holds the view may clip there. */
-export function thinAxis(body: HTMLElement, axis: 'x' | 'y', { gap = 6, inside = false } = {}): void {
+export function thinAxis(body: HTMLElement, axis: 'x' | 'y', { gap = 0.45, inside = false } = {}): void {
   const box = body.querySelector<HTMLElement>(axis === 'x' ? '.uav-x-axis' : '.uav-y-axis');
   if (!box) return;
   const at = axis === 'x' ? '--uav-x' : '--uav-t', size = axis === 'x' ? 'width' : 'height';
   thinLabels(box, ':scope > span:not([data-exit])', (all) => {
-    const room = box.getBoundingClientRect()[size];
+    // The gap two labels keep is in the view's em, which the axis is set in. What is measured is in px.
+    const room = box.getBoundingClientRect()[size], unit = parseFloat(getComputedStyle(box).fontSize);
     const spans = all.map((el) => {
       // A label stands about its ratio, or from it or up to it where it is anchored at an end.
       const s = el.getBoundingClientRect()[size], lo = Number(el.style.getPropertyValue(at)) * room - s * ({ start: 0, end: 1 }[el.dataset.anchor ?? ''] ?? 0.5);
       return { lo, hi: lo + s, rank: Number(el.dataset.rank ?? el.dataset.order) || 0 };
     });
-    const fits = spans.map((s) => !inside || s.hi <= room + 1), gone = thin(spans.filter((_, i) => fits[i]), gap);
+    const fits = spans.map((s) => !inside || s.hi <= room + 1), gone = thin(spans.filter((_, i) => fits[i]), gap * unit);
     return all.map((_, i) => !fits[i] || !!gone[fits.slice(0, i).filter(Boolean).length]);
   });
 }

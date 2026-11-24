@@ -50,11 +50,11 @@ describe('a list whose rows are divided into series', () => {
   });
   it('swaps its legend for the one line, and gives both up, by the same rules resolve() asks', () => {
     const css = compileFitRules(FIT_RULES.filter((r) => r.layout === 'rows'), { rows: painter.fit ?? {} });
-    expect(css).toContain('/* rows legend */\n@container uav-view (inline-size < calc(170em / 13.33 - 0.5px)) {\n  .uav[data-layout="rows"] .uav-legend { display: none; }\n  .uav[data-layout="rows"] .uav-legend-top { display: block; }\n}');
-    expect(css).toContain('/* rows legend */\n@container uav-view (block-size < calc(150em / 13.33 - 0.5px)) {');
+    expect(css).toContain('/* rows legend */\n@container uav-view (inline-size < calc(12.75em - 0.5px)) {\n  .uav[data-layout="rows"] .uav-legend { display: none; }\n  .uav[data-layout="rows"] .uav-legend-top { display: block; }\n}');
+    expect(css).toContain('/* rows legend */\n@container uav-view (block-size < calc(11.25em - 0.5px)) {');
     // With both gone the pieces of a row are one colour, by the same rule.
     const fig = '.uav[data-layout="rows"]';
-    expect(css).toContain(['/* rows legend-top */', '@container uav-view (block-size < calc(84em / 13.33 - 0.5px)) {', '  ' + fig + ' :is(.uav-legend, .uav-legend-top) { display: none; }', '  ' + fig + ' { --uav-split: plain; }',
+    expect(css).toContain(['/* rows legend-top */', '@container uav-view (block-size < calc(6.3em - 0.5px)) {', '  ' + fig + ' :is(.uav-legend, .uav-legend-top) { display: none; }', '  ' + fig + ' { --uav-split: plain; }',
       ...Object.entries(SPLIT_PLAIN).map(([sel, decl]) => '  ' + fig + ' ' + sel + ' { ' + decl + ' }'), '}'].join('\n'));
     expect(css.indexOf('rows legend-top')).toBeGreaterThan(css.indexOf('rows legend */'));
     expect(painter.css).toContain('.uav[data-layout="rows"] :is(.uav-legend, .uav-legend-top) { grid-column: 1 / -1; grid-row: 3; }');

@@ -21,12 +21,12 @@ import { paintUnitKey } from '../chrome/unit.ts';
  * A second unit's axis and the labels at the line ends are columns on the far side, each as wide as its content and
  * no wider than nothing when it is empty or hidden. The legend of a split plot is a row under it all.
  * The height stated is the plot's and not the body's (--uav-plot-block, not --uav-body-block), so a legend adds its own
- * lines to a view of natural height. What comes off it is the 10 px above the plot and the x axis,
+ * lines to a view of natural height. What comes off it is the 0.75 em above the plot and the x axis,
  * which is 22 px where a tick is 11 px and follows the tick's face from there (--uav-x-axis-block, view.ts).
  * In a box the plot takes what is left, and the legend's lines come out of it. */
 const css = `
-.uav[data-layout="cartesian"] { --uav-plot-block: calc(${AXES_HEIGHT} - ${PLOT_TOP}px - var(--uav-x-axis-block)); }
-.uav[data-layout="cartesian"] .uav-body { display: grid; padding-block-start: ${PLOT_TOP}px;
+.uav[data-layout="cartesian"] { --uav-plot-block: calc(${AXES_HEIGHT} - ${PLOT_TOP}em - var(--uav-x-axis-block)); }
+.uav[data-layout="cartesian"] .uav-body { display: grid; padding-block-start: ${PLOT_TOP}em;
   grid-template: "y plot y2 labels" var(--uav-plot-block) ". x . ." auto "legend legend legend legend" auto / auto minmax(0, 1fr) auto auto; }
 /* On the body, where it outranks whatever a fit rule sets on the figure. */
 ${IN_BOX} { .uav[data-layout="cartesian"] .uav-body { --uav-plot-block: minmax(0, 1fr); } }
@@ -39,7 +39,7 @@ ${IN_BOX} { .uav[data-layout="cartesian"] .uav-body { --uav-plot-block: minmax(0
 .uav-labels { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .uav-labels { grid-area: labels; display: none; }
 .uav-labels span { grid-area: 1 / 1; align-self: start; justify-self: start; position: relative; inset-block-start: ${FROM_TOP}; translate: 0 calc(var(--uav-dy, 0px) - 50%);
-  box-sizing: border-box; padding-inline-start: 6px; ${LABEL} ${cut('14ch')} }
+  box-sizing: border-box; padding-inline-start: 0.75em; ${LABEL} ${cut('14ch')} }
 /* The legend of a split plot is a swatch and a name per series, in a row that wraps (chrome/legend.ts). */
 .uav[data-layout="cartesian"] .uav-legend { grid-area: legend; }
 /* The ramp of a plot whose bars or dots a metric paints (chrome/ramp.ts): a line of its own under the plot, as the key to sizes is. */
@@ -68,8 +68,8 @@ ${IN_BOX} { .uav[data-layout="cartesian"] .uav-body { --uav-plot-block: minmax(0
 .uav-bars i[data-stacked] { --uav-gap-y: ${token('stroke-width-rule')}; }
 .uav-plot svg { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; overflow: visible; }
 /* A point scale puts its first and last marks 2 px inside the plot. */
-.uav-body[data-scale="point"] svg { inset-inline-start: ${POINT_INSET}px; inline-size: calc(100% - ${2 * POINT_INSET}px); }
-.uav-body[data-scale="point"] .uav-x-axis { margin-inline: ${POINT_INSET}px; }
+.uav-body[data-scale="point"] svg { inset-inline-start: ${POINT_INSET}em; inline-size: calc(100% - ${2 * POINT_INSET}em); }
+.uav-body[data-scale="point"] .uav-x-axis { margin-inline: ${POINT_INSET}em; }
 /* A path is drawn so wherever the plot's painter draws one: in a plot, and down the rows of a list (rows.ts). */
 :is(.uav-plot, .uav-track) path { fill: none; stroke: var(--uav-paint); stroke-width: ${token('stroke-width-line')}; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke-linecap: round; }
 :is(.uav-plot, .uav-track) path[data-fill] { fill: var(--uav-paint); stroke: none; }
@@ -77,9 +77,9 @@ ${IN_BOX} { .uav[data-layout="cartesian"] .uav-body { --uav-plot-block: minmax(0
  * sketch's curve does. Only then: paint() marks the SVG it has just made, and the mark comes off when the drawing is
  * done (motion.ts). A change of data moves the line that is there, and does not draw it again. */
 @media (prefers-reduced-motion: no-preference) { .uav-plot svg[data-draw] { animation: uav-draw ${token('motion-duration-draw')} linear both; } }
-@keyframes uav-draw { from { clip-path: inset(-8px 100% -8px -8px); } to { clip-path: inset(-8px); } }
+@keyframes uav-draw { from { clip-path: inset(-0.6em 100% -0.6em -0.6em); } to { clip-path: inset(-0.6em); } }
 /* ponytail: a label in the plot is set above its line at the inline end, the one anchor a scene asks for today. */
-.uav-refs span { position: absolute; inset-inline-end: 0; inset-block-start: ${FROM_TOP}; translate: 0 -100%; padding-block-end: 2px; ${LABEL} }`;
+.uav-refs span { position: absolute; inset-inline-end: 0; inset-block-start: ${FROM_TOP}; translate: 0 -100%; padding-block-end: 0.25em; ${LABEL} }`;
 
 const inPlot = (n: SceneNode) => n.part === 'plot';
 
@@ -91,8 +91,8 @@ export const cartesian: LayoutPainter = {
     // A number the measured pass has set carries data-fit and is left to it: that is the number alone, under `marks`.
     axes: {
       // A view with a key to sizes states its body's height, for the key's line. Bare, it has no key, and is as tall as its plot.
-      '': `--uav-plot-block: calc(${BARE_HEIGHT} - ${2 * BARE_PAD}px); --uav-body-block: initial; grid-template: "number body" minmax(0, 1fr) / auto minmax(0, 1fr); column-gap: 12px;`,
-      '.uav-body': `grid-template: "plot" var(--uav-plot-block) / minmax(0, 1fr); padding-block: ${BARE_PAD}px;`,
+      '': `--uav-plot-block: calc(${BARE_HEIGHT} - ${2 * BARE_PAD}em); --uav-body-block: initial; grid-template: "number body" minmax(0, 1fr) / auto minmax(0, 1fr); column-gap: 0.9em;`,
+      '.uav-body': `grid-template: "plot" var(--uav-plot-block) / minmax(0, 1fr); padding-block: ${BARE_PAD}em;`,
       '.uav-number': 'align-self: center; margin: 0;',
       // With no key to say what a size is, every dot is one size.
       '.uav-dots i': ONE_SIZE,

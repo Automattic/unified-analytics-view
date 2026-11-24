@@ -13,9 +13,9 @@ describe('a unit\'s glyphs in the DOM', () => {
   it('hold their shape: a dot is as wide as the lesser of its room across and up, and as tall as it is wide', () => {
     expect(UNIT_CSS).toContain('.uav-plot .uav-dots i[data-unit] { inline-size: max(1px, calc(min(var(--uav-w) * 100cqi, var(--uav-h) * 100cqb) - 1px)); }');
     expect(UNIT_CSS).toContain('.uav-dots i[data-unit] { inline-size: max(1px, calc(var(--uav-w) * 100cqi - 1px)); block-size: auto; aspect-ratio: 1; }');
-    expect(rows.css).toMatch(/i\[data-mark="unit"\] \{ inset-block: 0; margin-block: auto; inline-size: max\(1px, calc\(min\(var\(--uav-w\) \* [^;]+, var\(--uav-row-block\) - 8px\) - 1px\)\); block-size: auto; aspect-ratio: 1; border-radius: 50%;/);
-    expect(band.css).toContain('.uav-band[data-unit] { display: grid; grid-template: repeat(10, minmax(0, 1fr)) / repeat(10, minmax(0, 1fr)); gap: 1px; block-size: auto; flex: none; align-self: center; inline-size: min(100%, 160px); aspect-ratio: 1; margin-inline: auto; }');
-    expect(radial.css).toContain('inline-size: min(100%, var(--uav-radial-most, 160px)); aspect-ratio: var(--uav-aspect, 1); container: uav-plot / inline-size;');
+    expect(rows.css).toMatch(/i\[data-mark="unit"\] \{ inset-block: 0; margin-block: auto; inline-size: max\(1px, calc\(min\(var\(--uav-w\) \* [^;]+, var\(--uav-row-block\) - 0\.6em\) - 1px\)\); block-size: auto; aspect-ratio: 1; border-radius: 50%;/);
+    expect(band.css).toContain('.uav-band[data-unit] { display: grid; grid-template: repeat(10, minmax(0, 1fr)) / repeat(10, minmax(0, 1fr)); gap: 1px; block-size: auto; flex: none; align-self: center; inline-size: min(100%, 12em); aspect-ratio: 1; margin-inline: auto; }');
+    expect(radial.css).toContain('inline-size: min(100%, var(--uav-radial-most, 12em)); aspect-ratio: var(--uav-aspect, 1); container: uav-plot / inline-size;');
   });
   it('the shared styles join the base sheet once, and the key shows only where the plan names it', () => {
     expect(BASE_CSS.split(UNIT_CSS)).toHaveLength(2);
@@ -26,7 +26,7 @@ describe('a unit\'s glyphs in the DOM', () => {
     const css = compileFitRules(FIT_RULES.filter((r) => r.id.startsWith('unit')));
     expect(css).not.toContain('.uav-unit-key');
     const fig = '.uav[data-layout="band"]', swap = (id: string) => '  ' + fig + ':has(~ .uav-fallback[data-rule="' + id + '"]) { display: none; }\n  ' + fig + ' ~ .uav-fallback[data-rule="' + id + '"] { display: block; }\n}';
-    expect(css).toContain('/* band unit */\n@container uav-view (inline-size < calc(280em / 13.33 - 0.5px)) {\n' + swap('unit'));
-    expect(css).toContain('/* band unit-alone */\n@container uav-view (block-size < calc(220em / 13.33 - 0.5px)) {\n' + swap('unit-alone'));
+    expect(css).toContain('/* band unit */\n@container uav-view (inline-size < calc(21em - 0.5px)) {\n' + swap('unit'));
+    expect(css).toContain('/* band unit-alone */\n@container uav-view (block-size < calc(16.5em - 0.5px)) {\n' + swap('unit-alone'));
   });
 });

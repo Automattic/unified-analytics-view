@@ -1,8 +1,8 @@
-import { COLUMNS_BLOCK, columnRooms, inColumn, ruleFor, type PathNode, type RowNode, type Scene, type SceneNode, type TextNode } from '@unified-analytics/core';
+import { COLUMNS_BLOCK, EM, columnRooms, inColumn, ruleFor, type PathNode, type RowNode, type Scene, type SceneNode, type TextNode } from '@unified-analytics/core';
 import { SPLIT_PLAIN, paintLegend } from '../chrome/legend.ts';
 import { attr, ensure, ensureSvg, keyed, prop, svg, text } from '../dom.ts';
 import { token } from '../tokens.ts';
-import { IN_BOX, NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
+import { IN_BOX, NUMBER_ALONE, em, type LayoutPainter } from '../layout.ts';
 import { TRACK_CSS, TRACK_FIT, trackMark } from './track.ts';
 import { paintPaths } from './points.ts';
 import { paintUnitKey } from '../chrome/unit.ts';
@@ -21,9 +21,9 @@ import { paintUnitKey } from '../chrome/unit.ts';
  * A row divided into series has their key under the rows, in a grid row of its own: a swatch and a name for each, in a
  * line that wraps, as a split plot's is (chrome/legend.ts), or the one line that names the series with the most, in its colour. The plan
  * names the first, and a fit rule swaps them. Either comes out of the rows' room in a box. */
-/** A cell's padding at each side, in px. A column's room as read here is its text and both: what it takes on the page, where
+/** A cell's padding at each side, in the view's em: a header in one face stands over values in another, so the two share it. A column's room as read here is its text and both: what it takes on the page, where
  * core's columnRooms() estimates 14 for it from no face. */
-const PAD = 8;
+const PAD = 0.6;
 const short = '(100cqi - var(--uav-need) + 0.01px) * 999999';
 
 /** The room each column takes, as core reckons it (columnRooms), at the width a character has in this view. Core's is
@@ -38,12 +38,13 @@ function roomsHere(body: HTMLElement, scene: Scene): number[] {
     probe.style.position = 'absolute'; probe.style.visibility = 'hidden'; probe.style.whiteSpace = 'nowrap';
     return probe;
   });
-  const [tick, value] = probes.map((probe) => probe.getBoundingClientRect().width / 10), room: number[] = [];
+  // What is measured is in px, and core's estimate and the padding are in em: the body is set in the view's face.
+  const [tick, value] = probes.map((probe) => probe.getBoundingClientRect().width / 10), room: number[] = [], unit = parseFloat(getComputedStyle(body).fontSize) || EM;
   for (const probe of probes) probe.remove();
-  if (!tick || !value) return columnRooms(scene);
+  if (!tick || !value) return columnRooms(scene).map((r) => r * unit);
   for (const n of scene.nodes.filter(inColumn)) {
     const i = n.rank || 0;
-    room[i] = Math.max(room[i] || 0, Math.ceil(n.text.length * (n.part === 'columns' ? tick : value)) + 2 * PAD);
+    room[i] = Math.max(room[i] || 0, Math.ceil(n.text.length * (n.part === 'columns' ? tick : value)) + 2 * PAD * unit);
   }
   return room;
 }
@@ -54,13 +55,13 @@ const css = `
 .uav[data-layout="rows"]:not([data-parts~="columns"]) .uav-columns { display: none; }
 .uav-rows { position: relative; grid-row: 2; align-content: start; row-gap: var(--uav-row-gap); overflow: hidden; }
 .uav-row { position: relative; align-items: center; block-size: var(--uav-row-block); }
-.uav-row > i { position: absolute; grid-column: var(--uav-track, 1 / 3); inset-block: 0; inset-inline-start: calc(var(--uav-x, 0) * 100%); inline-size: max(3px, calc(var(--uav-v) * 100%));
+.uav-row > i { position: absolute; grid-column: var(--uav-track, 1 / 3); inset-block: 0; inset-inline-start: calc(var(--uav-x, 0) * 100%); inline-size: max(0.225em, calc(var(--uav-v) * 100%));
   background: var(--uav-paint); border-radius: ${token('border-radius-bar', '3px')}; }
-:is(.uav-row, .uav-columns) > span { position: relative; grid-row: 1; padding-inline: ${PAD}px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--uav-paint); }
+:is(.uav-row, .uav-columns) > span { position: relative; grid-row: 1; padding-inline: ${em(PAD)}; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--uav-paint); }
 .uav-row > .uav-f-label { grid-column: var(--uav-col, 1); padding-inline-end: 0; }
 :is(.uav-row, .uav-columns) > span:not(.uav-f-label) { grid-column: var(--uav-col); }
 :is(.uav-row, .uav-columns) > [data-anchor="end"] { text-align: end; }
-:is(.uav-row, .uav-columns) > [data-rank] { max-inline-size: max(0px, ${short}); padding-inline: min(${PAD}px, max(0px, ${short})); }
+:is(.uav-row, .uav-columns) > [data-rank] { max-inline-size: max(0px, ${short}); padding-inline: min(${em(PAD)}, max(0px, ${short})); }
 .uav[data-layout="rows"] :is(.uav-legend, .uav-legend-top) { grid-column: 1 / -1; grid-row: 3; }
 /* What runs down a list from row to row (core's \`track\` part): the plot's lines and areas, drawn by the plot's painter
  * in one SVG laid over the tracks of all the rows and turned on its side. A place along a plot's x is then a place down
@@ -82,7 +83,12 @@ ${IN_BOX} {
 /** What the measured pass needs to set each column's room again from the widths it reads: the scene, the label's room,
  * and the cells that hold a room, by the rank of their column. */
 const painted = new WeakMap<HTMLElement, { scene: Scene; label: number; cells: [HTMLElement | SVGElement, number | undefined][] }>();
-const needOf = (label: number, rooms: number[], rank?: number) => (rank ? label + rooms.slice(0, rank + 1).reduce((s, w) => s + w, 0) + 'px' : null);
+/** The room a ranked column needs to stay: the label's, in em, and every column's up to its own. Core's rooms are in em, and the ones read here in px. */
+const needOf = (label: number, rooms: number[], rank: number | undefined, measured = false) => {
+  if (!rank) return null;
+  const sum = rooms.slice(0, rank + 1).reduce((s, w) => s + w, 0);
+  return measured ? `calc(${em(label)} + ${sum}px)` : em(label + sum);
+};
 
 export const rows: LayoutPainter = {
   layout: 'rows',
@@ -110,7 +116,7 @@ export const rows: LayoutPainter = {
     list.setAttribute('data-hits', 'y');                                     // each row is its own hit target
     prop(body, '--uav-tracks', 'auto '.repeat(lead) + (beside ? 'minmax(0, auto) ' : '') + 'minmax(0, 1fr)' + ' auto'.repeat(rooms.length));
     prop(body, '--uav-track', beside ? first - 1 + ' / ' + first : lead ? '1 / ' + (first + 1) : null); attr(body, 'data-track', scene.track);
-    prop(body, '--uav-row-block', rules.rows.rowHeight + 'px'); prop(body, '--uav-row-gap', rules.rows.gap + 'px'); prop(body, '--uav-columns-block', COLUMNS_BLOCK + 'px');
+    prop(body, '--uav-row-block', rules.rows.rowHeight + 'em'); prop(body, '--uav-row-gap', rules.rows.gap + 'em'); prop(body, '--uav-columns-block', COLUMNS_BLOCK + 'em');
     // A column's cell says which track is its own, so one that is given up leaves the others where they are.
     const cell = (c: HTMLElement | SVGElement, n: TextNode) => {
       text(c, n); c.setAttribute('data-anchor', n.anchor);
@@ -148,6 +154,6 @@ export const rows: LayoutPainter = {
     const p = painted.get(body);
     if (!p) return;
     const rooms = roomsHere(body, p.scene);
-    for (const [el, rank] of p.cells) prop(el, '--uav-need', needOf(p.label, rooms, rank));
+    for (const [el, rank] of p.cells) prop(el, '--uav-need', needOf(p.label, rooms, rank, true));
   },
 };

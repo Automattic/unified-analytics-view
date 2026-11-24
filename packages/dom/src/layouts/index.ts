@@ -11,7 +11,7 @@ import { rows } from './rows.ts';
 const notice: LayoutPainter = {
   layout: 'notice',
   css: `
-.uav[data-layout="notice"] { --uav-body-block: ${NOTICE_HEIGHT}px; }
+.uav[data-layout="notice"] { --uav-body-block: ${NOTICE_HEIGHT}em; }
 .uav[data-layout="notice"] .uav-body { display: grid; }
 .uav-notice { place-self: center; text-align: center; color: var(--uav-paint); }`,
   fit: { notice: { '.uav-body': 'display: none;' } },      // the room goes with the line

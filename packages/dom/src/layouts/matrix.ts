@@ -36,7 +36,7 @@ const css = `
 /* The frame is set from the left whichever way the page reads, as a plot's is (cartesian.ts): the row labels stay on
  * the left of the cells. The ramp is a legend, and follows the page. */
 .uav[data-layout="matrix"] .uav-body { display: grid; grid-template: "y plot" minmax(0, 1fr) ". x" auto "ramp ramp" auto "size size" auto / fit-content(${LABELS_SHARE}%) minmax(0, 1fr); direction: ltr; }
-.uav[data-layout="matrix"][data-parts~="size"] { --uav-body-block: calc(${AXES_HEIGHT} + ${SIZE_KEY_BLOCK}px); }
+.uav[data-layout="matrix"][data-parts~="size"] { --uav-body-block: calc(${AXES_HEIGHT} + ${SIZE_KEY_BLOCK}em); }
 /* Row labels are names, and a name can be longer than the view is wide. Their column is as wide as the widest, up to a
  * share of the view, and a longer one is cut short to it (chrome/axes.ts): its cells keep the rest, and its readout says it whole. */
 .uav[data-layout="matrix"] .uav-y-axis { grid-area: y; min-inline-size: 0; }
@@ -44,7 +44,7 @@ const css = `
 .uav[data-layout="matrix"] .uav-size { grid-area: size; }
 /* One row of cells is 34 px tall and no taller, with its labels and its ramp under it. Handed a box, it fills it. */
 .uav[data-layout="matrix"]:has(> .uav-body[data-strip]) { --uav-body-block: auto; }
-.uav[data-layout="matrix"] .uav-body[data-strip] { grid-template-rows: minmax(34px, 1fr) auto auto auto; }
+.uav[data-layout="matrix"] .uav-body[data-strip] { grid-template-rows: minmax(2.55em, 1fr) auto auto auto; }
 .uav-cells { position: absolute; inset: 0; container-type: size; display: grid; gap: 1px; grid-template: repeat(var(--uav-ny), minmax(0, 1fr)) / repeat(var(--uav-nx), minmax(0, 1fr)); }
 .uav-cells > div { display: contents; }
 .uav-cells i { grid-area: var(--uav-cy) / var(--uav-cx); background: var(--uav-paint); border-radius: ${token('border-radius-cell')}; }

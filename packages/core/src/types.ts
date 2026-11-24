@@ -185,7 +185,7 @@ export type PresetLibrary = Record<string, { layers: Layer[] }>;
 export interface ContainerRules {
   /** The room each part needs, and what is given up without it. */
   fit: FitRule[];
-  /* The natural heights a surface builds a plot and a row to, in px. */
+  /* The natural heights a surface builds a plot and a row to, in em of the view's type. */
   axes: { height: number };
   bare: { height: number; numberWidth: number };
   rows: { rowHeight: number; gap: number };

@@ -7,8 +7,8 @@ import { errOf as err, run, shown, validView as view } from './helpers.ts';
 // Step 8 of docs/archive/chart-coverage-plan.md, part 1: the registry of custom marks. Held here with a mark made for the
 // test, so nothing in it depends on a map. The `geo` mark is in test/geo.test.ts, and `fallback` in test/fallback.test.ts.
 const RULES: FitRule[] = [
-  { id: 'guides', layout: 'toy', container: 'view', needs: { inline: 200 }, hide: ['ramp'] },
-  { id: 'marks', layout: 'toy', container: 'view', needs: { inline: 150, block: 50 }, hide: [], fallback: 'bar-list' },
+  { id: 'guides', layout: 'toy', container: 'view', needs: { inline: 15 }, hide: ['ramp'] },
+  { id: 'marks', layout: 'toy', container: 'view', needs: { inline: 11.25, block: 3.75 }, hide: [], fallback: 'bar-list' },
 ];
 // A strip of tiles, one for each row, filled by a metric. It reads its encodings and nothing else.
 const toy: CustomMark = {
@@ -174,7 +174,7 @@ describe('a registered preset in a view', () => {
   it('a rule\'s fallback may name one: the view is planned again through the registry, from either kind of spec', () => {
     // A second toy, whose marks give way to a registered list of a bar and a label, which no preset of core's is.
     const list: PresetLibrary[string] = { layers: [{ mark: 'bar', encode: { y: '$by', x: '$metric' } }, { mark: 'text', encode: { y: '$by', text: '$by' } }] };
-    registerMark('toy-2', { ...toy, rules: [{ id: 'marks', layout: 'toy-2', container: 'view', needs: { inline: 150 }, hide: [], fallback: 'toy-list' }] });
+    registerMark('toy-2', { ...toy, rules: [{ id: 'marks', layout: 'toy-2', container: 'view', needs: { inline: 11.25 }, hide: [], fallback: 'toy-list' }] });
     registerPreset('toy-list', list);
     registerPreset('toy-strip-2', { layers: [{ mark: 'toy-2', encode: { x: '$by', color: '$metric' } }] });
     const written: Spec = { ...tiles, layers: [{ mark: 'toy-2', encode: { x: 'page', color: 'pageviews' } }] }, asked: Spec = { ...rest, use: 'toy-list' };
@@ -187,7 +187,7 @@ describe('a registered preset in a view', () => {
       expect([ratio, fit]).toEqual([own.ratio, own.fit]);
     }
     // A fallback no one registered is expand()'s error, with the registry in it.
-    registerMark('toy-3', { ...toy, rules: [{ id: 'marks', layout: 'toy-3', container: 'view', needs: { inline: 150 }, hide: [], fallback: 'toy-gone' }] });
+    registerMark('toy-3', { ...toy, rules: [{ id: 'marks', layout: 'toy-3', container: 'view', needs: { inline: 11.25 }, hide: [], fallback: 'toy-gone' }] });
     expect(err(() => run({ ...tiles, layers: [{ mark: 'toy-3', encode: { x: 'page', color: 'pageviews' } }] }, 149))).toMatch(/^Unknown preset "toy-gone"\. The library has: .*\. Registered: .*toy-list.*\. Use one of those, or register it with registerPreset\("toy-gone", …\)/);
   });
 });

@@ -30,7 +30,7 @@ export function describe(catalog?: Catalog) {
     guides: Object.fromEntries(Object.entries(GUIDES).map(([name, { from: _from, ...guide }]) => [name, guide])),
     /** What each part needs, and what goes without it: how a view gives way when room is short. */
     fit: FIT_RULES,
-    /** The size of type a need is written at, in px. A need of the view is that much more or less where a room's `em` is another size. */
+    /** A need in `fit` is in em, the size of the view's type. This is an em in px where a room says no other. */
     em: EM,
     presets: { library: PRESETS, registered: Object.fromEntries(customPresets()) },
     ...(catalog && { catalog }),

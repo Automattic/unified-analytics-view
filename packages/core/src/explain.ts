@@ -1,5 +1,5 @@
 import { CONTAINER_RULES } from './container.ts';
-import { fitTo, needAt, type FitRule, type Room } from './fit.ts';
+import { SLACK, fitTo, needAt, type FitRule, type Room } from './fit.ts';
 import { GUIDE_CHANNEL } from './guides.ts';
 import { customMarks } from './marks.ts';
 import { PRESETS, expand, fills, usesPrevious } from './presets.ts';
@@ -123,13 +123,13 @@ export function explain(spec0: Spec, result: Result, catalog: Catalog, room?: Ex
   // Which rules hold is the reader's to say (fitTo), as it is for any surface. A plot nobody measured is asked nothing.
   const rooms = { view: { inline: room.inline, block: room.block ?? null }, ...(room.plot !== undefined && { plot: room.plot }), ...(room.em != null && { em: room.em }) };
   const fit = fitTo(scene, rooms, rules, { marks: plan.layers.map((l) => l.mark), fills: (use) => fills(use, q, presets) });
-  // A need is said as it stands at this room's type: the px the container is short of.
+  // A need is in em, and is said in px as it stands at this room's type: what the container is short of.
   const need = (r: FitRule, least = needAt(r, room.em)) => [least.inline && px(least.inline) + ' px wide', least.block && px(least.block) + ' px tall'].filter(Boolean).join(' and ');
   const gone = new Set<string>(), placed = new Set<string>(), said = (r: FitRule) => 'rule "' + r.id + '" needs ' + need(r) + ' of the ' + r.container + ', and it has ' + has(rooms[r.container]);
   for (const { rule: r } of fit.held) {
     // What the room is short of: a width, a height, or both. A spec has no say in what a container gives up, so the
     // one thing that changes a rule's verdict is the room, and that is the surface's to give.
-    const c = rooms[r.container], least = needAt(r, room.em), short = [least.inline != null && c && c.inline < least.inline && px(least.inline) + ' px wide', least.block != null && c?.block != null && c.block < least.block && px(least.block) + ' px tall'].filter(Boolean).join(' and ');
+    const c = rooms[r.container], least = needAt(r, room.em), short = [least.inline != null && c && c.inline < least.inline - SLACK && px(least.inline) + ' px wide', least.block != null && c?.block != null && c.block < least.block - SLACK && px(least.block) + ' px tall'].filter(Boolean).join(' and ');
     const lever = short ? 'give the ' + r.container + ' ' + short : undefined;
     if (r.fallback) {
       const j = plan.layers.findIndex((l) => !r.mark || l.mark === r.mark);

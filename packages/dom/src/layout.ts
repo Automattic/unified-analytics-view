@@ -52,11 +52,14 @@ export const FROM_TOP = 'calc((1 - var(--uav-t)) * 100%)';
 /** The faces core lays a view out for, in px (place.ts measures its characters and lines at these). A line set in a
  * face is so many px at this size, and grows and shrinks with the face from there: a line-height is that line over
  * this. They are not the tokens' fallbacks, which a theme moves: a line-height stays a ratio of whatever face is set. */
-export const DRAWN = { tick: 11, label: 13, display: 37, 'display-small': 26 } as const;
+export const DRAWN = { tick: 0.825, label: 0.975, display: 2.775, 'display-small': 1.95 } as const;
 /** A line-height: a line `px` tall in `face` at the size it is drawn at. */
-export const lineOf = (face: keyof typeof DRAWN, px: number): string => `calc(${px} / ${DRAWN[face]})`;
+export const lineOf = (face: keyof typeof DRAWN, em: number): string => `calc(${em} / ${DRAWN[face]})`;
+/** A length in the view's em, for an element set in another face, or for a size handed down to one: what it shares
+ * with what stands round it. On an element set in the view's own face a plain em is the same. */
+export const em = (n: number): string => `calc(var(--uav-em) * ${+n.toFixed(4)})`;
 /** The number's value on its line, in its face and in the smaller one, in px at DRAWN. */
-export const DISPLAY_LINE = 34, DISPLAY_SMALL_LINE = 24;
+export const DISPLAY_LINE = 2.55, DISPLAY_SMALL_LINE = 1.8;
 /** The number in its smaller face: declarations. */
 export const NUMBER_SMALL = `font-size: var(--uav-font-display-small); line-height: ${lineOf('display-small', DISPLAY_SMALL_LINE)};`;
 /** Rules that set the text under each selector in its shorter form, where it has one (dom.ts text()). */
@@ -69,8 +72,8 @@ export const SHOWN = 'position: static; inline-size: auto; block-size: auto; ove
 
 /** A plot's natural height with its axes, and without them beside the number: the context's, which the element sets on
  * the figure, and else core's defaults. */
-export const AXES_HEIGHT = `var(--uav-axes-height, ${CONTAINER_RULES.axes.height}px)`;
-export const BARE_HEIGHT = `var(--uav-bare-height, ${CONTAINER_RULES.bare.height}px)`;
+export const AXES_HEIGHT = `var(--uav-axes-height, ${CONTAINER_RULES.axes.height}em)`;
+export const BARE_HEIGHT = `var(--uav-bare-height, ${CONTAINER_RULES.bare.height}em)`;
 
 /** What changes with a rule that leaves the number alone: the figure's grid is the number's row, the body goes whole
  * so that its row holds no gap, and the number gives up the margin that stood between them. For a layout's `fit`. */

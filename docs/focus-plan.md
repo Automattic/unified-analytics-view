@@ -265,3 +265,5 @@ Calls made by best judgement while building, each to confirm or turn over.
 17. **Who the reference is for.** `describe()` now gives an author the tables as data: what each mark reads, the fit rules, the presets, the schemas. So the long reference could become the builders' record, and an author's guide could be a short page beside `describe()`. I did not rewrite it, because that choice shapes the rewrite.
 18. **`CLAUDE.md`'s Layout section is cut from 10 kB to under 5.** It is your file and it primes every session, so read the cut: the list of what each module exports is gone, and the facts the code does not say are kept.
 19. **The built plans are archived, not deleted,** since about forty files point into them. The plan said they would leave the tree.
+20. **The cuts did not make it lighter.** Built the same way before and after, the element with core and d3 is 93.5 kB gzip now and was 94.7 kB when the plan began: twenty-five presets and most of the sentence code are about one percent of it. What is light about this plan is the surface an author has to learn, and not the bytes. A size the build is held to is still owed (`docs/positioning.md`).
+

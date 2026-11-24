@@ -103,6 +103,11 @@ export type Channel = (typeof CHANNELS)[number];
 export const ROLES = ['primary', 'comparison', 'reference', 'context'] as const;
 export type Role = (typeof ROLES)[number];
 export const KEEP_PARTS = ['guides', 'secondary', 'rows', 'marks'] as const;
+/** The fields a spec, its query and a layer take. One that is not among them is refused by name (resolve): a size or a
+ * switch in a spec, or a filter written under another name, would otherwise be read past and the view drawn without it. */
+export const SPEC_FIELDS = ['spec', 'title', 'use', 'query', 'layers', 'keep', 'facet'] as const;
+export const QUERY_FIELDS = ['metrics', 'by', 'range', 'compare', 'limit', 'where'] as const;
+export const LAYER_FIELDS = ['mark', 'encode', 'series', 'role', 'stack', 'sweep', 'label', 'at', 'align', 'paint'] as const;
 export type KeepPart = (typeof KEEP_PARTS)[number];
 export const LAYER_SERIES = ['previous', 'delta'] as const;
 export const STACKS = ['zero', 'normalize', 'center', 'diverge'] as const;

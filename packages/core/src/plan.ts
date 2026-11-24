@@ -7,7 +7,7 @@ import { PRESETS, expand, fills, presetNames, usesPrevious } from './presets.ts'
 import { checkReads } from './reads.ts';
 import { DETAIL_LAYOUTS, SERIES, isMetric, buildScene, widest, columnsOf, isDim, metricOf, overMarks, pointDimOf, roleOf, xDimOf } from './scene.ts';
 import { filterSaid, tldrProse } from './prose.ts';
-import { MARKS, baseOf } from './types.ts';
+import { LAYER_FIELDS, MARKS, QUERY_FIELDS, SPEC_FIELDS, baseOf } from './types.ts';
 import type { Catalog, ContainerRules, Layer, Layout, Plan, PlanShape, PresetLibrary, Query, Result, Scene, Spec, Where } from './types.ts';
 
 /* The layout a layer's fields ask for: what is on x, on y and on color, first match first. `any` asks nothing of its channel. */
@@ -142,6 +142,13 @@ function checkWhere(q: Query, result: Result, catalog: Catalog): void {
 export function resolve(spec0: Spec, result: Result, catalog: Catalog, rules: ContainerRules = CONTAINER_RULES, presets: PresetLibrary = PRESETS): Plan {
   if (spec0.facet != null) throw new Error('This spec has "facet": ' + JSON.stringify(spec0.facet) + ', so it is a view for each value of that dimension and has no one plan. Ask facets(spec, result, catalog) for the views and resolve each, or remove "facet".');
   const spec = expand(spec0, presets), q = spec.query || ({} as Query);
+  // A field that nothing reads is refused by name, where it was once read past: a view was drawn without the size, the
+  // switch or the filter its author wrote.
+  const stray = (has: object, takes: readonly string[]) => Object.keys(has).find((k) => !takes.includes(k) && (has as Record<string, unknown>)[k] !== undefined);
+  for (const [what, has, takes, more] of [['The spec', spec0, SPEC_FIELDS, ' A view says what to show and nothing of how: no size, breakpoint or switch.'], ['The spec\'s query', q, QUERY_FIELDS, ' A filter is "where".'], ...(spec0.layers || []).map((l, i) => ['Layer ' + (i + 1), l || {}, LAYER_FIELDS, ' What a mark draws is on its channels, in "encode".'] as const)] as const) {
+    const k = stray(has, takes);
+    if (k != null) throw new Error(what + ' has "' + k + '", which it does not take. It takes: ' + takes.join(', ') + '.' + more);
+  }
   if (!q.metrics || !q.metrics.length) throw new Error('A view needs query.metrics, for example ["visitors"].');
   // A name the catalog does not carry is refused here, once, before anything reads its definition.
   for (const [kind, where, names, has] of [['metric', 'metrics', q.metrics, catalog.metrics], ['dimension', 'by', q.by || [], catalog.dimensions], ['dimension', 'where', Object.keys(q.where || {}), catalog.dimensions]] as const) for (const f of names)

@@ -1,6 +1,6 @@
 # Focus plan
 
-As of November 24, 2026. **Status: steps 1 to 6 are built.** On November 24 David said to go ahead with the rest by best judgement, weighed against the vision, and to keep what wants his opinion for the end: it is under "For David, at the end".
+As of November 24, 2026. **Status: steps 1 to 7 are built.** On November 24 David said to go ahead with the rest by best judgement, weighed against the vision, and to keep what wants his opinion for the end: it is under "For David, at the end".
 
 ## Why
 
@@ -133,6 +133,14 @@ It needs a dependency core does not have (an MCP library), which is asked for be
 
 **Done when** each of the three answers for every sample, and a refused spec gets the message `resolve()` gives.
 
+**Built November 24** (reference, Decided 57): `packages/agent`, and `pnpm agent` for the server. What it found:
+
+- **`resolve()` read past a field it had no use for.** A `width` in a spec, or a filter written as `filter`, was drawn without, and only the schema said so. Core refuses them now, by name, with the fields there are. No sample and no test had one.
+- **The protocol is written out, in about thirty lines,** for the three methods a server of tools needs. It adds no dependency but `ajv`, which the tests had. It is held by tests that speak it, over stdio among them, and it has not been connected to a real MCP client (For David, 9).
+- **The fixtures could not be loaded by Node:** their three JSON files were imported with no `type`. They say it now, so the server and anything else with no bundler can load them.
+- **`draw_view` was run for real** on the two-bar spec of step 4: three pictures back, and the check's findings.
+- A board is read as its views on the fixture engine. With answers of its own each view is checked alone, since a board has no one answer.
+
 ### 8. Fit needs worked out, not picked
 
 The largest step. A model is proposed and approved before anything is built, and every stage is held to the capture, frame for frame.
@@ -205,3 +213,5 @@ Calls made by best judgement while building, each to confirm or turn over.
 6. **Two bar layers on one x sit side by side,** in place of one drawn over the other. The other answer was to refuse them. No sample has such a spec, so nothing drawn today changed.
 7. **A `text` layer takes no `paint`.** It was dropped, and is refused now. Letting a label be muted (`ink.muted`) is a small thing to build if it is wanted.
 8. **`background` is a paint token a custom mark brought in.** `partition` sets a name in it on a filled box. It is in the scene schema, since scenes hold it, and in no token list of the element's. It should be a token of the system's or go.
+9. **The MCP server speaks a protocol I wrote out by hand,** to add no dependency. It answers `initialize`, `ping`, `tools/list` and `tools/call`, which is what a client of tools sends, and I have not connected a real client to it. The MCP SDK is the other choice, and the plan said to ask before adding it.
+10. **A spec, a query and a layer now refuse a field they do not take.** It is stricter than before for every surface, the element among them: a host that kept a field of its own on a spec object will be refused, by name.

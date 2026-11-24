@@ -23,6 +23,7 @@ packages/
   dom/                        the <ua-view> custom element: HTML, CSS and SVG painter
   geo/ flow/ partition/       custom marks: a map, a Sankey, a treemap
   spacefast/                  the adapter from Spacefast's analytics query API
+  agent/                      the agent surface: what can be said, and a spec checked or drawn, as an MCP server
   dots/                       dot-grid painter (not started)
 apps/
   bench/                      where work is looked at: playground, samples, a board, marks, parts, tokens

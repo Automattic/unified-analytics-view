@@ -21,3 +21,17 @@ describe('a name the catalog does not carry', () => {
   it('a name every object has is not a metric', () => expect(refused({ spec: 'view/0', query: { metrics: ['toString'] } })).toMatch(/^The catalog has no metric "toString"\./));
   it('an empty catalog says so', () => expect(refused({ spec: 'view/0', query: { metrics: ['revenue'] } }, { metrics: {}, dimensions: {} })).toMatch(/It has: none\./));
 });
+
+// A field that nothing reads was read past, and the view drawn without what its author wrote. It is refused by name,
+// with the fields there are. A filter under another name is the one that matters most: the answer would be of everything.
+describe('a field a spec, its query or a layer does not take', () => {
+  const q = { metrics: ['revenue'], by: ['sku'] };
+  it('a size in a spec', () => expect(refused({ spec: 'view/0', use: 'bar-list', query: q, width: 346 } as Spec))
+    .toBe('The spec has "width", which it does not take. It takes: spec, title, use, query, layers, keep, facet. A view says what to show and nothing of how: no size, breakpoint or switch.'));
+  it('a filter under another name', () => expect(refused({ spec: 'view/0', use: 'bar-list', query: { ...q, filter: { sku: 'A' } } } as unknown as Spec))
+    .toBe('The spec\'s query has "filter", which it does not take. It takes: metrics, by, range, compare, limit, where. A filter is "where".'));
+  it('a colour on a layer', () => expect(refused({ spec: 'view/0', query: q, layers: [{ mark: 'bar', encode: { y: 'sku', x: 'revenue' } }, { mark: 'text', encode: { y: 'sku', text: 'sku' }, color: 'red' }] } as unknown as Spec))
+    .toBe('Layer 2 has "color", which it does not take. It takes: mark, encode, series, role, stack, sweep, label, at, align, paint. What a mark draws is on its channels, in "encode".'));
+  it('a field that is written and holds nothing is no field', () => expect(refused({ spec: 'view/0', use: 'bar-list', query: q, width: undefined } as Spec)).toBe('no error'));
+});
+

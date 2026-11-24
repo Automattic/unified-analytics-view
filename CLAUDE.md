@@ -19,6 +19,7 @@ pnpm bench        # the bench at localhost:5173, on Vite
 pnpm --filter @unified-analytics/bench capture   # every sample × width × theme × height off the parts page, to apps/bench/captures/<time>/ (ignored by git); spec=<file> for a view that is no sample
 pnpm --filter @unified-analytics/bench check     # hold the latest capture to the parts' promises (the fit rules, and cut, overlap, theme, steady); against=<capture> for what moved
 pnpm --filter @unified-analytics/tokens generate   # rewrite packages/tokens/generated from its config
+pnpm agent        # the agent surface as an MCP server over stdio: describe, check_view, draw_view
 ```
 
 Packages export their TypeScript source and nothing is built for release yet. Vite serves the bench. CI runs `pnpm typecheck` and `pnpm test` on every pull request and on `master` (`.github/workflows/test.yml`); `bench.yml` builds and deploys the bench from `master` and runs neither.
@@ -36,6 +37,7 @@ Packages export their TypeScript source and nothing is built for release yet. Vi
 - `packages/flow`: the `link` custom mark, for a Sankey of one step, and its preset `sankey`. No dependency but core, and `packages/dom` for its painter. Its scene half loads with no DOM.
 - `packages/partition`: the `partition` custom mark, for a treemap of one level or two. Squarify is written in it, and its only dependency is core (and `packages/dom`, for its painter). Its scene half loads with no DOM. The fixtures register it on import.
 - `packages/spacefast`: the adapter from one answer of Spacefast's analytics query API to a view's query, result and catalog. One function, `adapt`. It knows that API's names; core still knows none. The API's two recorded examples are in `test/fixtures/spacefast`.
+- `packages/agent`: the agent surface, for an author outside this repository. `describe()` is what can be said, as data: the schemas, what each mark reads, the guides, the fit rules, the presets. `check()` reads a spec with its answer and no browser: the refusal, or what the view says and shows at each room and why. It wraps core and adds no rule. `src/server.ts` offers both as an MCP server over stdio, with `draw_view`, which runs the bench's capture and check on a spec: the protocol is written out there, and it adds no dependency but `ajv`. `test/agent.test.ts` holds it to say what core says.
 - `packages/dots`: not started.
 
 ## Rules

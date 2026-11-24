@@ -1,6 +1,6 @@
 import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { ALIGNS, CHANNELS, CONTAINER_RULES, DIMENSION_TYPES, DIMENSION_VALUES, KEEP_PARTS, LAYER_SERIES, MARKS, POLARITIES, RANGE_TOTALS, ROLES, SERIES, STACKS, UNITS, buildScene, expand, formatDimension, formatValue, partialNote, pathD, resolve, type Spec, type Unit } from '@unified-analytics/core';
+import { ALIGNS, CHANNELS, CONTAINER_RULES, DIMENSION_TYPES, DIMENSION_VALUES, KEEP_PARTS, LAYER_FIELDS, LAYER_SERIES, MARKS, POLARITIES, QUERY_FIELDS, RANGE_TOTALS, ROLES, SERIES, SPEC_FIELDS, STACKS, UNITS, buildScene, expand, formatDimension, formatValue, partialNote, pathD, resolve, type Spec, type Unit } from '@unified-analytics/core';
 import catalogSchema from '@unified-analytics/core/schema/catalog.schema.json';
 import viewSchema from '@unified-analytics/core/schema/view.schema.json';
 import { catalog, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
@@ -220,6 +220,8 @@ describe('schemas', () => {
     expect(layer.stack.enum).toEqual(STACKS);
     expect(layer.align.enum).toEqual(ALIGNS);
     expect((viewSchema as any).properties.keep.items.enum).toEqual(KEEP_PARTS);
+    // The fields a spec, a query and a layer take: resolve() refuses any other by name, as the schema does.
+    expect([Object.keys((viewSchema as any).properties), Object.keys((viewSchema as any).definitions.query.properties), Object.keys(layer)]).toEqual([SPEC_FIELDS, QUERY_FIELDS, LAYER_FIELDS]);
     // A description cannot be derived, so it is held to the count it states.
     expect(layer.paint.description).toContain('series.1 to series.' + SERIES + ',');
   });

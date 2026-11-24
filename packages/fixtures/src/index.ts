@@ -2,9 +2,9 @@ import { holds, inProgressNote, type Board, type Catalog, type Query, type Resul
 import { registerLink } from '@unified-analytics/flow';
 import { registerGeo, type Shapes } from '@unified-analytics/geo';
 import { registerPartition } from '@unified-analytics/partition';
-import shapes from './countries.json';
-import hexes from './tiles-hex.json';
-import squares from './tiles-square.json';
+import shapes from './countries.json' with { type: 'json' };   // the attribute is for Node, which the agent's server and the capture run on
+import hexes from './tiles-hex.json' with { type: 'json' };
+import squares from './tiles-square.json' with { type: 'json' };
 
 /** Boundary shapes for the `geo` mark: 123 countries. A shape's id is its ISO 3166-1 alpha-2 code in capitals, which is
  * the value the `country` dimension has for it, and its name is beside it in `properties.name`. Somaliland has no code

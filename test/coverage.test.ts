@@ -3,7 +3,7 @@ import { FIT_RULES, buildScene, expand, resolve, type Catalog, type Result, type
 import { catalog, moreSamples, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
 import { err, ofUnbounded, run, shown, validView as view } from './helpers.ts';
 
-// What the grammar draws beyond the first six samples (docs/chart-coverage-plan.md), held to its own sweep, facts and
+// What the grammar draws beyond the first six samples (docs/archive/chart-coverage-plan.md), held to its own sweep, facts and
 // golden scenes.
 // The engine refuses some queries itself. `q` is one it answers, for an error that is resolve()'s to make.
 

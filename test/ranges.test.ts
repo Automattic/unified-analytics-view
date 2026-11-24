@@ -8,14 +8,14 @@ import { inUse, useExamples } from './examples.ts';
 useExamples();   // the presets the library no longer ships, which these cases still write `use` with
 const moreSamples = inUse(written);   // and the samples as they were written with them
 
-// Ranges and `tick` (docs/chart-coverage-plan.md, step 3): companion fields, a second end on a bar, a rule and an
+// Ranges and `tick` (docs/archive/chart-coverage-plan.md, step 3): companion fields, a second end on a bar, a rule and an
 // area, a rule with fields, the tick, dots in a row's track, and paint by direction. All of it
 // is held to its own sweep, facts and golden scenes.
 const names = ['box', 'errors', 'waterfall', 'candlestick', 'fan', 'dumbbell', 'bullet'];
 const specs = Object.fromEntries(names.map((k) => [k, moreSamples[k]!.spec]));
 const { box, errors, waterfall, candlestick, fan, dumbbell, bullet } = specs as Record<string, Spec>;
 const league = moreSamples.league!.spec;
-// What step 0 of docs/uncommon-coverage-plan.md added of these: dots, rules and ranged bars in a row's track, and a fan of two bands.
+// What step 0 of docs/archive/uncommon-coverage-plan.md added of these: dots, rules and ranged bars in a row's track, and a fan of two bands.
 const swept: Record<string, Spec> = { ...specs, ...Object.fromEntries(['cleveland', 'lollipop', 'tornado', 'fans'].map((k) => [k, moreSamples[k]!.spec])) };
 const marks = (nodes: any[]) => nodes.filter((n) => n.layer === 'data' && n.part !== 'number' && n.kind !== 'row' && n.kind !== 'text');
 const heights = [null, 300, 160, 100, 60, 40];

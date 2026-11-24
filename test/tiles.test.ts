@@ -7,7 +7,7 @@ import { geoPainter, geoPainterAs, registerGeoPainters } from '@unified-analytic
 import { painterOf } from '../packages/dom/src/layouts/index.ts';
 import { run, shapes, shown, validView as view } from './helpers.ts';
 
-// Step 10 of docs/uncommon-coverage-plan.md: tile maps. No new mark: the `geo` mark, registered again by the fixtures
+// Step 10 of docs/archive/uncommon-coverage-plan.md: tile maps. No new mark: the `geo` mark, registered again by the fixtures
 // under a name for each of two files of tiles. The mark itself is held in test/geo.test.ts, and what is held here is
 // what tiles add: shapes on a flat sheet, a mark under another name, and the two samples.
 const grid = moreSamples.tiles!.spec, hex = moreSamples.hexes!.spec, map = moreSamples.map!.spec;

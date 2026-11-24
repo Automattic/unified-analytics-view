@@ -3,7 +3,7 @@ import { buildScene, expand, formatValue, resolve, sizeStep, type CircleNode, ty
 import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
 import { err, run, shown, validView as view } from './helpers.ts';
 
-// The `cell` mark and the grid it is laid out in (docs/chart-coverage-plan.md, step 5). It
+// The `cell` mark and the grid it is laid out in (docs/archive/chart-coverage-plan.md, step 5). It
 // is held to a sweep, facts and golden scenes of its own, as test/coverage.test.ts holds step 1.
 const heatmap = moreSamples.heatmap!.spec;
 const cells = (ratio: { nodes: unknown[] }) => (ratio.nodes as RectNode[]).filter((n) => n.part === 'plot' && n.kind === 'rect');
@@ -51,7 +51,7 @@ describe('golden scenes', () => {
   it('heatmap, at each room', () => expect(sizes.map(([w, h]) => [w, h, shown(run(heatmap, w, h))])).toMatchSnapshot());
 });
 
-// The grids step 0 of docs/uncommon-coverage-plan.md added: a calendar, a strip of days and a square of pages. And
+// The grids step 0 of docs/archive/uncommon-coverage-plan.md added: a calendar, a strip of days and a square of pages. And
 // step 5's: a correlation matrix and its circles, and a count by two binned quantities.
 describe('the grids of the Uncommon types', () => {
   const grids = Object.fromEntries(['calendar', 'stripes', 'adjacency', 'correlogram', 'highlight', 'circles', 'bins2d'].map((k) => [k, moreSamples[k]!.spec]));

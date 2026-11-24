@@ -7,7 +7,7 @@ import { geoPainter, zoomBox } from '@unified-analytics/geo/dom';
 import world from '@unified-analytics/geo/countries-110m.json';
 import { errOf as err, run, shapes, shown, validView as view } from './helpers.ts';
 
-// Step 8 of docs/chart-coverage-plan.md: the `geo` mark, which is a custom mark, registered by the fixtures with their
+// Step 8 of docs/archive/chart-coverage-plan.md: the `geo` mark, which is a custom mark, registered by the fixtures with their
 // boundary shapes. It is held to a sweep, facts and golden scenes of its own. The registry
 // and `fallback` are in test/registry.test.ts.
 const map = moreSamples.map!.spec, symbols = moreSamples.symbols!.spec, unmapped = moreSamples.unmapped!.spec;

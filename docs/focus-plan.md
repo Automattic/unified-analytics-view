@@ -1,6 +1,6 @@
 # Focus plan
 
-As of November 24, 2026. **Status: steps 1 to 7 and 9 are built, with the first stage of step 8 and the parts of steps 10 and 11 that need no one else.** On November 24 David said to go ahead with the rest by best judgement, weighed against the vision, and to keep what wants his opinion for the end: it is under "For David, at the end".
+As of November 24, 2026. **Status: steps 1 to 7 and 9 are built, with the first stage of step 8 and the parts of steps 10, 11 and 12 that need no one else.** On November 24 David said to go ahead with the rest by best judgement, weighed against the vision, and to keep what wants his opinion for the end: it is under "For David, at the end".
 
 ## Why
 
@@ -217,7 +217,13 @@ Not built, because each is a look: patterns beside colour, Selected, and the pag
 
 - The reference keeps what an author needs and the decision log. Plans that are built leave the tree; git keeps them.
 - `CLAUDE.md`'s Layout section is cut to what the code does not say, and its rules are reworded as each step lands.
-- `docs/positioning.md` cites `design-inputs/`, which is not in the repository.
+- ~~`docs/positioning.md` cites `design-inputs/`, which is not in the repository.~~ It is: `docs/design-inputs/`. I looked for it at the root.
+
+**Built November 24, in part.** What it found:
+
+- **Six plans that are built are in `docs/archive/`,** with a note on what each is: 304 kB of the 514 kB of docs. They are moved and not deleted, because the reference and some forty files of code and tests point at what building each found, and those pointers still resolve.
+- **`CLAUDE.md`'s Layout section is under half its size:** what each package is and what the code does not say of it, with the lists of what each exports left to the code.
+- **The reference is not rewritten.** Its stale section 18 is retired and its prototype claims were fixed in step 1, and it is otherwise as long as it was: 154 kB, a fifth of it the decision log. Making it concise is an editorial job that wants its reader decided first (For David, 17).
 
 ## To decide
 
@@ -256,3 +262,6 @@ Calls made by best judgement while building, each to confirm or turn over.
 14. **What an answer says of itself.** How fresh it is, what was filtered from it, that a metric is not available here: I proposed all three (reference, Open 23) and built none, because each needs a place on the view, and the shape is the API's owners' to agree. The catalog's `by` is built, as a proposal to them.
 15. **The WordPress alias sheet is a first reading of two lists.** I paired 29 tokens by role, with the design system's own reference open. The first series takes the page's accent (`indicator-brand`), which is the pair most worth a look. It needs to be seen on a WordPress page.
 16. **Step 11's design work is yours:** patterns as a second channel beside colour, a look for Selected, and the visual pass. A pass with a screen reader is owed by someone with one.
+17. **Who the reference is for.** `describe()` now gives an author the tables as data: what each mark reads, the fit rules, the presets, the schemas. So the long reference could become the builders' record, and an author's guide could be a short page beside `describe()`. I did not rewrite it, because that choice shapes the rewrite.
+18. **`CLAUDE.md`'s Layout section is cut from 10 kB to under 5.** It is your file and it primes every session, so read the cut: the list of what each module exports is gone, and the facts the code does not say are kept.
+19. **The built plans are archived, not deleted,** since about forty files point into them. The plan said they would leave the tree.

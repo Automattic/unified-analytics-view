@@ -6,7 +6,7 @@ import { pathTargets } from '../packages/dom/src/layouts/points.ts';
 import { mix, pairUp } from '../packages/dom/src/motion.ts';
 import { errOf, run, shown } from './helpers.ts';
 
-// Step 3 of docs/uncommon-coverage-plan.md: what a line and an area take that they refused. Here, on a catalog and
+// Step 3 of docs/archive/uncommon-coverage-plan.md: what a line and an area take that they refused. Here, on a catalog and
 // results of its own, is what a companion's unit is and how a scale of ranks runs. The samples that use them, and what
 // each one is, are in test/uncommon.test.ts, with the fixture's facts.
 const catalog: Catalog = {

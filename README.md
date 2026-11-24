@@ -10,9 +10,8 @@ Tracking, storage and retrieval are built elsewhere. This repo starts at the que
 docs/
   vision.md                   what this is for: read first
   view-grammar-reference.md   the design, and what is decided and open
-  milestones.md               the course to the MVP
-  focus-plan.md               the course since: what is cut and what is built, a step at a time
-  claude-code-prompt.md       the brief for milestone 1 (typed core, no DOM)
+  focus-plan.md               the course: what is cut and what is built, a step at a time
+  archive/                    the plans that are built, and what building each found
   design-inputs/              research behind the design: views, view spec, semantic model
 prototype/                    two sketches of materials, which the bench's were ported from
 sketches/                     visual direction: materials and the dot-matrix readout

@@ -4,7 +4,7 @@ import type { CustomMark, FitRule, Part, PresetLibrary, RectNode, Spec } from '@
 import { catalog, runQuery, samples } from '@unified-analytics/fixtures';
 import { errOf as err, run, shown, validView as view } from './helpers.ts';
 
-// Step 8 of docs/chart-coverage-plan.md, part 1: the registry of custom marks. Held here with a mark made for the
+// Step 8 of docs/archive/chart-coverage-plan.md, part 1: the registry of custom marks. Held here with a mark made for the
 // test, so nothing in it depends on a map. The `geo` mark is in test/geo.test.ts, and `fallback` in test/fallback.test.ts.
 const RULES: FitRule[] = [
   { id: 'guides', layout: 'toy', container: 'view', needs: { inline: 200 }, hide: ['ramp'], keep: 'guides' },
@@ -94,7 +94,7 @@ describe('a custom mark whose rule names a fallback', () => {
   });
 });
 
-// Step 7 of docs/uncommon-coverage-plan.md: the registry of presets, beside the one for marks. Core cannot name a
+// Step 7 of docs/archive/uncommon-coverage-plan.md: the registry of presets, beside the one for marks. Core cannot name a
 // custom mark, so the package that registers one registers the presets that draw it. Held here with the toy mark.
 const strip: PresetLibrary[string] = { layers: [{ mark: 'toy', encode: { x: '$by', color: '$metric' } }] };
 const registered = () => [...customPresets().keys()].join(', ');

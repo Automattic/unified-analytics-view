@@ -5,7 +5,7 @@ import catalogSchema from '@unified-analytics/core/schema/catalog.schema.json';
 import { catalog, moreSamples, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
 import { err, round, run, shown, validView as view } from './helpers.ts';
 
-// Step 6 of docs/chart-coverage-plan.md: the `arc` mark and the `radial` layout. It
+// Step 6 of docs/archive/chart-coverage-plan.md: the `arc` mark and the `radial` layout. It
 // is held to its own sweep, facts and golden scenes, as test/coverage.test.ts holds the plots.
 const specs = Object.fromEntries(['donut', 'pie', 'half', 'gauge', 'radar'].map((k) => [k, moreSamples[k]!.spec]));
 const { donut, pie, half, gauge } = specs as Record<string, Spec>;

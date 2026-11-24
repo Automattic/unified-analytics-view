@@ -47,7 +47,7 @@ Stop there and report. Do not start milestone 2.
 
 ## Then, before any DOM code: a design note
 
-Write `docs/dom-painter-plan.md` and wait for review. It should propose:
+Write `docs/archive/dom-painter-plan.md` and wait for review. It should propose:
 
 - The format for per-element fit rules, such that one declaration compiles to container queries for browser hosts and can also be evaluated in code (reference doc sections 10.2 and 19, Open item 1).
 - Whether the scene carries ratios or pixels, and how the dot-grid painter shares it (Open item 2).

@@ -1,6 +1,6 @@
 # Feedback from the build
 
-As of October 8, 2026. What executing `docs/dom-painter-plan.md` has found so far: where the plan did not hold as written, bugs, and loose ends. Every step of the plan is built and merged into `dom-painter`, since merged into `master`. Every item was checked again against `efa899f` on October 14; where a later commit settled one, the item says so.
+As of October 8, 2026. What executing `docs/archive/dom-painter-plan.md` has found so far: where the plan did not hold as written, bugs, and loose ends. Every step of the plan is built and merged into `dom-painter`, since merged into `master`. Every item was checked again against `efa899f` on October 14; where a later commit settled one, the item says so.
 
 Each entry says what was found, what was done about it, and what is still to decide. Nothing here has been settled quietly.
 
@@ -242,7 +242,7 @@ What it found and left, all open:
 
 ## Defects: chart coverage, steps 1 to 8
 
-Found while building `docs/chart-coverage-plan.md` on October 8, by the agents that built each step and by two browser checks of the merged tree (headless Chromium, and WebKit for the second). Design questions the build raised are not here: they are in section 9 of that plan. Each step's own findings are in its section 8. The pixel painter compared below is the bench's SVG painter, removed in `6ac261e`; `place()` is the pixel comparison left.
+Found while building `docs/archive/chart-coverage-plan.md` on October 8, by the agents that built each step and by two browser checks of the merged tree (headless Chromium, and WebKit for the second). Design questions the build raised are not here: they are in section 9 of that plan. Each step's own findings are in its section 8. The pixel painter compared below is the bench's SVG painter, removed in `6ac261e`; `place()` is the pixel comparison left.
 
 ### Fixed
 

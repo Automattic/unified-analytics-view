@@ -3,7 +3,7 @@ import { FIT_RULES, buildScene, columnRooms, expand, formatValue, hasOf, pathD, 
 import { catalog, moreSamples, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
 import { at, err, ofUnbounded, run, shown, validView as view } from './helpers.ts';
 
-// Rows as tracks (docs/chart-coverage-plan.md, step 2): columns of values, a change per row, a signed track and the
+// Rows as tracks (docs/archive/chart-coverage-plan.md, step 2): columns of values, a change per row, a signed track and the
 // funnel. The sweep and the golden scenes of these samples are in test/coverage.test.ts, with the rest of `moreSamples`.
 const conversions = moreSamples.conversions!.spec, league = moreSamples.league!.spec, funnel = moreSamples.funnel!.spec;
 const texts = (nodes: { key: string }[], key: RegExp) => nodes.filter((n) => key.test(n.key)).map((n) => (n as unknown as { text: string }).text);

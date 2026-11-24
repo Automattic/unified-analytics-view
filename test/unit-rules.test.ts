@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { UNIT_CELLS, UNIT_MOST, UNIT_SEATS, unitCount, unitSeats, unitShares, unitWorth } from '@unified-analytics/core';
 
-// Step 6 of docs/uncommon-coverage-plan.md: the arithmetic of the `unit` mark, each rule tested where it is written
+// Step 6 of docs/archive/uncommon-coverage-plan.md: the arithmetic of the `unit` mark, each rule tested where it is written
 // (packages/core/src/unit.ts). None of it takes a size: a scene is in ratios, so a glyph's worth comes from the data.
 const sum = (ns: number[]) => ns.reduce((s, n) => s + n, 0);
 

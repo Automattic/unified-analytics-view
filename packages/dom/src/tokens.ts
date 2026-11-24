@@ -1,6 +1,6 @@
 /* The public tokens: every custom property <ua-view> reads from the page it is on, and what each falls back to
  * where the page sets none. The names are @automattic/charts' own, with our prefix for its `--a8c-charts-`
- * (docs/dom-painter-plan.md, 4.1), and more of the same shape where it has none.
+ * (docs/archive/dom-painter-plan.md, 4.1), and more of the same shape where it has none.
  *
  * packages/tokens declares the same names as its charts tier, and its config is the authority for every value: a
  * fallback here is what that config resolves to (a fluid size, the widest end of its clamp), but for the ones in

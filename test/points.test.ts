@@ -9,7 +9,7 @@ import { nearest } from '../packages/dom/src/layouts/points.ts';
 import { err, run, shown } from './helpers.ts';
 
 // A metric on both axes, `dot`, `size`, labels on points, a rule on x, and a numeric dimension
-// (docs/chart-coverage-plan.md, step 4). The samples are swept and have golden scenes in coverage.test.ts.
+// (docs/archive/chart-coverage-plan.md, step 4). The samples are swept and have golden scenes in coverage.test.ts.
 const { scatter, bubble, quadrant, histogram, density } = Object.fromEntries(Object.entries(moreSamples).map(([k, s]) => [k, s.spec])) as Record<string, Spec>;
 const texts = (ratio: { nodes: any[] }, part: string) => ratio.nodes.filter((n) => n.part === part && n.kind === 'text').map((n) => n.text);
 

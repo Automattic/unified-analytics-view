@@ -1,6 +1,6 @@
 # View grammar: reference for the build
 
-As of October 7, 2026. Working name only; rename freely.
+Begun October 7, 2026, and kept current as each thing is built: the last entries are of November 24. Working name only; rename freely.
 
 `docs/vision.md` says what the project is for. Every Decided and Open item here is weighed against it.
 
@@ -352,7 +352,7 @@ The JSON Schema for a spec is `packages/core/schema/view.schema.json`, and the c
 | `arc` | angle, radius, color, detail | Its own mark. No general polar coordinate system: `angle` and `radius` take a metric and a dimension between them, and there are four forms. **A metric on `angle`, a dimension on `color`:** a segment for each row, its share of the engine's total; a number on `radius` is the inner radius. With a second dimension on `detail`, a ring outside it divides each segment among that dimension's values, lighter and in the segment's colour, with no legend entry: the query is by the two, and a segment's span is the engine's `totalsBy`. **A dimension on `angle`, a metric on `radius`:** an equal slice for each row, in the engine's order, reaching out to its value on a square-root scale, so its area carries the value. It starts at the centre and is drawn in one paint, with a label for each slice round the rim. **A dimension on `radius`, a metric on `angle`:** a ring for each row, six at most, the first outermost, swept against the catalog `domain`, or the largest row where there is none. With nothing on `angle` it is the whole ring, faint. The same dimension on `color` gives each ring a series colour and a legend entry that says its value. **A metric on `angle` alone:** read against its catalog `domain` | Built October 8; data on `angle` and `radius`, and the second ring, built October 12 |
 | `unit` | x, y, color, angle | A value drawn as counted glyphs, one for so many, where a `bar` or an `arc` would draw a length. What a glyph is worth comes from the data. It takes no second end, no `stack`, no `series` and no value below zero | Built October 12 |
 
-"Built October 8" means built, tested and looked at in headless Chromium by the agent that built it. What each one found is in `docs/chart-coverage-plan.md`, section 8.
+"Built October 8" means built, tested and looked at in headless Chromium by the agent that built it. What each one found is in `docs/archive/chart-coverage-plan.md`, section 8.
 
 **The `unit` mark has five forms, and its channels choose between them.** No field names one.
 
@@ -572,7 +572,7 @@ With `stack: "diverge"` and two series that is a population pyramid; with five i
   ] }
 ```
 
-`rows` is a track per row: a label, a track with a linear scale that bars, dots, rules and ticks draw in, and columns of values. A facet is a view for each value (section 6, "A facet"). The plan and what building it found are in `docs/chart-coverage-plan.md`.
+`rows` is a track per row: a label, a track with a linear scale that bars, dots, rules and ticks draw in, and columns of values. A facet is a view for each value (section 6, "A facet"). The plan and what building it found are in `docs/archive/chart-coverage-plan.md`.
 
 ---
 
@@ -688,7 +688,7 @@ This is the heart of the system and the part most in flux.
 - A layout that hands out a box (a toolbar row, a dashboard tile) opts its children into filling the height too. That is set in the layout's own CSS, never on the view.
 - Both behaviours exist because of constraint 4 in section 10.3.
 
-The layouts and their CSS are in `docs/dom-painter-plan.md`, section 4.2.
+The layouts and their CSS are in `docs/archive/dom-painter-plan.md`, section 4.2.
 
 ### 10.1 What the prototype did
 
@@ -739,7 +739,7 @@ For browser containers, each element should break only when it needs to, using i
 - **Each element owns its thresholds.** The axis, grid, legend, tick labels and each role carry their own container query. These rules belong to the design system's mark and chrome components, so the view spec stays free of sizes.
 - **Dependent changes share a condition.** The tldr value that appears when the axes go uses the same query as the axes.
 
-A sketch, untested. The worked rules are in `docs/dom-painter-plan.md`, section 2, where the axes rule queries the view and not the plot, because hiding an axis changes the plot's size:
+A sketch, untested. The worked rules are in `docs/archive/dom-painter-plan.md`, section 2, where the axes rule queries the view and not the plot, because hiding an axis changes the plot's size:
 
 ```css
 .uav-plot { container: uav-plot / size; }           /* needs a definite height; use inline-size otherwise */
@@ -814,7 +814,7 @@ The number, a legend and a list's rows carry no position: a surface sets them in
 
 **The scene has a schema** (built November 24; Decided 56): `packages/core/schema/scene.schema.json`, `scene/0`. It is a draft, and says the scene as it is built: the fields above, an arc's own, each kind of node and what it must hold, the parts, and the paint tokens. `test/scene-schema.test.ts` holds every scene a sample builds to it, in every data state, so a field a builder adds without the schema fails there. A surface that paints a scene, or an author who writes one, has it to go by.
 
-Until this the height up a plot was `v` on a bar and on a path's point and `t` on a line, a dot and a label, and a row's bar ran from `v0` to `v` beside a rule from `x` to `x2`. The plans that record earlier steps (`docs/chart-coverage-plan.md`, `docs/uncommon-coverage-plan.md`) use those names, as they were then.
+Until this the height up a plot was `v` on a bar and on a path's point and `t` on a line, a dot and a label, and a row's bar ran from `v0` to `v` beside a rule from `x` to `x2`. The plans that record earlier steps (`docs/archive/chart-coverage-plan.md`, `docs/archive/uncommon-coverage-plan.md`) use those names, as they were then.
 
 A placed scene is `{ width, height, nodes, plot? }`. Nodes are flat and drawn in order.
 
@@ -840,7 +840,7 @@ Every node also has:
 
 Paint tokens in use: `ink`, `ink.muted`, `grid`, `axis`, `series.1` to `series.6`, `compare`, `rule`, `delta.good`, `delta.bad`, `live`, the steps of the two ramps (`seq.1` to `seq.10`, `seq.none`, `div.1` to `div.9`), `band.1` to `band.3`, and `background`, which the `partition` mark sets a name on a filled box in.
 
-**Decided October 7: one scene, in ratios.** A pixel scene needs a size before it can exist, which is the opposite of intrinsic. Every node gets a `part` and coordinates from 0 to 1 within that part's box. The DOM painter lets CSS turn them into pixels. The dot-grid and canvas painters get today's pixel scene from a pure function, `place(scene, size)`, which is held to the existing golden scenes. Keys, paint tokens, roles and `layer` are identical in both. Detail is in `docs/dom-painter-plan.md`, section 3.
+**Decided October 7: one scene, in ratios.** A pixel scene needs a size before it can exist, which is the opposite of intrinsic. Every node gets a `part` and coordinates from 0 to 1 within that part's box. The DOM painter lets CSS turn them into pixels. The dot-grid and canvas painters get today's pixel scene from a pure function, `place(scene, size)`, which is held to the existing golden scenes. Keys, paint tokens, roles and `layer` are identical in both. Detail is in `docs/archive/dom-painter-plan.md`, section 3.
 
 **Amended November 23 (Decided 43).** No painter read the pixel scene: the element paints the ratios, and the dot-grid and canvas painters are not started. `place()` was a second layout engine written by hand for each layout, and each new form had to be written in it as well as in the scene and the stylesheet. It is parked. A surface with no CSS gets the scene and what the fit rules make of it at a room (`fitTo`), and places the parts itself. One generic placer is the thing to write when a pixel painter is wanted, once every node is a ratio of its part's box (Open 20).
 
@@ -853,7 +853,7 @@ One consequence, also agreed: a scene with no size cannot choose its tick count 
 **Status: the HTML and CSS painter is Proven (`packages/dom`). SVG and dot grid were the prototype's, and are not built here: core places nothing since November 23 (Decided 43).**
 
 - **Two layers per view.** Data marks go to whichever renderer fits. Axes, labels, tooltips, brush and focus rings always stay in the DOM, so text stays crisp, tokens apply through CSS and keyboard access survives.
-- **Tokens, not colours.** A painter maps paint tokens to CSS custom properties, using the `@automattic/charts` token names under our own prefix (`series.1` becomes `--ua-charts-color-series-1`, for its `--a8c-charts-color-series-1`). Which custom property each paint token reads is `PAINT` in `packages/dom/src/dom.ts`, and `docs/dom-painter-plan.md` section 4.1 says where the rest of the map is. Light and dark are token sets.
+- **Tokens, not colours.** A painter maps paint tokens to CSS custom properties, using the `@automattic/charts` token names under our own prefix (`series.1` becomes `--ua-charts-color-series-1`, for its `--a8c-charts-color-series-1`). Which custom property each paint token reads is `PAINT` in `packages/dom/src/dom.ts`, and `docs/archive/dom-painter-plan.md` section 4.1 says where the rest of the map is. Light and dark are token sets.
 - **Intrinsic sizing.** The DOM painter plans once per data change and CSS fits the view on resize. Bars are HTML positioned by custom properties; lines and areas are a stretched SVG (decided October 7). The view carries no size or mode; see section 10.
 - **Direction.** A plot's frame runs left to right whichever way the page reads: the plot, the axes on every side of it, the labels at the line ends, a grid of cells and its row labels, and a map. A circle of arcs runs clockwise and a number from its first character. What mirrors with the page is the legend, the key to sizes and the ramp, the number's block and the prose, a band and a list of rows; a label's words run their own way wherever they stand. Left and Right move the way they point.
 - **Isolation.** On a customer's site the view must not inherit or leak styles. Use a custom element with shadow DOM.
@@ -1011,26 +1011,7 @@ The v1 product also needs primitives that are not built here yet: a delta badge 
 
 ## 18. Stack and repository shape
 
-**Status: Proposed. Push back if something here is a poor fit.**
-
-- TypeScript, strict. The core has no DOM and no framework.
-- `d3-scale`, `d3-shape`, `d3-array` only. No chart library.
-- A custom element with shadow DOM for the DOM painter. Thin Preact and React bindings later; one consumer renders with Preact, so do not assume React.
-- Vite and Vitest. Scene snapshots as golden files, so grammar changes show up as diffs.
-- A JSON Schema for the spec and the catalog as the published contract.
-- Tokens as CSS custom properties.
-
-```
-packages/
-  core/       spec types and schema, validation, catalog types, presets and expand, plan, scene, tldr prose
-  dom/        HTML, CSS and SVG painter; the custom element
-  dots/       dot-grid painter (later)
-  fixtures/   catalog, fixture query engine, sample specs
-apps/
-  bench/      the playground: spec editor, container width and height, data states, painter switch
-docs/
-  view-grammar-reference.md
-```
+Removed November 24: it was a proposal of October, and what was built from it is in the `README.md` and `CLAUDE.md`. The number is kept so later sections keep theirs.
 
 ---
 
@@ -1060,7 +1041,7 @@ docs/
 20. One scene, in ratios, with a `part` on every node. Pixel painters go through `place(scene, size)`. (October 7) The second sentence is amended by 43.
 21. Y ticks always round to 4, thinned by a rule on short plots. A deliberate departure from the prototype. (October 7)
 22. In the DOM, bars are HTML and lines and areas are a stretched SVG. (October 7)
-23. Layouts stay, as arrangements of parts that fit rules and painters hang on. A channel's scale comes from its field; `rows` becomes a track per row; `radial` is added for `arc`. Detail and the build order are in `docs/chart-coverage-plan.md`. (October 7) Reopened November 23, to be narrowed and not undone: see Open 21.
+23. Layouts stay, as arrangements of parts that fit rules and painters hang on. A channel's scale comes from its field; `rows` becomes a track per row; `radial` is added for `arc`. Detail and the build order are in `docs/archive/chart-coverage-plan.md`. (October 7) Reopened November 23, to be narrowed and not undone: see Open 21.
 24. A query may have two dimensions in `by`, no more. The second goes to `color`, to `facet`, or to the other axis. (October 7)
 25. Statistics (bins, quantiles, density, running totals) come from the engine as companion fields, as `metric@previous` does. Core gains no transform for them. (October 7)
 26. A facet is a small board: a plan per value with one shared domain, laid out by the container. (October 7)
@@ -1104,7 +1085,7 @@ docs/
 
 ### Open
 
-1. The format for per-element fit rules, such that they compile to container queries and also run in code. Proposed in `docs/dom-painter-plan.md`, section 2. Built: the rules are compiled (`packages/dom/src/compile.ts`) and read in code by `fitTo` (Decided 43), and `keep` holds a rule off in both. One difference step 1 of that plan found is still open: a rule on the view cannot say the plot's room when the number sits above the plot, which is why the `y-ticks` rule carries a note and Open 19 its last sentence.
+1. The format for per-element fit rules, such that they compile to container queries and also run in code. Proposed in `docs/archive/dom-painter-plan.md`, section 2. Built: the rules are compiled (`packages/dom/src/compile.ts`) and read in code by `fitTo` (Decided 43), and `keep` holds a rule off in both. One difference step 1 of that plan found is still open: a rule on the view cannot say the plot's room when the number sits above the plot, which is why the `y-ticks` rule carries a note and Open 19 its last sentence.
 2. Settled October 7: see Decided 20. The number is kept so later items keep theirs.
 3. How a preset pins a hand-tuned form.
 4. Settled October 7: see Decided 23. Built October 8.
@@ -1114,12 +1095,12 @@ docs/
 8. Whether deltas exclude the partial day.
 9. Params and selections. Settled in part November 24: see Decided 48 and 49. The filter, the board's shared query, a selection as a filter a view proposes and cross-filtering by one rule are built. A set and an interval are picked with modifiers (Decided 50). Still open: a drag for a run, which waits for a look; whether a touch should pick several in the element itself, by a long press, where today the surface decides; how a screen reader reads what is selected; and whether Spacefast's API takes a filter in this form, which its recorded answers do not show.
 10. Settled October 7: see Decided 24. Built October 8.
-11. Catalog properties beyond the stub, and where polarity and thresholds are declared. Among them, what a metric counts, one and many ("person", "people"): without it an instant metric reads "Present now: 7 right now" and not "7 people are here right now". What this repo will propose to the API's owners is listed in `docs/chart-coverage-plan.md`, section 3.5: a `number` dimension type; `domain`, `target` and `bands` on a metric; a colour role per dimension value; and totals per split on the result. All but the colour role are built here and are in the schema, so a catalog may use them; what is open is whether the API will send them.
+11. Catalog properties beyond the stub, and where polarity and thresholds are declared. Among them, what a metric counts, one and many ("person", "people"): without it an instant metric reads "Present now: 7 right now" and not "7 people are here right now". What this repo will propose to the API's owners is listed in `docs/archive/chart-coverage-plan.md`, section 3.5: a `number` dimension type; `domain`, `target` and `bands` on a metric; a colour role per dimension value; and totals per split on the result. All but the colour role are built here and are in the schema, so a catalog may use them; what is open is whether the API will send them.
 12. Settled November 23 and 24: see Decided 45 and 49. A board holds views and no layout; the facet and the board are built.
 13. The name.
 14. Which survives at the smallest size, the marks or the tldr value. Today the tldr value does; a sparkline in a table cell wants the line alone. To settle in testing.
 15. Whether the tldr prose rung can be anything but measured. The plan proposes a measured pass, because the threshold is the width of the number itself. It is the one place the fit is not intrinsic.
-16. What building the chart coverage plan left to decide. Listed in `docs/chart-coverage-plan.md`, section 9.
+16. What building the chart coverage plan left to decide. Listed in `docs/archive/chart-coverage-plan.md`, section 9.
 17. Time zone, grain and locale on the time axis. A time is said as its string writes it (section 4), which needs no zone while an engine names buckets by its own clock: the fixtures send bare dates, and Spacefast's API cuts in UTC and says so. Its contract says site time zones come later. When they do, either the adapter rewrites each instant as the site's clock time, or a zone reaches the formatter as a new input on the result. The first is recommended, since it adds nothing to the grammar. A stated grain would let the midnight bucket of an hourly result say its hour and a week say that it is one. Dates are written in `en-US` throughout. Raised again on November 24 by the Jetpack Stats team's review, which calls it architectural and asks that it be threaded through while the call sites are few: `format.ts` builds its formatters once, in `en-US` and UTC, some seventy calls read them from core, the element and two custom marks, and the prose, `explain` and the readout are written in English. Recommendation: locale and time zone are where the view lands, as its theme is, so they are an input a container hands a view beside `catalog` and `rules` and never a part of a spec; and the words are an input too, a table of the sentences with English as what stands where none is given. In three stages, each leaving every view as it is where nothing is handed in: the formatters made from the input and no longer once for all; then the words gathered into one table; then the element reading the page's own language where it is told none.
 18. Settled November 23: see Decided 41 and 42. Built that day.
 19. What the fit rules do not say (section 10.2 lists it): rows trimmed to a height, columns given up by width, the number's shorter forms and the prose rung, a number too wide for its hole, labels that would meet, and anything that depends on the content's height. The element measures these, and the reader is silent on them. Recommendation: write each as a rule where its need can be stated in px, starting with the number's forms and whole rows, and leave label collision to the surface (Open 5). The two rules on the plot need the plot's box, which a rule on the view could state where the plot's share of the view is known.

@@ -24,7 +24,7 @@ The demo is Friday, October 9. The order below is chosen so that every milestone
 
 ### 1. Typed core
 
-Port sections 1 to 7 of `prototype/prototype-bench.js` into `packages/core` and `packages/fixtures`, as scoped in `docs/claude-code-prompt.md`: types, validation, presets, the plan with its central reducer, scene builders, the tldr prose, JSON Schemas for the spec and the catalog.
+Port sections 1 to 7 of `prototype/prototype-bench.js` into `packages/core` and `packages/fixtures`, as scoped in `docs/archive/claude-code-prompt.md`: types, validation, presets, the plan with its central reducer, scene builders, the tldr prose, JSON Schemas for the spec and the catalog.
 
 **Done when:** the ported pipeline produces the same plan, scene and tldr prose as the prototype for every sample, data state, painter, height and width in the sweep; the fixture facts in section 17 of the reference hold; golden scenes exist for the six samples at three container sizes.
 
@@ -62,7 +62,7 @@ The fixtures grow to cover these metrics and dimensions. Each grammar gap become
 
 ### 4. DOM painter
 
-Per element from the start (decided Oct 5). `docs/dom-painter-plan.md` is the design note and is awaiting review: the fit-rule format, a ratio scene with `place()` for pixel painters, element structure and container names, and how keys map to DOM. After review, a half-day spike on the trend view, then `packages/dom`: HTML, CSS and SVG with intrinsic sizing and per-element container queries, inside a custom element with shadow DOM, with paint tokens as CSS custom properties.
+Per element from the start (decided Oct 5). `docs/archive/dom-painter-plan.md` is the design note and is awaiting review: the fit-rule format, a ratio scene with `place()` for pixel painters, element structure and container names, and how keys map to DOM. After review, a half-day spike on the trend view, then `packages/dom`: HTML, CSS and SVG with intrinsic sizing and per-element container queries, inside a custom element with shadow DOM, with paint tokens as CSS custom properties.
 
 **Done when:** the view set renders at 346 px and degrades sensibly down to the number, with no script running on resize, and does not inherit or leak styles on a hostile host page.
 
@@ -98,7 +98,7 @@ Built since: params and selections with cross-filtering, and boards (November 24
 
 What was listed here, in rough order: params and selections (cross-filtering), boards, generalizing the three hard-coded layouts, the `arc` mark, the dot-grid painter ported to the packages, label collision, keyboard navigation and keyed transitions, the agent surface over MCP, and the parity list and port into the Jetpack monorepo that the positioning doc describes.
 
-The layouts, the `arc` mark and the rest of the marks are inventoried and ordered in `docs/chart-coverage-plan.md`: what it takes to draw every common chart type, in eight steps.
+The layouts, the `arc` mark and the rest of the marks are inventoried and ordered in `docs/archive/chart-coverage-plan.md`: what it takes to draw every common chart type, in eight steps.
 
 ## The seam
 
@@ -111,6 +111,6 @@ Both are proposals to bring to Jeff and Laura, not decisions. An adapter between
 
 ## Open calls that shape the course
 
-1. **The DOM painter plan.** Five calls in `docs/dom-painter-plan.md`, and a spike that can still send us back to the pixel scene.
+1. **The DOM painter plan.** Five calls in `docs/archive/dom-painter-plan.md`, and a spike that can still send us back to the pixel scene.
 2. **Channels and devices: share bar or ranked list.** A design decision in milestone 3.
 3. **What "present now" counts.** Tabs or people is the team's call; the view is the same either way, only the label and the tldr prose change.

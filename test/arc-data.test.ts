@@ -9,7 +9,7 @@ import { inUse, useExamples } from './examples.ts';
 useExamples();   // the presets the library no longer ships, which these cases still write `use` with
 const moreSamples = inUse(written);   // and the samples as they were written with them
 
-// Step 2 of docs/uncommon-coverage-plan.md: an `arc` that reads data on `angle` and `radius`, and a second ring by
+// Step 2 of docs/archive/uncommon-coverage-plan.md: an `arc` that reads data on `angle` and `radius`, and a second ring by
 // `detail`. Held to its own sweep, facts and golden scenes, as test/radial.test.ts holds the circle divided by colour.
 const specs = Object.fromEntries(['rose', 'rings', 'sunburst'].map((k) => [k, moreSamples[k]!.spec])) as Record<string, Spec>;
 const { rose, rings, sunburst } = specs;

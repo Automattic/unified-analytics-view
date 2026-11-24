@@ -5,7 +5,7 @@ import { registerPreset, type PresetLibrary, type Spec } from '@unified-analytic
  * second metric, a companion's suffix, a layer of the period before left out where the query does not compare.
  * Not a test file: vitest takes only *.test.ts. A suite that writes `use` with one of these calls `useExamples()`. */
 export const EXAMPLES: PresetLibrary = {
-  // An arc that reads data on angle and radius (docs/uncommon-coverage-plan.md, step 2). Working names, all three:
+  // An arc that reads data on angle and radius (docs/archive/uncommon-coverage-plan.md, step 2). Working names, all three:
   // check each against @automattic/charts before it ships.
   // A slice for each value, equal in width and reaching out to its value: a Nightingale rose, and with hours a clock.
   'rose': { layers: [
@@ -68,7 +68,7 @@ export const EXAMPLES: PresetLibrary = {
     { mark: 'unit', encode: { angle: '$metric', color: '$by' }, sweep: 'half' } ] },
   'icon-array': { layers: [
     { mark: 'unit', encode: { x: '$metric' } } ] },
-  // Lines and areas beyond the trend (docs/uncommon-coverage-plan.md, step 3). Working names, all five: check each
+  // Lines and areas beyond the trend (docs/archive/uncommon-coverage-plan.md, step 3). Working names, all five: check each
   // against @automattic/charts before it ships.
   // A bump chart: each value of the split by its place, first at the top. The engine returns the place, as `$metric@rank`,
   // and the catalog says that companion's unit is `rank`.
@@ -92,7 +92,7 @@ export const EXAMPLES: PresetLibrary = {
   // Over bins the line is steps.
   'ecdf': { layers: [
     { mark: 'line', encode: { x: '$by', y: '$metric@cumulative' } } ] },
-  // What rows, bars, ticks and rules took in step 4 of the Uncommon plan (docs/uncommon-coverage-plan.md). Working
+  // What rows, bars, ticks and rules took in step 4 of the Uncommon plan (docs/archive/uncommon-coverage-plan.md). Working
   // names, all five: check each against @automattic/charts before it ships.
   // A stem from zero to a dot, for each row.
   'lollipop': { layers: [

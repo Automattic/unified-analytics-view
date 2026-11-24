@@ -7,7 +7,7 @@ import { rows as painter } from '../packages/dom/src/layouts/rows.ts';
 import { TRACK_CSS } from '../packages/dom/src/layouts/track.ts';
 import { ofUnbounded } from './helpers.ts';
 
-// What <ua-view> does for step 4 of docs/uncommon-coverage-plan.md, where that is strings and plain functions. The
+// What <ua-view> does for step 4 of docs/archive/uncommon-coverage-plan.md, where that is strings and plain functions. The
 // element itself was looked at in a browser, on the bench.
 const of = (name: string) => {
   const spec = moreSamples[name]!.spec, result = runQuery(spec.query), q = expand(spec).query, { plan, scene } = ofUnbounded(spec, result, q);

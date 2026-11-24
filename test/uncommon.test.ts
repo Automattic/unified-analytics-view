@@ -7,7 +7,7 @@ import { inUse, useExamples } from './examples.ts';
 useExamples();   // the presets the library no longer ships, which these cases still write `use` with
 const moreSamples = inUse(written);   // and the samples as they were written with them
 
-// Step 0 of docs/uncommon-coverage-plan.md: the Uncommon types that today's marks already say, each as a sample, and
+// Step 0 of docs/archive/uncommon-coverage-plan.md: the Uncommon types that today's marks already say, each as a sample, and
 // what running them found (section 7 of that note). The samples are swept, and have their golden scenes, with the
 // others of their layout: test/coverage.test.ts, test/ranges.test.ts and test/cell.test.ts. Here is what each one is,
 // and where the grammar stops short of it. A fact marked "for step N" is a hole that step is to close, held so that

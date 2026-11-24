@@ -43,7 +43,7 @@ export const catalog: Catalog = {
     conversion_rate:  { label: 'Conversion rate', unit: 'ratio', polarity: 'up' },
     conversion_value: { label: 'Value',           unit: 'usd',   polarity: 'up', rangeTotal: 'sum' },
     response_time:    { label: 'Response time',   unit: 'ms',    polarity: 'down' },
-    // For the Uncommon types (docs/uncommon-coverage-plan.md, step 0). A share that runs up through the rows is a metric of
+    // For the Uncommon types (docs/archive/uncommon-coverage-plan.md, step 0). A share that runs up through the rows is a metric of
     // its own, in its own unit. An effect and a place in an embedding have no total: the engine sends null for each.
     errors:           { label: 'Errors',            unit: 'count', polarity: 'down', rangeTotal: 'sum' },
     errors_share:     { label: 'Cumulative share',  unit: 'ratio', polarity: 'none' },
@@ -51,10 +51,10 @@ export const catalog: Catalog = {
     embed_x:          { label: 'First component',   unit: 'count', polarity: 'none' },
     embed_y:          { label: 'Second component',  unit: 'count', polarity: 'none' },
     requests:         { label: 'Requests',          unit: 'count', polarity: 'none', rangeTotal: 'sum' },
-    // How far two assumptions move together, from -1 to 1 (docs/uncommon-coverage-plan.md, step 5). It has no total, and
+    // How far two assumptions move together, from -1 to 1 (docs/archive/uncommon-coverage-plan.md, step 5). It has no total, and
     // no unit: a plain number is written as a count is. Its domain crosses zero, so it is painted on the diverging ramp.
     correlation:      { label: 'Correlation',       unit: 'count', polarity: 'none', domain: [-1, 1] },
-    // Companions that are not in their metric's unit (docs/uncommon-coverage-plan.md, step 3). The engine returns each
+    // Companions that are not in their metric's unit (docs/archive/uncommon-coverage-plan.md, step 3). The engine returns each
     // with its metric, and a query cannot ask for one by name. An entry under a companion's whole name says its unit:
     // a place among the values of the other dimension, and the share of the total held up to the end of a bin or a row.
     'visitors@rank':        { label: 'Rank',             unit: 'rank',  polarity: 'down' },
@@ -556,7 +556,7 @@ export const boardSamples: Record<string, { label: string; board: Board }> = {
   ] } },
 };
 
-/* Samples beyond the first six (docs/chart-coverage-plan.md). test/core.test.ts holds `samples` by name and never
+/* Samples beyond the first six (docs/archive/chart-coverage-plan.md). test/core.test.ts holds `samples` by name and never
  * meets these. They have a sweep and golden scenes of their own, in test/coverage.test.ts. */
 /** Specs with a `facet`: each is a view for every value of a dimension (core's `facets`), on the same scales. They are
  * apart from `moreSamples` because a facet has no one plan, and what sweeps the samples asks each for its plan. */
@@ -615,11 +615,11 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
   labelled: { label: 'Map with its values on it: visitors by country, said on each', spec: { spec: 'view/0', title: 'Visitors by country', query: { metrics: ['visitors'], by: ['country'], range: '28d' },
             layers: [{ mark: 'geo', encode: { x: 'country', color: 'visitors' } }, { mark: 'text', encode: { x: 'country', text: 'visitors' } }] } },
   symbols: { label: 'Symbols on a map: page views by country', spec: { spec: 'view/0', title: 'Page views by country', layers: [{ mark: 'geo', encode: { x: 'country', size: 'pageviews' } }], query: { metrics: ['pageviews'], by: ['country'], range: '28d' } } },
-  // A split that spends no colour (docs/uncommon-coverage-plan.md, step 1): a line for each country, all in one paint.
+  // A split that spends no colour (docs/archive/uncommon-coverage-plan.md, step 1): a line for each country, all in one paint.
   spaghetti: { label: 'Spaghetti: visitors by day, a line for each of fifteen countries', spec: { spec: 'view/0', title: 'Visitors by country, day by day', layers: [{ mark: 'line', encode: { x: 'date.day', y: 'visitors', detail: 'country' } }], query: { metrics: ['visitors'], by: ['date.day', 'country'], range: '28d' } } },
   tiles:   { label: 'A tile grid map: visitors by country, each an equal square', spec: { spec: 'view/0', title: 'Visitors by country', layers: [{ mark: 'geo-tiles', encode: { x: 'country', color: 'visitors' } }], query: { metrics: ['visitors'], by: ['country'], range: '28d' } } },
   hexes:   { label: 'A hex tile map: visitors by country, each an equal hexagon', spec: { spec: 'view/0', title: 'Visitors by country', layers: [{ mark: 'geo-hexes', encode: { x: 'country', color: 'visitors' } }], query: { metrics: ['visitors'], by: ['country'], range: '28d' } } },
-  // An arc that reads data on angle and radius (docs/uncommon-coverage-plan.md, step 2). Swept, with golden scenes, in test/arc-data.test.ts.
+  // An arc that reads data on angle and radius (docs/archive/uncommon-coverage-plan.md, step 2). Swept, with golden scenes, in test/arc-data.test.ts.
   rose:    { label: 'A rose: visitors by hour of the day', spec: { spec: 'view/0', title: 'Visitors by hour', layers: [{ mark: 'arc', encode: { angle: 'hour', radius: 'visitors' } }], query: { metrics: ['visitors'], by: ['hour'], range: '28d' } } },
   // The plot's marks about a centre: a line round the circle from each day's place to the next, the fill in from it, a dot at each, and the period before as a second line.
   tinted:  { label: 'Bars painted by a second metric: visitors by page, and how each converts', spec: { spec: 'view/0', title: 'Visitors, and how they convert', query: { metrics: ['visitors', 'page_conversion'], by: ['page'], range: '28d', limit: 8 },
@@ -632,11 +632,11 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
               { mark: 'line', encode: { angle: 'weekday', radius: 'visitors' } }, { mark: 'dot', encode: { angle: 'weekday', radius: 'visitors' } }] } },
   rings:   { label: 'Radial bars: visitors by channel', spec: { spec: 'view/0', title: 'Visitors by channel', layers: [{ mark: 'arc', encode: { radius: 'channel', color: 'channel' }, role: 'context' }, { mark: 'arc', encode: { angle: 'visitors', radius: 'channel', color: 'channel' } }], query: { metrics: ['visitors'], by: ['channel'], range: '28d' } } },
   sunburst: { label: 'A sunburst: visitors by device, then by channel', spec: { spec: 'view/0', title: 'Visitors by device and channel', layers: [{ mark: 'arc', encode: { angle: 'visitors', color: 'device', detail: 'channel' } }], query: { metrics: ['visitors'], by: ['device', 'channel'], range: '28d' } } },
-  // The `partition` mark (docs/uncommon-coverage-plan.md, step 9). They are swept, and have their golden scenes, in test/partition.test.ts.
+  // The `partition` mark (docs/archive/uncommon-coverage-plan.md, step 9). They are swept, and have their golden scenes, in test/partition.test.ts.
   treemap: { label: 'A treemap: page views by section, and by page in each', spec: { spec: 'view/0', title: 'Page views by section and page', use: 'treemap', query: { metrics: ['pageviews'], by: ['section', 'page'], range: '28d' } } },
   treemap1: { label: 'A treemap of one level: visitors by channel', spec: { spec: 'view/0', title: 'Visitors by channel', query: { metrics: ['visitors'], by: ['channel'], range: '28d' },
             layers: [{ mark: 'partition', encode: { x: 'channel', size: 'visitors' } }] } },
-  // The `unit` mark, a sample for each of its forms (docs/uncommon-coverage-plan.md, step 6). They are swept, and have
+  // The `unit` mark, a sample for each of its forms (docs/archive/uncommon-coverage-plan.md, step 6). They are swept, and have
   // their golden scenes, in test/unit.test.ts.
   waffle:  { label: 'Waffle: device share, a hundred cells', spec: { spec: 'view/0', title: 'Devices, cell by cell', layers: [{ mark: 'unit', encode: { x: 'visitors', color: 'device' } }], query: { metrics: ['visitors'], by: ['device'], range: '28d' } } },
   units:   { label: 'Unit chart: visitors by weekday, counted', spec: { spec: 'view/0', title: 'Visitors by weekday', layers: [{ mark: 'unit', encode: { x: 'weekday', y: 'visitors' } }], query: { metrics: ['visitors'], by: ['weekday'], range: '28d' } } },
@@ -647,7 +647,7 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
   icons:   { label: 'Icon array: sign-ups against their range', spec: { spec: 'view/0', title: 'Sign-ups, of 500', layers: [{ mark: 'unit', encode: { x: 'signups' } }], query: { metrics: ['signups'], range: '28d' } } },
   unmapped: { label: 'A map with rows it has no shape for: visitors by every country seen', spec: { spec: 'view/0', title: 'Visitors by country, all of them', query: { metrics: ['visitors'], by: ['visitor_country'], range: '28d' },
             layers: [{ mark: 'geo', encode: { x: 'visitor_country', color: 'visitors' } }] } },
-  // The Uncommon types that today's marks already say (docs/uncommon-coverage-plan.md, step 0, and what it found in section 7).
+  // The Uncommon types that today's marks already say (docs/archive/uncommon-coverage-plan.md, step 0, and what it found in section 7).
   // `dumbbell`, `bullet` and `fan` above are three of them. Each is swept, and has its golden scenes, with the samples of its layout, and what each one is is in test/uncommon.test.ts.
   cleveland: { label: 'Cleveland dot plot: page views by page, ranked, so an ordered dot plot too', spec: { spec: 'view/0', title: 'Page views by page', layers: [{ mark: 'dot', encode: { y: 'page', x: 'pageviews' } }, { mark: 'text', encode: { y: 'page', text: 'page' } }, { mark: 'text', encode: { y: 'page', text: 'pageviews' }, align: 'end' }], query: { metrics: ['pageviews'], by: ['page'], range: '28d', limit: 8 } } },
   lollipop: { label: 'Lollipop: visitors by channel, a stem from zero to each dot', spec: { spec: 'view/0', title: 'Visitors by channel', layers: [{ mark: 'rule', encode: { y: 'channel', x: 'visitors' }, role: 'context' }, { mark: 'dot', encode: { y: 'channel', x: 'visitors' } }, { mark: 'text', encode: { y: 'channel', text: 'channel' } }, { mark: 'text', encode: { y: 'channel', text: 'visitors' }, align: 'end' }], query: { metrics: ['visitors'], by: ['channel'], range: '28d' } } },
@@ -685,9 +685,9 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
             layers: [{ mark: 'dot', encode: { x: 'embed_x', y: 'embed_y' } }] } },
   stem:    { label: 'Stem-and-leaf: load times, the seconds and the tenths under each', spec: { spec: 'view/0', title: 'Load times', query: { metrics: ['requests'], by: ['load_stem'], range: '28d' },
             layers: [{ mark: 'text', encode: { y: 'load_stem', text: 'load_stem' } }, { mark: 'text', encode: { y: 'load_stem', text: 'load_stem@leaves' } }] } },
-  // The `link` mark (step 8 of docs/uncommon-coverage-plan.md). Swept, with its golden scenes, in test/flow.test.ts.
+  // The `link` mark (step 8 of docs/archive/uncommon-coverage-plan.md). Swept, with its golden scenes, in test/flow.test.ts.
   sankey:  { label: 'Sankey: visitors from channel to the section they land in', spec: { spec: 'view/0', title: 'Where visitors land', use: 'sankey', query: { metrics: ['visitors'], by: ['channel', 'landing'], range: '28d' } } },
-  // What a line and an area take beyond the trend (docs/uncommon-coverage-plan.md, step 3). Each is swept, and has its
+  // What a line and an area take beyond the trend (docs/archive/uncommon-coverage-plan.md, step 3). Each is swept, and has its
   // golden scenes, in test/coverage.test.ts, and what each one is is in test/uncommon.test.ts.
   connected: { label: 'Connected scatterplot: visitors against sign-ups, joined day by day', spec: { spec: 'view/0', title: 'Visitors and sign-ups, day by day', layers: [{ mark: 'line', encode: { x: 'visitors', y: 'signups' } }, { mark: 'dot', encode: { x: 'visitors', y: 'signups' } }], query: { metrics: ['visitors', 'signups'], by: ['date.day'], range: '28d' } } },
   ecdf:    { label: 'ECDF: the share of page views that loaded within each time, as steps over the bins', spec: { spec: 'view/0', title: 'Loaded within', layers: [{ mark: 'line', encode: { x: 'load_time', y: 'pageviews@cumulative' } }], query: { metrics: ['pageviews'], by: ['load_time'], range: '28d' } } },

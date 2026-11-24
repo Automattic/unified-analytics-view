@@ -136,7 +136,7 @@ export const BASE_CSS = stylesOf(Object.values(LAYOUTS));
 let styled = 0, styles = BASE_CSS;
 const allStyles = () => (styled === registered ? styles : ((styled = registered), (styles = stylesOf(Object.values(LAYOUTS)))));
 
-/** The two surface layouts of docs/dom-painter-plan.md section 4.2. The surface owns them; they are here so that a
+/** The two surface layouts of docs/archive/dom-painter-plan.md section 4.2. The surface owns them; they are here so that a
  * surface which is itself a custom element can adopt them into its shadow root. */
 export const SURFACE_CSS = `.ua-stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--ua-space-s, 12px); }
 .ua-row { display: flex; gap: var(--ua-space-s, 12px); }

@@ -6,7 +6,7 @@ What follows is the vision, from `docs/vision.md`. Weigh every decision about sc
 
 @docs/vision.md
 
-Read `docs/view-grammar-reference.md` before changing the grammar: its sections are labelled Proven, Proposed or Open, and its section 19 is the log of what is decided and what is open. `docs/focus-plan.md` is the course since November 24, 2026: what is cut and what is built, a step at a time, with what each step found and what is still David's to decide. The plans that are built, and what building each found, are in `docs/archive/`.
+Read `docs/view-grammar-reference.md` before changing the grammar: its sections are labelled Proven, Proposed or Open, and its section 19 is the log of what is decided and what is open. `docs/focus-plan.md` is the course since November 24, 2026: what is cut and what is built, a step at a time, with what each step found and what is still David's to decide. `docs/api-proposal.md` is what the views ask of the query API, for its owners: nothing in it is agreed. The plans that are built, and what building each found, are in `docs/archive/`.
 
 ## Commands
 

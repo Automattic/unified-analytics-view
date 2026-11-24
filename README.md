@@ -11,6 +11,7 @@ docs/
   vision.md                   what this is for: read first
   view-grammar-reference.md   the design, and what is decided and open
   focus-plan.md               the course: what is cut and what is built, a step at a time
+  api-proposal.md             what the views ask of the query API: a proposal to its owners
   archive/                    the plans that are built, and what building each found
   design-inputs/              research behind the design: views, view spec, semantic model
 sketches/                     visual direction: materials and the dot-matrix readout

@@ -164,7 +164,7 @@ describe('the same mark under another name', () => {
     expect(painter.css).toBe(geoPainter.css.split('[data-layout="geo"]').join('[data-layout="geo-tiles"]'));
     expect(painter.css).not.toContain('"geo"');
     expect(geoPainterAs('geo').css).toBe(geoPainter.css);
-    const css = compileFitRules(geoRules('geo-tiles'), { 'geo-tiles': painter.fit ?? {} }), fig = '.uav[data-layout="geo-tiles"]:not([data-keep~="marks"])';
+    const css = compileFitRules(geoRules('geo-tiles'), { 'geo-tiles': painter.fit ?? {} }), fig = '.uav[data-layout="geo-tiles"]';
     expect(css).toContain('@container uav-view (inline-size < 279.5px) {\n  ' + fig + ':has(~ .uav-fallback[data-rule="marks"]) { display: none; }\n  ' + fig + ' ~ .uav-fallback[data-rule="marks"] { display: block; }\n}');
   });
 });

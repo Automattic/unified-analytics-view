@@ -43,9 +43,9 @@ export const geoRules = (layout: string): FitRule[] => [
   // The ramp and the key to sizes are the keys to a map's fills and its symbols, so they stay as long as the map: under
   // this each is in its shorter form. The note of what the map could not draw stays with them.
   { id: 'guides', layout, container: 'view', needs: { inline: 320, block: 170 },
-    hide: [], set: { ramp: 'strip', 'size-key': 'most' }, keep: 'guides' },
+    hide: [], set: { ramp: 'strip', 'size-key': 'most' } },
   { id: 'marks',  layout, container: 'view', needs: { inline: 280, block: 120 },      // regions too small to tell apart
-    hide: [], fallback: 'bar-list', keep: 'marks' },
+    hide: [], fallback: 'bar-list' },
 ];
 /** The rules of the mark under its own name, `geo`. Under another name they are `geoRules(name)`: a rule names its layout. */
 export const GEO_RULES: FitRule[] = geoRules('geo');

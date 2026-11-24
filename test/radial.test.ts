@@ -187,8 +187,6 @@ describe('fit rules', () => {
   it('below the room the marks need, the number alone', () => {
     expect(at(donut!, 346, 63)).toMatchObject({ parts: ['number'], set: { split: 'plain' } });
     expect(at(donut!, 71, 200).parts).toEqual(['number']);
-    // The spec's `keep` holds the legend's rules off, and the marks' own rule is no rule of the guides.
-    expect(at({ ...donut!, keep: ['guides'] }, 346, 63)).toMatchObject({ parts: ['number'], rules: ['kept:legend-top', 'marks'] });
   });
 });
 

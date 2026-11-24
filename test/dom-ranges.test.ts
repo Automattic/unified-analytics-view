@@ -56,7 +56,7 @@ describe('the readout', () => {
 describe('a track beside its label', () => {
   it('gives up its body under its own rule, and only where the figure says its track is beside', () => {
     const css = compileFitRules(FIT_RULES.filter((r) => r.layout === 'rows' && r.id === 'track'), { rows: rows.fit! });
-    const fig = '.uav[data-layout="rows"]:where([data-has~="track"]):not([data-keep~="marks"])';
+    const fig = '.uav[data-layout="rows"]:where([data-has~="track"])';
     expect(css.split('\n')).toEqual([
       '/* rows track */', '@container uav-view (inline-size < 159.5px) {',
       '  ' + fig + ' :is(.uav-rows, .uav-track, .uav-columns, .uav-legend, .uav-legend-top, .uav-unit-key) { display: none; }', '  ' + fig + ' .uav-number { display: block; }',

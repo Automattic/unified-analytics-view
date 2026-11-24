@@ -100,7 +100,7 @@ describe('a rose: a dimension on angle and a metric on radius', () => {
   });
   it('the labels are the key to the slices: under the `rim` rule\'s need they thin to the ones with no rank, and stay as long as the circle', () => {
     const rule = FIT_RULES.find((r) => r.layout === 'radial' && r.id === 'rim')!;
-    expect(rule).toMatchObject({ needs: { inline: 230, block: 120 }, hide: ['rim.ranked'], keep: 'guides' });
+    expect(rule).toMatchObject({ needs: { inline: 230, block: 120 }, hide: ['rim.ranked'] });
     const wide = run(rose!, 346), narrow = run(rose!, 229);
     expect(wide.plan.guides.rim).toBe(true);
     expect(shown(wide)).toMatchObject({ parts: ['radial', 'rim'], hidden: [], rules: [] });
@@ -110,8 +110,6 @@ describe('a rose: a dimension on angle and a metric on radius', () => {
     // They go with the circle, and not before it.
     expect(shown(run(rose!, 100)).parts).toEqual(['radial', 'rim']);
     expect(shown(run(rose!, 71)).parts).toEqual(['number']);
-    // A spec that keeps its guides holds the rule off, and every name stays.
-    expect(shown(run({ ...rose!, keep: ['guides'] }, 229))).toMatchObject({ parts: ['radial', 'rim'], hidden: [], rules: ['kept:rim'] });
   });
 });
 
@@ -241,7 +239,7 @@ describe('the prose finds the leader by comparing rows, whatever order they came
 
 // String work only, as test/dom-radial.test.ts. What the browser makes of it is checked on the bench.
 describe('the radial layout paints the new forms', () => {
-  const css = compileFitRules(FIT_RULES.filter((r) => r.layout === 'radial'), { radial: radial.fit! }), fig = '.uav[data-layout="radial"]:not([data-keep~="guides"])';
+  const css = compileFitRules(FIT_RULES.filter((r) => r.layout === 'radial'), { radial: radial.fit! }), fig = '.uav[data-layout="radial"]';
   it('the `rim` rule thins the labels to the ones with no rank and leaves the circle its margin, before the legend steps down', () => {
     for (const need of ['inline-size < 229.5px', 'block-size < 119.5px'])
       expect(css).toContain('@container uav-view (' + need + ') {\n  ' + fig + ' .uav-rim [data-rank] { display: none; }\n}');

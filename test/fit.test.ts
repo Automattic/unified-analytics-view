@@ -51,11 +51,6 @@ describe('fitTo: a view at a room, read off its rules', () => {
     expect(at(149, [take, swap]).parts).toEqual(['plot', 'axis', 'legend-top']);
     expect(at(149, [R('a', { inline: 200 }, { set: { key: 'short' } }), R('b', { inline: 150 }, { set: { key: 'gone' } })]).set).toEqual({ key: 'gone' });
   });
-  it('a rule the spec keeps is held off, and said to be', () => {
-    const rules = [R('axis', { inline: 300 }, { hide: ['axis'], keep: 'guides' })];
-    expect(at(200, rules, { keep: ['guides'] })).toMatchObject({ parts: ['plot', 'axis', 'legend'], held: [{ rule: rules[0], kept: true }] });
-    expect(at(200, rules, { keep: ['marks'] }).parts).toEqual(['plot', 'legend']);
-  });
   it('a rule for a mark is asked of a view that holds it, and one for a kind of view of that kind', () => {
     const forLine = R('ends', { inline: 300 }, { hide: ['legend'], mark: 'line' }), forTrack = R('track', { inline: 300 }, { hide: ['plot'], has: 'track' }), forLegend = R('key', { inline: 300 }, { hide: ['axis'], has: 'legend' });
     expect([at(200, [forLine], { marks: ['bar'] }).parts, at(200, [forLine], { marks: ['bar', 'line'] }).parts]).toEqual([['plot', 'axis', 'legend'], ['plot', 'axis']]);
@@ -72,11 +67,10 @@ describe('fitTo: a view at a room, read off its rules', () => {
     // A plot an earlier rule took has nothing left in it.
     expect(at(99, [R('marks', { inline: 100 }, { hide: ['plot'] }), inside]).parts).toEqual(['axis']);
   });
-  it('a fallback takes the whole view: the first the spec leaves on that the query can fill', () => {
-    const list = R('list', { inline: 300 }, { fallback: 'bar-list', keep: 'marks' }), bar = R('bar', { inline: 300 }, { fallback: 'share-bar' });
+  it('a fallback takes the whole view: the first that the query can fill', () => {
+    const list = R('list', { inline: 300 }, { fallback: 'bar-list' }), bar = R('bar', { inline: 300 }, { fallback: 'share-bar' });
     expect(at(299, [list, bar], { fills: () => true })).toMatchObject({ parts: [], fallback: list });
     expect(at(299, [list, bar], { fills: (use: string) => use === 'share-bar' }).fallback).toBe(bar);
-    expect(at(299, [list, bar], { keep: ['marks'], fills: () => true })).toMatchObject({ fallback: bar, held: [{ rule: list, kept: true }, { rule: bar, kept: false }] });
     expect(at(300, [list, bar], { fills: () => true }).fallback).toBeUndefined();
   });
 });

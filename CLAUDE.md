@@ -47,7 +47,7 @@ What each package is, and what about it the code does not say. A package's expor
 - **New samples go in `moreSamples`.** `samples` is the first six, which `test/core.test.ts` holds by name and to the layouts they have. One with a `facet` goes in `facetSamples`: `resolve` refuses it, and the sweeps ask every sample for its plan.
 - **Statistics come from the engine,** as companion fields (`metric@p25`). Core computes no quantile, bin or running total.
 - **This is the candidate next major of `@automattic/charts`.** Keep its token structure, under our own prefix (`--ua-charts-*` for its `--a8c-charts-*`), and its keyboard model. The two do not interoperate yet; a page with version 4 tokens aliases each one across. See `docs/positioning.md`.
-- **No sizes, breakpoints or presentation switches in a spec.** They belong to the container and its rules. `keep` is the author's one lever, and it is provisional.
+- **No sizes, breakpoints or presentation switches in a spec.** They belong to the container and its rules. A spec has no lever over them: where a default is wrong for a view, the answer is a better rule (reference, Decided 63).
 - **Scenes carry paint tokens, never colours.**
 - **A scene is the same on every machine.** Sums and products are, and a sine or a cosine is not, to its last digits: a place worked out with one goes through `steady` (`packages/core/src/path.ts`), to a millionth of its box. The golden scenes are held to the digit in CI, on another machine than the one that wrote them.
 - **Keys are stable and unique.** Transitions and keyboard navigation hang on them.

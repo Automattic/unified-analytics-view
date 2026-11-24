@@ -262,7 +262,6 @@ describe('a split plot\'s legend', () => {
     expect(key(346, 170, bars).parts).toEqual(['y-axis', 'plot', 'x-axis', 'legend']);
     expect(key(250, null, bars)).toMatchObject({ parts: ['number', 'plot'], set: { split: 'plain' } });
     expect(marks(key(250, null, bars)).every((n) => n.legend === true)).toBe(true);
-    expect(key(300, null, { ...series, keep: ['guides'] })).toMatchObject({ parts: ['y-axis', 'plot', 'x-axis', 'legend'], rules: ['kept:legend', 'mid-tick'] });
   });
   it('the scene carries both forms, each in its own part, and the fit names the one that shows', () => {
     for (const w of [346, 300, 250]) {

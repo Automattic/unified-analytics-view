@@ -104,8 +104,6 @@ describe('size', () => {
     expect(run(bubble!, 346, 159).fit.set['size-key']).toBe('most');
     // It stays down to the least a plot of points stands in.
     expect(shown(run(bubble!, 346, 120))).toMatchObject({ parts: ['y-axis', 'plot', 'points', 'x-axis', 'size'], set: { 'size-key': 'most' } });
-    const kept = run({ ...bubble!, keep: ['guides'] }, 319);
-    expect([kept.fit.set['size-key'], shown(kept).rules.includes('kept:size')]).toEqual([undefined, true]);
     // Under that the dots go, and the key with them.
     expect(run(bubble!, 279).fit.parts).toEqual(['number']);
   });

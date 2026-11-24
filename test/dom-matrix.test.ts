@@ -26,7 +26,7 @@ describe('stepCell', () => {
 
 describe('the matrix layout', () => {
   const css = compileFitRules(FIT_RULES.filter((r) => r.layout === 'matrix'), { matrix: matrix.fit! });
-  const fig = (keep: string) => '.uav[data-layout="matrix"]:not([data-keep~="' + keep + '"])';
+  const fig = (_was?: string) => '.uav[data-layout="matrix"]';
   it('sets what a pair says in the middle of the pair\'s place, as a plot\'s label and not cut short', () => {
     // The label is the plot's own (points.ts): the grid moves it from above its point to the middle of its cell.
     expect(matrix.css).toContain('.uav[data-layout="matrix"] .uav-point-labels span { translate: -50% -50%; max-inline-size: none; }');

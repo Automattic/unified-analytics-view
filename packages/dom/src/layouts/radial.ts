@@ -80,8 +80,8 @@ ${IN_BOX} {
   .uav[data-layout="radial"] .uav-body { container-type: size; overflow: hidden; --uav-legend-block: ${legendBlock(ARCS_LEAST)}; }
   .uav[data-layout="radial"] .uav-radial { ${shape.box} }
   .uav[data-layout="radial"] :is(.uav-legend, .uav-legend-top) { flex: none; }
-  .uav[data-layout="radial"]:not([data-keep~="guides"]) .uav-legend { ${LEGEND_SWAP.full} }
-  .uav[data-layout="radial"][data-parts~="legend"]:not([data-keep~="guides"]) .uav-legend-top { ${LEGEND_SWAP.top} }
+  .uav[data-layout="radial"] .uav-legend { ${LEGEND_SWAP.full} }
+  .uav[data-layout="radial"][data-parts~="legend"] .uav-legend-top { ${LEGEND_SWAP.top} }
   /* Seats keep 80 px of height under the full legend, the least they are built to, where arcs keep 64. */
   .uav[data-layout="radial"] .uav-body:has(.uav-dots > [data-unit]) { --uav-legend-block: ${legendBlock(SEATS_LEAST / 2)}; }
 }`;

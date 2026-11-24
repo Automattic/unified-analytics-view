@@ -40,8 +40,6 @@ describe('the sweep', () => {
       // A grid has no bare form beside the number: under its `marks` need it is the number alone.
       expect(at(149).slice(0, 2)).toEqual(['matrix', 'number']);
       expect(at(346, 89)[1]).toBe('number');
-      // A ramp the spec keeps stays whole, and the grid with it, down to the grid's own need.
-      expect([234, 150, 149].map((w) => at(w, null, { ...heatmap, keep: ['guides'] }).slice(1))).toEqual([['y-axis plot x-axis ramp', 'whole'], ['y-axis plot x-axis ramp', 'whole'], ['number', 'whole']]);
     }
   });
 });

@@ -13,12 +13,6 @@
     "use": { "type": "string", "description": "A preset name. Expands into layers. Ignored if layers is present. The library ships: line, bar-list, share-bar, bar, grouped-bar, stacked-bar, stacked-area, pie, donut, pie-semi-circle, gauge, heatmap, funnel. Most take a dimension in query.by, and gauge takes none: resolve() says which a preset needs. A form the library does not ship is written as its layers. A custom mark's package registers the preset that draws it, in code, with registerPreset(): the geo package registers choropleth, the flow package registers sankey, and the partition package registers treemap and pair-list. A code base may also hand resolve() a library of its own. So this is not an enum: resolve() checks the name against the library and then the registry, and its error lists the presets there are." },
     "query": { "$ref": "#/definitions/query" },
     "layers": { "type": "array", "items": { "$ref": "#/definitions/layer" } },
-    "keep": {
-      "type": "array",
-      "description": "Parts a container may not drop.",
-      "items": { "enum": ["guides", "secondary", "rows", "marks"] },
-      "uniqueItems": true
-    },
     "facet": { "type": "string", "description": "One of the dimensions in query.by. The spec is then a view for each of its values, every one on the same scales, and the surface lays them out: no columns are said. The layers do not encode it." }
   },
   "allOf": [

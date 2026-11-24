@@ -11,7 +11,6 @@ export const trend = samples.trend!.spec;
 export const specs: Record<string, Spec> = {
   ...Object.fromEntries(Object.entries(samples).map(([k, s]) => [k, s.spec])),
   headed: trend,                         // swept in the ALWAYS context
-  kept: { ...trend, keep: ['guides'] },
 };
 export const heights = [null, 300, 160, 100, 60, 40];
 export const widths = [54, 80, 120, 170, 250, 290, 346, 500, 700];
@@ -40,8 +39,8 @@ export const shown = ({ fit: f, ratio }: { fit: Fit; ratio: { scale?: string | u
   // What each switch is for. One that is for nothing a view has changes nothing in it.
   const FOR: Record<string, string[]> = { legend: ['legend'], ramp: ['ramp'], 'size-key': ['size'], dots: ['size'], split: ['legend', 'labels', 'legend-top', 'ramp'] };
   const sets = (k: string) => !FOR[k] || FOR[k].some(drawn);
-  const acts = (h: Fit['held'][number]) => h.hid.length || h.showed.length || Object.keys(h.rule.set ?? {}).some(sets) || h.rule.fallback || h.rule.hide.some((t) => there(t) || (h.kept && f.parts.includes(t)));
-  return { parts: f.parts, set: Object.fromEntries(Object.entries(f.set).filter(([k]) => sets(k))), hidden: f.hidden.filter(there), rules: f.held.filter(acts).map((h) => (h.kept ? 'kept:' : '') + h.rule.id), ...(f.fallback && { fallback: f.fallback.fallback }) };
+  const acts = (h: Fit['held'][number]) => h.hid.length || h.showed.length || Object.keys(h.rule.set ?? {}).some(sets) || h.rule.fallback || h.rule.hide.some((t) => there(t));
+  return { parts: f.parts, set: Object.fromEntries(Object.entries(f.set).filter(([k]) => sets(k))), hidden: f.hidden.filter(there), rules: f.held.filter(acts).map((h) => h.rule.id), ...(f.fallback && { fallback: f.fallback.fallback }) };
 };
 
 /** The message `f` throws, or undefined. */

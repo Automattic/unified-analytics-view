@@ -1,5 +1,5 @@
 import { BAND_BAR, PLOT_TOP, X_AXIS_BLOCK } from './sizes.ts';
-import type { KeepPart, Layout } from './types.ts';
+import type { Layout } from './types.ts';
 
 /* Fit rules: one declaration per part. Each names a container, the room the part
  * needs in it, and what happens otherwise. `fitTo()` reads them in code, for any surface;
@@ -20,8 +20,6 @@ export interface FitRule {
    * is one too: `ramp: strip`, `size-key: most`. So is a drawing without an encoding whose key the rule takes:
    * `dots: one` for dots of one size, `split: plain` for series in one paint. */
   set?: Record<string, string>;
-  /** The spec's `keep` entry that disables this rule. */
-  keep?: KeepPart;
   /** A preset the view becomes under the same condition: the same query, drawn another way. It takes the place of the
    * whole view, so `hide` and `show` have nothing left to act on. `viewAt()` plans again with it. A browser container
    * paints both, and the compiled rule shows one. */
@@ -81,64 +79,64 @@ export const FIT_RULES: FitRule[] = [
   // else: it stays as long as the first does, and what is drawn on it goes when it goes. A bare plot is of one unit.
   // It has no room for a key to sizes either, so its dots are drawn at one size: what a size meant goes with what said it.
   { id: 'axes',      layout: 'cartesian', container: 'view', needs: LEAST.plot,
-    hide: ['x-axis', 'y-axis', 'y-axis-2', 'grid', 'axis:2', 'size'], show: ['number'], set: { arrange: 'side', dots: 'one' }, keep: 'guides' },
+    hide: ['x-axis', 'y-axis', 'y-axis-2', 'grid', 'axis:2', 'size'], show: ['number'], set: { arrange: 'side', dots: 'one' } },
   // A plot told apart by colour has a legend, which becomes a label at the end of each line. That is for a view with
   // a line or an area in it: bars have no ends to label, so their legend has nothing to give way to and stays. Both go
   // when the axes do, and the colours go with them: a bare plot's series are in one paint, as a split by `detail` is.
   { id: 'legend',      layout: 'cartesian', mark: 'line', container: 'view', needs: LEAST.plotLegend,
-    hide: ['legend'], show: ['labels'], keep: 'guides' },
+    hide: ['legend'], show: ['labels'] },
   { id: 'legend-area', layout: 'cartesian', mark: 'area', container: 'view', needs: LEAST.plotLegend,
-    hide: ['legend'], show: ['labels'], keep: 'guides' },
+    hide: ['legend'], show: ['labels'] },
   { id: 'labels',      layout: 'cartesian', container: 'view', needs: LEAST.plot,
-    hide: ['labels', 'legend', 'ramp'], set: { split: 'plain' }, keep: 'guides' },   // and a ramp, which has no shorter form a bare plot has room for
+    hide: ['labels', 'legend', 'ramp'], set: { split: 'plain' } },   // and a ramp, which has no shorter form a bare plot has room for
   { id: 'point-labels', layout: 'cartesian', container: 'view', needs: LEAST.plotPointLabels,   // labels on points go first
-    hide: ['point-labels'], keep: 'guides' },
+    hide: ['point-labels'] },
   { id: 'size',      layout: 'cartesian', container: 'view', needs: LEAST.plotSizeKey,      // then the key to the sizes of dots, down to its largest step: it stays as long as sized dots do
-    hide: [], set: { 'size-key': 'most' }, keep: 'guides' },
+    hide: [], set: { 'size-key': 'most' } },
   { id: 'points',    layout: 'cartesian', has: 'points', container: 'view', needs: LEAST.plot,   // a plot of points has no sparkline form: under the axes' need it is the number alone
-    hide: PLOT, show: ['number'], keep: 'marks' },
+    hide: PLOT, show: ['number'] },
   { id: 'mid-tick',  layout: 'cartesian', container: 'view', needs: { inline: LEAST.plotMidTick }, hide: ['x-tick.mid'] },
   // A short plot keeps its unranked y ticks: 120 px for the plot, 10 above it and 22 for the x axis.
   // ponytail: it asks the view, since the y axis stands outside the plot's container. Wrong when the number is above
   // the plot. A rule on the plot, and the y axis inside that container, would say it properly.
   { id: 'y-ticks',   layout: 'cartesian', container: 'view', needs: { block: LEAST.plot.block + PLOT_TOP + X_AXIS_BLOCK }, hide: ['y-tick.ranked'] },
   { id: 'secondary', layout: 'cartesian', container: 'plot', needs: LEAST.secondary,       // comparison and reference layers stay legible above this
-    hide: ['role:comparison', 'role:reference', 'role:context'], keep: 'secondary' },
+    hide: ['role:comparison', 'role:reference', 'role:context'] },
   { id: 'marks',     layout: 'cartesian', container: 'view', needs: { inline: LEAST.number + LEAST.gap + LEAST.bare.inline, block: LEAST.bare.block },       // 76 for the number, a 12 px gap and a 64 px bare plot
-    hide: PLOT, show: ['number'], keep: 'marks' },
+    hide: PLOT, show: ['number'] },
   { id: 'legend',     layout: 'rows',     container: 'view', needs: { inline: LEAST.legend, block: LEAST.dividedRows },      // a divided row's legend becomes one line, as the band's does, and where the rows have under three of their own
-    hide: ['legend'], show: ['legend-top'], keep: 'guides' },
+    hide: ['legend'], show: ['legend-top'] },
   { id: 'legend-top', layout: 'rows',     container: 'view', needs: { block: 2 * LEAST.row + LEAST.rowGap + LEAST.legendLine },                    // and that line goes where it would leave no two rows, and the series' colours with it
-    hide: ['legend', 'legend-top'], set: { split: 'plain' }, keep: 'guides' },
+    hide: ['legend', 'legend-top'], set: { split: 'plain' } },
   // After the legend's rules, as every layout's is: where two rules say otherwise of a part the later one wins, and the one that takes the marks has the last word.
   { id: 'marks',     layout: 'rows',      container: 'view', needs: { inline: LEAST.label, block: LEAST.row },        // the label, and one row: a surface shows whole rows, so a box shorter than one shows none. The value's room is measured, and each ranked column's
-    hide: ROWS, show: ['number'], keep: 'marks' },
+    hide: ROWS, show: ['number'] },
   { id: 'legend',    layout: 'band',      container: 'view', needs: { inline: LEAST.legend },                  // the full legend becomes the largest segment's label
-    hide: [], set: { legend: 'top' }, keep: 'guides' },
+    hide: [], set: { legend: 'top' } },
   { id: 'marks',     layout: 'band',      container: 'view', needs: { inline: LEAST.band, block: BAND_BAR + LEAST.legendLine },       // the bar and the one-line legend, 24 px each
-    hide: ['band', 'legend', 'legend-top', 'unit-key'], show: ['number'], keep: 'marks' },
+    hide: ['band', 'legend', 'legend-top', 'unit-key'], show: ['number'] },
   { id: 'legend',     layout: 'radial', container: 'view', needs: { inline: LEAST.legend },                    // as the band's
-    hide: [], set: { legend: 'top' }, keep: 'guides' },
+    hide: [], set: { legend: 'top' } },
   { id: 'legend-top', layout: 'radial', container: 'view', needs: { block: LEAST.circle.block + LEAST.legendLine },                      // the least circle, and one line under it. Under that the legend goes, and the segments' colours with it
-    hide: ['legend', 'legend-top'], set: { split: 'plain' }, keep: 'guides' },
+    hide: ['legend', 'legend-top'], set: { split: 'plain' } },
   // Labels round the rim: the circle, and a label's width to either side of it. They are the key to which slice is
   // which, so under that they thin to the ones with no rank, about four, and stay as long as the circle does.
   { id: 'rim',        layout: 'radial', container: 'view', needs: LEAST.rim,
-    hide: ['rim.ranked'], keep: 'guides' },
+    hide: ['rim.ranked'] },
   { id: 'hole',       layout: 'radial', container: 'plot', needs: { inline: LEAST.hole },                    // the number sits in a donut's hole while the circle is this wide
     hide: ['hole'] },
   { id: 'marks',      layout: 'radial', container: 'view', needs: LEAST.circle,          // the least circle, and what stands in it and round it
-    hide: ['radial', 'hole', 'rim', 'legend', 'legend-top', 'unit-key'], show: ['number'], keep: 'marks' },
+    hide: ['radial', 'hole', 'rim', 'legend', 'legend-top', 'unit-key'], show: ['number'] },
   // A grid has no bare form. Its ramp is the key to its colours and its key to sizes to its dots, so neither goes before
   // the grid: under this each is in its shorter form, the ramp a thin strip of every step and the sizes their largest alone.
   { id: 'ramp',      layout: 'matrix',    container: 'view', needs: LEAST.gridKeys,
-    hide: [], set: { ramp: 'strip', 'size-key': 'most' }, keep: 'guides' },
+    hide: [], set: { ramp: 'strip', 'size-key': 'most' } },
   { id: 'marks',     layout: 'matrix',    container: 'view', needs: LEAST.grid,       // its labels thin by rank where they would meet, which is measured
-    hide: ['plot', 'point-labels', 'x-axis', 'y-axis', 'ramp', 'size'], show: ['number'], keep: 'marks' },
+    hide: ['plot', 'point-labels', 'x-axis', 'y-axis', 'ramp', 'size'], show: ['number'] },
   { id: 'notice',    layout: 'notice',    container: 'view', needs: LEAST.notice,
-    hide: ['notice'], show: ['number'], keep: 'marks' },
+    hide: ['notice'], show: ['number'] },
   { id: 'track',     layout: 'rows',      has: 'track', container: 'view', needs: { inline: LEAST.label + LEAST.track },    // a track beside its label: the label's 90 px and 70 to read a mark's place in. The value's room is measured
-    hide: ROWS, show: ['number'], keep: 'marks' },
+    hide: ROWS, show: ['number'] },
   /* The `unit` mark, in each layout it draws in. Glyphs are counted, so under the room that takes they are not drawn
    * smaller: the view becomes the preset of the same query that needs less, whole, and that one steps down to the
    * number by its own rules. What a glyph is worth is said in a line under the glyphs, and that line is the key to
@@ -149,15 +147,15 @@ export const FIT_RULES: FitRule[] = [
    * ponytail: a form whose glyph is worth one has no line, and gives way at the height one would need all the same.
    * A rule cannot ask what a view shows. Let one name a part it is for (`has`), if those 40 px are ever missed. */
   { id: 'unit',       layout: 'cartesian', mark: 'unit', container: 'view', needs: { inline: LEAST.glyphs, block: LEAST.stack },                           // a stack, where a plot has its axes, and the line
-    hide: [], fallback: 'bar', keep: 'marks' },
+    hide: [], fallback: 'bar' },
   { id: 'unit',       layout: 'rows',      mark: 'unit', container: 'view', needs: { inline: LEAST.glyphs, block: LEAST.run },                           // a run of ten beside its label and its value: three rows and the line
-    hide: [], fallback: 'bar-list', keep: 'marks' },
+    hide: [], fallback: 'bar-list' },
   { id: 'unit',       layout: 'band',      mark: 'unit', container: 'view', needs: { inline: LEAST.glyphs, block: LEAST.hundred },                           // a hundred cells, and a legend under them
-    hide: [], fallback: 'share-bar', keep: 'marks' },
+    hide: [], fallback: 'share-bar' },
   { id: 'unit-alone', layout: 'band',      mark: 'unit', container: 'view', needs: { inline: LEAST.glyphs, block: LEAST.hundredAlone },                           // a hundred cells under the number, and the line
-    hide: [], fallback: 'gauge', keep: 'marks' },
+    hide: [], fallback: 'gauge' },
   { id: 'unit',       layout: 'radial',    mark: 'unit', container: 'view', needs: { inline: LEAST.glyphs, block: LEAST.seats },                           // up to a hundred seats, the line and the legend
-    hide: [], fallback: 'pie-semi-circle', keep: 'marks' },
+    hide: [], fallback: 'pie-semi-circle' },
 ];
 
 /** The rule a layout has under an id. A part with no rule needs no room. */
@@ -188,14 +186,13 @@ export interface Fit {
   set: Record<string, string>;
   /** The rule under which the view gives way, whole, to a preset. Nothing of this view shows then: `parts` is empty. */
   fallback?: FitRule;
-  /** Each rule that holds here, in order: whether the spec's `keep` held it off, the parts it took that were showing,
-   * and the ones it put in their place. */
-  held: { rule: FitRule; kept: boolean; hid: string[]; showed: string[] }[];
+  /** Each rule that holds here, in order: the parts it took that were showing, and the ones it put in their place. */
+  held: { rule: FitRule; hid: string[]; showed: string[] }[];
 }
 
-/** What a view holds, as its rules ask of it: its scene, the spec's `keep`, its layers' marks, and whether its query
+/** What a view holds, as its rules ask of it: its scene, its layers' marks, and whether its query
  * fills a preset a rule would have it become. `via` is what it has given way from already (`gaveWay`). */
-export interface FitView { keep?: KeepPart[]; marks?: string[]; fills?: (preset: string) => boolean; via?: string[] }
+export interface FitView { marks?: string[]; fills?: (preset: string) => boolean; via?: string[] }
 
 /** What a view has, for a rule that is for one kind of view (`has`): each part its scene shows, and `track` where a
  * row's track stands beside its label. A surface says the same of its figure, for the compiled rules to ask. */
@@ -204,20 +201,19 @@ export const hasOf = (scene: { parts: string[]; track?: string | undefined }): s
 /** A view at a room, read off its fit rules with no browser. It is the reading a stylesheet compiled from the same
  * rules gives (`compileFitRules` in packages/dom): every rule of the layout whose container is short of its need
  * holds, each on its own, and where two say otherwise of one part the later one wins. A rule for a mark is asked only
- * of a view that holds it, one for a kind of view (`has`) only of that kind, and one the spec's `keep` names is held off. `rules` are the context's, with a custom
+ * of a view that holds it, one for a kind of view (`has`) only of that kind. `rules` are the context's, with a custom
  * mark's own after them. Pure, and it measures nothing: what depends on the content is the surface's to see to. */
 export function fitTo(scene: { layout: Layout; parts: string[]; track?: string | undefined; nodes: { part: string }[] }, room: Rooms, rules: FitRule[], view: FitView = {}): Fit {
-  const keep = view.keep ?? [], marks = view.marks ?? [], has = hasOf(scene);
-  const swap = fallbackRule(rules, scene.layout, keep, view.via, view.fills && { marks, fills: view.fills });
+  const marks = view.marks ?? [], has = hasOf(scene);
+  const swap = fallbackRule(rules, scene.layout, view.via, view.fills && { marks, fills: view.fills });
   const fit: Fit = { parts: scene.parts.slice(), hidden: [], set: {}, held: [] }, gone = new Set<string>();
   for (const r of rules) {
     if (r.layout !== scene.layout || (r.mark && !marks.includes(r.mark)) || (r.has && !has.includes(r.has))) continue;
     // A rule on the plot holds when there is no plot left: what sits in it has gone with it.
     if (!applies(r, room) && !(r.container === 'plot' && (room.plot === null || gone.has('plot')))) continue;
-    if (r.keep && keep.includes(r.keep)) { fit.held.push({ rule: r, kept: true, hid: [], showed: [] }); continue; }
     if (r.fallback) {
       if (r !== swap) continue;                                             // a preset the query cannot fill is no fallback of this view's
-      fit.held.push({ rule: r, kept: false, hid: fit.parts, showed: [] });
+      fit.held.push({ rule: r, hid: fit.parts, showed: [] });
       return { ...fit, parts: [], fallback: r };
     }
     const hid = r.hide.filter((t) => fit.parts.includes(t)), showed = (r.show ?? []).filter((t) => !fit.parts.includes(t) && scene.nodes.some((n) => n.part === t));
@@ -225,7 +221,7 @@ export function fitTo(scene: { layout: Layout; parts: string[]; track?: string |
     // The number leads where it shows, as it does in a scene. The rest stand after what is there.
     fit.parts = [...showed.filter((t) => t === 'number'), ...fit.parts.filter((p) => !hid.includes(p)), ...showed.filter((t) => t !== 'number')];
     Object.assign(fit.set, r.set);
-    fit.held.push({ rule: r, kept: false, hid, showed });
+    fit.held.push({ rule: r, hid, showed });
   }
   fit.hidden = [...gone];
   return fit;
@@ -234,16 +230,16 @@ export function fitTo(scene: { layout: Layout; parts: string[]; track?: string |
 /** What a view gives up under a rule's `fallback`, as `via` holds it: the rule's layout, and with it the mark where the rule is for one. */
 export const gaveWay = (rule: FitRule): string => (rule.mark ? rule.layout + ' (' + rule.mark + ')' : rule.layout);
 
-/** The rule under which a layout gives way to a preset: the first of its rules that names a `fallback` and that the
- * spec's `keep` leaves on. `view` says what the view holds, where the caller knows: its layers' marks, for a rule that
+/** The rule under which a layout gives way to a preset: the first of its rules that names a `fallback`.
+ * `view` says what the view holds, where the caller knows: its layers' marks, for a rule that
  * is for one mark, and whether its query has what a preset's slots ask for. A rule whose preset the query cannot fill
  * is passed over, so a layout that draws queries of more than one shape names a fallback for each, in rules of the
  * same need, and the first that can be drawn is the one: a preset that takes a dimension and, after it, one that takes none. With no
  * `view` a rule for a mark is passed over too: nothing says the view holds it.
  * `via` holds what the view has already given up on its way here (`gaveWay`). A fallback that leads back to one of
  * them would never settle, so that throws. */
-export function fallbackRule(rules: FitRule[], layout: Layout, keep: KeepPart[] = [], via: string[] = [], view?: { marks: string[]; fills(preset: string): boolean }): FitRule | undefined {
-  const rule = rules.find((r) => r.layout === layout && r.fallback && !(r.keep && keep.includes(r.keep)) && (!r.mark || !!view?.marks.includes(r.mark)) && (!view || view.fills(r.fallback)));
+export function fallbackRule(rules: FitRule[], layout: Layout, via: string[] = [], view?: { marks: string[]; fills(preset: string): boolean }): FitRule | undefined {
+  const rule = rules.find((r) => r.layout === layout && r.fallback && (!r.mark || !!view?.marks.includes(r.mark)) && (!view || view.fills(r.fallback)));
   if (rule && via.includes(gaveWay(rule))) throw new Error('A fit rule\'s "fallback" leads back to the "' + gaveWay(rule) + '" layout (' + via.concat(gaveWay(rule)).join(', then ') + '), so the view would never settle. Name a preset that is laid out another way, or remove "fallback" from the rule.');
   return rule;
 }

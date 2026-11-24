@@ -72,11 +72,11 @@ export const GAP = 2, KID_GAP = 1;
  * `bar-list` has one dimension to its rows and would leave the other undrawn. With one it is `bar-list`. */
 export const PARTITION_RULES: FitRule[] = [
   { id: 'guides', layout: 'partition', container: 'view', needs: { inline: 320, block: 170 },     // the ramp, where a metric is on color: under this a thin strip, which stays as long as the boxes
-    hide: [], set: { ramp: 'strip' }, keep: 'guides' },
+    hide: [], set: { ramp: 'strip' } },
   { id: 'marks',  layout: 'partition', container: 'view', needs: { inline: 280, block: 120 },     // boxes too small to tell apart, or to name
-    hide: [], fallback: 'pair-list', keep: 'marks' },
+    hide: [], fallback: 'pair-list' },
   { id: 'marks-flat', layout: 'partition', container: 'view', needs: { inline: 280, block: 120 }, // the same room, for a query by one dimension
-    hide: [], fallback: 'bar-list', keep: 'marks' },
+    hide: [], fallback: 'bar-list' },
 ];
 
 interface Leaf { key: string; name: string; row: Row; box: Box; paint: string }

@@ -59,11 +59,6 @@ describe('the sweep', () => {
       expect([fell.ratio, fell.fit], w + ' ' + h).toEqual([own.ratio, own.fit]);
       expect([fell.plan.preset, fell.gave]).toEqual(['bar-list', ['geo']]);
     }
-    // `keep` switches the rule off, so there is no list: the map stays, with the room and without it, and its other rules are read as before.
-    const kept = run({ ...map, keep: ['marks'] }, 250);
-    expect(kept.plan).toMatchObject({ layout: 'geo', preset: 'choropleth' });
-    expect([kept.gave, shown(kept)]).toEqual([[], { parts: ['plot', 'ramp'], set: { ramp: 'strip' }, hidden: [], rules: ['guides', 'kept:marks'] }]);
-    expect(run({ ...map, keep: ['marks'] }, 346).plan).toMatchObject({ layout: 'geo', preset: 'choropleth', dropped: [] });
   });
 });
 
@@ -324,7 +319,7 @@ describe('the painter\'s half, as strings', () => {
     expect(geoPainter.css).toContain('.uav[data-layout="geo"] .uav-plot { flex: none; align-self: center; inline-size: min(100%, 480px); aspect-ratio: var(--uav-aspect, 2);');
   });
   it('its rules compile to the keys in their shorter forms, and then to the swap for the ranked list, by width and by height', () => {
-    const css = compileFitRules(GEO_RULES, { geo: geoPainter.fit ?? {} }), fig = (keep: string) => '.uav[data-layout="geo"]:not([data-keep~="' + keep + '"])';
+    const css = compileFitRules(GEO_RULES, { geo: geoPainter.fit ?? {} }), fig = (_was?: string) => '.uav[data-layout="geo"]';
     const shorter = ['  ' + fig('guides') + ' { --uav-ramp: strip; --uav-size-key: most; }', '  ' + fig('guides') + ' .uav-ramp { gap: 0; }', '  ' + fig('guides') + ' .uav-ramp i { --uav-swatch-i: 7px; --uav-swatch-r: 0px; }',
       '  ' + fig('guides') + ' .uav-ramp :is([data-key="ramp:none"], [data-key="ramp:none:label"]) { display: none; }', '  ' + fig('guides') + ' .uav-size > :not(:first-child):not(:nth-last-child(-n+2)) { display: none; }', '}'].join('\n');
     expect(css).toContain('@container uav-view (inline-size < 319.5px) {\n' + shorter);

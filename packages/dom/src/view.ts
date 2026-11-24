@@ -195,7 +195,7 @@ const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v =
 export function check(spec: Spec, result: Result, catalog: Catalog): void {
   if (!isObject(spec.query)) throw new Error('The spec has no "query". Add one, for example { "metrics": ["visitors"], "by": ["date.day"] }.');
   // A list written as a bare value is the slip hand-written JSON makes, and core's failure for it names no fix.
-  for (const [name, v] of [['query.metrics', spec.query.metrics], ['query.by', spec.query.by], ['layers', spec.layers], ['keep', spec.keep]] as const)
+  for (const [name, v] of [['query.metrics', spec.query.metrics], ['query.by', spec.query.by], ['layers', spec.layers]] as const)
     if (v != null && !Array.isArray(v)) throw new Error('The spec gives "' + name + '" as ' + JSON.stringify(v) + '. It is a list: write ' + JSON.stringify([v]) + '.');
   if (!Array.isArray(result.rows) || !isObject(result.totals) || !isObject(result.meta)) throw new Error('The result needs "rows" (an array), "totals" and "meta". Pass what the query returned, whole.');
   if (!isObject(catalog.metrics) || !isObject(catalog.dimensions)) throw new Error('The catalog needs "metrics" and "dimensions". Pass the catalog the query was run against.');
@@ -448,7 +448,7 @@ export class UaView extends Base {
 
       painting = true;
       this.#root.adoptedStyleSheets = [sheet(doc, allStyles()), sheet(doc, FALLBACK_CSS), fit];
-      fig.dataset.layout = scene.layout; fig.dataset.keep = (spec.keep || []).join(' '); fig.dataset.parts = scene.parts.join(' '); fig.dataset.has = hasOf(scene).join(' ');
+      fig.dataset.layout = scene.layout; fig.dataset.parts = scene.parts.join(' '); fig.dataset.has = hasOf(scene).join(' ');
       fig.dataset.marks = [...new Set(plan.layers.map((l) => l.mark))].join(' ');
       if (spec.title) fig.setAttribute('aria-label', spec.title); else fig.removeAttribute('aria-label');
       // The plot's natural heights are the context's, read by the stylesheet. The painter hard-codes neither.
@@ -468,7 +468,7 @@ export class UaView extends Base {
       else if (painter?.table) painter.table(this.#table, spec.title, scene, data); else paintTable(this.#table, spec.title, data.query, result, catalog, plan.layers);
       this.#keys.paint(scene, expand(spec).query, result, catalog, plan.layers);
       // The rule this view gives way under, if one is for what it holds and its query can fill the rule's preset: as fitTo() asks.
-      const swap = fallbackRule(fits, scene.layout, spec.keep, this.via, { marks: plan.layers.map((l) => l.mark), fills: (use) => fills(use, data.query) }), { layers: _layers, ...rest } = spec;
+      const swap = fallbackRule(fits, scene.layout, this.via, { marks: plan.layers.map((l) => l.mark), fills: (use) => fills(use, data.query) }), { layers: _layers, ...rest } = spec;
       if (swap) {
         const beside = this.#fallback ??= this.#root.appendChild(Object.assign(document.createElement(this.localName) as UaView, { className: 'uav-fallback' }));
         beside.setAttribute('data-rule', swap.id);                            // the compiled rule shows the one that is its own

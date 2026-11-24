@@ -33,10 +33,10 @@ group('check: a spec read with no browser', () => {
       for (const b of view!.rooms.flatMap((r) => r.because)) expect(b.why, name).toMatch(/^rule "/);
     }
   });
-  it('says the lever where a rule took something a spec could keep', () => {
+  it('says what would change a rule\'s verdict: the room, which is the surface\'s to give', () => {
     const c = check({ ...on(trend), rooms: [{ inline: 250 }] });
     expect(c.ok && c.views[0]!.rooms[0]).toMatchObject({ parts: ['number', 'plot'], set: { arrange: 'side' } });
-    expect(c.ok && c.views[0]!.rooms[0]!.because.find((b) => b.part === 'x-axis')).toMatchObject({ what: 'hidden', rule: 'axes', lever: expect.stringContaining('add "guides" to keep') });
+    expect(c.ok && c.views[0]!.rooms[0]!.because.find((b) => b.part === 'x-axis')).toMatchObject({ what: 'hidden', rule: 'axes', lever: 'give the view 280 px wide' });
   });
   it('a spec that is refused comes back with the message resolve() gives', () => {
     for (const spec of [{ ...trend, use: 'no-such-preset' }, { query: { metrics: ['visitors'], by: ['channel'] } }, { query: trend.query, layers: [{ mark: 'line', encode: { x: 'date.day', y: 'visitors', size: 'visitors' } }] }] as Spec[])
@@ -44,9 +44,9 @@ group('check: a spec read with no browser', () => {
   });
   it('and what only the schema refuses is refused too, once core has had its say: a value of the wrong kind, which core reads past', () => {
     expect(check(on({ ...trend, width: 346 } as Spec))).toEqual({ ok: false, error: err({ ...trend, width: 346 } as Spec) });
-    const kept = { ...trend, keep: ['axes'] } as unknown as Spec;
-    expect(err(kept)).toBeUndefined();
-    expect(check(on(kept))).toEqual({ ok: false, error: 'spec.keep[0] must be equal to one of the allowed values: guides, secondary, rows, marks.' });
+    const titled = { ...trend, title: 5 } as unknown as Spec;
+    expect(err(titled)).toBeUndefined();
+    expect(check(on(titled))).toEqual({ ok: false, error: 'spec.title must be string.' });
   });
   it('says what the view is for, where its author did, beside what the view says of its data', () => {
     const c = check(on({ ...trend, description: 'How many people came, day by day.' }));

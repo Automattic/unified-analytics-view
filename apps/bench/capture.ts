@@ -36,7 +36,7 @@ const browser = await chromium.launch(), context = await browser.newContext({ vi
 if (given) await context.addInitScript((g) => { (window as unknown as { benchGiven: unknown }).benchGiven = g; }, given);
 
 /** What the view plans, and what a fit rule may ask of its scene: `has` is core's hasOf, and `drawn` the parts the scene has anything for. A capture taken before the two were kept has neither. */
-export interface Plan { layout: string; parts: string[]; keep: string[]; marks: string[]; has?: string[]; drawn?: string[] }
+export interface Plan { layout: string; parts: string[]; marks: string[]; has?: string[]; drawn?: string[] }
 export interface Record { sample: string; plan?: Plan; theme: string; height: string; width: string; error?: string; measure: FrameMeasure; frame: string; parts: { [part: string]: string } }
 const records: Record[] = [];
 

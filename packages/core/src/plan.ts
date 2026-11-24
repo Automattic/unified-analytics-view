@@ -232,7 +232,7 @@ export function resolve(spec0: Spec, result: Result, catalog: Catalog, rules: Co
 export function viewAt(spec: Spec, result: Result, catalog: Catalog, room: Rooms, rules: ContainerRules = CONTAINER_RULES, presets: PresetLibrary = PRESETS, via: string[] = []): { spec: Spec; plan: Plan; scene: Scene; fit: Fit; gave: string[] } {
   const plan = resolve(spec, result, catalog, rules, presets), full = expand(spec, presets), q = full.query;
   const scene = buildScene(plan, q, result, catalog), custom = customMarks().get(plan.layout);
-  const fit = fitTo(scene, room, custom ? rules.fit.concat(custom.rules) : rules.fit, { keep: full.keep ?? [], marks: plan.layers.map((l) => l.mark), fills: (use) => fills(use, q, presets), via });
+  const fit = fitTo(scene, room, custom ? rules.fit.concat(custom.rules) : rules.fit, { marks: plan.layers.map((l) => l.mark), fills: (use) => fills(use, q, presets), via });
   if (!fit.fallback) return { spec, plan, scene, fit, gave: via };
   const { layers: _layers, ...rest } = spec;
   return viewAt({ ...rest, use: fit.fallback.fallback! }, result, catalog, { view: room.view }, rules, presets, via.concat(gaveWay(fit.fallback)));

@@ -57,7 +57,6 @@ describe('a row divided by a second dimension', () => {
     expect(at(346, 100)).toEqual([['rows', 'legend-top'], {}, ['legend']]);
     // With no key the pieces of a row are one colour, and a row reads as its total.
     expect(at(346, 60)).toEqual([['rows'], { split: 'plain' }, ['legend', 'legend-top']]);
-    expect(at(346, 100, { ...split(), keep: ['guides'] })).toEqual([['rows', 'legend'], {}, ['kept:legend']]);
     // A narrow list keeps the whole legend while it has the width and the height for it.
     expect(at(250, 160)).toEqual([['rows', 'legend'], {}, []]);
   });

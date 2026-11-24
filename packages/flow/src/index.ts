@@ -28,7 +28,7 @@ export const LABEL = 6;
  * rows and the targets its columns. */
 export const LINK_RULES: FitRule[] = [
   { id: 'marks',  layout: 'link', container: 'view', needs: { inline: 320, block: 140 },      // a name inside each column, and ribbons between
-    hide: [], fallback: 'heatmap', keep: 'marks' },
+    hide: [], fallback: 'heatmap' },
 ];
 
 const round = (n: number) => Math.round(n * 100) / 100;

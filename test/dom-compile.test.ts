@@ -16,15 +16,15 @@ describe('compileFitRules', () => {
     expect(css).toBe([
       '/* cartesian axes */',
       '@container uav-view (inline-size < 279.5px) {',
-      '  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) :is(.uav-x-axis, .uav-y-axis, .uav-y-axis-2, .uav-grid, [data-axis="2"], .uav-size) { display: none; }',
-      '  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) .uav-number { display: block; }',
-      '  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) { --uav-arrange: side; --uav-dots: one; }',
+      '  .uav[data-layout="cartesian"] :is(.uav-x-axis, .uav-y-axis, .uav-y-axis-2, .uav-grid, [data-axis="2"], .uav-size) { display: none; }',
+      '  .uav[data-layout="cartesian"] .uav-number { display: block; }',
+      '  .uav[data-layout="cartesian"] { --uav-arrange: side; --uav-dots: one; }',
       '}',
       '/* cartesian axes */',
       '@container uav-view (block-size < 119.5px) {',
-      '  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) :is(.uav-x-axis, .uav-y-axis, .uav-y-axis-2, .uav-grid, [data-axis="2"], .uav-size) { display: none; }',
-      '  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) .uav-number { display: block; }',
-      '  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) { --uav-arrange: side; --uav-dots: one; }',
+      '  .uav[data-layout="cartesian"] :is(.uav-x-axis, .uav-y-axis, .uav-y-axis-2, .uav-grid, [data-axis="2"], .uav-size) { display: none; }',
+      '  .uav[data-layout="cartesian"] .uav-number { display: block; }',
+      '  .uav[data-layout="cartesian"] { --uav-arrange: side; --uav-dots: one; }',
       '}',
     ].join('\n'));
     expect(compileFitRules(FIT_RULES)).not.toMatch(/\bor\b/);
@@ -32,22 +32,22 @@ describe('compileFitRules', () => {
 
   it('maps roles to data-role, on the plot container', () => {
     expect(compileFitRules(only('cartesian', 'secondary'))).toContain(
-      '@container uav-plot (block-size < 89.5px) {\n  .uav[data-layout="cartesian"]:not([data-keep~="secondary"]) :is([data-role="comparison"], [data-role="reference"], [data-role="context"]) { display: none; }\n}');
+      '@container uav-plot (block-size < 89.5px) {\n  .uav[data-layout="cartesian"] :is([data-role="comparison"], [data-role="reference"], [data-role="context"]) { display: none; }\n}');
   });
 
-  it('maps the middle tick to the ranked x label, and a rule with no keep to a bare figure', () => {
+  it('maps the middle tick to the ranked x label, and a rule to a bare figure', () => {
     expect(compileFitRules(only('cartesian', 'mid-tick'))).toBe(
       '/* cartesian mid-tick */\n@container uav-view (inline-size < 379.5px) {\n  .uav[data-layout="cartesian"] .uav-x-axis [data-rank] { display: none; }\n}');
   });
 
   it('writes a set with nothing hidden, as the band legend has', () => {
     expect(compileFitRules(only('band', 'legend'))).toBe(
-      '/* band legend */\n@container uav-view (inline-size < 169.5px) {\n  .uav[data-layout="band"]:not([data-keep~="guides"]) { --uav-legend: top; }\n}');
+      '/* band legend */\n@container uav-view (inline-size < 169.5px) {\n  .uav[data-layout="band"] { --uav-legend: top; }\n}');
   });
 
-  it('adds what a layout says changes with a rule, under the same condition and keep', () => {
+  it('adds what a layout says changes with a rule, under the same condition', () => {
     const css = compileFitRules(only('cartesian', 'marks'), { cartesian: { marks: { '': 'grid-template: none;', '.uav-body': 'display: none;' } } });
-    const fig = '.uav[data-layout="cartesian"]:not([data-keep~="marks"])';
+    const fig = '.uav[data-layout="cartesian"]';
     expect(css.split('\n').slice(0, 6)).toEqual([
       '/* cartesian marks */', '@container uav-view (inline-size < 151.5px) {',
       '  ' + fig + ' :is(.uav-plot, .uav-points, .uav-point-labels, .uav-x-axis, .uav-y-axis, .uav-y-axis-2, .uav-labels, .uav-legend, .uav-ramp, .uav-size, .uav-unit-key) { display: none; }', '  ' + fig + ' .uav-number { display: block; }',
@@ -113,7 +113,6 @@ describe('what <ua-view> checks before it paints', () => {
   const trend = samples.trend!.spec, result = runQuery(trend.query);
   it('says how to write a list that a spec gives as a bare value', () => {
     expect(() => check(trend, result, catalog)).not.toThrow();
-    expect(() => check({ ...trend, keep: 'guides' } as unknown as Spec, result, catalog)).toThrow(/gives "keep" as "guides"\. It is a list: write \["guides"\]/);
     expect(() => check({ ...trend, query: { ...trend.query, by: 'date.day' } } as unknown as Spec, result, catalog)).toThrow(/"query\.by" as "date\.day"\. It is a list/);
     expect(() => check({ ...trend, query: { ...trend.query, metrics: 'visitors' } } as unknown as Spec, result, catalog)).toThrow(/"query\.metrics" as "visitors"/);
   });

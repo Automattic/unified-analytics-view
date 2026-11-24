@@ -340,11 +340,11 @@ describe('refusals, each naming its fix', () => {
 
 describe('fallbacks: under the room its glyphs need, a form becomes the preset of the same query that needs less', () => {
   it('each form has a rule that names the mark and the preset, by the room a plot with axes needs across', () => {
-    expect(FIT_RULES.filter((r) => r.fallback).map((r) => [r.layout, r.id, r.mark, r.fallback, r.needs, r.keep])).toEqual([
+    expect(FIT_RULES.filter((r) => r.fallback).map((r) => [r.layout, r.id, r.mark, r.fallback, r.needs])).toEqual([
       // Each form's height is its glyphs' and the line's that says what one is worth. A grid divided by a dimension has no line.
-      ['cartesian', 'unit', 'unit', 'bar', { inline: 280, block: 160 }, 'marks'], ['rows', 'unit', 'unit', 'bar-list', { inline: 280, block: 120 }, 'marks'],
-      ['band', 'unit', 'unit', 'share-bar', { inline: 280, block: 180 }, 'marks'], ['band', 'unit-alone', 'unit', 'gauge', { inline: 280, block: 220 }, 'marks'],
-      ['radial', 'unit', 'unit', 'pie-semi-circle', { inline: 280, block: 200 }, 'marks']]);
+      ['cartesian', 'unit', 'unit', 'bar', { inline: 280, block: 160 }], ['rows', 'unit', 'unit', 'bar-list', { inline: 280, block: 120 }],
+      ['band', 'unit', 'unit', 'share-bar', { inline: 280, block: 180 }], ['band', 'unit-alone', 'unit', 'gauge', { inline: 280, block: 220 }],
+      ['radial', 'unit', 'unit', 'pie-semi-circle', { inline: 280, block: 200 }]]);
   });
   for (const name of NAMES) it(name + ': at 279 px it is that preset\'s scene to the node, and from there steps down by that preset\'s own rules', () => {
     const spec = specs[name]!, [layout, fallback] = FORMS[name]!, other: Spec = { ...spec, layers: undefined, use: fallback };
@@ -364,7 +364,6 @@ describe('fallbacks: under the room its glyphs need, a form becomes the preset o
   });
   it('a spec that keeps its marks keeps its glyphs, and an empty range has nothing to give way from', () => {
     for (const name of NAMES) {
-      expect(run({ ...specs[name]!, keep: ['marks'] }, 250).plan.layers.some((l) => l.mark === 'unit'), name).toBe(true);
       expect(run(specs[name]!, 250, null, 'empty').gave, name).toEqual([]);
     }
   });

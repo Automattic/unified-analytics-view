@@ -56,10 +56,6 @@ describe('the sweep', () => {
     const { ratio, result } = run(sankey, 250);
     expect(ratio.ys).toEqual(result.totalsBy!.channel!.map((r) => r.channel));
     expect(ratio.rows).toEqual(result.totalsBy!.landing!.map((r) => r.landing));
-    // `keep` switches the rule off, so there is no grid, and the Sankey stays, with the room and without it.
-    expect(run({ ...sankey, keep: ['marks'] }, 346).plan).toMatchObject({ layout: 'link', preset: 'sankey', dropped: [] });
-    const kept = run({ ...sankey, keep: ['marks'] }, 250);
-    expect([kept.plan.layout, kept.gave, shown(kept)]).toEqual(['link', [], { parts: ['plot', 'labels'], set: {}, hidden: [], rules: ['kept:marks'] }]);
   });
 });
 
@@ -203,7 +199,7 @@ describe('the painter\'s half, as strings', () => {
   it('its one rule compiles to the swap for the grid, by width and by height, and nothing takes the names alone', () => {
     const css = compileFitRules(LINK_RULES);
     expect(css).not.toContain('.uav-labels');
-    expect(css).toContain('@container uav-view (inline-size < 319.5px) {\n  .uav[data-layout="link"]:not([data-keep~="marks"]):has(~ .uav-fallback[data-rule="marks"]) { display: none; }\n  .uav[data-layout="link"]:not([data-keep~="marks"]) ~ .uav-fallback[data-rule="marks"] { display: block; }');
+    expect(css).toContain('@container uav-view (inline-size < 319.5px) {\n  .uav[data-layout="link"]:has(~ .uav-fallback[data-rule="marks"]) { display: none; }\n  .uav[data-layout="link"] ~ .uav-fallback[data-rule="marks"] { display: block; }');
     expect(css).toContain('@container uav-view (block-size < 139.5px)');
     expect(LINK_RULES.map((r) => [r.id, r.fallback])).toEqual([['marks', 'heatmap']]);
   });

@@ -3,7 +3,7 @@ import { CONTAINER_RULES, type Catalog, type ContainerRules, type FitRule, type 
 /* The seam between <ua-view> and a layout. A layout is one module in layouts/, exporting one LayoutPainter.
  *
  * What the element owns, and a layout leaves alone:
- *   figure.uav[data-layout][data-keep][data-parts]      a grid: "number" above "body", or beside it
+ *   figure.uav[data-layout][data-parts]      a grid: "number" above "body", or beside it
  *     figcaption.uav-prose                              the tldr prose
  *     div.uav-number                                    the number part, painted by the element
  *     div.uav-body                                      the layout's own
@@ -31,7 +31,7 @@ export interface LayoutPainter {
    * whose content has a height of its own states the height of the part that has none (cartesian.ts). */
   css: string;
   /** What else changes when one of its fit rules applies, by rule id: a selector inside the figure ('' is the
-   * figure itself), then declarations. They are written under the rule's own condition and `keep`. */
+   * figure itself), then declarations. They are written under the rule's own condition. */
   fit?: Record<string, Record<string, string>>;
   paint(body: HTMLElement, scene: Scene, rules: ContainerRules, data: ViewData): void;
   /** The table alternative, where the element's own, a row of the table per row of the result, is not this layout's. */

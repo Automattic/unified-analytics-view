@@ -93,11 +93,6 @@ describe('the sweep', () => {
         expect([fell.plan.preset, fell.gave]).toEqual([use, ['partition']]);
       }
     }
-    // `keep` switches both rules off, so there is no list: the treemap stays, with the room and without it.
-    const kept = run({ ...treemap, keep: ['marks'] }, 250);
-    expect(kept.plan).toMatchObject({ layout: 'partition', preset: 'treemap' });
-    expect([kept.gave, kept.fit.parts, shown(kept).rules]).toEqual([[], ['plot'], ['kept:marks', 'kept:marks-flat']]);
-    expect(run({ ...treemap, keep: ['marks'] }, 346).plan).toMatchObject({ layout: 'partition', preset: 'treemap', dropped: [] });
   });
 });
 
@@ -303,10 +298,9 @@ describe('a layout with a fallback for each shape of query', () => {
     expect(fills('no-such-preset', one)).toBe(true);
   });
   it('the rule that applies is the first whose preset the query can fill, and with nothing asked it is the first, as it was', () => {
-    const rule = (q: Spec['query']) => fallbackRule(PARTITION_RULES, 'partition', [], [], { marks: ['partition'], fills: (use) => fills(use, q) })?.fallback;
+    const rule = (q: Spec['query']) => fallbackRule(PARTITION_RULES, 'partition', [], { marks: ['partition'], fills: (use) => fills(use, q) })?.fallback;
     expect([rule(treemap.query), rule(tiles.query)]).toEqual(['pair-list', 'bar-list']);
     expect(fallbackRule(PARTITION_RULES, 'partition')?.fallback).toBe('pair-list');
-    expect(fallbackRule(PARTITION_RULES, 'partition', ['marks'], [], { marks: ['partition'], fills: () => true })).toBeUndefined();
   });
   it('the list of pairs is rows in the engine\'s order, each named by both dimensions, and it needs both', () => {
     const { ratio, result, plan } = run({ ...treemap, use: 'pair-list' }, 346);
@@ -325,7 +319,7 @@ describe('the painter\'s half, as strings and plain functions', () => {
     expect(partitionPainter.css).not.toMatch(/#[0-9a-f]{3,6}\b|rgb\(/i);
   });
   it('its rules compile to the ramp as a strip, and then to the swap for the list, by width and by height', () => {
-    const css = compileFitRules(PARTITION_RULES, { partition: partitionPainter.fit ?? {} }), fig = (keep: string) => '.uav[data-layout="partition"]:not([data-keep~="' + keep + '"])';
+    const css = compileFitRules(PARTITION_RULES, { partition: partitionPainter.fit ?? {} }), fig = (_was?: string) => '.uav[data-layout="partition"]';
     expect(css).toContain('@container uav-view (inline-size < 319.5px) {\n  ' + fig('guides') + ' { --uav-ramp: strip; }\n  ' + fig('guides') + ' .uav-ramp { gap: 0; }\n  ' + fig('guides') + ' .uav-ramp i { --uav-swatch-i: 7px; --uav-swatch-r: 0px; }\n  '
       + fig('guides') + ' .uav-ramp :is([data-key="ramp:none"], [data-key="ramp:none:label"]) { display: none; }\n}');
     const swap = '  ' + fig('marks') + ':has(~ .uav-fallback[data-rule="marks"]) { display: none; }\n  ' + fig('marks') + ' ~ .uav-fallback[data-rule="marks"] { display: block; }\n}';

@@ -20,7 +20,7 @@
  * With no capture, the latest. Writes check.json and check.md into the capture; with `against`, says what is new and
  * what is gone since that one. */
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { FIT_RULES, fitTo, type FitRule, type KeepPart } from '@unified-analytics/core';
+import { FIT_RULES, fitTo, type FitRule } from '@unified-analytics/core';
 import type { Record } from './capture.ts';
 
 /** Pairs drawn one over the other on purpose: labels on their points, the ring's labels and its number on the ring, and what runs down a list over its rows. */
@@ -83,11 +83,11 @@ function rules(r: Record, say: (r: Record, check: string, part: string, detail: 
   if (!FIT_RULES.some((f) => f.layout === plan.layout)) return;
   // An older capture kept less of the scene: every part is taken to have something in it, and a track beside its label goes unsaid.
   const has = plan.has ?? plan.parts, scene = { layout: plan.layout, parts: plan.parts, ...(has.includes('track') && { track: 'beside' }), nodes: (plan.drawn ?? [...PARTS]).map((part) => ({ part })) };
-  const fit = fitTo(scene, room, FIT_RULES, { keep: plan.keep as KeepPart[], marks: plan.marks, fills: () => true });
+  const fit = fitTo(scene, room, FIT_RULES, { marks: plan.marks, fills: () => true });
   if (fit.fallback) return;
   // A rule that sets the legend at the top hides the full one: `legend-top` takes its place.
   const top = fit.set.legend === 'top', expected = new Set(fit.parts.filter((p) => !(top && p === 'legend')));
-  const took = (p: string) => [...fit.held].reverse().find((h) => !h.kept && (h.rule.hide.includes(p) || (p === 'legend' && h.rule.set?.legend === 'top')))?.rule;
+  const took = (p: string) => [...fit.held].reverse().find((h) => h.rule.hide.includes(p) || (p === 'legend' && h.rule.set?.legend === 'top'))?.rule;
   const need = (f: FitRule) => `"${f.id}" needs ${[f.needs.inline && f.needs.inline + ' wide', f.needs.block && f.needs.block + ' tall'].filter(Boolean).join(', ')} of the ${f.container}`;
   for (const p of Object.keys(parts)) { const f = PARTS.has(p) && !expected.has(p) && took(p); if (f) say(r, 'hidden', p, `shown, but ${need(f)} and has ${room[f.container]?.inline ?? '?'}×${room[f.container]?.block ?? 'natural'}`); }
   // Down to the number alone, the view has collapsed, by a rule or by the measured pass, and every other part went with it.
@@ -104,7 +104,7 @@ function contracts(): string {
   const by = new Map<string, string[]>();
   for (const f of FIT_RULES) for (const p of f.hide.filter((p) => PARTS.has(p))) {
     const needs = [f.needs.inline && `${f.needs.inline} wide`, f.needs.block && `${f.needs.block} tall`].filter(Boolean).join(' and ');
-    by.set(p, [...(by.get(p) ?? []), `${f.layout}: needs ${needs} of the ${f.container}${f.show?.length ? `; else ${f.show.join(', ')} shows` : ''}${f.keep ? ` (keep: ${f.keep})` : ''}`]);
+    by.set(p, [...(by.get(p) ?? []), `${f.layout}: needs ${needs} of the ${f.container}${f.show?.length ? `; else ${f.show.join(', ')} shows` : ''}`]);
   }
   return [...by].sort().map(([p, lines]) => `- **${p}**\n${lines.map((l) => `  - ${l}`).join('\n')}`).join('\n');
 }

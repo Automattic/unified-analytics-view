@@ -62,12 +62,12 @@ describe('a split path', () => {
 
 describe('the cartesian layout\'s guides', () => {
   const rules = (id: string) => CONTAINER_RULES.fit.filter((r) => r.layout === 'cartesian' && r.id === id);
-  const fig = '.uav[data-layout="cartesian"]:not([data-keep~="guides"])';
+  const fig = '.uav[data-layout="cartesian"]';
 
   it('swaps the legend for the labels at the line ends, as a grid, where there are ends to label', () => {
     // Bars and dots have none, so the rule asks for a line (or, by its twin, an area) and their legend stays.
     // The condition is in :where(), which weighs nothing: a rule further down the ladder still overrides this one.
-    const lines = fig.replace(':not', ':where([data-marks~="line"]):not');
+    const lines = fig + ':where([data-marks~="line"])';
     expect(compileFitRules(rules('legend'), { cartesian: cartesian.fit! }).split('\n').slice(0, 6)).toEqual([
       '/* cartesian legend */', '@container uav-view (inline-size < 319.5px) {',
       '  ' + lines + ' .uav-legend { display: none; }', '  ' + lines + ' .uav-labels { display: block; }', '  ' + lines + ' .uav-labels { display: grid; }', '}',

@@ -20,16 +20,17 @@ import type { Catalog, Layout, PresetLibrary, Result, Spec, Where } from './type
 export interface Because {
   /** The part it is about, where it is about one. */
   part?: string;
-  /** What happened: "the layout is rows", "shown", "hidden", "kept", "shown in its place", "not drawn", a key's shorter
+  /** What happened: "the layout is rows", "shown", "hidden", "shown in its place", "not drawn", a key's shorter
    * form ("shown as a thin strip"), or what went with a key ("hidden, and the marks it keyed drawn in one colour"). */
   what: string;
-  /** Where in the spec it came from: a path such as `layers[0].encode.color`, `keep` or `query.metrics[0]`. A layer of
+  /** Where in the spec it came from: a path such as `layers[0].encode.color` or `query.metrics[0]`. A layer of
    * a preset is named through it: `use "bar-list", layer 1`. */
   from: string;
   why: string;
   /** The fit rule that decided it, by its id, where one did. */
   rule?: string;
-  /** What in the spec would change it. Absent where nothing does, and the default decides. */
+  /** What would change it: in the spec, or for what a fit rule decided, the room the surface would have to give, since
+   * a spec has no say in what a container gives up. Absent where nothing does, and the default decides. */
   lever?: string;
 }
 export interface Explanation { layout: Layout; entries: Because[] }
@@ -121,21 +122,18 @@ export function explain(spec0: Spec, result: Result, catalog: Catalog, room?: Ex
   const custom = customMarks().get(plan.layout), rules = CONTAINER_RULES.fit.concat(custom ? custom.rules : []).filter((r) => r.layout === plan.layout);
   // Which rules hold is the reader's to say (fitTo), as it is for any surface. A plot nobody measured is asked nothing.
   const rooms = { view: { inline: room.inline, block: room.block ?? null }, ...(room.plot !== undefined && { plot: room.plot }) };
-  const fit = fitTo(scene, rooms, rules, { keep: spec.keep ?? [], marks: plan.layers.map((l) => l.mark), fills: (use) => fills(use, q, presets) });
+  const fit = fitTo(scene, rooms, rules, { marks: plan.layers.map((l) => l.mark), fills: (use) => fills(use, q, presets) });
   const gone = new Set<string>(), placed = new Set<string>(), said = (r: FitRule) => 'rule "' + r.id + '" needs ' + need(r) + ' of the ' + r.container + ', and it has ' + has(rooms[r.container]);
-  for (const { rule: r, kept } of fit.held) {
-    if (kept) {
-      out.push({ part: r.hide.filter((p) => parts.includes(p as never)).join(' ') || undefined, what: 'kept', from: 'keep', why: said(r), rule: r.id, lever: 'remove "' + r.keep + '" from keep to let it go here' });
-      continue;
-    }
+  for (const { rule: r } of fit.held) {
+    // What the room is short of: a width, a height, or both. A spec has no say in what a container gives up, so the
+    // one thing that changes a rule's verdict is the room, and that is the surface's to give.
+    const c = rooms[r.container], short = [r.needs.inline != null && c && c.inline < r.needs.inline && r.needs.inline + ' px wide', r.needs.block != null && c?.block != null && c.block < r.needs.block && r.needs.block + ' px tall'].filter(Boolean).join(' and ');
+    const lever = short ? 'give the ' + r.container + ' ' + short : undefined;
     if (r.fallback) {
       const j = plan.layers.findIndex((l) => !r.mark || l.mark === r.mark);
-      out.push({ what: 'drawn as "' + r.fallback + '"', from: of(j), why: said(r), rule: r.id, lever: r.keep && 'add "' + r.keep + '" to keep to hold these marks' });
+      out.push({ what: 'drawn as "' + r.fallback + '"', from: of(j), why: said(r), rule: r.id, lever });
       return { layout: plan.layout, entries: out };
     }
-    // What the room is short of: a width, a height, or both. Only those are worth asking for.
-    const c = rooms[r.container], short = [r.needs.inline != null && c && c.inline < r.needs.inline && r.needs.inline + ' px wide', r.needs.block != null && c?.block != null && c.block < r.needs.block && r.needs.block + ' px tall'].filter(Boolean).join(' and ');
-    const lever = r.keep ? 'add "' + r.keep + '" to keep to hold it' + (short ? ', or give the ' + r.container + ' ' + short : '') : undefined;
     let acted = false;
     // What a rule does to a part without taking it: a key in its shorter form, by a switch, and a rim thinned to its unranked names.
     const less = new Map<string, string>([...Object.entries(r.set ?? {}).flatMap(([k, v]): [string, string][] => (SHORTER[k + ': ' + v] ? [SHORTER[k + ': ' + v]!] : [])), ...r.hide.flatMap((t): [string, string][] => (THINNED[t] ? [THINNED[t]!] : []))]);

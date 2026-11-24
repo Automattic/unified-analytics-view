@@ -5,7 +5,7 @@ import { LEGEND_CSS } from '../packages/dom/src/chrome/legend.ts';
 import { band } from '../packages/dom/src/layouts/band.ts';
 
 // String work only, as in dom-compile.test.ts. What the browser makes of it is checked on the bench.
-const fig = (keep: string) => '.uav[data-layout="band"]:not([data-keep~="' + keep + '"])';
+const fig = (_was?: string) => '.uav[data-layout="band"]';
 const css = compileFitRules(FIT_RULES.filter((r) => r.layout === 'band'), { band: band.fit! });
 
 describe('the band layout', () => {

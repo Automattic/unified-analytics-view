@@ -7,7 +7,7 @@ import { rows } from '../packages/dom/src/layouts/rows.ts';
 describe('the rows layout', () => {
   it('gives up its body with its marks, so the number stands alone', () => {
     const css = compileFitRules(FIT_RULES.filter((r) => r.layout === 'rows' && r.id === 'marks'), { rows: rows.fit! });
-    const fig = '.uav[data-layout="rows"]:not([data-keep~="marks"])';
+    const fig = '.uav[data-layout="rows"]';
     expect(css.split('\n').slice(0, 8)).toEqual([
       '/* rows marks */', '@container uav-view (inline-size < 89.5px) {',
       '  ' + fig + ' :is(.uav-rows, .uav-track, .uav-columns, .uav-legend, .uav-legend-top, .uav-unit-key) { display: none; }', '  ' + fig + ' .uav-number { display: block; }',

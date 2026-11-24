@@ -1,6 +1,6 @@
 import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { ALIGNS, CHANNELS, CONTAINER_RULES, DIMENSION_TYPES, DIMENSION_VALUES, KEEP_PARTS, LAYER_FIELDS, LAYER_SERIES, MARKS, POLARITIES, QUERY_FIELDS, RANGE_TOTALS, ROLES, SERIES, SPEC_FIELDS, STACKS, UNITS, buildScene, expand, formatDimension, formatValue, partialNote, pathD, resolve, type Spec, type Unit } from '@unified-analytics/core';
+import { ALIGNS, CHANNELS, CONTAINER_RULES, DIMENSION_TYPES, DIMENSION_VALUES, LAYER_FIELDS, LAYER_SERIES, MARKS, POLARITIES, QUERY_FIELDS, RANGE_TOTALS, ROLES, SERIES, SPEC_FIELDS, STACKS, UNITS, buildScene, expand, formatDimension, formatValue, partialNote, pathD, resolve, type Spec, type Unit } from '@unified-analytics/core';
 import catalogSchema from '@unified-analytics/core/schema/catalog.schema.json';
 import viewSchema from '@unified-analytics/core/schema/view.schema.json';
 import { catalog, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
@@ -157,10 +157,6 @@ describe('fitting the container (reference section 10.1)', () => {
     expect(at('mix', 150)).toMatchObject({ parts: ['band', 'legend'], set: { legend: 'top' } });
     expect(at('mix', 100).parts).toEqual(['number']);
   });
-  it('keep holds a rule off', () => {
-    expect(at('kept', 250)).toMatchObject({ parts: ['y-axis', 'plot', 'x-axis'], rules: expect.arrayContaining(['kept:axes']) });
-    expect(shown(run({ ...trend, keep: ['marks'] }, 120))).toMatchObject({ parts: expect.arrayContaining(['plot']), rules: expect.arrayContaining(['kept:marks']) });
-  });
   it('the tldr value sits above the marks for an instant metric, or wherever the context says always', () => {
     expect(run(specs.live!, 346).plan).toMatchObject({ layout: 'rows', tldrValue: true });
     expect(run(specs.pages!, 346).plan.tldrValue).toBe(false);
@@ -219,7 +215,6 @@ describe('schemas', () => {
     expect(layer.role.enum).toEqual(ROLES);
     expect(layer.stack.enum).toEqual(STACKS);
     expect(layer.align.enum).toEqual(ALIGNS);
-    expect((viewSchema as any).properties.keep.items.enum).toEqual(KEEP_PARTS);
     // The fields a spec, a query and a layer take: resolve() refuses any other by name, as the schema does.
     expect([Object.keys((viewSchema as any).properties), Object.keys((viewSchema as any).definitions.query.properties), Object.keys(layer)]).toEqual([SPEC_FIELDS, QUERY_FIELDS, LAYER_FIELDS]);
     // A description cannot be derived, so it is held to the count it states.

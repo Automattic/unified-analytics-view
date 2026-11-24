@@ -17,7 +17,7 @@ describe('explain', () => {
       if (s.spec.layers) expect(shown.every((b) => !b.from.startsWith('use ')), name).toBe(true);
     }
   });
-  it('says which rule hides a part at a room, what it needs and what it has, and the lever where the spec has one', () => {
+  it('says which rule hides a part at a room, what it needs and what it has, and the room that would change it', () => {
     expect(lines(of('trend', { inline: 250 }))).toMatchSnapshot();
     expect(lines(of('mix', { inline: 120 }))).toMatchSnapshot();
     expect(lines(of('donut', { inline: 120, block: 100 }))).toMatchSnapshot();
@@ -33,11 +33,6 @@ describe('explain', () => {
     expect(what('donut', { inline: 170, block: 80 }, 'legend')).toBe('hidden, and the marks it keyed drawn in one colour');
     // Bars have no line end to label, so no rule acts on their legend while the axes are there.
     expect(what('grouped', { inline: 300 }, 'legend')).toBeUndefined();
-  });
-  it('says a part the spec keeps is kept, and how to let it go', () => {
-    const spec = { ...all.trend!.spec, keep: ['guides' as const] }, e = of('trend', { inline: 250 }, undefined, spec);
-    expect(e.entries.find((b) => b.what === 'kept')).toMatchObject({ from: 'keep', lever: 'remove "guides" from keep to let it go here' });
-    expect(e.entries.some((b) => b.part === 'x-axis' && b.what === 'hidden')).toBe(false);
   });
   it('says why a comparison is not drawn, and what to add', () => {
     const spec = all.trend!.spec, asked = of('trend', undefined, 'no-prior');

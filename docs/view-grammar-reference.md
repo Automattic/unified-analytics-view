@@ -217,10 +217,9 @@ It counts no events, so it has none to filter. It answers `where` from the pairs
 | `query` | object | Required. See section 5 |
 | `use` | string | A preset name. Expands into `layers`. Ignored if `layers` is present |
 | `layers` | array | Explicit layers. See below |
-| `keep` | array | Parts a container may not drop: `"guides"`, `"secondary"`, `"rows"`, `"marks"`. Provisional; see section 10.1 |
 | `facet` | string | One of the query's dimensions. The spec is then a view for each of its values, on the same scales. See "A facet", below |
 
-The spec says what to show and nothing about how. Whether the tldr value or a guide appears is decided by the container's rules (sections 8 and 10). `keep` is the one presentation lever an author has.
+The spec says what to show and nothing about how. Whether the tldr value or a guide appears is decided by the container's rules (sections 8 and 10). A spec has no lever over it: `keep`, which let one hold a part a container would drop, went on November 24 (Decided 63).
 
 A layer:
 
@@ -454,7 +453,7 @@ A limit is backpressure: it says where the grammar ends, and a refusal that name
 | No sum of rows, no share worked out of them, no quantile, bin or running total | What keeps a number true: many metrics do not add up | The engine's totals and `totalsBy`; a companion field |
 | An answer that is not of its query, or of its filter, is refused | What keeps a number true | What the query returned, set with its spec in one step |
 | No expression, function, variable or reference in a spec; a string on a channel is a field | What keeps a spec data: a page can take one from an author it does not trust | `at`, for a value; a companion, for what is computed; a custom mark, for what is drawn another way |
-| No size, breakpoint or presentation switch in a spec | The vision: what a view looks like belongs to where it lands | The container's rules; `keep` |
+| No size, breakpoint or presentation switch in a spec | The vision: what a view looks like belongs to where it lands | The container's rules, and a context's own set of them |
 | One layer in a band; one custom mark to a view, with the plot's `text` over it | A layout is an arrangement of parts, and these have one place for marks | A plot or a list; `places` |
 | A query is by two dimensions at most; `where` joins dimensions by "and"; a range is a count of days or now | The engine's contract, which is Open with the API's owners | Another query; another tool |
 
@@ -791,7 +790,7 @@ The rules on the plot (`secondary` and `hole`) ask for the plot's own box, which
 
 ### 10.4 Why a view looks as it does (Proven)
 
-A spec that does not come out as its author expected is fixed in the spec, so the view says what it decided in the spec's own words. `explain(spec, result, catalog, room)` in core returns the layout and why the layers asked for it, every part the plan has and the place in the spec it comes from (`layers[0].encode.color`, `query.metrics[0]`, or `use "donut": layers[0]` for a preset's), and at a room each fit rule that holds: what it hides or shows, what it needs and what the room has, its id, and the lever where the spec has one (`keep`, a field, `compare`). A key a rule cuts down is said in its shorter form ("shown as a thin strip", "shown as its largest step", "thinned to about four"), and one it takes says what went with it ("hidden, and the marks it keyed drawn in one colour"). A rule on the plot is said to be "not asked" where the room gives no plot to measure. A filtered answer is said straight after the layout ("filtered to channel Search"), from `query.where`, with the lever that draws the whole. A plan knows no selection, so what a view marks of one is a surface's to add, with `selectedBecause`: "marked as selected: channel Search", from `selected`, and why the view is not filtered by it. `UaView.explain()` adds it. An entry with no lever is a default, and the rules are where it is fixed. `UaView.explain()` asks it at the element's own size and adds what the measured pass decided there: labels given up or cut short, the number's shorter forms, the prose rung.
+A spec that does not come out as its author expected is fixed in the spec, so the view says what it decided in the spec's own words. `explain(spec, result, catalog, room)` in core returns the layout and why the layers asked for it, every part the plan has and the place in the spec it comes from (`layers[0].encode.color`, `query.metrics[0]`, or `use "donut": layers[0]` for a preset's), and at a room each fit rule that holds: what it hides or shows, what it needs and what the room has, its id, and what would change it (a field, `compare`, or for a fit rule the room the surface would have to give). A key a rule cuts down is said in its shorter form ("shown as a thin strip", "shown as its largest step", "thinned to about four"), and one it takes says what went with it ("hidden, and the marks it keyed drawn in one colour"). A rule on the plot is said to be "not asked" where the room gives no plot to measure. A filtered answer is said straight after the layout ("filtered to channel Search"), from `query.where`, with the lever that draws the whole. A plan knows no selection, so what a view marks of one is a surface's to add, with `selectedBecause`: "marked as selected: channel Search", from `selected`, and why the view is not filtered by it. `UaView.explain()` adds it. An entry with no lever is a default, and the rules are where it is fixed. `UaView.explain()` asks it at the element's own size and adds what the measured pass decided there: labels given up or cut short, the number's shorter forms, the prose rung.
 
 The fit rules are the contract it reads, so a part the element hides that no rule names is a gap in the rules. Building it found two: the `axes` rule now names `y-axis-2`, and the grid's `marks` rule its axes and keys.
 
@@ -1025,7 +1024,7 @@ Removed November 24: it was a proposal of October, and what was built from it is
 1. Chart types are presets, not primitives.
 2. No `intent` in the spec.
 3. Comparison is a role on a layer (`series: "previous"`), not a second metric.
-4. Sizes and thresholds belong to the container and the design system. The spec has none; `keep` is the author's only lever.
+4. Sizes and thresholds belong to the container and the design system. The spec has none; `keep` is the author's only lever. (`keep` went on November 24: Decided 63.)
 5. Totals come from the engine, never from summing rows.
 6. `arc` will be its own mark. No general polar coordinates. It reads data on `angle` and on `radius`, one a metric and the other a dimension, and that is a closed set of forms of one mark and not a coordinate system: no other mark is drawn about a centre, and nothing has an angle and a radius both from metrics. A slice that reaches to its value starts at the centre: there is no hole in a rose. (Extended October 12) Reopened November 23: see Open 21.
 7. The scene is the seam between structure and rendering. Paint tokens, never colours.
@@ -1038,7 +1037,7 @@ Removed November 24: it was a proposal of October, and what was built from it is
 14. The spec is the seed for everything. An author writes a spec and decides where to render it; nobody writes a spec for a container. (October 7)
 15. Presentation is intrinsic. A container fits a view by default rules, and a context that wants different behaviour passes its containers a durable rule set. (October 7)
 16. `headline` and `guides` are out of the spec. Whether the tldr value and the guides show is decided by the rules. (October 7)
-17. `keep` stays, provisionally, as the author's one lever. Uses are counted during testing and the field is removed if the defaults make it unnecessary. (October 7)
+17. `keep` stays, provisionally, as the author's one lever. Uses are counted during testing and the field is removed if the defaults make it unnecessary. (October 7) The count reached zero, and it was removed on November 24: Decided 63.
 18. Names: tldr value (was headline), tldr prose (was sentence), container (was host). The prototype kept the old names, and the parity test mapped them, until both went (Decided 52). (October 7)
 19. Intrinsic behaviour is the default. A surface lays its containers out by its own scheme; a container fills the room it is handed and does not know where it is. With nothing said it fills the width and takes its natural height; a layout that hands out a box opts its children into filling it. (October 7)
 20. One scene, in ratios, with a `part` on every node. Pixel painters go through `place(scene, size)`. (October 7) The second sentence is amended by 43.
@@ -1086,10 +1085,11 @@ Removed November 24: it was a proposal of October, and what was built from it is
 60. A catalog may say which dimensions a metric is answered by, with `by` on the metric, and a query that asks it by another is refused before it is run. It is the one part of the tenth step of `docs/focus-plan.md` that is built, because it is the one with a reader here: `resolve()`. The rest is proposed to the API's owners and is Open 23. (November 24)
 61. A view says its sentence in a live region when new data changes it, and a draft of the alias sheet for a page themed by the WordPress Design System is in the token package (`packages/tokens/wpds.css`). These are the parts of the eleventh step of `docs/focus-plan.md` that need no eye. Patterns beside colour, a look for Selected and the visual design are design's, and a pass with a screen reader is still owed. (November 24)
 62. A spec may say what its view is for: `description`, one sentence in its author's words that does not change with the data. A surface says it before the tldr prose, which stays derived, and it is drawn nowhere. It is the one authored sentence a spec has, and David's call over a recommendation to add none. A facet says it once, of its views together. (November 24)
+63. `keep` is gone. It let a spec hold a part that a container would drop, and was provisional from the day it was kept (Decided 17): no sample used it, and a spec that says how it is shown is the one thing the vision rules out. A spec, a fit rule and `fitTo` have no `keep`, and a spec that writes one is refused by name. What `explain` gives as the lever of a fit rule's verdict is the room, which is the surface's to give. Where a default is wrong for a view, the answer is a better rule, or a rule set a context hands its containers. No frame of the bench's capture moved. (November 24)
 
 ### Open
 
-1. The format for per-element fit rules, such that they compile to container queries and also run in code. Proposed in `docs/archive/dom-painter-plan.md`, section 2. Built: the rules are compiled (`packages/dom/src/compile.ts`) and read in code by `fitTo` (Decided 43), and `keep` holds a rule off in both. One difference step 1 of that plan found is still open: a rule on the view cannot say the plot's room when the number sits above the plot, which is why the `y-ticks` rule carries a note and Open 19 its last sentence.
+1. The format for per-element fit rules, such that they compile to container queries and also run in code. Proposed in `docs/archive/dom-painter-plan.md`, section 2. Built: the rules are compiled (`packages/dom/src/compile.ts`) and read in code by `fitTo` (Decided 43). One difference step 1 of that plan found is still open: a rule on the view cannot say the plot's room when the number sits above the plot, which is why the `y-ticks` rule carries a note and Open 19 its last sentence.
 2. Settled October 7: see Decided 20. The number is kept so later items keep theirs.
 3. How a preset pins a hand-tuned form.
 4. Settled October 7: see Decided 23. Built October 8.

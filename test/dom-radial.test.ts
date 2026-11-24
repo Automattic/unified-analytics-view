@@ -5,7 +5,7 @@ import { LAYOUTS } from '../packages/dom/src/layouts/index.ts';
 import { radial } from '../packages/dom/src/layouts/radial.ts';
 
 // String work only, as in dom-band.test.ts. What the browser makes of it is checked on the bench.
-const fig = (keep: string) => '.uav[data-layout="radial"]:not([data-keep~="' + keep + '"])';
+const fig = (_was?: string) => '.uav[data-layout="radial"]';
 const css = compileFitRules(FIT_RULES.filter((r) => r.layout === 'radial'), { radial: radial.fit! });
 
 describe('the radial layout', () => {

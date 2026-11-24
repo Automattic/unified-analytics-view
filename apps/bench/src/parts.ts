@@ -105,7 +105,7 @@ if (!embed) {
   try {
     const result = answer(), plan = resolve(spec, result, cat), scene = buildScene(plan, spec.query, result, cat);
     // And what a fit rule may ask of the scene: what kind of view it is, and which parts it has anything for.
-    Object.assign(window, { benchPlan: { layout: plan.layout, parts: scene.parts, keep: expand(spec).keep ?? [], marks: (expand(spec).layers ?? []).map((l) => l.mark), has: hasOf(scene), drawn: [...new Set(scene.nodes.map((n) => n.part))] } });
+    Object.assign(window, { benchPlan: { layout: plan.layout, parts: scene.parts, marks: (expand(spec).layers ?? []).map((l) => l.mark), has: hasOf(scene), drawn: [...new Set(scene.nodes.map((n) => n.part))] } });
   } catch { /* the frames say what went wrong */ }
   const strip = el('div', 'strip');
   for (const w of [...WIDTHS, 0]) {

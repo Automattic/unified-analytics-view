@@ -69,13 +69,20 @@ export const NEEDS: Record<string, Record<string, readonly Channel[]>> = {
   matrix:    { cell: ['color'], dot: ['x', 'y', 'size'], text: ['text'] },
 };
 
-/** The layer fields that only some marks read, and where. On any other mark one was dropped. `role` is read of every
- * layer, and `paint`, `series` and `stack` are refused where they are drawn, form by form: they are not here. */
-export const FIELDS: Record<string, Record<string, readonly ('label' | 'align' | 'sweep' | 'at')[]>> = {
-  cartesian: { rule: ['label', 'at'], tick: ['align'] },
-  rows:      { text: ['align'], tick: ['align'] },
-  radial:    { arc: ['sweep'], unit: ['sweep'] },
+/** A field of a layer that only some marks read. `role` is read of every layer. */
+export type Field = 'label' | 'align' | 'sweep' | 'at' | 'paint' | 'series' | 'stack';
+/** The layer fields that only some marks read, and where. On any other mark one was dropped, and is refused now. This
+ * says whether a mark has a use for a field at all. What it asks of one in a form (a stack with nothing to stack, a
+ * paint beside a colour for each series, a period before of no metric) is refused where the form is known, in those words. */
+export const FIELDS: Record<string, Record<string, readonly Field[]>> = {
+  cartesian: { line: ['paint', 'series', 'stack'], area: ['paint', 'series', 'stack'], bar: ['paint', 'series', 'stack'], rule: ['label', 'at', 'paint', 'series'], dot: ['paint', 'series'], tick: ['align', 'paint'], unit: ['paint'] },
+  rows:      { bar: ['paint', 'series', 'stack'], rule: ['paint', 'series'], text: ['align', 'series'], tick: ['align', 'paint'], dot: ['paint', 'series'], unit: ['paint'], line: ['paint', 'series'], area: ['paint', 'series'] },
+  band:      { bar: ['stack'], unit: ['paint', 'stack'] },
+  radial:    { arc: ['sweep', 'paint', 'series'], unit: ['sweep'], line: ['paint', 'series'], area: ['paint', 'series'], dot: ['paint', 'series'] },
+  matrix:    { dot: ['paint'] },
 };
+/** The fields a layer is asked about. The first four were always in the table. */
+const ASKED: readonly Field[] = ['label', 'align', 'sweep', 'at', 'paint', 'series', 'stack'];
 
 /** What a mark of the plot's reads where it is drawn over a custom mark, at the places that mark offers (marks.ts, `places`). */
 const OVER: Record<string, Reads> = { text: { x: [D], text: [D, M, C] } };
@@ -117,10 +124,15 @@ export function checkReads(layout: Layout, why: string, layers: Layer[], catalog
     }
     const missing = (own ? [] : NEEDS[layout]?.[l.mark] ?? []).find((ch) => l.encode?.[ch] == null);
     if (missing) throw new Error(n + ' has the mark "' + l.mark + '" and nothing on ' + missing + ', and ' + there + ' is not drawn without it. Encode ' + orList(reads[missing]!.map((h) => A[h])) + ' on ' + missing + '.');
-    for (const field of ['label', 'align', 'sweep', 'at'] as const) {
-      if (l[field] == null || (!own && FIELDS[layout]?.[l.mark]?.includes(field))) continue;
+    for (const field of ASKED) {
+      // A custom mark says the fields it reads beside its channels (`fields`), and one drawn over it is the plot's `text`, which reads none.
+      if (l[field] == null || (own ? l.mark === layout && custom!.fields?.includes(field) : FIELDS[layout]?.[l.mark]?.includes(field))) continue;
       const where = Object.entries(FIELDS).flatMap(([lay, ms]) => Object.keys(ms).filter((m) => ms[m]!.includes(field)).map((m) => m + ' in ' + lay));
-      throw new Error(n + ' has "' + field + '", and ' + there + ' reads none. Remove it. It is read by: ' + where.join(', ') + '.');
+      // The marks that read it in this layout say more than every mark that reads it anywhere, which for a paint is most of them.
+      const here = Object.keys(FIELDS[layout] ?? {}).filter((m) => FIELDS[layout]![m]!.includes(field));
+      const said = own && ASKED.indexOf(field) >= 4 ? (custom!.fields?.length ? 'Of such fields it reads: ' + orList(custom!.fields.slice()) + '.' : 'It draws in paints of its own.')
+        : ASKED.indexOf(field) < 4 || !here.length ? 'It is read by: ' + where.join(', ') + '.' : 'In a "' + layout + '" layout it is read by: ' + orList(here) + '.';
+      throw new Error(n + ' has "' + field + '", and ' + there + ' reads none. Remove it. ' + said);
     }
   });
 }

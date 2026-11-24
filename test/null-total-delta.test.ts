@@ -16,10 +16,10 @@ describe('a null total, compared with the period before', () => {
   it('claims no change: a dash for the number, no delta beside it, no clause in the prose', () => {
     const v = view(number, result(null));
     expect(v.nodes.filter((n) => n.kind === 'text').map((n) => [n.key, n.text])).toEqual([['value', '–']]);
-    expect(v.text).toBe('Revenue: – in the last 28 days.');
+    expect(v.text).toBe('Revenue: no figure in the last 28 days.');
   });
   it('nor with no prior figure either: nothing is said of a comparison at all', () => {
-    expect(view(number, { ...result(null), totals: { revenue: null } }).text).toBe('Revenue: – in the last 28 days.');
+    expect(view(number, { ...result(null), totals: { revenue: null } }).text).toBe('Revenue: no figure in the last 28 days.');
   });
   it('a row with no figure has a dash in a column of changes', () => {
     const v = view(table, result(300, [{ sku: 'A', revenue: null, 'revenue@previous': 200 }, { sku: 'B', revenue: 100, 'revenue@previous': 200 }]));

@@ -5,7 +5,7 @@ import catalogSchema from '@unified-analytics/core/schema/catalog.schema.json';
 import { catalog, moreSamples, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
 import { err, round, run, shown, validView as view } from './helpers.ts';
 
-// Step 6 of docs/chart-coverage-plan.md: the `arc` mark and the `radial` layout. It has no prototype to match, so it
+// Step 6 of docs/archive/chart-coverage-plan.md: the `arc` mark and the `radial` layout. It
 // is held to its own sweep, facts and golden scenes, as test/coverage.test.ts holds the plots.
 const specs = Object.fromEntries(['donut', 'pie', 'half', 'gauge', 'radar'].map((k) => [k, moreSamples[k]!.spec]));
 const { donut, pie, half, gauge } = specs as Record<string, Spec>;
@@ -67,7 +67,7 @@ describe('arcs', () => {
     const top3: Spec = { ...pie!, query: { ...pie!.query, limit: 3 } }, { ratio, plan } = run(top3, 346);
     expect(Math.round(arcs(top3).pop()!.a1 * 100)).toBe(83);                // 41 + 28 + 14, less the gap
     expect((ratio.nodes.find((n) => n.key === 'legend-top') as { text: string }).text).toBe('Search 41%');
-    expect(plan.text).toBe('Search is the largest channel at 41% of visitors, followed by Direct at 28%.');
+    expect(plan.text).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. The top channel is Search, at 41%.');
   });
   it('the legend is the band\'s, node for node', () => {
     const legend = (spec: Spec) => run(spec, 346).ratio.nodes.filter((n) => n.part === 'legend' || n.part === 'legend-top');
@@ -187,8 +187,6 @@ describe('fit rules', () => {
   it('below the room the marks need, the number alone', () => {
     expect(at(donut!, 346, 63)).toMatchObject({ parts: ['number'], set: { split: 'plain' } });
     expect(at(donut!, 71, 200).parts).toEqual(['number']);
-    // The spec's `keep` holds the legend's rules off, and the marks' own rule is no rule of the guides.
-    expect(at({ ...donut!, keep: ['guides'] }, 346, 63)).toMatchObject({ parts: ['number'], rules: ['kept:legend-top', 'marks'] });
   });
 });
 

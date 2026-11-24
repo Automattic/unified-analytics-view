@@ -1,0 +1,17 @@
+{
+  "name": "@unified-analytics/agent",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "serve": "node src/server.ts"
+  },
+  "dependencies": {
+    "@unified-analytics/core": "workspace:*",
+    "@unified-analytics/fixtures": "workspace:*",
+    "ajv": "^8.20.0"
+  }
+}

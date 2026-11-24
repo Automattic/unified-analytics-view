@@ -72,11 +72,11 @@ export const GAP = 2, KID_GAP = 1;
  * `bar-list` has one dimension to its rows and would leave the other undrawn. With one it is `bar-list`. */
 export const PARTITION_RULES: FitRule[] = [
   { id: 'guides', layout: 'partition', container: 'view', needs: { inline: 320, block: 170 },     // the ramp, where a metric is on color: under this a thin strip, which stays as long as the boxes
-    hide: [], set: { ramp: 'strip' }, keep: 'guides' },
+    hide: [], set: { ramp: 'strip' } },
   { id: 'marks',  layout: 'partition', container: 'view', needs: { inline: 280, block: 120 },     // boxes too small to tell apart, or to name
-    hide: [], fallback: 'pair-list', keep: 'marks' },
+    hide: [], fallback: 'pair-list' },
   { id: 'marks-flat', layout: 'partition', container: 'view', needs: { inline: 280, block: 120 }, // the same room, for a query by one dimension
-    hide: [], fallback: 'bar-list', keep: 'marks' },
+    hide: [], fallback: 'bar-list' },
 ];
 
 interface Leaf { key: string; name: string; row: Row; box: Box; paint: string }
@@ -128,6 +128,7 @@ const round = (n: number) => Math.round(n * 1e5) / 1e5;
 export const partitionMark: CustomMark = {
   rules: PARTITION_RULES,
   reads: { x: ['dimension'], detail: ['dimension'], size: ['metric'], color: ['metric'] },
+  fields: [],   // it draws in paints of its own, and takes no field beside its channels
 
   /* The nodes, in order: a parent's box, its name, and then each of its children's boxes with the child's name after
    * it. A parent's box is set in the part, as a cell is: `x` and `w` across it and `y` and `h` down it. A child's is

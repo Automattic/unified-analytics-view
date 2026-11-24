@@ -26,6 +26,9 @@ importers:
       '@types/node':
         specifier: ^26.6.4
         version: 26.6.4
+      '@unified-analytics/agent':
+        specifier: workspace:*
+        version: link:packages/agent
       '@unified-analytics/core':
         specifier: workspace:*
         version: link:packages/core
@@ -103,42 +106,17 @@ importers:
         specifier: ^8.3.3
         version: 8.3.3(@types/node@26.6.4)(yaml@2.9.1)
 
-  apps/bench-archive:
+  packages/agent:
     dependencies:
       '@unified-analytics/core':
         specifier: workspace:*
-        version: link:../../packages/core
-      '@unified-analytics/dom':
-        specifier: workspace:*
-        version: link:../../packages/dom
+        version: link:../core
       '@unified-analytics/fixtures':
         specifier: workspace:*
-        version: link:../../packages/fixtures
-      '@unified-analytics/flow':
-        specifier: workspace:*
-        version: link:../../packages/flow
-      '@unified-analytics/geo':
-        specifier: workspace:*
-        version: link:../../packages/geo
-      '@unified-analytics/partition':
-        specifier: workspace:*
-        version: link:../../packages/partition
-      '@unified-analytics/spacefast':
-        specifier: workspace:*
-        version: link:../../packages/spacefast
-      '@unified-analytics/tokens':
-        specifier: workspace:*
-        version: link:../../packages/tokens
-      d3-scale:
-        specifier: ^4.0.2
-        version: 4.0.2
-      d3-shape:
-        specifier: ^3.2.0
-        version: 3.2.0
-    devDependencies:
-      vite:
-        specifier: ^8.3.3
-        version: 8.3.3(@types/node@26.6.4)(yaml@2.9.1)
+        version: link:../fixtures
+      ajv:
+        specifier: ^8.20.0
+        version: 8.20.0
 
   packages/core:
     dependencies:

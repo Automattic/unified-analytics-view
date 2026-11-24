@@ -3,7 +3,7 @@ import { FIT_RULES, buildScene, columnRooms, expand, formatValue, hasOf, pathD, 
 import { catalog, moreSamples, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
 import { at, err, ofUnbounded, run, shown, validView as view } from './helpers.ts';
 
-// Rows as tracks (docs/chart-coverage-plan.md, step 2): columns of values, a change per row, a signed track and the
+// Rows as tracks (docs/archive/chart-coverage-plan.md, step 2): columns of values, a change per row, a signed track and the
 // funnel. The sweep and the golden scenes of these samples are in test/coverage.test.ts, with the rest of `moreSamples`.
 const conversions = moreSamples.conversions!.spec, league = moreSamples.league!.spec, funnel = moreSamples.funnel!.spec;
 const texts = (nodes: { key: string }[], key: RegExp) => nodes.filter((n) => key.test(n.key)).map((n) => (n as unknown as { text: string }).text);
@@ -205,10 +205,10 @@ describe('the funnel preset', () => {
 
 describe('tldr prose for several metrics by one dimension', () => {
   const text = (spec: Spec, sc?: (typeof scenarios)[number]) => run(spec, 346, null, sc).plan.text;
-  it('ranks by the first metric and says the rest once, as the engine\'s totals', () => {
-    expect(text(conversions)).toBe('Top events by conversions, last 28 days: Add to cart (1,310), Newsletter signup (842), Checkout started (655). Overall, conversion rate 21% and value $134.7k.');
-    expect(text(funnel)).toBe('Top steps by visitors, last 28 days: Visited the site (10.5k), Viewed pricing (1,705), Started checkout (655). Overall, conversion rate 3.9%.');
-    expect(text(league)).toBe('Top pages by page views, last 28 days: / (4,820), /pricing (2,960), /blog/launch-notes (2,105).');
+  it('says each metric once, as the engine\'s totals, and the leader by the first', () => {
+    expect(text(conversions)).toBe('Conversions: 3,513 in the last 28 days. Conversion rate: 21%. Value: $134.7k. The top event is Add to cart.');
+    expect(text(funnel)).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. Conversion rate: 3.9%. The top step is Visited the site.');
+    expect(text(league)).toBe('Page views: 25.1k in the last 28 days, up 14% on the previous period. The top page is /.');
     expect(text(conversions, 'empty')).toBe('Conversions: nothing recorded in the last 28 days.');
   });
 });

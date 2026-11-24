@@ -1,4 +1,4 @@
-import { buildScene, expand, hasOf, resolve } from '@unified-analytics/core';
+import { buildScene, expand, hasOf, resolve, type Catalog, type Result, type Spec } from '@unified-analytics/core';
 import { UaView } from '@unified-analytics/dom';
 import { catalog, runQuery, type Scenario } from '@unified-analytics/fixtures';
 import { el } from './page.ts';
@@ -14,6 +14,11 @@ const WIDTHS = [480, 346, 250, 170, 120, 80, 40];
 /* Each part of a scene is drawn under a class of its name (core's `Part`), and the readout chip is one more. */
 const PARTS = ['number', 'plot', 'x-axis', 'y-axis', 'y-axis-2', 'labels', 'columns', 'rows', 'band', 'legend', 'legend-top', 'radial', 'hole', 'rim',
   'ramp', 'notice', 'points', 'point-labels', 'size', 'note', 'unit-key', 'track', 'readout'];
+
+/** A view handed in from outside the page, which the capture does for `spec=<file>` (capture.ts): a spec, and with it
+ * the answer and the catalog it is drawn against where those are not the fixtures'. It joins the samples under its name. */
+const given = (window as unknown as { benchGiven?: { name: string; spec: Spec; result?: Result; catalog?: Catalog } }).benchGiven;
+if (given) samples[given.name] = { label: given.name, spec: given.spec };
 
 const params = new URLSearchParams(location.search), embed = params.has('embed');
 const controls = document.querySelector<HTMLFormElement>('#controls')!, main = document.querySelector('main')!;
@@ -94,11 +99,13 @@ if (!embed) {
 } else {
   document.body.classList.add('embed');
   const { sample, part, scenario, height } = state(), spec = samples[sample]!.spec;
+  // A view that was handed in is drawn on the answer and the catalog it came with, where it came with them.
+  const mine = given?.name === sample ? given : undefined, cat = mine?.catalog ?? catalog, answer = () => mine?.result ?? runQuery(spec.query, scenario);
   // What the view plans with no limits: its layout and every part it can show. The capture keeps it beside the frames, for the checker.
   try {
-    const result = runQuery(spec.query, scenario), plan = resolve(spec, result, catalog), scene = buildScene(plan, spec.query, result, catalog);
+    const result = answer(), plan = resolve(spec, result, cat), scene = buildScene(plan, spec.query, result, cat);
     // And what a fit rule may ask of the scene: what kind of view it is, and which parts it has anything for.
-    Object.assign(window, { benchPlan: { layout: plan.layout, parts: scene.parts, keep: expand(spec).keep ?? [], marks: (expand(spec).layers ?? []).map((l) => l.mark), has: hasOf(scene), drawn: [...new Set(scene.nodes.map((n) => n.part))] } });
+    Object.assign(window, { benchPlan: { layout: plan.layout, parts: scene.parts, marks: (expand(spec).layers ?? []).map((l) => l.mark), has: hasOf(scene), drawn: [...new Set(scene.nodes.map((n) => n.part))] } });
   } catch { /* the frames say what went wrong */ }
   const strip = el('div', 'strip');
   for (const w of [...WIDTHS, 0]) {
@@ -108,8 +115,8 @@ if (!embed) {
     if (w) frame.style.inlineSize = w + 'px'; else cell.classList.add('free');
     boxIn(frame, height);
     resizable(frame);
-    view.catalog = catalog; view.spec = spec;
-    try { view.result = runQuery(spec.query, scenario); } catch (e) { caption.className = 'meta error'; caption.textContent = (e as Error).message; }
+    view.catalog = cat; view.spec = spec;
+    try { view.result = answer(); } catch (e) { caption.className = 'meta error'; caption.textContent = (e as Error).message; }
     frame.prepend(view);
     cell.append(frame, caption);
     strip.append(cell);
@@ -117,4 +124,6 @@ if (!embed) {
     new ResizeObserver(() => requestAnimationFrame(() => requestAnimationFrame(() => { focus(view, part); readout(frame, caption); }))).observe(frame);
   }
   main.append(strip);
+  // The capture asks for the frames on one line (parts.css, `.still`). The free one keeps the width a line of its own gives it.
+  if (params.has('still')) { strip.querySelector<HTMLElement>('.free')!.style.inlineSize = main.clientWidth + 'px'; document.body.classList.add('still'); }
 }

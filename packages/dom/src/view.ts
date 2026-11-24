@@ -29,7 +29,9 @@ const PULSE_MARGIN = [2, 8] as const;
 /* Everything the element owns, in one layer, so a compiled fit rule beats it whatever the specificity. Every painter's
  * styles, the built-in ones' and a custom mark's alike, come in one place in it: after the base, before the chrome. */
 const stylesOf = (painters: LayoutPainter[]) => `@layer uav {
-:host { display: block; container: uav-view / inline-size; line-height: 1.3; text-align: start; text-indent: 0; color: ${paintVar('ink')}; }
+/* The view is set in its label face, and is the container its fit rules ask: an em in one of their queries is this
+ * size, which is how a need follows the type (compile.ts). Nothing is drawn in it here: every part says its own face. */
+:host { display: block; container: uav-view / inline-size; font-size: ${token('font-size-label')}; line-height: 1.3; text-align: start; text-indent: 0; color: ${paintVar('ink')}; }
 :host([hidden]), [hidden] { display: none !important; }
 /* The faces, worked out here and nowhere else. A page's type tokens may be fluid, in cqi, and these are the view's
  * children: the view is their container, so a face is one size across the whole of it. Read inside the plot, which
@@ -43,6 +45,10 @@ const stylesOf = (painters: LayoutPainter[]) => `@layer uav {
  * repaint them as the page, so both are told to leave a mark its paint. */
 .uav-body i { forced-color-adjust: none; }
 .uav-prose { ${VISUALLY_HIDDEN} }
+/* What the view is for, in its author's words (a spec's description), said before the sentence and never shown: where a view is its sentence, it is the sentence alone. */
+.uav-about { ${VISUALLY_HIDDEN} }
+/* What is said when the sentence changes under a reader. It stands outside the figure, which is hidden while a view loads. */
+.uav-live { ${VISUALLY_HIDDEN} }
 .uav-body { grid-area: body; box-sizing: border-box; min-inline-size: 0; block-size: var(--uav-body-block, auto); }
 .uav-error { margin: 0; font-size: var(--uav-font-label); overflow-wrap: anywhere; color: ${paintVar('delta.bad')}; }
 /* Loading: until the view has an input it has not been handed, or until its turn to paint has come. A plot's natural
@@ -134,7 +140,7 @@ export const BASE_CSS = stylesOf(Object.values(LAYOUTS));
 let styled = 0, styles = BASE_CSS;
 const allStyles = () => (styled === registered ? styles : ((styled = registered), (styles = stylesOf(Object.values(LAYOUTS)))));
 
-/** The two surface layouts of docs/dom-painter-plan.md section 4.2. The surface owns them; they are here so that a
+/** The two surface layouts of docs/archive/dom-painter-plan.md section 4.2. The surface owns them; they are here so that a
  * surface which is itself a custom element can adopt them into its shadow root. */
 export const SURFACE_CSS = `.ua-stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--ua-space-s, 12px); }
 .ua-row { display: flex; gap: var(--ua-space-s, 12px); }
@@ -191,7 +197,7 @@ const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v =
 export function check(spec: Spec, result: Result, catalog: Catalog): void {
   if (!isObject(spec.query)) throw new Error('The spec has no "query". Add one, for example { "metrics": ["visitors"], "by": ["date.day"] }.');
   // A list written as a bare value is the slip hand-written JSON makes, and core's failure for it names no fix.
-  for (const [name, v] of [['query.metrics', spec.query.metrics], ['query.by', spec.query.by], ['layers', spec.layers], ['keep', spec.keep]] as const)
+  for (const [name, v] of [['query.metrics', spec.query.metrics], ['query.by', spec.query.by], ['layers', spec.layers]] as const)
     if (v != null && !Array.isArray(v)) throw new Error('The spec gives "' + name + '" as ' + JSON.stringify(v) + '. It is a list: write ' + JSON.stringify([v]) + '.');
   if (!Array.isArray(result.rows) || !isObject(result.totals) || !isObject(result.meta)) throw new Error('The result needs "rows" (an array), "totals" and "meta". Pass what the query returned, whole.');
   if (!isObject(catalog.metrics) || !isObject(catalog.dimensions)) throw new Error('The catalog needs "metrics" and "dimensions". Pass the catalog the query was run against.');
@@ -238,7 +244,7 @@ export class UaView extends Base {
   // Whether an input changed since the last paint. A view that is only moved in the page paints again, and nothing in it moves.
   #changed = false;
   #layout: Layout | null = null;
-  #root: ShadowRoot; #fig: HTMLElement; #prose: HTMLElement; #number: HTMLElement; #body: HTMLElement; #table: HTMLTableElement; #error: HTMLElement; #loading: HTMLElement;
+  #root: ShadowRoot; #fig: HTMLElement; #prose: HTMLElement; #about: HTMLElement; #sentence: HTMLElement; #facetAbout: HTMLElement | null = null; #live: HTMLElement; #said: string | null = null; #number: HTMLElement; #body: HTMLElement; #table: HTMLTableElement; #error: HTMLElement; #loading: HTMLElement;
   // The timer that says, in the console, which input a view still waits for when it has waited long.
   #late = 0;
   #room: HTMLElement; #ruler: HTMLElement[]; #seen = '';
@@ -266,6 +272,10 @@ export class UaView extends Base {
     this.#fig = ensure(this.#root as unknown as Element, 'figure', 'uav');
     this.#prose = ensure(this.#fig, 'figcaption', 'uav-prose');
     this.#prose.id = 'prose'; this.#fig.setAttribute('aria-describedby', 'prose');
+    this.#about = ensure(this.#prose, 'span', 'uav-about'); this.#sentence = ensure(this.#prose, 'span', 'uav-sentence');
+    // A live region: a view drawn again with new data is not focused again, so nothing else would say that its sentence changed.
+    this.#live = ensure(this.#root as unknown as Element, 'div', 'uav-live');
+    this.#live.setAttribute('aria-live', 'polite'); this.#live.setAttribute('aria-atomic', 'true');
     this.#number = ensure(this.#fig, 'div', 'uav-number');
     this.#body = ensure(this.#fig, 'div', 'uav-body');
     this.#table = ensure(this.#fig, 'table', 'uav-table');
@@ -440,13 +450,17 @@ export class UaView extends Base {
 
       painting = true;
       this.#root.adoptedStyleSheets = [sheet(doc, allStyles()), sheet(doc, FALLBACK_CSS), fit];
-      fig.dataset.layout = scene.layout; fig.dataset.keep = (spec.keep || []).join(' '); fig.dataset.parts = scene.parts.join(' '); fig.dataset.has = hasOf(scene).join(' ');
+      fig.dataset.layout = scene.layout; fig.dataset.parts = scene.parts.join(' '); fig.dataset.has = hasOf(scene).join(' ');
       fig.dataset.marks = [...new Set(plan.layers.map((l) => l.mark))].join(' ');
       if (spec.title) fig.setAttribute('aria-label', spec.title); else fig.removeAttribute('aria-label');
       // The plot's natural heights are the context's, read by the stylesheet. The painter hard-codes neither.
       fig.style.setProperty('--uav-axes-height', rules.axes.height + 'px'); fig.style.setProperty('--uav-bare-height', rules.bare.height + 'px');
       begin(fig, changed && this.#layout === scene.layout);
-      this.#prose.textContent = plan.text;
+      // The figure is described by both: what it is for, where its author said, and then what it holds.
+      this.#about.textContent = spec.description ? spec.description + ' ' : ''; this.#sentence.textContent = plan.text;
+      // The first sentence is the view's description, and is read with it. One that takes its place is said, once.
+      if (this.#said != null && this.#said !== plan.text) this.#live.textContent = plan.text;
+      this.#said = plan.text;
       for (const el of [this.#number, ...this.#ruler]) paintNumber(el, scene.nodes.filter((n) => n.part === 'number'));
       if (this.#layout !== scene.layout) { this.#body.replaceChildren(); this.#body.removeAttribute('data-scale'); this.#layout = scene.layout; }
       const painter = painterOf(scene.layout), data = { layers: plan.layers, query: expand(spec).query, result, catalog };
@@ -456,7 +470,7 @@ export class UaView extends Base {
       else if (painter?.table) painter.table(this.#table, spec.title, scene, data); else paintTable(this.#table, spec.title, data.query, result, catalog, plan.layers);
       this.#keys.paint(scene, expand(spec).query, result, catalog, plan.layers);
       // The rule this view gives way under, if one is for what it holds and its query can fill the rule's preset: as fitTo() asks.
-      const swap = fallbackRule(fits, scene.layout, spec.keep, this.via, { marks: plan.layers.map((l) => l.mark), fills: (use) => fills(use, data.query) }), { layers: _layers, ...rest } = spec;
+      const swap = fallbackRule(fits, scene.layout, this.via, { marks: plan.layers.map((l) => l.mark), fills: (use) => fills(use, data.query) }), { layers: _layers, ...rest } = spec;
       if (swap) {
         const beside = this.#fallback ??= this.#root.appendChild(Object.assign(document.createElement(this.localName) as UaView, { className: 'uav-fallback' }));
         beside.setAttribute('data-rule', swap.id);                            // the compiled rule shows the one that is its own
@@ -477,6 +491,10 @@ export class UaView extends Base {
     const board = this.#board ??= this.#root.appendChild(Object.assign(doc.createElement('div'), { className: 'uav-facets' }));
     board.setAttribute('role', 'group');
     if (spec.title) board.setAttribute('aria-label', spec.title); else board.removeAttribute('aria-label');
+    // What the views are for is said of the group, once: each view's own description is its sentence alone (core's `facets`).
+    this.#facetAbout ??= Object.assign(this.#root.appendChild(doc.createElement('div')), { className: 'uav-about', id: 'about' });
+    this.#facetAbout.textContent = spec.description ?? '';
+    if (spec.description) board.setAttribute('aria-describedby', 'about'); else board.removeAttribute('aria-describedby');
     const had = new Map([...board.children].map((c) => [(c as HTMLElement).dataset.key, c as HTMLElement]));
     const cells = views.map((v) => {
       let cell = had.get(v.key);

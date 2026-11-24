@@ -1,0 +1,810 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://universal-analytics.local/schema/scene-0.json",
+  "title": "Scene, scene/0 (draft)",
+  "description": "What a view draws, with no size: a flat list of shapes in ratios of the part each is in, with stable keys and paint tokens. buildScene() makes one from a plan and a result, and a custom mark's `scene` makes its own. A draft: it says the scene as it is built today, and its names may still change. A node says where it is in the same fields whatever its kind and its layout: x and y where it is, x2 and y2 its other end, w and h an extent. x runs across its box from the start and y up it from the bottom, 0 to 1, in its part's box or, in a list, its row's track. A value may fall outside 0 to 1 where a mark does: a bar below its axis. An arc keeps fields of its own, about its part's centre. The number, a legend, a list's rows and a notice carry no position: a surface sets them in order.",
+  "type": "object",
+  "required": [
+    "layout",
+    "parts",
+    "nodes"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "layout": {
+      "type": "string",
+      "description": "cartesian, rows, band, radial, matrix, none, notice or prose, or the name of a custom mark, which is laid out by its own code."
+    },
+    "parts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/part"
+      },
+      "description": "The parts the plan shows, with all the room they ask for. Which of them show at a room is the fit rules' to say (fitTo). A scene holds nodes of parts that are not here, for a rule to show in another's place: the number, and both forms of a legend."
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Dimension values in order: the x domain, the rows, the segments, slices or rings."
+    },
+    "series": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "The values of the dimension on color, where a view is split into series. A series' paint is its place here."
+    },
+    "detail": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "The values of the dimension on detail, where a view is split into series that are not painted apart."
+    },
+    "ys": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "In a grid, the y dimension's values in order."
+    },
+    "scale": {
+      "enum": [
+        "band",
+        "point",
+        "linear"
+      ],
+      "description": "How x is shared among the rows of a plot."
+    },
+    "track": {
+      "const": "beside",
+      "description": "In rows: the track stands beside the label and the values, because its marks are read by where they are."
+    },
+    "aspect": {
+      "type": "number",
+      "description": "Where a part holds its shape, its width over its height."
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/node"
+      },
+      "description": "Drawn in order."
+    },
+    "text": {
+      "type": "string"
+    }
+  },
+  "definitions": {
+    "part": {
+      "enum": [
+        "number",
+        "plot",
+        "x-axis",
+        "y-axis",
+        "y-axis-2",
+        "labels",
+        "columns",
+        "rows",
+        "band",
+        "legend",
+        "legend-top",
+        "radial",
+        "hole",
+        "ramp",
+        "notice",
+        "points",
+        "point-labels",
+        "size",
+        "track",
+        "rim",
+        "note",
+        "unit-key"
+      ],
+      "description": "A part is a box a surface lays out, and what a fit rule names."
+    },
+    "paint": {
+      "type": "string",
+      "pattern": "^(ink|ink\\.muted|background|grid|axis|rule|compare|live|delta\\.(good|bad)|series\\.[1-6]|band\\.[1-3]|seq\\.(none|[1-9]|10)|div\\.[1-9])$",
+      "description": "A token, never a colour. A surface maps each to its own colours."
+    },
+    "node": {
+      "oneOf": [
+        {
+          "type": "object",
+          "description": "A bar, a segment of a band, a cell, a swatch or a box.",
+          "required": [
+            "key",
+            "part",
+            "paint",
+            "layer",
+            "kind"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "key": {
+              "type": "string",
+              "description": "Stable across renders and unique in the scene. Transitions and keyboard navigation hang on it."
+            },
+            "part": {
+              "$ref": "#/definitions/part"
+            },
+            "paint": {
+              "$ref": "#/definitions/paint"
+            },
+            "layer": {
+              "enum": [
+                "data",
+                "guide"
+              ]
+            },
+            "role": {
+              "enum": [
+                "primary",
+                "comparison",
+                "reference",
+                "context"
+              ]
+            },
+            "legend": {
+              "const": true,
+              "description": "Its paint is one of a legend's. Where the legend goes with nothing in its place, the mark is drawn in its layer's own paint."
+            },
+            "axis": {
+              "const": 2,
+              "description": "It is on a plot's second y scale, and goes when that axis goes."
+            },
+            "row": {
+              "type": "string",
+              "description": "The dimension value the node came from."
+            },
+            "series": {
+              "type": "string",
+              "description": "The value it came from of the dimension on color or on detail."
+            },
+            "rank": {
+              "type": "number",
+              "description": "Absent stays. A ranked node is given up when room is short, the higher its rank the sooner."
+            },
+            "opacity": {
+              "type": "number"
+            },
+            "tone": {
+              "const": "soft",
+              "description": "A fill that tints and does not mark."
+            },
+            "note": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "rect"
+            },
+            "x": {
+              "type": "number"
+            },
+            "w": {
+              "type": "number"
+            },
+            "x2": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "y2": {
+              "type": "number"
+            },
+            "h": {
+              "type": "number"
+            },
+            "pair": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 2,
+              "maxItems": 2,
+              "description": "The two dimension values a cell or a grid's dot came from: the one on x, then the one on y."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "description": "A line or the fill under one. `d` is drawn in a box of 100 by 100 for a surface to stretch, and `points` are what it was drawn from.",
+          "required": [
+            "key",
+            "part",
+            "paint",
+            "layer",
+            "kind",
+            "d",
+            "points"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "key": {
+              "type": "string",
+              "description": "Stable across renders and unique in the scene. Transitions and keyboard navigation hang on it."
+            },
+            "part": {
+              "$ref": "#/definitions/part"
+            },
+            "paint": {
+              "$ref": "#/definitions/paint"
+            },
+            "layer": {
+              "enum": [
+                "data",
+                "guide"
+              ]
+            },
+            "role": {
+              "enum": [
+                "primary",
+                "comparison",
+                "reference",
+                "context"
+              ]
+            },
+            "legend": {
+              "const": true,
+              "description": "Its paint is one of a legend's. Where the legend goes with nothing in its place, the mark is drawn in its layer's own paint."
+            },
+            "axis": {
+              "const": 2,
+              "description": "It is on a plot's second y scale, and goes when that axis goes."
+            },
+            "row": {
+              "type": "string",
+              "description": "The dimension value the node came from."
+            },
+            "series": {
+              "type": "string",
+              "description": "The value it came from of the dimension on color or on detail."
+            },
+            "rank": {
+              "type": "number",
+              "description": "Absent stays. A ranked node is given up when room is short, the higher its rank the sooner."
+            },
+            "opacity": {
+              "type": "number"
+            },
+            "tone": {
+              "const": "soft",
+              "description": "A fill that tints and does not mark."
+            },
+            "note": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "path"
+            },
+            "d": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "points": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "x",
+                  "y"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "row": {
+                    "type": "string"
+                  },
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "y2": {
+                    "type": "number"
+                  },
+                  "w": {
+                    "type": "number"
+                  }
+                }
+              }
+            },
+            "curve": {
+              "enum": [
+                "monotone",
+                "step",
+                "radial"
+              ]
+            },
+            "fill": {
+              "type": "boolean"
+            },
+            "width": {
+              "type": "number"
+            },
+            "dash": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "description": "A straight stroke: across a plot at y, or from (x, y) to (x2, y2).",
+          "required": [
+            "key",
+            "part",
+            "paint",
+            "layer",
+            "kind",
+            "y"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "key": {
+              "type": "string",
+              "description": "Stable across renders and unique in the scene. Transitions and keyboard navigation hang on it."
+            },
+            "part": {
+              "$ref": "#/definitions/part"
+            },
+            "paint": {
+              "$ref": "#/definitions/paint"
+            },
+            "layer": {
+              "enum": [
+                "data",
+                "guide"
+              ]
+            },
+            "role": {
+              "enum": [
+                "primary",
+                "comparison",
+                "reference",
+                "context"
+              ]
+            },
+            "legend": {
+              "const": true,
+              "description": "Its paint is one of a legend's. Where the legend goes with nothing in its place, the mark is drawn in its layer's own paint."
+            },
+            "axis": {
+              "const": 2,
+              "description": "It is on a plot's second y scale, and goes when that axis goes."
+            },
+            "row": {
+              "type": "string",
+              "description": "The dimension value the node came from."
+            },
+            "series": {
+              "type": "string",
+              "description": "The value it came from of the dimension on color or on detail."
+            },
+            "rank": {
+              "type": "number",
+              "description": "Absent stays. A ranked node is given up when room is short, the higher its rank the sooner."
+            },
+            "opacity": {
+              "type": "number"
+            },
+            "tone": {
+              "const": "soft",
+              "description": "A fill that tints and does not mark."
+            },
+            "note": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "line"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "x2": {
+              "type": "number"
+            },
+            "y2": {
+              "type": "number"
+            },
+            "width": {
+              "type": "number"
+            },
+            "dash": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "description": "A dot, a glyph of a unit, or the pulse beside the number. `size` is a step from 1 up, not a radius.",
+          "required": [
+            "key",
+            "part",
+            "paint",
+            "layer",
+            "kind",
+            "pulse"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "key": {
+              "type": "string",
+              "description": "Stable across renders and unique in the scene. Transitions and keyboard navigation hang on it."
+            },
+            "part": {
+              "$ref": "#/definitions/part"
+            },
+            "paint": {
+              "$ref": "#/definitions/paint"
+            },
+            "layer": {
+              "enum": [
+                "data",
+                "guide"
+              ]
+            },
+            "role": {
+              "enum": [
+                "primary",
+                "comparison",
+                "reference",
+                "context"
+              ]
+            },
+            "legend": {
+              "const": true,
+              "description": "Its paint is one of a legend's. Where the legend goes with nothing in its place, the mark is drawn in its layer's own paint."
+            },
+            "axis": {
+              "const": 2,
+              "description": "It is on a plot's second y scale, and goes when that axis goes."
+            },
+            "row": {
+              "type": "string",
+              "description": "The dimension value the node came from."
+            },
+            "series": {
+              "type": "string",
+              "description": "The value it came from of the dimension on color or on detail."
+            },
+            "rank": {
+              "type": "number",
+              "description": "Absent stays. A ranked node is given up when room is short, the higher its rank the sooner."
+            },
+            "opacity": {
+              "type": "number"
+            },
+            "tone": {
+              "const": "soft",
+              "description": "A fill that tints and does not mark."
+            },
+            "note": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "circle"
+            },
+            "pulse": {
+              "type": "boolean"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "size": {
+              "type": "number"
+            },
+            "w": {
+              "type": "number"
+            },
+            "h": {
+              "type": "number"
+            },
+            "pair": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 2,
+              "maxItems": 2,
+              "description": "The two dimension values a cell or a grid's dot came from: the one on x, then the one on y."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "description": "Text. `short` is a shorter form, for when room is short.",
+          "required": [
+            "key",
+            "part",
+            "paint",
+            "layer",
+            "kind",
+            "text",
+            "anchor",
+            "font"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "key": {
+              "type": "string",
+              "description": "Stable across renders and unique in the scene. Transitions and keyboard navigation hang on it."
+            },
+            "part": {
+              "$ref": "#/definitions/part"
+            },
+            "paint": {
+              "$ref": "#/definitions/paint"
+            },
+            "layer": {
+              "enum": [
+                "data",
+                "guide"
+              ]
+            },
+            "role": {
+              "enum": [
+                "primary",
+                "comparison",
+                "reference",
+                "context"
+              ]
+            },
+            "legend": {
+              "const": true,
+              "description": "Its paint is one of a legend's. Where the legend goes with nothing in its place, the mark is drawn in its layer's own paint."
+            },
+            "axis": {
+              "const": 2,
+              "description": "It is on a plot's second y scale, and goes when that axis goes."
+            },
+            "row": {
+              "type": "string",
+              "description": "The dimension value the node came from."
+            },
+            "series": {
+              "type": "string",
+              "description": "The value it came from of the dimension on color or on detail."
+            },
+            "rank": {
+              "type": "number",
+              "description": "Absent stays. A ranked node is given up when room is short, the higher its rank the sooner."
+            },
+            "opacity": {
+              "type": "number"
+            },
+            "tone": {
+              "const": "soft",
+              "description": "A fill that tints and does not mark."
+            },
+            "note": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "text"
+            },
+            "text": {
+              "type": "string"
+            },
+            "short": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "anchor": {
+              "enum": [
+                "start",
+                "middle",
+                "end"
+              ]
+            },
+            "baseline": {
+              "const": "middle"
+            },
+            "font": {
+              "enum": [
+                "tick",
+                "label",
+                "value",
+                "display"
+              ]
+            },
+            "halo": {
+              "type": "boolean"
+            },
+            "pair": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 2,
+              "maxItems": 2,
+              "description": "In a grid, the two dimension values the text stands at: the one on x, then the one on y."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "description": "An arc about the centre of its part. a0 and a1 are in turns, clockwise from the top; r0 and r1 are ratios of the part's radius; `d` is drawn about the origin at a radius of 50.",
+          "required": [
+            "key",
+            "part",
+            "paint",
+            "layer",
+            "kind",
+            "a0",
+            "a1",
+            "r0",
+            "r1",
+            "d"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "key": {
+              "type": "string",
+              "description": "Stable across renders and unique in the scene. Transitions and keyboard navigation hang on it."
+            },
+            "part": {
+              "$ref": "#/definitions/part"
+            },
+            "paint": {
+              "$ref": "#/definitions/paint"
+            },
+            "layer": {
+              "enum": [
+                "data",
+                "guide"
+              ]
+            },
+            "role": {
+              "enum": [
+                "primary",
+                "comparison",
+                "reference",
+                "context"
+              ]
+            },
+            "legend": {
+              "const": true,
+              "description": "Its paint is one of a legend's. Where the legend goes with nothing in its place, the mark is drawn in its layer's own paint."
+            },
+            "axis": {
+              "const": 2,
+              "description": "It is on a plot's second y scale, and goes when that axis goes."
+            },
+            "row": {
+              "type": "string",
+              "description": "The dimension value the node came from."
+            },
+            "series": {
+              "type": "string",
+              "description": "The value it came from of the dimension on color or on detail."
+            },
+            "rank": {
+              "type": "number",
+              "description": "Absent stays. A ranked node is given up when room is short, the higher its rank the sooner."
+            },
+            "opacity": {
+              "type": "number"
+            },
+            "tone": {
+              "const": "soft",
+              "description": "A fill that tints and does not mark."
+            },
+            "note": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "arc"
+            },
+            "a0": {
+              "type": "number"
+            },
+            "a1": {
+              "type": "number"
+            },
+            "r0": {
+              "type": "number"
+            },
+            "r1": {
+              "type": "number"
+            },
+            "d": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "description": "One row of a list: what a painter keys and a reader chooses. It draws nothing itself.",
+          "required": [
+            "key",
+            "part",
+            "paint",
+            "layer",
+            "kind",
+            "row"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "key": {
+              "type": "string",
+              "description": "Stable across renders and unique in the scene. Transitions and keyboard navigation hang on it."
+            },
+            "part": {
+              "$ref": "#/definitions/part"
+            },
+            "paint": {
+              "$ref": "#/definitions/paint"
+            },
+            "layer": {
+              "enum": [
+                "data",
+                "guide"
+              ]
+            },
+            "role": {
+              "enum": [
+                "primary",
+                "comparison",
+                "reference",
+                "context"
+              ]
+            },
+            "legend": {
+              "const": true,
+              "description": "Its paint is one of a legend's. Where the legend goes with nothing in its place, the mark is drawn in its layer's own paint."
+            },
+            "axis": {
+              "const": 2,
+              "description": "It is on a plot's second y scale, and goes when that axis goes."
+            },
+            "row": {
+              "type": "string",
+              "description": "The dimension value the node came from."
+            },
+            "series": {
+              "type": "string",
+              "description": "The value it came from of the dimension on color or on detail."
+            },
+            "rank": {
+              "type": "number",
+              "description": "Absent stays. A ranked node is given up when room is short, the higher its rank the sooner."
+            },
+            "opacity": {
+              "type": "number"
+            },
+            "tone": {
+              "const": "soft",
+              "description": "A fill that tints and does not mark."
+            },
+            "note": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "row"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { FIT_RULES, expand, unitWorth } from '@unified-analytics/core';
 import type { Catalog, CircleNode, Layer, RectNode, Result, Spec, TextNode } from '@unified-analytics/core';
-import { catalog, moreSamples, scenarios } from '@unified-analytics/fixtures';
+import { catalog, moreSamples as written, scenarios } from '@unified-analytics/fixtures';
 import { err as shared, run, shown, validView as view } from './helpers.ts';
+import { inUse, useExamples } from './examples.ts';
 
-// Step 6 of docs/uncommon-coverage-plan.md: the `unit` mark, which draws a value as counted glyphs. It has no prototype
-// to match, so it is held to its own sweep, facts and golden scenes, as test/radial.test.ts holds the arcs. The rules its
+useExamples();   // the presets the library no longer ships, which these cases still write `use` with
+const moreSamples = inUse(written);   // and the samples as they were written with them
+
+// Step 6 of docs/archive/uncommon-coverage-plan.md: the `unit` mark, which draws a value as counted glyphs. It
+// is held to its own sweep, facts and golden scenes, as test/radial.test.ts holds the arcs. The rules its
 // counts come from are tested where they are written, in test/unit-rules.test.ts.
 // Unlike the shared one, says so when there is no error.
 const err = (s: Spec, result?: Result, c?: Catalog) => shared(s, result, c) ?? 'no error';
@@ -336,11 +340,11 @@ describe('refusals, each naming its fix', () => {
 
 describe('fallbacks: under the room its glyphs need, a form becomes the preset of the same query that needs less', () => {
   it('each form has a rule that names the mark and the preset, by the room a plot with axes needs across', () => {
-    expect(FIT_RULES.filter((r) => r.fallback).map((r) => [r.layout, r.id, r.mark, r.fallback, r.needs, r.keep])).toEqual([
+    expect(FIT_RULES.filter((r) => r.fallback).map((r) => [r.layout, r.id, r.mark, r.fallback, r.needs])).toEqual([
       // Each form's height is its glyphs' and the line's that says what one is worth. A grid divided by a dimension has no line.
-      ['cartesian', 'unit', 'unit', 'bar', { inline: 280, block: 160 }, 'marks'], ['rows', 'unit', 'unit', 'bar-list', { inline: 280, block: 120 }, 'marks'],
-      ['band', 'unit', 'unit', 'share-bar', { inline: 280, block: 180 }, 'marks'], ['band', 'unit-alone', 'unit', 'gauge', { inline: 280, block: 220 }, 'marks'],
-      ['radial', 'unit', 'unit', 'pie-semi-circle', { inline: 280, block: 200 }, 'marks']]);
+      ['cartesian', 'unit', 'unit', 'bar', { inline: 280, block: 160 }], ['rows', 'unit', 'unit', 'bar-list', { inline: 280, block: 120 }],
+      ['band', 'unit', 'unit', 'share-bar', { inline: 280, block: 180 }], ['band', 'unit-alone', 'unit', 'gauge', { inline: 280, block: 220 }],
+      ['radial', 'unit', 'unit', 'pie-semi-circle', { inline: 280, block: 200 }]]);
   });
   for (const name of NAMES) it(name + ': at 279 px it is that preset\'s scene to the node, and from there steps down by that preset\'s own rules', () => {
     const spec = specs[name]!, [layout, fallback] = FORMS[name]!, other: Spec = { ...spec, layers: undefined, use: fallback };
@@ -360,7 +364,6 @@ describe('fallbacks: under the room its glyphs need, a form becomes the preset o
   });
   it('a spec that keeps its marks keeps its glyphs, and an empty range has nothing to give way from', () => {
     for (const name of NAMES) {
-      expect(run({ ...specs[name]!, keep: ['marks'] }, 250).plan.layers.some((l) => l.mark === 'unit'), name).toBe(true);
       expect(run(specs[name]!, 250, null, 'empty').gave, name).toEqual([]);
     }
   });
@@ -380,11 +383,11 @@ describe('the prose is the query\'s, and names no glyph', () => {
     }
   });
   it('and it is true', () => {
-    expect(run(waffle!, 346).plan.text).toBe('Desktop is the largest device at 52% of visitors, followed by Mobile at 41%.');
-    expect(run(units!, 346).plan.text).toBe('Top weekdays by visitors, last 28 days: Tue (1,760), Wed (1,729), Mon (1,666).');
-    expect(run(wilkinson!, 346).plan.text).toBe('Page views: 25.1k in the last 28 days. The most, 4,758, at a load time of 1.5 to 2.');
-    expect(run(isotype!, 346).plan.text).toBe('Top channels by visitors, last 28 days: Search (4,318), Direct (2,949), Social (1,474).');
-    expect(run(parliament!, 346).plan.text).toBe('Search is the largest channel at 41% of visitors, followed by Direct at 28%.');
+    expect(run(waffle!, 346).plan.text).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. The top device is Desktop, at 52%.');
+    expect(run(units!, 346).plan.text).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. The top weekday is Tue.');
+    expect(run(wilkinson!, 346).plan.text).toBe('Page views: 25.1k in the last 28 days.');
+    expect(run(isotype!, 346).plan.text).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. The top channel is Search.');
+    expect(run(parliament!, 346).plan.text).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. The top channel is Search, at 41%.');
     expect(run(icons!, 346).plan.text).toBe('Sign-ups: 303 in the last 28 days, 76% of its target of 400.');
     // The sentence is the same where the form has given way.
     for (const name of NAMES) expect(run(specs[name]!, 250).plan.text, name).toBe(run(specs[name]!, 700).plan.text);

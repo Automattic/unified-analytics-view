@@ -3,7 +3,7 @@ import { buildScene, expand, formatValue, resolve, sizeStep, type CircleNode, ty
 import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
 import { err, run, shown, validView as view } from './helpers.ts';
 
-// The `cell` mark and the grid it is laid out in (docs/chart-coverage-plan.md, step 5). No prototype knows it, so it
+// The `cell` mark and the grid it is laid out in (docs/archive/chart-coverage-plan.md, step 5). It
 // is held to a sweep, facts and golden scenes of its own, as test/coverage.test.ts holds step 1.
 const heatmap = moreSamples.heatmap!.spec;
 const cells = (ratio: { nodes: unknown[] }) => (ratio.nodes as RectNode[]).filter((n) => n.part === 'plot' && n.kind === 'rect');
@@ -40,8 +40,6 @@ describe('the sweep', () => {
       // A grid has no bare form beside the number: under its `marks` need it is the number alone.
       expect(at(149).slice(0, 2)).toEqual(['matrix', 'number']);
       expect(at(346, 89)[1]).toBe('number');
-      // A ramp the spec keeps stays whole, and the grid with it, down to the grid's own need.
-      expect([234, 150, 149].map((w) => at(w, null, { ...heatmap, keep: ['guides'] }).slice(1))).toEqual([['y-axis plot x-axis ramp', 'whole'], ['y-axis plot x-axis ramp', 'whole'], ['number', 'whole']]);
     }
   });
 });
@@ -51,7 +49,7 @@ describe('golden scenes', () => {
   it('heatmap, at each room', () => expect(sizes.map(([w, h]) => [w, h, shown(run(heatmap, w, h))])).toMatchSnapshot());
 });
 
-// The grids step 0 of docs/uncommon-coverage-plan.md added: a calendar, a strip of days and a square of pages. And
+// The grids step 0 of docs/archive/uncommon-coverage-plan.md added: a calendar, a strip of days and a square of pages. And
 // step 5's: a correlation matrix and its circles, and a count by two binned quantities.
 describe('the grids of the Uncommon types', () => {
   const grids = Object.fromEntries(['calendar', 'stripes', 'adjacency', 'correlogram', 'highlight', 'circles', 'bins2d'].map((k) => [k, moreSamples[k]!.spec]));
@@ -79,7 +77,7 @@ describe('the grids of the Uncommon types', () => {
     expect(texts(ratio, 'xtick:')).toEqual(['Sep 7', 'Sep 14', 'Sep 21', 'Sep 28']);
     expect(cells(ratio).length).toBe(28);
     expect(cells(ratio).every((n) => n.paint !== 'seq.none')).toBe(true);
-    expect(plan.text).toMatch(/^Most visitors at \w+, Sep \d+ \(\d+\) in the last 28 days\. \w+ is the busiest weekday at \d+% of visitors, and Sep \d+ the busiest week at \d+%\.$/);
+    expect(plan.text).toBe('Visitors: 10.8k in the last 28 days. This is a sum of daily counts, not a unique count. The top weekday is Mon.');
   });
   it('a strip of signed days is one row of cells on the diverging ramp: zero is its neutral middle, and a loss is as many steps below it as a gain as large is above', () => {
     const { ratio, result } = run(grids.stripes!, 700), days = cells(ratio);
@@ -120,8 +118,8 @@ describe('the grids of the Uncommon types', () => {
     for (const n of cells(ratio)) expect(n.paint, n.key).toBe('div.' + Math.min(9, 1 + Math.floor(((value(n) + 1) / 2) * 9)));
     expect([...new Set(cells(ratio).map((n) => n.paint))].sort()).toEqual(['div.2', 'div.3', 'div.4', 'div.5', 'div.6', 'div.7', 'div.8', 'div.9']);
     expect(cells(ratio).filter((n) => n.pair![0] === n.pair![1]).every((n) => n.paint === 'div.9')).toBe(true);
-    // A factor with itself is 1, which is no finding: the prose passes it over. There is no total, so no share and no top factor.
-    expect(plan.text).toBe('Correlation runs from -0.56 (Conversion rate and Churn) to 0.81 (Traffic and Ad spend) in the last 28 days.');
+    // There is no total, and the sentence says so: no share, and no top factor.
+    expect(plan.text).toBe('Correlation: no figure in the last 28 days.');
     expect(result.totals.correlation).toBeNull();
     expect(texts(run(grids.correlogram!, 120).ratio, 'value')).toEqual(['–']);
     expect(run(grids.correlogram!, 120).ratio.nodes.some((n) => n.key === 'sub')).toBe(false);
@@ -142,7 +140,7 @@ describe('the grids of the Uncommon types', () => {
     // A pair nothing fell in is a count of none, a step of the ramp, and not no value.
     expect(result.rows.some((r) => r.pageviews === 0)).toBe(true);
     expect(cells(ratio).every((n) => /^seq\.\d+$/.test(n.paint))).toBe(true);
-    expect(plan.text).toBe('Most page views at page weight 1–1.5, load time 1.5–2 (1,770) in the last 28 days. 1.5–2 is the busiest page weight at 32% of page views, and 2–2.5 the busiest load time at 19%.');
+    expect(plan.text).toBe('Page views: 25.1k in the last 28 days.');
   });
   it('a dot stands in each pair of a grid in place of its cell, sized by how far its value is from zero and painted by the same scale a cell is', () => {
     const { ratio, plan, result } = run(grids.circles!, 700), value = (n: CircleNode) => result.rows.find((r) => r.other_factor === n.pair![0] && r.factor === n.pair![1])!.correlation as number;
@@ -302,8 +300,8 @@ describe('the ramp, and the labels', () => {
 });
 
 describe('prose, the preset and errors', () => {
-  it('says the peak cell, and the busiest value of each dimension as a share of the engine\'s total', () => {
-    expect(run(heatmap, 346).plan.text).toBe('Most visitors at Wed, 11am (158) in the last 28 days. Tue is the busiest weekday at 17% of visitors, and 11am the busiest hour at 8.1%.');
+  it('says the number and the value that leads the first dimension, and nothing of a peak', () => {
+    expect(run(heatmap, 346).plan.text).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. The top weekday is Tue.');
     expect(run(heatmap, 346, null, 'empty').plan.text).toBe('Visitors: nothing recorded in the last 28 days.');
     expect((run(heatmap, 120).ratio.nodes.find((n) => n.key === 'sub') as { text: string }).text).toBe('Top: Tue');
   });

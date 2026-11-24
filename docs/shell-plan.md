@@ -51,7 +51,7 @@ Friday's panel hard-codes which views it shows. Its state is still one plain obj
 
 ## 4. What this asks of the painter
 
-Raised against `docs/dom-painter-plan.md` as reviewed October 7, and written into it the same day (its section 8, item 6). None changes its design.
+Raised against `docs/archive/dom-painter-plan.md` as reviewed October 7, and written into it the same day (its section 8, item 6). None changes its design.
 
 1. **Registered property names leak.** Section 6 registers `--x`, `--w`, `--v` and `--t` on the document. Registration is global, so on a customer's page it changes what their own `--x` means, and it fails if they registered one first. Prefix them (`--uav-x`).
 2. **How the DOM is built is not stated.** Rule 4 above applies: the `style="--t:.25"` in section 4's sketch has to be set through the object model, and the compiled fit rules adopted as a constructed stylesheet.

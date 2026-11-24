@@ -29,6 +29,10 @@ export interface MetricDef {
   /** Where the domain is divided, in ascending order: each is where one band ends and the next begins. Drawn behind a
    * row's marks by a `bar` with nothing on x, in the paints `band.1` to `band.3`, the least first. */
   bands?: number[];
+  /** The dimensions the engine can answer it by, where it cannot by all the catalog has: a query that asks it by
+   * another, in `by` or in `where`, is refused before it is run. Left out, it is asked by any. Proposed to the API's
+   * owners (docs/focus-plan.md, step 10). */
+  by?: string[];
 }
 export interface DimensionDef {
   label: string;
@@ -102,8 +106,11 @@ export const CHANNELS = ['x', 'y', 'color', 'detail', 'text', 'angle', 'radius',
 export type Channel = (typeof CHANNELS)[number];
 export const ROLES = ['primary', 'comparison', 'reference', 'context'] as const;
 export type Role = (typeof ROLES)[number];
-export const KEEP_PARTS = ['guides', 'secondary', 'rows', 'marks'] as const;
-export type KeepPart = (typeof KEEP_PARTS)[number];
+/** The fields a spec, its query and a layer take. One that is not among them is refused by name (resolve): a size or a
+ * switch in a spec, or a filter written under another name, would otherwise be read past and the view drawn without it. */
+export const SPEC_FIELDS = ['spec', 'title', 'description', 'use', 'query', 'layers', 'facet'] as const;
+export const QUERY_FIELDS = ['metrics', 'by', 'range', 'compare', 'limit', 'where'] as const;
+export const LAYER_FIELDS = ['mark', 'encode', 'series', 'role', 'stack', 'sweep', 'label', 'at', 'align', 'paint'] as const;
 export const LAYER_SERIES = ['previous', 'delta'] as const;
 export const STACKS = ['zero', 'normalize', 'center', 'diverge'] as const;
 export const ALIGNS = ['start', 'end'] as const;
@@ -160,10 +167,13 @@ export interface Guides {
 export interface Spec {
   spec?: string;
   title?: string;
+  /** What the view is for, in its author's words: a sentence that does not change with the data. A surface says it
+   * before the tldr prose, which is derived and does, so a reader hears what they are looking at and then what it holds.
+   * It is drawn nowhere, as the title is not: a view's own words in the least room are its sentence. */
+  description?: string;
   query: Query;
   use?: string | undefined;
   layers?: Layer[];
-  keep?: KeepPart[];
   /** One of the query's dimensions. The spec is then a view for each of its values, every one on the same scales, and
    * the surface lays them out: a facet is a small board (reference, Decided 26 and 45). `facets` gives the views. */
   facet?: string;
@@ -313,6 +323,8 @@ export interface TextNode extends NodeBase {
   baseline?: 'middle';
   font: 'tick' | 'label' | 'value' | 'display';
   halo?: boolean;
+  /** In a grid: the two dimension values it stands at, as a cell's. */
+  pair?: [x: string, y: string];
 }
 /** An arc about the centre of the `radial` part. `a0` and `a1` are in turns, clockwise from the top, and below zero to the
  * left of it. `r0` and `r1` are ratios of the part's radius. `d` is drawn about the origin at a radius of 50, so the

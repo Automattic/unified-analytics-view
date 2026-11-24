@@ -11,7 +11,6 @@ export const trend = samples.trend!.spec;
 export const specs: Record<string, Spec> = {
   ...Object.fromEntries(Object.entries(samples).map(([k, s]) => [k, s.spec])),
   headed: trend,                         // swept in the ALWAYS context
-  kept: { ...trend, keep: ['guides'] },
 };
 export const heights = [null, 300, 160, 100, 60, 40];
 export const widths = [54, 80, 120, 170, 250, 290, 346, 500, 700];
@@ -27,7 +26,7 @@ export const run = (spec: Spec, w: number, h: number | null = null, scenario: (t
 };
 
 /** What the fit rules make of a view at a room, in short, from what `run` gives: the parts that show, the switches set,
- *  the ids of the rules that hold (`kept:` before one the spec's `keep` held off), and what else is hidden that is no
+ *  the ids of the rules that hold, and what else is hidden that is no
  *  part: marks of a role or on an axis, the grid, a part's ranked labels, the middle date. A fit names every rule that
  *  holds, every target it hides and every switch it sets. This leaves out the ones with nothing in this view to act
  *  on: a legend's one line where there is no legend, the ranked names of a rim there is none of. */
@@ -40,8 +39,8 @@ export const shown = ({ fit: f, ratio }: { fit: Fit; ratio: { scale?: string | u
   // What each switch is for. One that is for nothing a view has changes nothing in it.
   const FOR: Record<string, string[]> = { legend: ['legend'], ramp: ['ramp'], 'size-key': ['size'], dots: ['size'], split: ['legend', 'labels', 'legend-top', 'ramp'] };
   const sets = (k: string) => !FOR[k] || FOR[k].some(drawn);
-  const acts = (h: Fit['held'][number]) => h.hid.length || h.showed.length || Object.keys(h.rule.set ?? {}).some(sets) || h.rule.fallback || h.rule.hide.some((t) => there(t) || (h.kept && f.parts.includes(t)));
-  return { parts: f.parts, set: Object.fromEntries(Object.entries(f.set).filter(([k]) => sets(k))), hidden: f.hidden.filter(there), rules: f.held.filter(acts).map((h) => (h.kept ? 'kept:' : '') + h.rule.id), ...(f.fallback && { fallback: f.fallback.fallback }) };
+  const acts = (h: Fit['held'][number]) => h.hid.length || h.showed.length || Object.keys(h.rule.set ?? {}).some(sets) || h.rule.fallback || h.rule.hide.some((t) => there(t));
+  return { parts: f.parts, set: Object.fromEntries(Object.entries(f.set).filter(([k]) => sets(k))), hidden: f.hidden.filter(there), rules: f.held.filter(acts).map((h) => h.rule.id), ...(f.fallback && { fallback: f.fallback.fallback }) };
 };
 
 /** The message `f` throws, or undefined. */

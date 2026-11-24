@@ -4,7 +4,6 @@ dist/
 
 # internal team context, not for the repo
 context-brief.md
-prototype/bench.js
 
 # agent worktrees
 .claude/worktrees/

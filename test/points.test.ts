@@ -9,7 +9,7 @@ import { nearest } from '../packages/dom/src/layouts/points.ts';
 import { err, run, shown } from './helpers.ts';
 
 // A metric on both axes, `dot`, `size`, labels on points, a rule on x, and a numeric dimension
-// (docs/chart-coverage-plan.md, step 4). The samples are swept and have golden scenes in coverage.test.ts.
+// (docs/archive/chart-coverage-plan.md, step 4). The samples are swept and have golden scenes in coverage.test.ts.
 const { scatter, bubble, quadrant, histogram, density } = Object.fromEntries(Object.entries(moreSamples).map(([k, s]) => [k, s.spec])) as Record<string, Spec>;
 const texts = (ratio: { nodes: any[] }, part: string) => ratio.nodes.filter((n) => n.part === part && n.kind === 'text').map((n) => n.text);
 
@@ -104,8 +104,6 @@ describe('size', () => {
     expect(run(bubble!, 346, 159).fit.set['size-key']).toBe('most');
     // It stays down to the least a plot of points stands in.
     expect(shown(run(bubble!, 346, 120))).toMatchObject({ parts: ['y-axis', 'plot', 'points', 'x-axis', 'size'], set: { 'size-key': 'most' } });
-    const kept = run({ ...bubble!, keep: ['guides'] }, 319);
-    expect([kept.fit.set['size-key'], shown(kept).rules.includes('kept:size')]).toEqual([undefined, true]);
     // Under that the dots go, and the key with them.
     expect(run(bubble!, 279).fit.parts).toEqual(['number']);
   });
@@ -229,15 +227,13 @@ describe('a numeric dimension', () => {
 
 describe('tldr prose', () => {
   const text = (spec: Spec, sc?: (typeof scenarios)[number]) => run(spec, 346, null, sc).plan.text;
-  it('for two metrics set against each other: the range of each, and the point furthest out on each by name', () => {
-    expect(text(scatter!)).toBe('Across 8 pages in the last 28 days, the range of visitors is 244 to 2,610 and of conversion rate is 0.9% to 5.8%. / is highest on visitors and /pricing on conversion rate.');
-    expect(text(bubble!)).toBe(text(scatter!));
+  it('says each metric the query asks for, and the value that leads its dimension', () => {
+    expect(text(scatter!)).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. Conversion rate: 2.6%. The top page is /.');
+    expect(text(bubble!)).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. Conversion rate: 2.6%. Page views: 25.1k. The top page is /.');
     expect(text(scatter!, 'empty')).toBe('Visitors: nothing recorded in the last 28 days.');
-    const flipped: Spec = { ...scatter!, query: { ...scatter!.query, metrics: ['visitors', 'pageviews'] }, layers: [{ mark: 'dot', encode: { x: 'visitors', y: 'pageviews' } }] };
-    expect(text(flipped)).toBe('Across 8 pages in the last 28 days, the range of visitors is 244 to 2,610 and of page views is 290 to 4,820. / is highest on both.');
   });
-  it('for a numeric dimension: the total, and the bin that holds the most', () => {
-    expect(text(histogram!)).toBe('Page views: 25.1k in the last 28 days. The most, 4,758, at a load time of 1.5 to 2.');
+  it('for a numeric dimension: the total, and no leader, since a bin is no name', () => {
+    expect(text(histogram!)).toBe('Page views: 25.1k in the last 28 days.');
     expect(text(density!)).toBe(text(histogram!));
   });
 });

@@ -6,8 +6,8 @@ import { customMarks } from './marks.ts';
 import { PRESETS, expand, fills, presetNames, usesPrevious } from './presets.ts';
 import { checkReads } from './reads.ts';
 import { DETAIL_LAYOUTS, SERIES, isMetric, buildScene, widest, columnsOf, isDim, metricOf, overMarks, pointDimOf, roleOf, xDimOf } from './scene.ts';
-import { differenceProse, filterSaid, gridProse, rangeProse, rankProse, tldrProse } from './prose.ts';
-import { MARKS, baseOf } from './types.ts';
+import { filterSaid, tldrProse } from './prose.ts';
+import { LAYER_FIELDS, MARKS, QUERY_FIELDS, SPEC_FIELDS, baseOf } from './types.ts';
 import type { Catalog, ContainerRules, Layer, Layout, Plan, PlanShape, PresetLibrary, Query, Result, Scene, Spec, Where } from './types.ts';
 
 /* The layout a layer's fields ask for: what is on x, on y and on color, first match first. `any` asks nothing of its channel. */
@@ -87,6 +87,11 @@ function checkLayers(layers: Layer[], q: Query, catalog: Catalog, result: Result
     }
     if (l.series === 'delta' && !(l.mark === 'text' && isDim(catalog, l.encode && l.encode.y) && typeof (l.encode && l.encode.text) === 'string' && (l.encode!.text as string) in catalog.metrics))
       throw new Error('Layer ' + (i + 1) + ' has series: "delta", which is a row\'s change in a metric. Make it a text layer with the dimension on y and the metric on text.');
+    // The period before is of a metric. A layer that encodes none had nothing to take it of, and was drawn as it stood.
+    if (l.series === 'previous' && !Object.values(l.encode || {}).some((f) => isMetric(catalog, f))) throw new Error('Layer ' + (i + 1) + ' has series: "previous" and encodes no metric, so there is no period before to draw. Encode the metric it is the period before of, or remove "series".');
+    // A mark has one paint: the one its layer states, or a colour for each value of a dimension on color. With both, one was dropped.
+    const lp = l.encode?.color;
+    if (l.paint && l.paint !== 'direction' && isDim(catalog, lp)) throw new Error('Layer ' + (i + 1) + ' has the paint "' + l.paint + '" and encodes "' + lp + '" on color, and a mark has one paint: the one stated, or a colour for each "' + lp + '". Remove one of the two' + (by.indexOf(lp) >= 0 && lp !== l.encode?.x && lp !== l.encode?.y ? ', or put "' + lp + '" on detail to split the layer and draw every series in that paint.' : '.'));
     // A dimension on detail splits a layer and paints nothing apart. It is one of the query's dimensions, and no companion or number.
     const ld = l.encode?.detail;
     if (ld != null && by.indexOf(ld as string) < 0) throw new Error('Layer ' + (i + 1) + ' encodes ' + JSON.stringify(ld) + ' on detail, and detail splits a layer by one of the query\'s dimensions' + (by.length ? ': ' + by.join(', ') + '. Encode one of those' : ', of which it has none. Add one to query.by') + ', or remove "detail".');
@@ -137,10 +142,24 @@ function checkWhere(q: Query, result: Result, catalog: Catalog): void {
 export function resolve(spec0: Spec, result: Result, catalog: Catalog, rules: ContainerRules = CONTAINER_RULES, presets: PresetLibrary = PRESETS): Plan {
   if (spec0.facet != null) throw new Error('This spec has "facet": ' + JSON.stringify(spec0.facet) + ', so it is a view for each value of that dimension and has no one plan. Ask facets(spec, result, catalog) for the views and resolve each, or remove "facet".');
   const spec = expand(spec0, presets), q = spec.query || ({} as Query);
+  // A field that nothing reads is refused by name, where it was once read past: a view was drawn without the size, the
+  // switch or the filter its author wrote.
+  const stray = (has: object, takes: readonly string[]) => Object.keys(has).find((k) => !takes.includes(k) && (has as Record<string, unknown>)[k] !== undefined);
+  for (const [what, has, takes, more] of [['The spec', spec0, SPEC_FIELDS, ' A view says what to show and nothing of how: no size, breakpoint or switch.'], ['The spec\'s query', q, QUERY_FIELDS, ' A filter is "where".'], ...(spec0.layers || []).map((l, i) => ['Layer ' + (i + 1), l || {}, LAYER_FIELDS, ' What a mark draws is on its channels, in "encode".'] as const)] as const) {
+    const k = stray(has, takes);
+    if (k != null) throw new Error(what + ' has "' + k + '", which it does not take. It takes: ' + takes.join(', ') + '.' + more);
+  }
   if (!q.metrics || !q.metrics.length) throw new Error('A view needs query.metrics, for example ["visitors"].');
   // A name the catalog does not carry is refused here, once, before anything reads its definition.
   for (const [kind, where, names, has] of [['metric', 'metrics', q.metrics, catalog.metrics], ['dimension', 'by', q.by || [], catalog.dimensions], ['dimension', 'where', Object.keys(q.where || {}), catalog.dimensions]] as const) for (const f of names)
     if (!Object.hasOwn(has, f)) throw new Error('The catalog has no ' + kind + ' "' + f + '". It has: ' + (Object.keys(has).join(', ') || 'none') + '. Add it to the catalog passed in, or correct the name in query.' + where + '.');
+  // A metric the catalog gives by some dimensions only cannot be answered by another, and is refused before anything is drawn.
+  for (const f of q.metrics) {
+    const takes = catalog.metrics[f]!.by, where = takes && (['by', 'where'] as const).find((w) => (w === 'by' ? q.by || [] : Object.keys(q.where || {})).some((d) => !takes.includes(d)));
+    if (!where) continue;
+    const d = (where === 'by' ? q.by! : Object.keys(q.where!)).find((x) => !takes!.includes(x))!;
+    throw new Error('The metric "' + f + '" is not answered by "' + d + '": the catalog gives it by ' + (takes!.length ? orList(takes!) : 'no dimension') + '. ' + (takes!.length ? 'Ask it by one of those, or take' : 'Take') + ' "' + d + '" out of query.' + where + '.');
+  }
   checkWhere(q, result, catalog);
   const m = q.metrics[0]!, M = catalog.metrics[m]!, by = (q.by || [])[0], dropped: string[] = [];
   let layers = (spec.layers || []).slice();
@@ -159,10 +178,17 @@ export function resolve(spec0: Spec, result: Result, catalog: Catalog, rules: Co
   const unit = layers.some((l) => l.mark === 'unit'), divided = (l: Layer) => l.mark === 'unit' && isDim(catalog, l.encode?.color) && !isDim(catalog, l.encode?.x) && !isDim(catalog, l.encode?.y);
   const share = layers.some((l) => l.stack === 'normalize' || (l.mark === 'arc' && !isDim(catalog, l.encode?.angle) && !isDim(catalog, l.encode?.radius)) || divided(l));
   // A custom mark brings the rules of its own layout. A context's rules for that layout come first.
+  const all = spec.layers || [];
   const choice = layers.length ? layoutOf(catalog, layers) : null, laid = choice ? choice.layout : 'none', custom = customMarks().get(laid);
+  // A band is one bar divided by share, or one grid of glyphs. A second layer had no place in it and was dropped, and a
+  // bar was divided by share whatever its `stack` said.
+  if (laid === 'band' && all.length > 1 && all.every((l) => l.mark === 'bar' || l.mark === 'unit')) throw new Error('These layers are laid out as a band (' + choice!.why + '), which draws one layer, and there are ' + all.length + '. Keep one, or put a dimension on x or on y to lay them out as a plot or a list.');
+  const banded = laid === 'band' ? all.findIndex((l) => l.mark === 'bar' && l.stack && l.stack !== 'normalize') : -1;
+  if (banded >= 0) throw new Error('Layer ' + (banded + 1) + ' is a bar in a band with stack: "' + all[banded]!.stack + '", and a band is one bar divided by share. Write stack: "normalize", or remove "stack".');
   // What a layer encodes and nothing reads is refused (reads.ts): every layer the spec has, so a view is not valid with a
   // comparison and refused without one. It is asked once the scene has been built, below.
-  const read = () => { if (choice) checkReads(laid, choice.why, spec.layers || [], catalog); };
+  // Where every layer was of the period before and none is left, the layout is the one they would have had.
+  const read = () => { const c = choice ?? (all.length ? layoutOf(catalog, all) : null); if (c) checkReads(c.layout, c.why, all, catalog); };
   // A layout that does not read detail would draw its series over each other, and say nothing. A custom mark reads its own channels.
   const lost = custom || DETAIL_LAYOUTS.includes(laid) ? -1 : layers.findIndex((l) => l.encode?.detail != null);
   if (lost >= 0) throw new Error('Layer ' + (lost + 1) + ' encodes "' + layers[lost]!.encode!.detail + '" on detail, and these layers are laid out as "' + laid + '", which does not split a layer by detail. It is read in: ' + DETAIL_LAYOUTS.join(', ') + '. Put a dimension on x and a metric on y, or remove "detail".');
@@ -176,21 +202,9 @@ export function resolve(spec0: Spec, result: Result, catalog: Catalog, rules: Co
         + (xDim && ch === 'color' ? ' For a colour each, put "' + each + '" on y and the metric on x: a row is painted by its own dimension.' : ''));
     });
   }
-  const points = !!layers.length && isPoints(catalog, layers);
   // Glyphs with no dimension say how far along its range a metric is, and not what it is: the number stands above them.
   const p: PlanShape = { layout: laid, layers, guides: guidesOf(laid, layers, catalog), tldrValue: rules.tldrValue.above === 'always' || !!M.instant || !layers.length || (unit && !by),
-                         share, text: tldrProse(q, result, share, catalog, points && pointDimOf(catalog, layers, by), layers.some((l) => l.mark === 'line')) };
-  // A plot whose y is a place in an order says who is first and who moved, where it has a dimension to split by. A rank is known by its unit.
-  const ranked = p.layout === 'cartesian' && xDimOf(catalog, layers) ? layers.map((l) => (l.encode || {}).y).find((f): f is string => metricOf(catalog, f)?.unit === 'rank') : undefined;
-  if (ranked) p.text = rankProse(q, result, catalog, ranked, xDimOf(catalog, layers)!) ?? p.text;
-  if (p.layout === 'matrix') p.text = gridProse(q, result, catalog) ?? p.text;
-  // A range that supports the central mark is said after the view's own sentence: its least and its most. One that
-  // runs from the period before is the comparison, which is not a range.
-  const range = layers.filter((l) => roleOf(l) === 'context' && !usesPrevious(l)).map((l) => l.encode || {}).map((e) => (e.y2 != null ? [e.y, e.y2] : [e.x, e.x2])).find((ends): ends is [string, string] => ends.every((f) => typeof f === 'string'));
-  if (range) p.text += rangeProse(q, result, catalog, range);
-  // An area painted by direction is a surplus and a deficit: on how many rows its second end is above its first is said after the view's own sentence.
-  const gap = p.layout === 'cartesian' ? layers.find((l) => l.mark === 'area' && l.paint === 'direction') : undefined;
-  if (gap && !result.meta.empty) p.text += differenceProse(q, result, catalog, [gap.encode!.y as string, gap.encode!.y2!]);
+                         share, text: tldrProse(q, result, share, catalog) };
   // What the answer is filtered to is said last, of everything before it: a view of some rows never reads as one of all.
   const only = filterSaid(result.meta.where, catalog);
   if (only) p.text += ' Filtered to ' + only + '.';
@@ -218,7 +232,7 @@ export function resolve(spec0: Spec, result: Result, catalog: Catalog, rules: Co
 export function viewAt(spec: Spec, result: Result, catalog: Catalog, room: Rooms, rules: ContainerRules = CONTAINER_RULES, presets: PresetLibrary = PRESETS, via: string[] = []): { spec: Spec; plan: Plan; scene: Scene; fit: Fit; gave: string[] } {
   const plan = resolve(spec, result, catalog, rules, presets), full = expand(spec, presets), q = full.query;
   const scene = buildScene(plan, q, result, catalog), custom = customMarks().get(plan.layout);
-  const fit = fitTo(scene, room, custom ? rules.fit.concat(custom.rules) : rules.fit, { keep: full.keep ?? [], marks: plan.layers.map((l) => l.mark), fills: (use) => fills(use, q, presets), via });
+  const fit = fitTo(scene, room, custom ? rules.fit.concat(custom.rules) : rules.fit, { marks: plan.layers.map((l) => l.mark), fills: (use) => fills(use, q, presets), via });
   if (!fit.fallback) return { spec, plan, scene, fit, gave: via };
   const { layers: _layers, ...rest } = spec;
   return viewAt({ ...rest, use: fit.fallback.fallback! }, result, catalog, { view: room.view }, rules, presets, via.concat(gaveWay(fit.fallback)));
@@ -232,7 +246,8 @@ export interface Facet { key: string; label: string; spec: Spec; result: Result 
  * views are read against one another. Where they stand is the surface's: a spec says no columns. A result with no
  * value of the dimension is one view, of the whole, which says that it is empty. */
 export function facets(spec0: Spec, result: Result, catalog: Catalog, rules: ContainerRules = CONTAINER_RULES, presets: PresetLibrary = PRESETS): Facet[] {
-  const { facet: f, ...rest } = spec0, by = (rest.query && rest.query.by) || [];
+  // What the spec is for is said once, of the views together, and not again by each of them.
+  const { facet: f, description: _description, ...rest } = spec0, by = (rest.query && rest.query.by) || [];
   if (typeof f !== 'string' || !by.includes(f)) throw new Error('The spec\'s "facet" is ' + JSON.stringify(f) + ', and a facet is one of the query\'s dimensions: ' + (by.length ? by.map((d) => '"' + d + '"').join(' or ') : 'it has none in "by"') + '. ' + (by.length ? 'Name one of them' : 'Add the dimension to query.by and name it') + ', or remove "facet".');
   const dim = catalog.dimensions[f];
   if (!dim) throw new Error('The catalog has no dimension "' + f + '". It has: ' + (Object.keys(catalog.dimensions).join(', ') || 'none') + '. Add it to the catalog passed in, or correct the name in query.by.');

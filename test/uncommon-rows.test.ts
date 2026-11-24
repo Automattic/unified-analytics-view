@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { buildScene, resolve, unitsOf, type Layer, type Result, type Spec } from '@unified-analytics/core';
-import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
+import { catalog, moreSamples as written, runQuery, scenarios } from '@unified-analytics/fixtures';
 import { errOf, run as runAt, shown, startingWith as of, validView as view } from './helpers.ts';
+import { inUse, useExamples } from './examples.ts';
 
-// Step 4 of docs/uncommon-coverage-plan.md: what rows, bars, ticks and rules take that they refused. Each part of the
+useExamples();   // the presets the library no longer ships, which these cases still write `use` with
+const moreSamples = inUse(written);   // and the samples as they were written with them
+
+// Step 4 of docs/archive/uncommon-coverage-plan.md: what rows, bars, ticks and rules take that they refused. Each part of the
 // step has its facts here. The samples are swept, and have their golden scenes, at the foot of this file.
 const run = (spec: Spec, w = 346, h: number | null = null, result?: Result) => runAt(spec, w, h, 'typical', { result });
 const err = (spec: Spec, result?: Result) => errOf(() => run(spec, 346, null, result));
@@ -53,7 +57,6 @@ describe('a row divided by a second dimension', () => {
     expect(at(346, 100)).toEqual([['rows', 'legend-top'], {}, ['legend']]);
     // With no key the pieces of a row are one colour, and a row reads as its total.
     expect(at(346, 60)).toEqual([['rows'], { split: 'plain' }, ['legend', 'legend-top']]);
-    expect(at(346, 100, { ...split(), keep: ['guides'] })).toEqual([['rows', 'legend'], {}, ['kept:legend']]);
     // A narrow list keeps the whole legend while it has the width and the height for it.
     expect(at(250, 160)).toEqual([['rows', 'legend'], {}, []]);
   });
@@ -69,8 +72,8 @@ describe('a row divided by a second dimension', () => {
     expect(err({ query: q, layers: [{ mark: 'dot', encode: { y: 'channel', x: 'visitors', color: 'device' } }, label('channel')] }))
       .toBe('Layer 1 is in rows by "channel" and encodes "device" on color. A row is painted by its own dimension, for a colour each, or by a companion the result returns with it, for rows that go together. Encode "channel" on color, or remove it.');
   });
-  it('says who leads each dimension, from the engine\'s totals', () => {
-    expect(run(split()).plan.text).toBe('Search is the largest channel at 41% of visitors, and Desktop the largest device at 50%.');
+  it('says the number and the leader of the first dimension, from the engine\'s totals', () => {
+    expect(run(split()).plan.text).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. The top channel is Search.');
   });
 });
 
@@ -111,7 +114,7 @@ describe('stack: "diverge"', () => {
     expect(ratio.nodes.find((n) => n.key === 'grid:0')).toMatchObject({ paint: 'axis', y: zero });
     // The readout and the sentence say each value as it is: nothing is negative but where it is drawn.
     expect(result.rows.every((r) => (r.visitors as number) > 0)).toBe(true);
-    expect(run(plot(['channel', 'device'], 2)).plan.text).toBe('Search is the largest channel at 41% of visitors, and Desktop the largest device at 50%.');
+    expect(run(plot(['channel', 'device'], 2)).plan.text).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. The top channel is Search.');
   });
   it('leaves "center" as it was: half of the whole stack on each side, whatever the count', () => {
     const centred: Spec = { ...plot(['channel', 'device'], 2), layers: [{ mark: 'bar', encode: { x: 'channel', y: 'visitors', color: 'device' }, stack: 'center' }] };
@@ -159,8 +162,8 @@ describe('several marks to a row, by detail', () => {
     expect(plan.guides).toEqual({});
     expect(of<{ text: string }>(ratio.nodes, 'primary:text#2:').map((n) => n.text)).toEqual(result.totalsBy!.channel!.map((r) => (r.visitors as number).toLocaleString('en-US')));
   });
-  it('says who leads each dimension, from the engine\'s totals, and sums no row', () => {
-    expect(run(strip()).plan.text).toBe('Search is the largest channel at 41% of visitors, and United States the largest country at 33%.');
+  it('says the number and the leader of the first dimension, from the engine\'s totals, and sums no row', () => {
+    expect(run(strip()).plan.text).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. The top channel is Search.');
   });
   it('gives up the list for the number where a track has no room', () => {
     expect(shown(run(strip(), 160)).parts).toEqual(['rows']);
@@ -185,13 +188,12 @@ describe('points coloured by a second dimension', () => {
     expect(ratio.nodes.find((n) => n.part === 'points')).toMatchObject({ key: 'primary:dot:pricing:Pricing', row: 'pricing', series: 'Pricing' });
     expect(ratio.nodes.filter((n) => n.part === 'points').every((n) => n.opacity == null)).toBe(true);
     expect(ratio.parts).toEqual(['y-axis', 'plot', 'points', 'x-axis', 'legend']);
-    // The sentence is the one for points, and not the one for two dimensions, which has no total here to lead with.
-    expect(plan.text).toBe('Across 24 search terms in the last 28 days, the range of first component is -0.7 to 0.73 and of second component is -0.64 to 0.65. getting started is highest on first component and sso setup on second component.');
+    // The engine gives no total of a component, and the sentence says so.
+    expect(plan.text).toBe('First component: no figure in the last 28 days. Second component: no figure. The top search term is getting started.');
   });
   it('whichever way the query names the two', () => {
     const turned = { ...q, by: ['intent', 'term'] }, { ratio, plan } = run({ query: turned, layers: [dot] }, 346, null, runQuery(q));
     expect([ratio.rows!.length, ratio.series]).toEqual([24, ['Pricing', 'How to', 'Privacy']]);
-    expect(plan.text).toMatch(/^Across 24 search terms in the last 28 days/);
   });
   it('steps down as any plot of points: the legend stays with the axes, and then the number alone', () => {
     // A dot has no line end for a label to stand at, so nothing takes the legend while the axes are there.
@@ -421,7 +423,7 @@ describe('the samples of step 4', () => {
     for (const age of ratio.rows!) { const [f, m] = of<{ x: number; x2?: number; paint: string }>(ratio.nodes, 'primary:bar:' + age + ':') as [any, any]; expect([f.x, m.x2, f.paint, m.paint]).toEqual([zero, zero, 'series.1', 'series.2']); }
     // The readout's and the sentence's numbers are the engine's, and no count is below zero.
     expect(result.rows.every((r) => (r.visitors as number) > 0)).toBe(true);
-    expect(plan.text).toBe('25–34 is the largest age band at 27% of visitors, and Female the largest sex at 53%.');
+    expect(plan.text).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. The top age band is 25–34.');
   });
   it('a Likert chart: the same preset over five answers, the middle one half on each side of zero in every row', () => {
     const { ratio, plan } = run(S('likert'));
@@ -429,7 +431,7 @@ describe('the samples of step 4', () => {
     const mid = ratio.rows!.map((q) => { const n = of<{ x: number; x2: number }>(ratio.nodes, 'primary:bar:' + q + ':')[2]!; return (n.x2 + n.x) / 2; });
     mid.forEach((m) => expect(m).toBeCloseTo(mid[0]!, 12));
     expect(ratio.nodes.find((n) => n.key === 'legend-top')).toMatchObject({ text: 'Agree 33%', paint: 'series.4' });
-    expect(plan.text).toBe('Easy to set up is the largest statement at 20% of responses, and Agree the largest answer at 33%.');
+    expect(plan.text).toBe('Responses: 1,265 in the last 28 days. The top statement is Easy to set up.');
   });
   it('a strip plot and a Marimekko, each from its preset', () => {
     expect([run(S('strip')).plan.preset, run(S('strip')).ratio.nodes.filter((n) => n.kind === 'circle' && n.part === 'rows').length]).toEqual(['strip', 90]);
@@ -462,7 +464,7 @@ describe('the samples of step 4', () => {
     expect(line.points.map((p: any) => [p.x, p.x])).toEqual([[0, 0], [1, 1]]);
     expect(ratio.nodes.filter((n) => n.part === 'points').length).toBe(19);
     expect(['xtick:', 'ytick:'].map((k) => of<{ text: string }>(ratio.nodes, k).map((n) => n.text))).toEqual([['0ms', '2s', '4s', '6s'], ['0ms', '2s', '4s', '6s']]);
-    expect(plan.text).toBe('Across 19 quantiles in the last 28 days, the range of normal quantile is 760ms to 4s and of load time quantile is 1.1s to 5.6s. 95% is highest on both.');
+    expect(plan.text).toBe('Normal quantile: no figure in the last 28 days. Load time quantile: no figure. The top quantile is 95%.');
   });
 });
 

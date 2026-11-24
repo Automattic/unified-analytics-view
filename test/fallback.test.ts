@@ -4,12 +4,15 @@ import type { FitRule, Spec } from '@unified-analytics/core';
 import { compileFitRules } from '@unified-analytics/dom';
 import { catalog, runQuery, samples } from '@unified-analytics/fixtures';
 import { errOf as err, shown } from './helpers.ts';
+import { useExamples } from './examples.ts';
 
-// Step 8 of docs/chart-coverage-plan.md, part 3: `fallback` on a fit rule, the preset a view becomes below the rule's
+useExamples();   // the presets the library no longer ships, which these cases still write `use` with
+
+// Step 8 of docs/archive/chart-coverage-plan.md, part 3: `fallback` on a fit rule, the preset a view becomes below the rule's
 // need. No default rule names one, so a context hands the samples a rule that does. A custom mark with a fallback of
 // its own is in test/registry.test.ts and test/geo.test.ts.
 const pages = samples.pages!.spec, mix = samples.mix!.spec;
-const swap: FitRule = { id: 'swap', layout: 'band', container: 'view', needs: { inline: 200, block: 60 }, hide: [], fallback: 'bar-list', keep: 'marks' };
+const swap: FitRule = { id: 'swap', layout: 'band', container: 'view', needs: { inline: 200, block: 60 }, hide: [], fallback: 'bar-list' };
 /** A view at a room, in a context whose rules are the defaults and `more`: the view it settles as, and what it gave way from. */
 const run = (spec: Spec, w: number, more: FitRule[] = [], h: number | null = null, scenario: 'typical' | 'empty' = 'typical') => {
   const at = viewAt(spec, runQuery(spec.query, scenario), catalog, { view: { inline: w, block: h } }, { ...CONTAINER_RULES, fit: [...FIT_RULES, ...more] });
@@ -29,8 +32,7 @@ describe('fallback on a fit rule', () => {
     }
     expect(run(mix, 89, [swap])).toMatchObject({ fit: { parts: ['number'] }, gave: ['band'] });
   });
-  it('a spec that keeps the rule\'s part does not fall back, and an empty result has nothing to fall back from', () => {
-    expect(run({ ...mix, keep: ['marks'] }, 199, [swap])).toMatchObject({ plan: { layout: 'band', preset: 'share-bar' }, gave: [] });
+  it('an empty result has nothing to fall back from', () => {
     expect(run(mix, 199, [swap], null, 'empty')).toMatchObject({ plan: { layout: 'notice', preset: 'share-bar' }, gave: [] });
   });
   it('no default rule names one but those of one mark, so nothing changes for a view that does not hold it', () => {
@@ -46,29 +48,28 @@ describe('fallback on a fit rule', () => {
     // A preset the library does not have is expand()'s error.
     expect(err(() => run(pages, 346, [{ ...self, fallback: 'nope' }]))).toMatch(/^Unknown preset "nope"\. The library has: /);
   });
-  it('fallbackRule finds the rule a spec\'s keep leaves on', () => {
+  it('fallbackRule finds the rule a layout gives way under', () => {
     expect(fallbackRule([...FIT_RULES, swap], 'band')).toBe(swap);
-    expect(fallbackRule([...FIT_RULES, swap], 'band', ['marks'])).toBeUndefined();
-    expect(fallbackRule([...FIT_RULES, swap], 'band', ['guides'])).toBe(swap);
+    expect(fallbackRule([...FIT_RULES, swap], 'band', [])).toBe(swap);
     expect(fallbackRule([...FIT_RULES, swap], 'cartesian')).toBeUndefined();
-    expect(err(() => fallbackRule([swap], 'band', [], ['band']))).toMatch(/^A fit rule's "fallback" leads back to the "band" layout \(band, then band\)/);
+    expect(err(() => fallbackRule([swap], 'band', ['band']))).toMatch(/^A fit rule's "fallback" leads back to the "band" layout \(band, then band\)/);
   });
-  it('compiles to the swap: under the need the figure goes and the view beside it shows, unless the spec keeps the marks', () => {
+  it('compiles to the swap: under the need the figure goes and the view beside it shows, ', () => {
     // Only where the view beside it is there and is this rule's: a rule for one mark leaves the layout's other views as they are.
-    const fig = '.uav[data-layout="band"]:not([data-keep~="marks"])', beside = '.uav-fallback[data-rule="swap"]', body = '  ' + fig + ':has(~ ' + beside + ') { display: none; }\n  ' + fig + ' ~ ' + beside + ' { display: block; }\n}';
-    expect(compileFitRules([swap])).toBe('/* band swap */\n@container uav-view (inline-size < 199.5px) {\n' + body + '\n/* band swap */\n@container uav-view (block-size < 59.5px) {\n' + body);
+    const fig = '.uav[data-layout="band"]', beside = '.uav-fallback[data-rule="swap"]', body = '  ' + fig + ':has(~ ' + beside + ') { display: none; }\n  ' + fig + ' ~ ' + beside + ' { display: block; }\n}';
+    expect(compileFitRules([swap])).toBe('/* band swap */\n@container uav-view (inline-size < calc(200em / 13.33 - 0.5px)) {\n' + body + '\n/* band swap */\n@container uav-view (block-size < calc(60em / 13.33 - 0.5px)) {\n' + body);
   });
   it('a rule for one mark is for a view that holds it, so a built-in layout can give way to a preset of the same layout', () => {
     // The pages as rows of dots give way to the ranked list, which is rows too, and the list gives way to nothing.
     const dots: Spec = { query: pages.query, layers: [{ mark: 'dot', encode: { y: 'page', x: 'pageviews' } }, { mark: 'text', encode: { y: 'page', text: 'page' } }] };
-    const forDots: FitRule = { id: 'dots', layout: 'rows', mark: 'dot', container: 'view', needs: { inline: 300 }, hide: [], fallback: 'bar-list', keep: 'marks' };
+    const forDots: FitRule = { id: 'dots', layout: 'rows', mark: 'dot', container: 'view', needs: { inline: 300 }, hide: [], fallback: 'bar-list' };
     expect(run(dots, 300, [forDots])).toMatchObject({ plan: { layout: 'rows', preset: null }, gave: [] });
     expect(run(dots, 299, [forDots])).toMatchObject({ plan: { layout: 'rows', preset: 'bar-list' }, gave: ['rows (dot)'] });
     expect(run(dots, 299, [forDots]).ratio).toEqual(run(pages, 299).ratio);
     expect(run(pages, 299, [forDots])).toMatchObject({ plan: { preset: 'bar-list' }, gave: [] });
     const view = (marks: string[]) => ({ marks, fills: () => true });
-    expect(fallbackRule([forDots], 'rows', [], [], view(['dot', 'text']))).toBe(forDots);
-    expect(fallbackRule([forDots], 'rows', [], [], view(['bar', 'text']))).toBeUndefined();
+    expect(fallbackRule([forDots], 'rows', [], view(['dot', 'text']))).toBe(forDots);
+    expect(fallbackRule([forDots], 'rows', [], view(['bar', 'text']))).toBeUndefined();
     // What it gave up is the layout with that mark, so a rule of the layout's own may still follow it, and a rule that leads back to itself is still refused.
     expect(gaveWay(forDots)).toBe('rows (dot)');
     expect(run(dots, 199, [forDots, { ...swap, layout: 'rows', fallback: 'share-bar' }])).toMatchObject({ plan: { layout: 'band', preset: 'share-bar' }, gave: ['rows (dot)', 'rows'] });
@@ -78,7 +79,7 @@ describe('fallback on a fit rule', () => {
   it('a fallback the query cannot fill is passed over, for the next of the layout\'s that it can', () => {
     // No dimension: the share bar has nothing to divide by, and the gauge reads the same metric against its range.
     const signups: Spec = { query: { metrics: ['signups'], range: '28d' }, layers: [{ mark: 'arc', encode: { angle: 'signups', radius: 0.2 } }] };
-    const split: FitRule = { id: 'split', layout: 'radial', container: 'view', needs: { inline: 300 }, hide: [], fallback: 'bar-list' }, alone: FitRule = { ...split, id: 'alone', layout: 'radial', mark: 'arc', keep: 'marks' };
+    const split: FitRule = { id: 'split', layout: 'radial', container: 'view', needs: { inline: 300 }, hide: [], fallback: 'bar-list' }, alone: FitRule = { ...split, id: 'alone', layout: 'radial', mark: 'arc' };
     expect(fills('bar-list', signups.query)).toBe(false);
     expect(fills('gauge', signups.query)).toBe(true);
     expect(fills('bar-list', pages.query)).toBe(true);

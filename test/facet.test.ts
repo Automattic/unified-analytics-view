@@ -3,6 +3,9 @@ import { buildScene, expand, explain, facetColumns, facets, resolve, viewAt, FAC
 import { catalog, facetSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
 import { FACET_CSS } from '../packages/dom/src/view.ts';
 import { errOf, validView as view } from './helpers.ts';
+import { useExamples } from './examples.ts';
+
+useExamples();   // the presets the library no longer ships, which these cases still write `use` with
 
 // A facet is a small board (reference, Decided 26 and 45): a view for each value of one of the query's dimensions,
 // every one on the same scales. Core gives the views; where they stand is the surface's.
@@ -153,3 +156,10 @@ describe('how many of a facet\'s views stand side by side', () => {
     expect(FACET_CSS).toContain('grid-template-columns: repeat(auto-fit, minmax(min(100%, ' + FACET_LEAST + 'px), 1fr)); gap: ' + FACET_GAP + 'px;');
   });
 });
+
+it('what a facet is for is said once, of its views together: no view of it carries the description', () => {
+  const about = 'Where visitors came from, channel by channel.', views = facets({ ...trend, description: about }, runQuery(trend.query), catalog);
+  expect(views.length).toBeGreaterThan(1);
+  expect(views.every((v) => v.spec.description === undefined)).toBe(true);
+});
+

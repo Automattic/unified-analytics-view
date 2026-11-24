@@ -1,5 +1,5 @@
 // A total may be null, where the engine has no figure for the range, and a share is of the engine's total. `t[m] || 1`
-// used to divide by one: "Search is the largest channel at 431800% of visitors". With no total, or one of zero, no
+// used to divide by one, and said a share of 431800%. With no total, or one of zero, no
 // percentage is said and no segment has a length: the value is said in its place. The rows are never summed.
 import { describe, expect, it } from 'vitest';
 import { type Catalog, type Result, type Row, type Spec } from '@unified-analytics/core';
@@ -24,18 +24,13 @@ const specs: Record<string, [Spec, Result['rows'], Partial<Result>]> = {
   grid: [{ spec: 'view/0', layers: [{ mark: 'cell', encode: { x: 'hour', y: 'channel', color: 'visitors' } }], query: { metrics: ['visitors'], by: ['hour', 'channel'] } }, pairs, { totalsBy }],
 };
 const shown = (name: string, total: number | null) => { const [spec, rs, more] = specs[name]!, v = view(spec, result(rs, total, more)); return { ...v, said: [v.text, ...v.nodes.flatMap((n) => (n.kind === 'text' && /^(number|legend)/.test(n.part) ? [n.text] : []))].join(' | ') }; };
-const ranking = 'Top channels by visitors, last 28 days: Search (4,318), Direct (2,000).';
-const prose: Record<string, string> = {
-  band: ranking, pie: ranking,
-  two: 'Search is the largest channel (4,318), and 9 the largest hour (4,318).',
-  time: 'Search is the largest channel (4,318) in the last 28 days, and leads on all 1 day.',
-  grid: 'Most visitors at 9, Search (4,318) in the last 28 days. 9 is the busiest hour (4,318), and Search the busiest channel (4,318).',
-};
+// What follows the number in the sentence: the leader of the query's first dimension, where it is categorical.
+const leader: Record<string, string> = { band: ' The top channel is Search.', pie: ' The top channel is Search.', two: ' The top channel is Search.', time: '', grid: ' The top hour is 9.' };
 
 describe.each([[null], [0]])('a share view whose total is %s', (total) => {
   it.each(Object.keys(specs))('%s: says the value, and no percentage', (name) => {
     const v = shown(name, total);
-    expect(v.text).toBe(prose[name]);
+    expect(v.text).toBe('Visitors: ' + (total == null ? 'no figure' : '0') + ' in the last 28 days.' + leader[name]);
     expect(v.said).not.toMatch(/%|NaN|Infinity|null/);
   });
   it('a band and a pie have no length to give a segment, and the legend says each value', () => {
@@ -50,6 +45,6 @@ describe.each([[null], [0]])('a share view whose total is %s', (total) => {
   });
 });
 it('with a total, a share is still said', () => {
-  expect(shown('band', 6318).said).toBe('Search is the largest channel at 68% of visitors, followed by Direct at 32%. | 6,318 | Search 68% | Search | 68% | Direct | 32% | Search 68%');
-  expect(shown('grid', 6318).text).toMatch(/9 is the busiest hour at 68% of visitors, and Search the busiest channel at 68%\.$/);
+  expect(shown('band', 6318).said).toBe('Visitors: 6,318 in the last 28 days. The top channel is Search, at 68%. | 6,318 | Search 68% | Search | 68% | Direct | 32% | Search 68%');
+  expect(shown('grid', 6318).text).toBe('Visitors: 6,318 in the last 28 days. The top hour is 9.');
 });

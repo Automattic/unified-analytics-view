@@ -1,82 +1,14 @@
-import { readFileSync } from 'node:fs';
-import vm from 'node:vm';
 import Ajv from 'ajv';
-import * as d3array from 'd3-array';
-import * as d3scale from 'd3-scale';
-import * as d3shape from 'd3-shape';
 import { describe, expect, it } from 'vitest';
-import { ALIGNS, CHANNELS, CONTAINER_RULES, DIMENSION_TYPES, DIMENSION_VALUES, KEEP_PARTS, LAYER_SERIES, MARKS, POLARITIES, RANGE_TOTALS, ROLES, SERIES, STACKS, UNITS, buildScene, expand, formatDimension, formatValue, partialNote, pathD, resolve, type Spec, type Unit } from '@unified-analytics/core';
+import { ALIGNS, CHANNELS, CONTAINER_RULES, DIMENSION_TYPES, DIMENSION_VALUES, LAYER_FIELDS, LAYER_SERIES, MARKS, POLARITIES, QUERY_FIELDS, RANGE_TOTALS, ROLES, SERIES, SPEC_FIELDS, STACKS, UNITS, buildScene, expand, formatDimension, formatValue, partialNote, pathD, resolve, type Spec, type Unit } from '@unified-analytics/core';
 import catalogSchema from '@unified-analytics/core/schema/catalog.schema.json';
 import viewSchema from '@unified-analytics/core/schema/view.schema.json';
 import { catalog, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
-import { CHAR_W, clip, delta } from '../packages/core/src/format.ts';
+import { delta } from '../packages/core/src/format.ts';
 import { ALWAYS, err, heights, ofUnbounded, run, shown, specs, trend, validView, widths } from './helpers.ts';
 
-// The prototype, loaded as the reference the port is held to.
-(globalThis as any).d3 = { ...d3array, ...d3scale, ...d3shape };
-vm.runInThisContext(readFileSync(new URL('../prototype/prototype-bench.js', import.meta.url), 'utf8'));
-const proto = (globalThis as any).VGB;
-// A context that always sets the tldr value above the marks.
-// The prototype is read-only and keeps its own names. The deliberate differences are mapped here and nowhere else:
-// it calls the `line` preset `trend`; its spec asks for the number with `headline`, which is now a container rule;
-// and its plan says `headline` and `sentence` where ours says `tldrValue` and `prose`.
-const toProto = (s: Spec, rules = CONTAINER_RULES): object => ({
-  ...s, ...(s.use === 'line' && { use: 'trend' }),
-  ...((rules.tldrValue.above === 'always' || catalog.metrics[s.query.metrics[0]!]!.instant) && { headline: true }),
-});
-// The words: a deliberate departure from the prototype (review of October 12). The prototype says "visits", "people",
-// "the site" and "page" whatever the metric is, and reads `rows[0].page` whatever the query is by: an empty revenue view
-// says "No visits yet", and a count by another dimension says its busiest page is undefined. Core knows no name, so ours
-// are made of the catalog's label and the query's dimension. The label leads an empty range and is not made a noun of:
-// the prototype's "No visitors recorded" would be "No came back recorded" of a label that is a phrase. This maps the prototype's words to ours, here and nowhere
-// else: its prose where it says them, and its two notes, each cut to the room the prototype cut its own to. Nothing but
-// `text` is touched. Ours are asserted for themselves in the describe below, and for another catalog in words.test.ts.
-const PROSE: [string, string][] = [
-  [' not unique people.', ' not a unique count.'],
-  ['7 people are on the site right now; the busiest page is / (3).', 'Present now: 7 right now; the top page is / (3).'],
-  ['Nobody is on the site right now.', 'Present now: 0 right now.'],
-];
-const ourProse = (s: string) => PROSE.reduce((t, [theirs, ours]) => t.replace(theirs, ours), s)
-  .replace(/^No (.+) recorded in the /, (_, name: string) => Object.values(catalog.metrics).find((M) => M.label.toLowerCase() === name)!.label + ': nothing recorded in the ');
-const ourNotes = (scene0: any, q: Spec['query']) => {
-  const label = catalog.metrics[q.metrics[0]!]!.label;
-  const notes: Record<string, [number, [string, string][]]> = {
-    sub: [CHAR_W - 0.8, [['on the site right now', 'right now'], ['Nobody is here right now', 'right now'], ['No visits yet', label + ': nothing yet']]],
-    notice: [CHAR_W, [['No visits in this period yet', label + ': nothing in this period yet']]],
-  };
-  return scene0.nodes.map((n: any) => {
-    const [advance, words] = notes[n.key] ?? [0, []], room = Math.floor(scene0.width / advance), mine = words.find(([theirs]) => n.text === clip(theirs, room));
-    return mine ? { ...n, text: clip(mine[1], room) } : n;
-  });
-};
-// A plan takes no size now, and the prototype's is planned for a host. So what is held to it is what a plan says with
-// all the room it asks for: the prototype's at 700 wide and its natural height, less what only a size decides (its
-// reductions, the room it needs, the number beside a bare plot, the rows it trims). Its legend is "full" where ours is on.
-const fromProto = ({ headline, reductions: _reductions, needs: _needs, side: _side, rowLimit: _rowLimit, ...p }: any) => ({
-  ...p, text: ourProse(p.text), tldrValue: headline, guides: { ...p.guides, ...(p.guides.legend && { legend: true }) },
-});
-// Layer keys: a deliberate departure from the prototype (feedback, decision 1 of October 7; transitions finding 1).
-// The prototype's keys count layers, `L<index>:<mark>`, so when a layer drops the next one takes its key and a painter
-// that reconciles by key morphs one layer into another. Ours name the layer by role and mark, with `#n` for the nth of
-// a role and mark. This maps the prototype's keys to ours, here and nowhere else. Nothing but `key` is touched, so
-// geometry, paint and order are still compared exactly.
-// The one-line legend's key: a second deliberate departure (feedback, review of October 7, finding 3). The prototype's
-// is `legend:top`, which is also the key of the legend entry of a segment called "top". Ours is `legend-top`, which no
-// segment can make. It changes the key in every band case of the sweep, and is mapped here with the layer keys.
-const ourKeys = (scene0: any, layers: { role: string; mark: string }[]) => {
-  const seen: Record<string, number> = {};
-  const names = layers.map((l) => { const base = l.role + ':' + l.mark, n = (seen[base] = (seen[base] || 0) + 1); return n > 1 ? base + '#' + n : base; });
-  return { ...scene0, nodes: scene0.nodes.map((n: any) => ({ ...n, key: n.key === 'legend:top' ? 'legend-top' : n.key.replace(/^L(\d+):[a-z]+/, (_: string, i: string) => names[+i]) })) };
-};
-/** The prototype's scene as plain data, its layer keys mapped to ours. */
-const protoScene = (plan0: any, q: Spec['query'], res0: unknown, host0: unknown) => {
-  const scene0 = ourKeys(plain(proto.buildScene(plan0, q, res0, host0)), plan0.layers);
-  return { ...scene0, ...(scene0.text != null && { text: ourProse(scene0.text) }), nodes: ourNotes(scene0, q) };
-};
-
-// The row node: a deliberate addition (chart-coverage-plan, step 2, part 6; feedback, rows, finding 5). A `rows` scene
-// holds a node per row, of kind `row`, for a painter to key. The prototype has none. The ratio scenes recorded before
-// it are held to what they were by leaving it out, here and nowhere else.
+// The row node (chart-coverage-plan, step 2, part 6; feedback, rows, finding 5). A `rows` scene holds a node per row, of
+// kind `row`, for a painter to key. The golden scenes recorded before it are held to what they were by leaving it out.
 const lessRows = <S extends { nodes: { kind: string }[] }>(scene: S): S => ({ ...scene, nodes: scene.nodes.filter((n) => n.kind !== 'row') });
 
 const invalid: Record<string, Spec> = {
@@ -84,35 +16,18 @@ const invalid: Record<string, Spec> = {
   'dimension, no layers': { spec: 'view/0', query: { metrics: ['visitors'], by: ['channel'] } },
   'preset, no dimension': { spec: 'view/0', use: 'line', query: { metrics: ['visitors'] } },
 };
-const plain = (v: unknown) => JSON.parse(JSON.stringify(v));
-/** The prototype with all the room it asks for: its plan and its scene, mapped to our names. */
-const roomy = (spec: Spec, sc: string, rules = CONTAINER_RULES, res0: unknown = proto.runQuery(spec.query, sc)) => {
-  const host0 = proto.makeHost(700, null, 'svg', 8), plan0 = proto.resolve(toProto(spec, rules), res0, host0);
-  return { res0, plan0: fromProto(plain(plan0)), scene0: protoScene(plan0, spec.query, res0, host0) };
-};
-/** What a scene's nodes hold, whatever their place: key, kind, paint, layer, and what a text says. Of the nodes whose keys `keys` names, in the scene's order. */
-const held = (nodes: any[], keys: Set<string>) => nodes.filter((n) => keys.has(n.key)).map((n) => [n.key, n.kind, n.paint, n.layer, n.kind === 'text' ? n.text : undefined]);
 
-// Parity with the prototype (reference, section 11). The prototype places every node in pixels for a host of a size.
-// The port takes no size, so it is held to the prototype for what does not need one: the engine's answer, the plan with
-// all its room, the sentence, and what the scene holds, node for node. Where a node is placed is a surface's to say,
-// and how a view gives way at a room is the fit rules', which test/fit.test.ts holds.
+// What every sample holds in every data state, whatever its room. How a view gives way at a room is the fit rules',
+// which test/fit.test.ts holds.
 describe('the sweep', () => {
   for (const [name, spec] of Object.entries(specs)) {
-    it(name + ': the engine\'s answer, the plan, the sentence and what the scene holds are the prototype\'s, with unique keys and no NaN', () => {
+    it(name + ': unique keys and no NaN, in every data state', () => {
       const rules = name === 'headed' ? ALWAYS : CONTAINER_RULES;
       for (const sc of scenarios) {
-        const at = name + ' ' + sc, result = runQuery(spec.query, sc), plan = resolve(spec, result, catalog, rules), ratio = buildScene(plan, spec.query, result, catalog);
+        const at = name + ' ' + sc, result = runQuery(spec.query, sc), ratio = buildScene(resolve(spec, result, catalog, rules), spec.query, result, catalog);
         const keys = ratio.nodes.map((n) => n.key);
         expect(new Set(keys).size, 'duplicate keys: ' + at).toBe(keys.length);
         expect(JSON.stringify(ratio, (_, v) => (typeof v === 'number' && isNaN(v) ? 'NaN' : v)), 'NaN: ' + at).not.toMatch(/NaN/);
-
-        const { res0, plan0, scene0 } = roomy(spec, sc, rules);
-        expect(plain(result), 'result: ' + at).toEqual(plain(res0));
-        expect(plain(plan), 'plan: ' + at).toEqual({ ...plan0, preset: plan.preset });
-        // Every node the prototype draws is in ours under its key, of its kind and in its paint, saying what it says, in its order.
-        const theirs = new Set<string>(scene0.nodes.map((n: any) => n.key));
-        expect(held(lessRows(ratio).nodes, theirs), 'scene: ' + at).toEqual(held(scene0.nodes, theirs));
       }
     });
     it(name + ': at every room its parts are ones the scene has', () => {
@@ -151,10 +66,10 @@ describe('tldr prose', () => {
   const text = (name: string, sc?: (typeof scenarios)[number]) => run(specs[name]!, 346, null, sc).plan.text;
   it('is derived from the query', () => {
     expect(text('trend')).toBe('Visitors: 10.5k in the last 28 days, up 12% on the previous period. This is a sum of daily counts, not a unique count.');
-    expect(text('pages')).toBe('Top pages by page views, last 28 days: / (4,820), /pricing (2,960), /blog/launch-notes (2,105).');
-    expect(text('mix')).toBe('Search is the largest channel at 41% of visitors, followed by Direct at 28%.');
+    expect(text('pages')).toBe('Page views: 25.1k in the last 28 days. The top page is /.');
+    expect(text('mix')).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. The top channel is Search, at 41%.');
     expect(text('total')).toBe('Page views: 25.1k in the last 28 days, up 14% on the previous period.');
-    expect(text('live')).toBe('Present now: 7 right now; the top page is / (3).');
+    expect(text('live')).toBe('Present now: 7 right now.');
     expect(text('trend', 'empty')).toBe('Visitors: nothing recorded in the last 28 days.');
   });
 });
@@ -242,10 +157,6 @@ describe('fitting the container (reference section 10.1)', () => {
     expect(at('mix', 150)).toMatchObject({ parts: ['band', 'legend'], set: { legend: 'top' } });
     expect(at('mix', 100).parts).toEqual(['number']);
   });
-  it('keep holds a rule off', () => {
-    expect(at('kept', 250)).toMatchObject({ parts: ['y-axis', 'plot', 'x-axis'], rules: expect.arrayContaining(['kept:axes']) });
-    expect(shown(run({ ...trend, keep: ['marks'] }, 120))).toMatchObject({ parts: expect.arrayContaining(['plot']), rules: expect.arrayContaining(['kept:marks']) });
-  });
   it('the tldr value sits above the marks for an instant metric, or wherever the context says always', () => {
     expect(run(specs.live!, 346).plan).toMatchObject({ layout: 'rows', tldrValue: true });
     expect(run(specs.pages!, 346).plan.tldrValue).toBe(false);
@@ -258,8 +169,8 @@ describe('fitting the container (reference section 10.1)', () => {
 
 describe('validation', () => {
   it('names the fix', () => {
-    expect(err(invalid['unknown preset']!)).toBe('Unknown preset "no-such-preset". The library has: line, bar-list, share-bar, bar, grouped-bar, stacked-bar, stacked-area, pie, donut, pie-semi-circle, gauge, rose, radial-bar, sunburst, heatmap, funnel, box-plot, error-bars, waterfall, candlestick, fan, dumbbell, bullet, waffle, unit-chart, isotype, parliament, icon-array, bump, spaghetti, difference, connected-scatter, ecdf, lollipop, pyramid, strip, marimekko, ohlc. Registered: choropleth, symbol-map, sankey, tile-grid-map, hex-tile-map, treemap, pair-list. Use one of those, or register it with registerPreset("no-such-preset", …) before the view is resolved.');
-    expect(err(invalid['dimension, no layers']!)).toBe('This spec has a dimension but no layers, so there is nothing to draw it with. Add "layers", or "use" one of: line, bar-list, share-bar, bar, grouped-bar, stacked-bar, stacked-area, pie, donut, pie-semi-circle, gauge, rose, radial-bar, sunburst, heatmap, funnel, box-plot, error-bars, waterfall, candlestick, fan, dumbbell, bullet, waffle, unit-chart, isotype, parliament, icon-array, bump, spaghetti, difference, connected-scatter, ecdf, lollipop, pyramid, strip, marimekko, ohlc, choropleth, symbol-map, sankey, tile-grid-map, hex-tile-map, treemap, pair-list.');
+    expect(err(invalid['unknown preset']!)).toBe('Unknown preset "no-such-preset". The library has: line, bar-list, share-bar, bar, grouped-bar, stacked-bar, stacked-area, pie, donut, pie-semi-circle, gauge, heatmap, funnel. Registered: choropleth, sankey, treemap, pair-list. Use one of those, or register it with registerPreset("no-such-preset", …) before the view is resolved.');
+    expect(err(invalid['dimension, no layers']!)).toBe('This spec has a dimension but no layers, so there is nothing to draw it with. Add "layers", or "use" one of: line, bar-list, share-bar, bar, grouped-bar, stacked-bar, stacked-area, pie, donut, pie-semi-circle, gauge, heatmap, funnel, choropleth, sankey, treemap, pair-list.');
     expect(err(invalid['preset, no dimension']!)).toBe('The "line" preset needs a dimension in query.by.');
     expect(err({ query: { metrics: ['pageviews'], by: ['page'] }, layers: [{ mark: 'bar', encode: { y: 'page', x: 'visitors' } }] }))
       .toBe('Layer 1 encodes "visitors" on x, which the query does not return. It returns: page, pageviews.');
@@ -304,7 +215,8 @@ describe('schemas', () => {
     expect(layer.role.enum).toEqual(ROLES);
     expect(layer.stack.enum).toEqual(STACKS);
     expect(layer.align.enum).toEqual(ALIGNS);
-    expect((viewSchema as any).properties.keep.items.enum).toEqual(KEEP_PARTS);
+    // The fields a spec, a query and a layer take: resolve() refuses any other by name, as the schema does.
+    expect([Object.keys((viewSchema as any).properties), Object.keys((viewSchema as any).definitions.query.properties), Object.keys(layer)]).toEqual([SPEC_FIELDS, QUERY_FIELDS, LAYER_FIELDS]);
     // A description cannot be derived, so it is held to the count it states.
     expect(layer.paint.description).toContain('series.1 to series.' + SERIES + ',');
   });
@@ -355,17 +267,11 @@ describe('the ratio scene (dom-painter-plan section 3)', () => {
   });
 });
 
-describe('layer keys: a deliberate departure from the prototype (feedback, decision 1 of October 7)', () => {
+describe('layer keys (feedback, decision 1 of October 7)', () => {
   const layerKeys = (spec: Spec, sc: (typeof scenarios)[number] = 'typical') => [...new Set(run(spec, 346, null, sc).ratio.nodes.filter((n) => n.role).map((n) => n.key.replace(/:(partial|label)$/, '')))];
-  it('a layer keeps its key when another drops: the prototype hands the primary line the comparison\'s', () => {
+  it('a layer keeps its key when another drops', () => {
     expect(layerKeys(trend)).toEqual(['context:area', 'comparison:line', 'primary:line']);
     expect(layerKeys(trend, 'no-prior')).toEqual(['context:area', 'primary:line']);
-    const host0 = proto.makeHost(346, null, 'svg', 8), keys0 = (sc: string) => {
-      const res0 = proto.runQuery(trend.query, sc);
-      return proto.buildScene(proto.resolve(toProto(trend), res0, host0), trend.query, res0, host0).nodes.map((n: any) => n.key);
-    };
-    expect(keys0('typical')).toContain('L2:line');
-    expect(keys0('no-prior')).not.toContain('L2:line');
   });
   it('two layers of one role and mark are counted among themselves, the previous series last', () => {
     const y = { x: 'date.day', y: 'visitors' };
@@ -377,15 +283,12 @@ describe('layer keys: a deliberate departure from the prototype (feedback, decis
   });
 });
 
-describe('y ticks: a deliberate departure from the prototype (dom-painter-plan section 8, decision 3)', () => {
-  // The prototype rounds the y scale to 2 ticks when the plot is under 120 px tall, so its domain changes with the size.
-  // A scene with no size cannot. We always round to 4 and rank the ticks, and a surface thins them on a short plot.
+describe('y ticks (dom-painter-plan section 8, decision 3)', () => {
+  // A scene with no size cannot choose its tick count by height. The y scale always rounds to 4 and ranks the ticks,
+  // and a surface thins them on a short plot.
   const ticks = (scene: { nodes: { key: string; rank?: number }[] }, ranked = true) => scene.nodes.filter((n) => ranked || !n.rank).map((n) => n.key).filter((k) => /^(ytick|grid):/.test(k));
-  it('on a 100 px plot the prototype draws bars against another scale; ours is one scale, with the ticks a short plot gives up ranked', () => {
-    const spec = specs.layers!, res0 = proto.runQuery(spec.query, 'typical');
-    const host0 = { ...proto.makeHost(346, 100, 'svg', 8), rules: { ...proto.HOST_RULES, axes: { ...proto.HOST_RULES.axes, minHeight: 80 } } }, plan0 = proto.resolve(toProto(spec), res0, host0);
-    expect(ticks(protoScene(plan0, spec.query, res0, host0))).toEqual(['grid:0', 'ytick:0', 'grid:1000', 'ytick:1000', 'grid:2000', 'ytick:2000']);
-    const { ratio } = run(spec, 346, 100);
+  it('one scale at any height, with the ticks a short plot gives up ranked', () => {
+    const { ratio } = run(specs.layers!, 346, 100);
     expect(ticks(ratio)).toEqual(['grid:0', 'ytick:0', 'grid:500', 'ytick:500', 'grid:1000', 'ytick:1000', 'grid:1500', 'ytick:1500']);
     expect(ticks(ratio, false)).toEqual(['grid:0', 'ytick:0', 'grid:1000', 'ytick:1000']);
   });
@@ -399,21 +302,14 @@ describe('y ticks: a deliberate departure from the prototype (dom-painter-plan s
   });
 });
 
-describe('one row on a time axis: a deliberate departure from the prototype (feedback, Bugs 1)', () => {
-  // The prototype labels the first and the last row of a time axis. With one row they are the same row, so it emits two
-  // `xtick` nodes under one key. Keys are unique here, so ours emits one. No fixture query returns one row, so the sweep does not meet this.
+describe('one row on a time axis', () => {
+  // A time axis labels its first and its last row. With one row they are the same row, and it has one tick: keys are
+  // unique. No fixture query returns one row, so the sweep does not meet this.
   const one = runQuery(trend.query), day = one.rows[0]![trend.query.by![0]!] as string;
   one.rows = one.rows.slice(0, 1);
   const xticks = (scene: { nodes: { key: string }[] }) => scene.nodes.map((n) => n.key).filter((k) => k.startsWith('xtick:'));
-  it('the prototype repeats the tick; ours has it once, and nothing else it holds differs', () => {
-    const plan = resolve(trend, one, catalog), ratio = buildScene(plan, trend.query, one, catalog);
-    const { plan0, scene0 } = roomy(trend, 'typical', CONTAINER_RULES, one);
-    expect(xticks(scene0)).toEqual(['xtick:' + day, 'xtick:' + day]);
-    expect(xticks(ratio)).toEqual(['xtick:' + day]);
-    expect(plain(plan)).toEqual({ ...plan0, preset: plan.preset });
-    // The prototype's first copy is ours. Its second, anchored at the end, is the one dropped.
-    const second = scene0.nodes.findIndex((n: any, i: number) => n.key === 'xtick:' + day && scene0.nodes[i - 1].key === n.key), theirs = new Set<string>(scene0.nodes.map((n: any) => n.key));
-    expect(held(ratio.nodes, theirs)).toEqual(held(scene0.nodes.filter((_: unknown, i: number) => i !== second), theirs));
+  it('has the tick once', () => {
+    expect(xticks(buildScene(resolve(trend, one, catalog), trend.query, one, catalog))).toEqual(['xtick:' + day]);
   });
   it('two rows still have two ticks, and three have three', () => {
     for (const n of [2, 3]) {
@@ -423,32 +319,24 @@ describe('one row on a time axis: a deliberate departure from the prototype (fee
   });
 });
 
-describe('a time dimension on rows and on a band: a deliberate departure from the prototype (feedback, review of October 7, finding 5)', () => {
-  // The prototype writes a row's label and a segment's name as the result holds them, "2026-09-29", where its own x axis
-  // and our readout say "Sep 29". Ours says the dimension as the catalog sets it, wherever it is written. No sample puts a
-  // time dimension on rows or on a band, so the sweep does not meet this. The prototype's texts are mapped here and nowhere else.
-  const day = /^\d{4}-\d{2}-\d{2}/, said = (text: string) => text.replace(day, (iso) => formatDimension(iso, catalog.dimensions['date.day']!));
-  const ourDays = (scene0: any) => ({ ...scene0, nodes: scene0.nodes.map((n: any) => (n.kind === 'text' ? { ...n, text: said(n.text) } : n)) });
+describe('a time dimension on rows and on a band', () => {
+  // A row's label and a segment's name say the dimension as the catalog sets it, "Sep 29", wherever it is written, and
+  // never as the result holds it, "2026-09-29". No sample puts a time dimension on rows or on a band.
+  const day = /^\d{4}-\d{2}-\d{2}/;
   const byDay: Record<string, Spec> = {
     rows: { spec: 'view/0', title: 'Page views by day', use: 'bar-list', query: { metrics: ['pageviews'], by: ['date.day'], range: '28d', limit: 8 } },
     band: { spec: 'view/0', title: 'Visitors by day', use: 'share-bar', query: { metrics: ['visitors'], by: ['date.day'], range: '28d', limit: 6 } },
   };
   for (const [name, spec] of Object.entries(byDay)) {
-    it(name + ': the prototype says the date raw; ours says the day, and nothing else it holds differs', () => {
-      const { plan, ratio, result } = run(spec, 700), { res0, plan0, scene0 } = roomy(spec, 'typical');
-      const texts = (sc: any): string[] => sc.nodes.filter((n: any) => n.kind === 'text').map((n: any) => n.text);
-      expect(plain(result)).toEqual(plain(res0));
-      expect(plain(plan)).toEqual({ ...plan0, preset: plan.preset });
-      expect(texts(scene0).some((t) => day.test(t))).toBe(true);
-      expect(texts(ratio).some((t) => day.test(t))).toBe(false);
-      expect(texts(ratio).some((t) => /^[A-Z][a-z]{2} \d/.test(t))).toBe(true);
-      const theirs = new Set<string>(scene0.nodes.map((n: any) => n.key));
-      expect(held(lessRows(ratio).nodes, theirs)).toEqual(held(ourDays(scene0).nodes, theirs));
+    it(name + ': says the day, and not the date as the result holds it', () => {
+      const texts = run(spec, 700).ratio.nodes.flatMap((n) => (n.kind === 'text' ? [n.text] : []));
+      expect(texts.some((t) => day.test(t))).toBe(false);
+      expect(texts.some((t) => /^[A-Z][a-z]{2} \d/.test(t))).toBe(true);
     });
   }
 });
 
-describe('the one-line legend\'s key: a deliberate departure from the prototype (feedback, review of October 7, finding 3)', () => {
+describe('the one-line legend\'s key', () => {
   // A channel called "top", which no fixture has.
   const mix = samples.mix!.spec, named = runQuery(mix.query);
   named.rows = named.rows.map((r, i) => (i ? r : { ...r, channel: 'top' }));
@@ -457,41 +345,28 @@ describe('the one-line legend\'s key: a deliberate departure from the prototype 
     expect(new Set(keys).size, 'duplicate keys').toBe(keys.length);
     expect(ratio.nodes.filter((n) => n.key === 'legend:top' || n.key === 'legend-top').map((n) => [n.key, n.part, (n as { text: string }).text])).toEqual([['legend:top', 'legend', 'top'], ['legend-top', 'legend-top', 'top 41%']]);
   });
-  it('the prototype gives the two one key', () => {
-    const host0 = proto.makeHost(346, null, 'svg', 8), full = plain(proto.buildScene(proto.resolve(toProto(mix), named, host0), mix.query, named, host0));
-    const host1 = proto.makeHost(150, null, 'svg', 8), line = plain(proto.buildScene(proto.resolve(toProto(mix), named, host1), mix.query, named, host1));
-    expect([full, line].map((s) => s.nodes.filter((n: any) => n.key === 'legend:top').map((n: any) => n.text))).toEqual([['top'], ['top 41%']]);
-  });
 });
 
-describe('the words: a deliberate departure from the prototype (review of October 12)', () => {
-  // The prototype's words are literals: visits, people, the site, and `rows[0].page`. Ours are the catalog's label and the
-  // query's dimension, so a view of page views that is empty says so of page views. The sweep maps one to the other.
+describe('the words are the catalog\'s label and the query\'s dimension', () => {
+  // Core knows no name, so a view of page views that is empty says so of page views, and never of visits or people.
   const texts = (name: string, sc: (typeof scenarios)[number]) => { const { plan, ratio: scene } = run(specs[name]!, 346, null, sc); return [plan.text, ...scene.nodes.filter((n) => scene.parts.includes(n.part)).flatMap((n) => (n.key === 'sub' || n.key === 'notice' ? [(n as { text: string }).text] : []))]; };
-  const texts0 = (name: string, sc: string) => { const host0 = proto.makeHost(346, null, 'svg', 8), res0 = proto.runQuery(specs[name]!.query, sc), plan0 = proto.resolve(toProto(specs[name]!), res0, host0); return [plan0.text, ...proto.buildScene(plan0, specs[name]!.query, res0, host0).nodes.filter((n: any) => n.key === 'sub' || n.key === 'notice').map((n: any) => n.text)]; };
-  it('an empty range is said of its metric, the label first; the prototype calls page views visits', () => {
-    expect(texts0('total', 'empty')).toEqual(['No page views recorded in the last 28 days.', 'No visits yet']);
+  it('an empty range is said of its metric, the label first', () => {
     expect(texts('total', 'empty')).toEqual(['Page views: nothing recorded in the last 28 days.', 'Page views: nothing yet']);
-    expect(texts0('pages', 'empty')[1]).toBe('No visits in this period yet');
     expect(texts('pages', 'empty')[1]).toBe('Page views: nothing in this period yet');
     expect(texts('trend', 'empty')[1]).toBe('Visitors: nothing in this period yet');
   });
-  it('an instant metric is said by its label and the query\'s dimension; the prototype says people, the site and a page', () => {
-    expect(texts0('live', 'typical')).toEqual(['7 people are on the site right now; the busiest page is / (3).', 'on the site right now']);
-    expect(texts('live', 'typical')).toEqual(['Present now: 7 right now; the top page is / (3).', 'right now']);
-    expect(texts0('live', 'empty')).toEqual(['Nobody is on the site right now.', 'Nobody is here right now']);
+  it('an instant metric is said by its label and the query\'s dimension', () => {
+    expect(texts('live', 'typical')).toEqual(['Present now: 7 right now.', 'right now']);
     expect(texts('live', 'empty')).toEqual(['Present now: 0 right now.', 'right now']);
   });
   it('a sum of daily counts is not called a count of people', () => {
-    expect(texts0('trend', 'typical')[0]).toMatch(/ This is a sum of daily counts, not unique people\.$/);
     expect(texts('trend', 'typical')[0]).toMatch(/ This is a sum of daily counts, not a unique count\.$/);
   });
 });
 
-describe('the delta at zero and below it: a deliberate departure from the prototype', () => {
-  // The prototype divides by the previous value as it stands, so a rise from below zero reads as a fall and is painted
-  // as one, and it says "New" of a zero that stayed zero. Ours measures the change against the size of the previous value,
-  // and nothing changed where the two are equal. No fixture has a total at zero or below, so the sweep does not meet it.
+describe('the delta at zero and below it', () => {
+  // The change is measured against the size of the previous value, so a rise from below zero is a rise, and nothing
+  // changed where the two are equal: a zero that stayed zero is not "New". No fixture has a total at zero or below.
   const total = samples.total!.spec, m = total.query.metrics[0]!;
   const at = (cur: number, prev: number) => { const r = runQuery(total.query); return { ...r, totals: { ...r.totals, [m]: cur, [m + '@previous']: prev } }; };
   it('says the direction the value went, and paints it by the metric\'s polarity', () => {
@@ -515,11 +390,6 @@ describe('the delta at zero and below it: a deliberate departure from the protot
     expect([node.short, node.paint]).toEqual(['▲ 50%', 'delta.good']);
     expect(plan.text).toContain(', up 50% on the previous period');
     expect(resolve(total, at(0, 0), catalog).text).toContain(', level with the previous period');
-  });
-  it('the prototype says a rise from below zero is a fall', () => {
-    const res = at(-5, -10), host0 = proto.makeHost(346, null, 'svg', 8), plan0 = proto.resolve(toProto(total), res, host0);
-    expect(plain(proto.buildScene(plan0, total.query, res, host0)).nodes.find((n: any) => n.key === 'delta').paint).toBe('delta.bad');
-    expect(plan0.text).toContain(', down 50% on the previous period');
   });
 });
 

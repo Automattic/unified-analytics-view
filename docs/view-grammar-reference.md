@@ -1,31 +1,31 @@
-# View grammar: reference for the build
+# View grammar: the reference
 
-As of October 7, 2026. Working name only; rename freely.
+For the author of a view, a person or an agent: what a spec may say, what becomes of it, and why. As of November 24, 2026.
 
-`docs/vision.md` says what the project is for. Every Decided and Open item here is weighed against it.
+`docs/vision.md` says what the project is for, and every Decided and Open item here is weighed against it. The same contract is data: the schemas in `packages/core/schema/`, and `describe()` in `packages/agent`. How each part came to be built is in `docs/archive/` and in git.
 
-This is the reference for building an analytics view system in which a view is described once, as data, and the container it lands in decides how to present it. It compiles the design work so far and the lessons from a working prototype (`prototype/prototype-bench.js`, 815 lines, plus `prototype-bench.html` and `prototype-test.js`).
+**Status labels.** A section or an item is one of:
 
-**How to read the status labels.** Each section is marked one of:
+- **Proven:** built and exercised across views, widths, heights and data states. A section with no label is Proven.
+- **Proposed:** decided in design and not yet built. It is the plan: build it as written, and say so if building it shows it is wrong.
+- **Open:** undecided. Do not settle one silently: raise it, with a recommendation.
 
-- **Proven:** implemented in the prototype and exercised across views, widths, heights and data states.
-- **Proposed:** decided in design but not yet built. Treat as the plan, and say so if building it shows it is wrong.
-- **Open:** undecided. Do not settle these silently; raise them.
+Section 19 is the log of what is decided and what is open. Section numbers and item numbers are cited from the code, so they do not change.
 
 ---
 
 ## 1. Goal and principles
 
-Build the front-end foundation for analytics views: a small grammar of marks, a spec format, and renderers. Collection and storage are out of scope and handled elsewhere.
+A small grammar of marks, a spec format, and renderers, for showing the answer to an analytics query. Collection, storage and the query engine are built elsewhere.
 
-1. **A view is specified once, and the spec is the seed for everything.** An author writes a spec and decides where to render it, and nothing else. The spec carries no sizes, no breakpoints and no presentation switches; the container it lands in decides how it is presented.
-2. **Chart types are presets, not primitives.** A "bar chart" is a saved combination of marks, encodings and transforms. The grammar never sees a chart-type name.
-3. **A valid spec always produces something meaningful,** even if it is odd. Odd may be what was asked for. An invalid spec fails with a message that names the fix.
-4. **Specs are mostly written by agents.** That means a small closed vocabulary, plain JSON, a published schema, and errors an agent can act on.
-5. **High visual control.** Structure and rendering are separated by a scene, so the look of every mark can be designed and replaced.
-6. **Polish is not optional.** Accessibility, transitions and label collision are requirements of the system, written once against the grammar and not once per chart.
-7. **The core is framework-free TypeScript with no DOM.** The first container is in a browser, but the same spec must be usable by an agent (text only), a canvas painter and later a native shell.
-8. **It must work on any site.** The first surface is a panel that slides in on a customer's own site, at sidebar width, in the site owner's browser. It cannot rely on the host page's styles, and it cannot depend on Chromium-only features without a fallback.
+1. **A view is specified once.** An author writes a spec and decides where it renders. The spec carries no size, no breakpoint and no presentation switch: the container it lands in decides how it is presented.
+2. **Chart types are presets, not primitives.** A "bar chart" is a saved combination of marks and encodings. The grammar never sees a chart type's name.
+3. **A valid spec always draws something meaningful.** An invalid one fails with a message that names the fix.
+4. **Specs are mostly written by agents.** So: a small closed vocabulary, plain JSON, a published schema, and errors an agent can act on.
+5. **Structure and rendering are apart.** A scene stands between them, so the look of every mark can be designed and replaced.
+6. **Polish is part of the system.** Accessibility, transitions and label collision are written once against the grammar, not once for each chart.
+7. **The core has no DOM and no framework.** The first container is a browser, and the same spec serves an agent, a canvas painter and a native shell.
+8. **It works on any site.** A view cannot rely on its page's styles, and depends on no feature of one browser without a fallback.
 
 ---
 
@@ -40,19 +40,17 @@ spec ──► expand ──► plan ──► scene ──► fit ──► pai
  └─ query ──► result ┘        container: its own size, and the rules a context hands it
 ```
 
-| Step | Input | Output | Owns | Status |
-|---|---|---|---|---|
-| **Catalog** | — | Metric and dimension definitions | What names mean; units, polarity, additivity | Proven (as a stub) |
-| **Query** | `spec.query` | `{ rows, totals, meta }` | Fetching. Stubbed with fixtures today | Proven (fixtures only) |
-| **Expand** | Spec with `use` | Spec with `layers` | Preset library | Proven |
-| **Plan** | Expanded spec, result, the context's rules | A plan: layout, layers with roles, guides, the tldr prose. It takes no size | What a spec asks to have drawn | Proven |
-| **Scene** | Plan, result | Flat list of shapes in ratios of their part, with stable keys | What is drawn | Proven |
-| **Fit** | Scene, a room, the fit rules | The parts that show there, what else is hidden, the switches set | How a view gives way when room is short (section 10) | Proven: `fitTo` in core, and the same rules compiled to container queries |
-| **Painter** | Scene, fit | Pixels | Appearance, and where each part is placed | Proven: HTML and CSS (`packages/dom`). SVG and dot grid in the prototype only |
+| Step | Takes | Gives |
+|---|---|---|
+| **Catalog** | | What names mean: labels, units, polarity |
+| **Query** | `spec.query` | `{ rows, totals, meta }`, from an engine. Fixtures stand in for one here |
+| **Expand** | A spec with `use` | A spec with `layers` |
+| **Plan** | The spec, the result, the catalog | Layout, layers with roles, guides, the tldr prose. It takes no size |
+| **Scene** | The plan, the result | A flat list of shapes, in ratios of their part, with stable keys and paint tokens |
+| **Fit** | The scene, a room, the fit rules | The parts that show there, what else is hidden, the switches set (section 10) |
+| **Painter** | The scene, the fit | Pixels. HTML and CSS today (`packages/dom`) |
 
-Everything up to and including the scene is pure and has no DOM. d3 is used only for scales (`d3-scale`), path geometry (`d3-shape`) and array helpers (`d3-array`). No chart library.
-
-**Deliberately deferred:** the query coordinator, DuckDB-WASM, WebGPU, brushing, a board element, and the semantic compiler. See section 20.
+Everything up to and including the fit is pure and has no DOM. d3 is used for scales, path geometry and array helpers, and there is no chart library.
 
 ---
 
@@ -60,30 +58,30 @@ Everything up to and including the scene is pure and has no DOM. d3 is used only
 
 | Term | Meaning here |
 |---|---|
-| **Mark** | The shape drawn per row of data: line, area, bar, rule, text (later dot, cell, tick, arc). A mark is only a shape plus the constraints that shape implies |
-| **Channel** | A visual property of a mark that can carry data: x, y, color, text |
-| **Encoding** | Assigning a field to a channel |
+| **Mark** | The shape drawn for each row: `line`, `area`, `bar`, `rule`, `text`, `dot`, `tick`, `cell`, `arc`, `unit`. A mark is a shape and the constraints that shape implies |
+| **Channel** | A visual property of a mark that carries data: `x`, `y`, `color`, `size`, `text`, `angle`, `radius` |
+| **Encoding** | A field on a channel |
 | **Scale** | The function from data values to visual values |
-| **Transform** | How rows relate before drawing: stack, normalize (later bin) |
-| **Layer** | One mark with its encodings. A view is a stack of layers over shared scales |
+| **Layer** | One mark with its encodings. A view is layers over shared scales |
 | **Role** | What a layer is for: `primary`, `comparison`, `reference`, `context`. A container gives up layers by role |
-| **Guide** | Anything derived from scales, never authored: axes, grid, legend, tick labels |
-| **Tldr value** | The numerical tl;dr of a view: the primary metric's total from the engine, an optional delta, an optional note. Formerly "headline" |
-| **Preset** | A named, saved fragment of a spec that expands into layers |
-| **Container** | Wherever a view renders. It owns its size, and is handed the rules a view is fitted by. Formerly "host" |
-| **Context** | The surface that holds containers: a panel, a toolbar, a dashboard, an agent. It lays its containers out by a scheme of its own, and hands them a durable rule set once, as it hands them a token set |
-| **Plan** | What a spec asks to have drawn, with no size: layout, layers with roles, guides and the sentence |
-| **Scene** | A flat JSON list of positioned shapes with stable keys and paint tokens |
+| **Guide** | What is derived from a scale and never authored: an axis, the grid, a legend, a ramp, a key to sizes |
+| **Tldr value** | The number: the primary metric's total from the engine, a delta, a note |
+| **Tldr prose** | The sentence every view has, derived from the answer (section 16) |
+| **Preset** | A named fragment of a spec that expands into layers |
+| **Container** | Wherever a view renders. It owns its size and is handed the rules a view is fitted by |
+| **Context** | The surface that holds containers: a panel, a dashboard, an agent. It hands its containers a rule set once, as it hands them tokens |
+| **Plan** | What a spec asks to have drawn, with no size |
+| **Scene** | A flat JSON list of shapes with stable keys and paint tokens |
 | **Painter** | Code that draws a scene |
-| **Tldr prose** | The prose tl;dr of a view: the text sibling every view has, derived from the query and transforms. Formerly "sentence" |
+| **Companion** | A field the engine returns beside a metric or a dimension: `visitors@previous`, `response_time@p25`, `bin@end` |
 
 ---
 
 ## 4. The catalog contract
 
-**Status: Proven as a stub. The real contract is Open and depends on the server API.**
+**Status: Proven against a stub. What the real API sends is Open (Open 11 and 23, and `docs/api-proposal.md`).**
 
-The catalog is the slice of the semantic model the front end needs. Computation and table mapping live on the server, behind the API. The front end needs only names and the properties that drive presentation.
+The catalog is the slice of the semantic model a view needs: names, and the properties that drive presentation. It is an input. Core knows no metric's name.
 
 ```json
 {
@@ -100,36 +98,36 @@ The catalog is the slice of the semantic model the front end needs. Computation 
 }
 ```
 
-Rules the front end relies on:
+Of a metric:
 
-- **The names in this document are the fixtures'.** Another catalog has its own (`bucket` for `date.day`, `page_views` for `pageviews`), and a spec uses the names of the catalog it is drawn against.
-- **Each name is defined exactly once,** outside both the data and the views. A view refers to `visitors`; it never carries a formula.
-- **Totals come from the engine.** A view never sums the rows it happens to receive, because many metrics are not additive. Visitors in v1 are counted per day, so a range total is a sum of daily counts and must be labelled as one (`rangeTotal: "sum of daily"`).
-- **The unit says how a value is written,** wherever it is written: the tldr value, a tick, a row, the readout, the table, the prose. The units are `count`, `ratio` (a rate from 0 to 1), `percent` (one from 0 to 100), `ms`, `s`, `bytes` and `rank` (a place in an order, 1 the first), and a currency's ISO 4217 code in lower case (`usd`, `eur`) for money in that currency's own units: dollars, not cents. Each currency is a unit of its own, so two never share an axis and nothing adds them. An unknown unit is an error. A `number` dimension has no unit yet, so load time is still a bare number.
-- **A metric may carry its definition:** what the number counts, caveats included, in a sentence or two. It rides on the tldr value as its `note`, and `<ua-view>` shows it when the number is pointed at. It is too long to stand under the number, and the tldr prose does not say it.
-- **A time value is said as the engine wrote it,** and written the same wherever it is: "Sep 8" on an axis, a row, a legend and in the readout. Its date and its time of day are read from the string, and an offset is not applied: an engine names a bucket by the clock where it cut it, so `2026-09-08T00:00:00+02:00` is "Sep 8" on every machine, and the viewer's time zone is never asked. So a result has no time zone, and an engine that sends instants cut in another zone writes each as that zone's clock time before the view has it (an adapter's work; Open 17). The forms are a day (`2026-09-08`), a day and time with a `T` or a space and with or without an offset (`2026-09-08T15:00:00Z`, `2026-09-08 15:00:00`), a month (`2026-09`, "Sep 2026") and an ISO week (`2026-W36`, said by the Monday it starts on, "Aug 31"). A bucket on an hour of the day reads "Sep 8, 3 PM". Any other value of a time dimension is an error that names these forms, raised by the plan before anything is drawn. The grain is read from the value, because neither the catalog nor the result states it, so the midnight bucket of an hourly result reads as a day. Valid grains are among the properties below.
-- **A dimension whose values are codes says so,** with `values`. `country` is the one kind: an ISO 3166-1 alpha-2 code in capitals, written as the country's name wherever a value is written. An empty code reads as no value, and what is not a code is written as it came.
-- **Polarity drives delta colour.** `up` means an increase is good, `down` the reverse, `none` means no judgement.
-- **`instant`** marks a metric with no range and no prior period, such as people present now.
-- **The label is the only name a view has for a metric or a dimension,** and every word it says of one is made of it: "Revenue: nothing yet", "Open carts: 3 right now; the top sku is A-100 (2)". Core holds no noun of its own, so it cannot say "7 people" or "on the site". Nor does it make a noun of a label: the label leads and a colon follows, so one that is a phrase reads too, "Came back: nothing in this period yet" and not "No came back yet". A catalog that wants those words needs a property for them, and that is Open (section 19, Open 11).
-- **How each unit reads.** `count` is a number, shortened where room is short ("13.4k"). `ratio` and `percent` are both written as a percentage ("5.8%"). `ms` and `s` are a length of time ("27.6s", "3m 48s"). `bytes` is a size. A currency is written with its symbol ("$4,333"). A `rank` is written as a place, "1st", "2nd", "23rd", and as the bare number on a scale of ranks. A value that is null is written as a dash, and never as zero.
-- **The unit `rank` has a scale of its own** (built October 12). On y it runs from 1 at the top down to the largest rank in the rows, with a tick and a grid line for each rank, and for every few of them past ten. On a short plot the first and the last stay. It holds no zero: what is no rank, such as the zero a bar or an area starts from, is at the foot. A metric may be in it, and so may a companion.
-- **A companion's unit is its metric's, unless the catalog has an entry for the companion** (decided October 12). `response_time@p25` is in milliseconds because `response_time` is, and nothing need say so. A companion that is not in its metric's unit, a rank or a share of a count, has an entry in `metrics` under its whole name, `"pageviews@rank": { "label": "Rank", "unit": "rank", "polarity": "down" }`, and its unit, label and polarity are read from there: its axis, its ticks, the readout and the table all follow. Core reads no suffix to know any of this, so `@rank` and `@share` mean nothing to it: the same companion under a catalog that has no entry for it is drawn in its metric's unit. An entry does not make a companion something a query can ask for (section 5). In rows, a `text` layer on a companion that has an entry is a column of values with a header, as a metric's is.
-- **A metric may say what it is read against,** with `domain` (least, then most), `target` and `bands`. The `gauge` preset needs `domain`; a gauge and the `bullet` preset mark `target`. A dimension of type `number` is one the engine has cut into bins: each row holds where its bin starts, and where it ends as `<dimension>@end`. These are built here and are in the schema. They are still proposals to the API's owners (section 19, Open 11).
-- **A name is an opaque string.** `date.day`, `bucket`, `revenue.usd` and `page_views` are all names; a dot means nothing to the grammar. Only `@` is read: `<name>@<suffix>` is a companion of `<name>`.
-- **Unknown is null, not zero.**
+| Property | Says |
+|---|---|
+| `label` | The only name a view has for it. Every word a view says of a metric is made of its label: "Revenue: nothing yet" |
+| `unit` | How a value is written, wherever it is written. See below |
+| `polarity` | `up`, `down` or `none`: whether an increase is good. It colours a delta |
+| `rangeTotal` | `sum`, or `sum of daily` where a range total adds up daily counts and must say so |
+| `instant` | A metric with no range and no period before: people present now |
+| `definition` | What the number counts, in a sentence or two. Shown when the number is pointed at |
+| `domain`, `target`, `bands` | What it is read against: least and most, a goal, and where the range divides. A gauge needs `domain` |
+| `by` | The dimensions it can be answered by. A query that asks it by another, in `by` or in `where`, is refused before it is run. Left out, it is asked by any |
 
-Properties the full catalog will need but the stub lacks: format, thresholds or bands, valid dimensions per metric, valid grains, approximation and coverage, identity definition for people-counts, hierarchy on dimensions, and a colour role on dimensions.
+Of a dimension: `label`; `type`, which is `time`, `categorical` or `number` (one the engine has cut into bins, each row holding where its bin starts and, as `<dimension>@end`, where it ends); and `values: "country"` where its values are ISO 3166-1 alpha-2 codes, written as the country's name.
 
-The v1 metric list the catalog must eventually cover: visitors, page views, unique page views, engaged time, top pages, referrers, channels (including AI assistants), UTM, country, device, conversions and custom events, revenue by channel and page, and present now.
+**Units.** `count` is a number, shortened where room is short ("13.4k"). `ratio` (0 to 1) and `percent` (0 to 100) are both written as a percentage. `ms` and `s` are a length of time ("3m 48s"). `bytes` is a size. A currency is its ISO 4217 code in lower case (`usd`), written with its symbol, and each is a unit of its own: two never share an axis and nothing adds them. `rank` is a place, "1st", on a scale that runs from 1 at the top. An unknown unit is an error.
+
+**What a view relies on:**
+
+- **A name is an opaque string,** defined once. `date.day`, `bucket` and `page_views` are all names, and a spec uses the names of the catalog it is drawn against. Only `@` is read: `<name>@<suffix>` is a companion of `<name>`.
+- **Totals come from the engine.** A view never sums the rows it receives, since many metrics do not add up.
+- **Unknown is null, not zero.** A null is written as a dash, compared with nothing, and nothing is a share of it.
+- **A companion is in its metric's unit,** unless the catalog has an entry under the companion's whole name: `"pageviews@rank": { "label": "Rank", "unit": "rank", "polarity": "down" }`. Core reads no suffix to know a unit.
+- **A time is said as the engine wrote it.** Its date and time of day are read from the string and no offset is applied, so `2026-09-08T00:00:00+02:00` is "Sep 8" on every machine and the viewer's zone is never asked. The forms are a day (`2026-09-08`), a day and time, a month (`2026-09`) and an ISO week (`2026-W36`). Any other value of a time dimension is an error that names these. The grain is read from the value (Open 17).
 
 ---
 
 ## 5. Query and result
 
-**Status: Proven with fixtures. The real query layer is deferred.**
-
-A query is written in catalog names:
+**Status: Proven with fixtures. The query layer is built elsewhere.**
 
 ```json
 { "metrics": ["visitors"], "by": ["date.day"], "range": "28d", "compare": "previous", "limit": 8,
@@ -139,34 +137,27 @@ A query is written in catalog names:
 | Field | Notes |
 |---|---|
 | `metrics` | Required. The first is the primary metric |
-| `by` | Zero, one or two dimensions. With two, rows come back long, one per pair, and the result carries `totalsBy`: the engine's totals per value of each dimension |
-| `range` | `"28d"` style. Optional: where the answer's `meta.range` names none, the prose names none. A count of days, or `"now"` for an instant. Presets and custom ranges are Open: until they are settled, a value in another form is refused by name |
-| `compare` | `"previous"` or absent. Other modes (year over year, baseline) are Open |
-| `limit` | Top-N for categorical dimensions |
-| `where` | A filter, by dimension: the answer is of the rows where every dimension named holds what is said of it. See below |
+| `by` | Zero, one or two dimensions. With two, rows come back one for each pair, and the result carries `totalsBy`: the engine's totals for each value of each dimension |
+| `range` | A count of days (`"28d"`), or `"now"` for an instant. Any other form is refused by name |
+| `compare` | `"previous"`, or absent |
+| `limit` | The first N values of a categorical dimension |
+| `where` | A filter, by dimension |
 
-**A filter (`where`, Decided 48).** Each dimension is held to one of three things, and a dimension here need not be in `by`:
+**A filter** (Decided 48). Each dimension is held to a value, to any of a list, or to a run. A dimension here need not be in `by`.
 
 ```json
-{ "where": { "channel": "Search" } }
 { "where": { "channel": ["Search", "Social"], "device": "Mobile" } }
 { "where": { "date.day": { "from": "2026-09-21", "to": "2026-09-27" } } }
 ```
 
-| Form | Holds for |
-|---|---|
-| A value | That value of the dimension |
-| A list of values | Any of them |
-| `{ "from", "to" }` | Every value from the one to the other, both included, as the engine names and orders them: a day, where a bin starts. Either end may be left out. For a time or a number, and refused on a categorical dimension, which has no order to run along |
+- Dimensions are joined by "and". There is no "or" between two, no "not", and no threshold on a metric.
+- A run, `{ "from", "to" }`, is for a time or a number, both ends included, and either may be left out.
+- The engine applies the filter and carries it back as `meta.where`. Core filters no row and sums none.
+- An answer that is not of its query's filter is refused, so a view never says one thing and shows another.
+- The view says its filter after its sentence: "Filtered to channel Search or Social, and device Mobile."
+- The filter comes before the ranking and the limit. One that holds for nothing is an empty answer that still says its filter.
 
-- **Dimensions are joined by "and".** There is no "or" between two dimensions, no "not", and no threshold on a metric. What needs one is a query for another tool.
-- **The engine applies it, and says so.** Its answer carries the filter back as `meta.where`. Core filters no row and sums none: a filtered total is the engine's, as every total is.
-- **An answer that is not of the query's filter is refused.** `resolve` compares `query.where` with `meta.where` by what they hold (a value is a list of one, and order does not count) and names both where they differ. Without it a spec that asked for some rows would be drawn from an answer of all of them, or the other way about, and the view would say one thing and show another. It is the stale answer of section 13, caught for a filter.
-- **The view says it.** After its sentence: "Filtered to channel Search or Social, and device Mobile." (section 16), and in what it says of itself (section 10.4). It paints no chip: a filter's control is chrome, and the surface's.
-- **The filter comes before the ranking and the limit:** the first values are the first of what is left.
-- **A filter that holds for nothing** is an answer of nothing, `meta.empty`, which still says its filter.
-
-A result is:
+**A result:**
 
 ```json
 {
@@ -179,25 +170,20 @@ A result is:
 }
 ```
 
-An answer to a query with `where` has it in its `meta` too, as the query wrote it.
+- **A comparison is a companion,** `metric@previous`, row by row and in the totals. It is null where there is no period before.
+- **Statistics come the same way:** `metric@p25`, `metric@lower`, `metric@running`, `metric@rank`, and `dimension@end` for a bin. Core computes none. A query cannot yet ask for one by name.
+- **A value is a finite number or null.** `NaN`, an infinity or a string is refused, by field and row.
+- **A total may be null.** It is written as a dash, no change is said of it, and a share view says each value in place of its percentage.
+- **`partial: true`** marks an unfinished bucket, and **`meta.empty: true`** a period with no data.
+- **A spec may be drawn against an answer that already exists.** It names metrics that answer has, and its `by`, `range` and `compare` are the answer's.
 
-- A comparison is delivered as a companion field, `metric@previous`, aligned row by row. It is null when there is no prior data.
-- Statistics arrive the same way, as companions the engine returns: `metric@p25`, `metric@lower`, `metric@running`, `metric@rank`, `metric@cumulative`, and `dimension@end` for a bin. One that is not in its metric's unit has a catalog entry of its own (section 4). Core computes none of them. A query cannot yet ask for one by name; that is Open.
-- A spec drawn against an answer that already exists names metrics that answer has, in any order and not necessarily all of them: the first named is the primary metric. Its `by`, `range` and `compare` are the answer's. Leaving `limit` out keeps every row the answer has.
-- A total may be null, where the engine has no figure for the range. It is written as a dash. Nothing is compared with it: no change is shown or said, where a missing `metric@previous` is "No prior period". Nothing is a share of it either, nor of a total of zero: a share view says each value in place of its percentage and draws no segment, and the rows are never summed to make a total.
-- A metric's value, or a companion's, is a finite number or null, in a row and in the totals. `NaN`, an infinity, a string or `undefined` is refused, as an error that names the field and the row.
-- `partial: true` marks an incomplete bucket (today).
-- `meta.empty: true` marks a period with no data at all.
-
-The fixture engine has three data states: `typical`, `no-prior` (comparison requested, none available) and `empty`. Keep all three as test fixtures.
-
-It counts no events, so it has none to filter. It answers `where` from the pairs it already makes: a dimension the query is not by is asked for beside the ones it is, the rows that hold are kept, and what is left is added up. So a filter agrees with the query by the same dimension row for row, which `test/where.test.ts` holds. Its limits are its own: it makes pairs and no triples, so a dimension filtered past two in all, `by` and `where` together, is taken as independent of them, and the share its values hold of each metric scales what the pairs give; and it filters only metrics that add up over rows, and refuses another by name. Its pairs do not add up to what a query by one dimension returns, which it has always said of itself, so two views of one board may differ by a few percent under one filter.
+The fixture engine (`packages/fixtures`) has three data states, `typical`, `no-prior` and `empty`. It answers `where` from the pairs it makes, within limits it names.
 
 ---
 
 ## 6. The view spec
 
-**Status: Proven. Version string is `view/0`.**
+**Version `view/0`.** The schema is `packages/core/schema/view.schema.json`. What a schema cannot check, a field against a result or a preset's name, `resolve()` does, and its error names the fix.
 
 ```json
 {
@@ -208,36 +194,40 @@ It counts no events, so it has none to filter. It answers `where` from the pairs
 }
 ```
 
-| Field | Type | Meaning |
-|---|---|---|
-| `spec` | string | Format version |
-| `title` | string | Shown by the container's frame, not drawn in the scene |
-| `query` | object | Required. See section 5 |
-| `use` | string | A preset name. Expands into `layers`. Ignored if `layers` is present |
-| `layers` | array | Explicit layers. See below |
-| `keep` | array | Parts a container may not drop: `"guides"`, `"secondary"`, `"rows"`, `"marks"`. Provisional; see section 10.1 |
-| `facet` | string | One of the query's dimensions. The spec is then a view for each of its values, on the same scales. See "A facet", below |
+| Field | Meaning |
+|---|---|
+| `spec` | The format's version |
+| `title` | Shown by the container's frame, and not drawn in the view |
+| `description` | What the view is for, in its author's words. Said before the tldr prose and drawn nowhere |
+| `query` | Required. Section 5 |
+| `use` | A preset's name, which expands into `layers` (section 9). Ignored where `layers` is present |
+| `layers` | The layers, written out |
+| `facet` | One of the query's dimensions: the spec is then a view for each of its values |
 
-The spec says what to show and nothing about how. Whether the tldr value or a guide appears is decided by the container's rules (sections 8 and 10). `keep` is the one presentation lever an author has.
+A spec says what to show and nothing of how. It has no lever over what a container gives up (Decided 63).
 
-A layer:
+**A layer:**
 
 | Field | Meaning |
 |---|---|
-| `mark` | `line`, `area`, `bar`, `rule`, `text`, `dot`, `tick`, `cell`, `arc`, `unit`, or the name of a custom mark registered in code |
-| `encode` | Channel to field: `x`, `y`, `x2`, `y2`, `color`, `detail`, `size`, `text`, `angle`, `radius`. A field is a dimension name, a metric name, a companion the result returns (`metric@p25`), or a number (for a rule, or an arc's inner radius). In rows, `color` paints each row: the rows' own dimension is a colour for each, and a companion of it (`source@kind`) paints rows that share a value alike. Built October 8, for the sidebar test case. `detail` is one of the query's dimensions: it splits the layer into a series for each value, as a dimension on `color` does, and paints none apart. Every series is in the layer's own paint, there is no legend and no label at a line's end, and the limit of six series does not apply, since no series colour is spent. A layer in a plot is split once, by `color` or by `detail`, and a layer split by `detail` takes no `stack`. Read in a plot with a dimension on x; built October 12. In rows it is read by a `dot` or a `tick`, which then has one to each pair of a row and a detail value, drawn at half strength, and in a plot of points a `dot` with one dimension on `color` and the other on `detail` is a point for each value of `detail`'s, coloured by `color`'s (step 4, October 12). On an `arc`, `angle` and `radius` take a metric and a dimension between them, and which holds what is the form (section 7, the `arc` row): a number on `radius` is the inner radius, a metric there is how far each slice reaches, and a dimension there is a ring for each value. `detail` on an `arc` split by `color` is a second ring; built October 12. `x2` and `y2` are the second end of a `bar`, a `rule` or an `area`; a `rule` or a `bar` may start at a number, and with all four a `rule` is a line across a plot of points. `size` on a `bar` is its column's width, in a plot of shares. A `bar` in rows with nothing on `x` is the range behind the row's marks |
-| `series` | `"previous"` draws the comparison companion of the metric. Comparison is a property of a layer, not a second metric. `"delta"`, on a `text` layer in rows, is the row's change, painted by polarity |
-| `role` | `primary`, `comparison`, `reference`, `context`. Defaults: a `previous` series is `comparison`, a `rule` is `reference`, everything else is `primary` |
-| `stack` | `"zero"`, `"normalize"` for share of whole, `"center"`, or `"diverge"`, on a layer split by `color`, and not by `detail`. `"diverge"` sets the first half of the series below zero and the second half above it, in their order, and with an odd count the middle one half on each side; its axis counts away from zero on both sides (built October 12). A `bar` split by `color` or by `detail` with no `stack` sits beside its neighbours. In rows, `stack` is what lets a bar's `color` be the query's second dimension: each row's bar is divided into a series for each of its values (built October 12) |
-| `sweep` | `"half"` for an `arc` that is divided by `color`, or that reads a metric against its range. Refused with a dimension on `angle` or on `radius`: those go all the way round. Also for a `unit` with a metric on `angle`, whose seats sit round a half circle and no other way. The one layer field that is neither data nor role |
-| `label` | Text for a rule |
-| `at` | On a `rule`, in a plot whose x is a time, a category or a number in bins: the value of x it stands at, or a list of them. A value, where what is on a channel is a field. See "A rule at a value", below |
-| `align` | `"end"` for right-aligned text. On a `tick`, `"start"` or `"end"` is the half of it to that side of its band's middle (built October 12) |
-| `paint` | Override the paint token. `"delta"` is the paint of the metric's change over the range: good or bad by its polarity, and the layer's own where there is no change to judge. Built October 8, for the sidebar test case. `"direction"` is for a `bar` or an `area` with two ends, and is refused on anything else and beside a dimension on `color`: each bar is painted `delta.good` or `delta.bad` by which way it runs from its first end (`x` or `y`) to its second (`x2` or `y2`) and the metric's polarity, and an area is cut where its two ends cross and each piece painted so. Where the polarity is `none` the mark is in the layer's own paint. Nothing is painted by direction unless a layer says so. Built October 12 |
+| `mark` | `line`, `area`, `bar`, `rule`, `text`, `dot`, `tick`, `cell`, `arc`, `unit`, or a custom mark's name |
+| `encode` | Channel to field: `x`, `y`, `x2`, `y2`, `color`, `detail`, `size`, `text`, `angle`, `radius`. A field is a dimension, a metric, a companion the result returns, or a number. What each mark reads is in section 7 |
+| `series` | `"previous"` draws the metric's comparison companion. `"delta"`, on a `text` layer in rows, is the row's change, painted by polarity |
+| `role` | `primary`, `comparison`, `reference` or `context`. By default a `previous` series is `comparison`, a `rule` is `reference`, and anything else is `primary` |
+| `stack` | `"zero"`, `"normalize"` for share of the whole, `"center"`, or `"diverge"`, on a layer split by `color`. A `bar` split with no `stack` sits beside its neighbours |
+| `sweep` | `"half"`, for an `arc` divided by `color` or read against a range, and for a `unit`'s seats |
+| `label` | The text of a rule |
+| `at` | On a `rule`: the value of x it stands at, or a list of them |
+| `align` | `"end"` for a column of values. On a `tick`, `"start"` or `"end"` is the half of it to that side |
+| `paint` | A paint token in place of the layer's own. `"delta"` is good or bad by the metric's change. `"direction"`, on a `bar` or an `area` with two ends, paints each by which way it runs |
 
-Paint tokens an author may name: `series.1` to `series.6`, `compare`, `rule`, `ink`, `ink.muted`, `delta`, `delta.good` and `delta.bad`. `direction` is not a token: it is the one value of `paint` that asks for two, `delta.good` and `delta.bad`, mark by mark. A scene also names `band.1` to `band.3`, for the parts a metric's catalog `bands` divide its range into, the least first: three neutral steps, and not an author's to choose. A layer with no `paint` takes `series.1`, or `compare` for a `previous` series, or in a plot whose layers measure several metrics the series colour of its own metric, and that holds for a bar or an area with two ends too; a layer split by a dimension on `color` takes a series colour per value, and one split by `detail` keeps its own for every value. The steps of the two colour ramps, `seq.1` to `seq.10` and `div.1` to `div.9`, and `seq.none`, are the colour scale's and not an author's: a metric on `color` is quantized to them, and which ramp it is on is read from its values (decision 33).
+**The channels that split.** A dimension on `color` splits a layer into a series for each value, each in a series colour, six at most, with a legend. A dimension on `detail` splits it the same way and paints none apart: every series is in the layer's own paint, with no legend and no limit. A layer is split once. The query's second dimension goes to `color`, to `detail`, to `facet` or to the other axis.
 
-**A rule at a value** (built November 23; Decided 46). A reference line at a number stands on a scale: `{ "mark": "rule", "encode": { "y": 1000 } }`. A plot whose x is a list of values, a time or a category, has no number to stand at, and a string on a channel is always a field. So the place is said as a value, in the layer field `at`, and the rule encodes nothing:
+**Paint tokens an author may name:** `series.1` to `series.6`, `compare`, `rule`, `ink`, `ink.muted`, `delta`, `delta.good` and `delta.bad`. A layer with no `paint` takes `series.1`, or `compare` for a `previous` series. The ramps (`seq.1` to `seq.10`, `div.1` to `div.9`) are the colour scale's: a metric on `color` is quantized to one, diverging where its values cross zero (Decided 33).
+
+**A description** (Decided 62). A view's sentence is derived, since its data is live. What its author can say that the data cannot is what the view is for: "How many people came, day by day." It says nothing the data would make false: no number, no date, no "up". A facet says it once.
+
+**A rule at a value** (Decided 46). A reference line at a number stands on a scale: `{ "mark": "rule", "encode": { "y": 1000 } }`. On an axis that is a list, a time or a category, a string on a channel would be a field, so the place is said as a value:
 
 ```json
 { "query": { "metrics": ["visitors"], "by": ["date.day"], "range": "28d" },
@@ -247,89 +237,55 @@ Paint tokens an author may name: `series.1` to `series.6`, `compare`, `rule`, `i
   ] }
 ```
 
-It stands the height of the plot at that value's place, drawn as any reference is, with its label beside it at the top. A list of values is a rule at each, all with the layer's one label; rules that are named apart are layers apart. A value is matched to the rows as it is written, so a date is in the form the engine returns. One the axis does not have is not drawn, and is no error: a date outside the range leaves the view as it was. `at` is refused on any other mark and in any other layout, and beside anything on the rule's channels.
+A value is matched as the engine writes it. One the axis does not have is not drawn and is no error, so a view does not break when its range moves past a date.
 
-**Colour by a metric in a plot** (built November 23; Decided 47). A `bar` or a `dot` in a plot takes a metric on `color`, as a `cell` does in a grid. Each mark is then a step of the sequential ramp, by its row's value, and the ramp stands under the plot as its key: the least value, a swatch for each step, the most, and a swatch for no value where a row has none. A bubble chart may have the ramp and the key to sizes together, each on a line of its own under the plot. A layer split by `detail` is painted mark by mark, each by its own row.
+**Colour by a metric in a plot** (Decided 47). A `bar` or a `dot` takes a metric on `color`, as a `cell` does. Each mark is a step of the ramp, and the ramp stands under the plot as its key. One metric paints a plot, and not beside colours that tell series or metrics apart. A `line` and an `area` take none: one path has one paint.
 
 ```json
 { "query": { "metrics": ["visitors", "page_conversion"], "by": ["page"] },
   "layers": [{ "mark": "bar", "encode": { "x": "page", "y": "visitors", "color": "page_conversion" } }] }
 ```
 
-A plot's colours say one thing. So one metric paints a plot, whichever layers name it; a layer it paints states no `paint`; and it is refused beside a split by a dimension on `color` and beside layers that are told apart by the metrics they measure. A `line` and an `area` take no metric on `color`: one path has one paint. The ramp stays as long as the axes do. Under their need a plot has no room for it, so it goes and the marks are drawn in one paint, as a legend's series are (the `labels` rule, `split: plain`): what a colour meant goes with what said it. The readout says both metrics of a mark either way.
+**Several metrics on one plot.** Each is a layer, and they are told apart as the series of a split are: a series colour for each metric, an entry in the legend, a label where each line ends. Bars of several layers sit side by side. Metrics of one unit share the y axis, metrics of two units get an axis each, and three units is an error.
 
-**A facet** (built November 23; Decided 26 and 45). `facet` names one of the dimensions in the query's `by`, and the spec is then a small board: a view for each value of that dimension, in the engine's order. Each is the spec without the facet, asked of that value's rows alone, so the layers do not encode the facet's dimension, and a preset is filled from the dimensions that are left. With the facet as the only dimension each view is a number, and needs no layers: an instrument panel.
+**A facet** (Decided 26 and 45). `facet` names a dimension in the query's `by`, and the spec is a view for each of its values, in the engine's order. With the facet as the only dimension each view is a number: an instrument panel.
 
 ```json
 { "use": "line", "facet": "channel",
   "query": { "metrics": ["visitors"], "by": ["date.day", "channel"], "range": "28d", "compare": "previous" } }
 ```
 
-Core gives the views and draws none: `facets(spec, result, catalog)` returns each one's `key`, `label`, `spec` and `result`, and a surface draws each as it draws any view, with `resolve`, `buildScene` and `fitTo`. `resolve` refuses a spec with a `facet`, since it has no one plan.
+- **Scales are shared.** Every scale takes the widest domain any view would take alone, so a small value is drawn small. A whole is its own: the shares of a pie are of their own view.
+- **Totals are the engine's:** a view's are its value's row of `totalsBy`.
+- **A spec says no columns.** The element holds the views in a grid that wraps where one would have under 200 px. `facetColumns` is the same sum for a surface with no CSS.
+- `resolve` refuses a spec with a `facet`, which has no one plan. `facets(spec, result, catalog)` gives each view's `key`, `label`, `spec` and `result`.
 
-- **Totals are the engine's.** A view's totals are its value's row of `totalsBy`, or its own row where the facet is the only dimension. With neither a view has no number: none is summed from its rows.
-- **Scales are shared.** Every scale of every view takes the widest domain any of them would take alone, so a small value is drawn small: the y scale of a plot and its x where that is a quantity, a list's track, how far a slice or a ring reaches, the colour ramp, the sizes of dots and symbols, and what a `unit`'s glyph is worth. It is said as data on each view's result (`Result.domains`, by the scale's name), so any surface that builds the scene shares them. A whole is its own: the shares of a pie or a share bar are of their own view. A list of values on an axis is each view's own rows, so the engine must return every pair for the views to line up.
-- **A spec says no columns.** Where the views stand is the surface's. The element holds them in a grid that wraps where a view would have less than `FACET_LEAST` (200 px, with `FACET_GAP` between), each its own container with its own fit rules, keyboard and measured pass, so nothing runs on resize; `facetColumns(inline, count)` is the same sum for a surface with no CSS. In a box the rows share its height. A view paints no title, so the element sets the value's name over each.
-- **The table and the selection.** The table switch shows each view's own table. A selection one view proposes is heard on the facet, and the key set on the facet is marked in every view that has it.
-- **Empty.** A result with no value of the dimension is one view, of the whole, which says that it is empty.
-- **What it says of itself.** `explain` says how many views there are and of what, then what the first view says at its own room. In the element the views are a group named by the spec's `title`, and each is a figure named by its value, with its own sentence and table.
+Not built: a y axis on the first view of a row only, and a facet down the rows.
 
-Not built: the y axis on the first view of each row only (the coverage plan's step 7, item 3), because CSS cannot say which view starts a row of a wrapping grid, and a view that gave up its axis would have a wider plot than its neighbour; every view keeps its own. A view's sentence does not name its value. A facet down the rows, for a ridgeline, is still the Uncommon plan's step 11. `partition` shares only its colour ramp and `link` nothing: their areas and widths are shares of their own whole.
-
-**A board** (built November 24; Decided 45, 48 and 49). A board is views and the part of the query they share. It is a document of its own, `board/0`, and its schema is `packages/core/schema/board.schema.json`:
+**A board** (Decided 49). A board is views and the part of the query they share. It is a document of its own, `board/0` (`board.schema.json`):
 
 ```json
 { "spec": "board/0", "title": "Traffic",
   "query": { "range": "28d", "compare": "previous" },
   "views": [
-    { "spec": "view/0", "title": "Visitors", "query": { "metrics": ["visitors"] } },
     { "spec": "view/0", "title": "Visitors by day", "use": "line", "query": { "metrics": ["visitors"], "by": ["date.day"] } },
     { "spec": "view/0", "title": "Channels", "use": "bar-list", "query": { "metrics": ["visitors"], "by": ["channel"] } }
   ] }
 ```
 
-| Field | Notes |
-|---|---|
-| `spec` | `"board/0"` |
-| `title` | Shown by the surface |
-| `query` | What the views share, each a part of a query: `range`, `compare` and `where`. Nothing else: metrics, `by` and `limit` are each view's own, and anything else here is refused by name |
-| `views` | View specs, each whole and valid alone. Each needs a `title`, and no two the same: it is the view's key |
+- **Its `query` is its params:** `range`, `compare` and `where`, and nothing else. There is no variable, reference or expression. A view that states its own keeps it.
+- **One rule combines the views, and no field changes it.** A view is filtered by every dimension of the board's `where` but the ones it draws. On one it draws it keeps every value and marks the ones held (`selected`).
+- **A board has no layout and no state apart from itself.** A surface that changes a param holds a new board.
+- **Core gives the views and fetches nothing:** `boardViews(board, catalog)` returns each view's key, its spec and what it marks, and `boardSelect` the board after a selection (section 13). Each view needs a `title`, which is its key.
+- `<ua-view>` draws no board. The bench's Board page is the reference surface.
 
-- **Params are the board's `query`.** There is no named variable, no reference and no expression. `range` and `compare` stand where a view states none, and a view that states its own keeps it.
-- **One rule combines the views, and no field changes it.** A view is filtered by every dimension of the board's `where` but the ones it draws, which are those in its own `by`. On one it draws it keeps every value and is told which to mark (`selected`). So a list shows what was picked among the rest, and every other view is of the pick. A view's own `where` is its own, and wins.
-- **A board has no state apart from itself.** Its `query` is its params at their values now. A surface that changes one, by a control or by a selection, holds a new board; the one it began with is how it resets.
-- **Core gives the views and fetches nothing.** `boardViews(board, catalog)` returns each view's `key` (its title), the `spec` to run and draw, and what it is to mark, `selected`. A surface runs each query with the function it was handed and draws each view as it draws any. `boardSelect(board, proposal, catalog)` is the board after a view proposes a selection: the proposal folded into the board's `where` (`select`, section 13). Which view proposed it does not matter, since a datum's filter is of the dimensions its view draws.
-- **No layout.** Where each view stands is the surface's. `<ua-view>` does not draw a board: a board needs a query function and something to keep it, and the element has neither. The bench's Board page is the reference surface, in about twenty lines.
-
-Not built: a view that turns the board's `compare` off, which `compare` has no value for; and a board inside a board.
-
-
-**Several metrics on one plot** (built November 20). Each is a layer of its own, and the layers are told apart as the series of a split are. A metric has a series colour, in the order the layers first name them, and every layer of it that states no `paint` is drawn in it: the fill under a line with its line. A `paint` that is stated stands. Each metric has an entry in the legend, named by its catalog label and in the paint its layer is drawn in, and where the legend's rule gives it up, a label where its line ends. A companion is its metric's, so a box's quartiles are one quantity and have no legend; one with a catalog entry of its own (`pageviews@rank`) is a quantity of its own. A `rule`, a `tick` and a `text` are set in ink and count for none. More than six metrics that state no paint is an error. Beside a split by a dimension on `color` the colours are the series', and the legend is theirs. Metrics of one unit share the y axis, however far apart their values are. Metrics of two units get an axis each; three units is an error.
-
-The same spec, written as layers:
-
-```json
-{
-  "spec": "view/0",
-  "title": "Daily page views",
-  "query": { "metrics": ["pageviews"], "by": ["date.day"], "range": "28d" },
-  "layers": [
-    { "mark": "bar",  "encode": { "x": "date.day", "y": "pageviews" } },
-    { "mark": "rule", "encode": { "y": 1000 }, "label": "Target 1,000", "role": "reference" }
-  ]
-}
-```
-
-Rules:
+**Rules:**
 
 - A spec with no dimension and no layers is the tldr value alone.
-- A spec with a dimension and no layers (and no `use`) is an error. There is no silent default.
-- A layer that encodes a field the query does not return is an error that lists what the query does return.
-- A layer that encodes what its mark does not read is an error that lists what the mark does read, in the layout it is drawn in (section 7, "What each mark reads"). Nothing a layer encodes is dropped without a word.
-- There is no `intent` field. An earlier version had one; it was a chart type under a new name and was removed.
-- There is no `headline` field and no `guides` field. Both were presentation switches and were removed on October 7; the schema rejects them. The container's rules decide what they used to.
-
-The JSON Schema for a spec is `packages/core/schema/view.schema.json`, and the catalog's is beside it. A board's is `board.schema.json`, which holds each of its views to the view's. It is the contract agents write against. It cannot check a field against a result, a preset's name, or a custom mark's: `resolve()` does, and its error names the fix.
+- A spec with a dimension and neither `layers` nor `use` is an error. There is no silent default.
+- A layer that encodes a field the query does not return is an error that lists what it does return.
+- A layer that says what its mark does not read is an error that lists what the mark reads (section 7).
+- A field that a spec, its query or a layer does not take is an error that lists the ones it does. So a size written in a spec is refused, and not read past.
 
 ---
 
@@ -337,106 +293,129 @@ The JSON Schema for a spec is `packages/core/schema/view.schema.json`, and the c
 
 ### Marks
 
-| Mark | Channels today | What comes with it | Status |
-|---|---|---|---|
-| `line` | x, y, color, detail | Connects neighbouring rows, with a curve that never leaves the values it joins, so x must be ordered. Split by `detail` its lines are drawn light, so where many run together reads darker. On a `number` dimension whose rows carry `<dimension>@end` it is drawn as steps: flat across each bin and upright at its edge, as a bar there has no gap. With a metric on x as well as on y it joins the points in the engine's order, straight from each to the next: the dimension that keys the rows is the order, so by a time dimension it is the path through time. With a metric of unit `rank` on y, first place is at the top | Proven; split by `detail`, steps, the joined points and the rank scale built October 12 |
-| `area` | x, y, y2, color, detail | Fills to a zero baseline, or between two ends. Over a `number` dimension's bins it is steps, as a line is. Between two ends with `paint: "direction"` it is cut where they cross, and each piece is a gain or a loss. Stacked about the middle (`stack: "center"`) it has no value axis. Refused with a metric on x: there is no one way along x to fill under | Proven; split, stacked and ranged forms built October 8; split by `detail`, steps and paint by direction built October 12 |
-| `bar` | x, y, x2, y2, color, detail, size | Has a baseline, so the scale holds zero. In a plot `color` may be a metric, which paints each bar off the ramp (section 6, "Colour by a metric in a plot"). With two ends it floats, in the layer's own paint, or with `paint: "direction"` as a gain or a loss by which way it runs. Its first end may be a number where its second is a field (`x: 0, x2: "metric@high"`): the same bar as one written the other way, and by direction one that runs from the number to the value, so a bar from zero to a gain is a gain. Bars of one metric that go both ways from zero are still painted as gains and losses with nothing said In rows, stacked, it is divided by the query's second dimension. With a metric on `size`, in a plot of shares, its column is as wide as its x's share of the engine's total. In rows with nothing on x it is the metric's catalog `domain` behind the row's marks, divided at its `bands` | Proven; split, stacked, signed and ranged forms built October 8; split by `detail` built October 12; paint by direction made the layer's to ask for October 12; divided rows, `size` and the range built October 12 |
-| `rule` | x or y (a constant), or `at` (a value of x), or fields per row with x2 or y2, or all four | A reference line with an optional label, at a number or at a value of the list on x (`at`: a date, a category), or a segment per row, which may run from a number to a field or from a field to a number. With x, y, x2 and y2 it is a line across a plot of points: one line where all four are numbers, drawn as a reference is and with no label, and a line for each row where any is a field | Proven; constant on x and the per-row form built October 8; a number as the start and the line across a plot built October 12 |
-| `text` | y, text; in a plot x, y, text | A label per row, a column of values, or a label on a point | Proven in rows; in the plot built October 8 |
-| `dot` | x, y, size, color, detail | A point. Its radius is the painter's, in pixels. In a plot `color` may be a metric, as on a bar. With a dimension on both x and y it stands in a grid, in each pair: `size` is a metric, read by how far it is from zero, and `color` may be a metric where no `cell` has one. In rows with a dimension on `detail` a row has a dot for each of its pairs, at half strength so that where they lie over each other the row reads darker | Built October 8; in a grid October 12; several to a row October 12 |
-| `tick` | x, y, detail | A short stroke across its band at a value, or with `align` the half of it to one side of the band's middle. In a plot of points, with the plot's metric on x and nothing on y, it is a stroke at the foot of the plot for each row: a rug. In rows it may be several to a row, by `detail`, as a dot may | Built October 8; `align`, the rug and several to a row October 12 |
-| `cell` | x, y, color | Both positions discrete; colour quantized to a ramp: `seq`, or `div` where the values or the catalog's `domain` cross zero, with zero in its neutral middle step and both arms measured by the end farther from zero. No value is `seq.none` on either. With no x it is one column and with no y one row, a strip. A binned dimension's row is labelled by its bin, and along the foot at its edges; a binned dimension on y beside another on x reads from the foot, its least bin lowest | Built October 8; the strip October 9; the diverging ramp October 12 |
-| `arc` | angle, radius, color, detail | Its own mark. No general polar coordinate system: `angle` and `radius` take a metric and a dimension between them, and there are four forms. **A metric on `angle`, a dimension on `color`:** a segment for each row, its share of the engine's total; a number on `radius` is the inner radius. With a second dimension on `detail`, a ring outside it divides each segment among that dimension's values, lighter and in the segment's colour, with no legend entry: the query is by the two, and a segment's span is the engine's `totalsBy`. **A dimension on `angle`, a metric on `radius`:** an equal slice for each row, in the engine's order, reaching out to its value on a square-root scale, so its area carries the value. It starts at the centre and is drawn in one paint, with a label for each slice round the rim. **A dimension on `radius`, a metric on `angle`:** a ring for each row, six at most, the first outermost, swept against the catalog `domain`, or the largest row where there is none. With nothing on `angle` it is the whole ring, faint. The same dimension on `color` gives each ring a series colour and a legend entry that says its value. **A metric on `angle` alone:** read against its catalog `domain` | Built October 8; data on `angle` and `radius`, and the second ring, built October 12 |
-| `unit` | x, y, color, angle | A value drawn as counted glyphs, one for so many, where a `bar` or an `arc` would draw a length. What a glyph is worth comes from the data. It takes no second end, no `stack`, no `series` and no value below zero | Built October 12 |
+A mark carries only its shape and what that shape implies. How marks relate, stacked, overlaid or side by side, is a transform or layering, and never part of the mark.
 
-"Built October 8" means built, tested and looked at in headless Chromium by the agent that built it. What each one found is in `docs/chart-coverage-plan.md`, section 8.
+| Mark | What comes with it |
+|---|---|
+| `line` | Joins neighbouring rows, so x is ordered. Over a binned number it is drawn as steps. With a metric on x and on y it joins the points in the engine's order. With a `rank` on y, first place is at the top |
+| `area` | Fills to zero, or between two ends (`y2`). With `paint: "direction"` it is cut where its ends cross, and each piece is a gain or a loss. Stacked about the middle it has no value axis |
+| `bar` | Has a baseline, so its scale holds zero. With two ends it floats. In rows, stacked, it is divided by the query's second dimension, and with nothing on `x` it is the metric's `domain` behind the row's marks. With a metric on `size`, in a plot of shares, its column is as wide as its share |
+| `rule` | A reference line at a number, or at a value of x (`at`). With `x2` or `y2`, a segment for each row. With all four, a line across a plot of points |
+| `text` | A row's label, a column of values, or a label on a point, on a grid's pair or on a map's region |
+| `dot` | A point, sized by the painter or by a metric on `size`. With a dimension on both axes it stands in a grid |
+| `tick` | A short stroke across its band at a value. In a plot of points, with a metric on x and nothing on y, a stroke at the foot for each row: a rug |
+| `cell` | Both positions are lists, and its colour is a step of a ramp. With one axis it is a strip |
+| `arc` | A shape about a centre. `angle` and `radius` take a metric and a dimension between them, and which holds what is the form |
+| `unit` | A value as counted glyphs, one for so many. What a glyph is worth comes from the data |
 
-**The `unit` mark has five forms, and its channels choose between them.** No field names one.
+**An `arc` has four forms,** and no field names one:
+
+- **A metric on `angle`, a dimension on `color`:** a segment for each row, its share of the engine's total. A number on `radius` is the inner radius, which makes a donut. A second dimension on `detail` is a ring outside.
+- **A dimension on `angle`, a metric on `radius`:** an equal slice for each row, reaching out to its value, so its area carries the value. A rose.
+- **A dimension on `radius`, a metric on `angle`:** a ring for each row, six at most, swept against the catalog `domain`.
+- **A metric on `angle` alone:** read against its catalog `domain`. A gauge.
+
+**A `unit` has five forms,** chosen by its channels:
 
 | On its channels | Layout | Draws | A glyph is worth |
 |---|---|---|---|
-| A dimension on x, a metric on y | `cartesian` | A stack of dots up from the axis for each value. On a binned number dimension it is the Wilkinson dot plot | The least of 1, 2 and 5 times a power of ten at which the largest value is ten glyphs or fewer |
-| A dimension on y, a metric on x | `rows` | A run of dots along each row's track, beside its label | The same |
-| A metric on x, a dimension on `color` | `band` | A grid of a hundred cells, a run of them and a series colour for each value, with the band's legend | A hundredth of the engine's total. The cells are shared out by largest remainder, so values that make up the total fill the grid exactly; under a `limit` the cells left over are the rest, painted as no value |
-| A metric on x, and no dimension in the query | `band` | The same grid, lit up to the metric's place in its catalog `domain`, under the number | A hundredth of the domain |
-| A metric on `angle`, a dimension on `color`, `sweep: "half"` | `radial` | Seats round a half circle, a wedge and a series colour for each value | One of the metric while the engine's total is a hundred or fewer, and beyond that the round number at which it is a hundred seats or fewer |
+| A dimension on x, a metric on y | `cartesian` | A stack of dots up from the axis for each value | The least of 1, 2 and 5 times a power of ten at which the largest value is ten glyphs or fewer |
+| A dimension on y, a metric on x | `rows` | A run of dots along each row's track | The same |
+| A metric on x, a dimension on `color` | `band` | A grid of a hundred cells, a run of them for each value | A hundredth of the engine's total, shared out by largest remainder |
+| A metric on x, and no dimension | `band` | The same grid, lit up to the metric's place in its `domain` | A hundredth of the domain |
+| A metric on `angle`, a dimension on `color`, `sweep: "half"` | `radial` | Seats round a half circle | One, up to a hundred seats, and beyond that a round number |
 
-A value is rounded to whole glyphs, and a value above nothing has one at least. A glyph is a dot or a square (decided October 12): icons wait for a glyph per metric in the catalog. Glyphs hold their shape: a grid's part states an `aspect`, and a dot states the room it has, `w` and `h`, of which the painter takes the lesser in pixels. A stack is on the plot's own y scale, so an axis or a `rule` reads true against it. Each form gives way, under 280 px across or under its own height, to the preset of the same query that needs less room (section 9): glyphs are counted, so they are never drawn smaller than can be told apart.
+Glyphs are counted, so they are never drawn smaller than can be told apart: short of the room it needs, a form becomes the plainer preset of the same query (section 9). A line under the glyphs says what one is worth, "Each is 500".
 
-A mark carries only its shape and those constraints. Relationships between marks (stacked, overlaid, normalized) are transforms or layering, never part of the mark.
+### A custom mark is a candidate
 
-A custom mark registered in code and referenced by name is the escape hatch for anything the grammar cannot express (maps, Sankeys). Keep the spec small; do not let it grow an expression language. The registry is `registerMark` in `packages/core/src/marks.ts`. There are two: `geo`, in `packages/geo`, and `link`, in `packages/flow`. A custom mark says which channels it reads, in `reads` beside its fit rules, and is held to that as core's marks are (below). What it gives core is a scene in ratios and its fit rules, and what it gives a surface is a painter: it places nothing in pixels itself (Decided 43).
+**Decided 59.** A custom mark, registered in code (`registerMark`) and written in a spec by its name, is where a form the grammar cannot say enters the system. It is not a way round it: an author who wants a chart this system does not draw has other libraries. So a custom mark is held to what a core mark is held to from the day it is registered, in `test/admission.test.ts`:
+
+- it says the channels it reads (`reads`) and the layer fields (`fields`);
+- a sample in the bench draws it;
+- every scene it builds is valid against `scene/0`: paint tokens, unique keys, and no field of its own;
+- at every room it shows something, and in the least it is its number, or the view it gave way to is.
+
+There are three: `geo`, a map (`packages/geo`); `link`, a Sankey of one step (`packages/flow`); and `partition`, a treemap (`packages/partition`). A custom mark gives core a scene in ratios and its fit rules, and gives a surface a painter. It takes one layer, alone in its view, with the plot's `text` over it where it offers its places.
+
+**What moves a mark into core (Proposed).** It is drawn in the views of more than one product. It takes the plot's marks over it. It needs no dependency core does not have. Its fit rules are ladders of parts core already has. What moves a core mark out is the reverse, and `unit` is the one to watch.
 
 ### What each mark reads
 
-**Built November 20.** What a mark reads depends on the layout it is drawn in, and this table is the whole of it: a row for each mark in each layout, with the channels it reads there and what each may hold, the ones it is not drawn without, and the fields of the layer it has a use for. It is data: `READS`, `NEEDS` and `FIELDS` in `packages/core/src/reads.ts`. The rows below are held to them by `test/reads.test.ts`, which also holds every cell to be true: a sample draws it, or a probe there writes that channel another way and gets another scene. A custom mark states the channels it reads beside its fit rules (`reads`), and its layout is its name.
-
-`resolve()` refuses what a layer says that is not here, by name: a mark its layout does not draw, a channel the mark does not read there, a channel holding what the mark takes no account of, and a `label`, an `align` or a `sweep` on a mark with no use for it. It refuses a mark with nothing on a channel it needs. The error says what the mark does read, and where what was written is read. Until this was built each of these was dropped and the view drawn without it: a bar with a metric on `color` was drawn in one colour, a `text` beside a band's bar not at all, and a bar with nothing on `y` as a plot with no marks.
+What a mark reads depends on the layout it is drawn in. This table is the whole of it, and it is data: `READS`, `NEEDS` and `FIELDS` in `packages/core/src/reads.ts`, which `test/reads.test.ts` holds this table to. `resolve()` refuses what a layer says that is not here, by name: a mark its layout does not draw, a channel the mark does not read there, a channel holding what the mark takes no account of, a layer field the mark has no use for, and a mark with nothing on a channel it needs. The error says what the mark does read.
 
 | Layout | Mark | Channels, the ones it needs in bold | Fields |
 |---|---|---|---|
-| `cartesian` | `line` | `x` dimension, metric; **`y`** metric; `color` dimension; `detail` dimension |  |
-| `cartesian` | `area` | `x` dimension; **`y`** metric; `y2` metric, number; `color` dimension; `detail` dimension |  |
-| `cartesian` | `bar` | `x` dimension; **`y`** metric, number; `y2` metric, number; `color` dimension, metric; `detail` dimension; `size` metric |  |
-| `cartesian` | `rule` | `x` dimension, metric, number; `y` metric, number; `x2` metric, number; `y2` metric, number; `detail` dimension | `label`, `at` |
-| `cartesian` | `dot` | `x` dimension, metric; **`y`** metric; `color` dimension, metric; `detail` dimension; `size` metric |  |
-| `cartesian` | `tick` | `x` dimension, metric; `y` metric; `detail` dimension | `align` |
+| `cartesian` | `line` | `x` dimension, metric; **`y`** metric; `color` dimension; `detail` dimension | `paint`, `series`, `stack` |
+| `cartesian` | `area` | `x` dimension; **`y`** metric; `y2` metric, number; `color` dimension; `detail` dimension | `paint`, `series`, `stack` |
+| `cartesian` | `bar` | `x` dimension; **`y`** metric, number; `y2` metric, number; `color` dimension, metric; `detail` dimension; `size` metric | `paint`, `series`, `stack` |
+| `cartesian` | `rule` | `x` dimension, metric, number; `y` metric, number; `x2` metric, number; `y2` metric, number; `detail` dimension | `label`, `at`, `paint`, `series` |
+| `cartesian` | `dot` | `x` dimension, metric; **`y`** metric; `color` dimension, metric; `detail` dimension; `size` metric | `paint`, `series` |
+| `cartesian` | `tick` | `x` dimension, metric; `y` metric; `detail` dimension | `align`, `paint` |
 | `cartesian` | `text` | `x` dimension, metric; **`y`** metric; **`text`** dimension, metric, companion; `detail` dimension |  |
-| `cartesian` | `unit` | `x` dimension; **`y`** metric |  |
-| `rows` | `bar` | `y` dimension; `x` metric, number; `x2` metric, number; `color` dimension, companion |  |
-| `rows` | `rule` | `y` dimension; **`x`** metric, number; `x2` metric, number |  |
-| `rows` | `tick` | `y` dimension; **`x`** metric, number; `detail` dimension | `align` |
-| `rows` | `dot` | `y` dimension; **`x`** metric, number; `color` dimension, companion; `detail` dimension |  |
-| `rows` | `unit` | `y` dimension; **`x`** metric; `color` dimension, companion |  |
-| `rows` | `text` | `y` dimension; **`text`** dimension, metric, companion | `align` |
-| `rows` | `line` | `y` dimension; **`x`** metric |  |
-| `rows` | `area` | `y` dimension; **`x`** metric |  |
-| `band` | `bar` | **`x`** metric; **`color`** dimension |  |
-| `band` | `unit` | **`x`** metric; `color` dimension |  |
-| `radial` | `arc` | `angle` dimension, metric, number; `radius` dimension, metric, number; `color` dimension; `detail` dimension | `sweep` |
+| `cartesian` | `unit` | `x` dimension; **`y`** metric | `paint` |
+| `rows` | `bar` | `y` dimension; `x` metric, number; `x2` metric, number; `color` dimension, companion | `paint`, `series`, `stack` |
+| `rows` | `rule` | `y` dimension; **`x`** metric, number; `x2` metric, number | `paint`, `series` |
+| `rows` | `tick` | `y` dimension; **`x`** metric, number; `detail` dimension | `align`, `paint` |
+| `rows` | `dot` | `y` dimension; **`x`** metric, number; `color` dimension, companion; `detail` dimension | `paint`, `series` |
+| `rows` | `unit` | `y` dimension; **`x`** metric; `color` dimension, companion | `paint` |
+| `rows` | `text` | `y` dimension; **`text`** dimension, metric, companion | `align`, `series` |
+| `rows` | `line` | `y` dimension; **`x`** metric | `paint`, `series` |
+| `rows` | `area` | `y` dimension; **`x`** metric | `paint`, `series` |
+| `band` | `bar` | **`x`** metric; **`color`** dimension | `stack` |
+| `band` | `unit` | **`x`** metric; `color` dimension | `paint`, `stack` |
+| `radial` | `arc` | `angle` dimension, metric, number; `radius` dimension, metric, number; `color` dimension; `detail` dimension | `sweep`, `paint`, `series` |
 | `radial` | `unit` | **`angle`** metric; **`color`** dimension | `sweep` |
-| `radial` | `line` | **`angle`** dimension; **`radius`** metric |  |
-| `radial` | `area` | **`angle`** dimension; **`radius`** metric |  |
-| `radial` | `dot` | **`angle`** dimension; **`radius`** metric |  |
+| `radial` | `line` | **`angle`** dimension; **`radius`** metric | `paint`, `series` |
+| `radial` | `area` | **`angle`** dimension; **`radius`** metric | `paint`, `series` |
+| `radial` | `dot` | **`angle`** dimension; **`radius`** metric | `paint`, `series` |
 | `matrix` | `cell` | `x` dimension; `y` dimension; **`color`** metric |  |
-| `matrix` | `dot` | **`x`** dimension; **`y`** dimension; `color` metric; **`size`** metric |  |
+| `matrix` | `dot` | **`x`** dimension; **`y`** dimension; `color` metric; **`size`** metric | `paint` |
 | `matrix` | `text` | `x` dimension; `y` dimension; **`text`** dimension, metric, companion |  |
-| `geo` | `geo` | `x` dimension; `color` metric; `size` metric |  |
+| `geo` | `geo` | `x` dimension; `color` metric; `size` metric | `paint` |
 | `link` | `link` | `x` dimension; `y` dimension; `size` metric |  |
-| `geo-tiles` | `geo-tiles` | `x` dimension; `color` metric; `size` metric |  |
-| `geo-hexes` | `geo-hexes` | `x` dimension; `color` metric; `size` metric |  |
+| `geo-tiles` | `geo-tiles` | `x` dimension; `color` metric; `size` metric | `paint` |
+| `geo-hexes` | `geo-hexes` | `x` dimension; `color` metric; `size` metric | `paint` |
 | `partition` | `partition` | `x` dimension; `detail` dimension; `size` metric; `color` metric |  |
 
-A `metric` is one of the catalog's, or a companion the engine returns with one (`visitors@p25`): a quantity, as its metric is. A `companion` is one returned with a dimension (`source@kind`). A `number` is a constant.
+A `metric` is one of the catalog's, or a companion the engine returns with one. A `companion` is one returned with a dimension (`source@kind`). A `number` is a constant.
 
-The table says what one channel may hold. What a mark asks of several together is refused where the mark is drawn, in that code's own words: a second end that needs a first, a `size` on a bar that needs a plot of shares, a tick that needs a value on `y` unless it is a rug, a `label` on a rule for each row. Those errors come first: the table is asked once the scene has been built. One such rule is the plan's: the dimension a plot has a mark for each of, the one on x or under two metrics the one its points are keyed by, splits nothing on `color` and paints nothing, so it is refused there, and beside itself on `detail`. In rows that encoding is read, as a colour for each row. A mark, a channel or a field that is built is added to these tables in the same change.
+The table says what one channel may hold. What a mark asks of several together is refused where the mark is drawn: a second end that needs a first, a `label` on a rule for each row. Two forms are refused by the plan: a `paint` beside a dimension on `color`, since a mark has one paint, and `series: "previous"` on a layer that encodes no metric. A layer of the period before, where the answer has none, is left out and reported (`plan.dropped`).
 
-**What it does not catch yet.** Each of these was found while building it, and each is still drawn wrong or not at all with nothing said:
+### Limits, and why each holds
 
-- Two layers that draw in one place are drawn over each other: a bar for each of two metrics on one x.
-- A band draws its first layer, and a second bar is dropped.
-- `paint`, `series` and `stack` are not in the tables. Each is refused in some forms where it is drawn, and elsewhere it may still be dropped: a `paint` on a `text` is, and a band's bar is divided by share whatever its `stack` says.
+A limit is backpressure: it says where the grammar ends, and a refusal that names the next step is a signal an author can act on. Each holds for a reason, and none is changed without that reason being answered.
+
+| The limit | Why it holds | In its place |
+|---|---|---|
+| Six series colours, six rings round a centre, six sources in a Sankey | What an eye can tell apart | `limit` on the query; `detail`, for a series each in one paint; a list |
+| Two units on one plot, and no third | What an eye can read against an axis | A view for each, on a board |
+| No sum of rows, no share worked out of them, no quantile, bin or running total | What keeps a number true: many metrics do not add up | The engine's totals and `totalsBy`; a companion field |
+| An answer that is not of its query, or of its filter, is refused | What keeps a number true | What the query returned, set with its spec in one step |
+| No expression, function, variable or reference in a spec; a string on a channel is a field | What keeps a spec data: a page can take one from an author it does not trust | `at`, for a value; a companion, for what is computed; a custom mark, for what is drawn another way |
+| No size, breakpoint or presentation switch in a spec | The vision: what a view looks like belongs to where it lands | The container's rules, and a context's own set of them |
+| One layer in a band; one custom mark to a view, with the plot's `text` over it | A layout is an arrangement of parts, and these have one place for marks | A plot or a list; `places` |
+| A query is by two dimensions at most; `where` joins dimensions by "and"; a range is a count of days or now | The engine's contract, which is Open with the API's owners | Another query; another tool |
 
 ### Transforms
 
-`stack` is the only one: `"zero"`, `"normalize"`, `"center"` and `"diverge"`, on any axis and in a row's track. Binning, quantiles, density and running totals are not transforms: the engine returns them (section 19, Decided 25).
+`stack` is the only one: `"zero"`, `"normalize"`, `"center"` and `"diverge"`. `"diverge"` sets the first half of the series below zero and the second half above it, and the middle one of an odd count half on each side. Binning, quantiles, density and running totals are not transforms: the engine returns them (Decided 25).
 
 ### Layouts
 
-**This was the thinnest part of the prototype.** It detected one of three hard-coded layouts from the layers. A layout is now an arrangement of parts, chosen from a table of what is on x, y and color (`LAYOUTS` in `plan.ts`), and each mark is a function looked up by name:
+A layout is an arrangement of parts, chosen from what is on x, y and `color`. It says what stands round the marks, and not which marks may be drawn (Decided 44): a mark is one function of its space, drawn in each layout by the function it has.
 
-| Layout | Trigger | Draws |
+| Layout | Chosen by | Draws |
 |---|---|---|
-| `cartesian` | A dimension on x | line, area, bar, rule over a category or time axis, and a `unit`'s stacks |
-| `rows` | A dimension on y | The ranked bar list: a bar behind a label and a value per row. A `unit` is a run of glyphs in the track. A `line` or an `area` runs down the list from row to row |
-| `band` | A dimension on color only, or a `unit` with a metric on x and no dimension at all | One stacked, normalized bar with a legend, or a `unit`'s grid of a hundred |
-| `cartesian` | A metric on x and on y | Points: `dot`, `text`, rules on either axis, and a `line` that joins them in the engine's order |
-| `matrix` | A dimension on x and on y, or a `cell` with one on either alone | A grid of `cell`s with a ramp, of `dot`s with a key to sizes, or of both: one `cell` layer, one `dot` layer on the same x and y, or the two together. A diverging ramp says its low end, zero and its high end A `text` on the same x and y says a value in the middle of each pair, over the cells or the dots |
-| `radial` | Anything on `angle` | `arc`s about one centre, and a `unit`'s seats, in a part that holds its shape. Under it the legend of what is on `color`, or round it a label for each slice of a dimension on `angle` (the `rim` part, which the `rim` fit rule gives up first). Its rows are the segments, slices or rings: the keys step through them, and up and down step out to a second ring and back. With a dimension on `angle` and a metric on `radius` it also draws the plot's `line`, `area` and `dot`, about the centre |
-| a custom mark's name | A layer with that mark | Whatever the mark draws, and over it the plot's `text` at each of its places, where the mark offers them |
+| `cartesian` | A dimension on x | A plot over a category or a time axis: line, area, bar, rule, and a `unit`'s stacks |
+| `cartesian` | A metric on x and on y | Points: `dot`, `text`, rules on either axis, and a `line` that joins them |
+| `rows` | A dimension on y | A list: a label, a track that bars, dots, rules and ticks draw in, and columns of values |
+| `band` | A dimension on `color` only | One bar divided by share, with a legend, or a `unit`'s grid of a hundred |
+| `matrix` | A dimension on x and on y | A grid of `cell`s with a ramp, of `dot`s with a key to sizes, or both, and a `text` over them |
+| `radial` | Anything on `angle` | `arc`s about one centre, a `unit`'s seats, and the plot's `line`, `area` and `dot` bent about it |
+| a custom mark's name | A layer with that mark | What the mark draws, and the plot's `text` at its places |
 
-**A table is rows of `text` layers.** In `rows`, each `text` layer with a metric on `text` is a column of values, set at the end with `align: "end"`; one with the dimension on `text` is the row's label. With more than one column the columns get headers, from the metrics' labels. A bar is optional: rows with no bar, dot or tick are a plain table. Each column takes the unit of its own metric, so columns of different units, or of several currencies, are fine. A header cannot be authored, and a column that is not a metric is written raw.
+**A table is rows of `text` layers.** Each `text` with a metric on `text` is a column of values, and one with the dimension is the row's label. With more than one column the columns get headers, from the metrics' labels. A bar is optional.
 
 ```json
 "layers": [
@@ -447,55 +426,7 @@ The table says what one channel may hold. What a mark asks of several together i
 ]
 ```
 
-**A grid draws the plot's `text`** (built November 23, the first stage of Decided 44). A grid is a plot whose two axes are both lists, so a mark of the plot's that needs no quantity to stand at is drawn there by the plot's own function, handed the grid's places. A `text` on the grid's x and y says what is on `text` in the middle of each pair, over a `cell` or a `dot`: a heatmap with its values in its cells. A pair with no value says nothing. A surface shows the values in every pair or in none, by whether each fits its cell, which it measures. A `text` alone is refused, since the cells and dots are what a reader steps through, and so is a second one. A `tick`, a `rule`, a `line` and a `bar` are measured along an axis and have no place between two lists.
-
-```json
-{ "query": { "metrics": ["correlation"], "by": ["factor", "other_factor"] },
-  "layers": [
-    { "mark": "cell", "encode": { "y": "factor", "x": "other_factor", "color": "correlation" } },
-    { "mark": "text", "encode": { "y": "factor", "x": "other_factor", "text": "correlation" } }
-  ] }
-```
-
-**The `geo` mark** draws a map, and was the first custom mark. It takes one layer, alone in the view. `x` is the dimension whose values are region keys (a `country` dimension holds ISO 3166-1 alpha-2 codes). `color` is a metric to fill each region by, on the sequential ramp, or the diverging one where its values cross zero, as a `cell` is; `size` is a metric for a symbol on each region. Either or both. The boundary shapes and the projection are handed over in code, not in the spec.
-
-```json
-{ "query": { "metrics": ["visitors"], "by": ["country"] }, "layers": [{ "mark": "geo", "encode": { "x": "country", "color": "visitors" } }] }
-```
-
-**Text over a map** (built November 23, the fifth stage of Decided 44). A custom mark may offer its places: where each value of the dimension on its `x` is, in its own box (`places`, in `packages/core/src/marks.ts`). The plot's `text` is then drawn over it by the plot's own function, a label in the middle of each place: `geo` offers the middle of each region, where its symbol stands. The text takes the mark's `x` and says what is on `text`, a metric or the dimension itself. It is ranked by what it says, so where two would meet a surface keeps the one that says more, and it says nothing of a row the mark has no place for. One text to a view, and no other mark of the plot's: a `dot` there is the map's own symbol, on `size`. A mark that offers no places is still drawn alone, as `link` and `partition` are, which set their own names. The labels go where the map goes, to the list of the same query, and stand down while the map is brought in to one region.
-
-```json
-{ "query": { "metrics": ["visitors"], "by": ["country"] },
-  "layers": [
-    { "mark": "geo",  "encode": { "x": "country", "color": "visitors" } },
-    { "mark": "text", "encode": { "x": "country", "text": "visitors" } }
-  ] }
-```
-
-**A tile map is the same mark with other shapes** (built October 12). A tile grid map draws each region as an equal square roughly where the region is, and a hex tile map as an equal hexagon. Neither is a new mark. The shapes file holds a square or a hexagon for each region, under the region's key, and says `"planar": true`: its coordinates are x and y on a flat sheet, and the mark fits them to its box as they are, with no map projection. The registry holds one mark to a name, and a spec may not say which shapes to draw, since that would be a presentation switch. So a page that wants a map and tiles registers the mark once for each set of shapes, under a name each: `registerGeo(shapes, { name: "geo-tiles", presets: { color: "tile-grid-map" } })`, and a painter for that name, `registerPainter(geoPainterAs("geo-tiles"))`. The name is what a spec writes in `mark`, and the layer takes the same encodings.
-
-```json
-{ "query": { "metrics": ["visitors"], "by": ["country"] }, "layers": [{ "mark": "geo-tiles", "encode": { "x": "country", "color": "visitors" } }] }
-```
-
-Each name is a custom mark to the health check of section 9. Below the room a map needs, a tile map is the same ranked list. A tile carries no label yet: the mark names a region in its readout and the table, and nowhere on the tile.
-
-**The `link` mark** draws a Sankey of one step, and is the second custom mark (built October 12, in `packages/flow`, with no dependency but core). It takes one layer, alone in the view, of a query by two dimensions. `x` is the source dimension, `y` the target and `size` the metric. Two columns of nodes, the sources on the left: a node for each value, in the engine's order, as tall as the engine's total for it, so a result with no `totalsBy` is an error. A ribbon for each row, as wide at each end as the row's share of the node it meets; a row whose value is null or zero has none. A source takes a series colour, so more than six is an error that names `limit`; its ribbons are that colour as a tint, and a target is neutral. A node's name is the key to it, so the names stay as long as the ribbons do: short of the room they need, 320 by 140 px, the view becomes the `heatmap` of the same query, with the sources down the side.
-
-```json
-{ "query": { "metrics": ["visitors"], "by": ["channel", "landing"] }, "layers": [{ "mark": "link", "encode": { "x": "channel", "y": "landing", "size": "visitors" } }] }
-```
-
-The target is on `y` because a custom mark cannot add a channel, and `x2` is kept for a bar, a rule or an area. A view of it says the sentence any query by two dimensions says, who leads each dimension, and not its largest flow: a custom mark has no way to give the prose (`docs/uncommon-coverage-plan.md`, section 7).
-
-**The `partition` mark** draws a treemap: a box divided by area, nested once. It is a custom mark, in `packages/partition`, and takes one layer, alone in the view. `x` is the dimension the box is divided by and `size` the metric each part's area is its share of. A second dimension on `detail` divides each part again. A metric on `color` paints every box a step of the sequential ramp, with the ramp under it; without one each value on `x` has a series colour, its children are in that colour, and more than six is an error that names the fix. Every area is a share of a total the engine gives: the whole box is the metric's total, a parent is its row of `totalsBy`, and a child is its value against its parent's. So with a `limit` the boxes stop short and the rest is left unpainted, as a band stops short of its end. Two dimensions without `totalsBy` is an error. A name shows only where it fits its box, and a child's only where its parent's does. Below the room it needs the view becomes a list of the same query: `bar-list` with one dimension, `pair-list` with two.
-
-```json
-{ "query": { "metrics": ["pageviews"], "by": ["section", "page"] }, "layers": [{ "mark": "partition", "encode": { "x": "section", "detail": "page", "size": "pageviews" } }] }
-```
-
-**A row may be divided by the query's second dimension** (built October 12). A `bar` with `stack` takes that dimension on `color`: the rows are the values of the first dimension, in the order the result first has them, and each row's bar is a series for each value of the second, end to end, in that dimension's own order, which is the engine's. Series colours follow that order, six at most, and a legend stands under the rows. It steps down as a band's does: to one line that names the series with the most, in its colour, and then to nothing, before the rows go. A row's text reads the engine's total for the row (`totalsBy`), and a share under `"normalize"` is of that total: no pair is ever summed. Such a track stands beside its label, as any track read by position does. Any other mark in rows is still painted by the row's own dimension.
+**A row divided by the query's second dimension.** A `bar` with `stack` in rows takes that dimension on `color`. A row's text reads the engine's total for the row. With `stack: "diverge"` and two series it is a population pyramid, and with five a Likert chart.
 
 ```json
 { "query": { "metrics": ["visitors"], "by": ["age", "sex"] },
@@ -505,25 +436,7 @@ The target is on `y` because a custom mark cannot add a channel, and `x2` is kep
   ] }
 ```
 
-With `stack: "diverge"` and two series that is a population pyramid; with five it is a Likert chart, the middle answer half on each side of zero. A row's track has no axis, so nothing there says a count: the readout does, and no count is below zero anywhere but in where it is drawn. A diverging stack of shares needs the engine to send the share as a metric, since `stack` holds one value.
-
-**Several marks to a row** (built October 12). A `dot` or a `tick` in rows with the second dimension on `detail` has one mark for each pair, each at its own value on the row's track, all in the layer's paint and at half strength. That is a strip plot. There is no legend and no limit of six. The readout of a row says how many it holds and which has the most.
-
-**The range behind a row's marks** (built October 12). A `bar` in rows with nothing on `x` is no mark of a value: it is the catalog `domain` of the metric the row's other marks put on the track, drawn as tall as the row and under them, in a part for each of the catalog's `bands`, painted `band.1` to `band.3` from the least. The track's scale then holds the whole domain. A metric with no `domain` has no range drawn, and that is no error, as a metric with no `target` has no tick at one. The `bullet` preset has this layer. The gauge's bands are not drawn yet.
-
-**The plot's marks about a centre** (built November 23, the fourth stage of Decided 44). The circle is the bend: a place round it is what a plot has along x, and how far out from the middle what it has up y. A spec says so as `arc` does, with `angle` and `radius`, and nothing else. With a dimension on `angle` and a metric on `radius`, a `line` runs round from each value's place to the next and closes, an `area` fills in from it to the middle, and a `dot` stands at each place: a radar. Each is drawn by the plot's own function and then bent, so a line's path is drawn about the middle as an arc's is, straight from place to place, and a dot is set in the part's box as a seat is. They are on the circle's one scale out, from nothing at the middle to the most of the layers at the rim: by distance where only lines and dots reach, and by area where a slice does, so over a rose a line meets the slices' ends. The layers reach by one metric, and `series: "previous"` is the period before. The names round the rim are said once, the rows are the places, and where no slice stands a place's share of the circle is what a reader points at and steps to.
-
-```json
-{ "query": { "metrics": ["visitors"], "by": ["weekday"], "compare": "previous" },
-  "layers": [
-    { "mark": "area", "encode": { "angle": "weekday", "radius": "visitors" }, "role": "context" },
-    { "mark": "line", "encode": { "angle": "weekday", "radius": "visitors" }, "series": "previous" },
-    { "mark": "line", "encode": { "angle": "weekday", "radius": "visitors" } },
-    { "mark": "dot",  "encode": { "angle": "weekday", "radius": "visitors" } }
-  ] }
-```
-
-**A line down a list** (built November 23, the second stage of Decided 44). A list draws the plot's `line` and `area`, by the plot's own function, on their side: a row's place down the list is what a plot has along x, and the track's scale what it has up y. A `line` with a metric on `x` runs from each row's value to the next, through the middle of each row, and an `area` fills back to where the track has nothing. It is on the scale the row's other marks are on, so it is in their unit, and a row with no value has no point. With `series: "previous"` it is the period before, dashed, down a list of this period's bars. Such a list is read by where its marks are, so its track stands beside its labels. The line is one mark to the list and not one to a row: its nodes are in a part of their own, `track`, which lies over the tracks of every row, and a surface turns them. It takes no `color` and no `detail`, and a reader steps through the rows as before.
+**More in a row.** A `dot` or a `tick` with the second dimension on `detail` has one mark for each pair, at half strength: a strip plot. A `bar` with nothing on `x` is the catalog `domain` behind the row's marks, divided at its `bands`: a bullet graph. A `line` or an `area` with a metric on `x` runs down the list from row to row:
 
 ```json
 { "query": { "metrics": ["pageviews"], "by": ["page"], "compare": "previous" },
@@ -534,49 +447,97 @@ With `stack: "diverge"` and two series that is a population pyramid; with five i
   ] }
 ```
 
-`rows` is a track per row: a label, a track with a linear scale that bars, dots, rules and ticks draw in, and columns of values. A facet is a view for each value (section 6, "A facet"). The plan and what building it found are in `docs/chart-coverage-plan.md`.
+**A grid with its values.** A `text` on a grid's x and y says what is on `text` in the middle of each pair, over a `cell` or a `dot`. A surface shows the values in every pair or in none, by whether each fits.
+
+```json
+{ "query": { "metrics": ["correlation"], "by": ["factor", "other_factor"] },
+  "layers": [
+    { "mark": "cell", "encode": { "y": "factor", "x": "other_factor", "color": "correlation" } },
+    { "mark": "text", "encode": { "y": "factor", "x": "other_factor", "text": "correlation" } }
+  ] }
+```
+
+**The plot's marks about a centre.** With a dimension on `angle` and a metric on `radius`, a `line` runs round and closes, an `area` fills in to the middle, and a `dot` stands at each place: a radar. `series: "previous"` is the period before.
+
+```json
+{ "query": { "metrics": ["visitors"], "by": ["weekday"], "compare": "previous" },
+  "layers": [
+    { "mark": "area", "encode": { "angle": "weekday", "radius": "visitors" }, "role": "context" },
+    { "mark": "line", "encode": { "angle": "weekday", "radius": "visitors" }, "series": "previous" },
+    { "mark": "line", "encode": { "angle": "weekday", "radius": "visitors" } }
+  ] }
+```
+
+**A map (`geo`).** `x` is the dimension whose values are region keys, `color` a metric to fill each region by, and `size` a metric for a symbol on each. The shapes and the projection are handed over in code. A `text` on the same `x` is a label in the middle of each region. Below the room a map needs it is the ranked list of the same query.
+
+```json
+{ "query": { "metrics": ["visitors"], "by": ["country"] },
+  "layers": [
+    { "mark": "geo",  "encode": { "x": "country", "color": "visitors" } },
+    { "mark": "text", "encode": { "x": "country", "text": "visitors" } }
+  ] }
+```
+
+A tile map is the same mark with other shapes. A spec may not say which shapes to draw, since that would be a presentation switch, so a page registers the mark once for each set, under a name each, and a painter for that name: `registerGeo(shapes, { name: "geo-tiles" })` and `registerPainter(geoPainterAs("geo-tiles"))`.
+
+**A Sankey of one step (`link`).** A query by two dimensions: `x` is the source, `y` the target and `size` the metric. A node is as tall as the engine's total for it, so the result needs `totalsBy`. Short of the room its names need it becomes the `heatmap` of the same query.
+
+```json
+{ "query": { "metrics": ["visitors"], "by": ["channel", "landing"] },
+  "layers": [{ "mark": "link", "encode": { "x": "channel", "y": "landing", "size": "visitors" } }] }
+```
+
+**A treemap (`partition`).** `x` is the dimension the box is divided by and `size` the metric each area is its share of. A second dimension on `detail` divides each part again, and a metric on `color` paints every box off the ramp. Every area is a share of a total the engine gives. Below the room it needs it becomes a list.
+
+```json
+{ "query": { "metrics": ["pageviews"], "by": ["section", "page"] },
+  "layers": [{ "mark": "partition", "encode": { "x": "section", "detail": "page", "size": "pageviews" } }] }
+```
 
 ---
 
 ## 8. Roles, guides and the tldr value
 
-- **Roles** let a container reason about a view without knowing what chart it is. `primary` is the thing itself. `comparison` is the same metric for another period. `reference` is a target or threshold. `context` is supporting ink, such as the area under a line.
-- **Guides** are derived from scales. Axes, grid, tick labels and legends are never authored, and a spec cannot switch them on or off. They start on (both axes and the grid on a cartesian layout, the full legend on a band), and the container's rules decide when they go. One scale has no axis to show: a stack set about the middle (`stack: "center"`) is read by how thick each band is, and a scale that counts away from the middle says nothing true of that, so it has no y ticks, no grid and no gutter for them, and its bands take the height of the plot (decided October 12). Thickness is said by the readout, the legend's order and the table. Which encoding each comes from is said once, in `GUIDES` in `packages/core/src/guides.ts`: the plan reads a view's guides off its layers from that table, whatever its layout, and `explain()` and the check on the fit rules have it from there. An axis: a plot's positions and a grid's. A legend: a dimension on `color`, or in a plot the several metrics its layers measure. A ramp: a metric on `color`. A key to sizes: a metric on `size`, but for a bar's, which is its column's width. A rim: a dimension on `angle`. (Built November 20; until then each layout set its own.)
-- **A guide is a key or a frame.** A key says what an encoding means: the legend, the ramp, the key to sizes, what a glyph is worth, the second y axis, a row's column headers, the names round a rim. The marks it keys cannot be read without it. An axis and a grid frame marks that still read by their shape, which is why a plot may give them up and stand bare beside the number. So no fit rule takes a key while the marks it keys are drawn, unless it puts a shorter form of the same guide in its place or has the marks drawn without the encoding. Eighteen rules did, and that was the audit's finding F2. All are closed (November 23), each by one of three answers: the key stays as long as its marks, a shorter form of it does, or the marks give up the encoding when the key goes. `test/guides.test.ts` holds every rule to it, core's and each custom mark's, and names the window a new rule would open.
-  - **The second y axis** stays as long as the first. It went under 340 px once, and left a line in one unit to be read against the axis of another. Where the axes go and the plot stands bare beside the number, what is drawn on the second axis goes with it: a bare plot is of one unit, which is the number's. A scene's node says which axis it is on (`axis: 2`), and the `axes` rule takes `axis:2` with the axes.
-  - **What a glyph is worth** stays as long as the glyphs. No rule takes the line but one that leaves the number alone. The room a `unit` form needs is its glyphs' and the line's together, and short of it the form becomes its plainer preset: a stack 160 px tall, a run 120, a grid read against a range 220, seats 200.
-  - **A row's column headers** stay as long as two columns do. Short of height a list gives up rows, and never the names of the columns it still shows.
-  - **A Sankey's node names** stay as long as its ribbons: the view becomes its grid at the size the names need (section 7).
+**Roles** let a container reason about a view without knowing what chart it is. `primary` is the thing itself, `comparison` the same metric for another period, `reference` a target or a threshold, and `context` supporting ink, such as the area under a line.
 
-  - **The legend, where nothing stands in for it,** takes the colours with it. In a plot a label at each line's end stands in for the legend, so the rule that swaps the two asks for a line or an area (a rule's `mark`, which is then a condition on the view's marks): bars and dots have no end to label, and keep their legend as long as the axes. It left them under 320 px once. Where the axes go and the plot stands bare beside the number, where a divided row is under 84 px tall and where a circle is under 88, nothing says which colour is which, so there is one colour: every mark a legend keyed is drawn in the first series' paint (the switch `split: plain`), as `detail` draws a split. A scene's node says that its paint is a legend's (`legend: true`), and one that was a tint is a tint of that paint. The pieces keep their gaps, so a row or a circle still says how it divides, and the number beside them is of them all.
-  - **The ramp** is cut to a strip (`ramp: strip`): every step 7 px wide with no gap between them, its two ends still numbered and the neutral step still marked where it diverges, and no swatch for no data. A grid has it under 240 by 150, and a map and a treemap under the room their `guides` rule asks. It is not hidden while a cell is drawn.
-  - **The key to sizes** is cut to its largest step (`size-key: most`): the metric's name, the biggest dot and the most it stands for. A plot has it under 320 by 160, and a grid and a map with their ramp. In the bare plot the dots are one size (`dots: one`), since nothing there says what a size means.
-  - **The names round a rim** are thinned to about four (the fit target `rim.ranked`, under 230 by 120): the scene ranks them, about four spaced evenly round with no rank, and the rule takes the ranked ones. Four names are enough to read the rest by their place.
+**Guides are read off scales, and never authored.** A spec cannot switch one on or off. Which encoding each comes from is one table, `GUIDES` in `packages/core/src/guides.ts`:
 
-  A key cut down in place is still the key. The rule says so with a switch (`ramp: strip`, `size-key: most`) or a target inside the part (`rim.ranked`), `fitTo` reports it, and a surface draws that form.
-- **A `unit`'s key** is a line under the glyphs that says what one is worth, "Each is 500", in the metric's own format. It is the part `unit-key`. There is none where a glyph is worth one, or a hundredth of a whole. It is the key to the glyphs, so it stays as long as they do: the glyphs give way to their plainer preset at the height the two need together (above).
-- **The tldr value** is the primary metric's total from the engine, a delta if the query compares, and a derived note:
-  - time dimension: the range-total caveat, such as "Sum of daily counts"
-  - categorical dimension: "Top: /pricing"
-  - categorical with `stack: "normalize"`: "Search 41%"
-  - instant metric: "right now"
+| Guide | Read off |
+|---|---|
+| An axis, and the grid | A plot's positions, and a grid's |
+| A legend | A dimension on `color`, or the several metrics a plot's layers measure |
+| A ramp | A metric on `color` |
+| A key to sizes | A metric on `size` |
+| The names round a rim | A dimension on `angle` |
 
-Where the tldr value appears is the container's decision, never the spec's:
+**A guide is a key or a frame** (Decided 40 to 42). A key says what an encoding means: the legend, the ramp, the key to sizes, what a glyph is worth, the second y axis, a column's header. The marks it keys cannot be read without it. An axis and a grid frame marks that still read by their shape, which is why a plot may give them up and stand bare beside the number. So no fit rule takes a key while its marks are drawn, unless it puts a shorter form in its place or has the marks drawn without the encoding. `test/guides.test.ts` holds every rule to it.
 
-- It is the whole view when there are no layers, and what remains at collapse.
-- It is added beside the plot when the axes drop.
-- It sits above the marks, when there is room for both, according to the rule `tldrValue.above`. The default is `instant`: only for an instant metric. A context can pass `always`.
-- It sits above a `unit`'s grid that has no dimension, always: the grid says how far along its range the metric is, and not what it is. A departure from the line above, built October 12 and still to confirm.
+| Key | When room is short |
+|---|---|
+| A plot's legend | A label at each line's end, where there is a line. Bars and dots keep theirs as long as the axes |
+| A legend with nothing to stand in for it | One line that names the largest, and then it goes and takes the colours with it: its marks are drawn in one paint (`split: plain`) |
+| The ramp | A thin strip of every step, its two ends still numbered (`ramp: strip`) |
+| The key to sizes | Its largest step (`size-key: most`). In a bare plot the dots are one size |
+| The names round a rim | Thinned to about four |
+| The second y axis | Stays as long as the first. In a bare plot what is drawn on it goes too |
+| What a glyph is worth | Stays as long as the glyphs, which give way to their plainer preset |
+| A row's column headers | Stay as long as two columns do |
 
-Delta states: up or down with a percentage, "No change" (under 0.5%), "New" (prior was zero), "No prior period" (prior is null). Colour follows the metric's polarity.
+**The tldr value** is the primary metric's total from the engine, a delta where the query compares, and a note: the range total's caveat ("Sum of daily counts") over a time dimension, the leader ("Top: /pricing") over a categorical one, its share where the view is of shares ("Search 41%"), and "right now" for an instant metric.
+
+Where it appears is the container's decision:
+
+- It is the whole view where there are no layers, and what remains when the marks go.
+- It stands beside the plot when the axes go.
+- It sits above the marks by the rule `tldrValue.above`: by default only for an instant metric, and a context can pass `always`.
+
+A delta is up or down with a percentage, "No change" (under 0.5%), "New" (the period before was zero), or "No prior period" (it is null). Its colour follows the metric's polarity.
 
 ---
 
 ## 9. Presets
 
-**Status: Proven.**
-
-A preset is a saved fragment of a spec with slots filled from the query: `$metric` and `$by`, `$split` for a second dimension, and `$metric2` for a second metric. A slot may carry a suffix, `$metric@p50`, for a companion the engine returns. It expands before the grammar runs, and nothing downstream knows its name.
+A preset is a saved fragment of a spec with slots filled from the query: `$metric` and `$by`, `$split` for a second dimension, `$metric2` for a second metric, and a suffix for a companion (`$metric@p50`). It expands before the grammar runs, and nothing downstream knows its name.
 
 ```json
 {
@@ -589,14 +550,11 @@ A preset is a saved fragment of a spec with slots filled from the query: `$metri
     { "mark": "bar",  "encode": { "y": "$by", "x": "$metric" } },
     { "mark": "text", "encode": { "y": "$by", "text": "$by" } },
     { "mark": "text", "encode": { "y": "$by", "text": "$metric" }, "align": "end" }
-  ] },
-  "share-bar": { "layers": [
-    { "mark": "bar", "encode": { "x": "$metric", "color": "$by" }, "stack": "normalize" }
   ] }
 }
 ```
 
-The library ships these (`packages/core/src/presets.ts`). The three above are written out; the rest expand the same way.
+**The library ships the common charts and no more** (Decided 54), each named after the `@automattic/charts` component it replaces where one exists. A form that is less common is written as its layers: the bench has a sample of each, a box plot and a waterfall, a bump chart and a waffle.
 
 | Preset | The query needs | Draws |
 |---|---|---|
@@ -611,193 +569,116 @@ The library ships these (`packages/core/src/presets.ts`). The three above are wr
 | `donut` | The same | A ring divided by share, with the total in the middle |
 | `pie-semi-circle` | The same | Half a ring |
 | `gauge` | No dimension, and a metric with a catalog `domain` | The metric against its range, with its `target` marked and its `bands` behind |
-| `rose` | One dimension, in the engine's order: an hour, a weekday, a month | An equal slice for each value, reaching out to its value by area. A working name |
-| `radial-bar` | One categorical dimension of six values or fewer (`limit`) | A ring for each value, in a colour of its own, swept to its value against the largest, or the metric's `domain`. A working name |
-| `sunburst` | Two dimensions: the segments, then what divides each. Needs `totalsBy` | A circle divided by share, and round it a ring that divides each segment again. A working name |
 | `heatmap` | Two dimensions: down the side, then across | A grid of cells coloured by the metric |
 | `funnel` | Two metrics, a count then a rate, by a dimension in the engine's order | Rows with a bar, the count and the rate |
-| `box-plot` | Companions `@min`, `@p25`, `@p50`, `@p75`, `@max` | A box and whiskers for each value |
-| `error-bars` | Companions `@lower`, `@upper` | A bar and the interval it is known to |
-| `waterfall` | Companions `@before`, `@running` | Floating bars, each from the running total before it |
-| `candlestick` | Companions `@open`, `@close`, `@min`, `@max` | A body and a wick for each value |
-| `fan` | Companions `@lower`, `@upper` | A line inside the band it is known to |
-| `dumbbell` | One categorical dimension, and `compare` | Rows with a dot for now and one for before, joined. Without `compare`, a dot each |
-| `bullet` | One categorical dimension, and a metric with a catalog `target` | Rows with a bar and a tick at the target, over the metric's catalog `domain` divided at its `bands` |
-| `waffle` | One categorical dimension | A grid of a hundred cells divided by share, with a legend. Under 280 px it is the `share-bar` |
-| `unit-chart` | One dimension. On a binned number dimension it is the Wilkinson dot plot | Glyphs stacked up from the axis, one for so many. Under 280 px it is the `bar` |
-| `isotype` | One categorical dimension | Rows with a run of glyphs, the label and the value. Under 280 px it is the `bar-list` |
-| `parliament` | One categorical dimension of six values or fewer (`limit`) | Seats round a half circle, a colour for each value. Under 280 px it is the `pie-semi-circle` |
-| `icon-array` | No dimension, and a metric with a catalog `domain` | A grid of a hundred, filled to the metric's place in its range, under the number. Under 280 px it is the `gauge` |
-| `bump` | Two dimensions: the axis, then the split. The companion `@rank`, with a catalog entry that gives it the unit `rank` | A line for each value of the split by its place, first at the top |
-| `spaghetti` | Two dimensions: the axis, then the split | A line for each value of the split, all in one paint, with no legend |
-| `difference` | One dimension, time or ordered, and `compare` | The metric and the period before as two lines, and the area between them painted as a gain where the metric is ahead and a loss where it is behind. Without `compare`, the line alone |
-| `connected-scatter` | Two metrics, x then y, by one dimension in the engine's order | A point for each value at the two metrics, joined in that order: by a time dimension, the path the two took together |
-| `ecdf` | One `number` dimension, and the companion `@cumulative`, with a catalog entry that gives it the unit `ratio` | The share of the whole held up to each value, as a line that steps over the bins |
-| `lollipop` | One categorical dimension | Rows with a stem from zero to a dot, the label and the value |
-| `pyramid` | Two dimensions: the rows, then the split | Rows with a bar divided about zero: the first half of the split's values to one side and the second half to the other. Two values are a population pyramid, five a Likert chart |
-| `strip` | Two dimensions: the rows, then the split | Rows with a dot for each value of the split, all in one paint |
-| `marimekko` | Two dimensions: the axis, then the split | Columns as wide as their share of the total, each divided by share |
-| `ohlc` | Companions `@open`, `@close`, `@min`, `@max` | A stroke from the least to the most for each value, with a tick for the opening to its start and one for the close to its end |
 
-A companion is something the engine returns with a metric. A query cannot yet ask for one by name (section 5), so a preset that needs companions works only against a result that has them.
-
-**A custom mark's package registers its own presets.** Core cannot name a custom mark, so the library cannot hold a preset that draws one. The package that registers the mark registers its presets beside it, with `registerPreset(name, { layers })` (`packages/core/src/presets.ts`), written in the same slots. `expand` looks in the library first and then in the registry, so a spec uses a registered name as it uses any other, and a fit rule's `fallback` may name one. `registerGeo` registers two (built October 12):
+**A custom mark's package registers its own,** with `registerPreset(name, { layers })`, since core cannot name a custom mark. A spec uses a registered name as it uses any other, and a fit rule's `fallback` may name one.
 
 | Preset | The query needs | Draws |
 |---|---|---|
 | `choropleth` | One dimension whose values are region keys | A map, each region filled by the metric on the sequential ramp |
-| `symbol-map` | The same | A map with a symbol on each region, sized by the metric |
+| `sankey` | Two dimensions, the source and then the target, and `totalsBy` in the result | A Sankey of one step: a node for each value, and a ribbon for each pair |
 | `treemap` | Two categorical dimensions, a parent and its children, and `totalsBy` in the result | A box divided by area among the first dimension's values, and each part divided again among the second's (`packages/partition`) |
 | `pair-list` | Two categorical dimensions | Rows, one for each pair, named by both. What a treemap of two dimensions becomes below the room it needs |
 
-A page that registers the mark again for a set of tiles (section 7) names the presets that draw it. The fixtures register two, for the marks `geo-tiles` and `geo-hexes` (built October 12):
-
-| Preset | The query needs | Draws |
-|---|---|---|
-| `tile-grid-map` | One dimension whose values are region keys | A tile grid map: an equal square for each region, filled by the metric on the sequential ramp |
-| `hex-tile-map` | The same | A hex tile map: an equal hexagon for each region, filled the same way |
-
-`registerLink`, in `packages/flow`, registers one (built October 12):
-
-| Preset | The query needs | Draws |
-|---|---|---|
-| `sankey` | Two dimensions, the source and then the target, and `totalsBy` in the result | A Sankey of one step: a node for each value, and a ribbon for each pair |
-
-`waffle`, `unit-chart`, `isotype`, `parliament` and `icon-array` are working names as well, and `bar` follows `BarChart`. `gauge` and `icon-array` are the two presets that take no dimension. The schema does not say which presets take one (it cannot know a library's or the registry's): `resolve()` does, by name.
-
-All seven are working names, to check against `@automattic/charts`. A name must be letters, digits, `_` and `-`, and cannot be one the library has. A name already registered is replaced. `customPresets()` lists what is registered. The registry is a map and two functions, as the one for marks is, and a name in it is unknown until its package has been loaded: the error for an unknown preset lists the library and the registry, and names `registerPreset`.
-
-- The library ships the basics. Users and agents add their own presets to it.
-- A preset is named after the `@automattic/charts` component it replaces, where one exists: `line` for `LineChart`, `bar-list` for `BarListChart`. The prototype calls `line` by its earlier name, `trend`.
-- A `previous` layer is left out on expansion when the query has no `compare`.
-- **Proposed:** a preset may pin a hand-tuned form for a size where the derived result is not good enough. The format for this is Open.
-- **The health check for the whole approach:** count how many presets need pins or custom marks. If most do, this has become a chart-type library with extra steps.
+- A code base that wants a name for a form registers it, or hands `resolve()` a library of its own.
+- A `previous` layer is left out on expansion where the query has no `compare`.
+- A preset that needs companions works only against a result that has them, since a query cannot yet ask for one.
+- An unknown preset is an error that lists the library and the registry.
+- **The health check for the approach:** if presets come to need hand-tuned forms for a size, this has become a chart-type library with extra steps (Open 3).
 
 ---
 
 ## 10. Fitting the container
 
-This is the heart of the system and the part most in flux.
+**Who decides what.** The spec is the seed: an author writes it and decides where it renders. A container fits the view by a rule set. The defaults ship with the design system and have to be good at any size. A context that wants its containers to behave otherwise hands them its own set once, as it hands them tokens (`rules`, whose `fit` list is the room each part needs).
 
-**Who decides what (decided October 7).** The spec is the seed. An author writes it and decides where it renders; nobody writes a spec for a container. A container fits the view by a rule set. The defaults ship with the design system and have to be good at any size. A context that wants its containers to behave differently passes them its own rule set once, the way it passes them tokens. In the code today that rule set is `CONTAINER_RULES`, carried on each container as `rules`; the room each part needs is its `fit` list.
+**Intrinsic by default.** A container does not know or care where it is. It fills the room it is handed and renders itself for that room.
 
-**Intrinsic by default (decided October 7).** A surface lays its containers out by a scheme of its own: a sidebar stacks them, a toolbar sets them small in a row. As containers are added they divide the room by that scheme. A container does not know or care where it is. It fills the room it is handed and renders itself for that room. Nothing in a view or a spec names a surface, a size or a mode.
+- With nothing said, a container fills the width and takes its natural height.
+- A layout that hands out a box, a toolbar row or a dashboard tile, opts its children into filling the height too. That is the layout's CSS, and never the view's.
 
-- With nothing said, a container fills the width and takes its natural height, so it cannot collapse whatever it is dropped into.
-- A layout that hands out a box (a toolbar row, a dashboard tile) opts its children into filling the height too. That is set in the layout's own CSS, never on the view.
-- Both behaviours exist because of constraint 4 in section 10.3.
+### 10.1 What a view gives up, and in what order
 
-The layouts and their CSS are in `docs/dom-painter-plan.md`, section 4.2.
+Each part has a rule that says the room it needs, and gives way on its own when its container is short of it. For a plot the effect is a ladder:
 
-### 10.1 What the prototype does (Proven)
+1. Labels on points go, and a legend becomes a label at each line's end.
+2. The axes and the grid go. The number stands beside the bare plot in their place.
+3. The layers that are not `primary` go, by the plot's own box.
+4. The marks go. The number stays.
+5. The number takes its shorter forms, and then the tldr prose is all that is left.
 
-The port ran this reducer too, until November 23 (Decided 43). Core no longer does: a plan takes no size, and how a view gives way is the rules of 10.2, read at a room by `fitTo`. This section stays as the record of what the prototype does and of where the ladder came from.
-
-A central reducer. The plan starts with everything the spec asks for, checks whether it fits, and if not applies the container's reductions in a fixed order until it does:
-
-1. **Drop guides.** Axes and grid go; the tldr value is added beside a bare plot to make up for them. A full legend becomes the largest segment's label.
-2. **Drop secondary layers.** Everything whose role is not `primary`.
-3. **Trim rows.** Only when the container has a height limit.
-4. **Collapse.** All marks go; the tldr value stays.
-5. **Tldr prose.** Only the text remains.
-
-The port departs from the prototype in one place (decided October 7): a tldr value that stands alone and is too tall for the container gives up its note before step 5.
-
-"Fits" means the container is at least the layout's minimum width, the scene is no taller than the container's height limit, and any secondary layers have a plot at least 180 by 90 px.
-
-Starting values, owned by the container's rules and not the spec:
+Some of the room the default rules ask, in px at the default type:
 
 | Part | Needs |
 |---|---|
-| Plot with axes | 280 px wide, 120 px tall (natural height 184) |
-| Secondary layers legible | Plot 180 by 90 px |
-| Bare plot beside the tldr value | 64 px wide, 46 px tall |
-| Row in a bar list | 28 px plus a 4 px gap; 90 px for the label plus room for the value |
-| Share bar | 110 px, or 170 px with a full legend |
+| A plot with its axes | 280 wide, 120 tall |
+| Comparison and reference layers | A plot 180 by 90 |
+| A bare plot beside the number | 152 wide, 46 tall |
+| A list's row | 28, with 90 for its label |
+| A share bar | 110 wide, and 170 for its whole legend |
+| A circle | 72 by 64 |
 
-A spec's `keep` stops a step from being applied. It is provisional (decided October 7): showing and hiding parts is the main discretionary lever over how a view scales, so it stays while the defaults are tested. Count the specs that need it. Each use points at a default rule to fix, and the field goes when the count reaches zero.
+Every need is one of forty picked numbers or a sum of them, said once in `LEAST` in `packages/core/src/fit.ts` (Decided 58).
 
-**What this got right.** Derived fallback reproduced a hand-designed ladder without being told: a trend steps from chart, to tldr value beside sparkline, to tldr value, to tldr prose. Bars with a target became a bar sparkline nobody designed. The comparison drops because of a legibility rule, not because a chart type said so.
+**Known to be weak:** a bar list keeps every row and then jumps to the number, with no step between (Open 6). The thresholds are still picked by eye.
 
-**Where it was weaker than hand tuning.**
+### 10.2 How a view is fitted
 
-- The bar list keeps every row down to about 140 px wide and then jumps straight to the tldr value. A hand-tuned version had a top-three step in between.
-- A collapsed bar list shows the metric total with "Top: /" as a note. For a view called "Top pages" that is arguably the wrong number.
-- The thresholds are still picked by hand. They moved from per chart type to per part.
-- "Add the tldr value when the axes drop" is a hard-coded rule for one layout.
-- Everything switches at once. That is the model the next section replaces for browser containers.
+**In a browser, by CSS, part by part.** The element plans once for each change of data and paints the scene in ratios. Positions are custom properties that CSS turns into pixels, lines and areas are a stretched SVG, and each fit rule is a container query. Nothing runs on resize.
 
-### 10.2 The direction: degrade per element (Proposed)
+**A measured pass, for what CSS cannot see:** ticks and labels thinned where they would meet, and any threshold that depends on the content.
 
-For browser containers, each element should break only when it needs to, using intrinsic layout and container queries. Three tiers:
+**Anywhere else, by the reader.** `fitTo(scene, room, rules)` reads the same rules at a room and says the parts that show, what else is hidden and the switches set. `viewAt(spec, result, catalog, room)` gives the plan and the scene with it, and follows a rule's `fallback` to the view the spec gives way to. An agent, a canvas painter and a native shell read a view's fit this way. It measures nothing.
 
-**Tier 1: CSS, per element.** Handles hiding, restyling and reflow with no script on resize.
+**One source of truth.** The rules are data (`FIT_RULES`): one for each part, naming a container (the view or its plot), the room the part needs, and what is hidden, shown or switched otherwise. A rule may be for a view that holds one mark (`mark`) or for one kind of view (`has`), and may name a `fallback`: a preset the view becomes. A rule names every part it takes, since a reader with no browser has no nesting to go by. `test/fit.test.ts` holds every sample at every room to what the rules promise: a view always shows something, it is its number alone wherever a rule takes its marks, and no key goes while its marks stay. The bench's `check` holds each captured frame to the same reading.
 
-- **Positions are ratios.** A scale outputs 0 to 1, written as a custom property on the element. CSS turns it into pixels: a bar's size is `calc(var(--v) * 100%)`, a tick sits at `calc(var(--t) * 100%)`, share segments use `flex-grow: var(--v)`.
-- **Lines and areas stretch.** An SVG with a fixed viewBox, `preserveAspectRatio="none"` and `vector-effect: non-scaling-stroke` resizes fluidly. Text is never inside the stretched SVG.
-- **Each element owns its thresholds.** The axis, grid, legend, tick labels and each role carry their own container query. These rules belong to the design system's mark and chrome components, so the view spec stays free of sizes.
-- **Dependent changes share a condition.** The tldr value that appears when the axes go uses the same query as the axes.
+**A need follows the type (Decided 64).** A need is written in px at the default type: the label face where no theme sets it, 13.33 px (`EM`). A need of the view grows and shrinks with that face, whole (`needAt`).
 
-A sketch, untested. The worked rules are in `docs/dom-painter-plan.md`, section 2, where the axes rule queries the view and not the plot, because hiding an axis changes the plot's size:
+- The element sets itself in its label face and asks a need of the view in `em`, which a container query reads off its container. No script is in it.
+- A surface with no browser says the size with the room: `em` on the rooms `fitTo`, `viewAt`, `explain` and the agent's `check` take.
+- A need of the plot is of the plot's own box, where what is drawn is sized by the box, and stays in px.
 
-```css
-.uav-plot { container: uav-plot / size; }           /* needs a definite height; use inline-size otherwise */
-@container uav-plot (inline-size < 280px) or (block-size < 120px) {
-  .uav-axis, .uav-grid { display: none; }
-}
-@container uav-plot (inline-size < 180px) or (block-size < 90px) {
-  [data-role="comparison"], [data-role="reference"], [data-role="context"] { display: none; }
-}
-```
+What it does not do: a need scales whole, so a part with no type in it gives way a little early under larger type. One size stands for the view's type, so a theme that changes its ticks alone moves no need. And the em is the element's own: a label token that is fluid in `cqi` is read there against what the element stands in, and inside the view against the view, which with the bench's theme differ by 7% at most.
 
-**Tier 2: a measured pass in script.** For what CSS cannot see.
-
-- Tick thinning when labels would collide. Simple to build.
-- Label placement on points and lines. Source or build properly; an occupancy-bitmap approach is the usual technique.
-- Any threshold that depends on the data, such as how many ticks there are or how long the labels run.
-- The plot set on whole device px (`packages/dom/src/pixels.ts`), so that a pixel face and a hairline are sharp: CSS cannot know where on the page a view stands. The element reads it after each paint, when its room changes, and when anything it stands in changes size, which is how a view learns that what is above it has moved it. Until November 24 it read only the first two, so a view moved by a caption or a view above it kept a move made for where it had been, and stood a fraction of a px off. A plot half way between two device px goes to the one before it, nearer the top and the start, always: read back after a move it is a hair to either side, and plain rounding sent it up on one load and down on the next. Those two were why a capture differed from the last by 1 px on a few frames with nothing changed.
-
-**Tier 3: the reader, for surfaces with no CSS.** `fitTo(scene, room, rules)` in core reads the rules at a room and says the parts that show, what else is hidden and the switches set. `viewAt(spec, result, catalog, room)` gives the plan and scene with it, and follows a rule's `fallback` to the view the spec gives way to. An agent, a canvas or dot-grid painter and a native shell read a view's fit this way. It measures nothing.
-
-Changing the data is a resolver's work and is not built: Top-N plus "other", coarser grain (daily to weekly), and downsampling to pixel resolution need new data, not new styles.
-
-**One source of truth.** The per-element rules are data (`FIT_RULES` in `packages/core/src/fit.ts`): one declaration per part, naming a container, the room the part needs in width and height, and what is hidden, shown or switched otherwise. A rule may be for a view that holds one mark (`mark`) or for one kind of view (`has`: a plot of points, a row whose track stands beside its label). They compile to container queries for a browser, and `fitTo` reads the same rules in code. This rule set is what a context passes to its containers. Three things hold the two readings together:
-
-- `test/fit.test.ts` holds the reader to the rules, and every sample at every room of the sweep to what the rules promise: a view always shows something, it is its number alone wherever a rule takes its marks, and no key goes while its marks stay.
-- A rule names every part it takes, one that stands inside another among them, because a reader with no browser has no nesting to go by. A layout's painter may add CSS under a rule for how what is left is arranged, and never for which parts show.
-- The bench's `check` reads each captured frame's room through `fitTo` and reports a frame where the element shows otherwise.
-
-**What the rules do not say yet (Open 19).** The element settles these in its stylesheet or its measured pass. A surface with no browser has to see to them itself until each is a rule:
+**What the rules do not say yet (Open 19).** The element settles these in its stylesheet or its measured pass, and a surface with no browser has to see to them itself:
 
 - whole rows trimmed to a height, and a ranked column given up by the width of its values;
-- the number's shorter forms (under 160, 200 and 120 px, in `sizes.ts`), its note, and the prose rung where the number itself does not fit;
+- the number's shorter forms, its note, and the prose rung where the number itself does not fit;
 - a number wider than the hole of its donut;
-- labels thinned where they would meet: ticks, line ends, points, the names round a rim, a Sankey's columns, a treemap's names, and the values in a grid's cells, which show in every cell or in none;
+- labels thinned where they would meet;
 - a legend that wraps out of its room, and anything else that depends on how tall the content is.
 
-The rules on the plot (`secondary` and `hole`) ask for the plot's own box, which only a surface that has laid the view out knows. `fitTo` passes over them where the room gives no plot, and `explain()` says they were not asked.
+The two rules on the plot (`secondary` and `hole`) ask for the plot's own box, which only a surface that has laid the view out knows. `fitTo` passes over them where the room gives no plot.
 
-### 10.3 Constraints to design around
+**Not built:** what changes the data. The first N and "other", a coarser grain and downsampling need a new query, not new styles.
 
-1. CSS can hide and restyle. It cannot re-query.
+### 10.3 Constraints
+
+1. CSS can hide and restyle. It cannot ask a new query.
 2. CSS cannot see collisions, and cannot express a threshold that depends on the data.
-3. CSS only exists in the DOM.
-4. Height queries need a container with a definite height. A container sized by its content can only be queried on width.
-5. Container queries of this kind have been widely supported since early 2023. Style queries are still partial; do not depend on them.
+3. CSS exists only in the DOM.
+4. A height query needs a container with a definite height. One sized by its content can be asked only its width.
+5. Style queries are still partial. Do not depend on them.
 
-### 10.4 Why a view looks as it does (Proven)
+### 10.4 Why a view looks as it does
 
-A spec that does not come out as its author expected is fixed in the spec, so the view says what it decided in the spec's own words. `explain(spec, result, catalog, room)` in core returns the layout and why the layers asked for it, every part the plan has and the place in the spec it comes from (`layers[0].encode.color`, `query.metrics[0]`, or `use "donut": layers[0]` for a preset's), and at a room each fit rule that holds: what it hides or shows, what it needs and what the room has, its id, and the lever where the spec has one (`keep`, a field, `compare`). A key a rule cuts down is said in its shorter form ("shown as a thin strip", "shown as its largest step", "thinned to about four"), and one it takes says what went with it ("hidden, and the marks it keyed drawn in one colour"). A rule on the plot is said to be "not asked" where the room gives no plot to measure. A filtered answer is said straight after the layout ("filtered to channel Search"), from `query.where`, with the lever that draws the whole. A plan knows no selection, so what a view marks of one is a surface's to add, with `selectedBecause`: "marked as selected: channel Search", from `selected`, and why the view is not filtered by it. `UaView.explain()` adds it. An entry with no lever is a default, and the rules are where it is fixed. `UaView.explain()` asks it at the element's own size and adds what the measured pass decided there: labels given up or cut short, the number's shorter forms, the prose rung.
+A spec that does not come out as its author expected is fixed in the spec, so a view says what it decided in the spec's own words. `explain(spec, result, catalog, room)` returns:
 
-The fit rules are the contract it reads, so a part the element hides that no rule names is a gap in the rules. Building it found two: the `axes` rule now names `y-axis-2`, and the grid's `marks` rule its axes and keys.
+- the layout, and why the layers asked for it;
+- every part the plan has, and the place in the spec it comes from: `layers[0].encode.color`, `query.metrics[0]`, or `use "donut": layers[0]` for a preset's;
+- at a room, each fit rule that holds: what it hides or shows, what it needs and what the room has, and the lever that would change it. For a fit rule the lever is the room, which is the surface's to give;
+- a filter, straight after the layout.
+
+`UaView.explain()` asks it at the element's own size and adds what the measured pass decided there. The agent's `check()` is the same reading with no browser, at the rooms it is handed.
 
 ---
 
 ## 11. The scene
 
-**Status: the ratio form is Proven. `buildScene` returns it, `<ua-view>` in `packages/dom` paints from it, and the golden scenes hold it; its fields are in `packages/core/src/types.ts`. What follows describes the placed scene, which is the prototype's. Core made one with `place()` until November 23 (Decided 43) and no longer does: this stays as the record of what a placed node holds, for the surface that next needs one.**
+A scene is what is drawn, as data: `{ layout, parts, nodes }`. Nodes are flat and drawn in order. It has no size: every node says where it is in ratios of the box it is in, its part's, or in a list its row's track. Its schema is `packages/core/schema/scene.schema.json` (`scene/0`, a draft), and every scene a sample builds is held to it.
 
-**The ratio scene's fields (Decided 51, November 24).** A node says where it is in the box it is in, its part's or in a list its row's track, in the same fields whatever its kind and whatever the layout:
+**A node says where it is in one vocabulary** (Decided 51), whatever its kind and whatever the layout:
 
 | Field | What it says |
 |---|---|
@@ -805,323 +686,262 @@ The fit rules are the contract it reads, so a part the element hides that no rul
 | `x2`, `y2` | Its other end, where it has one that is not the start of the axis |
 | `w`, `h` | An extent: from `x` and `y` for a rect, about them for a glyph's room |
 
-So a bar in a plot is `x` and `w` across, and up to `y` from `y2`. A row's bar reaches `x` from `x2` along its track, as a rule on the same track runs from `x` to `x2`. A band's segment is its share, `w`. A line is from (`x`, `y`) to (`x2`, `y2`), a dot and a label are at (`x`, `y`), and a path's point is (`x`, `y`), with `y2` where the fill under it starts above the bottom. An arc keeps its own fields, `a0`, `a1`, `r0` and `r1`. A custom mark's `places` gives `x` and `y` too.
-
-`x` runs across from the start and `y` up from the bottom, for every node. So a rect with an extent stands on `y` and is `h` tall: a grid's cell, a cell of a `unit`'s grid, a treemap's box, which is in its parent's, and a Sankey's node. The bottom left cell of a grid is at `y` 0. Until the second stage of this work those four counted down from the top.
-
-The number, a legend and a list's rows carry no position: a surface sets them in order. So this is what a generic placer needs (Open 20) and not that placer.
-
-Until this the height up a plot was `v` on a bar and on a path's point and `t` on a line, a dot and a label, and a row's bar ran from `v0` to `v` beside a rule from `x` to `x2`. The plans that record earlier steps (`docs/chart-coverage-plan.md`, `docs/uncommon-coverage-plan.md`) use those names, as they were then.
-
-A placed scene is `{ width, height, nodes, plot? }`. Nodes are flat and drawn in order.
-
-| Kind | Fields |
-|---|---|
-| `rect` | `x, y, w, h, rx` |
-| `path` | `d`, `fill` (boolean), `width`, `dash` |
-| `line` | `x1, y1, x2, y2, width, dash` |
-| `circle` | `cx, cy, r, pulse` |
-| `text` | `x, y, text, anchor, baseline, font` (`tick`, `label`, `value`, `display`), and for `display`: `h, cell`; optional `halo` |
+`x` runs across from the start and `y` up from the bottom, for every node. So a bar in a plot is `x` and `w` across, and up to `y` from `y2`. A line is from (`x`, `y`) to (`x2`, `y2`), and a dot and a label are at (`x`, `y`). An arc keeps its own fields: `a0`, `a1`, `r0` and `r1`. The number, a legend and a list's rows carry no position: a surface sets them in order.
 
 Every node also has:
 
-- `key`: stable across renders, for example `primary:line`, `primary:bar:2026-09-08`, `seg:Search`. A layer's key is its role and mark, with `#2` for a second layer of the same role and mark; it does not count layers, so it holds when one drops. The prototype's keys do count them (`L2:line`), and the parity test maps them. Keys are what make transitions and keyboard navigation possible. Duplicate keys are a bug; the prototype test checks for them. A result that says a dimension value twice still gets a key for each row: the repeat is `Google#2` (`rowKeys`), and the axis, legend and readout say its value as it is. Which of the two is the second is the result's order, so a host that has ids hands those over, not labels.
-- `paint`: a token, never a colour.
-- `layer`: `data` or `guide`.
-- Optional `opacity`, `tx`, `ty`, `note`.
+- **`key`:** stable across renders and unique, such as `primary:line` or `primary:bar:2026-09-08`. Transitions and keyboard navigation hang on keys. A result that says a dimension's value twice still gets a key for each row (`Google#2`).
+- **`paint`:** a token, never a colour. The tokens are `ink`, `ink.muted`, `background`, `grid`, `axis`, `rule`, `compare`, `live`, `delta.good`, `delta.bad`, `series.1` to `series.6`, `band.1` to `band.3`, and the steps of the two ramps: `seq.1` to `seq.10`, `seq.none`, and `div.1` to `div.9`.
+- **`part`:** the part it is drawn in, which is what a fit rule hides or shows.
 
-```json
-{ "key": "primary:line:partial", "kind": "path", "d": "M326.9,83.5L338,117.7", "paint": "series.1",
-  "width": 2, "dash": "2 4", "opacity": 0.75, "layer": "data", "note": "incomplete bucket" }
-```
+A scene is the same on every machine, to the digit. Its y scale always rounds to four ticks, and a rule thins them on a short plot (Decided 21).
 
-Paint tokens in use: `ink`, `ink.muted`, `grid`, `axis`, `series.1` to `series.6`, `compare`, `rule`, `delta.good`, `delta.bad`, `live`.
-
-**Decided October 7: one scene, in ratios.** A pixel scene needs a size before it can exist, which is the opposite of intrinsic. Every node gets a `part` and coordinates from 0 to 1 within that part's box. The DOM painter lets CSS turn them into pixels. The dot-grid and canvas painters get today's pixel scene from a pure function, `place(scene, size)`, which is held to the existing golden scenes. Keys, paint tokens, roles and `layer` are identical in both. Detail is in `docs/dom-painter-plan.md`, section 3.
-
-**Amended November 23 (Decided 43).** No painter read the pixel scene: the element paints the ratios, and the dot-grid and canvas painters are not started. `place()` was a second layout engine written by hand for each layout, and each new form had to be written in it as well as in the scene and the stylesheet. It is parked. A surface with no CSS gets the scene and what the fit rules make of it at a room (`fitTo`), and places the parts itself. One generic placer is the thing to write when a pixel painter is wanted, once every node is a ratio of its part's box (Open 20).
-
-One consequence, also agreed: a scene with no size cannot choose its tick count by height, so the y scale always rounds to 4 ticks and a rule thins them on short plots. This departs from the prototype, which rounds to 2 under 120 px, and the parity test changes with it on purpose.
+**Core places nothing** (Decided 43). A surface with no CSS gets the scene and what the fit rules make of it at a room, and places the parts itself. One generic placer is Open 20.
 
 ---
 
 ## 12. Painters
 
-**Status: the HTML and CSS painter is Proven (`packages/dom`). SVG and dot grid are Proven in the prototype only: core places nothing since November 23 (Decided 43).**
+**Status: the HTML and CSS painter is Proven (`packages/dom`, the `<ua-view>` element). No other is built.**
 
-- **Two layers per view.** Data marks go to whichever renderer fits. Axes, labels, tooltips, brush and focus rings always stay in the DOM, so text stays crisp, tokens apply through CSS and keyboard access survives.
-- **Tokens, not colours.** A painter maps paint tokens to CSS custom properties, using the `@automattic/charts` token names under our own prefix (`series.1` becomes `--ua-charts-color-series-1`, for its `--a8c-charts-color-series-1`). Which custom property each paint token reads is `PAINT` in `packages/dom/src/dom.ts`, and `docs/dom-painter-plan.md` section 4.1 says where the rest of the map is. Light and dark are token sets.
-- **Intrinsic sizing.** The DOM painter plans once per data change and CSS fits the view on resize. Bars are HTML positioned by custom properties; lines and areas are a stretched SVG (decided October 7). The view carries no size or mode; see section 10.
-- **Direction.** A plot's frame runs left to right whichever way the page reads: the plot, the axes on every side of it, the labels at the line ends, a grid of cells and its row labels, and a map. A circle of arcs runs clockwise and a number from its first character. What mirrors with the page is the legend, the key to sizes and the ramp, the number's block and the prose, a band and a list of rows; a label's words run their own way wherever they stand. Left and Right move the way they point.
-- **Isolation.** On a customer's site the view must not inherit or leak styles. Use a custom element with shadow DOM.
-- **Renderer choice by mark count.** HTML and SVG for up to a few thousand marks, canvas beyond, WebGPU later. Aggregating to pixel resolution first keeps most analytics views in the first tier.
+- **Tokens, not colours.** A painter maps paint tokens to CSS custom properties, in the token structure of `@automattic/charts` under our own prefix: `series.1` is `--ua-charts-color-series-1`. `packages/dom/src/tokens.ts` lists the public tokens with the value each falls back to, so a page that loads none still gets a legible view. Light and dark are token sets.
+- **Intrinsic sizing.** The element plans once for each change of data, and CSS fits the view on resize. Bars are HTML placed by custom properties, and lines and areas are a stretched SVG.
+- **Text stays in the DOM,** so it stays crisp, takes tokens and is reachable by keyboard.
+- **Isolation.** A view must not inherit or leak styles on a page it does not own: it is a custom element with shadow DOM.
+- **Direction.** A plot's frame runs left to right whichever way the page reads, and a circle runs clockwise. What mirrors with the page is the legend, the keys, the number's block, the prose, a band and a list of rows.
+- **A custom mark's painter** joins through `registerPainter`.
 
-### The dot-grid painter
-
-It exists to prove the scene seam and to carry the product's visual direction. It redraws the same scene on a fixed grid; a shape only decides which cells are lit.
-
-- Cells are 4 px or 8 px, fixed in space. Movement is shown only by which cells light up.
-- Light mode reads as an LCD: one ink, with series told apart by dither pattern (solid, checker, horizontal stripe, sparse, diagonal, vertical stripe). Low opacity becomes a sparse pattern; a dashed line becomes a checker.
-- Dark mode reads as a VFD on black: series told apart by wide-gamut (Display P3) hue, with an sRGB fallback. No drawn glow.
-- Big numbers are set on a 5 by 7 grid. Other text stays in the DOM.
-- Shapes are rasterized through a low-resolution mask, one mask pixel per cell.
-
-Related visual directions not yet built: segmented display type for large numerals, split-flap style tables, and refined transitions. Treat these as painters and design-system components over the same scene, never as chart types.
+**Proposed, and not built:** a renderer chosen by how many marks there are (HTML and SVG up to a few thousand, canvas beyond), and a dot-grid painter that redraws the same scene on a fixed grid of cells, with series told apart by dither pattern. Either is a painter over the same scene, and never a chart type.
 
 ---
 
 ## 13. States
 
-| State | Prototype behaviour | Status |
+| State | What a view does | Status |
 |---|---|---|
-| Empty period | A notice in place of the marks, "Page views: nothing in this period yet"; a zero in the metric's unit and "Page views: nothing yet" when collapsed. Both lead with the metric's label, so where one is cut to its room the label is what stays. The prototype says "No visits" of every metric | Proven |
-| No prior period | Comparison layer dropped and reported; delta reads "No prior period" | Proven |
-| Partial bucket (today) | Dashed tail on a line, faded bar, excluded from the area | Proven |
-| Instant metric at zero | "0" with "right now", and no pulse. The prototype says "Nobody is here right now" | Proven |
-| Loading | — | Built in `<ua-view>`: a placeholder until an input it has not been handed comes, and until its turn to paint on a page of many views. A plot's natural height in a stack, the whole box in a row. It fades in after 150 ms, so a view that paints at once never shows it. A view already drawn stays drawn while new inputs are awaited. An input still missing after ten seconds is reported in the console with its fix, not shown as an error |
-| Stale or late data | — | To do. Freshness should be a visible state |
-| Filtered (bots, consent) | — | To do |
-| Metric unavailable here | — | To do |
-| Error | Message shown outside the view; the last valid view stays drawn | Proven in the bench, and in `<ua-view>` for inputs it refuses: the last view stays drawn with the message under it. A view with nothing drawn yet, or one that failed while painting, shows the message alone |
-| Result of another query | Refused, as an error: a row or the totals lack a field the query names. Companions are not required | Proven |
+| Empty period | A notice in place of the marks, "Page views: nothing in this period yet", and a zero where it is the number alone | Proven |
+| No prior period | The comparison layer is left out and reported, and the delta reads "No prior period" | Proven |
+| Partial bucket | A dashed tail on a line, a faded bar, left out of the area | Proven |
+| Instant metric | The number, with "right now" | Proven |
+| Loading | A placeholder, which fades in after 150 ms so that a view that paints at once never shows it. A view already drawn stays drawn while new inputs are awaited | Proven |
+| Error | The last valid view stays drawn, with the message under it | Proven |
+| An answer of another query | Refused: a row or the totals lack a field the query names | Proven |
+| Stale or late data | | Open 23 |
+| Filtered (bots, consent) | | Open 23 |
+| Metric unavailable here | | Open 23 |
 
-**Open:** whether a delta should exclude the partial day. Today the totals include it.
-
-`<ua-view>` takes its inputs as properties (`spec`, `result`, `catalog`, `rules`) or as JSON in child scripts. A spec and its result belong together, and a host that changes both sets them in one step:
+**Inputs.** `<ua-view>` takes `spec`, `result`, `catalog` and `rules` as properties or as JSON in child scripts. A spec and its result belong together, and a host that changes both sets them in one step, or the new spec meets the old result and is refused:
 
 ```js
-view.inputs = { spec, result };          // or { spec, result, catalog, rules }; an input left out keeps what it had
+view.inputs = { spec, result };          // an input left out keeps what it had
 ```
 
-Set a task apart, the new spec meets the old result. The view checks the first row and the totals for the query's `by` fields and metrics, refuses a result that lacks one, and names it. A result with no rows is an answer, and is held to its totals alone.
+### Selection
 
-### Selection (Built November 24)
-
-A datum the user picks stays picked: it is **Selected**, one of the states every atom has (`docs/component-states-plan.md`). A selection is a filter, as a query's `where` is one (Decided 49): what is picked is said by its values, never by pixels or row ids. The view does not keep it, because the host is what outlives a re-render, and the view decides nothing of what an activation does to it (Decided 50). When the user activates a datum the view sends `ua-select`, whose `detail` is a proposal: `where`, the filter that datum is, its value of each dimension it is of; `how`, how it was activated; and `key`, its key in the view. The host folds the proposal into the filter it keeps, with core's `select`, and sets the result back:
+A selection is a filter, as a query's `where` is one (Decided 49): what is picked is said by its values, never by pixels or row ids. The view does not keep it, and decides nothing of what an activation does to it (Decided 50). When a datum is activated the view sends `ua-select`, whose `detail` is a proposal: `where`, the filter that datum is; `how`, how it was activated; and `key`. The host folds the proposal into the filter it keeps, with core's `select`, and sets the result back:
 
 ```js
 view.addEventListener('ua-select', (e) => { view.selected = select(view.selected, e.detail, catalog); });
 ```
 
-In a board the fold is `boardSelect`, and the host sets on each view what `boardViews` says it is to mark:
-
-```js
-surface.addEventListener('ua-select', (e) => { board = boardSelect(board, e.detail, catalog); draw(); });
-```
+On a board the fold is `boardSelect`, and the host sets on each view what `boardViews` says it is to mark.
 
 | `how` | Click or tap | Keys | What `select` makes of it |
 |---|---|---|---|
 | `pick` | plain | Enter, Space | Each dimension is held to the datum's value alone. Where it already was, the datum is let go |
-| `toggle` | Cmd or Ctrl | Cmd or Ctrl with Enter | The value joins those the dimension is held to, or leaves them: a set. A run gives way to the value |
-| `extend` | Shift | Shift with Enter or Space | On a time or a number, a run from what is held to the value. It grows to take the value in, and a value inside it becomes its end. With nothing held it is a pick |
+| `toggle` | Cmd or Ctrl | Cmd or Ctrl with Enter | The value joins those the dimension is held to, or leaves them |
+| `extend` | Shift | Shift with Enter or Space | On a time or a number, a run from what is held to the value. On a categorical dimension it is a toggle |
 
-- **Extend is for what has an order.** On a categorical dimension `extend` is a toggle: the order a list's rows are drawn in is their rank today, and no order of their values.
-- **A set of cells is a set on each dimension.** A proposal of two dimensions is folded one at a time, and dimensions are joined by "and", so two cells toggled are their columns and their rows.
-- **The modifiers take nothing from version 4's keyboard.** Its plots read Enter and Space whatever is held with them. Read from `xy-chart-tooltip.tsx` on Jetpack trunk, November 24.
-- **A touch has no modifier, so a tap is a pick.** The fold is the host's, so a surface that wants several picked by touch passes `toggle` for a plain activation: the bench's Board page has a switch that does.
-- **What a datum is.** A point of a plot or a row of a list is its value of the dimension along it. Where a series is chosen at a point, by the keys or on a ring, it is that series' mark: both dimensions. A grid's cell is both of its dimensions, a treemap's parent its own value, and a child both.
-- **What is marked.** `selected` takes any filter, and the view marks `data-selected` on every atom whose rows all hold it (`holds` in core). So a filter on the dimension along x marks every mark at a point; one on the split marks a whole series, its line and its legend entry with it; one on both marks a single mark; a list marks each of its values, and a run every value in it. A dimension the view does not draw marks nothing.
-- **It is said.** Each thing that can be chosen, an option, a grid's cell, a tree's item, says `aria-selected`, and its holder `aria-multiselectable`.
-- **It filters nothing.** `selected` paints nothing again and takes no row away. What a view is of is its query's `where`, and the host's to ask for.
-- **It stays.** A selection outlives a new result where its data do. Escape lets go of hover and focus, never of the selection. A spec says nothing of it: like a size, it is the container's.
+- **What a datum is.** A point of a plot or a row of a list is its value of the dimension along it. Where a series is chosen at a point it is both dimensions, as a grid's cell is.
+- **What is marked.** `selected` takes any filter, and the view marks every atom whose rows all hold it (`data-selected`, and `aria-selected` for assistive technology). A dimension the view does not draw marks nothing.
+- **A set of cells is a set on each dimension.** A proposal of two dimensions is folded one at a time, so two cells toggled are their columns and their rows.
+- **It filters nothing.** What a view is of is its query's `where`, which is the host's to ask for.
+- **It stays.** A selection outlives a new result where its data do, and Escape does not let it go.
+- **A touch has no modifier,** so a tap is a pick. A surface that wants several picked by touch passes `toggle` for a plain activation.
 
-Not built: a drag along a plot for a run. Shift does the same by pointer and by keyboard, and a drag needs a band drawn as it moves. When it is built, the band is the view's own and transient, and letting go proposes the run, once.
-
-Selected has no look of its own yet; that is design's to set. The bench's Board page lends one so that a selection can be seen there: the rest set back, and a band over a run of days.
+Not built: a drag along a plot for a run, and a look for Selected, which is design's to set (Open 9).
 
 ---
 
-## 14. Accessibility requirements
+## 14. Accessibility
 
-Write these once against the scene and the plan, not per preset.
+Written once against the scene and the plan, not for each preset.
 
-- Every view exposes its **tldr prose** as its accessible name or description.
-- Every view offers the **same query as a table**. Chart and table read one result.
-- **Keyboard navigation** over data marks, driven by keys and the row each mark came from. Announce the dimension value, the metric value in its catalog format, and the comparison if present.
-- A **canvas or dot-grid painter needs a hidden DOM mirror** carrying the same structure.
-- **Never colour alone.** Series must also differ by dash, pattern or direct label. The dot painter's dither patterns are one instance of this.
-- **What is selected is said**, not only shown: `aria-selected` on each thing that can be chosen, and `aria-multiselectable` on what holds them (section 13). Not yet heard through a screen reader.
+- Every view exposes its **tldr prose** as its accessible description, after its `description` where a spec has one, and says it again, politely, when new data changes it.
+- Every view offers the **same query as a table.** Chart and table read one result.
+- **Keyboard navigation** over data marks, by their keys and the row each came from, in the keyboard model of `@automattic/charts`. A mark announces its dimension's value, the metric's value in its catalog format, and the comparison where there is one.
+- **What is selected is said,** not only shown (section 13).
+- **Never colour alone.** Series also differ by dash, pattern or a direct label. Patterns are not built.
 - Visible focus, sufficient contrast in both themes, and `prefers-reduced-motion` respected.
-- The Olli model (overview, then axes and legends, then intervals, then points) is the reference for the navigable tree.
+
+Owed: a pass with a screen reader.
 
 ---
 
 ## 15. Transitions
 
-- **Stable keys give enter, update and exit** for any view, including when a container drops a part.
-- With positions as registered custom properties, the **design system's motion tokens** animate them in plain CSS.
-- **Hard cases that need script:** discrete layout switches, and line shapes when the data changes (interpolate the values and regenerate the path).
-- Do not animate while the container is being resized continuously; animate on data and spec changes.
-- The dot painter animates by interpolating the scene and re-rasterizing. Cells never move.
-- Respect reduced motion everywhere.
-
-Transitions are a first-class requirement and should be refined, not incidental.
+- **Stable keys give enter, update and exit** for any view, including when a container gives up a part.
+- Positions are registered custom properties, so the **design system's motion tokens** animate them in plain CSS.
+- **What needs script:** a line's shape when its data changes, and a switch between layouts.
+- Nothing animates while a container is being resized. A change of data or of spec does.
+- Reduced motion is respected everywhere.
 
 ---
 
 ## 16. The tldr prose
 
-Derived from the query and transforms. No chart type is consulted.
+The number block in words, and then the filter (Decided 53). Every view's sentence is of this one shape. No chart type and no layout is consulted, so a custom mark needs no sentence of its own.
 
-| Query shape | Tldr prose |
+| Part | Says | As in |
+|---|---|---|
+| Each metric the query asks for, the first with the range | Its total from the engine; its change, where the query compares; its share of its target, where the catalog gives one; and that it is a sum of daily counts, where it is | "Visitors: 10.5k in the last 28 days, up 12% on the previous period. This is a sum of daily counts, not a unique count." |
+| The leader, where the query's first dimension is categorical | The value the number's note names, with its share where the view is of shares | "The top channel is Search, at 41%." |
+| The filter, after everything else | What the answer is filtered to, read off its `meta.where` | "Filtered to channel Search." |
+
+Three answers have a sentence of their own:
+
+| The answer | Tldr prose |
 |---|---|
-| Instant metric | "Present now: 7 right now; the top page is / (3)." With no dimension, or at zero: "Present now: 0 right now." |
-| Time dimension, or none | "Visitors: 10.5k in the last 28 days, up 12% on the previous period. This is a sum of daily counts, not a unique count." |
-| Categorical dimension | "Top pages by page views, last 28 days: / (4,820), /pricing (2,960), /blog/launch-notes (2,105)." |
-| Categorical with `stack: "normalize"` | "Search is the largest channel at 41% of visitors, followed by Direct at 28%." |
-| A plot of ranks, split by a dimension | "In the last 28 days, / is first by visitors on all 4 weeks. Places changed along the way, and each page ended where it began." Where places differ from the first row to the last: "Direct rose from 2nd to 1st, and Search fell from 1st to 2nd." |
-| An area painted by direction, after the view's own sentence | "Revenue: $63.5k in the last 28 days, up 8.1% on the previous period. Above the previous period on 17 of 27 days, and below it on 10." |
-| Two metrics joined through a time dimension | "From Sep 8 to Oct 4, visitors went from 416 to 310 and sign-ups from 15 to 9. Sep 25 is highest on both." |
+| An instant metric | "Present now: 7 right now." |
 | Empty | "Visitors: nothing recorded in the last 28 days." |
-| A filtered answer, after everything else the view says | "Visitors: 4,454 in the last 28 days, up 11% on the previous period. Filtered to channel Search." A list is "channel Search or Social", a run "day from Sep 21 to Sep 27", and dimensions are joined by ", and". Read off the answer's `meta.where`, as the range is read off its `meta.range` |
+| A total the engine does not give | "Correlation: no figure in the last 28 days." |
 
-Every word is the catalog's or the query's: a metric is said by its label, a dimension by its label, and a value of one as a row says it, so a country's code is its name and no value is a dash. The words that are not, such as "right now" and "nothing … yet", are set in `packages/core/src/prose.ts` and nowhere else.
+It is derived because a view's data is live and an authored sentence is not: "up 12%" is false tomorrow. It says no more than the number because what a view shows beyond it, who rose in a ranking, the busiest cell of a grid, is for whoever reads the result to say, a person or an agent. What an author can say is what the view is for (`description`, section 6).
 
-The tldr prose is the last rung of every view, the accessible description, and what an agent gets when it cannot render anything.
+Every word is the catalog's or the query's. The words that are not, such as "right now" and "no figure", are set in `packages/core/src/prose.ts` and nowhere else.
+
+The tldr prose is the last rung of every view, its accessible description, and what an agent gets where it can render nothing.
 
 ---
 
 ## 17. Acceptance set
 
-The six sample specs in the prototype are the first acceptance tests. Port them with their fixtures.
+The first six sample specs, `samples` in `packages/fixtures`, are the first acceptance tests. The rest are `moreSamples`, one for each form the bench shows.
 
 | Sample | Spec | Covers |
 |---|---|---|
-| Visitors over time | `use: "line"`, visitors by day, compare previous | Time series, comparison, partial bucket |
-| Top pages | `use: "bar-list"`, page views by page, limit 8 | Ranked list |
+| Visitors over time | `use: "line"`, visitors by day, compared | A time series, a comparison, a partial bucket |
+| Top pages | `use: "bar-list"`, page views by page, limit 8 | A ranked list |
 | Channel mix | `use: "share-bar"`, visitors by channel | Part to whole |
-| Page views total | A query with no dimension and no layers | The tldr value alone, with delta |
-| Present now | `use: "bar-list"`, present by page | Instant metric, so the tldr value sits above the list |
-| Bars and a target | Explicit layers: bar plus rule | Authored layers and roles |
+| Page views total | A query with no dimension and no layers | The tldr value alone, with its delta |
+| Present now | `use: "bar-list"`, present by page | An instant metric, so the number sits above the list |
+| Bars and a target | Layers written out: a bar and a rule | Authored layers and roles |
 
-Fixture facts to assert: visitors total 10,531 against 9,437 previous (up 12%); page views 25,061 against 21,974 (up 14%); 28 daily rows, the last one partial; channel shares 41, 28, 14, 8, 6 and 3 percent; 7 people present across 4 pages.
-
-`prototype-test.js` sweeps every sample across three data states, two painters, six height limits and nine widths, and checks for duplicate keys, NaN values and scenes taller than the container allows. Port that sweep.
-
-The v1 product also needs primitives the prototype does not have yet: a delta badge as its own part, scope and filter chips, a compact date and compare control, a detail table, and loading and stale notices.
+Fixture facts to assert: visitors total 10,531 against 9,437 before (up 12%); page views 25,061 against 21,974 (up 14%); 28 daily rows, the last one partial; channel shares of 41, 28, 14, 8, 6 and 3 percent; 7 people present across 4 pages.
 
 ---
 
 ## 18. Stack and repository shape
 
-**Status: Proposed. Push back if something here is a poor fit.**
-
-- TypeScript, strict. The core has no DOM and no framework.
-- `d3-scale`, `d3-shape`, `d3-array` only. No chart library.
-- A custom element with shadow DOM for the DOM painter. Thin Preact and React bindings later; one consumer renders with Preact, so do not assume React.
-- Vite and Vitest. Scene snapshots as golden files, so grammar changes show up as diffs.
-- A JSON Schema for the spec and the catalog as the published contract.
-- Tokens as CSS custom properties.
-
-```
-packages/
-  core/       spec types and schema, validation, catalog types, presets and expand, plan, scene, tldr prose
-  dom/        HTML, CSS and SVG painter; the custom element
-  dots/       dot-grid painter (later)
-  fixtures/   catalog, fixture query engine, sample specs
-apps/
-  bench/      the playground: spec editor, container width and height, data states, painter switch
-docs/
-  view-grammar-reference.md
-prototype/    read-only reference: prototype-bench.js, prototype-bench.html, prototype-test.js
-```
-
-Map from the prototype's sections to modules: catalog (1), fixtures and query (2), formatting (3), host context (4), presets (5), plan (6), scene (7), painters (8), bench UI (9).
+Removed: what was built is in `README.md` and `CLAUDE.md`. The number is kept so later sections keep theirs.
 
 ---
 
 ## 19. Decisions and open questions
+
+Each entry is the decision. What led to it, and what building it found, is in git and in `docs/archive/`.
 
 ### Decided
 
 1. Chart types are presets, not primitives.
 2. No `intent` in the spec.
 3. Comparison is a role on a layer (`series: "previous"`), not a second metric.
-4. Sizes and thresholds belong to the container and the design system. The spec has none; `keep` is the author's only lever.
+4. Sizes and thresholds belong to the container and the design system. The spec has none.
 5. Totals come from the engine, never from summing rows.
-6. `arc` will be its own mark. No general polar coordinates. It reads data on `angle` and on `radius`, one a metric and the other a dimension, and that is a closed set of forms of one mark and not a coordinate system: no other mark is drawn about a centre, and nothing has an angle and a radius both from metrics. A slice that reaches to its value starts at the centre: there is no hole in a rose. (Extended October 12) Reopened November 23: see Open 21.
+6. `arc` is its own mark, with a closed set of forms, and there is no general polar coordinate system. Narrowed by 44: the plot's line, area and dot are drawn about a centre too.
 7. The scene is the seam between structure and rendering. Paint tokens, never colours.
 8. Text stays in the DOM. Data marks may go to any renderer.
 9. Every view has a derived tldr prose.
-10. The front end needs only a catalog. Computation and table mapping are server-side. Presentation hints may live with the design system, keyed to catalog names.
+10. The front end needs only a catalog. Computation and table mapping are server-side.
 11. A valid spec always draws something. An invalid one fails with a message naming the fix.
 12. Guardrails are the authoring agent's job plus validation, not a restricted component API.
-13. For browser containers, degradation is per element with container queries, not one global switch.
-14. The spec is the seed for everything. An author writes a spec and decides where to render it; nobody writes a spec for a container. (October 7)
-15. Presentation is intrinsic. A container fits a view by default rules, and a context that wants different behaviour passes its containers a durable rule set. (October 7)
-16. `headline` and `guides` are out of the spec. Whether the tldr value and the guides show is decided by the rules. (October 7)
-17. `keep` stays, provisionally, as the author's one lever. Uses are counted during testing and the field is removed if the defaults make it unnecessary. (October 7)
-18. Names: tldr value (was headline), tldr prose (was sentence), container (was host). The read-only prototype keeps the old names, and the parity test maps them. (October 7)
-19. Intrinsic behaviour is the default. A surface lays its containers out by its own scheme; a container fills the room it is handed and does not know where it is. With nothing said it fills the width and takes its natural height; a layout that hands out a box opts its children into filling it. (October 7)
-20. One scene, in ratios, with a `part` on every node. Pixel painters go through `place(scene, size)`. (October 7) The second sentence is amended by 43.
-21. Y ticks always round to 4, thinned by a rule on short plots. A deliberate departure from the prototype. (October 7)
+13. In a browser a view gives way part by part, with container queries, and not by one global switch.
+14. The spec is the seed for everything: nobody writes a spec for a container. (October 7)
+15. Presentation is intrinsic. A container fits a view by default rules, and a context may hand its containers a rule set of its own. (October 7)
+16. `headline` and `guides` are out of the spec. The rules decide what they used to. (October 7)
+17. `keep` stayed, provisionally, as the author's one lever. Removed by 63. (October 7)
+18. Names: tldr value (was headline), tldr prose (was sentence), container (was host). (October 7)
+19. A container fills the width and takes its natural height. A layout that hands out a box opts its children into filling it. (October 7)
+20. One scene, in ratios, with a `part` on every node. (October 7) Pixel painters were to go through `place()`: amended by 43.
+21. Y ticks always round to four, thinned by a rule on short plots. (October 7)
 22. In the DOM, bars are HTML and lines and areas are a stretched SVG. (October 7)
-23. Layouts stay, as arrangements of parts that fit rules and painters hang on. A channel's scale comes from its field; `rows` becomes a track per row; `radial` is added for `arc`. Detail and the build order are in `docs/chart-coverage-plan.md`. (October 7) Reopened November 23, to be narrowed and not undone: see Open 21.
-24. A query may have two dimensions in `by`, no more. The second goes to `color`, to `facet`, or to the other axis. (October 7)
-25. Statistics (bins, quantiles, density, running totals) come from the engine as companion fields, as `metric@previous` does. Core gains no transform for them. (October 7)
-26. A facet is a small board: a plan per value with one shared domain, laid out by the container. (October 7)
-27. A layer may carry a shape parameter from a closed set, starting with `sweep: "half"` for `arc`. Count them; chart types must not come back as parameters. (October 7)
-28. A delta per row is `series: "delta"` on a `text` layer. ~~A ranged bar is painted by its direction and the metric's polarity.~~ (October 7) **Amended October 12 by Decided 36:** no mark is painted by direction unless its layer says `paint: "direction"`. The automatic rule caught a box plot, whose box goes no way, and read a bar from a gain to zero as a loss.
-29. A fit rule may name a `fallback` preset that the view becomes below the rule's need. (October 7)
-30. `d3-geo` is allowed in a `packages/geo` of its own. Core keeps its three dependencies. (October 7)
-31. `detail` splits a layer into series without painting them apart. It is a channel that takes a dimension: one series per value, all in the layer's own paint, with no legend and no limit of six. The query's second dimension may go to `color`, to `detail`, to `facet` or to the other axis. (October 12)
-32. `unit` draws a value as counted glyphs; what a glyph is worth comes from the data. It is one built-in mark whose form is what is on its channels: a stack, a run, a grid of a hundred, seats. A glyph is a dot or a square. A scene has no size, so nothing about a glyph's worth or count is a size: the largest value is ten glyphs or fewer, a grid is a hundred cells shared by largest remainder against the engine's total, and seats are one each up to a hundred. Under the room its glyphs need a form becomes another preset of the same query, by a fit rule's `fallback`, which for that may now name the mark it is for. (October 12)
-33. A colour scale whose values cross zero is diverging about zero. Nothing in a spec says so: the ramp is read from the least and the most of the values drawn, or from the `domain` the catalog states for the metric. Zero is the neutral middle step, `div.5`, and both arms are measured by the end farther from zero, so two values as far from zero as each other are as many steps from the middle. Anything else is sequential, as before. The arms say below and above, never bad and good: that is polarity's, and the delta's paint. A grid and a map share the one scale. (October 12)
-34. A `line` or an `area` on a `number` dimension whose rows carry `<dimension>@end` is drawn as steps, as a `bar` there is drawn with no gap. It follows from the bins, and there is no layer field for it. (October 12)
-35. `rank` is a unit in the catalog: a scale that runs from 1 at the top, with a tick for each rank. A companion is in its metric's unit unless the catalog has an entry under the companion's whole name, which is how `metric@rank` takes the unit, and how any companion that is not in its metric's unit says so. Core reads no suffix for it. (October 12)
-36. `paint: "direction"` paints a `bar` or an `area` with two ends by which way it runs and the metric's polarity, `delta.good` or `delta.bad`, and the layer's own paint where the polarity is `none`. An area is cut where its ends cross. It replaces the automatic rule of Decided 28: the presets `waterfall`, `candlestick` and `difference` state it, and a bar with two ends and no `paint` is in its layer's own. `paint` gains a value, and no layer field is added. (October 12)
-37. A stack may diverge: `stack: "diverge"` sets the first half of a layer's series below zero and the second half above it, in the series' own order, and the middle one of an odd count half on each side. `"center"` stays as the silhouette a streamgraph uses. An axis under a diverging stack counts away from zero on both sides, so no series is said to be less than nothing. (October 12)
-38. A row may be divided by the query's second dimension: a `bar` with `stack` in rows takes it on `color`, and a `dot` or a `tick` takes it on `detail`. The rows are the first dimension's values, and what a row says of itself is the engine's total for it. So the query's second dimension may go to `color`, to `detail`, to `facet` or to the other axis, in rows as in a plot. (October 12)
-39. Layers of a plot that measure several metrics are told apart as the series of a split are: a series colour for each metric where its layers state no paint, an entry each in the legend, and a label where each one's line ends. Nothing in a spec asks for it, as nothing asks for a legend. It closes the gap of October 8, where two metrics on one plot were both `series.1` with nothing to say which was which. (November 20)
+23. Layouts stay, as arrangements of parts that fit rules and painters hang on. Narrowed by 44. (October 7)
+24. A query is by two dimensions at most. The second goes to `color`, to `detail`, to `facet` or to the other axis. (October 7)
+25. Statistics come from the engine as companion fields. Core gains no transform for them. (October 7)
+26. A facet is a small board: a plan for each value with one shared domain, laid out by the container. (October 7)
+27. A layer may carry a shape parameter from a closed set, starting with `sweep: "half"`. Count them: chart types must not come back as parameters. (October 7)
+28. A delta for each row is `series: "delta"` on a `text` layer. (October 7) Its other half, a bar painted by its direction unasked, was replaced by 36.
+29. A fit rule may name a `fallback`: a preset the view becomes below the rule's need. (October 7)
+30. `d3-geo` is allowed in `packages/geo`. Core keeps its three dependencies. (October 7)
+31. `detail` splits a layer into series without painting them apart: no legend, and no limit of six. (October 12)
+32. `unit` draws a value as counted glyphs, and what a glyph is worth comes from the data. Its form is what is on its channels. Under the room its glyphs need, a form becomes another preset of the same query. (October 12)
+33. A colour scale whose values cross zero is diverging about zero, read from the values or from the catalog's `domain`. Nothing in a spec says so. Its arms say below and above, never bad and good. (October 12)
+34. A `line` or an `area` over a binned number is drawn as steps, and there is no layer field for it. (October 12)
+35. `rank` is a unit. A companion is in its metric's unit unless the catalog has an entry under its whole name. (October 12)
+36. `paint: "direction"` paints a `bar` or an `area` with two ends by which way it runs and the metric's polarity. Nothing is painted by direction unless a layer says so. (October 12)
+37. A stack may diverge (`stack: "diverge"`). `"center"` stays, as the silhouette a streamgraph uses. (October 12)
+38. A row may be divided by the query's second dimension: a `bar` with `stack` takes it on `color`, and a `dot` or a `tick` on `detail`. (October 12)
+39. Layers of a plot that measure several metrics are told apart as the series of a split are: a colour, a legend entry and a label at its line's end for each. Nothing in a spec asks for it. (November 20)
 40. A guide is read off a scale, and which encoding each comes from is one table, `GUIDES`. A guide is a key or a frame, and a key leaves no sooner than the marks it keys. (November 20)
-41. A key with no shorter form stays as long as its marks, or its marks give way with it. The second y axis stays as long as the first, and in the bare plot what is drawn on it goes too. What a glyph is worth stays as long as the glyphs, which give way to their plainer preset at the height the two need. A row's column headers stay as long as two columns do, and a list gives up rows instead. A Sankey becomes its grid at the size its node names need. (November 23)
-42. Where a key cannot stay whole it is cut down, or the marks give up what it was the key to. A legend with nothing to stand in for it takes the colours with it, and its marks are drawn in one paint; bars and dots, which have no line end to label, keep theirs as long as the axes. The ramp becomes a thin strip of every step between its two ends, chosen over its two ends alone when both were looked at. The key to sizes becomes its largest step, and dots are one size in the bare plot. The names round a rim are thinned to about four. With that no rule takes a key from marks that are still drawn. (November 23)
-43. A plan takes no size, and core places nothing. How a view gives way when room is short is the fit rules, as data, and one function reads them at a room with no browser: `fitTo`, with `viewAt` to follow a rule's `fallback`. The reducer in `resolve()`, `place()` and each custom mark's `place` are parked: nothing shipped read them, and they were a second reading of the rules and a second layout engine, both written by hand for each layout. Parity with the prototype is held for what takes no size: the engine's answer, the plan, the sentence and what each scene holds, node for node. Where a node is placed is no longer compared, and the tag `prototype-parity` marks the last commit that did. Two conditions joined the rule format so that the data says what the element does: a rule names every part it takes, and may be for one kind of view (`has`). The rules the DOM's painters had made for themselves are core's now. (November 23)
-44. One space for the marks, which reopens 6 and narrows 23. A view's space is two axes, each a list of values (a dimension), a quantity (a metric or a binned number) or nothing, and it is flat or bent about a centre. A spec asks for the bend as `arc` does, by writing `angle` and `radius` where a flat view writes `x` and `y`, and says nothing else. A mark is one function of that space: on an axis that is a list it takes its value's place, and on one that is a quantity it is measured along it. A layout stays as what stands round the marks and how the view takes its size, and no longer says which marks may be drawn. It is built a layout at a time and held to the bench's capture, frame for frame, since a scene's nodes change shape on the way. Stage 1, the grid, is built: it draws the plot's `text` by the plot's function, handed a pair's place and what the pair is known by (`GRID_MARKS` and `Draw.of` in `scene.ts`), and the element paints it with the plot's label painter. Between two lists only `cell`, `dot` and `text` have a place. Stage 2, the list, is built: it draws the plot's `line` and `area` by the plot's function, on their side (`LIST_MARKS`), in a part of their own, `track`, that lies over the rows, and the element paints them with the plot's path painter in one SVG it turns. A row's own five marks are still the track's own functions (`TRACK_MARKS`): each is a line or two and belongs to its row's element, so making them the plot's would add more than it took away until a node says its place one way in every layout. Stage 4, the circle, is built: with a dimension on `angle` and a metric on `radius` it draws the plot's `line`, `area` and `dot` by the plot's functions (`ROUND_MARKS`), then bends them, on one scale out from the middle that slices share. A path about a centre is made where every path is (`pathD`, `curve: "radial"`). It was built before stage 3 because it is the one that adds diagrams. Stage 5 is built for the map: a custom mark may offer its places (`places`), and the plot's `text` is drawn over it at them by the plot's function (`OVER_MARKS`), so `geo` carries labels. Stage 3, the share bar as a list of one row, is not built: it would add no diagram. What the stages have not done is replace a layout's own marks with the plot's: a grid's cell and dot, a row's five, an arc and a map's symbol are still their layout's own functions, because a node says its place differently in each layout (`v` and `t` from the foot, a cell's `y` from the top, `row` against `pair`). Since Decided 51 a node says its place one way, and a row's five are the plot's, turned; a grid's cell and dot, an arc and a map's symbol are still their own. One way of saying it is the step that would let them be one, and it changes every painter. (November 23)
-45. A board holds views and what they share, and no layout: where each view stands is the surface's, as a view's size is its container's. That settles the part of Open 12 a facet waited for, so the facet is built first, since it shares only its scales and needs no params. A spec's `facet` names one of the query's dimensions, core's `facets` gives a view for each value with the engine's totals and one domain for every scale, and a surface lays them out; a spec says no columns. (November 23)
-46. A mark's place may be said as a value. What is on a channel is a field or a number, so a value of a list axis (a date, a category) had no way to be said: a string there is a field. The layer field `at` says it, first for a `rule` in a plot, which stands at that value of x. A value the axis does not have is not drawn, since a view must not break when its range moves past a date. (November 23)
-47. A metric on `color` paints a plot's bars and dots off the ramp, as it paints a grid's cells, and the ramp is its key. A guide is read off a scale, so the ramp was already a view's wherever a metric is on `color`; a plot now draws it. One metric paints a plot, and not beside colours that tell series or metrics apart. The ramp leaves with the axes, and the marks are then in one paint. (November 23)
-48. A filter is part of the query, and a param is a part of the query that views share. That settles how Open 9 begins. A query's `where` holds a dimension to one of its values, to any of a list, or to a run from one to another: the three kinds Open 9 named, point, set and interval. Dimensions are joined by "and" and there is nothing else: no "or", no "not", no threshold. The engine applies it and carries it back as `meta.where`, a view says it after its sentence and of itself, and `resolve` refuses an answer that is not of its query's filter. Core filters no row. Proposed to the API's owners with it: `where` on the request and on the answer's `meta`. What follows from it and is not built: a board's `query` laid under each of its views' as their params, a selection as a `where` that a view proposes, and views combined by one rule with no field, each filtered by every dimension but the ones it draws, where it marks what is selected. (November 24)
-
-49. A board is views and what they share, and a selection is a filter. This settles the rest of Open 9's model and the board of Open 12. A board's `query` holds `range`, `compare` and `where`, laid under each view's own: those are its params, and there is no variable, reference or expression. Views are combined by one rule with no field: each is filtered by every dimension of the board's `where` but the ones it draws, and on those it marks what is held. A board has no layout and no state apart from itself, so a surface that changes a param holds a new board. Core gives the views (`boardViews`) and the board after a selection (`boardSelect`), and fetches nothing. `<ua-view>` proposes a selection as the filter the activated datum is (`ua-select`, `detail.where`) and marks by any filter set back on it (`selected`), which replaces the key it took before. It draws no board: that is a surface's, and the bench has the reference one. (November 24)
-
-50. A view says what was activated and how, and core decides what that does to the selection. `ua-select` carries a proposal: the datum's filter, and `how`, which is `pick`, `toggle` or `extend` by the modifier held (none, Cmd or Ctrl, Shift), the same for a click and for Enter or Space. Core's `select` folds a proposal into the filter held, and `boardSelect` is that fold on a board, so it no longer asks which view proposed. The view keeps no anchor and no set, and no longer sends `null` to let a datum go: picking it again does that, in the fold. A set is a list on a dimension and a run is `from` and `to`, which a filter already held and a view already marked by. Extend is for a time or a number. There is no drag yet. What is selected is said to assistive technology. This settles how a set and an interval are picked, which Open 9 left. (November 24)
-51. One vocabulary for where a node is, begun. Every node says its place in the same fields, whatever its kind and its layout: `x` and `y` where it is, `x2` and `y2` its other end, `w` and `h` an extent (section 11). `v`, `v0`, `t` and `t2` are gone, and with them a list's bar that ran from `v0` to `v` beside a rule from `x` to `x2`. It is the step Decided 44 named as the one that would let each layout's own marks be the plot's. The first stage was the names alone: no number changed, which a comparison of every node of every sample's scene before and after holds, and the capture. The second made `y` count up everywhere: a grid's cell, a cell of a `unit`'s grid, a treemap's box and a Sankey's node had counted down from the top, and each now stands on `y` from the bottom, where it stood before. The third made a row's marks the plot's, turned. A list had five functions of its own, for a bar, a rule, a tick, a dot and a unit, each a copy of the plot's on its side. A row's track now draws the plot's own, handed one row and the track's scale, and each node is turned once: what was up the plot runs along the track, and what was across a band runs up the row, from the top. A list's layer is turned the same way going in, its `y` read as `x` and its `x` as `y`. What a list alone does is said after the turn: a bar behind its label is a tint and is never faded as an unfinished bucket is, a dot or a tick of a mass lets the ones under it show, and a rule with one end at a number lies from zero in each row. What it found: every node of every sample's scene is as it was, ten of them to the last digit of a float; a list already drew every mark a plot does, so it gained none; and the code is no shorter, seven lines longer. What it gives is one definition of each mark, so what is added to the plot's reaches a list where its painter draws it. Still to come, if they are wanted: the share bar as a list of one row, and a slice as a bar, bent. (November 24)
+41. A key with no shorter form stays as long as its marks, or its marks give way with it: the second y axis, what a glyph is worth, a row's column headers, a Sankey's node names. (November 23)
+42. Where a key cannot stay whole it is cut down, or its marks give up what it was the key to. A legend takes the colours with it, the ramp becomes a strip, the key to sizes its largest step, and the names round a rim about four. (November 23)
+43. A plan takes no size, and core places nothing. How a view gives way is the fit rules, as data, and one function reads them at a room with no browser: `fitTo`, with `viewAt` to follow a `fallback`. A rule names every part it takes, and may be for one kind of view (`has`). (November 23)
+44. One space for the marks. A view's space is two axes, each a list of values, a quantity or nothing, flat or bent about a centre, and a mark is one function of that space. A layout says what stands round the marks, and no longer which marks may be drawn. Built for the grid, the list, the circle and the map. The share bar as a list of one row, and a slice as a bar, bent, are left. (November 23)
+45. A board holds views and what they share, and no layout. The facet was built first: a view for each value of one of the query's dimensions, on shared scales. (November 23)
+46. A mark's place may be said as a value: `at`, for a `rule` on an axis that is a list. A value the axis does not have is not drawn. (November 23)
+47. A metric on `color` paints a plot's bars and dots off the ramp, and the ramp is its key. One metric paints a plot. (November 23)
+48. A filter is part of the query. `where` holds a dimension to a value, to a list or to a run, and dimensions are joined by "and". The engine applies it and carries it back, and `resolve` refuses an answer that is not of its query's filter. Core filters no row. (November 24)
+49. A board is views and what they share, and a selection is a filter. A board's `query` is its params, with no variable or expression. Views are combined by one rule with no field: each is filtered by every dimension of the board's `where` but the ones it draws. (November 24)
+50. A view says what was activated and how (`pick`, `toggle`, `extend`), and core's `select` decides what that does to the selection. The view keeps none. (November 24)
+51. One vocabulary for where a node is: `x` and `y`, `x2` and `y2`, `w` and `h`, whatever its kind and its layout, with `y` counting up everywhere. A row's marks are the plot's, turned. (November 24)
+52. The prototype is gone, and nothing is held to it. (November 24)
+53. The tldr prose is the number block in words, and then the filter: one shape for every view. It stays derived. What a view shows beyond its number is for whoever reads the result to say. (November 24)
+54. The library ships the common charts and no more: thirteen presets. A form that is less common is written as its layers and kept as a sample. (November 24)
+55. Nothing a layer says is dropped without a word. `paint`, `series` and `stack` are in the table of what each mark reads, a band is one layer, and bars of several layers sit side by side. (November 24)
+56. The scene has a schema, `scene/0`, a draft. (November 24)
+57. The agent surface is `packages/agent`, which wraps core and adds no rule: `describe()`, `check()`, and an MCP server over stdio that also draws a spec. A spec, a query and a layer refuse a field they do not take. (November 24)
+58. What the fit rules pick is said once: forty numbers, in `LEAST`. (November 24)
+59. A custom mark is a candidate for the system, and not a way round it. It is held to what a core mark is held to (`test/admission.test.ts`), and the count of them is a queue of candidates. (November 24)
+60. A catalog may say which dimensions a metric is answered by (`by`), and a query that asks it by another is refused before it is run. (November 24)
+61. A view says its sentence in a live region when new data changes it. A draft of the alias sheet for the WordPress Design System is `packages/tokens/wpds.css`. (November 24)
+62. A spec may say what its view is for: `description`, the one authored sentence it has. (November 24)
+63. `keep` is gone. A spec has no lever over what a container gives up: where a default is wrong for a view, the answer is a better rule, or a rule set a context hands its containers. (November 24)
+64. A need follows the type. It is written in px at the default type (`EM`), and a need of the view grows and shrinks with the view's label face: the element asks it in `em`, and a surface with no browser says the size with the room. A need of the plot stays in px. It is narrower than proposed, the face each part is set in: a container query has one em. (November 24)
 
 ### Open
 
-1. The format for per-element fit rules, such that they compile to container queries and also run in code. Proposed in `docs/dom-painter-plan.md`, section 2. Built: the rules are compiled (`packages/dom/src/compile.ts`) and read in code by `fitTo` (Decided 43), and `keep` holds a rule off in both. One difference step 1 of that plan found is still open: a rule on the view cannot say the plot's room when the number sits above the plot, which is why the `y-ticks` rule carries a note and Open 19 its last sentence.
-2. Settled October 7: see Decided 20. The number is kept so later items keep theirs.
-3. How a preset pins a hand-tuned form.
-4. Settled October 7: see Decided 23. Built October 8.
+1. A rule on the view cannot say the plot's room where the number sits above the plot, which is why the `y-ticks` rule carries a note. The rule format itself is built (Decided 43).
+2. Settled: Decided 20.
+3. How a preset pins a hand-tuned form for a size.
+4. Settled: Decided 23.
 5. Label collision: build or source.
-6. Bar list behaviour when narrow, and what a collapsed ranking should show.
-7. Whether a trend shows the tldr value above the plot by default. This is now the container rule `tldrValue.above` and not a spec field; the default says no.
-8. Whether deltas exclude the partial day.
-9. Params and selections. Settled in part November 24: see Decided 48 and 49. The filter, the board's shared query, a selection as a filter a view proposes and cross-filtering by one rule are built. A set and an interval are picked with modifiers (Decided 50). Still open: a drag for a run, which waits for a look; whether a touch should pick several in the element itself, by a long press, where today the surface decides; how a screen reader reads what is selected; and whether Spacefast's API takes a filter in this form, which its recorded answers do not show.
-10. Settled October 7: see Decided 24. Built October 8.
-11. Catalog properties beyond the stub, and where polarity and thresholds are declared. Among them, what a metric counts, one and many ("person", "people"): without it an instant metric reads "Present now: 7 right now" and not "7 people are here right now". What this repo will propose to the API's owners is listed in `docs/chart-coverage-plan.md`, section 3.5: a `number` dimension type; `domain`, `target` and `bands` on a metric; a colour role per dimension value; and totals per split on the result. All but the colour role are built here and are in the schema, so a catalog may use them; what is open is whether the API will send them.
-12. Settled November 23 and 24: see Decided 45 and 49. A board holds views and no layout; the facet and the board are built.
+6. A bar list when narrow, and what a collapsed ranking should show.
+7. Whether a trend shows the tldr value above the plot by default. It is the rule `tldrValue.above`, and the default says no.
+8. Whether a delta leaves out the partial day. Today the totals include it.
+9. Params and selections, settled in part (Decided 48 to 50). Still open: a drag for a run, which waits for a look; whether a touch should pick several in the element itself; how a screen reader reads what is selected; and whether Spacefast's API takes a filter in this form.
+10. Settled: Decided 24.
+11. Catalog properties beyond the stub. Among them what a metric counts, one and many ("person", "people"), without which an instant metric reads "Present now: 7 right now", and a colour for a value of a dimension. `domain`, `target`, `bands`, a `number` dimension and `totalsBy` are built here, and whether the API sends them is open (`docs/api-proposal.md`).
+12. Settled: Decided 45 and 49.
 13. The name.
-14. Which survives at the smallest size, the marks or the tldr value. Today the tldr value does; a sparkline in a table cell wants the line alone. To settle in testing.
-15. Whether the tldr prose rung can be anything but measured. The plan proposes a measured pass, because the threshold is the width of the number itself. It is the one place the fit is not intrinsic.
-16. What building the chart coverage plan left to decide. Listed in `docs/chart-coverage-plan.md`, section 9.
-17. Time zone, grain and locale on the time axis. A time is said as its string writes it (section 4), which needs no zone while an engine names buckets by its own clock: the fixtures send bare dates, and Spacefast's API cuts in UTC and says so. Its contract says site time zones come later. When they do, either the adapter rewrites each instant as the site's clock time, or a zone reaches the formatter as a new input on the result. The first is recommended, since it adds nothing to the grammar. A stated grain would let the midnight bucket of an hourly result say its hour and a week say that it is one. Dates are written in `en-US` throughout. Raised again on November 24 by the Jetpack Stats team's review, which calls it architectural and asks that it be threaded through while the call sites are few: `format.ts` builds its formatters once, in `en-US` and UTC, some seventy calls read them from core, the element and two custom marks, and the prose, `explain` and the readout are written in English. Recommendation: locale and time zone are where the view lands, as its theme is, so they are an input a container hands a view beside `catalog` and `rules` and never a part of a spec; and the words are an input too, a table of the sentences with English as what stands where none is given. In three stages, each leaving every view as it is where nothing is handed in: the formatters made from the input and no longer once for all; then the words gathered into one table; then the element reading the page's own language where it is told none.
-18. Settled November 23: see Decided 41 and 42. Built that day.
-19. What the fit rules do not say (section 10.2 lists it): rows trimmed to a height, columns given up by width, the number's shorter forms and the prose rung, a number too wide for its hole, labels that would meet, and anything that depends on the content's height. The element measures these, and the reader is silent on them. Recommendation: write each as a rule where its need can be stated in px, starting with the number's forms and whole rows, and leave label collision to the surface (Open 5). The two rules on the plot need the plot's box, which a rule on the view could state where the plot's share of the view is known.
-20. A placer for surfaces with no CSS. Recommendation: one generic function, written when a pixel painter is wanted and after the layouts share one coordinate space, so that it maps a ratio and its part's box to pixels and knows no layout. Until then such a surface gets the scene and `fitTo`.
-21. Settled November 23: see Decided 44. Its first stage was built that day.
-
-22. A field that is read out and never drawn. Proposed by the Jetpack Stats team's review (November 24), in place of a hook that lets a host write a tooltip's content: a view names fields, of its query's metrics or their companions, that the readout and the table say, labelled and formatted from the catalog, and that no mark draws. It is data and not a function, so a spec stays JSON and every surface can say it, which a hook could not. Recommendation: adopt it, as Proposed. What is open within it is where it is said: a layer draws, so a list on the spec is the likelier place than a layer with no mark, and the readout already says each metric its layers draw and their companions (`companions` in `packages/dom/src/keys.ts`), which this would add to.
+14. Which survives at the smallest size, the marks or the tldr value. Today the number does. A sparkline in a table's cell wants the line alone.
+15. Whether the prose rung can be anything but measured. Its threshold is the width of the number itself, which is the one place the fit is not intrinsic.
+16. What building the chart coverage left to decide: `docs/archive/chart-coverage-plan.md`, section 9.
+17. Time zone, grain and locale. A time is said as its string writes it, which needs no zone while an engine names buckets by its own clock, and dates and words are in `en-US` throughout. Raised again by the Jetpack Stats team's review, which asks that it be threaded through while the call sites are few. Recommendation: locale and time zone are where the view lands, as its theme is, so they are inputs a container hands a view beside `catalog` and `rules`, and never part of a spec. The words are an input too, with English where none is given. In three stages, each leaving every view as it is where nothing is handed in: the formatters made from the input; the words gathered into one table; the element reading the page's own language.
+18. Settled: Decided 41 and 42.
+19. What the fit rules do not say (section 10.2). Recommendation: write each as a rule where its need can be stated, starting with the number's forms and whole rows, and leave label collision to the surface (Open 5).
+20. A placer for surfaces with no CSS. Recommendation: one generic function that maps a ratio and its part's box to pixels and knows no layout, written when a pixel painter is wanted.
+21. Settled: Decided 44.
+22. A field that is read out and never drawn, proposed by the Jetpack Stats team's review in place of a hook that writes a tooltip: a view names fields that the readout and the table say and no mark draws. It is data and not a function, so a spec stays JSON. Recommendation: adopt it, as Proposed, as a list on the spec.
+23. What a catalog and an answer should say that they do not. Of the catalog: the grains a time dimension may be asked at, and whether a metric adds up over a dimension. Of the answer: how fresh it is, what was left out of it, and that a metric is not available here. Recommendation: propose all five to the API's owners, which `docs/api-proposal.md` does, and build none here before they are accepted.
 
 ---
 
 ## 20. Out of scope for now
 
-- **Query coordinator.** The layer that collects each view's request, merges duplicates, caches and routes to an engine.
-- **Local engine.** DuckDB-WASM slicing server results in the browser. An in-page panel should lean on the server tier because of download size.
-- **WebGPU and canvas renderers for dense data.**
-- **A drag for a run.** Cross-filtering by a value, a set and a run is built (Decided 49 and 50), with modifiers. The drag is Open 9.
-- **Semantic compiler.** Turning catalog names into SQL is server-side.
-- **A board element.** The board is built as data and two functions (Decided 49), and the bench has the reference surface. An element that is handed a board and a query function, and keeps the board, is the shell's (`docs/shell-plan.md`).
-- **Agent surface.** Returning a view through an MCP server. The spec and the tldr prose are designed for it; nothing is built.
+- **A query coordinator:** the layer that collects each view's request, merges duplicates, caches and routes to an engine.
+- **A local engine,** slicing server results in the browser.
+- **Canvas and WebGPU renderers** for dense data.
+- **A semantic compiler.** Turning catalog names into SQL is server-side.
+- **A board element.** The board is data and two functions (Decided 49). An element that is handed a board and a query function, and keeps the board, is the shell's (`docs/shell-plan.md`).
+- **A bridge to each agent harness.** Returning a view into a harness's own frame is not built. The agent surface is (Decided 57).
+- **What a product needs round a view:** scope and filter chips, a date and compare control, a detail table.

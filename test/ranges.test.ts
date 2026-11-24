@@ -1,17 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import { CONTAINER_RULES, FIT_RULES, expand, resolve, type Catalog, type Room, type Spec } from '@unified-analytics/core';
-import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
+import { catalog, moreSamples as written, runQuery, scenarios } from '@unified-analytics/fixtures';
 import { hitNodes } from '../packages/dom/src/keys.ts';
 import { at, err, run, shown, validView as view } from './helpers.ts';
+import { inUse, useExamples } from './examples.ts';
 
-// Ranges and `tick` (docs/chart-coverage-plan.md, step 3): companion fields, a second end on a bar, a rule and an
-// area, a rule with fields, the tick, dots in a row's track, and paint by direction. Nothing here has a prototype to
-// match, so it is held to its own sweep, facts and golden scenes.
+useExamples();   // the presets the library no longer ships, which these cases still write `use` with
+const moreSamples = inUse(written);   // and the samples as they were written with them
+
+// Ranges and `tick` (docs/archive/chart-coverage-plan.md, step 3): companion fields, a second end on a bar, a rule and an
+// area, a rule with fields, the tick, dots in a row's track, and paint by direction. All of it
+// is held to its own sweep, facts and golden scenes.
 const names = ['box', 'errors', 'waterfall', 'candlestick', 'fan', 'dumbbell', 'bullet'];
 const specs = Object.fromEntries(names.map((k) => [k, moreSamples[k]!.spec]));
 const { box, errors, waterfall, candlestick, fan, dumbbell, bullet } = specs as Record<string, Spec>;
 const league = moreSamples.league!.spec;
-// What step 0 of docs/uncommon-coverage-plan.md added of these: dots, rules and ranged bars in a row's track, and a fan of two bands.
+// What step 0 of docs/archive/uncommon-coverage-plan.md added of these: dots, rules and ranged bars in a row's track, and a fan of two bands.
 const swept: Record<string, Spec> = { ...specs, ...Object.fromEntries(['cleveland', 'lollipop', 'tornado', 'fans'].map((k) => [k, moreSamples[k]!.spec])) };
 const marks = (nodes: any[]) => nodes.filter((n) => n.layer === 'data' && n.part !== 'number' && n.kind !== 'row' && n.kind !== 'text');
 const heights = [null, 300, 160, 100, 60, 40];
@@ -394,15 +398,12 @@ describe('the league table\'s rank', () => {
 
 describe('tldr prose for a metric with a range', () => {
   const text = (spec: Spec, sc?: (typeof scenarios)[number]) => run(spec, 346, null, sc).plan.text;
-  it('says the least and the most of the range, after the query\'s own sentence', () => {
-    expect(text(box!)).toBe('Top pages by response time, last 28 days: /blog/analytics-without-cookies (720ms), /blog/launch-notes (655ms), /docs/getting-started (530ms). Between 100ms and 2.6s across 8 pages.');
-    expect(text(errors!)).toBe('Top pages by response time, last 28 days: /blog/analytics-without-cookies (720ms), /blog/launch-notes (655ms), /docs/getting-started (530ms). Between 266ms and 792ms across 8 pages.');
-    expect(text(fan!)).toMatch(/^Response time: 436ms in the last 28 days\. Between \d+ms and \d+ms across 28 days\.$/);
-    expect(text(candlestick!)).toMatch(/^Response time: 436ms in the last 28 days\. Between \d+ms and \d+ms across 28 days\.$/);
-  });
-  it('is the range of a context layer: a waterfall has none, a dumbbell\'s is its comparison, and an empty result has no rows', () => {
+  it('is the query\'s own sentence, and says nothing of the range', () => {
+    expect(text(fan!)).toBe('Response time: 436ms in the last 28 days.');
+    expect(text(candlestick!)).toBe(text(fan!));
+    expect(text(box!)).toBe('Response time: 436ms in the last 28 days. The top page is /blog/analytics-without-cookies.');
+    expect(text(errors!)).toBe(text(box!));
     expect(text(waterfall!)).toBe('Net subscribers: 180 in the last 28 days.');
-    expect(text(dumbbell!)).toBe('Top pages by page views, last 28 days: / (4,820), /pricing (2,960), /blog/launch-notes (2,105).');
     expect(text(box!, 'empty')).toBe('Response time: nothing recorded in the last 28 days.');
   });
 });

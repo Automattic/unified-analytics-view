@@ -4,6 +4,12 @@
 .strip { display: flex; flex-wrap: wrap; align-items: start; gap: var(--ua-space-m); }
 .strip .free { flex-basis: 100%; }
 .strip .free .frame { inline-size: 100%; }
+/* For the capture (`still` in the URL): every frame on one line, the free one last and as wide as the page it has
+ * when it has a line to itself. So no frame's place depends on another frame's height. A plot is set on whole device
+ * px from where it stands on the page, and a frame that another moved could move its axis by a px with nothing of
+ * its own changed: a capture could not then say which change moved what. */
+.still .strip { flex-wrap: nowrap; inline-size: max-content; }
+.still .strip .cell { flex: none; }
 /* Every frame's extent shows, not only on hover: here the edge is what is being looked at. */
 .strip .frame { outline: 1px dashed var(--ua-color-border); }
 .strip .meta { font-family: var(--ua-font-family-code); }

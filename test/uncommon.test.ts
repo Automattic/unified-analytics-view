@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { CONTAINER_RULES, expand, type PathNode, type Result, type Room, type Spec } from '@unified-analytics/core';
-import { catalog, moreSamples, runQuery } from '@unified-analytics/fixtures';
+import { catalog, moreSamples as written, runQuery } from '@unified-analytics/fixtures';
 import { errOf, run as runAt, shown, startingWith as of } from './helpers.ts';
+import { inUse, useExamples } from './examples.ts';
 
-// Step 0 of docs/uncommon-coverage-plan.md: the Uncommon types that today's marks already say, each as a sample, and
+useExamples();   // the presets the library no longer ships, which these cases still write `use` with
+const moreSamples = inUse(written);   // and the samples as they were written with them
+
+// Step 0 of docs/archive/uncommon-coverage-plan.md: the Uncommon types that today's marks already say, each as a sample, and
 // what running them found (section 7 of that note). The samples are swept, and have their golden scenes, with the
 // others of their layout: test/coverage.test.ts, test/ranges.test.ts and test/cell.test.ts. Here is what each one is,
 // and where the grammar stops short of it. A fact marked "for step N" is a hole that step is to close, held so that
@@ -119,7 +123,7 @@ describe('bars in rows: tornado, bullet', () => {
     expect([low[0]!.x, high[0]!.x]).toEqual([0, 1]);
     expect([...new Set(low.map((n) => n.paint)), ...new Set(high.map((n) => n.paint))]).toEqual(['delta.bad', 'delta.good']);
     // There is no total of effects, so the number is a dash.
-    expect(plan.text).toBe('Top factors by effect on revenue, last 28 days: Conversion rate ($800), Traffic ($250), Average order ($250).');
+    expect(plan.text).toBe('Effect on revenue: no figure in the last 28 days. The top factor is Conversion rate.');
     expect(ratio.nodes.find((n) => n.key === 'value')).toMatchObject({ text: '–' });
   });
   it('a bar with two ends and no paint is in its layer\'s own: the rule that painted every such bar by direction is gone', () => {
@@ -154,7 +158,7 @@ describe('lines and areas: Pareto, sparkline, fan, streamgraph, slopegraph, cumu
     expect(of<{ text: string }>(ratio.nodes, 'ytick:ratio:').map((n) => n.text)).toEqual(['0%', '20%', '40%', '60%', '80%', '100%']);
     expect(line.points.map((p) => p.y)).toEqual([0.38, 0.627, 0.785, 0.875, 0.932, 0.969, 1]);
     expect(of<{ y: number }>(ratio.nodes, 'primary:bar:')[0]!.y).toBeCloseTo(412 / 500, 12);
-    expect(plan.text).toBe('Top causes by errors, last 28 days: Timeout (412), Not found (268), Server error (171). Overall, cumulative share 100%.');
+    expect(plan.text).toBe('Errors: 1,084 in the last 28 days. Cumulative share: 100%. The top cause is Timeout.');
   });
   it('the same share as a companion of the errors is drawn the same way: the catalog has an entry for it, which says its unit', () => {
     // Step 0 found a companion flat along the foot of the count's scale, for want of a unit. It has one now where the catalog gives it one.
@@ -168,7 +172,7 @@ describe('lines and areas: Pareto, sparkline, fan, streamgraph, slopegraph, cumu
     expect(drawn(ratio.nodes)).toEqual(drawn(metric.nodes));
     expect(ratio.nodes.filter((n) => n.part === 'legend').map((n) => n.key)).toEqual(['swatch:errors', 'legend:errors', 'swatch:errors@share', 'legend:errors@share']);
     // A companion is no metric of the query, so the sentence has no total of it to say.
-    expect(plan.text).toBe('Top causes by errors, last 28 days: Timeout (412), Not found (268), Server error (171).');
+    expect(plan.text).toBe('Errors: 1,084 in the last 28 days. The top cause is Timeout.');
     // With no entry a companion is in its metric's unit, as a quantile is: a rank beside the count it ranks is still on the count's scale.
     const ranked: Spec = { query: { metrics: ['pageviews'], by: ['page'], range: '28d', compare: 'previous', limit: 8 }, layers: [{ mark: 'bar', encode: { x: 'page', y: 'pageviews' } }, { mark: 'line', encode: { x: 'page', y: 'pageviews@rank' }, paint: 'series.2' }] };
     expect(catalog.metrics['pageviews@rank']).toBe(undefined);
@@ -186,8 +190,7 @@ describe('lines and areas: Pareto, sparkline, fan, streamgraph, slopegraph, cumu
     expect([outer.key, inner.key, line.key]).toEqual(['context:area', 'context:area#2', 'primary:line']);
     inner.points.forEach((p, i) => { const o = outer.points[i]!, l = line.points[i]!; expect(o.y2! < p.y2! && p.y2! < l.y && l.y < p.y && p.y < o.y, p.row).toBe(true); });
     expect([outer.opacity, inner.opacity, outer.paint, inner.paint]).toEqual([0.14, 0.14, 'series.1', 'series.1']);
-    // The sentence says the first range the layers give, which is the wider.
-    expect(plan.text).toBe('Response time: 436ms in the last 28 days. Between 199ms and 631ms across 28 days.');
+    expect(plan.text).toBe('Response time: 436ms in the last 28 days.');
     // Bare, the bands go and the line is left: a bare plot is short of what the layers about the central mark need.
     expect(roles(run(S('fans'), 234, undefined, BARE))).toEqual(['role:context']);
   });
@@ -211,7 +214,7 @@ describe('lines and areas: Pareto, sparkline, fan, streamgraph, slopegraph, cumu
     // At 300 px the legend has given way to a name at each line's end.
     expect(shown(run(S('slopegraph'), 300))).toMatchObject({ parts: ['y-axis', 'plot', 'x-axis', 'labels'], hidden: [] });
     expect(of<{ text: string }>(ratio.nodes, 'label:').map((n) => n.text)).toEqual(lines.map((n) => n.series));
-    expect(plan.text).toBe('Search is the largest channel at 43% of visitors in the last 14 days, and leads on all 2 weeks.');
+    expect(plan.text).toBe('Visitors: 5,674 in the last 14 days. This is a sum of daily counts, not a unique count.');
     // Two points have no middle, so the rule that takes the middle date has none to take.
     expect(of<{ rank?: number }>(ratio.nodes, 'xtick:').some((n) => n.rank)).toBe(false);
   });
@@ -251,7 +254,7 @@ describe('what a line and an area take beyond the trend: connected scatterplot, 
     expect(line!.points.map((p) => p.row)).toEqual(result.rows.slice(0, 27).map((r) => r['date.day']));
     expect(ratio.nodes.filter((n) => n.kind === 'circle' && n.part === 'points').length).toBe(28);
     // The path through time: where it set out and where the last finished day left it.
-    expect(plan.text).toBe('From Sep 8 to Oct 4, visitors went from 416 to 310 and sign-ups from 15 to 9. Sep 25 is highest on both.');
+    expect(plan.text).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. Sign-ups: 303, 76% of its target of 400.');
     // No bare form, as any plot of points: below the room its axes need it is the number.
     expect(shown(run(S('connected'), 234)).parts).toEqual(['number']);
   });
@@ -276,7 +279,7 @@ describe('what a line and an area take beyond the trend: connected scatterplot, 
     expect(of<{ text: string; y: number }>(ratio.nodes, 'ytick:').map((n) => [n.text, n.y])).toEqual([['1', 1], ['2', 0.8], ['3', 0.6], ['4', 0.4], ['5', 0.2], ['6', 0]]);
     expect(lines.map((n) => [n.series, n.points.map((p) => Math.round(6 - p.y * 5))])).toEqual([['/', [1, 1, 1, 1]], ['/pricing', [2, 2, 3, 2]], ['/blog/launch-notes', [3, 3, 2, 3]], ['/docs/getting-started', [4, 4, 4, 4]], ['/changelog', [5, 5, 6, 5]], ['/about', [6, 6, 5, 6]]]);
     expect(ratio.series).toEqual(lines.map((n) => n.series));
-    expect(plan.text).toBe('In the last 28 days, / is first by visitors on all 4 weeks. Places changed along the way, and each page ended where it began.');
+    expect(plan.text).toBe('Visitors: 10.8k in the last 28 days. This is a sum of daily counts, not a unique count.');
     // Bare, the lines still cross where the places changed.
     expect(shown(run(S('bump'), 234)).parts).toEqual(['number', 'plot']);
   });
@@ -286,7 +289,7 @@ describe('what a line and an area take beyond the trend: connected scatterplot, 
     expect(areas.length).toBe(15);
     expect(areas.map((n) => n.paint)).toEqual(areas.map((_, i) => (i % 2 ? 'delta.bad' : 'delta.good')));
     expect(paths(ratio.nodes).filter((n) => !n.fill).map((n) => n.key)).toEqual(['comparison:line', 'primary:line', 'primary:line:partial']);
-    expect(plan.text).toBe('Revenue: $63.5k in the last 28 days, up 8.1% on the previous period. Above the previous period on 17 of 27 days, and below it on 10.');
+    expect(plan.text).toBe('Revenue: $63.5k in the last 28 days, up 8.1% on the previous period.');
     // With no period before it is the line, and says so. With no compare in the query the preset is the line alone.
     const alone = run(S('difference'), 700, runQuery(S('difference').query, 'no-prior'));
     expect([paths(alone.ratio.nodes).map((n) => n.key), alone.plan.dropped, alone.plan.text]).toEqual([['primary:line', 'primary:line:partial'], ['comparison series (no prior data)'], 'Revenue: $63.5k in the last 28 days, with no prior period to compare.']);
@@ -312,7 +315,7 @@ describe('points and text: embedding scatter, stem-and-leaf', () => {
     expect(ratio.parts).toEqual(['y-axis', 'plot', 'points', 'x-axis']);
     expect(ratio.nodes.filter((n) => n.part === 'points').length).toBe(24);
     expect(['xtick:', 'ytick:'].map((k) => of<{ text: string }>(ratio.nodes, k).map((n) => n.text))).toEqual([['-1', '-0.5', '0', '0.5', '1'], ['-1', '-0.5', '0', '0.5', '1']]);
-    expect(plan.text).toBe('Across 24 search terms in the last 28 days, the range of first component is -0.7 to 0.73 and of second component is -0.64 to 0.65. getting started is highest on first component and sso setup on second component.');
+    expect(plan.text).toBe('First component: no figure in the last 28 days. Second component: no figure. The top search term is getting started.');
     // A place has no total, so what is left where the plot has no room is a dash, over a note that calls the first row the top one.
     expect(ratio.nodes.filter((n) => n.part === 'number').map((n) => [n.key, (n as { text?: string }).text])).toEqual([['value', '–'], ['sub', 'Top: getting started']]);
     expect(shown(run(S('embedding'), 234)).parts).toEqual(['number']);
@@ -344,7 +347,7 @@ describe('points and text: embedding scatter, stem-and-leaf', () => {
     // Its marks' rule needs the label's 90 px, so at 120 the rows are still there.
     const narrow = run(stem, 120);
     expect(shown(narrow).parts).toEqual(['rows']);
-    // The sentence ranks rows that are in the dimension's own order.
-    expect(narrow.plan.text).toBe('Top whole seconds by requests, last 28 days: 2 (12), 1 (9), 3 (7).');
+    // The sentence finds its leader among rows that are in the dimension's own order.
+    expect(narrow.plan.text).toBe('Requests: 40 in the last 28 days. The top whole second is 2.');
   });
 });

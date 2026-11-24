@@ -6,8 +6,8 @@ import { PARTITION_RULES, squarify, type Box } from '@unified-analytics/partitio
 import { boxNames, nameFits, partitionPainter, stepBox } from '@unified-analytics/partition/dom';
 import { errOf as err, rects, run, shown, validView as view } from './helpers.ts';
 
-// Step 9 of docs/uncommon-coverage-plan.md: the `partition` mark, a custom mark that draws a treemap. No prototype
-// knows it, so it is held to a sweep, facts and golden scenes of its own.
+// Step 9 of docs/archive/uncommon-coverage-plan.md: the `partition` mark, a custom mark that draws a treemap. It
+// is held to a sweep, facts and golden scenes of its own.
 const treemap = moreSamples.treemap!.spec, tiles = moreSamples.treemap1!.spec;
 const limited: Spec = { ...treemap, query: { ...treemap.query, limit: 3 } };
 const ramped: Spec = { spec: 'view/0', query: { metrics: ['pageviews', 'visitors'], by: ['section', 'page'], range: '28d' }, layers: [{ mark: 'partition', encode: { x: 'section', detail: 'page', size: 'pageviews', color: 'visitors' } }] };
@@ -93,11 +93,6 @@ describe('the sweep', () => {
         expect([fell.plan.preset, fell.gave]).toEqual([use, ['partition']]);
       }
     }
-    // `keep` switches both rules off, so there is no list: the treemap stays, with the room and without it.
-    const kept = run({ ...treemap, keep: ['marks'] }, 250);
-    expect(kept.plan).toMatchObject({ layout: 'partition', preset: 'treemap' });
-    expect([kept.gave, kept.fit.parts, shown(kept).rules]).toEqual([[], ['plot'], ['kept:marks', 'kept:marks-flat']]);
-    expect(run({ ...treemap, keep: ['marks'] }, 346).plan).toMatchObject({ layout: 'partition', preset: 'treemap', dropped: [] });
   });
 });
 
@@ -272,10 +267,10 @@ describe('names, prose and errors', () => {
     const compared = { ...tiles.query, compare: 'previous' as const }, prior = runQuery(compared);
     expect(boxNames({ layers: tiles.layers!, query: compared, result: prior, catalog }).get('primary:partition:Search')!.says).toMatch(/^Search: Visitors 4,318, previous period [\d,]+$/);
   });
-  it('the prose names the largest parent and its share of the engine\'s total, and with one dimension it is the ranked sentence', () => {
-    expect(run(treemap, 346).plan.text).toBe('Marketing is the largest section at 42% of page views, and / the largest page at 21%.');
+  it('the prose is any view\'s: the number, and the parent that leads, from the engine\'s totals', () => {
+    expect(run(treemap, 346).plan.text).toBe('Page views: 25.1k in the last 28 days. The top section is Marketing.');
     expect(run(treemap, 250).plan.text).toBe(run(treemap, 346).plan.text);
-    expect(run(tiles, 346).plan.text).toBe('Top channels by visitors, last 28 days: Search (4,318), Direct (2,949), Social (1,474).');
+    expect(run(tiles, 346).plan.text).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. The top channel is Search.');
     expect(run(treemap, 346, null, 'empty').plan.text).toBe('Page views: nothing recorded in the last 28 days.');
   });
   it('errors name the fix', () => {
@@ -303,10 +298,9 @@ describe('a layout with a fallback for each shape of query', () => {
     expect(fills('no-such-preset', one)).toBe(true);
   });
   it('the rule that applies is the first whose preset the query can fill, and with nothing asked it is the first, as it was', () => {
-    const rule = (q: Spec['query']) => fallbackRule(PARTITION_RULES, 'partition', [], [], { marks: ['partition'], fills: (use) => fills(use, q) })?.fallback;
+    const rule = (q: Spec['query']) => fallbackRule(PARTITION_RULES, 'partition', [], { marks: ['partition'], fills: (use) => fills(use, q) })?.fallback;
     expect([rule(treemap.query), rule(tiles.query)]).toEqual(['pair-list', 'bar-list']);
     expect(fallbackRule(PARTITION_RULES, 'partition')?.fallback).toBe('pair-list');
-    expect(fallbackRule(PARTITION_RULES, 'partition', ['marks'], [], { marks: ['partition'], fills: () => true })).toBeUndefined();
   });
   it('the list of pairs is rows in the engine\'s order, each named by both dimensions, and it needs both', () => {
     const { ratio, result, plan } = run({ ...treemap, use: 'pair-list' }, 346);
@@ -325,12 +319,12 @@ describe('the painter\'s half, as strings and plain functions', () => {
     expect(partitionPainter.css).not.toMatch(/#[0-9a-f]{3,6}\b|rgb\(/i);
   });
   it('its rules compile to the ramp as a strip, and then to the swap for the list, by width and by height', () => {
-    const css = compileFitRules(PARTITION_RULES, { partition: partitionPainter.fit ?? {} }), fig = (keep: string) => '.uav[data-layout="partition"]:not([data-keep~="' + keep + '"])';
-    expect(css).toContain('@container uav-view (inline-size < 319.5px) {\n  ' + fig('guides') + ' { --uav-ramp: strip; }\n  ' + fig('guides') + ' .uav-ramp { gap: 0; }\n  ' + fig('guides') + ' .uav-ramp i { --uav-swatch-i: 7px; --uav-swatch-r: 0px; }\n  '
+    const css = compileFitRules(PARTITION_RULES, { partition: partitionPainter.fit ?? {} }), fig = (_was?: string) => '.uav[data-layout="partition"]';
+    expect(css).toContain('@container uav-view (inline-size < calc(320em / 13.33 - 0.5px)) {\n  ' + fig('guides') + ' { --uav-ramp: strip; }\n  ' + fig('guides') + ' .uav-ramp { gap: 0; }\n  ' + fig('guides') + ' .uav-ramp i { --uav-swatch-i: 7px; --uav-swatch-r: 0px; }\n  '
       + fig('guides') + ' .uav-ramp :is([data-key="ramp:none"], [data-key="ramp:none:label"]) { display: none; }\n}');
     const swap = '  ' + fig('marks') + ':has(~ .uav-fallback[data-rule="marks"]) { display: none; }\n  ' + fig('marks') + ' ~ .uav-fallback[data-rule="marks"] { display: block; }\n}';
-    expect(css).toContain('@container uav-view (inline-size < 279.5px) {\n' + swap);
-    expect(css).toContain('@container uav-view (block-size < 119.5px) {\n' + swap);
+    expect(css).toContain('@container uav-view (inline-size < calc(280em / 13.33 - 0.5px)) {\n' + swap);
+    expect(css).toContain('@container uav-view (block-size < calc(120em / 13.33 - 0.5px)) {\n' + swap);
   });
   it('a name fits where its box is as wide and as tall as it is', () => {
     expect([nameFits({ width: 40, height: 14 }, { width: 40.2, height: 16 }), nameFits({ width: 41, height: 14 }, { width: 40, height: 16 }), nameFits({ width: 30, height: 14 }, { width: 40, height: 9 })]).toEqual([true, false, false]);

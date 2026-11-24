@@ -377,7 +377,7 @@ The nine Common charts marked "out" in section 2, and the four Uncommon families
 
 ## 8. Findings as it is built
 
-Kept here and not in `docs/feedback.md`, which other work on `dom-painter` is writing to.
+Kept here and not in `docs/archive/feedback.md`, which other work on `dom-painter` is writing to.
 
 ### Step 5, part 1: the sequential ramp (built October 8)
 

@@ -3,8 +3,8 @@ import { FIT_RULES, buildScene, expand, resolve, type Catalog, type Result, type
 import { catalog, moreSamples, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
 import { err, ofUnbounded, run, shown, validView as view } from './helpers.ts';
 
-// What the grammar draws beyond the prototype's six samples (docs/chart-coverage-plan.md). Nothing here has a
-// prototype to match, so it is held to its own sweep, facts and golden scenes.
+// What the grammar draws beyond the first six samples (docs/archive/chart-coverage-plan.md), held to its own sweep, facts and
+// golden scenes.
 // The engine refuses some queries itself. `q` is one it answers, for an error that is resolve()'s to make.
 
 // The plots and the rows among them. Another layout has a suite of its own: test/radial.test.ts, test/cell.test.ts.
@@ -16,7 +16,7 @@ const specs = Object.fromEntries(Object.entries(moreSamples).map(([k, s]) => [k,
 const heights = [null, 300, 160, 100, 60, 40];
 const widths = [54, 80, 120, 170, 250, 290, 346, 500, 700];
 
-describe('the sweep, for what the prototype does not know', () => {
+describe('the sweep, for the samples beyond the first six', () => {
   for (const [name, spec] of Object.entries(specs)) {
     it(name + ': unique keys, no NaN, ratios from 0 to 1, and at every room parts the scene has', () => {
       for (const sc of scenarios) for (const h of heights) for (const w of widths) {
@@ -65,7 +65,7 @@ describe('shares are of the engine\'s total', () => {
     const band = ratio.nodes.filter((n) => n.part === 'band').map((n) => (n as { w: number }).w);
     expect(band.map((v) => Math.round(v * 100))).toEqual([41, 28, 14]);
     expect(['share:Search', 'share:Direct', 'share:Social', 'legend-top', 'sub'].map(text)).toEqual(['41%', '28%', '14%', 'Search 41%', 'Search 41%']);
-    expect(plan.text).toBe('Search is the largest channel at 41% of visitors, followed by Direct at 28%.');
+    expect(plan.text).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. The top channel is Search, at 41%.');
   });
   it('the fixture\'s channels add up to its total at any range', () => {
     for (const range of ['7d', '14d', '28d']) {
@@ -215,8 +215,8 @@ describe('detail splits a plot into series and paints none apart', () => {
     expect('detail' in ratio).toBe(false);
     expect(paths.map((n) => [n.paint, n.opacity])).toEqual([['series.1', undefined], ['series.2', undefined], ['series.3', undefined]]);
   });
-  it('the prose says who leads, and nothing of a colour or a legend', () => {
-    expect(run(moreSamples.spaghetti!.spec, 700).plan.text).toBe('United States is the largest country at 32% of visitors in the last 28 days, and leads on all 28 days.');
+  it('the prose says nothing of a colour or a legend', () => {
+    expect(run(moreSamples.spaghetti!.spec, 700).plan.text).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count.');
   });
   it('the schema takes a dimension\'s name on detail, and no number', () => {
     expect(view(by('line')), JSON.stringify(view.errors)).toBe(true);
@@ -262,7 +262,6 @@ describe('a split plot\'s legend', () => {
     expect(key(346, 170, bars).parts).toEqual(['y-axis', 'plot', 'x-axis', 'legend']);
     expect(key(250, null, bars)).toMatchObject({ parts: ['number', 'plot'], set: { split: 'plain' } });
     expect(marks(key(250, null, bars)).every((n) => n.legend === true)).toBe(true);
-    expect(key(300, null, { ...series, keep: ['guides'] })).toMatchObject({ parts: ['y-axis', 'plot', 'x-axis', 'legend'], rules: ['kept:legend', 'mid-tick'] });
   });
   it('the scene carries both forms, each in its own part, and the fit names the one that shows', () => {
     for (const w of [346, 300, 250]) {
@@ -446,11 +445,11 @@ describe('a scale per unit', () => {
 
 describe('tldr prose for two dimensions and for two metrics', () => {
   const text = (name: string, sc?: (typeof scenarios)[number]) => run(specs[name]!, 346, null, sc).plan.text;
-  it('says who leads each dimension, as a share of the engine\'s total, and over time on how many days', () => {
-    expect(text('series')).toBe('Desktop is the largest device at 52% of visitors in the last 28 days, and leads on 26 of 28 days.');
+  it('says the number, and the leader of the first dimension where it is categorical', () => {
+    expect(text('series')).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count.');
     expect(text('stacked')).toBe(text('series'));
-    expect(text('area')).toBe('Search is the largest channel at 42% of page views in the last 28 days, and leads on all 28 days.');
-    expect(text('grouped')).toBe('Search is the largest channel at 41% of visitors, and Desktop the largest device at 50%.');
+    expect(text('area')).toBe('Page views: 25.1k in the last 28 days.');
+    expect(text('grouped')).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. The top channel is Search.');
     expect(text('grouped', 'empty')).toBe('Visitors: nothing recorded in the last 28 days.');
   });
   it('says each metric of two, the first with the range', () => {

@@ -7,8 +7,8 @@ import { geoPainter, zoomBox } from '@unified-analytics/geo/dom';
 import world from '@unified-analytics/geo/countries-110m.json';
 import { errOf as err, run, shapes, shown, validView as view } from './helpers.ts';
 
-// Step 8 of docs/chart-coverage-plan.md: the `geo` mark, which is a custom mark, registered by the fixtures with their
-// boundary shapes. No prototype knows it, so it is held to a sweep, facts and golden scenes of its own. The registry
+// Step 8 of docs/archive/chart-coverage-plan.md: the `geo` mark, which is a custom mark, registered by the fixtures with their
+// boundary shapes. It is held to a sweep, facts and golden scenes of its own. The registry
 // and `fallback` are in test/registry.test.ts.
 const map = moreSamples.map!.spec, symbols = moreSamples.symbols!.spec, unmapped = moreSamples.unmapped!.spec;
 const both: Spec = { ...map, query: { ...map.query, metrics: ['visitors', 'pageviews'] }, layers: [{ mark: 'geo', encode: { x: 'country', color: 'visitors', size: 'pageviews' } }] };
@@ -59,11 +59,6 @@ describe('the sweep', () => {
       expect([fell.ratio, fell.fit], w + ' ' + h).toEqual([own.ratio, own.fit]);
       expect([fell.plan.preset, fell.gave]).toEqual(['bar-list', ['geo']]);
     }
-    // `keep` switches the rule off, so there is no list: the map stays, with the room and without it, and its other rules are read as before.
-    const kept = run({ ...map, keep: ['marks'] }, 250);
-    expect(kept.plan).toMatchObject({ layout: 'geo', preset: 'choropleth' });
-    expect([kept.gave, shown(kept)]).toEqual([[], { parts: ['plot', 'ramp'], set: { ramp: 'strip' }, hidden: [], rules: ['guides', 'kept:marks'] }]);
-    expect(run({ ...map, keep: ['marks'] }, 346).plan).toMatchObject({ layout: 'geo', preset: 'choropleth', dropped: [] });
   });
 });
 
@@ -107,18 +102,18 @@ describe('geo, filled by a metric', () => {
     expect([plan.layout, ratio.layout, plan.preset]).toEqual(['geo', 'geo', 'choropleth']);
   });
   it('its presets are registered with it, since core cannot name it: a view that uses one is the layers written out, to the node', () => {
-    expect([...customPresets().keys()]).toEqual(['choropleth', 'symbol-map', 'sankey', 'tile-grid-map', 'hex-tile-map', 'treemap', 'pair-list']);
+    expect([...customPresets().keys()]).toEqual(['choropleth', 'sankey', 'treemap', 'pair-list']);
     expect(PRESETS).not.toHaveProperty('choropleth');
-    expect(map.layers ?? symbols.layers).toBeUndefined();
+    expect(map.layers).toBeUndefined();
     expect(expand(map).layers).toEqual([{ mark: 'geo', encode: { x: 'country', color: 'visitors' } }]);
-    expect(expand(symbols).layers).toEqual([{ mark: 'geo', encode: { x: 'country', size: 'pageviews' } }]);
-    for (const spec of [map, symbols]) {
+    expect(symbols.layers).toEqual([{ mark: 'geo', encode: { x: 'country', size: 'pageviews' } }]);   // a map of symbols has no preset, and is written as its layer
+    for (const spec of [map]) {
       const { use: _use, ...rest } = spec, written: Spec = { ...rest, layers: expand(spec).layers };
       for (const [w, h] of [[346, null], [300, null], [250, null], [346, 100], [120, null]] as [number, number | null][]) { const a = run(spec, w, h), b = run(written, w, h); expect([a.ratio, a.fit, a.gave], spec.use + ' ' + w + ' ' + h).toEqual([b.ratio, b.fit, b.gave]); }
       expect(run(written, 346).plan.preset).toBeNull();
       expect(view(spec), JSON.stringify(view.errors)).toBe(true);
     }
-    expect(run(symbols, 346).plan).toMatchObject({ layout: 'geo', preset: 'symbol-map' });
+    expect(run(symbols, 346).plan).toMatchObject({ layout: 'geo', preset: null });
     expect(err(() => expand({ ...map, query: { metrics: ['visitors'] } }))).toBe('The "choropleth" preset needs a dimension in query.by.');
   });
   it('draws every shape handed in, in the shapes\' order whatever the ranking, each a path in a box 100 wide', () => {
@@ -281,8 +276,8 @@ describe('rows the map has no shape for', () => {
 });
 
 describe('prose, the number and errors', () => {
-  it('says what the ranked list says: the top regions by the metric', () => {
-    expect(run(map, 346).plan.text).toBe('Top countries by visitors, last 28 days: United States (3,265), India (1,264), United Kingdom (948).');
+  it('says what any view of one dimension says: the number, and the region that leads', () => {
+    expect(run(map, 346).plan.text).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. The top country is United States.');
     expect(run(map, 250).plan.text).toBe(run(map, 346).plan.text);
     expect(run(map, 346, null, 'empty').plan.text).toBe('Visitors: nothing recorded in the last 28 days.');
     expect((run(map, 120).ratio.nodes.find((n) => n.key === 'sub') as { text: string }).text).toBe('Top: United States');
@@ -324,15 +319,15 @@ describe('the painter\'s half, as strings', () => {
     expect(geoPainter.css).toContain('.uav[data-layout="geo"] .uav-plot { flex: none; align-self: center; inline-size: min(100%, 480px); aspect-ratio: var(--uav-aspect, 2);');
   });
   it('its rules compile to the keys in their shorter forms, and then to the swap for the ranked list, by width and by height', () => {
-    const css = compileFitRules(GEO_RULES, { geo: geoPainter.fit ?? {} }), fig = (keep: string) => '.uav[data-layout="geo"]:not([data-keep~="' + keep + '"])';
+    const css = compileFitRules(GEO_RULES, { geo: geoPainter.fit ?? {} }), fig = (_was?: string) => '.uav[data-layout="geo"]';
     const shorter = ['  ' + fig('guides') + ' { --uav-ramp: strip; --uav-size-key: most; }', '  ' + fig('guides') + ' .uav-ramp { gap: 0; }', '  ' + fig('guides') + ' .uav-ramp i { --uav-swatch-i: 7px; --uav-swatch-r: 0px; }',
       '  ' + fig('guides') + ' .uav-ramp :is([data-key="ramp:none"], [data-key="ramp:none:label"]) { display: none; }', '  ' + fig('guides') + ' .uav-size > :not(:first-child):not(:nth-last-child(-n+2)) { display: none; }', '}'].join('\n');
-    expect(css).toContain('@container uav-view (inline-size < 319.5px) {\n' + shorter);
-    expect(css).toContain('@container uav-view (block-size < 169.5px) {\n' + shorter);
+    expect(css).toContain('@container uav-view (inline-size < calc(320em / 13.33 - 0.5px)) {\n' + shorter);
+    expect(css).toContain('@container uav-view (block-size < calc(170em / 13.33 - 0.5px)) {\n' + shorter);
     expect(css).not.toContain('.uav-note');
     const swap = '  ' + fig('marks') + ':has(~ .uav-fallback[data-rule="marks"]) { display: none; }\n  ' + fig('marks') + ' ~ .uav-fallback[data-rule="marks"] { display: block; }\n}';
-    expect(css).toContain('@container uav-view (inline-size < 279.5px) {\n' + swap);
-    expect(css).toContain('@container uav-view (block-size < 119.5px) {\n' + swap);
+    expect(css).toContain('@container uav-view (inline-size < calc(280em / 13.33 - 0.5px)) {\n' + swap);
+    expect(css).toContain('@container uav-view (block-size < calc(120em / 13.33 - 0.5px)) {\n' + swap);
   });
 });
 

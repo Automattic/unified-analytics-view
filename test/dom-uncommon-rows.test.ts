@@ -7,7 +7,7 @@ import { rows as painter } from '../packages/dom/src/layouts/rows.ts';
 import { TRACK_CSS } from '../packages/dom/src/layouts/track.ts';
 import { ofUnbounded } from './helpers.ts';
 
-// What <ua-view> does for step 4 of docs/uncommon-coverage-plan.md, where that is strings and plain functions. The
+// What <ua-view> does for step 4 of docs/archive/uncommon-coverage-plan.md, where that is strings and plain functions. The
 // element itself was looked at in a browser, on the bench.
 const of = (name: string) => {
   const spec = moreSamples[name]!.spec, result = runQuery(spec.query), q = expand(spec).query, { plan, scene } = ofUnbounded(spec, result, q);
@@ -50,11 +50,11 @@ describe('a list whose rows are divided into series', () => {
   });
   it('swaps its legend for the one line, and gives both up, by the same rules resolve() asks', () => {
     const css = compileFitRules(FIT_RULES.filter((r) => r.layout === 'rows'), { rows: painter.fit ?? {} });
-    expect(css).toContain('/* rows legend */\n@container uav-view (inline-size < 169.5px) {\n  .uav[data-layout="rows"]:not([data-keep~="guides"]) .uav-legend { display: none; }\n  .uav[data-layout="rows"]:not([data-keep~="guides"]) .uav-legend-top { display: block; }\n}');
-    expect(css).toContain('/* rows legend */\n@container uav-view (block-size < 149.5px) {');
+    expect(css).toContain('/* rows legend */\n@container uav-view (inline-size < calc(170em / 13.33 - 0.5px)) {\n  .uav[data-layout="rows"] .uav-legend { display: none; }\n  .uav[data-layout="rows"] .uav-legend-top { display: block; }\n}');
+    expect(css).toContain('/* rows legend */\n@container uav-view (block-size < calc(150em / 13.33 - 0.5px)) {');
     // With both gone the pieces of a row are one colour, by the same rule.
-    const fig = '.uav[data-layout="rows"]:not([data-keep~="guides"])';
-    expect(css).toContain(['/* rows legend-top */', '@container uav-view (block-size < 83.5px) {', '  ' + fig + ' :is(.uav-legend, .uav-legend-top) { display: none; }', '  ' + fig + ' { --uav-split: plain; }',
+    const fig = '.uav[data-layout="rows"]';
+    expect(css).toContain(['/* rows legend-top */', '@container uav-view (block-size < calc(84em / 13.33 - 0.5px)) {', '  ' + fig + ' :is(.uav-legend, .uav-legend-top) { display: none; }', '  ' + fig + ' { --uav-split: plain; }',
       ...Object.entries(SPLIT_PLAIN).map(([sel, decl]) => '  ' + fig + ' ' + sel + ' { ' + decl + ' }'), '}'].join('\n'));
     expect(css.indexOf('rows legend-top')).toBeGreaterThan(css.indexOf('rows legend */'));
     expect(painter.css).toContain('.uav[data-layout="rows"] :is(.uav-legend, .uav-legend-top) { grid-column: 1 / -1; grid-row: 3; }');

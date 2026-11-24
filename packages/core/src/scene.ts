@@ -536,7 +536,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   }));
   if (guides.x && keys.length && !xOn) {
     const last = keys.length - 1;
-    // First, middle and last, each once: one row has one tick. The prototype emits it twice, under one key.
+    // First, middle and last, each once: one row has one tick.
     const idx = isTime ? [...new Set([0, Math.floor(last / 2), last])] : keys.map((_, i) => i);
     // Under columns of unequal width a label is ranked by how wide its column is: the widest stays, and the rest are
     // given up from the narrowest where they would meet, which only a painter that knows how wide a label is can see.
@@ -565,6 +565,9 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   // A split plot's bars are painted by their series, and are not these.
   const diverges = (l: Layer) => { const y = l.encode!.y; return typeof y === 'string' && !splitOf(catalog, l, xField) && rows.some((r) => (r[y] as number) < 0); };
   const say = sayOf(catalog);
+  // Bars of several layers on one x sit side by side, as the bars of a split do: one drawn over another hid it.
+  // A bar with two ends floats, and is laid over what it belongs to: a box over its whiskers.
+  const beside = layers.flatMap((l, i) => (l.mark === 'bar' && l.encode!.y2 == null && !splitOf(catalog, l, xField) ? [i] : []));
   layers.forEach((l, i) => {
     const draw = PLOT_MARKS[l.mark], prev = l.series === 'previous', span = spans[i]!;
     if (!draw) throw new Error('The "' + l.mark + '" mark has no rule for a time or category axis yet. Use ' + orList(Object.keys(PLOT_MARKS)) + '.');
@@ -602,7 +605,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
       return drawn;
     };
     if (!splitOf(catalog, l, xField)) {
-      const drawn = shade(on(draw(l, d), m != null && !prev && !l.paint), d.rows), last = m == null || prev ? undefined : drawn.filter((n): n is PathNode => n.kind === 'path').map((n) => n.points[n.points.length - 1]!).pop();
+      const drawn = shade(on(draw(l, beside.length > 1 && beside.includes(i) ? { ...d, slot: [beside.indexOf(i), beside.length] } : d), m != null && !prev && !l.paint), d.rows), last = m == null || prev ? undefined : drawn.filter((n): n is PathNode => n.kind === 'path').map((n) => n.points[n.points.length - 1]!).pop();
       if (last) ends.set(m!, last.y);                                       // where the metric's line ends, for its label
       return nodes.push(...drawn);
     }
@@ -672,7 +675,7 @@ export function columnLabel(catalog: Catalog, l: Layer): string {
 // What a text layer says in one row.
 function cellOf(catalog: Catalog, l: Layer, r: Row): { text: string; paint: string } {
   const f = l.encode!.text as string, M = catalog.metrics[f], D = catalog.dimensions[f];
-  // A dimension is said as the readout says it, so a day is "Sep 29". The prototype writes it raw: a deliberate departure.
+  // A dimension is said as the readout says it, so a day is "Sep 29".
   if (!M || l.series !== 'delta') return { text: M ? formatValue(num(r, f), M) : D ? formatDimension(r[f], D) : String(r[f]), paint: 'ink' };
   // The row's change, as the tldr value's delta says the total's. A row with nothing before it has a dash: a column has no room for the words.
   const d = delta(num(r, f), r[f + '@previous'] as number | null | undefined, M.polarity);
@@ -926,7 +929,7 @@ const legendEntry = (k: string, of: { row?: string; series?: string }, text: str
 const seriesLegend = (series: string[], name: (s: string) => string = (s) => s): SceneNode[] => series.flatMap((s, j) => legendEntry(s, { series: s }, name(s), 'series.' + (j + 1)));
 // The legends of a whole split by colour, for a band and for a circle of arcs: both of them, each in its own part.
 // The plan names one in `parts`; a fit rule swaps them.
-// A segment is named as the readout names it, so a day is "Sep 29". The prototype writes it raw: a deliberate departure.
+// A segment is named as the readout names it, so a day is "Sep 29".
 // `said` is what an entry says of its row in place of its share: rings that are read against a range say the value.
 function shareLegend(rows: Row[], k: (r: Row) => string, f: string, dim: DimensionDef, m: string, M: MetricDef, total: number | null | undefined, paint: (i: number) => string, said = (r: Row) => portion(num(r, m), total, M)): SceneNode[] {
   const nodes: SceneNode[] = [], name = (r: Row) => formatDimension(r[f], dim);
@@ -935,7 +938,7 @@ function shareLegend(rows: Row[], k: (r: Row) => string, f: string, dim: Dimensi
     nodes.push({ key: 'share:' + k(r), part: 'legend', kind: 'text', row: k(r), text: said(r), anchor: 'end', baseline: 'middle', font: 'value', paint: 'ink', layer: 'guide' });
   });
   // One line for the whole of it, so it names no row. Its key has no colon after `legend`, so no segment's entry can
-  // share it, whatever the segment is called. The prototype's is `legend:top`: a deliberate departure.
+  // share it, whatever the segment is called.
   if (rows.length) nodes.push({ key: 'legend-top', part: 'legend-top', kind: 'text', text: name(rows[0]!) + ' ' + said(rows[0]!), anchor: 'start', font: 'label', paint: 'ink', layer: 'guide' });
   return nodes;
 }

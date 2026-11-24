@@ -43,9 +43,9 @@ export const geoRules = (layout: string): FitRule[] => [
   // The ramp and the key to sizes are the keys to a map's fills and its symbols, so they stay as long as the map: under
   // this each is in its shorter form. The note of what the map could not draw stays with them.
   { id: 'guides', layout, container: 'view', needs: { inline: 320, block: 170 },
-    hide: [], set: { ramp: 'strip', 'size-key': 'most' }, keep: 'guides' },
+    hide: [], set: { ramp: 'strip', 'size-key': 'most' } },
   { id: 'marks',  layout, container: 'view', needs: { inline: 280, block: 120 },      // regions too small to tell apart
-    hide: [], fallback: 'bar-list', keep: 'marks' },
+    hide: [], fallback: 'bar-list' },
 ];
 /** The rules of the mark under its own name, `geo`. Under another name they are `geoRules(name)`: a rule names its layout. */
 export const GEO_RULES: FitRule[] = geoRules('geo');
@@ -76,6 +76,7 @@ export function geoMark(shapes: Shapes, { name = 'geo', projection }: GeoOptions
   return {
     rules,
     reads: { x: ['dimension'], color: ['metric'], size: ['metric'] },
+    fields: ['paint'],   // the paint of its symbols
 
     scene({ layers, guides, query, result, catalog }) {
       const l = layers[0]!, { x: dim, color, size } = l.encode || {}, rows = result.rows;
@@ -132,15 +133,15 @@ export function eachGeoName(f: (name: string) => void): void { NAMES.forEach((n)
  * `mark`, or a preset in `use`.
  *
  * Other shapes are the same mark registered again under a name of its own, and `presets` names the presets that draw
- * it: the one that fills each region on `color`, and the one that stands a symbol on each on `size`. Under `geo` they
- * are `choropleth` and `symbol-map`, and under another name there are only the ones given.
- * Each name is a custom mark, and counts against the grammar as one. */
+ * it: the one that fills each region on `color`, and the one that stands a symbol on each on `size`. Under `geo` there
+ * is `choropleth`, and under another name there are only the ones given. A map of symbols is written as its layer.
+ * Each name is a custom mark of its own, and is held to what any is (test/admission.test.ts). */
 export function registerGeo(shapes: Shapes, { presets, ...options }: GeoOptions & { presets?: { color?: string; size?: string } } = {}): void {
   const name = options.name ?? 'geo';
   registerMark(name, geoMark(shapes, options));
   if (!NAMES.has(name)) { NAMES.add(name); HEARD.forEach((f) => f(name)); }
   // Core cannot name this mark, so its presets are registered here. Working names: check each against @automattic/charts before it ships.
-  const { color, size } = presets ?? (name === 'geo' ? { color: 'choropleth', size: 'symbol-map' } : {});
+  const { color, size } = presets ?? (name === 'geo' ? { color: 'choropleth' } : {});
   if (color) registerPreset(color, { layers: [{ mark: name, encode: { x: '$by', color: '$metric' } }] });
   if (size) registerPreset(size, { layers: [{ mark: name, encode: { x: '$by', size: '$metric' } }] });
 }

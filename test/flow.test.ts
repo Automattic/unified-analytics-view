@@ -6,8 +6,8 @@ import { LINK_RULES } from '@unified-analytics/flow';
 import { linkPainter } from '@unified-analytics/flow/dom';
 import { errOf as err, rects, run, shown, validView as view } from './helpers.ts';
 
-// Step 8 of docs/uncommon-coverage-plan.md: the `link` mark, a custom mark the fixtures register, and the Sankey of one
-// step it draws. No prototype knows it, so it is held to a sweep, facts and golden scenes of its own.
+// Step 8 of docs/archive/uncommon-coverage-plan.md: the `link` mark, a custom mark the fixtures register, and the Sankey of one
+// step it draws. It is held to a sweep, facts and golden scenes of its own.
 const sankey = moreSamples.sankey!.spec;
 const ribbons = (ratio: { nodes: unknown[] }) => (ratio.nodes as PathNode[]).filter((n) => n.part === 'plot' && n.kind === 'path');
 const labels = (ratio: { nodes: unknown[] }) => (ratio.nodes as TextNode[]).filter((n) => n.part === 'labels');
@@ -56,10 +56,6 @@ describe('the sweep', () => {
     const { ratio, result } = run(sankey, 250);
     expect(ratio.ys).toEqual(result.totalsBy!.channel!.map((r) => r.channel));
     expect(ratio.rows).toEqual(result.totalsBy!.landing!.map((r) => r.landing));
-    // `keep` switches the rule off, so there is no grid, and the Sankey stays, with the room and without it.
-    expect(run({ ...sankey, keep: ['marks'] }, 346).plan).toMatchObject({ layout: 'link', preset: 'sankey', dropped: [] });
-    const kept = run({ ...sankey, keep: ['marks'] }, 250);
-    expect([kept.plan.layout, kept.gave, shown(kept)]).toEqual(['link', [], { parts: ['plot', 'labels'], set: {}, hidden: [], rules: ['kept:marks'] }]);
   });
 });
 
@@ -169,9 +165,9 @@ describe('link: two columns of nodes and a ribbon for each row', () => {
 });
 
 describe('prose and errors', () => {
-  it('says what a query by two dimensions says: who leads each, as a share of the engine\'s total. Core gives a custom mark no sentence of its own', () => {
-    expect(run(sankey, 346).plan.text).toBe('Search is the largest channel at 41% of visitors, and Home the largest landing at 30%.');
-    expect(run(sankey, 250).plan.text).toBe('Most visitors at Search, Home (1,378) in the last 28 days. Search is the busiest channel at 41% of visitors, and Home the busiest landing at 30%.');
+  it('says what any view says: the number, and the leader of the first dimension. A custom mark needs no sentence of its own', () => {
+    expect(run(sankey, 346).plan.text).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. The top channel is Search.');
+    expect(run(sankey, 250).plan.text).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. The top channel is Search.');
     expect(run(sankey, 346, null, 'empty').plan.text).toBe('Visitors: nothing recorded in the last 28 days.');
   });
   it('errors name the fix: a wrong encoding, no totals from the engine, too many sources, a second layer, and x2', () => {
@@ -203,8 +199,8 @@ describe('the painter\'s half, as strings', () => {
   it('its one rule compiles to the swap for the grid, by width and by height, and nothing takes the names alone', () => {
     const css = compileFitRules(LINK_RULES);
     expect(css).not.toContain('.uav-labels');
-    expect(css).toContain('@container uav-view (inline-size < 319.5px) {\n  .uav[data-layout="link"]:not([data-keep~="marks"]):has(~ .uav-fallback[data-rule="marks"]) { display: none; }\n  .uav[data-layout="link"]:not([data-keep~="marks"]) ~ .uav-fallback[data-rule="marks"] { display: block; }');
-    expect(css).toContain('@container uav-view (block-size < 139.5px)');
+    expect(css).toContain('@container uav-view (inline-size < calc(320em / 13.33 - 0.5px)) {\n  .uav[data-layout="link"]:has(~ .uav-fallback[data-rule="marks"]) { display: none; }\n  .uav[data-layout="link"] ~ .uav-fallback[data-rule="marks"] { display: block; }');
+    expect(css).toContain('@container uav-view (block-size < calc(140em / 13.33 - 0.5px))');
     expect(LINK_RULES.map((r) => [r.id, r.fallback])).toEqual([['marks', 'heatmap']]);
   });
 });

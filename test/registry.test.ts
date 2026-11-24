@@ -4,11 +4,11 @@ import type { CustomMark, FitRule, Part, PresetLibrary, RectNode, Spec } from '@
 import { catalog, runQuery, samples } from '@unified-analytics/fixtures';
 import { errOf as err, run, shown, validView as view } from './helpers.ts';
 
-// Step 8 of docs/chart-coverage-plan.md, part 1: the registry of custom marks. Held here with a mark made for the
+// Step 8 of docs/archive/chart-coverage-plan.md, part 1: the registry of custom marks. Held here with a mark made for the
 // test, so nothing in it depends on a map. The `geo` mark is in test/geo.test.ts, and `fallback` in test/fallback.test.ts.
 const RULES: FitRule[] = [
-  { id: 'guides', layout: 'toy', container: 'view', needs: { inline: 200 }, hide: ['ramp'], keep: 'guides' },
-  { id: 'marks', layout: 'toy', container: 'view', needs: { inline: 150, block: 50 }, hide: [], fallback: 'bar-list', keep: 'marks' },
+  { id: 'guides', layout: 'toy', container: 'view', needs: { inline: 200 }, hide: ['ramp'] },
+  { id: 'marks', layout: 'toy', container: 'view', needs: { inline: 150, block: 50 }, hide: [], fallback: 'bar-list' },
 ];
 // A strip of tiles, one for each row, filled by a metric. It reads its encodings and nothing else.
 const toy: CustomMark = {
@@ -53,16 +53,12 @@ describe('a custom mark in a view', () => {
     expect(ratio.rows).toEqual(runQuery(tiles.query).rows.map((r) => r.page));
     expect(ratio.nodes.filter((n) => n.part === 'plot').map((n) => n.paint)).toEqual(['seq.10', 'seq.6', 'seq.5', 'seq.4', 'seq.2', 'seq.1', 'seq.1', 'seq.1']);
     expect(ratio.nodes.filter((n) => n.part === 'number').map((n) => n.key)).toEqual(['value', 'sub']);
-    expect(plan.text).toBe('Top pages by page views, last 28 days: / (4,820), /pricing (2,960), /blog/launch-notes (2,105).');
+    expect(plan.text).toBe('Page views: 25.1k in the last 28 days. The top page is /.');
   });
-  it('gives up its guides under its `guides` rule, unless the spec keeps them', () => {
-    const at = (w: number, h: number | null = null, keep?: Spec['keep']) => { const r = run({ ...tiles, keep }, w, h); return [r.plan.layout, r.fit.parts.join(' '), shown(r).rules.join(' ')]; };
+  it('gives up its guides under its `guides` rule', () => {
+    const at = (w: number, h: number | null = null) => { const r = run(tiles, w, h); return [r.plan.layout, r.fit.parts.join(' '), shown(r).rules.join(' ')]; };
     expect(at(200)).toEqual(['toy', 'plot ramp', '']);
     expect(at(199)).toEqual(['toy', 'plot', 'guides']);
-    expect(at(199, null, ['guides'])).toEqual(['toy', 'plot ramp', 'kept:guides']);
-    // Kept marks do not fall back: under their need the view is still the mark's, and its other rules are read as before.
-    expect(at(149, null, ['marks'])).toEqual(['toy', 'plot', 'guides kept:marks']);
-    expect(run({ ...tiles, keep: ['marks'] }, 149).gave).toEqual([]);
   });
   it('draws its layers alone, unless it offers its places to the plot\'s text', () => {
     const over: Spec = { ...tiles, layers: [...tiles.layers!, { mark: 'text', encode: { x: tiles.layers![0]!.encode!.x!, text: tiles.query.metrics[0]! } }] };
@@ -94,7 +90,7 @@ describe('a custom mark whose rule names a fallback', () => {
   });
 });
 
-// Step 7 of docs/uncommon-coverage-plan.md: the registry of presets, beside the one for marks. Core cannot name a
+// Step 7 of docs/archive/uncommon-coverage-plan.md: the registry of presets, beside the one for marks. Core cannot name a
 // custom mark, so the package that registers one registers the presets that draw it. Held here with the toy mark.
 const strip: PresetLibrary[string] = { layers: [{ mark: 'toy', encode: { x: '$by', color: '$metric' } }] };
 const registered = () => [...customPresets().keys()].join(', ');
@@ -178,7 +174,7 @@ describe('a registered preset in a view', () => {
   it('a rule\'s fallback may name one: the view is planned again through the registry, from either kind of spec', () => {
     // A second toy, whose marks give way to a registered list of a bar and a label, which no preset of core's is.
     const list: PresetLibrary[string] = { layers: [{ mark: 'bar', encode: { y: '$by', x: '$metric' } }, { mark: 'text', encode: { y: '$by', text: '$by' } }] };
-    registerMark('toy-2', { ...toy, rules: [{ id: 'marks', layout: 'toy-2', container: 'view', needs: { inline: 150 }, hide: [], fallback: 'toy-list', keep: 'marks' }] });
+    registerMark('toy-2', { ...toy, rules: [{ id: 'marks', layout: 'toy-2', container: 'view', needs: { inline: 150 }, hide: [], fallback: 'toy-list' }] });
     registerPreset('toy-list', list);
     registerPreset('toy-strip-2', { layers: [{ mark: 'toy-2', encode: { x: '$by', color: '$metric' } }] });
     const written: Spec = { ...tiles, layers: [{ mark: 'toy-2', encode: { x: 'page', color: 'pageviews' } }] }, asked: Spec = { ...rest, use: 'toy-list' };
@@ -191,7 +187,7 @@ describe('a registered preset in a view', () => {
       expect([ratio, fit]).toEqual([own.ratio, own.fit]);
     }
     // A fallback no one registered is expand()'s error, with the registry in it.
-    registerMark('toy-3', { ...toy, rules: [{ id: 'marks', layout: 'toy-3', container: 'view', needs: { inline: 150 }, hide: [], fallback: 'toy-gone', keep: 'marks' }] });
+    registerMark('toy-3', { ...toy, rules: [{ id: 'marks', layout: 'toy-3', container: 'view', needs: { inline: 150 }, hide: [], fallback: 'toy-gone' }] });
     expect(err(() => run({ ...tiles, layers: [{ mark: 'toy-3', encode: { x: 'page', color: 'pageviews' } }] }, 149))).toMatch(/^Unknown preset "toy-gone"\. The library has: .*\. Registered: .*toy-list.*\. Use one of those, or register it with registerPreset\("toy-gone", …\)/);
   });
 });

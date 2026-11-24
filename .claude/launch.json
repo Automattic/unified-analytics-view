@@ -4,15 +4,10 @@
     {
       "name": "bench",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["bench"],
+      "runtimeArgs": [
+        "bench"
+      ],
       "port": 5173,
-      "autoPort": true
-    },
-    {
-      "name": "archive",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["bench:archive"],
-      "port": 5183,
       "autoPort": true
     }
   ]

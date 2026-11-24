@@ -5,7 +5,7 @@ import { LEGEND_CSS } from '../packages/dom/src/chrome/legend.ts';
 import { band } from '../packages/dom/src/layouts/band.ts';
 
 // String work only, as in dom-compile.test.ts. What the browser makes of it is checked on the bench.
-const fig = (keep: string) => '.uav[data-layout="band"]:not([data-keep~="' + keep + '"])';
+const fig = (_was?: string) => '.uav[data-layout="band"]';
 const css = compileFitRules(FIT_RULES.filter((r) => r.layout === 'band'), { band: band.fit! });
 
 describe('the band layout', () => {
@@ -20,7 +20,7 @@ describe('the band layout', () => {
 
   it('swaps the legends under the legend rule, which alone only sets a switch', () => {
     expect(css).toContain([
-      '@container uav-view (inline-size < 169.5px) {',
+      '@container uav-view (inline-size < calc(170em / 13.33 - 0.5px)) {',
       '  ' + fig('guides') + ' { --uav-legend: top; }',
       '  ' + fig('guides') + ' .uav-legend { display: none; }',
       '  ' + fig('guides') + ' .uav-legend-top { display: block; max-block-size: none; }',
@@ -37,8 +37,8 @@ describe('the band layout', () => {
       '  ' + fig('marks') + ' .uav-number { align-self: start; margin: 0; }',
       '}',
     ].join('\n');
-    expect(css).toContain('@container uav-view (inline-size < 109.5px) {\n' + alone);
-    expect(css).toContain('@container uav-view (block-size < 47.5px) {\n' + alone);
-    expect(css.indexOf('inline-size < 169.5px')).toBeLessThan(css.indexOf('inline-size < 109.5px'));
+    expect(css).toContain('@container uav-view (inline-size < calc(110em / 13.33 - 0.5px)) {\n' + alone);
+    expect(css).toContain('@container uav-view (block-size < calc(48em / 13.33 - 0.5px)) {\n' + alone);
+    expect(css.indexOf('inline-size < calc(170em / 13.33 - 0.5px)')).toBeLessThan(css.indexOf('inline-size < calc(110em / 13.33 - 0.5px)'));
   });
 });

@@ -25,8 +25,8 @@ describe('a unit\'s glyphs in the DOM', () => {
   it('the rules compile to the swap for the rule\'s own view beside the figure, and none takes the key alone', () => {
     const css = compileFitRules(FIT_RULES.filter((r) => r.id.startsWith('unit')));
     expect(css).not.toContain('.uav-unit-key');
-    const fig = '.uav[data-layout="band"]:not([data-keep~="marks"])', swap = (id: string) => '  ' + fig + ':has(~ .uav-fallback[data-rule="' + id + '"]) { display: none; }\n  ' + fig + ' ~ .uav-fallback[data-rule="' + id + '"] { display: block; }\n}';
-    expect(css).toContain('/* band unit */\n@container uav-view (inline-size < 279.5px) {\n' + swap('unit'));
-    expect(css).toContain('/* band unit-alone */\n@container uav-view (block-size < 219.5px) {\n' + swap('unit-alone'));
+    const fig = '.uav[data-layout="band"]', swap = (id: string) => '  ' + fig + ':has(~ .uav-fallback[data-rule="' + id + '"]) { display: none; }\n  ' + fig + ' ~ .uav-fallback[data-rule="' + id + '"] { display: block; }\n}';
+    expect(css).toContain('/* band unit */\n@container uav-view (inline-size < calc(280em / 13.33 - 0.5px)) {\n' + swap('unit'));
+    expect(css).toContain('/* band unit-alone */\n@container uav-view (block-size < calc(220em / 13.33 - 0.5px)) {\n' + swap('unit-alone'));
   });
 });

@@ -26,8 +26,8 @@ ${legendTop('band')}
 .uav-band[data-unit] i { border-radius: ${token('border-radius-cell')}; }
 ${IN_BOX} {
   .uav[data-layout="band"] .uav-body { container-type: size; overflow: hidden; --uav-legend-block: ${legendBlock(BAND_BAR)}; }
-  .uav[data-layout="band"]:not([data-keep~="guides"]) .uav-legend { ${LEGEND_SWAP.full} }
-  .uav[data-layout="band"]:not([data-keep~="guides"]) .uav-legend-top { ${LEGEND_SWAP.top} }
+  .uav[data-layout="band"] .uav-legend { ${LEGEND_SWAP.full} }
+  .uav[data-layout="band"] .uav-legend-top { ${LEGEND_SWAP.top} }
   /* In a box the grid gives way to the height, down to nothing, and its width follows, as a circle of arcs does. The
    * full legend stays while the grid has 100 px under it, which is the least it is built to. */
   .uav[data-layout="band"] .uav-body:has(> .uav-band[data-unit]) { display: flex; flex-direction: column; --uav-legend-block: ${legendBlock(GRID_LEAST)}; }

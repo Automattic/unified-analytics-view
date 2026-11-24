@@ -6,7 +6,7 @@
     "test": "vitest run --dir test",
     "bench": "pnpm --filter @unified-analytics/bench dev",
     "typecheck": "tsc --noEmit",
-    "bench:archive": "pnpm --filter @unified-analytics/bench-archive dev"
+    "agent": "node packages/agent/src/server.ts"
   },
   "devDependencies": {
     "@adobe/leonardo-contrast-colors": "1.0.0",
@@ -15,6 +15,7 @@
     "@types/d3-scale": "^4.0.9",
     "@types/d3-shape": "^3.2.0",
     "@types/node": "^26.6.4",
+    "@unified-analytics/agent": "workspace:*",
     "@unified-analytics/core": "workspace:*",
     "@unified-analytics/dom": "workspace:*",
     "@unified-analytics/fixtures": "workspace:*",

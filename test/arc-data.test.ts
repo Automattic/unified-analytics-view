@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { FIT_RULES, arcD, buildScene, expand, resolve, tldrProse, type ArcNode, type Result, type Spec, type TextNode } from '@unified-analytics/core';
 import { compileFitRules } from '@unified-analytics/dom';
-import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
+import { catalog, moreSamples as written, runQuery, scenarios } from '@unified-analytics/fixtures';
 import { radial } from '../packages/dom/src/layouts/radial.ts';
 import { err, round, run, shown, validView as view } from './helpers.ts';
+import { inUse, useExamples } from './examples.ts';
 
-// Step 2 of docs/uncommon-coverage-plan.md: an `arc` that reads data on `angle` and `radius`, and a second ring by
+useExamples();   // the presets the library no longer ships, which these cases still write `use` with
+const moreSamples = inUse(written);   // and the samples as they were written with them
+
+// Step 2 of docs/archive/uncommon-coverage-plan.md: an `arc` that reads data on `angle` and `radius`, and a second ring by
 // `detail`. Held to its own sweep, facts and golden scenes, as test/radial.test.ts holds the circle divided by colour.
 const specs = Object.fromEntries(['rose', 'rings', 'sunburst'].map((k) => [k, moreSamples[k]!.spec])) as Record<string, Spec>;
 const { rose, rings, sunburst } = specs;
@@ -88,15 +92,15 @@ describe('a rose: a dimension on angle and a metric on radius', () => {
     const week = buildScene(resolve({ ...rose!, query: { metrics: ['visitors'], by: ['weekday'] } }, runQuery({ metrics: ['visitors'], by: ['weekday'] }), catalog), { metrics: ['visitors'], by: ['weekday'] }, runQuery({ metrics: ['visitors'], by: ['weekday'] }), catalog);
     expect(week.nodes.filter((n) => n.part === 'rim').map((n) => n.rank ?? 0)).toEqual([0, 1, 0, 1, 0, 1, 0]);
   });
-  it('the ranked sentence, and the note under the number, are true of rows that came in clock order', () => {
+  it('the leader in the sentence, and in the note under the number, is found by comparing rows that came in clock order', () => {
     const { plan, ratio } = run(rose!, 346);
-    expect(plan.text).toBe('Top hours by visitors, last 28 days: 11am (864), 10am (824), 12pm (824).');
+    expect(plan.text).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. The top hour is 11am.');
     expect((ratio.nodes.find((n) => n.key === 'sub') as TextNode).text).toBe('Top: 11am');
     expect(plan.share).toBe(false);
   });
   it('the labels are the key to the slices: under the `rim` rule\'s need they thin to the ones with no rank, and stay as long as the circle', () => {
     const rule = FIT_RULES.find((r) => r.layout === 'radial' && r.id === 'rim')!;
-    expect(rule).toMatchObject({ needs: { inline: 230, block: 120 }, hide: ['rim.ranked'], keep: 'guides' });
+    expect(rule).toMatchObject({ needs: { inline: 230, block: 120 }, hide: ['rim.ranked'] });
     const wide = run(rose!, 346), narrow = run(rose!, 229);
     expect(wide.plan.guides.rim).toBe(true);
     expect(shown(wide)).toMatchObject({ parts: ['radial', 'rim'], hidden: [], rules: [] });
@@ -106,8 +110,6 @@ describe('a rose: a dimension on angle and a metric on radius', () => {
     // They go with the circle, and not before it.
     expect(shown(run(rose!, 100)).parts).toEqual(['radial', 'rim']);
     expect(shown(run(rose!, 71)).parts).toEqual(['number']);
-    // A spec that keeps its guides holds the rule off, and every name stays.
-    expect(shown(run({ ...rose!, keep: ['guides'] }, 229))).toMatchObject({ parts: ['radial', 'rim'], hidden: [], rules: ['kept:rim'] });
   });
 });
 
@@ -124,7 +126,7 @@ describe('a radial bar: a dimension on radius and a metric on angle', () => {
     expect(value.map((n) => round(n.r1))).toEqual([1, 0.883, 0.767, 0.65, 0.533, 0.417]);
     expect(value.every((n, j) => n.r0 === behind[j]!.r0 && n.r1 === behind[j]!.r1 && round(n.r1 - n.r0) === 0.096)).toBe(true);
     expect(plan.share).toBe(false);
-    expect(plan.text).toBe('Top channels by visitors, last 28 days: Search (4,318), Direct (2,949), Social (1,474).');
+    expect(plan.text).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. The top channel is Search.');
   });
   it('the legend says each ring\'s value, since a ring is no share of a whole, and steps down as a donut\'s does', () => {
     const { ratio } = run(rings!, 346), says = (key: string) => (ratio.nodes.find((n) => n.key === key) as TextNode).text;
@@ -172,8 +174,9 @@ describe('a sunburst: detail on an arc split by color', () => {
     expect(short.map((n) => n.series)).toEqual(['Direct', 'Social', 'AI assistants', 'Email', 'Other']);
     expect(short.at(-1)!.a1).toBeLessThan(whole.a1 - 0.1);
   });
-  it('the share sentence, and a hole where the layer has an inner radius', () => {
-    expect(run(sunburst!, 346).plan).toMatchObject({ share: true, text: 'Desktop is the largest device at 52% of visitors, and Search the largest channel at 42%.' });
+  it('the sentence of a view of shares, and a hole where the layer has an inner radius', () => {
+    expect(run(sunburst!, 346).plan.share).toBe(true);
+    expect(run(sunburst!, 346).plan.text).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. The top device is Desktop, at 52%.');
     const holed = run(arc({ angle: 'visitors', color: 'device', detail: 'channel', radius: 0.5 }, ['device', 'channel']), 346);
     expect(holed.ratio.parts).toEqual(['radial', 'hole', 'legend']);
     expect(holed.ratio.nodes.filter((n): n is ArcNode => n.kind === 'arc').slice(0, 2).map((n) => [n.r0, n.r1])).toEqual([[0.5, 0.8], [0.8, 1]]);
@@ -226,22 +229,22 @@ describe('errors name the fix', () => {
   });
 });
 
-describe('the prose ranks rows by comparing them, whatever order they came in', () => {
+describe('the prose finds the leader by comparing rows, whatever order they came in', () => {
   it('says the same of rows the engine ranked, and the truth of rows it did not', () => {
     const q = { metrics: ['visitors'], by: ['channel'] }, result = runQuery(q), turned = { ...result, rows: result.rows.slice().reverse() };
     for (const share of [true, false]) expect(tldrProse(q, turned, share, catalog)).toBe(tldrProse(q, result, share, catalog));
-    expect(tldrProse(q, turned, true, catalog)).toBe('Search is the largest channel at 41% of visitors, followed by Direct at 28%.');
+    expect(tldrProse(q, turned, true, catalog)).toBe('Visitors: 10.5k in the last 28 days. This is a sum of daily counts, not a unique count. The top channel is Search, at 41%.');
   });
 });
 
 // String work only, as test/dom-radial.test.ts. What the browser makes of it is checked on the bench.
 describe('the radial layout paints the new forms', () => {
-  const css = compileFitRules(FIT_RULES.filter((r) => r.layout === 'radial'), { radial: radial.fit! }), fig = '.uav[data-layout="radial"]:not([data-keep~="guides"])';
+  const css = compileFitRules(FIT_RULES.filter((r) => r.layout === 'radial'), { radial: radial.fit! }), fig = '.uav[data-layout="radial"]';
   it('the `rim` rule thins the labels to the ones with no rank and leaves the circle its margin, before the legend steps down', () => {
-    for (const need of ['inline-size < 229.5px', 'block-size < 119.5px'])
+    for (const need of ['inline-size < calc(230em / 13.33 - 0.5px)', 'block-size < calc(120em / 13.33 - 0.5px)'])
       expect(css).toContain('@container uav-view (' + need + ') {\n  ' + fig + ' .uav-rim [data-rank] { display: none; }\n}');
     expect(css).not.toContain('--uav-rim: 0px');
-    expect(css.indexOf('inline-size < 229.5px')).toBeLessThan(css.indexOf('inline-size < 71.5px'));
+    expect(css.indexOf('inline-size < calc(230em / 13.33 - 0.5px)')).toBeLessThan(css.indexOf('inline-size < calc(72em / 13.33 - 0.5px)'));
   });
   it('the circle gives up a margin to the labels only where the plan shows them, and has a measured pass to thin them', () => {
     expect(radial.css).toContain('.uav[data-layout="radial"][data-parts~="rim"] .uav-radial { --uav-rim: 14px; }');

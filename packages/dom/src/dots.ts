@@ -1,5 +1,5 @@
 /* The dot-matrix face: what a view's number is set in, wherever it shows one. It is the prototype's dot painter,
- * for the one thing the direction gives it (docs/milestones.md, the tldr value): a glyph is five cells by seven, a
+ * for the one thing the direction gives it (docs/archive/milestones.md, the tldr value): a glyph is five cells by seven, a
  * shape only decides which cells are lit, and the cells that are not are still there, faintly.
  *
  * The number is on a screen with no surface of its own: its cells sit on whatever the view is on. The unlit cells are

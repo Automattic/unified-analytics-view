@@ -265,7 +265,13 @@ Once the steps were built he went through every call made by judgement, twenty-t
     - **It does move where the type does.** On the bench's trend, with the label set to 20 px the frame 346 px wide gives up its axes, as 280 px is then 420. With it at 10 px the frame 250 px wide keeps them.
     - `fitTo`, `viewAt`, `explain` and the agent's `check` take the size with the room, as `em`, and `explain` says a need as it stands there.
 18. A proposal for the API's owners: a metric's `by`, grains, whether a metric adds up, and the three states of an answer. Done: `docs/api-proposal.md`, one page that gathers everything asked of the catalog, the query and the answer, each with what a view does with it and whether it is built here. It is David's to send.
-19. The reference, rewritten as one concise document.
+19. The reference, rewritten as one concise document. Done: for the author of a view, with the decision log, at 14,100 words where it was 29,400.
+    - **What is kept.** Every section's number, and every Decided and Open item's, since the code cites them. The two tables the tests hold it to: what each mark reads, and the presets. Each recommendation on an Open item.
+    - **What is cut.** When each thing was built and what building it found, the prototype's reducer and its placed scene, the dot-grid painter's detail, and what each form was before it was fixed. Git has them: the file as it was is at `7f50928`.
+    - **The log is the decision alone:** a sentence or two for each of the 64, where some ran to a page.
+    - **Three things it said were out of date:** the vocabulary's marks ("later dot, cell, tick, arc"), two custom marks where there are three, and `keep` as provisional in section 10.1.
+    - **Every whole spec it writes is drawn,** and `test/docs.test.ts` now holds that: eleven specs, each read by the agent's `check` on the fixture engine. An example that is refused teaches a spec that does not draw.
+    - Of its words, 9,200 are prose, 2,400 of those the log, 4,100 are tables and 800 are examples. Whether the log should be shorter still, or a section that was cut should come back, is his to say on reading it.
 20. A real MCP client connected to the server. Done: Claude Code 2.1, handed a one-off config that runs `packages/agent/src/server.ts`, started it over stdio, listed its tools and called `check_view`, and got the view's sentence and its parts at 250 px back. So the protocol as written is one a real client speaks. `draw_view` was not called through it.
 
 **How the work is committed:** each step locally, on a feature branch, and nothing pushed or opened as a pull request without his word.

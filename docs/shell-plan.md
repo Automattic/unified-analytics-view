@@ -47,7 +47,7 @@ These cost little now and are awkward to retrofit. Each is forced by at least tw
 8. **Words travel with the picture.** Anything that hands a view to a harness hands over the tldr prose and the table with it.
 9. **Nothing global is claimed without a prefix.** Tag names, registered custom properties and events are ours by name.
 
-Friday's panel hard-codes which views it shows. Its state is still one plain object and one pure function from params to queries, so it lifts into core when params and boards arrive.
+Friday's panel hard-codes which views it shows. Its state is still one plain object and one pure function from params to queries, so it lifts into core when params and boards arrive. They arrived on November 24 (reference, Decided 48 to 50): a board's `query` is that object, `boardViews` that function, and `boardSelect` folds a selection into it. The bench's Board page is a surface written on them. The panel has not been moved onto them.
 
 ## 4. What this asks of the painter
 

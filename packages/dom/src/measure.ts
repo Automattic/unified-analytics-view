@@ -64,7 +64,7 @@ export function thinLabels(root: ParentNode, selector: string, gone: (labels: HT
 }
 
 /** Where to set labels so that each stands at least `line` from the next: every one as near its own place as that
- * allows, pushed down from the highest and then back up from the bottom of the room, as place() sets them. Null for
+ * allows, pushed down from the highest and then back up from the bottom of the room. Null for
  * one there is no room for; the lowest go first. */
 export function apart(ys: number[], line: number, room: number): (number | null)[] {
   const order = ys.map((_, i) => i).sort((a, b) => ys[a]! - ys[b]!).slice(0, Math.max(0, Math.floor(room / line) + 1));

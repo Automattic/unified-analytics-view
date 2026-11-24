@@ -42,7 +42,7 @@ export const linkPainter: LayoutPainter = {
   layout: 'link',
   css,
 
-  // Labels that would meet, by their real sizes, in each column: the larger node's stands, as place() decides it by a line.
+  // Labels that would meet, by their real sizes, in each column: the larger node's stands.
   measure(body) {
     for (const side of ['start', 'end']) {
       thinLabels(body, '.uav-labels > span[data-anchor="' + side + '"]:not([data-exit])', (els) =>
@@ -58,8 +58,8 @@ export const linkPainter: LayoutPainter = {
     // The nodes and their names say again what each ribbon's name says whole.
     const nodes = ensure(plot, 'div', 'uav-nodes'), labels = ensure(body, 'div', 'uav-labels');
     for (const el of [nodes, labels]) el.setAttribute('aria-hidden', 'true');
-    keyed(nodes, scene.nodes.filter((n): n is RectNode => n.part === 'plot' && n.kind === 'rect'), () => 'i', (el, n) => { prop(el, '--uav-x', n.x); prop(el, '--uav-y', n.y); prop(el, '--uav-h', n.h); });
-    keyed(labels, scene.nodes.filter((n): n is TextNode => n.part === 'labels' && n.kind === 'text'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-y', 1 - n.t!); el.setAttribute('data-anchor', n.anchor); });
+    keyed(nodes, scene.nodes.filter((n): n is RectNode => n.part === 'plot' && n.kind === 'rect'), () => 'i', (el, n) => { prop(el, '--uav-x', n.x); prop(el, '--uav-y', 1 - (n.y! + n.h!)); prop(el, '--uav-h', n.h); });
+    keyed(labels, scene.nodes.filter((n): n is TextNode => n.part === 'labels' && n.kind === 'text'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-y', 1 - n.y!); el.setAttribute('data-anchor', n.anchor); });
   },
 };
 

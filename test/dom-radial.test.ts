@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FIT_RULES } from '@unified-analytics/core';
-import { compileFitRules } from '@unified-analytics/dom';
+import { SPLIT_PLAIN, compileFitRules } from '@unified-analytics/dom';
 import { LAYOUTS } from '../packages/dom/src/layouts/index.ts';
 import { radial } from '../packages/dom/src/layouts/radial.ts';
 
@@ -9,16 +9,27 @@ const fig = (keep: string) => '.uav[data-layout="radial"]:not([data-keep~="' + k
 const css = compileFitRules(FIT_RULES.filter((r) => r.layout === 'radial'), { radial: radial.fit! });
 
 describe('the radial layout', () => {
+  it('draws what the plot draws about a centre over the arcs, and gives a place with no slice its share of the circle to be pointed at', () => {
+    // The paths are the plot's, drawn by the plot's painter (points.ts) in an SVG of their own: a line is a stroke and an area a fill, and neither takes the pointer.
+    expect(radial.css).toContain('.uav-radial .uav-round path { fill: none; stroke: var(--uav-paint);');
+    expect(radial.css).toContain('.uav-radial .uav-round path[data-fill] { fill: var(--uav-paint); stroke: none; }');
+    // A dot is in the part's box as a seat is, inside the rim's margin, and only a seat is a target.
+    expect(radial.css).toContain('.uav-radial > .uav-dots { inset: var(--uav-rim, 0px); }');
+    expect(radial.css).toContain('.uav-radial > .uav-dots i:not([data-unit]) { pointer-events: none; }');
+    expect(radial.css).toContain('.uav-radial svg path[data-bare] { fill: transparent; stroke: none; }');
+  });
   it('is registered, holds its shape, and is the plot container the hole rule asks about', () => {
     expect(LAYOUTS.radial).toBe(radial);
     expect(radial.css).toContain('aspect-ratio: var(--uav-aspect, 1); container: uav-plot / inline-size;');
     expect(css).toContain('@container uav-plot (inline-size < 119.5px) {\n  .uav[data-layout="radial"] .uav-hole { display: none; }\n}');
   });
-  it('steps the legend down as the band does, then to nothing, then to the number alone, in that order', () => {
+  it('steps the legend down as the band does, then to arcs of one colour, then to the number alone, in that order', () => {
     expect(css).toContain(['@container uav-view (inline-size < 169.5px) {', '  ' + fig('guides') + ' { --uav-legend: top; }',
       '  ' + fig('guides') + ' .uav-legend { display: none; }', '  ' + fig('guides') + ' .uav-legend-top { display: block; max-block-size: none; }', '}'].join('\n'));
-    expect(css).toContain('@container uav-view (block-size < 87.5px) {\n  ' + fig('guides') + ' :is(.uav-legend, .uav-legend-top) { display: none; }\n}');
-    const alone = ['  ' + fig('marks') + ' :is(.uav-radial, .uav-legend, .uav-legend-top) { display: none; }', '  ' + fig('marks') + ' .uav-number { display: block; }',
+    // The rule that takes the legend takes the colours it was the key to: what it painted is the first series' colour.
+    expect(css).toContain(['@container uav-view (block-size < 87.5px) {', '  ' + fig('guides') + ' :is(.uav-legend, .uav-legend-top) { display: none; }', '  ' + fig('guides') + ' { --uav-split: plain; }',
+      ...Object.entries(SPLIT_PLAIN).map(([sel, decl]) => '  ' + fig('guides') + ' ' + sel + ' { ' + decl + ' }'), '}'].join('\n'));
+    const alone = ['  ' + fig('marks') + ' :is(.uav-radial, .uav-hole, .uav-rim, .uav-legend, .uav-legend-top, .uav-unit-key) { display: none; }', '  ' + fig('marks') + ' .uav-number { display: block; }',
       '  ' + fig('marks') + ' { grid-template: "number" auto / minmax(0, 1fr); }', '  ' + fig('marks') + ' .uav-body { display: none; }', '  ' + fig('marks') + ' .uav-number { align-self: start; margin: 0; }', '}'].join('\n');
     expect(css).toContain('@container uav-view (inline-size < 71.5px) {\n' + alone);
     expect(css).toContain('@container uav-view (block-size < 63.5px) {\n' + alone);

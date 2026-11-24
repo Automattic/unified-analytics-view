@@ -1,9 +1,10 @@
 import { AXES_HEIGHT, FROM_TOP } from '../layout.ts';
-import { POINT_INSET, SIZE_KEY_BLOCK, declutter, dotRadius, type CircleNode, type PathNode, type Scene, type SceneNode, type TextNode } from '@unified-analytics/core';
+import { POINT_INSET, RAMP_BLOCK, SIZE_KEY_BLOCK, declutter, dotRadius, type CircleNode, type PathNode, type Scene, type SceneNode, type TextNode } from '@unified-analytics/core';
 import { attr, ensure, keyed, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { RULE } from '../chrome/rule.ts';
 import { thinLabels } from '../measure.ts';
+import { morph } from '../motion.ts';
 import { ANCHOR, LABEL, cut } from '../chrome/label.ts';
 import { DOT } from '../chrome/swatch.ts';
 import { centred } from '../chrome/tip.ts';
@@ -31,6 +32,10 @@ export const POINTS_CSS = `
 /* The holder of points lies over the plot's own hit targets, so only its dots take the pointer. */
 .uav-dots, .uav-points, .uav-point-labels { pointer-events: none; }
 .uav-points i { pointer-events: auto; }
+/* A plot with no points has the holder and nothing in it, and a holder of nothing takes no box: the rule that takes
+ * the points is for a plot that has them (core's \`points\` rule, \`has\`), and is not asked of this one. The same of the
+ * labels' holder, which a grid has too. */
+:is(.uav-points, .uav-point-labels):empty { display: none; }
 /* A point of a line that has no dot drawn on it: there to be pointed at and stepped to, and it wears only the outline. */
 .uav-points i[data-bare] { background: none; }
 :is(.uav-dots, .uav-points) i { position: absolute; inset-inline-start: calc(var(--uav-x) * 100%); inset-block-start: ${FROM_TOP}; translate: -50% -50%;
@@ -44,10 +49,15 @@ export const POINTS_CSS = `
 .uav-refs span[data-upright][data-anchor="end"] { translate: calc(${ANCHOR.end} - 4px) 0; }
 /* The key to sizes takes a row of its own under whatever else the body holds, and the view is that much taller for it. */
 .uav[data-layout="cartesian"][data-parts~="size"] { --uav-body-block: calc(${AXES_HEIGHT} + ${SIZE_KEY_BLOCK}px); }
+/* And by the ramp's line as well, where dots are painted by one metric and sized by another. */
+.uav[data-layout="cartesian"][data-parts~="size"][data-parts~="ramp"] { --uav-body-block: calc(${AXES_HEIGHT} + ${SIZE_KEY_BLOCK + RAMP_BLOCK}px); }
 .uav[data-layout="cartesian"] .uav-size { grid-column: 1 / -1; }`;
 
 /* A plot of points has no sparkline form. Under its `points` rule the body goes whole, and the number that the rule
  * shows stands alone, as it does under `marks`. Both ask for dots in `.uav-points`, so no other plot is touched. */
+/** Dots of one size, where a rule takes the key to their sizes with the axes (`dots: one`): each is the dot that has no
+ * size, whole, as the scene draws one. Declarations for the plot's dots, over what each wrote on itself. */
+export const ONE_SIZE = '--uav-size: initial !important; opacity: 1 !important;';
 export const POINTS_FIT: Record<string, Record<string, string>> = {
   points: { '.uav-body:has(.uav-points > i)': 'display: none;', '.uav-number:has(~ .uav-body .uav-points > i)': 'margin: 0;' },
 };
@@ -95,14 +105,35 @@ export function measurePoints(body: HTMLElement): void {
 /** A target for each row a joining line passes through, once, where it has a row: what stands in for dots that no layer drew. */
 export function pathTargets(paths: PathNode[]): CircleNode[] {
   const at = new Map<string, CircleNode>();
-  for (const n of paths) for (const p of n.points) if (p.row != null && !at.has(p.row)) at.set(p.row, { key: 'at:' + p.row, part: 'points', kind: 'circle', pulse: false, x: p.x, t: p.v, row: p.row, ...(n.series != null && { series: n.series }), paint: n.paint, layer: 'guide' });
+  for (const n of paths) for (const p of n.points) if (p.row != null && !at.has(p.row)) at.set(p.row, { key: 'at:' + p.row, part: 'points', kind: 'circle', pulse: false, x: p.x, y: p.y, row: p.row, ...(n.series != null && { series: n.series }), paint: n.paint, layer: 'guide' });
   return [...at.values()];
+}
+
+/** A path for each line and area of `paths`, under `holder`, which is an SVG of a 100 by 100 box or a group in one: the
+ * one painter of a path, for a plot's lines and for the ones a list has down its rows. */
+export function paintPaths(holder: Element, paths: PathNode[]): void {
+  keyed(holder, paths, () => 'path', (el, n) => {
+    morph(el as SVGElement, n); el.toggleAttribute('data-fill', !!n.fill);
+    // A scene's width is a weight, against the 2 it gives a line of the data: the line token is that line's width here,
+    // and a comparison's or a rule's is the same share of it.
+    prop(el, 'stroke-width', n.fill || !n.width ? null : `calc(${token('stroke-width-line')} * ${n.width / 2})`); prop(el, 'stroke-dasharray', n.dash);
+  });
+}
+
+/** A label for each place the scene has one at, in a holder over the marks: for any layout whose marks stand at a
+ * place in a box, a plot's points and a grid's pairs. `sizes` are the dots' own, by row, for a label that keeps clear of one. */
+export function paintLabels(plot: HTMLElement, scene: Scene, sizes?: Map<string | undefined, number | undefined>): void {
+  const labels = ensure(plot, 'div', 'uav-point-labels');
+  labels.setAttribute('aria-hidden', 'true');
+  keyed(labels, scene.nodes.filter((n): n is TextNode => n.part === 'point-labels' && n.kind === 'text'), () => 'span', (el, n) => {
+    text(el, n); prop(el, '--uav-x', n.x); prop(el, '--uav-t', n.y); prop(el, '--uav-size', sizes?.get(n.row)); el.toggleAttribute('data-halo', !!n.halo);
+  });
 }
 
 /** Paint them, after the plot's own parts. `plot` is the cartesian layout's `.uav-plot`. */
 export function paintPoints(plot: HTMLElement, scene: Scene): void {
   const nodes = scene.nodes, dots = (part: string) => nodes.filter((n): n is CircleNode => n.part === part && n.kind === 'circle');
-  const dot = (el: HTMLElement | SVGElement, n: CircleNode) => { prop(el, '--uav-x', n.x); prop(el, '--uav-t', n.t); prop(el, '--uav-size', n.size); unitDot(el, n); };
+  const dot = (el: HTMLElement | SVGElement, n: CircleNode) => { prop(el, '--uav-x', n.x); prop(el, '--uav-t', n.y); prop(el, '--uav-size', n.size); unitDot(el, n); };
   const drawn = dots('points'), sizes = new Map(drawn.concat(dots('plot')).map((n) => [n.row, n.size]));
   keyed(ensure(plot, 'div', 'uav-dots'), dots('plot'), () => 'i', dot);
   // A line that joins the points of two metrics (core puts its path in their part). Where no layer draws a dot on them,
@@ -116,11 +147,7 @@ export function paintPoints(plot: HTMLElement, scene: Scene): void {
   attr(holder, 'data-hits', points.length ? (joined.length ? 'path' : 'xy') : null);
   if (points.length) plot.querySelector(':scope > .uav-hits')?.removeAttribute('data-hits');
 
-  const labels = ensure(plot, 'div', 'uav-point-labels');
-  labels.setAttribute('aria-hidden', 'true');
-  keyed(labels, nodes.filter((n): n is TextNode => n.part === 'point-labels' && n.kind === 'text'), () => 'span', (el, n) => {
-    text(el, n); prop(el, '--uav-x', n.x); prop(el, '--uav-t', n.t); prop(el, '--uav-size', sizes.get(n.row)); el.toggleAttribute('data-halo', !!n.halo);
-  });
+  paintLabels(plot, scene, sizes);
 
   // The layout painted every rule as a line across the plot. One at a value on x is stood up, and its label with it.
   const upright = new Map(nodes.filter((n: SceneNode) => n.part === 'plot' && (n.kind === 'line' || n.kind === 'text') && n.x != null).map((n) => [n.key, n as TextNode]));

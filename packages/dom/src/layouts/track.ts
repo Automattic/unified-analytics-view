@@ -25,7 +25,7 @@ import { glyph } from '../chrome/unit.ts';
  * `data-track`, so a list of bars behind their labels is not touched. */
 const along = '(100% - 2 * var(--uav-row-gap))';
 const at = (x: string) => `calc(var(--uav-row-gap) + ${x} * ${along})`;
-/** What a unit's glyph keeps clear of its row's top and foot, in px, as place() does. */
+/** What a unit's glyph keeps clear of its row's top and foot, in px. */
 const GLYPH_INSET = 4;
 const dot = glyph(`min(var(--uav-w) * ${along}, var(--uav-row-block) - ${2 * GLYPH_INSET}px)`);
 export const TRACK_CSS = `
@@ -50,5 +50,5 @@ export function trackMark(el: HTMLElement | SVGElement, n: LineNode | CircleNode
   prop(el, '--uav-x', n.x); prop(el, '--uav-x2', x2); prop(el, '--uav-w', n.kind === 'circle' ? n.w : null); prop(el, '--uav-stroke', n.kind === 'line' && n.width ? n.width + 'px' : null);
   // How far up the row a tick starts and ends: the whole of it, or the half `align` gives it. Always stated, since a
   // ratio is a registered property, and one that is not set is nothing and not what a var() falls back to.
-  if (n.kind === 'line') { prop(el, '--uav-t', n.t); prop(el, '--uav-t2', n.t2 ?? n.t); }
+  if (n.kind === 'line') { prop(el, '--uav-t', n.y); prop(el, '--uav-t2', n.y2 ?? n.y); }
 }

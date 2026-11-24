@@ -12,5 +12,5 @@
     "types": ["node"],
     "moduleDetection": "force"
   },
-  "include": ["packages/*/src", "apps/*/src", "test"]
+  "include": ["packages/*/src", "apps/*/src", "apps/bench/*.ts", "test"]
 }

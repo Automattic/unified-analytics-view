@@ -17,13 +17,14 @@
       "description": "Parts a container may not drop.",
       "items": { "enum": ["guides", "secondary", "rows", "marks"] },
       "uniqueItems": true
-    }
+    },
+    "facet": { "type": "string", "description": "One of the dimensions in query.by. The spec is then a view for each of its values, every one on the same scales, and the surface lays them out: no columns are said. The layers do not encode it." }
   },
   "allOf": [
     {
-      "description": "A dimension needs something to draw it with: layers, or a preset.",
+      "description": "A dimension needs something to draw it with: layers, or a preset. The one a facet takes needs neither: with no other, each of its views is a number.",
       "if": { "properties": { "query": { "type": "object", "required": ["by"], "properties": { "by": { "type": "array", "minItems": 1 } } } } },
-      "then": { "anyOf": [{ "required": ["use"] }, { "required": ["layers"] }] }
+      "then": { "anyOf": [{ "required": ["use"] }, { "required": ["layers"] }, { "required": ["facet"], "properties": { "query": { "properties": { "by": { "maxItems": 1 } } } } }] }
     }
   ],
   "definitions": {
@@ -36,7 +37,16 @@
         "by": { "type": "array", "items": { "type": "string" }, "maxItems": 2, "uniqueItems": true, "description": "Zero, one or two catalog dimensions. With two, a layer must encode each: the second usually goes to color, to detail, or to the other axis of a grid of cells." },
         "range": { "type": "string", "description": "For example \"28d\"." },
         "compare": { "const": "previous" },
-        "limit": { "type": "integer", "minimum": 1, "description": "Top-N for each categorical dimension." }
+        "limit": { "type": "integer", "minimum": 1, "description": "Top-N for each categorical dimension." },
+        "where": {
+          "type": "object",
+          "description": "A filter, by catalog dimension: the answer is of the rows where every dimension named holds what is said of it. A dimension is held to one of its values, to any of a list of them, or to a run from one value to another, both included, which is for a time or a number. The engine applies it, and a dimension here need not be in by. The view says the filter after its sentence.",
+          "additionalProperties": { "anyOf": [
+            { "type": ["string", "number"] },
+            { "type": "array", "items": { "type": ["string", "number"] }, "minItems": 1, "uniqueItems": true },
+            { "type": "object", "additionalProperties": false, "minProperties": 1, "properties": { "from": { "type": ["string", "number"] }, "to": { "type": ["string", "number"] } } }
+          ] }
+        }
       }
     },
     "field": { "type": ["string", "number"], "description": "A dimension name, a metric name, a companion the result returns with one, written \"<metric>@<suffix>\", or a number (for a rule, on x or on y)." },
@@ -69,8 +79,9 @@
         "stack": { "enum": ["zero", "normalize", "center", "diverge"], "description": "On a layer split by color: each series starts where the one under it ends. \"normalize\" makes each a share of the whole, and \"center\" sets each stack half on either side of zero. \"diverge\" sets the first half of the series below zero and the second half above it, in the series' order, and with an odd count the middle one half on each side: two series are a population pyramid, and five a Likert chart. Its axis counts away from zero on both sides. A bar split by color with no stack sits beside its neighbours. In rows, a stacked bar is the one mark whose color may be the query's second dimension: each row's bar is divided into a series for each of its values, with a legend. A unit takes none, but \"normalize\" on its grid, which is shares already." },
         "sweep": { "const": "half", "description": "On an arc: the arcs run over the top half of the circle and not all the way round. For a circle divided by color and for a gauge; not with a dimension on angle or on radius. On a unit with a metric on angle: its seats sit round that half, and it is required. The one layer field that is neither data nor role." },
         "label": { "type": "string", "description": "Text for a rule." },
+        "at": { "anyOf": [{ "type": ["string", "number"] }, { "type": "array", "items": { "type": ["string", "number"] }, "minItems": 1 }], "description": "On a rule in a plot whose x is a time, a category or a number in bins: the value of x it stands at, or a list of them, the height of the plot. A value, not a field: \"2026-09-21\". The rule then encodes nothing. A value the axis does not have is not drawn." },
         "align": { "enum": ["start", "end"], "description": "On a text layer in rows, \"end\" sets it as a column of values. On a tick, the half of it to that side of the middle of its band: an OHLC chart's open is a tick to the start, and its close one to the end." },
-        "paint": { "type": "string", "description": "A paint token, never a colour: series.1 to series.6, compare, rule, ink, ink.muted, delta, delta.good, delta.bad. A layer with none takes series.1, so a second metric on the same plot wants \"series.2\". \"delta\" is the paint of the metric's change over the range: good or bad by its polarity, and the layer's own where there is no change to judge. \"direction\" is for a bar or an area with a second end (x2 or y2), and for no other mark: each bar is painted delta.good or delta.bad by which way it runs from its first end to its second and the metric's polarity, and an area is cut where its two ends cross and each piece painted so. Where the polarity is none it is the layer's own paint. A bar or an area with two ends and no paint is in the layer's own: nothing is painted by direction unless a layer says so. Not with a dimension on color." }
+        "paint": { "type": "string", "description": "A paint token, never a colour: series.1 to series.6, compare, rule, ink, ink.muted, delta, delta.good, delta.bad. A layer with none takes series.1, or in a plot whose layers measure several metrics the series colour of its own metric, in the order the layers name them: the metrics then have a legend. \"delta\" is the paint of the metric's change over the range: good or bad by its polarity, and the layer's own where there is no change to judge. \"direction\" is for a bar or an area with a second end (x2 or y2), and for no other mark: each bar is painted delta.good or delta.bad by which way it runs from its first end to its second and the metric's polarity, and an area is cut where its two ends cross and each piece painted so. Where the polarity is none it is the layer's own paint. A bar or an area with two ends and no paint is in the layer's own: nothing is painted by direction unless a layer says so. Not with a dimension on color." }
       }
     }
   }

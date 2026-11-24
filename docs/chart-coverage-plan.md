@@ -1,6 +1,6 @@
 # Chart coverage: inventory and plan
 
-As of October 7, 2026. **Status: steps 1 to 6 and 8 were built on October 8 and are merged on the branch `chart-coverage`. Step 7 (`facet`) is not started; it waits for a sketch of the board. Sections 1 to 7 are the plan as it was written. Section 8 is what building each step found, and section 9 is what that leaves to decide.**
+As of October 7, 2026. **Status: steps 1 to 6 and 8 were built on October 8 and are merged on the branch `chart-coverage`. Step 7 (`facet`) was built on November 23, once the board was settled as holding no layout (reference, Decided 45). Sections 1 to 7 are the plan as it was written. Section 8 is what building each step found, and section 9 is what that leaves to decide.**
 
 A catalog of 220 chart types (40 Common, 84 Uncommon, 38 Rare, 58 Specialist) was read against the grammar as it stands in `packages/core`. This note records what the grammar can draw today, what it would take to draw every Common type, and the order to build that in.
 
@@ -153,8 +153,9 @@ Statistics arrive as companion fields, the way `metric@previous` does today: `lo
 | `fallback` on a fit rule | Fit rules | Names the preset a view becomes below the rule's need |
 | A colour role on a dimension's values | Catalog | So "Search" is one colour in every view. Until it lands, paint follows the domain's order, not the row's |
 | Totals per split | Result | So a normalized stack divides by an engine total |
+| `where`, and `meta.where` on the answer | Query, result | Added November 24 with the reference's Decided 48: a filter by dimension, which the engine applies and carries back, so a view says what it is filtered to and refuses an answer of another filter |
 
-Nothing above is a size, a breakpoint or a presentation switch. The four catalog and result rows are proposals to the API's owners, as the rest of the seam is.
+Nothing above is a size, a breakpoint or a presentation switch. The catalog, query and result rows are proposals to the API's owners, as the rest of the seam is.
 
 ### 3.6 Scene
 
@@ -629,7 +630,7 @@ Collected from section 8. Nothing here was settled by the build; where an agent 
 
 ### Not built, within the plan
 
-- Step 7, `facet`.
+- Step 7, item 3: the y axis on the first view of each row only. CSS cannot say which view starts a row of a wrapping grid, so every view of a facet keeps its own axis (reference, section 6, "A facet").
 - In-cell bars per column; `bands` drawn; a waterfall's closing total; a rank with no `compare`; the fold into "Other".
 - Unit formatting: currency, duration, and one unit for a rate (`ratio` and `percent` both exist).
 - A metric on `radius` (rose, radial bar).

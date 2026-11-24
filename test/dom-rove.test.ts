@@ -110,11 +110,15 @@ describe('roveItems', () => {
     const heard: unknown[] = [];
     holder.addEventListener('ua-activate', (e) => heard.push((e as CustomEvent).detail));
     holder.addEventListener('ua-select', (e) => heard.push((e as CustomEvent).detail));
-    roveItems(holder, '.a, .b', () => null, (el) => ({ id: el.id }));
+    roveItems(holder, '.a, .b', () => null, (el) => ({ id: el.id, where: { box: el.id } }));
     holder.dispatchEvent(Object.assign(new Event('keydown', { cancelable: true }), { key: 'Enter' }));
     expect(asked).toEqual([':is(.a, .b):is([data-interaction], [data-focus])']);
-    // It proposes the chosen one as the selection, by its own key: it is no row.
-    expect(heard).toEqual([{ id: 'b' }, { key: 'box:b' }]);
+    // It proposes the chosen one as the selection: its key, the filter its holder says it is, and how it was activated.
+    expect(heard).toEqual([{ id: 'b', where: { box: 'b' } }, { key: 'box:b', where: { box: 'b' }, how: 'pick' }]);
+    // What is held with the key says what the activation is for; the holder decides nothing of what follows from it.
+    holder.dispatchEvent(Object.assign(new Event('keydown', { cancelable: true }), { key: 'Enter', shiftKey: true }));
+    holder.dispatchEvent(Object.assign(new Event('keydown', { cancelable: true }), { key: ' ', metaKey: true }));
+    expect(heard.filter((d) => (d as { how?: string }).how).map((d) => (d as { how: string }).how)).toEqual(['pick', 'extend', 'toggle']);
   });
 });
 

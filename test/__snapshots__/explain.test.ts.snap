@@ -1,0 +1,56 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`explain > says which rule hides a part at a room, what it needs and what it has, and the lever where the spec has one 1`] = `
+[
+  "cartesian",
+  "- | the layout is cartesian | use "line": layers[0] | a dimension on x | change what that layer puts on x, y, color or angle",
+  "plot | shown | use "line": layers[0], layers[1], layers[2] | area and line marks | ",
+  "x-axis | hidden | use "line": layers[0].encode.x | rule "axes" needs 280 px wide and 120 px tall of the view, and it has 250 × natural height | add "guides" to keep to hold it, or give the view 280 px wide",
+  "y-axis | hidden | use "line": layers[0].encode.y | rule "axes" needs 280 px wide and 120 px tall of the view, and it has 250 × natural height | add "guides" to keep to hold it, or give the view 280 px wide",
+  "number | shown in its place | query.metrics[0] | rule "axes" needs 280 px wide and 120 px tall of the view, and it has 250 × natural height | ",
+  "- | not asked | the room | rule "secondary" needs 180 px wide and 90 px tall of the plot, and the room says nothing of the plot: give its size as the room's "plot" to ask | ",
+]
+`;
+
+exports[`explain > says which rule hides a part at a room, what it needs and what it has, and the lever where the spec has one 2`] = `
+[
+  "band",
+  "- | the layout is band | use "share-bar": layers[0] | a dimension on color | change what that layer puts on x, y, color or angle",
+  "band | shown | use "share-bar": layers[0] | bar marks | ",
+  "legend | shown as one line | use "share-bar": layers[0].encode.color | rule "legend" needs 170 px wide of the view, and it has 120 × natural height | add "guides" to keep to hold it, or give the view 170 px wide",
+]
+`;
+
+exports[`explain > says which rule hides a part at a room, what it needs and what it has, and the lever where the spec has one 3`] = `
+[
+  "radial",
+  "- | the layout is radial | use "donut": layers[0] | something is on angle, so it is drawn about a centre | change what that layer puts on x, y, color or angle",
+  "radial | shown | use "donut": layers[0] | arc marks | ",
+  "hole | shown | query.metrics[0] | the total of "visitors", from the engine | ",
+  "legend | shown as one line | use "donut": layers[0].encode.color | rule "legend" needs 170 px wide of the view, and it has 120 × 100 | add "guides" to keep to hold it, or give the view 170 px wide",
+  "hole | not asked | the room | rule "hole" needs 120 px wide of the plot, and the room says nothing of the plot: give its size as the room's "plot" to ask | ",
+]
+`;
+
+exports[`explain > says which rule hides a part at a room, what it needs and what it has, and the lever where the spec has one 4`] = `
+[
+  "rows",
+  "- | the layout is rows | use "bar-list": layers[0] | a dimension on y | change what that layer puts on x, y, color or angle",
+  "rows | hidden | use "bar-list": layers[0], layers[1], layers[2] | rule "marks" needs 90 px wide and 28 px tall of the view, and it has 80 × natural height | add "marks" to keep to hold it, or give the view 90 px wide",
+  "number | shown in its place | query.metrics[0] | rule "marks" needs 90 px wide and 28 px tall of the view, and it has 80 × natural height | ",
+]
+`;
+
+exports[`explain > says which rule hides a part at a room, what it needs and what it has, and the lever where the spec has one 5`] = `
+[
+  "cartesian",
+  "- | the layout is cartesian | layers[0] | a dimension on x | change what that layer puts on x, y, color or angle",
+  "plot | shown | layers[0], layers[1] | bar and line marks | ",
+  "x-axis | hidden | layers[0].encode.x | rule "axes" needs 280 px wide and 120 px tall of the view, and it has 480 × 100 | add "guides" to keep to hold it, or give the view 120 px tall",
+  "y-axis | hidden | layers[0].encode.y | rule "axes" needs 280 px wide and 120 px tall of the view, and it has 480 × 100 | add "guides" to keep to hold it, or give the view 120 px tall",
+  "y-axis-2 | hidden | layers[1].encode.y | rule "axes" needs 280 px wide and 120 px tall of the view, and it has 480 × 100 | add "guides" to keep to hold it, or give the view 120 px tall",
+  "number | shown in its place | query.metrics[0] | rule "axes" needs 280 px wide and 120 px tall of the view, and it has 480 × 100 | ",
+  "legend | hidden | layers[0].encode.y, layers[1].encode.y | rule "legend" needs 320 px wide and 180 px tall of the view, and it has 480 × 100 | add "guides" to keep to hold it, or give the view 180 px tall",
+  "labels | hidden, and the marks it keyed drawn in one colour | layers[0].encode.y, layers[1].encode.y | rule "labels" needs 280 px wide and 120 px tall of the view, and it has 480 × 100 | add "guides" to keep to hold it, or give the view 120 px tall",
+]
+`;

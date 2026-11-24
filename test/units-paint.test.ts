@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { nodePaint } from '@unified-analytics/dom';
-import { buildScene, makeContainer, resolve, type Catalog, type Layer, type Result, type Spec } from '@unified-analytics/core';
+import { buildScene, resolve, type Catalog, type Layer, type Result, type Spec } from '@unified-analytics/core';
 
 /* What the sidebar test case asked of the grammar: a metric's unit in every place its value is said, a mark painted
  * by which way its metric went, and rows painted by a field. On a catalog and results of its own. */
@@ -16,7 +16,7 @@ const catalog: Catalog = {
 const days = (m: string, values: number[], now: number, before: number | null): Result => ({
   rows: values.map((v, i) => ({ 'date.day': '2026-10-0' + (i + 1), [m]: v, [m + '@previous']: v })), totals: { [m]: now, [m + '@previous']: before }, meta: { range: '3d', compare: 'previous', notes: [] } });
 const trend = (m: string, paint?: string): Spec => ({ query: { metrics: [m], by: ['date.day'], range: '3d', compare: 'previous' }, layers: [{ mark: 'line', encode: { x: 'date.day', y: m }, ...(paint && { paint }) }] });
-const scene = (spec: Spec, result: Result, w = 500) => { const plan = resolve(spec, result, makeContainer(w), catalog); return { plan, scene: buildScene(plan, spec.query, result, catalog) }; };
+const scene = (spec: Spec, result: Result, w = 500) => { const plan = resolve(spec, result, catalog); return { plan, scene: buildScene(plan, spec.query, result, catalog) }; };
 const text = (s: ReturnType<typeof scene>, key: string) => { const n = s.scene.nodes.find((x) => x.key === key); return n && n.kind === 'text' ? n.text : undefined; };
 
 describe('a metric\'s unit', () => {

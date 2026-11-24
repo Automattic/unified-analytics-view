@@ -1,57 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, FIT_RULES, applies, place, resolve, unboundedContainer, type FitRule, type Plan, type Spec } from '@unified-analytics/core';
-import { catalog, runQuery, scenarios } from '@unified-analytics/fixtures';
-import { ALWAYS, heights, painters, run, specs, trend, widths } from './helpers.ts';
+import { CONTAINER_RULES, FIT_RULES, applies, fitTo, hasOf, type FitRule } from '@unified-analytics/core';
+import { moreSamples, samples, scenarios } from '@unified-analytics/fixtures';
+import { heights, run, shown, specs, trend, widths } from './helpers.ts';
 
+/* How a view gives way when room is short is data, the fit rules, and one function reads them at a room with no
+ * browser: fitTo(). A stylesheet compiled from the same rules reads them the same way (test/dom-compile.test.ts), and
+ * the bench's check holds real frames to them. What follows holds the reader to the rules, and the rules to what they
+ * promise of every sample at every room. */
 const rule = (layout: string, id: string) => FIT_RULES.find((r) => r.layout === layout && r.id === id)!;
-
-/** Whether resolve() gave up what the rule hides. `null` where the plan cannot say: the part was already gone with its parent. */
-function gaveUp(r: FitRule, plan: Plan, unbounded: Plan): boolean | null {
-  const here = plan.layout === r.layout;
-  if (r.id === 'axes') return !(here && plan.guides.x);
-  // A plot has a legend, and labels at its line ends, only where it is split into series.
-  if (r.id === 'legend') return unbounded.guides.legend ? !(here && plan.guides.legend === 'full') : null;
-  if (r.id === 'labels' || r.id === 'legend-top') return unbounded.guides.legend ? !(here && !!plan.guides.legend) : null;   // and a list its one line only where its rows are divided
-  // And a second y axis only where its layers measure in two units.
-  if (r.id === 'axis-2') return unbounded.guides.y2 ? !(here && !!plan.guides.y2) : null;
-  // Labels on points, a key to sizes, and the rung a plot of points has in place of a bare plot: only where a view has them.
-  if (r.id === 'point-labels') return unbounded.guides.pointLabels ? !(here && !!plan.guides.pointLabels) : null;
-  if (r.id === 'size') return unbounded.guides.size ? !(here && !!plan.guides.size) : null;
-  if (r.id === 'points') return unbounded.layers.some((l) => String(l.encode?.x) in catalog.metrics) && !unbounded.layers.some((l) => String(l.encode?.x) in catalog.dimensions) ? !here : null;
-  // Rows have headers only where they have more than one column of values.
-  if (r.id === 'columns') return unbounded.guides.columns ? !(here && !!plan.guides.columns) : null;
-  if (r.id === 'mid-tick') return here && plan.guides.x ? plan.dropped.includes('the middle date label') : null;
-  if (r.id === 'secondary') return here && unbounded.layers.some((l) => l.role !== 'primary') ? plan.layers.every((l) => l.role === 'primary') : null;
-  // And a track that stands beside its label only where a row's marks are read by where they are.
-  if (r.id === 'track') return unbounded.layers.some((l) => ['rule', 'tick', 'dot'].includes(l.mark) || l.encode?.x2 != null) ? !here : null;
-  // The key to a unit's glyphs, and the preset a unit's form gives way to: only where a view holds the mark.
-  if (r.id === 'unit-key') return unbounded.guides.unitKey ? !(here && !!plan.guides.unitKey) : null;
-  if (r.mark) return unbounded.layers.some((l) => l.mark === r.mark) ? plan.preset !== unbounded.preset : null;
-  return !here;
-}
-
-/** Every case in the sweep, with each rule of the view's layout. */
-interface Case { name: string; spec: Spec; w: number; h: number | null; r: FitRule; says: boolean; did: boolean; wide: boolean }
-const cases: Case[] = [];
-function sweep(each: (c: Case) => void): void {
-  if (cases.length) return cases.forEach(each);
-  for (const [name, spec] of Object.entries(specs)) for (const sc of scenarios) for (const p of painters) {
-    const rules = name === 'headed' ? ALWAYS : CONTAINER_RULES;
-    const unbounded = resolve(spec, runQuery(spec.query, sc), { ...unboundedContainer(p, 8), rules }, catalog);
-    const timeAxis = catalog.dimensions[(spec.query.by || [])[0]!]?.type === 'time';
-    for (const r of FIT_RULES.filter((r) => r.layout === unbounded.layout && (r.id !== 'mid-tick' || timeAxis))) for (const w of widths) {
-      const wide = gaveUp(r, run(spec, w, null, sc, p, { rules }).plan, unbounded);
-      for (const h of heights) {
-        const { plan, scene } = run(spec, w, h, sc, p, { rules }), did = gaveUp(r, plan, unbounded);
-        if (did == null || wide == null) continue;
-        const kept = !!r.keep && (spec.keep || []).includes(r.keep);
-        const says = !kept && applies(r, { view: { inline: w, block: h }, plot: scene.plot && { inline: scene.plot.w, block: scene.plot.h } });
-        cases.push({ name, spec, w, h, r, says, did, wide });
-      }
-    }
-  }
-  cases.forEach(each);
-}
 
 describe('applies', () => {
   const axes = rule('cartesian', 'axes'), secondary = rule('cartesian', 'secondary');
@@ -71,76 +27,112 @@ describe('applies', () => {
   });
 });
 
+describe('fitTo: a view at a room, read off its rules', () => {
+  // A scene of four parts, with the number and a second form of the legend there to be shown, and rules of its own.
+  const scene = { layout: 'toy', parts: ['plot', 'axis', 'legend'], nodes: ['number', 'plot', 'axis', 'legend', 'legend-top'].map((part) => ({ part })) };
+  const R = (id: string, needs: FitRule['needs'], more: Partial<FitRule> = {}): FitRule => ({ id, layout: 'toy', container: 'view', needs, hide: [], ...more });
+  const at = (inline: number, rules: FitRule[], view = {}, plot?: { inline: number; block: number } | null) => fitTo(scene, { view: { inline }, ...(plot !== undefined && { plot }) }, rules, view);
+
+  it('every rule short of its need holds, each on its own: it hides, shows in its place and sets', () => {
+    const rules = [R('axis', { inline: 300 }, { hide: ['axis', 'grid'], set: { arrange: 'side' } }), R('legend', { inline: 200 }, { hide: ['legend'], show: ['legend-top'] })];
+    expect(at(300, rules)).toEqual({ parts: ['plot', 'axis', 'legend'], hidden: [], set: {}, held: [] });
+    expect(at(299, rules)).toMatchObject({ parts: ['plot', 'legend'], hidden: ['axis', 'grid'], set: { arrange: 'side' } });
+    expect(at(199, rules)).toMatchObject({ parts: ['plot', 'legend-top'], hidden: ['axis', 'grid', 'legend'] });
+    expect(at(199, rules).held.map((h) => [h.rule.id, h.hid, h.showed])).toEqual([['axis', ['axis'], []], ['legend', ['legend'], ['legend-top']]]);
+  });
+  it('the number leads where a rule shows it, and a part the scene has nothing for is not shown', () => {
+    const rules = [R('marks', { inline: 100 }, { hide: ['plot', 'axis', 'legend'], show: ['number', 'note'] })];
+    expect(at(99, rules).parts).toEqual(['number']);
+    expect(at(99, [R('side', { inline: 100 }, { show: ['number'] })]).parts).toEqual(['number', 'plot', 'axis', 'legend']);
+  });
+  it('where two rules say otherwise of one part, the later one wins, as in a stylesheet', () => {
+    const swap = R('legend', { inline: 200 }, { hide: ['legend'], show: ['legend-top'] }), take = R('top', { inline: 150 }, { hide: ['legend', 'legend-top'] });
+    expect(at(149, [swap, take]).parts).toEqual(['plot', 'axis']);
+    expect(at(149, [take, swap]).parts).toEqual(['plot', 'axis', 'legend-top']);
+    expect(at(149, [R('a', { inline: 200 }, { set: { key: 'short' } }), R('b', { inline: 150 }, { set: { key: 'gone' } })]).set).toEqual({ key: 'gone' });
+  });
+  it('a rule the spec keeps is held off, and said to be', () => {
+    const rules = [R('axis', { inline: 300 }, { hide: ['axis'], keep: 'guides' })];
+    expect(at(200, rules, { keep: ['guides'] })).toMatchObject({ parts: ['plot', 'axis', 'legend'], held: [{ rule: rules[0], kept: true }] });
+    expect(at(200, rules, { keep: ['marks'] }).parts).toEqual(['plot', 'legend']);
+  });
+  it('a rule for a mark is asked of a view that holds it, and one for a kind of view of that kind', () => {
+    const forLine = R('ends', { inline: 300 }, { hide: ['legend'], mark: 'line' }), forTrack = R('track', { inline: 300 }, { hide: ['plot'], has: 'track' }), forLegend = R('key', { inline: 300 }, { hide: ['axis'], has: 'legend' });
+    expect([at(200, [forLine], { marks: ['bar'] }).parts, at(200, [forLine], { marks: ['bar', 'line'] }).parts]).toEqual([['plot', 'axis', 'legend'], ['plot', 'axis']]);
+    expect(at(200, [forTrack, forLegend]).parts).toEqual(['plot', 'legend']);
+    expect(fitTo({ ...scene, track: 'beside' }, { view: { inline: 200 } }, [forTrack]).parts).toEqual(['axis', 'legend']);
+    expect([hasOf(scene), hasOf({ ...scene, track: 'beside' })]).toEqual([['plot', 'axis', 'legend'], ['plot', 'axis', 'legend', 'track']]);
+  });
+  it('a rule on the plot is asked of a plot that was measured, holds where there is none, and is passed over where nobody said', () => {
+    const inside = R('inside', { inline: 120 }, { container: 'plot', hide: ['legend'] });
+    expect(at(700, [inside]).parts).toContain('legend');
+    expect(at(700, [inside], {}, { inline: 119, block: 80 }).parts).not.toContain('legend');
+    expect(at(700, [inside], {}, { inline: 120, block: 80 }).parts).toContain('legend');
+    expect(at(700, [inside], {}, null).parts).not.toContain('legend');
+    // A plot an earlier rule took has nothing left in it.
+    expect(at(99, [R('marks', { inline: 100 }, { hide: ['plot'] }), inside]).parts).toEqual(['axis']);
+  });
+  it('a fallback takes the whole view: the first the spec leaves on that the query can fill', () => {
+    const list = R('list', { inline: 300 }, { fallback: 'bar-list', keep: 'marks' }), bar = R('bar', { inline: 300 }, { fallback: 'share-bar' });
+    expect(at(299, [list, bar], { fills: () => true })).toMatchObject({ parts: [], fallback: list });
+    expect(at(299, [list, bar], { fills: (use: string) => use === 'share-bar' }).fallback).toBe(bar);
+    expect(at(299, [list, bar], { keep: ['marks'], fills: () => true })).toMatchObject({ fallback: bar, held: [{ rule: list, kept: true }, { rule: bar, kept: false }] });
+    expect(at(300, [list, bar], { fills: () => true }).fallback).toBeUndefined();
+  });
+});
+
 describe('the rule set', () => {
   it('has one rule per id in a layout', () => {
     const ids = FIT_RULES.map((r) => r.layout + '/' + r.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
   it('is the container\'s to replace', () => {
-    const fit = FIT_RULES.map((r) => (r.layout === 'cartesian' && r.id === 'axes' ? { ...r, needs: { inline: 200 } } : r));
-    expect(run(trend, 250).plan.guides.x).toBe(false);
-    expect(run(trend, 250, null, 'typical', 'svg', { rules: { ...CONTAINER_RULES, fit } }).plan.guides.x).toBe(true);
-    // A part with no rule needs no room, so it is never given up for width.
-    const none = run(trend, 250, null, 'typical', 'svg', { rules: { ...CONTAINER_RULES, fit: [] } }).plan;
-    expect(none).toMatchObject({ layout: 'cartesian', side: false, dropped: [] });
+    const swap = (id: string, needs: FitRule['needs']) => ({ ...CONTAINER_RULES, fit: FIT_RULES.map((r) => (r.id === id ? { ...r, needs } : r)) });
+    const at = (rules = CONTAINER_RULES, w = 250, h: number | null = null, sc: (typeof scenarios)[number] = 'typical') => shown(run(trend, w, h, sc, { rules }));
+    expect(at().parts).toEqual(['number', 'plot']);
+    expect(at({ ...CONTAINER_RULES, fit: FIT_RULES.map((r) => (r.layout === 'cartesian' && r.id === 'axes' ? { ...r, needs: { inline: 200 } } : r)) }).parts).toEqual(['y-axis', 'plot', 'x-axis']);
+    // A part with no rule needs no room, so it is never given up.
+    expect(at({ ...CONTAINER_RULES, fit: [] }, 20, 10)).toEqual({ parts: ['y-axis', 'plot', 'x-axis'], set: {}, hidden: [], rules: [] });
+    // A context that moves a rule moves what it takes: the middle date, and the room a notice has.
+    expect([at(CONTAINER_RULES, 346).hidden, at(swap('mid-tick', { inline: 300 }), 346).hidden]).toEqual([['x-tick.mid'], []]);
+    expect([at(CONTAINER_RULES, 346, 30, 'empty').parts, at(swap('notice', { inline: 150, block: 20 }), 346, 30, 'empty').parts]).toEqual([['number'], ['notice']]);
   });
 });
 
-describe('the rules are what place() builds to', () => {
-  const swap = (id: string, needs: FitRule['needs']) => ({ ...CONTAINER_RULES, fit: FIT_RULES.map((r) => (r.id === id ? { ...r, needs } : r)) });
-  it('a context that moves the mid-tick rule moves what is drawn, as well as what is reported', () => {
-    const mid = (rules = CONTAINER_RULES) => { const { plan, scene } = run(trend, 346, null, 'typical', 'svg', { rules }); return [scene.nodes.some((n) => n.key === 'xtick:2026-09-21'), plan.dropped]; };
-    expect(mid()).toEqual([false, ['the middle date label']]);
-    expect(mid(swap('mid-tick', { inline: 300 }))).toEqual([true, []]);
-  });
-  it('the notice is as short as its rule allows', () => {
-    const at30 = (rules = CONTAINER_RULES) => { const { plan, scene } = run(trend, 346, 30, 'empty', 'svg', { rules }); return [plan.layout, scene.height]; };
-    expect(at30()[0]).toBe('prose');                                   // under 40 px the notice goes, and the number is too tall as well
-    expect(at30(swap('notice', { inline: 150, block: 20 }))).toEqual(['notice', 30]);
-  });
-  it('rows are as tall as the context says, so what resolve() trims to is what fits', () => {
-    const pages = (h: number | null) => run(specs.pages!, 346, h, 'typical', 'svg', { rules: { ...CONTAINER_RULES, rows: { rowHeight: 20, gap: 2 } } });
-    expect(pages(null).scene.height).toBe(8 * 22 - 2);
-    expect(pages(100).plan).toMatchObject({ layout: 'rows', rowLimit: 4, dropped: ['rows 5 to 8'] });
-    expect(pages(200).plan).toMatchObject({ layout: 'rows', rowLimit: null, dropped: [] });
-  });
-  it('the number beside a bare plot is as narrow as the context says', () => {
-    const plot = (numberWidth: number) => run(trend, 170, null, 'typical', 'svg', { rules: { ...CONTAINER_RULES, bare: { ...CONTAINER_RULES.bare, numberWidth } } }).scene.plot;
-    expect(plot(76)).toEqual({ w: 82, h: 50 });
-    expect(plot(100)).toEqual({ w: 58, h: 50 });
-  });
-});
+describe('what the rules promise, of every sample at every room', () => {
+  const all = { ...specs, ...Object.fromEntries(Object.entries(moreSamples).map(([k, s]) => [k, s.spec])) };
+  const DATA = ['plot', 'rows', 'band', 'radial', 'notice'];
+  /** Every sample, in every data state, at every room of the sweep: what `run` gives there, and the parts its scene shows with all its room. */
+  const sweep = (each: (r: ReturnType<typeof run>, at: string, full: string[]) => void) => {
+    for (const [name, spec] of Object.entries(all)) for (const sc of scenarios) for (const h of heights) for (const w of widths) { const r = run(spec, w, h, sc); each(r, [name, sc, w, h].join(' '), r.ratio.parts); }
+  };
+  it('covers the six samples and the rest', () => expect(Object.keys(all).length).toBeGreaterThan(Object.keys(samples).length + 40));
 
-describe('the rules against resolve(), over the sweep', () => {
-  // The whole sweep in one test: about 4.6 s, which the default 5 s limit cuts off on a busy machine.
-  it('a rule never hides what resolve() keeps', { timeout: 30000 }, () => {
+  it('a view always shows something, and only parts its scene has', { timeout: 60000 }, () => {
     const wrong: string[] = [];
-    sweep(({ name, w, h, r, says, did }) => { if (says && !did) wrong.push([name, r.id, w, h].join(' ')); });
+    sweep((r, at) => { if (!r.fit.parts.length || r.fit.parts.some((p) => !r.ratio.nodes.some((n) => n.part === p))) wrong.push(at + ': ' + r.fit.parts.join(' ')); });
     expect(wrong).toEqual([]);
   });
-  it('the secondary and mid-tick rules say exactly what resolve() does', () => {
+  // A reader with no browser has no nesting to go by, so a rule that takes the marks names all that stands with them.
+  it('where a rule takes its marks, a view is its number alone', { timeout: 60000 }, () => {
     const wrong: string[] = [];
-    sweep(({ name, w, h, r, says, did }) => { if ((r.id === 'secondary' || r.id === 'mid-tick') && says !== did) wrong.push([name, r.id, w, h].join(' ')); });
+    sweep((r, at, full) => { const marks = full.find((p) => DATA.includes(p)); if (marks && !r.fit.parts.includes(marks) && r.fit.parts.join() !== 'number') wrong.push(at + ': ' + r.fit.parts.join(' ')); });
     expect(wrong).toEqual([]);
   });
-
-  // The plan asks whether the view's block needs (120 px with axes, 46 px bare) reproduce resolve() under its height limits.
-  // The test: a part is given up at a height exactly when it is given up at that width with no limit, or the height is under the need.
-  it('the block needs on the view reproduce the height limits, but for the cases listed', () => {
-    const differs: Record<string, Set<number>> = {};
-    sweep(({ name, w, h, r, did, wide, spec }) => {
-      if (h == null || r.container !== 'view' || r.needs.block == null) return;
-      const kept = !!r.keep && (spec.keep || []).includes(r.keep);
-      if (did !== (wide || (!kept && h < r.needs.block))) (differs[`${name}: ${r.id} at ${h}`] ||= new Set()).add(w);
+  // The reader's account of test/guides.test.ts: a key leaves no sooner than the marks it keys, at any room, in any sample.
+  it('no key goes while its marks stay, unless a shorter form stands in or the marks give up what it was the key to', { timeout: 60000 }, () => {
+    const wrong: string[] = [];
+    sweep((r, at, full) => {
+      const { parts, set, hidden } = r.fit, gone = (key: string) => full.includes(key) && !parts.includes(key), marks = full.find((p) => DATA.includes(p));
+      if (!marks || !parts.includes(marks)) return;
+      const left = [
+        gone('legend') && !parts.includes('labels') && !parts.includes('legend-top') && set.split !== 'plain' && 'legend',
+        gone('size') && set.dots !== 'one' && 'size', gone('y-axis-2') && !hidden.includes('axis:2') && 'y-axis-2',
+        gone('ramp') && set.split !== 'plain' && 'ramp',                   // a plot's bars and dots are then in one paint, as a legend's series are
+        ...['unit-key', 'columns', 'rim'].map((key) => gone(key) && key),
+      ].filter(Boolean);
+      if (left.length) wrong.push(at + ': ' + left.join(' '));
     });
-    // Every width with room for the axes. These are known differences, listed so that a change shows. Do not tune the needs to clear them.
-    const roomy = [290, 346, 500, 700];
-    expect(Object.fromEntries(Object.entries(differs).map(([k, v]) => [k, [...v]]))).toEqual({
-      // The number sits above the plot and takes 92 px of the view (114 in the dot face), so the axes need 212 px, not 120. resolve() drops them; the rule keeps them.
-      'headed: axes at 160': roomy,
-      // The spec keeps its guides, so resolve() cannot drop the axes under 120 px and gives up the marks instead. The rules, each on its own, keep both.
-      'kept: axes at 100': roomy, 'kept: axes at 60': roomy, 'kept: axes at 40': roomy,
-      'kept: marks at 100': roomy, 'kept: marks at 60': roomy,
-    });
+    expect(wrong).toEqual([]);
   });
 });

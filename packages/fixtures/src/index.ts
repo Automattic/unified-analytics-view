@@ -1,4 +1,4 @@
-import { inProgressNote, type Catalog, type Query, type Result, type Row, type Spec } from '@unified-analytics/core';
+import { holds, inProgressNote, type Board, type Catalog, type Query, type Result, type Row, type Spec } from '@unified-analytics/core';
 import { registerLink } from '@unified-analytics/flow';
 import { registerGeo, type Shapes } from '@unified-analytics/geo';
 import { registerPartition } from '@unified-analytics/partition';
@@ -312,7 +312,54 @@ const binRow = (d: string, i: number): Row => { const w = d === 'load_time' ? LO
 /** The engine's total of each field over some rows: none where no row has a value of it, which is not a total of nothing. */
 const sumBy = (rows: Row[], fields: string[]): Row => Object.fromEntries(fields.map((f) => [f, rows.some((r) => r[f] != null) ? rows.reduce((s, r) => s + ((r[f] as number) || 0), 0) : null]));
 
+/* A query with `where`. The fixture counts no events, so it has none to filter, and it answers by the pairs it already
+ * makes: a dimension the query is not by is asked for beside the ones it is, the rows that hold are kept, and what is
+ * left is added up by what the query is by. So a filter agrees with the query by the same dimension, row for row.
+ * ponytail: the fixture makes pairs and no triples, so a dimension filtered past two in all, by and where together, is
+ * taken as independent of them: the share its values hold of each metric scales what the pairs give. And counts only,
+ * since a rate over some rows is no sum of theirs. An engine with events filters them, and has neither limit. */
+function filtered(q: Query, scenario: Scenario): Result {
+  const { where = {}, limit, ...rest } = q, by = rest.by || [], beyond = Object.keys(where).filter((d) => by.indexOf(d) < 0);
+  const exact = by.concat(beyond).slice(0, 2), scaled = beyond.filter((d) => exact.indexOf(d) < 0);
+  const flat = (rest.metrics || []).find((m) => catalog.metrics[m] && !catalog.metrics[m]!.rangeTotal);
+  if (flat) throw new Error('The fixture filters what adds up over rows, and "' + flat + '" does not: a rate, a time or a count of now over some rows is no sum of theirs. Query a count with "where", or remove "where".');
+  // A filter that holds for nothing is an answer of nothing, as an empty range is.
+  const none = (): Result => { const r = runQuery({ ...rest, limit }, 'empty'); return { ...r, meta: { ...r.meta, where } }; };
+  if (scenario === 'empty') return none();
+  const ask = (dims: string[]): Result => {
+    try { return runQuery({ ...rest, by: dims }, scenario); } catch (e) {
+      const added = dims.filter((d) => by.indexOf(d) < 0);
+      if (!added.length) throw e;
+      throw new Error('The fixture cannot filter this query by "' + added.join('" and "') + '": it would answer by ' + dims.join(' and ') + ', and has no such answer (' + (e as Error).message + ') Remove "' + added[added.length - 1] + '" from where.');
+    }
+  };
+  const all = ask(exact), fields = Object.keys(all.totals), m0 = (rest.metrics || [])[0]!, only = (dims: string[]) => Object.fromEntries(Object.entries(where).filter(([d]) => dims.indexOf(d) >= 0));
+  let kept = all.rows.filter((r) => holds(r, only(exact)));
+  for (const d of scaled) {
+    const alone = ask([d]).rows, part = sumBy(alone.filter((r) => holds(r, only([d]))), fields), whole = sumBy(alone, fields);
+    kept = kept.map((r) => ({ ...r, ...Object.fromEntries(fields.map((f) => [f, r[f] == null || !whole[f] ? r[f] : Math.round((r[f] as number) * ((part[f] as number) || 0) / (whole[f] as number))])) }));
+  }
+  if (!kept.length || kept.every((r) => !r[m0])) return none();
+  // A note is the query's own: "Today is still in progress" comes with an answer by day that holds today, and with no
+  // other. Asking by day beside the query's dimension, to filter by it, brings the note along, and it is left behind.
+  const notes = by.indexOf('date.day') >= 0 && kept.some((r) => r.partial) ? all.meta.notes : [];
+  const totals = sumBy(kept, fields) as Result['totals'], meta = { ...all.meta, notes, where };
+  // One row for each value of a dimension that a kept row has, in the engine's order, holding what the kept rows of it add up to.
+  const along = (d: string): Row[] => (all.totalsBy ? all.totalsBy[d]!.filter((o) => kept.some((r) => r[d] === o[d])).map((o) => ({ ...o, ...sumBy(kept.filter((r) => r[d] === o[d]), fields) })) : kept);
+  // The filter comes before the ranking and the limit: the first values are the first of what is left.
+  const most = (rs: Row[]) => rs.slice().sort((a, b) => ((b[m0] as number) || 0) - ((a[m0] as number) || 0)), categorical = (d: string) => catalog.dimensions[d]!.type === 'categorical';
+  const ranks = (d: string) => categorical(d) && OWN_ORDER.indexOf(d) < 0 && ORDERED.indexOf(d) < 0 && !(TABLES[d] && !TABLES[d]!.ranked);
+  if (by.length < 2) {
+    const rows = by.length ? (ranks(by[0]!) ? most(along(by[0]!)) : along(by[0]!)) : [];
+    return { rows: by.length && categorical(by[0]!) && limit ? rows.slice(0, limit) : rows, totals, meta };
+  }
+  const first = (d: string) => { const rs = along(d), names = categorical(d) && limit ? most(rs).slice(0, limit).map((r) => r[d]) : null; return names ? rs.filter((r) => names.indexOf(r[d]) >= 0) : rs; };
+  const totalsBy = { [by[0]!]: first(by[0]!), [by[1]!]: first(by[1]!) };
+  return { rows: kept.filter((r) => by.every((d) => totalsBy[d]!.some((o) => o[d] === r[d]))), totals, totalsBy, meta };
+}
+
 export function runQuery(q: Query, scenario: Scenario = 'typical'): Result {
+  if (q.where && Object.keys(q.where).length) return filtered(q, scenario);
   const metrics = q.metrics || [], dims = q.by || [], by = dims[0] || null;
   metrics.forEach((m) => { if (!catalog.metrics[m]) throw new Error('Unknown metric "' + m + '". The catalog has: ' + Object.keys(catalog.metrics).join(', ') + '.'); });
   dims.forEach((d) => { if (!catalog.dimensions[d]) throw new Error('Unknown dimension "' + d + '". The catalog has: ' + Object.keys(catalog.dimensions).join(', ') + '.'); });
@@ -497,8 +544,29 @@ export const samples: Record<string, { label: string; spec: Spec }> = {
             layers: [{ mark: 'bar', encode: { x: 'date.day', y: 'pageviews' } }, { mark: 'rule', encode: { y: 1000 }, label: 'Target 1,000', role: 'reference' }] } },
 };
 
+/* Boards: views and the part of the query they share (reference, Decided 49). Apart from every list of samples, since
+ * a board is no view: core's boardViews() gives its views, and a surface runs and draws each. */
+export const boardSamples: Record<string, { label: string; board: Board }> = {
+  traffic: { label: 'Traffic: a number, a trend and three lists that filter one another', board: { spec: 'board/0', title: 'Traffic', query: { range: '28d', compare: 'previous' }, views: [
+    { spec: 'view/0', title: 'Visitors', query: { metrics: ['visitors'] } },
+    { spec: 'view/0', title: 'Visitors by day', use: 'line', query: { metrics: ['visitors'], by: ['date.day'] } },
+    { spec: 'view/0', title: 'Channels', use: 'bar-list', query: { metrics: ['visitors'], by: ['channel'] } },
+    { spec: 'view/0', title: 'Devices', use: 'bar-list', query: { metrics: ['visitors'], by: ['device'] } },
+    { spec: 'view/0', title: 'Top pages', use: 'bar-list', query: { metrics: ['visitors'], by: ['page'], limit: 5 } },
+  ] } },
+};
+
 /* Samples the prototype does not know (docs/chart-coverage-plan.md). The parity sweep is held to `samples` and never
  * meets these. They have a sweep and golden scenes of their own, in test/coverage.test.ts. */
+/** Specs with a `facet`: each is a view for every value of a dimension (core's `facets`), on the same scales. They are
+ * apart from `moreSamples` because a facet has no one plan, and what sweeps the samples asks each for its plan. */
+export const facetSamples: Record<string, { label: string; spec: Spec }> = {
+  multiples: { label: 'Small multiples: visitors by day, a view for each channel', spec: { spec: 'view/0', title: 'Visitors by channel', use: 'line', facet: 'channel', query: { metrics: ['visitors'], by: ['date.day', 'channel'], range: '28d', compare: 'previous' } } },
+  lists:     { label: 'A list for each device: top pages by visitors', spec: { spec: 'view/0', title: 'Top pages by device', use: 'bar-list', facet: 'device', query: { metrics: ['visitors'], by: ['page', 'device'], range: '28d', limit: 5 } } },
+  panel:     { label: 'An instrument panel: a number for each channel', spec: { spec: 'view/0', title: 'Visitors by channel', facet: 'channel', query: { metrics: ['visitors'], by: ['channel'], range: '28d', compare: 'previous' } } },
+  roses:     { label: 'A rose for each device: visitors by channel', spec: { spec: 'view/0', title: 'Channels by device', use: 'rose', facet: 'device', query: { metrics: ['visitors'], by: ['channel', 'device'], range: '28d' } } },
+};
+
 export const moreSamples: Record<string, { label: string; spec: Spec }> = {
   series: { label: 'Three series: visitors by device', spec: { spec: 'view/0', title: 'Visitors by device', query: { metrics: ['visitors'], by: ['date.day', 'device'], range: '28d' },
             layers: [{ mark: 'line', encode: { x: 'date.day', y: 'visitors', color: 'device' } }] } },
@@ -538,8 +606,14 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
   candlestick: { label: 'Candlestick: response time by day', spec: { spec: 'view/0', title: 'Response time by day', use: 'candlestick', query: { metrics: ['response_time'], by: ['date.day'], range: '28d' } } },
   fan:     { label: 'Fan: response time by day, in the interval it is known to', spec: { spec: 'view/0', title: 'Response time', use: 'fan', query: { metrics: ['response_time'], by: ['date.day'], range: '28d' } } },
   dumbbell: { label: 'Dumbbell: page views by page, this period against the one before', spec: { spec: 'view/0', title: 'Page views, then and now', use: 'dumbbell', query: { metrics: ['pageviews'], by: ['page'], range: '28d', compare: 'previous', limit: 8 } } },
+  // The same pages as a ranked list of bars, with the period before as a line down the rows: the plot's `line`, drawn in a list on its side.
+  profile: { label: 'Bar list with a line down it: page views by page, and the period before as the line', spec: { spec: 'view/0', title: 'Page views, and the period before', query: { metrics: ['pageviews'], by: ['page'], range: '28d', compare: 'previous', limit: 8 },
+            layers: [{ mark: 'bar', encode: { y: 'page', x: 'pageviews' } }, { mark: 'line', encode: { y: 'page', x: 'pageviews' }, series: 'previous' }, { mark: 'text', encode: { y: 'page', text: 'page' } }, { mark: 'text', encode: { y: 'page', text: 'pageviews' }, align: 'end' }] } },
   bullet:  { label: 'Bullet: sign-ups by device, against the target', spec: { spec: 'view/0', title: 'Sign-ups against target', use: 'bullet', query: { metrics: ['signups'], by: ['device'], range: '28d' } } },
   map:     { label: 'A map: visitors by country', spec: { spec: 'view/0', title: 'Visitors by country', use: 'choropleth', query: { metrics: ['visitors'], by: ['country'], range: '28d' } } },
+  // The same map with each country's visitors said on it: the plot's `text`, drawn over a custom mark at the places it offers. Where two would meet, the one that says less goes.
+  labelled: { label: 'Map with its values on it: visitors by country, said on each', spec: { spec: 'view/0', title: 'Visitors by country', query: { metrics: ['visitors'], by: ['country'], range: '28d' },
+            layers: [{ mark: 'geo', encode: { x: 'country', color: 'visitors' } }, { mark: 'text', encode: { x: 'country', text: 'visitors' } }] } },
   symbols: { label: 'Symbols on a map: page views by country', spec: { spec: 'view/0', title: 'Page views by country', use: 'symbol-map', query: { metrics: ['pageviews'], by: ['country'], range: '28d' } } },
   // A split that spends no colour (docs/uncommon-coverage-plan.md, step 1): a line for each country, all in one paint.
   spaghetti: { label: 'Spaghetti: visitors by day, a line for each of fifteen countries', spec: { spec: 'view/0', title: 'Visitors by country, day by day', use: 'spaghetti', query: { metrics: ['visitors'], by: ['date.day', 'country'], range: '28d' } } },
@@ -547,6 +621,15 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
   hexes:   { label: 'A hex tile map: visitors by country, each an equal hexagon', spec: { spec: 'view/0', title: 'Visitors by country', use: 'hex-tile-map', query: { metrics: ['visitors'], by: ['country'], range: '28d' } } },
   // An arc that reads data on angle and radius (docs/uncommon-coverage-plan.md, step 2). Swept, with golden scenes, in test/arc-data.test.ts.
   rose:    { label: 'A rose: visitors by hour of the day', spec: { spec: 'view/0', title: 'Visitors by hour', use: 'rose', query: { metrics: ['visitors'], by: ['hour'], range: '28d' } } },
+  // The plot's marks about a centre: a line round the circle from each day's place to the next, the fill in from it, a dot at each, and the period before as a second line.
+  tinted:  { label: 'Bars painted by a second metric: visitors by page, and how each converts', spec: { spec: 'view/0', title: 'Visitors, and how they convert', query: { metrics: ['visitors', 'page_conversion'], by: ['page'], range: '28d', limit: 8 },
+    layers: [{ mark: 'bar', encode: { x: 'page', y: 'visitors', color: 'page_conversion' } }] } },
+  filtered: { label: 'A filter: visitors by day, from one channel alone', spec: { spec: 'view/0', title: 'Visitors from search', use: 'line', query: { metrics: ['visitors'], by: ['date.day'], range: '28d', compare: 'previous', where: { channel: 'Search' } } } },
+  launch:  { label: 'A day marked on a trend: visitors by day, and the day of a launch', spec: { spec: 'view/0', title: 'Visitors, and the launch', query: { metrics: ['visitors'], by: ['date.day'], range: '28d', compare: 'previous' },
+    layers: [{ mark: 'area', encode: { x: 'date.day', y: 'visitors' }, role: 'context' }, { mark: 'line', encode: { x: 'date.day', y: 'visitors' } }, { mark: 'line', encode: { x: 'date.day', y: 'visitors' }, series: 'previous' }, { mark: 'rule', at: '2026-09-21', label: 'Launch' }] } },
+  radar:   { label: 'Radar: visitors by day of the week, this period and the one before', spec: { spec: 'view/0', title: 'Visitors by weekday', query: { metrics: ['visitors'], by: ['weekday'], range: '28d', compare: 'previous' },
+            layers: [{ mark: 'area', encode: { angle: 'weekday', radius: 'visitors' }, role: 'context' }, { mark: 'line', encode: { angle: 'weekday', radius: 'visitors' }, series: 'previous' },
+              { mark: 'line', encode: { angle: 'weekday', radius: 'visitors' } }, { mark: 'dot', encode: { angle: 'weekday', radius: 'visitors' } }] } },
   rings:   { label: 'Radial bars: visitors by channel', spec: { spec: 'view/0', title: 'Visitors by channel', use: 'radial-bar', query: { metrics: ['visitors'], by: ['channel'], range: '28d' } } },
   sunburst: { label: 'A sunburst: visitors by device, then by channel', spec: { spec: 'view/0', title: 'Visitors by device and channel', use: 'sunburst', query: { metrics: ['visitors'], by: ['device', 'channel'], range: '28d' } } },
   // The `partition` mark (docs/uncommon-coverage-plan.md, step 9). They are swept, and have their golden scenes, in test/partition.test.ts.
@@ -589,6 +672,9 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
             layers: [{ mark: 'cell', encode: { x: 'date.day', color: 'net_subscribers' } }] } },
   // A correlation matrix: the catalog states that a correlation runs from -1 to 1, so zero is the ramp's neutral middle.
   correlogram: { label: 'Correlogram: how far each assumption moves with each other, from -1 to 1', spec: { spec: 'view/0', title: 'How the assumptions move together', use: 'heatmap', query: { metrics: ['correlation'], by: ['factor', 'other_factor'], range: '28d' } } },
+  // The same matrix with each pair's value said in its cell: the plot's `text`, drawn in a grid. A highlight table.
+  highlight: { label: 'Highlight table: the correlogram, with each correlation said in its cell', spec: { spec: 'view/0', title: 'How the assumptions move together', query: { metrics: ['correlation'], by: ['factor', 'other_factor'], range: '28d' },
+            layers: [{ mark: 'cell', encode: { y: 'factor', x: 'other_factor', color: 'correlation' } }, { mark: 'text', encode: { y: 'factor', x: 'other_factor', text: 'correlation' } }] } },
   // The same matrix as circles: a dot for each pair, sized by how far its correlation is from zero and painted by which side it is on.
   circles: { label: 'Correlogram, as circles: sized by how strong each correlation is, and painted by its sign', spec: { spec: 'view/0', title: 'How the assumptions move together', query: { metrics: ['correlation'], by: ['factor', 'other_factor'], range: '28d' },
             layers: [{ mark: 'dot', encode: { y: 'factor', x: 'other_factor', size: 'correlation', color: 'correlation' } }] } },

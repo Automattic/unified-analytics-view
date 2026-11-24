@@ -1,4 +1,4 @@
-import { SIZES, SIZE_KEY_BLOCK, type CircleNode, type RectNode, type Row } from '@unified-analytics/core';
+import { SIZES, SIZE_KEY_BLOCK, whereOf, type CircleNode, type RectNode, type Row } from '@unified-analytics/core';
 import { attr, ensure, keyed, nodePaint, prop } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { chooseItem, dimName, readout, roveItems } from '../keys.ts';
@@ -6,8 +6,10 @@ import { emptyTable, fieldLabel, tableRow, valueText, type Cell } from '../table
 import { ARROWS, IS } from '../rove.ts';
 import { AXES_HEIGHT, NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
 import { paintAxes, thinAxis } from '../chrome/axes.ts';
-import { paintRamp } from '../chrome/ramp.ts';
-import { paintSize } from '../chrome/size.ts';
+import { thinLabels } from '../measure.ts';
+import { paintLabels } from './points.ts';
+import { RAMP_STRIP, paintRamp } from '../chrome/ramp.ts';
+import { SIZE_MOST, paintSize } from '../chrome/size.ts';
 import { DOT, NO_SIZE } from '../chrome/swatch.ts';
 
 /* A dimension on x, another on y, a metric on colour: a grid of cells. The cells are a CSS grid, each set in its
@@ -24,13 +26,20 @@ import { DOT, NO_SIZE } from '../chrome/swatch.ts';
  * nothing chosen on focus, left and right along x and up and down along y, stopping at the edges, Enter or Space to
  * activate, Escape to let go. To assistive technology it is a grid of rows of cells, each named by its readout.
  * ponytail: version 4 has no model for two dimensions, so this one is a proposal (chart-coverage-plan, section 6). */
+/** The most of the view's width, in percent, that the row labels take before they are cut short. */
+export const LABELS_SHARE = 40;
+/** What a label in a cell keeps clear of the cell's sides, in px. */
+const LABEL_PAD = 2;
+
 const css = `
 .uav[data-layout="matrix"] { --uav-body-block: ${AXES_HEIGHT}; }
 /* The frame is set from the left whichever way the page reads, as a plot's is (cartesian.ts): the row labels stay on
  * the left of the cells. The ramp is a legend, and follows the page. */
-.uav[data-layout="matrix"] .uav-body { display: grid; grid-template: "y plot" minmax(0, 1fr) ". x" auto "ramp ramp" auto "size size" auto / auto minmax(0, 1fr); direction: ltr; }
+.uav[data-layout="matrix"] .uav-body { display: grid; grid-template: "y plot" minmax(0, 1fr) ". x" auto "ramp ramp" auto "size size" auto / fit-content(${LABELS_SHARE}%) minmax(0, 1fr); direction: ltr; }
 .uav[data-layout="matrix"][data-parts~="size"] { --uav-body-block: calc(${AXES_HEIGHT} + ${SIZE_KEY_BLOCK}px); }
-.uav[data-layout="matrix"] .uav-y-axis { grid-area: y; }
+/* Row labels are names, and a name can be longer than the view is wide. Their column is as wide as the widest, up to a
+ * share of the view, and a longer one is cut short to it (chrome/axes.ts): its cells keep the rest, and its readout says it whole. */
+.uav[data-layout="matrix"] .uav-y-axis { grid-area: y; min-inline-size: 0; }
 .uav[data-layout="matrix"] .uav-x-axis { grid-area: x; }
 .uav[data-layout="matrix"] .uav-size { grid-area: size; }
 /* One row of cells is 34 px tall and no taller, with its labels and its ramp under it. Handed a box, it fills it. */
@@ -45,6 +54,9 @@ const css = `
 .uav-cells i[data-dot]::before { content: ""; border-radius: 50%; background: var(--uav-dot);
   inline-size: min(${DOT}, (min(100cqw / var(--uav-nx), 100cqh / var(--uav-ny)) - 1px) * var(--uav-size, ${NO_SIZE}) / ${SIZES}); aspect-ratio: 1; }
 .uav-cells ${IS.held} { z-index: 1; }
+/* What a pair says is a plot's label (points.ts), in the middle of the pair's place and over its cell or its dot. A
+ * cell is no wider than it is, so a label is not cut short to fit: the measured pass shows them all or none. */
+.uav[data-layout="matrix"] .uav-point-labels span { translate: -50% -50%; max-inline-size: none; }
 .uav[data-layout="matrix"] .uav-ramp { grid-area: ramp; }`;
 
 /** Where a key moves to in a grid `nx` cells across and `ny` down, from `at` (null when none is chosen): left and
@@ -57,7 +69,7 @@ export function stepCell(key: string, at: [x: number, y: number] | null, nx: num
 }
 
 /* What the listeners read. They are bound once to the grid, which outlives every paint, and this is set by each. */
-interface Grid { nx: number; ny: number; rows: Map<string, Row> }
+interface Grid { nx: number; ny: number; rows: Map<string, Row>; dims: (string | undefined)[] }
 const grids = new WeakMap<HTMLElement, Grid>();
 const id = (x: number, y: number) => 'cell-' + x + '-' + y;
 
@@ -67,33 +79,42 @@ function bind(cells: HTMLElement): void {
     const g = grids.get(cells)!, to = stepCell(e.key, on ? (on.id.split('-').slice(1).map(Number) as [number, number]) : null, g.nx, g.ny);
     if (to) e.preventDefault();
     return to && cells.querySelector<HTMLElement>('#' + id(...to));
-  }, (el) => { const row = grids.get(cells)!.rows.get(el.id); return row && { row }; });
+  }, (el) => { const g = grids.get(cells)!, row = g.rows.get(el.id); return row && { row, where: whereOf(row, g.dims) }; });
 }
 
 export const matrix: LayoutPainter = {
   layout: 'matrix',
   css,
-  // The number alone. The body goes whole, so kept axes do not stand with no grid between them.
-  fit: { marks: NUMBER_ALONE },
+  // The two keys in their shorter forms, which stay as long as the grid. Then the number alone: the body goes whole, so
+  // kept axes do not stand with no grid between them.
+  fit: { ramp: { ...RAMP_STRIP, ...SIZE_MOST }, marks: NUMBER_ALONE },
 
   // Labels that would meet, by their real sizes, along each axis (chrome/axes.ts). A grid's are not anchored to stay inside
   // it, so one that would run past the far edge goes first, and down the side they may stand line on line.
   measure(body) {
     thinAxis(body, 'x', { inside: true });
     thinAxis(body, 'y', { gap: 0, inside: true });
+    // A value is said in every pair or in none. One wider or taller than its cell would lie over the next, and a few
+    // left standing would say nothing of the rest: so where any does not fit, all go.
+    const holder = body.querySelector<HTMLElement>('.uav-point-labels'), grid = grids.get(body.querySelector<HTMLElement>('.uav-cells')!);
+    if (holder && grid) thinLabels(holder, ':scope > span:not([data-exit])', (labels) => {
+      const room = holder.getBoundingClientRect(), w = room.width / grid.nx - 2 * LABEL_PAD, h = room.height / grid.ny;
+      const fits = labels.every((el) => { const r = el.getBoundingClientRect(); return r.width <= w && r.height <= h; });
+      return labels.map(() => !fits);
+    });
   },
 
   paint(body, scene, _rules, data) {
-    const xs = scene.rows ?? [], ys = scene.ys ?? [], { x: xf, y: yf } = data.layers[0]!.encode as Record<string, string>;
+    const xs = scene.rows ?? [], ys = scene.ys ?? [], { x: xf, y: yf } = data.layers[0]!.encode as Record<string, string>;   // every layer of a grid is on the grid's own axes
     const plot = paintAxes(body, scene);
     paintRamp(body, scene); paintSize(body, scene);
     const cells = ensure(plot, 'div', 'uav-cells'), dims = data.catalog.dimensions;
 
     if (!grids.has(cells)) bind(cells);
     const at = new Map(data.result.rows.map((r) => [(xf ? r[xf] : '') + '\n' + (yf ? r[yf] : ''), r])), rows = new Map<string, Row>();
-    grids.set(cells, { nx: xs.length, ny: ys.length, rows });
+    grids.set(cells, { nx: xs.length, ny: ys.length, rows, dims: [xf, yf] });
     prop(cells, '--uav-nx', xs.length); prop(cells, '--uav-ny', ys.length);
-    attr(cells, 'role', 'grid'); attr(cells, 'tabindex', xs.length && ys.length ? 0 : null);
+    attr(cells, 'role', 'grid'); attr(cells, 'aria-multiselectable', 'true'); attr(cells, 'tabindex', xs.length && ys.length ? 0 : null);
     attr(cells, 'aria-label', [yf, xf].filter(Boolean).map((f) => dims[f!]!.label).join(' by '));
     // One row is as tall as a cell and no taller: the stylesheet gives a strip its own height.
     body.toggleAttribute('data-strip', !yf);
@@ -116,6 +137,8 @@ export const matrix: LayoutPainter = {
         if (row) rows.set(c.id, row);
       });
     });
+    // What the pairs say, where a `text` layer has them say it: the plot's own labels, over the cells.
+    paintLabels(plot, scene);
     // ponytail: a chosen cell is let go on every paint, where keys.ts keeps a point that is still there.
     chooseItem(cells, null);
   },
@@ -125,7 +148,7 @@ export const matrix: LayoutPainter = {
   table(table, title, scene, { layers, result, catalog }) {
     // ponytail: the first layer's metric, on color or else on size. Dots over cells of another metric are in the readout and not in the pivot.
     // Not pivot() (table.ts): the grid's columns are the scene's, in its order, and named as its axis names them.
-    const { x: xf, y: yf, color, size } = layers[0]!.encode as Record<string, string>, m = (color ?? size)!;
+    const { x: xf, y: yf, color, size } = (layers.find((l) => l.mark !== 'text') ?? layers[0]!).encode as Record<string, string>, m = (color ?? size)!;
     const at = new Map(result.rows.map((r) => [(xf ? r[xf] : '') + '\n' + (yf ? r[yf] : ''), r[m]]));
     const value = (v: Row[string] | undefined): Cell => [valueText(v, m, catalog), 'td', true];
     // A value is a key here, and so a string: a bin's start is a number in the result. A bin is named by both its ends.

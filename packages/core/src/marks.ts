@@ -1,6 +1,7 @@
 import type { FitRule } from './fit.ts';
+import type { Reads } from './reads.ts';
 import { LAYOUTS, MARKS } from './types.ts';
-import type { Catalog, Container, Guides, Layer, Part, PlacedNode, Query, Result, Scene } from './types.ts';
+import type { Catalog, Guides, Layer, Part, Query, Result, Scene } from './types.ts';
 
 /* Custom marks: the escape hatch for what the grammar cannot express (reference, section 7). One is registered in
  * code under a name, and a spec refers to it by that name in `mark` and passes it encodings, nothing else. Whatever
@@ -16,17 +17,22 @@ import type { Catalog, Container, Guides, Layer, Part, PlacedNode, Query, Result
 export interface MarkView { layers: Layer[]; guides: Guides; query: Query; result: Result; catalog: Catalog }
 
 export interface CustomMark {
-  /** The fit rules of its layout. A context's own rules for the layout come before these. Two ids are asked for by
-   * `resolve()`: `guides` is the room its `ramp` and `size` parts need, and `marks` the room the marks do. */
+  /** The channels it reads, and what each may hold (reads.ts). `resolve()` refuses an encoding that is not among them,
+   * as it does for core's marks: one a mark does not read is drawn without. A mark that says nothing here is not asked. */
+  reads?: Reads;
+  /** The fit rules of its layout, read as core's are (`fitTo`). A context's own rules for the layout come before these.
+   * A key steps down to a shorter form by a switch (`set: { ramp: 'strip' }`, `'size-key': 'most'`), which its painter
+   * draws. A key may not go while the marks it keys are drawn (test/guides.test.ts). */
   rules: FitRule[];
-  /** Its scene, in ratios, with stable keys and paint tokens: every node, whatever the plan shows, and in `parts` the
-   * ones it does. A plan starts with the guides `ramp` and `size` on, and they go together. `rows` are the dimension
-   * values in the result's order, one for each of its rows. */
+  /** Its scene, in ratios, with stable keys and paint tokens: every node, and in `parts` the ones the plan shows.
+   * The plan's guides say whether it has a `ramp` and a `size`. `rows` are the dimension values in the result's order,
+   * one for each of its rows. */
   scene(view: MarkView): Pick<Scene, 'nodes' | 'rows' | 'aspect'> & { parts: Part[] };
-  /** For painters with no CSS: its own parts in pixels, in a box `width` wide and, where the view has a height limit,
-   * no taller than `room`. A `ramp` and a `size` part are place()'s, set under what this returns. `plot` is the box
-   * its marks were drawn in. */
-  place(scene: Scene, width: number, room: number | null, container: Container): { nodes: PlacedNode[]; height: number; plot?: { w: number; h: number } };
+  /** The places its space has, for the plot's marks that stand at a place and need no axis (reference, Decided 44):
+   * where the value `key` of the dimension on its `x` is, across and up its `plot` part's box from 0 to 1, or null
+   * where that value has no place. A mark that gives this lets a `text` layer on the same `x` say something at each
+   * place, drawn by the plot's own function. One that does not is drawn alone, as before. */
+  places?(view: MarkView): (key: string) => { x: number; y: number } | null;
 }
 
 const REGISTERED = new Map<string, CustomMark>();

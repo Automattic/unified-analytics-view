@@ -40,13 +40,13 @@ describe.each([[null], [0]])('a share view whose total is %s', (total) => {
   });
   it('a band and a pie have no length to give a segment, and the legend says each value', () => {
     const band = shown('band', total).nodes, pie = shown('pie', total).nodes, texts = (ns: typeof band) => ns.flatMap((n) => (n.kind === 'text' && n.part !== 'number' ? [n.text] : []));
-    expect(band.flatMap((n) => (n.part === 'band' && n.kind === 'rect' ? [n.v] : []))).toEqual([0, 0]);
+    expect(band.flatMap((n) => (n.part === 'band' && n.kind === 'rect' ? [n.w] : []))).toEqual([0, 0]);
     expect(pie.flatMap((n) => (n.kind === 'arc' ? [n.a1 - n.a0] : []))).toEqual([0, 0]);
     for (const ns of [band, pie]) expect(texts(ns)).toEqual(['Search', '4,318', 'Direct', '2,000', 'Search 4,318']);
     expect(band.find((n) => n.key === 'sub')).toMatchObject({ text: 'Top: Search' });
   });
   it('a stack normalized over an x the engine totals as null stands at no height', () => {
-    expect(shown('time', total).nodes.flatMap((n) => (n.kind === 'rect' && n.part === 'plot' ? [n.v] : []))).toEqual([0, 0]);
+    expect(shown('time', total).nodes.flatMap((n) => (n.kind === 'rect' && n.part === 'plot' ? [n.y] : []))).toEqual([0, 0]);
   });
 });
 it('with a total, a share is still said', () => {

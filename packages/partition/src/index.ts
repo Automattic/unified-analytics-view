@@ -1,5 +1,5 @@
-import { SERIES, formatDimension, heldBox, isDim, isMetric, layerKeys, metricOf, registerMark, registerPreset, roleOf, ruleFor, seqScale, tooManySeries, uniqueKeys } from '@unified-analytics/core';
-import type { CustomMark, FitRule, MarkView, Part, PlacedNode, RectNode, Row, SceneNode, TextNode } from '@unified-analytics/core';
+import { SERIES, formatDimension, isDim, isMetric, layerKeys, metricOf, registerMark, registerPreset, roleOf, seqScale, tooManySeries, uniqueKeys } from '@unified-analytics/core';
+import type { CustomMark, FitRule, MarkView, Part, RectNode, Row, SceneNode, TextNode } from '@unified-analytics/core';
 
 /* The `partition` mark: a box divided by area, nested once, which is a treemap. A custom mark (core's marks.ts). This
  * is its half for core: a scene in ratios and its place in pixels, with no DOM and no dependency but core. The
@@ -65,15 +65,14 @@ export const HEAD = 16, HEAD_MOST = 0.3;
 export const LINE = 14;
 /** px between two parents, and between two children: a parent stands half its gap in from the part's edge all round. */
 export const GAP = 2, KID_GAP = 1;
-const CHAR = 6;       // px a character of a label takes, near enough, where nothing can be measured
 
 /* Below the room a treemap needs it is not a smaller treemap: the view becomes a list of the same query. Which list
  * depends on the query, and a rule names one preset, so there are two rules: the first whose preset the query can
  * fill is the one that applies (core's fallbackRule). With two dimensions it is `pair-list`, registered below, since
  * `bar-list` has one dimension to its rows and would leave the other undrawn. With one it is `bar-list`. */
 export const PARTITION_RULES: FitRule[] = [
-  { id: 'guides', layout: 'partition', container: 'view', needs: { inline: 320, block: 170 },     // the ramp, where a metric is on color
-    hide: ['ramp', 'size'], keep: 'guides' },
+  { id: 'guides', layout: 'partition', container: 'view', needs: { inline: 320, block: 170 },     // the ramp, where a metric is on color: under this a thin strip, which stays as long as the boxes
+    hide: [], set: { ramp: 'strip' }, keep: 'guides' },
   { id: 'marks',  layout: 'partition', container: 'view', needs: { inline: 280, block: 120 },     // boxes too small to tell apart, or to name
     hide: [], fallback: 'pair-list', keep: 'marks' },
   { id: 'marks-flat', layout: 'partition', container: 'view', needs: { inline: 280, block: 120 }, // the same room, for a query by one dimension
@@ -103,7 +102,7 @@ function read({ layers, query, result, catalog }: Omit<MarkView, 'guides'>) {
   const total = result.totals[size], shown = total ? tops.filter((r) => is(r[size])) : [];
   const drawn = two ? result.rows.filter((r) => is(r[size]) && shown.some((t) => of(t) === of(r))) : shown;
   // The colour scale runs over the boxes that are painted by it, as a grid's runs over its cells.
-  const fill = typeof color === 'string' ? seqScale(drawn.map((r) => r[color]).filter((v): v is number => typeof v === 'number'), metricOf(catalog, color)!) : null;
+  const fill = typeof color === 'string' ? seqScale(drawn.map((r) => r[color]).filter((v): v is number => typeof v === 'number'), metricOf(catalog, color)!, result) : null;
   if (!fill && shown.length > SERIES) throw new Error(tooManySeries('Dividing by "' + dim + '"', shown.length, 'boxes', ', or encode a metric on color to paint every box by the ramp'));
   // A key is made unique as it is given out: two rows of one value, or a value with the separator in it.
   const id = layerKeys(layers)[0]!, key = uniqueKeys();
@@ -128,6 +127,7 @@ const round = (n: number) => Math.round(n * 1e5) / 1e5;
 
 export const partitionMark: CustomMark = {
   rules: PARTITION_RULES,
+  reads: { x: ['dimension'], detail: ['dimension'], size: ['metric'], color: ['metric'] },
 
   /* The nodes, in order: a parent's box, its name, and then each of its children's boxes with the child's name after
    * it. A parent's box is set in the part, as a cell is: `x` and `w` across it and `y` and `h` down it. A child's is
@@ -145,13 +145,13 @@ export const partitionMark: CustomMark = {
       labels.push([n, area]); nodes.push(n);
     };
     for (const g of groups) {
-      const b = g.box, at = { x: round(b.x), y: round(b.y), w: round(b.w), h: round(b.h) };
+      const b = g.box, at = { x: round(b.x), y: round(Math.max(0, 1 - (b.y + b.h))), w: round(b.w), h: round(b.h) };
       // A parent that is divided is the ground its children stand on: a tint of its colour, or the tone of no value.
       // What its children do not cover is what the rows past a `limit` hold.
       nodes.push({ key: g.key, part: 'plot', kind: 'rect', ...at, paint: g.paint, ...(two && !fill && { opacity: 0.14, tone: 'soft' as const }), layer: two && fill ? 'guide' : 'data', role: two && fill ? 'context' : role });
       label(g, b.w * b.h, two ? (fill ? 'ink.muted' : g.paint) : on, !two && !!fill);
       for (const c of g.kids) {
-        nodes.push({ key: c.key, part: 'plot', kind: 'rect', x: round(c.box.x), y: round(c.box.y), w: round(c.box.w), h: round(c.box.h), pair: [String(g.row[dim]), String(c.row[view.layers[0]!.encode!.detail as string])], paint: c.paint, layer: 'data', role } satisfies RectNode);
+        nodes.push({ key: c.key, part: 'plot', kind: 'rect', x: round(c.box.x), y: round(Math.max(0, 1 - (c.box.y + c.box.h))), w: round(c.box.w), h: round(c.box.h), pair: [String(g.row[dim]), String(c.row[view.layers[0]!.encode!.detail as string])], paint: c.paint, layer: 'data', role } satisfies RectNode);
         label(c, b.w * b.h * c.box.w * c.box.h, on, !!fill);
       }
     }
@@ -167,29 +167,6 @@ export const partitionMark: CustomMark = {
    * while the box can give it one, and a name is set only where it fits its box, by a width worked out from its
    * length: nothing is measured here. Where a parent's name does not fit, its children's are left out too, so a
    * child is never named without the parent it is in. */
-  place(scene, W, room, container) {
-    const least = ruleFor(container.rules.fit.concat(PARTITION_RULES), scene.layout, 'marks')?.needs.block ?? 0;
-    const { w, h, left } = heldBox(W, room, scene.aspect!, MAX, least * scene.aspect!);
-    const nodes: PlacedNode[] = [], fits = (n: TextNode, b: Box) => n.text.length * CHAR + 8 <= b.w && LINE <= b.h;
-    let parent: Box = { x: 0, y: 0, w: 0, h: 0 }, inner = parent, named = false, last = parent;
-    // A parent that is divided is a ground: a tint, or the tone of no value. Its name has a line of its own over its children.
-    const two = scene.nodes.some((n) => n.part === 'plot' && n.kind === 'rect' && (!!n.pair || n.tone === 'soft' || n.role === 'context'));
-    for (const n of scene.nodes) {
-      if (n.part !== 'plot') continue;
-      if (n.kind === 'rect') {
-        const child = !!n.pair, of = child ? inner : { x: left + GAP / 2, y: GAP / 2, w, h }, gap = child ? KID_GAP : GAP;
-        last = { x: of.x + n.x! * of.w, y: of.y + n.y! * of.h, w: Math.max(0, n.w! * of.w - gap), h: Math.max(0, n.h! * of.h - gap) };
-        nodes.push({ key: n.key, kind: 'rect', ...last, rx: 2, paint: n.paint, layer: n.layer, ...(n.opacity != null && { opacity: n.opacity }) });
-        if (!child) parent = last;
-      } else if (n.kind === 'text') {
-        const child = last !== parent, divided = !child && two, head = divided ? Math.min(HEAD, parent.h * HEAD_MOST) : 0;
-        const shows: boolean = child ? named && fits(n, last) : fits(n, divided ? { ...parent, h: head } : parent);
-        if (!child) { named = shows; inner = { x: parent.x, y: parent.y + head, w: parent.w + KID_GAP, h: parent.h - head + KID_GAP }; }
-        if (shows) nodes.push({ key: n.key, kind: 'text', x: last.x + 4, y: last.y + (divided ? head / 2 : LINE / 2 + 2), text: n.text, anchor: 'start', baseline: 'middle', font: n.font, paint: n.paint, layer: n.layer, ...(n.halo && { halo: true }) });
-      }
-    }
-    return { nodes, height: h, plot: { w, h } };
-  },
 };
 
 /** Register the `partition` mark, and the presets that go with it. A spec then names the mark in `mark`, or `treemap` in `use`. */

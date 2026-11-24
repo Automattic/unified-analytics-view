@@ -104,12 +104,12 @@ export function prop(el: HTMLElement | SVGElement, name: string, v: string | num
  * takes the step that holds contrast for text (`-text`), where the tokens have that, and the mark's colour where not. */
 export function nodePaint(n: Pick<SceneNode, 'paint' | 'kind' | 'tone' | 'opacity'>): string {
   const base = paintVar(n.paint), name = base.slice(4, base.indexOf(','));
-  if (n.tone === 'soft') return 'var(' + name + '-soft, color-mix(in srgb, ' + base + ' ' + (n.opacity ?? 1) * 100 + '%, transparent))';
+  if (n.tone === 'soft') return 'var(' + name + '-soft, color-mix(in srgb, ' + base + ' ' + +((n.opacity ?? 1) * 100).toFixed(2) + '%, transparent))';
   return n.kind === 'text' && n.paint.startsWith('series.') ? 'var(' + name + '-text, ' + base + ')' : base;
 }
 /** What every painted node carries: its key, what the fit rules select on, the row and series it came from, and its paint. */
 function mark(el: HTMLElement | SVGElement, n: SceneNode): void {
-  attr(el, 'data-key', n.key); attr(el, 'data-role', n.role); attr(el, 'data-rank', n.rank); attr(el, 'data-row', n.row); attr(el, 'data-series', n.series);
+  attr(el, 'data-key', n.key); attr(el, 'data-role', n.role); attr(el, 'data-rank', n.rank); attr(el, 'data-row', n.row); attr(el, 'data-series', n.series); attr(el, 'data-axis', n.axis); attr(el, 'data-legend', n.legend ? '' : null); attr(el, 'data-tone', n.tone);
   prop(el, '--uav-paint', nodePaint(n));
   prop(el, 'opacity', n.tone === 'soft' ? null : n.opacity);
 }

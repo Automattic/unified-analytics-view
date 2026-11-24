@@ -1,6 +1,6 @@
 import { geoEqualEarth, geoIdentity, geoPath, type ExtendedFeatureCollection, type GeoProjection } from 'd3-geo';
-import { dotRadius, heldBox, isDim, isMetric, layerKeys, metricOf, notShownNote, registerMark, registerPreset, roleOf, ruleFor, seqScale, sizeKey, sizeStep } from '@unified-analytics/core';
-import type { CircleNode, CustomMark, FitRule, Part, PathNode, PlacedNode, Row, SceneNode, TextNode } from '@unified-analytics/core';
+import { common, isDim, isMetric, layerKeys, metricOf, notShownNote, registerMark, registerPreset, roleOf, seqScale, sizeKey, sizeStep, steady } from '@unified-analytics/core';
+import type { CircleNode, CustomMark, FitRule, Part, PathNode, Row, SceneNode } from '@unified-analytics/core';
 
 /* The `geo` mark: a map of regions, as a custom mark (core's marks.ts). This is its half for core: a scene in ratios
  * and its place in pixels, with no DOM. The painter is in dom.ts.
@@ -40,8 +40,10 @@ export const NOTE = 18;
 /* Below the room a map needs it is not a smaller map: the view becomes the ranked list of the same query. The note goes
  * with the keys, before that, so it never takes the room of a small map, and is never beside the list, which has every row. */
 export const geoRules = (layout: string): FitRule[] => [
-  { id: 'guides', layout, container: 'view', needs: { inline: 320, block: 170 },      // the ramp, and the key to sizes
-    hide: ['ramp', 'size', 'note'], keep: 'guides' },
+  // The ramp and the key to sizes are the keys to a map's fills and its symbols, so they stay as long as the map: under
+  // this each is in its shorter form. The note of what the map could not draw stays with them.
+  { id: 'guides', layout, container: 'view', needs: { inline: 320, block: 170 },
+    hide: [], set: { ramp: 'strip', 'size-key': 'most' }, keep: 'guides' },
   { id: 'marks',  layout, container: 'view', needs: { inline: 280, block: 120 },      // regions too small to tell apart
     hide: [], fallback: 'bar-list', keep: 'marks' },
 ];
@@ -54,7 +56,6 @@ export const GEO_RULES: FitRule[] = geoRules('geo');
 export interface GeoOptions { name?: string; projection?: GeoProjection }
 
 /** A path drawn in the scene's box, at `k` times the size. Paths here are moves and lines to absolute points, so every number in one is a length. */
-const scaled = (d: string, k: number) => d.replace(/-?\d+(?:\.\d+)?/g, (n) => String(Math.round(Number(n) * k * 100) / 100));
 
 /** The geo mark for a set of boundary shapes. They are fitted to the box whole, so the map is of the shapes handed in:
  * the world, one country's regions, or a sheet of tiles. */
@@ -70,10 +71,11 @@ export function geoMark(shapes: Shapes, { name = 'geo', projection }: GeoOptions
   const height = path.bounds(all)[1][1], aspect = Math.round(BOX / height * 1000) / 1000;
   // ponytail: a symbol stands at the centroid of the whole shape, which for a country with far-flung parts is not on
   // its mainland. The centroid of its largest polygon, if that shows.
-  const regions = all.features.map((f) => { const [cx, cy] = path.centroid(f); return { id: f.id == null ? null : String(f.id), key: String(f.id ?? f.properties!.name), d: path(f), x: cx / BOX, t: 1 - cy / height }; }).filter((s) => s.d && Number.isFinite(s.x + s.t));
+  const regions = all.features.map((f) => { const [cx, cy] = path.centroid(f); return { id: f.id == null ? null : String(f.id), key: String(f.id ?? f.properties!.name), d: path(f), x: steady(cx / BOX), t: steady(1 - cy / height) }; }).filter((s) => s.d && Number.isFinite(s.x + s.t));
 
   return {
     rules,
+    reads: { x: ['dimension'], color: ['metric'], size: ['metric'] },
 
     scene({ layers, guides, query, result, catalog }) {
       const l = layers[0]!, { x: dim, color, size } = l.encode || {}, rows = result.rows;
@@ -93,13 +95,13 @@ export function geoMark(shapes: Shapes, { name = 'geo', projection }: GeoOptions
       const of = (id: string | null, f: unknown) => (typeof f === 'string' ? (at.get(id)?.[f] as number | null | undefined) : undefined);
       const values = (f: unknown) => drawn.map((s) => of(s.id, f)).filter((v): v is number => v != null);
       // The colour scale runs over the regions drawn, as a grid's runs over its cells: geometry, read from the rows.
-      const fill = isMetric(catalog, color) ? seqScale(values(color), metricOf(catalog, color)!) : null;
-      const top = Math.max(0, ...values(size)) || 1, id = layerKeys(layers)[0]!, role = roleOf(l);
+      const fill = isMetric(catalog, color) ? seqScale(values(color), metricOf(catalog, color)!, result) : null;
+      const top = common(result, 'size', [0, Math.max(0, ...values(size)) || 1])[1], id = layerKeys(layers)[0]!, role = roleOf(l);
       // Every shape handed in is drawn, in the shapes' own order, so the map does not change with the ranking. One the
       // result has a row for carries it. Under symbols the regions are the ground they stand on, in the tone of no value.
       const nodes: SceneNode[] = regions.map((s): PathNode => ({ key: id + ':' + s.key, part: 'plot', kind: 'path', d: s.d, points: [], fill: true,
         paint: fill ? fill.paint(of(s.id, color)) : 'seq.none', layer: fill ? 'data' : 'guide', role: fill ? role : 'context', ...(at.has(s.id) && { row: s.id! }) }));
-      if (typeof size === 'string') nodes.push(...drawn.filter((s) => of(s.id, size) != null).map((s): CircleNode => ({ key: id + ':' + s.key + ':symbol', part: 'points', kind: 'circle', pulse: false, x: s.x, t: s.t,
+      if (typeof size === 'string') nodes.push(...drawn.filter((s) => of(s.id, size) != null).map((s): CircleNode => ({ key: id + ':' + s.key + ':symbol', part: 'points', kind: 'circle', pulse: false, x: s.x, y: s.t,
         size: sizeStep(of(s.id, size)!, top), opacity: 0.7, row: s.id!, paint: l.paint || 'series.1', layer: 'data', role })));
       // Rows the map has no shape for: a count of rows, and of nothing in them.
       const ids = new Set(regions.map((s) => s.id)), note = notShownNote(rows.length - named.filter((r) => ids.has(String(r[dim]))).length, catalog.dimensions[dim]!.label);
@@ -114,20 +116,9 @@ export function geoMark(shapes: Shapes, { name = 'geo', projection }: GeoOptions
       return { nodes, rows: rows.map((r) => String(r[dim])), aspect, parts };
     },
 
-    // A box of the shapes' own aspect: as wide as the view up to MAP, no taller than the room, and in the middle of the width.
-    // The note is a line under it, at the start of the width as the keys are, and the room it takes is not the map's.
-    place(scene, W, room, container) {
-      const least = ruleFor(container.rules.fit.concat(rules), scene.layout, 'marks')?.needs.block ?? 0;
-      const note = scene.parts.includes('note') ? scene.nodes.find((n): n is TextNode => n.part === 'note' && n.kind === 'text') : undefined, under = note ? NOTE : 0;
-      const { w, h, left } = heldBox(W, room, scene.aspect!, MAP, least * scene.aspect!, under);
-      const nodes: PlacedNode[] = [];
-      for (const n of scene.nodes) {
-        if (n.part === 'plot' && n.kind === 'path') nodes.push({ key: n.key, kind: 'path', d: scaled(n.d!, w / BOX), fill: true, paint: n.paint, layer: n.layer, ...(left && { tx: left }) });
-        else if (n.part === 'points' && n.kind === 'circle') nodes.push({ key: n.key, kind: 'circle', cx: left + n.x! * w, cy: (1 - n.t!) * h, r: dotRadius(n.size), pulse: false, paint: n.paint, layer: n.layer, ...(n.opacity != null && { opacity: n.opacity }) });
-      }
-      if (note) nodes.push({ key: note.key, kind: 'text', x: 0, y: h + NOTE / 2 + 2, text: note.text, anchor: note.anchor, ...(note.baseline && { baseline: note.baseline }), font: note.font, paint: note.paint, layer: note.layer });
-      return { nodes, height: h + under, plot: { w, h } };
-    },
+    // A region's place is where its symbol stands: the middle of its shape, in the map's box.
+    places: () => (key) => { const s = regions.find((r) => r.id === key); return s ? { x: s.x, y: s.t } : null; },
+
   };
 }
 

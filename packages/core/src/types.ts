@@ -57,7 +57,14 @@ export interface Query {
   range?: string;
   compare?: 'previous';
   limit?: number;
+  /** A filter: the answer is of the rows where every dimension named here holds what is said of it. The engine applies
+   * it and says so on its answer (`meta.where`): core filters no row. A dimension here need not be in `by`. */
+  where?: Where;
 }
+/** What a filter holds one dimension to: one of its values, any of a list of them, or every one from a value to
+ * another, both included, as the engine names and orders them. A run is of a time or a number. */
+export type Held = string | number | (string | number)[] | { from?: string | number; to?: string | number };
+export type Where = Record<string, Held>;
 export type Row = Record<string, string | number | boolean | null | undefined>;
 export interface Result {
   rows: Row[];
@@ -65,8 +72,14 @@ export interface Result {
   /** With two dimensions in `by`: for each one, a row per value holding the metrics' totals over the other, in the
    * dimension's own order. A total covers the rows past `limit`. Proposed to the API's owners (chart-coverage-plan, section 3.5). */
   totalsBy?: Record<string, Row[]>;
-  meta: { range?: string; compare: string | null; notes: string[]; empty?: boolean };
+  /** The domain each scale takes, by the scale's name, where this result is one view's of a facet: the widest any of
+   * the facet's views would take alone, so they are read against one another. `facets` sets it; an engine does not send it. */
+  domains?: Domains;
+  /** `where` is the filter the answer is of, as the query asked it: a view says it after its sentence, and `resolve`
+   * refuses an answer that is not of its query's. */
+  meta: { range?: string; compare: string | null; notes: string[]; empty?: boolean; where?: Where };
 }
+export type Domains = Record<string, [number, number]>;
 
 /* The view spec. */
 /** The marks core draws, and the name of any custom mark registered in code (marks.ts).
@@ -110,6 +123,10 @@ export interface Layer {
    * The one layer field that is neither data nor role. */
   sweep?: 'half';
   label?: string;
+  /** On a `rule` in a plot whose x is a list of values (a time, a category, a number in bins): the value, or the values,
+   * of that list it stands at, the height of the plot, as one at a number stands on a scale. It is a value, where what
+   * is on a channel is a field. One the axis does not have is not drawn: a date outside the range is no error. */
+  at?: string | number | (string | number)[];
   /** On a `text` layer in rows, `end` sets it as a column of values. On a `tick`, the half of it to that side of its band's middle. */
   align?: (typeof ALIGNS)[number];
   /** A paint token in place of the layer's own. `delta` is the paint of its metric's change over the range: good or bad by
@@ -124,9 +141,9 @@ export interface Guides {
   /** The second y axis, on the far side, where the layers measure in two units. */
   y2?: boolean;
   grid?: boolean;
-  /** On a band, `top` is the largest segment's label. On a split plot, `labels` is a label at the end of each line.
-   * On rows divided into series, `top` is one line that names the series with the most. */
-  legend?: 'full' | 'top' | 'labels';
+  /** The key to a view's series. Its shorter forms are a fit rule's to choose at a room: a label at the end of each
+   * line of a split plot, the one line that names the largest of a band, a circle or a divided row. */
+  legend?: boolean;
   /** Under a grid of cells: the steps of the colour scale, with its low and its high value. */
   ramp?: boolean;
   /** The labels a `text` layer sets on the points of a plot. */
@@ -147,69 +164,64 @@ export interface Spec {
   use?: string | undefined;
   layers?: Layer[];
   keep?: KeepPart[];
+  /** One of the query's dimensions. The spec is then a view for each of its values, every one on the same scales, and
+   * the surface lays them out: a facet is a small board (reference, Decided 26 and 45). `facets` gives the views. */
+  facet?: string;
 }
 export type PresetLibrary = Record<string, { layers: Layer[] }>;
 
-/* Container: wherever a view renders. It owns sizes, and its rules are the
- * durable behaviour a context hands to every container it holds. */
-export type ReductionId = 'drop-guides' | 'drop-secondary' | 'trim-rows' | 'collapse' | 'prose';
+/* The rules a context hands to every container it holds: the durable behaviour of the views in it. A container owns
+ * its own size, and no plan is told it. */
 export interface ContainerRules {
   /** The room each part needs, and what is given up without it. */
   fit: FitRule[];
-  /* Sizes the pixel scene is built to. */
+  /* The natural heights a surface builds a plot and a row to, in px. */
   axes: { height: number };
   bare: { height: number; numberWidth: number };
   rows: { rowHeight: number; gap: number };
   /** When the tldr value sits above the marks while there is room for both. */
   tldrValue: { above: 'instant' | 'always' };
-  order: ReductionId[];
-}
-export type PainterName = 'svg' | 'dots';
-export interface Container {
-  width: number;
-  height: number | null;
-  painter: PainterName;
-  cell: number;
-  rules: ContainerRules;
-  /** Metrics of the tldr value's face at this length and available width. */
-  display(len: number, avail: number, small?: boolean): { h: number; cell?: number };
-  displayWidth(len: number): number;
 }
 
-/* Plan: what will be drawn at this size, and what was dropped. */
+/* Plan: what a spec asks to have drawn, with no size. */
 /** The layouts core builds. A custom mark is laid out by its own code, under its own name, which so cannot be one of these. */
 export const LAYOUTS = ['cartesian', 'rows', 'band', 'radial', 'matrix', 'none', 'notice', 'prose'] as const;
 export type Layout = (typeof LAYOUTS)[number] | (string & {});
-export interface Reduction {
-  id: ReductionId;
-  state: 'not needed' | 'applied' | 'kept by the spec' | 'nothing to drop';
-}
 /** The part of a plan the scene builders read. */
 export interface PlanShape {
   layout: Layout;
   layers: Layer[];
   guides: Guides;
   tldrValue: boolean;
-  side: boolean;
-  rowLimit: number | null;
   share: boolean;
   text: string;
 }
 export interface Plan extends PlanShape {
   preset: string | null;
   layers: (Layer & { role: Role })[];
-  reductions: Reduction[];
+  /** What the spec asked for and the result has no data to draw: a comparison with no period before. */
   dropped: string[];
-  needs: { width: number; height: number };
 }
 
 /* Scene: a flat list of shapes with stable keys and paint tokens, in ratios.
- * Every node names its part, and its coordinates run 0 to 1 within that part's
- * box. A scene needs no size to exist. Pixel painters get theirs from place(). */
+ * Every node names its part, and its coordinates run 0 to 1 within the box it is in: its part's, or in a list its
+ * row's track. A scene needs no size to exist.
+ *
+ * A node says where it is in the same fields whatever its kind and whatever the layout (reference, Decided 51):
+ *   x, y     where it is. For a mark that runs along an axis, a bar or the fill under a line, where it reaches.
+ *   x2, y2   its other end, where it has one that is not the start of the axis.
+ *   w, h     an extent: from `x` and `y` for a rect, about them for a glyph's room.
+ * `x` runs across the box from its start, and `y` up it from the bottom, for every node. So a rect with an extent stands
+ * on `y` and is `h` tall: a cell of a grid, a treemap's box, which is in its parent's, and a Sankey's node. */
 export type Part = 'number' | 'plot' | 'x-axis' | 'y-axis' | 'y-axis-2' | 'labels' | 'columns' | 'rows' | 'band' | 'legend' | 'legend-top' | 'radial' | 'hole' | 'ramp' | 'notice'
   /* `points` holds the dots of a plot that sets one metric against another, and `point-labels` the labels on a plot's
    * points. Both lie over the plot and share its box. `size` is the key to the sizes of its dots. */
   | 'points' | 'point-labels' | 'size'
+  /* `track` holds what runs down a list from row to row: a line or an area, which are the plot's marks on their side.
+   * Its box lies over the tracks of all the rows. A node in it is as the plot's is, with the two axes exchanged: its
+   * `x` is its place down the rows, from the top of the first at 0 to the foot of the last at 1, and its `y` is its
+   * value along the track. A surface turns it so. A row's own marks are in `rows`. */
+  | 'track'
   /* `rim` holds the labels round a circle of slices. It shares the `radial` part's box, and the circle gives up a margin to it. */
   | 'rim'
   /* `note` is a line of text under a custom mark's own parts, saying what they could not draw. It goes with the guides. */
@@ -222,6 +234,13 @@ interface NodeBase {
   paint: string;
   layer: 'data' | 'guide';
   role?: Role;
+  /** Its paint is one of a legend's: a series colour that only the legend says the meaning of. Where a view's legend
+   * goes with nothing in its place, a mark that has this is drawn in its layer's own paint, as a split by `detail` is:
+   * the scene builders do so for a plan with no legend, and a fit rule that sets `split: plain` does in a stylesheet. */
+  legend?: true;
+  /** The y scale a mark is drawn on, where that is a plot's second: its layer measures in the second of two units.
+   * It is read against the second y axis and nothing else, so a rule that takes that axis takes it too (`axis:2`). */
+  axis?: 2;
   /** The dimension value the node came from. */
   row?: string;
   /** The value it came from of the dimension on `color` or on `detail`, where a layer is split into series. */
@@ -234,52 +253,54 @@ interface NodeBase {
   tone?: 'soft';
   note?: string;
 }
-/** A bar in the plot (`x` and `w` across, and up the plot from `v0` to `v`), a row's bar (across its track from `v0` to `v`), a band segment (`v` is its share), a legend swatch,
+/** A bar in the plot (`x` and `w` across, and up the plot to `y` from `y2`), a row's bar (across its track to `x` from `x2`), a band segment (`w` is its share), a legend swatch,
  * or in `band` a cell of a `unit`'s grid, with `x`, `w`, `y` and `h` as a cell of a grid of cells has them.
  * In `rows`, one whose `layer` is `guide` is a part of the range behind the row's marks, as tall as the row.
- * `v0` is absent where a bar starts at the bottom of the plot, or at the start of the track. A bar that hangs below its start has `v` under `v0`.
- * A bar with a second end runs from the first, `v0`, to it, `v`, and is painted by which way it goes. */
+ * The other end, `y2` or `x2`, is absent where a bar starts at the bottom of the plot, or at the start of the track. A bar that hangs below its start reaches less than its other end.
+ * A bar with a second end runs from the first, its other end here, to it, and is painted by which way it goes. */
 export interface RectNode extends NodeBase {
-  kind: 'rect'; x?: number; w?: number; v?: number; v0?: number;
-  /** A cell of a grid: `y` and `h` down the plot from its top, as `x` and `w` run across it. */
+  kind: 'rect'; x?: number; w?: number; x2?: number; y2?: number;
+  /** In a plot, where a bar reaches. In a cell of a grid, with `h`: its foot, `y` up the plot from the bottom, and how tall it is, as `x` and `w` run across it. */
   y?: number; h?: number;
   /** The two dimension values a cell came from: the one on x, then the one on y. A cell has no `row`. */
   pair?: [x: string, y: string];
 }
-/** `d` is drawn in a 100 by 100 box, for the painter to stretch. `points` are what it was drawn from. An area's point has `v0` where it starts above the bottom of the plot.
+/** `d` is drawn in a 100 by 100 box, for the painter to stretch. `points` are what it was drawn from. An area's point has `y2` where it starts above the bottom of the plot.
  * A point with no `row` is where the two ends of an area cross, between two rows. With `curve: "step"` a point is a flat run `w` wide about its `x`: its bin.
- * A path in `points` joins the points of two metrics in the order of their rows, straight from each to the next, and has no `curve`. */
+ * A path in `points` joins the points of two metrics in the order of their rows, straight from each to the next, and has no `curve`.
+ * With `curve: "radial"` it is about a centre, in a circle's part: a point's `x` is its place round the circle, in turns from the top, and its `y` how far out it
+ * reaches, and `d` is drawn about the origin at a radius of 50, closed, as an arc's is. */
 export interface PathNode extends NodeBase {
   kind: 'path';
   d: string | null;
-  points: { row?: string; x: number; v: number; v0?: number; w?: number }[];
-  curve?: 'monotone' | 'step';
+  points: { row?: string; x: number; y: number; y2?: number; w?: number }[];
+  curve?: 'monotone' | 'step' | 'radial';
   fill?: boolean;
   width?: number;
   dash?: string | null;
 }
-/** A line across the plot at height `t`. The one at zero is painted `axis`, and sits above the bottom of the plot where values go below zero.
- * With `x`, `x2` and `t2` it is the segment from (`x`, `t`) to (`x2`, `t2`): a rule at a value on x stands from 0 to 1 at one `x`.
+/** A line across the plot at height `y`. The one at zero is painted `axis`, and sits above the bottom of the plot where values go below zero.
+ * With `x`, `x2` and `y2` it is the segment from (`x`, `y`) to (`x2`, `y2`): a rule at a value on x stands from 0 to 1 at one `x`.
  * One with a `row` is that row's own: a rule from one of its values to another, or a tick across its band at one. In `rows` it is in the row's
- * track: `x` and `x2` run along the track and `t` up the row, so a rule lies at 0.5 and a tick stands from 0 to 1. */
-export interface LineNode extends NodeBase { kind: 'line'; t: number; x?: number; x2?: number; t2?: number; width?: number; dash?: string }
-/** The pulse beside the number, or a dot at `x` and `t`: in `plot` on a time or category axis, in `points` where x is a metric too, and in `rows` along a row's track, half way up it. `size` is a step from 1 up, not a radius: how big a step is, in pixels, is the painter's.
+ * track: `x` and `x2` run along the track and `y` up the row, so a rule lies at 0.5 and a tick stands from 0 to 1. */
+export interface LineNode extends NodeBase { kind: 'line'; y: number; x?: number; x2?: number; y2?: number; width?: number; dash?: string }
+/** The pulse beside the number, or a dot at `x` and `y`: in `plot` on a time or category axis, in `points` where x is a metric too, and in `rows` along a row's track, half way up it. `size` is a step from 1 up, not a radius: how big a step is, in pixels, is the painter's.
  * A glyph of a `unit` states the room it has, as a cell states its own: `w` across and `h` up, as ratios of its part's
- * box, with `x` and `t` at the middle of it. A scene cannot say that it is round, since the two ratios are of different
+ * box, with `x` and `y` at the middle of it. A scene cannot say that it is round, since the two ratios are of different
  * lengths, so a painter draws the largest circle that room holds, by the lesser of the two in pixels: in a plot a glyph
  * is as wide as its band where the plot is tall enough, and where it is not, as tall as its share of the height.
- * In `radial` it is a seat, and `x` and `t` are across and up the part's box, as a point's are in a plot. */
-export interface CircleNode extends NodeBase { kind: 'circle'; pulse: boolean; x?: number; t?: number; size?: number; w?: number; h?: number;
+ * In `radial` it is a seat, and `x` and `y` are across and up the part's box, as a point's are in a plot. */
+export interface CircleNode extends NodeBase { kind: 'circle'; pulse: boolean; x?: number; y?: number; size?: number; w?: number; h?: number;
   /** A dot of a grid: the two dimension values it stands at, as a cell's. It has no `row`. */
   pair?: [x: string, y: string];
 }
-/** One row of the `rows` part: the thing a painter keys and a reader chooses. It draws nothing itself, and place() leaves it out. */
+/** One row of the `rows` part: the thing a painter keys and a reader chooses. It draws nothing itself. */
 export interface RowNode extends NodeBase { kind: 'row'; row: string }
-/** Text in the number, rows, legend and notice parts is set in order and carries no position. In `labels` it sits beside the plot at height `t`.
- * In `point-labels` it sits on the point at `x` and `t`, and its `rank` is its place among them, the largest point first.
+/** Text in the number, rows, legend and notice parts is set in order and carries no position. In `labels` it sits beside the plot at height `y`.
+ * In `point-labels` it sits on the point at `x` and `y`, and its `rank` is its place among them, the largest point first.
  * In `rows`, text in the `value` face is a column: the first has no `rank`, and each one after it has its place among them as its rank,
  * so the last is given up first. A header in `columns` has the rank of the column it is over.
- * In `rim` it names a slice of a circle: `x` and `t` are where the middle of the slice meets the rim, as ratios of the
+ * In `rim` it names a slice of a circle: `x` and `y` are where the middle of the slice meets the rim, as ratios of the
  * `radial` part's box, and a painter sets it outside that point. The ranked ones are given up where they would meet. */
 export interface TextNode extends NodeBase {
   kind: 'text';
@@ -287,7 +308,7 @@ export interface TextNode extends NodeBase {
   /** A shorter form, for when room is short. */
   short?: string;
   x?: number;
-  t?: number;
+  y?: number;
   anchor: 'start' | 'middle' | 'end';
   baseline?: 'middle';
   font: 'tick' | 'label' | 'value' | 'display';
@@ -301,12 +322,10 @@ export interface ArcNode extends NodeBase { kind: 'arc'; a0: number; a1: number;
 export type SceneNode = RectNode | PathNode | LineNode | CircleNode | TextNode | ArcNode | RowNode;
 export interface Scene {
   layout: Layout;
-  /** The parts the plan shows. The number's nodes are in the scene either way, so a fit rule can show it in compensation.
-   * So are both forms of a band's legend, `legend` and `legend-top`, and of a split plot's, `legend` and `labels`, so a rule can swap them.
-   * place() draws only the parts named here. */
+  /** The parts the plan shows, with all the room they ask for. The number's nodes are in the scene either way, so a fit
+   * rule can show it in compensation. So are both forms of a band's legend, `legend` and `legend-top`, and of a split
+   * plot's, `legend` and `labels`, so a rule can swap them. Which of them show at a room is `fitTo`'s to say. */
   parts: Part[];
-  /** The number sits beside a bare plot. */
-  side?: boolean;
   /** Dimension values in order: the x domain, the rows or the segments. Of a circle: its segments, slices or rings. */
   rows?: string[];
   /** The colour dimension's values in its own order, where a plot is split into series. A series' paint is its place here. */
@@ -327,39 +346,4 @@ export interface Scene {
   aspect?: number;
   nodes: SceneNode[];
   text?: string;
-}
-
-/* Placed scene: the same nodes in pixels, for painters with no CSS. */
-interface PlacedBase {
-  key: string;
-  paint: string;
-  layer: 'data' | 'guide';
-  opacity?: number;
-  tx?: number;
-  ty?: number;
-  note?: string;
-}
-export interface PlacedRect extends PlacedBase { kind: 'rect'; x: number; y: number; w: number; h: number; rx: number }
-export interface PlacedPath extends PlacedBase { kind: 'path'; d: string | null; fill?: boolean; width?: number; dash?: string | null }
-export interface PlacedLine extends PlacedBase { kind: 'line'; x1: number; y1: number; x2: number; y2: number; width?: number; dash?: string }
-export interface PlacedCircle extends PlacedBase { kind: 'circle'; cx: number; cy: number; r: number; pulse: boolean }
-export interface PlacedText extends PlacedBase {
-  kind: 'text';
-  x: number;
-  y: number;
-  text: string;
-  anchor: 'start' | 'middle' | 'end';
-  baseline?: 'middle';
-  font: 'tick' | 'label' | 'value' | 'display';
-  h?: number;
-  cell?: number | undefined;
-  halo?: boolean;
-}
-export type PlacedNode = PlacedRect | PlacedPath | PlacedLine | PlacedCircle | PlacedText;
-export interface PlacedScene {
-  width: number;
-  height: number;
-  nodes: PlacedNode[];
-  plot?: { w: number; h: number };
-  text?: string | undefined;
 }

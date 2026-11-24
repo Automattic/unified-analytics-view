@@ -5,6 +5,8 @@
  * cancels, lets go. Escape lets go of what is chosen, and is taken only then, so the first Escape of a dialog around
  * the view is not swallowed. Enter or Space activates it. What an arrow does is the holder's own: `step`. */
 
+import type { Gesture } from '@unified-analytics/core';
+
 export type How = 'keys' | 'pointer';
 
 /* The states every atom has, in Figma and here (docs/component-states-plan.md), each an attribute on the atom. Every
@@ -50,8 +52,8 @@ export interface Roving<T> {
   /** Choose a thing, or none, and say how. Letting go says nothing of how. */
   choose(t: T | null, how?: How): void;
   /** Activate the chosen thing, by a click or by a key. False where nothing is chosen to activate, so Enter and Space
-   * go on to the page. */
-  activate(how: How): boolean;
+   * go on to the page. `e` is the click or the key, whose modifiers say what the activation is for (gestureOf). */
+  activate(how: How, e?: Event): boolean;
   /** Where any other key moves the choice, or null where it is no step. A step that goes nowhere may still take its
    * key with preventDefault(), so the page behind does not scroll. */
   step(e: KeyboardEvent): T | null;
@@ -61,6 +63,14 @@ export interface Roving<T> {
   under?(t: T, at: T): boolean;
   /** The element with the tab stop: a key pressed on anything else is not the holder's. By default, the one bound. */
   holder?(): Element | null;
+}
+
+/** What an activation is for, by the modifiers held with the click or the key: Shift extends a run from the last
+ * pick, Cmd or Ctrl adds the datum to those picked or takes it out, and with neither it is picked alone. Version 4
+ * reads Enter and Space whatever is held with them, so these take nothing of its from the keyboard. */
+export function gestureOf(e?: Event): Gesture {
+  const m = (e ?? {}) as Partial<Pick<MouseEvent, 'shiftKey' | 'metaKey' | 'ctrlKey'>>;
+  return m.shiftKey ? 'extend' : m.metaKey || m.ctrlKey ? 'toggle' : 'pick';
 }
 
 /** Whether a pointer chose by pressing, a touch or a pen on the glass, so the press that follows activates. A mouse,
@@ -94,12 +104,12 @@ export function rove<T>(on: HTMLElement, r: Roving<T>): void {
   on.addEventListener('click', (e) => {
     const t = r.hit(e), at = r.chosen();
     if (t == null || at == null || !under(t, at)) return;
-    if (fresh) fresh = false; else r.activate('pointer');
+    if (fresh) fresh = false; else r.activate('pointer', e);
   });
   on.addEventListener('keydown', (e) => {
     if (e.target !== (r.holder ? r.holder() : on)) return;
     if (e.key === 'Escape') { if (r.chosen() != null) { e.preventDefault(); r.choose(null); } return; }
-    if (e.key === 'Enter' || e.key === ' ') { if (r.activate('keys')) e.preventDefault(); return; }
+    if (e.key === 'Enter' || e.key === ' ') { if (r.activate('keys', e)) e.preventDefault(); return; }
     const t = r.step(e);
     if (t == null) return;
     e.preventDefault();

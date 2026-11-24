@@ -5,12 +5,12 @@ import * as d3array from 'd3-array';
 import * as d3scale from 'd3-scale';
 import * as d3shape from 'd3-shape';
 import { describe, expect, it } from 'vitest';
-import { ALIGNS, CHANNELS, CONTAINER_RULES, DIMENSION_TYPES, DIMENSION_VALUES, KEEP_PARTS, LAYER_SERIES, MARKS, POLARITIES, RANGE_TOTALS, ROLES, SERIES, STACKS, UNITS, buildScene, expand, formatDimension, formatValue, makeContainer, partialNote, pathD, place, resolve, unboundedContainer, type PainterName, type Spec, type Unit } from '@unified-analytics/core';
+import { ALIGNS, CHANNELS, CONTAINER_RULES, DIMENSION_TYPES, DIMENSION_VALUES, KEEP_PARTS, LAYER_SERIES, MARKS, POLARITIES, RANGE_TOTALS, ROLES, SERIES, STACKS, UNITS, buildScene, expand, formatDimension, formatValue, partialNote, pathD, resolve, type Spec, type Unit } from '@unified-analytics/core';
 import catalogSchema from '@unified-analytics/core/schema/catalog.schema.json';
 import viewSchema from '@unified-analytics/core/schema/view.schema.json';
 import { catalog, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
 import { CHAR_W, clip, delta } from '../packages/core/src/format.ts';
-import { ALWAYS, err, heights, ofUnbounded, painters, run, specs, trend, validView, widths } from './helpers.ts';
+import { ALWAYS, err, heights, ofUnbounded, run, shown, specs, trend, validView, widths } from './helpers.ts';
 
 // The prototype, loaded as the reference the port is held to.
 (globalThis as any).d3 = { ...d3array, ...d3scale, ...d3shape };
@@ -49,9 +49,11 @@ const ourNotes = (scene0: any, q: Spec['query']) => {
     return mine ? { ...n, text: clip(mine[1], room) } : n;
   });
 };
-const fromProto = ({ headline, ...p }: any) => ({
-  ...p, text: ourProse(p.text), tldrValue: headline, layout: p.layout === 'sentence' ? 'prose' : p.layout,
-  reductions: p.reductions.map((r: any) => (r.id === 'sentence' ? { ...r, id: 'prose' } : r)),
+// A plan takes no size now, and the prototype's is planned for a host. So what is held to it is what a plan says with
+// all the room it asks for: the prototype's at 700 wide and its natural height, less what only a size decides (its
+// reductions, the room it needs, the number beside a bare plot, the rows it trims). Its legend is "full" where ours is on.
+const fromProto = ({ headline, reductions: _reductions, needs: _needs, side: _side, rowLimit: _rowLimit, ...p }: any) => ({
+  ...p, text: ourProse(p.text), tldrValue: headline, guides: { ...p.guides, ...(p.guides.legend && { legend: true }) },
 });
 // Layer keys: a deliberate departure from the prototype (feedback, decision 1 of October 7; transitions finding 1).
 // The prototype's keys count layers, `L<index>:<mark>`, so when a layer drops the next one takes its key and a painter
@@ -73,9 +75,8 @@ const protoScene = (plan0: any, q: Spec['query'], res0: unknown, host0: unknown)
 };
 
 // The row node: a deliberate addition (chart-coverage-plan, step 2, part 6; feedback, rows, finding 5). A `rows` scene
-// holds a node per row, of kind `row`, for a painter to key. place() leaves it out, so no placed scene has one and the
-// sweep against the prototype does not meet it. The ratio scenes recorded before it are held to what they were by
-// leaving it out, here and nowhere else.
+// holds a node per row, of kind `row`, for a painter to key. The prototype has none. The ratio scenes recorded before
+// it are held to what they were by leaving it out, here and nowhere else.
 const lessRows = <S extends { nodes: { kind: string }[] }>(scene: S): S => ({ ...scene, nodes: scene.nodes.filter((n) => n.kind !== 'row') });
 
 const invalid: Record<string, Spec> = {
@@ -84,31 +85,40 @@ const invalid: Record<string, Spec> = {
   'preset, no dimension': { spec: 'view/0', use: 'line', query: { metrics: ['visitors'] } },
 };
 const plain = (v: unknown) => JSON.parse(JSON.stringify(v));
-// The note is given up before prose: a deliberate departure from the prototype (feedback, decision 6 of October 7).
-// These are the swept cases it changes, and all of them: the prototype falls to prose, and ours keeps the number alone
-// without its note. The sweep passes over them and holds every other case to the prototype. They have their own describe below.
-const NOTE_FIRST = new Set((<[string[], PainterName, number[], number][]>[
-  [['trend', 'headed'], 'svg', [120], 60], [['trend', 'headed'], 'dots', [120, 170], 60],
-  [['kept'], 'svg', [120, 170, 250, 290, 346, 500, 700], 60], [['kept'], 'dots', [120, 170], 60],
-  [['pages'], 'dots', [120], 40], [['mix'], 'dots', [120, 170], 40],
-]).flatMap(([names, p, ws, h]) => names.flatMap((name) => ['typical', 'no-prior'].flatMap((sc) => ws.map((w) => [name, sc, p, w, h].join(' '))))));
+/** The prototype with all the room it asks for: its plan and its scene, mapped to our names. */
+const roomy = (spec: Spec, sc: string, rules = CONTAINER_RULES, res0: unknown = proto.runQuery(spec.query, sc)) => {
+  const host0 = proto.makeHost(700, null, 'svg', 8), plan0 = proto.resolve(toProto(spec, rules), res0, host0);
+  return { res0, plan0: fromProto(plain(plan0)), scene0: protoScene(plan0, spec.query, res0, host0) };
+};
+/** What a scene's nodes hold, whatever their place: key, kind, paint, layer, and what a text says. Of the nodes whose keys `keys` names, in the scene's order. */
+const held = (nodes: any[], keys: Set<string>) => nodes.filter((n) => keys.has(n.key)).map((n) => [n.key, n.kind, n.paint, n.layer, n.kind === 'text' ? n.text : undefined]);
+
+// Parity with the prototype (reference, section 11). The prototype places every node in pixels for a host of a size.
+// The port takes no size, so it is held to the prototype for what does not need one: the engine's answer, the plan with
+// all its room, the sentence, and what the scene holds, node for node. Where a node is placed is a surface's to say,
+// and how a view gives way at a room is the fit rules', which test/fit.test.ts holds.
 describe('the sweep', () => {
   for (const [name, spec] of Object.entries(specs)) {
-    it(name + ': matches the prototype, with unique keys, no NaN and nothing taller than the container allows', () => {
-    const rules = name === 'headed' ? ALWAYS : CONTAINER_RULES;
-      for (const sc of scenarios) for (const p of painters) for (const h of heights) for (const w of widths) {
-        const at = [name, sc, p, w, h].join(' ');
-        const { plan, scene } = run(spec, w, h, sc, p, { rules });
-        const keys = scene.nodes.map((n) => n.key);
+    it(name + ': the engine\'s answer, the plan, the sentence and what the scene holds are the prototype\'s, with unique keys and no NaN', () => {
+      const rules = name === 'headed' ? ALWAYS : CONTAINER_RULES;
+      for (const sc of scenarios) {
+        const at = name + ' ' + sc, result = runQuery(spec.query, sc), plan = resolve(spec, result, catalog, rules), ratio = buildScene(plan, spec.query, result, catalog);
+        const keys = ratio.nodes.map((n) => n.key);
         expect(new Set(keys).size, 'duplicate keys: ' + at).toBe(keys.length);
-        expect(JSON.stringify(scene, (_, v) => (typeof v === 'number' && isNaN(v) ? 'NaN' : v)), 'NaN: ' + at).not.toMatch(/NaN/);
-        if (h != null && plan.layout !== 'prose') expect(scene.height, 'too tall: ' + at).toBeLessThanOrEqual(h);
+        expect(JSON.stringify(ratio, (_, v) => (typeof v === 'number' && isNaN(v) ? 'NaN' : v)), 'NaN: ' + at).not.toMatch(/NaN/);
 
-        if (NOTE_FIRST.has(at)) continue;
-        const host0 = proto.makeHost(w, h, p, 8), res0 = proto.runQuery(spec.query, sc), plan0 = proto.resolve(toProto(spec, rules), res0, host0);
-        expect(plain(runQuery(spec.query, sc)), 'result: ' + at).toEqual(plain(res0));
-        expect(plain(plan), 'plan: ' + at).toEqual({ ...fromProto(plain(plan0)), preset: plan.preset });
-        expect(plain(scene), 'scene: ' + at).toEqual(protoScene(plan0, spec.query, res0, host0));
+        const { res0, plan0, scene0 } = roomy(spec, sc, rules);
+        expect(plain(result), 'result: ' + at).toEqual(plain(res0));
+        expect(plain(plan), 'plan: ' + at).toEqual({ ...plan0, preset: plan.preset });
+        // Every node the prototype draws is in ours under its key, of its kind and in its paint, saying what it says, in its order.
+        const theirs = new Set<string>(scene0.nodes.map((n: any) => n.key));
+        expect(held(lessRows(ratio).nodes, theirs), 'scene: ' + at).toEqual(held(scene0.nodes, theirs));
+      }
+    });
+    it(name + ': at every room its parts are ones the scene has', () => {
+      for (const sc of scenarios) for (const h of heights) for (const w of widths) {
+        const { ratio, fit } = run(spec, w, h, sc, { rules: name === 'headed' ? ALWAYS : CONTAINER_RULES });
+        expect(fit.parts.filter((p) => !ratio.nodes.some((n) => n.part === p)), [name, sc, w, h].join(' ')).toEqual([]);
       }
     });
   }
@@ -184,69 +194,62 @@ describe('what a painter says with: values and dimensions in catalog format', ()
 });
 
 describe('pathD: the one place a path string is made', () => {
-  it('is the scene\'s own `d` from the scene\'s points, and place()\'s in a pixel box', () => {
-    const { ratio, scene } = run(trend, 346), drawn = ratio.nodes.filter((n) => n.kind === 'path');
+  it('is the scene\'s own `d` from the scene\'s points', () => {
+    const drawn = run(trend, 346).ratio.nodes.filter((n) => n.kind === 'path');
     expect(drawn.length).toBe(4);
     for (const n of drawn) expect(pathD(n.points, n.curve, n.fill), n.key).toBe(n.d);
-    // The trend at 346 px: x from 38 to 338 and y from 162 up to 10. A ratio and d3's point scale can differ in the last bit, so place() passes its own scale.
-    const line = drawn.find((n) => n.key === 'primary:line')!, px = pathD(line.points, line.curve, line.fill, { x: (p) => 38 + p.x * 300, y: (v) => 162 - v * 152 })!;
-    const nums = (d: string) => d.split(/[A-Z,]/).filter(Boolean).map(Number), placed = nums((scene.nodes.find((n) => n.key === line.key) as { d: string }).d);
-    nums(px).forEach((v, i) => expect(v).toBeCloseTo(placed[i]!, 2));
   });
   it('draws one point, a straight line, an area to the baseline, and nothing from no points', () => {
-    expect(pathD([{ x: 0.5, v: 0.25 }], 'monotone')).toBe('M50,75Z');
-    expect(pathD([{ x: 0, v: 0 }, { x: 1, v: 1 }])).toBe('M0,100L100,0');
-    expect(pathD([{ x: 0, v: 0.5 }, { x: 1, v: 1 }], undefined, true)).toBe('M0,50L100,0L100,100L0,100Z');
+    expect(pathD([{ x: 0.5, y: 0.25 }], 'monotone')).toBe('M50,75Z');
+    expect(pathD([{ x: 0, y: 0 }, { x: 1, y: 1 }])).toBe('M0,100L100,0');
+    expect(pathD([{ x: 0, y: 0.5 }, { x: 1, y: 1 }], undefined, true)).toBe('M0,50L100,0L100,100L0,100Z');
     expect(pathD([])).toBe(null);
+  });
+  it('draws points about a centre: round from the top, out from the middle, straight and closed, in the box an arc is drawn in', () => {
+    // A quarter turn each, at the rim, half way out, the rim and the middle: right, down, left, and the origin.
+    expect(pathD([{ x: 0, y: 1 }, { x: 0.25, y: 0.5 }, { x: 0.5, y: 1 }, { x: 0.75, y: 0 }], 'radial')).toBe('M0,-50L25,0L0,50L0,0Z');
+    expect(pathD([{ x: 0, y: 1 }, { x: 0.25, y: 1 }], 'radial', true)).toBe('M0,-50L50,0Z');
+    expect(pathD([], 'radial')).toBe(null);
   });
 });
 
 describe('fitting the container (reference section 10.1)', () => {
-  const applied = (name: string, w: number, h: number | null = null) => run(specs[name]!, w, h).plan;
-  const state = (plan: ReturnType<typeof applied>, id: string) => plan.reductions.find((r) => r.id === id)!.state;
+  const at = (name: string, w: number, h: number | null = null, plot?: { inline: number; block: number }) => shown(run(specs[name]!, w, h, 'typical', { plot }));
 
-  it('a trend steps from chart, to tldr value beside sparkline, to tldr value, to tldr prose', () => {
-    const full = applied('trend', 346);
-    expect(full).toMatchObject({ layout: 'cartesian', side: false, guides: { x: true, y: true, grid: true } });
-    expect(full.layers.map((l) => l.role)).toEqual(['context', 'comparison', 'primary']);
-    expect(full.reductions.every((r) => r.state === 'not needed')).toBe(true);
+  it('a trend steps from chart, to tldr value beside sparkline, to tldr value', () => {
+    const full = run(trend, 346);
+    expect(full.plan).toMatchObject({ layout: 'cartesian', tldrValue: false, guides: { x: true, y: true, grid: true } });
+    expect(full.plan.layers.map((l) => l.role)).toEqual(['context', 'comparison', 'primary']);
+    // At 346 the one thing a rule takes is the middle date.
+    expect(shown(full)).toEqual({ parts: ['y-axis', 'plot', 'x-axis'], set: {}, hidden: ['x-tick.mid'], rules: ['mid-tick'] });
+    expect(shown(run(trend, 380)).rules).toEqual([]);
 
-    const spark = applied('trend', 250);
-    expect(spark).toMatchObject({ layout: 'cartesian', side: true, tldrValue: true, guides: { x: false, y: false, grid: false } });
-    expect(spark.layers.map((l) => l.role)).toEqual(['primary']);
-
-    expect(applied('trend', 120)).toMatchObject({ layout: 'none', tldrValue: true });
-    expect(applied('trend', 54).layout).toBe('prose');
+    expect(at('trend', 250)).toMatchObject({ parts: ['number', 'plot'], set: { arrange: 'side' } });
+    expect(at('trend', 120).parts).toEqual(['number']);
   });
-  it('the comparison drops on legibility, not width alone', () => {
-    expect(applied('trend', 346, 100).layers.map((l) => l.role)).not.toContain('comparison');
+  it('the comparison drops on legibility, not width alone: the rule is on the plot, which a surface measures', () => {
+    expect(at('trend', 346, null, { inline: 346, block: 152 }).hidden).not.toContain('role:comparison');
+    expect(at('trend', 346, null, { inline: 346, block: 89 }).hidden).toEqual(expect.arrayContaining(['role:comparison', 'role:context']));
+    expect(at('trend', 250, null, { inline: 162, block: 46 }).hidden).toEqual(expect.arrayContaining(['role:comparison', 'role:context']));
+    // A plot nobody measured is asked nothing.
+    expect(at('trend', 250).hidden).not.toContain('role:comparison');
   });
   it('bars with a target become a bar sparkline', () => {
-    const p = applied('layers', 250);
-    expect(p).toMatchObject({ layout: 'cartesian', side: true });
-    expect(p.layers.map((l) => l.mark)).toEqual(['bar']);
-  });
-  it('a bar list trims rows only under a height limit', () => {
-    expect(applied('pages', 346).rowLimit).toBe(null);
-    const p = applied('pages', 346, 100);
-    expect(p.rowLimit).toBe(3);
-    expect(p.dropped).toContain('rows 4 to 8');
+    expect(at('layers', 250, null, { inline: 162, block: 46 })).toMatchObject({ parts: ['number', 'plot'], set: { arrange: 'side' }, hidden: expect.arrayContaining(['role:reference']) });
   });
   it('a share bar gives up its legend before its marks', () => {
-    expect(applied('mix', 346).guides.legend).toBe('full');
-    expect(applied('mix', 150)).toMatchObject({ layout: 'band', guides: { legend: 'top' } });
+    expect(at('mix', 346)).toMatchObject({ parts: ['band', 'legend'], set: {} });
+    expect(at('mix', 150)).toMatchObject({ parts: ['band', 'legend'], set: { legend: 'top' } });
+    expect(at('mix', 100).parts).toEqual(['number']);
   });
-  it('keep stops a step from being applied', () => {
-    const p = applied('kept', 250);
-    expect(state(p, 'drop-guides')).toBe('kept by the spec');
-    expect(p.side).toBe(false);
-    const marks = run({ ...trend, keep: ['marks'] }, 120).plan;
-    expect(state(marks, 'collapse')).toBe('kept by the spec');
+  it('keep holds a rule off', () => {
+    expect(at('kept', 250)).toMatchObject({ parts: ['y-axis', 'plot', 'x-axis'], rules: expect.arrayContaining(['kept:axes']) });
+    expect(shown(run({ ...trend, keep: ['marks'] }, 120))).toMatchObject({ parts: expect.arrayContaining(['plot']), rules: expect.arrayContaining(['kept:marks']) });
   });
   it('the tldr value sits above the marks for an instant metric, or wherever the context says always', () => {
-    expect(applied('live', 346)).toMatchObject({ layout: 'rows', tldrValue: true });
-    expect(applied('pages', 346).tldrValue).toBe(false);
-    expect(run(trend, 346, null, 'typical', 'svg', { rules: ALWAYS }).plan).toMatchObject({ layout: 'cartesian', side: false, tldrValue: true });
+    expect(run(specs.live!, 346).plan).toMatchObject({ layout: 'rows', tldrValue: true });
+    expect(run(specs.pages!, 346).plan.tldrValue).toBe(false);
+    expect(run(trend, 346, null, 'typical', { rules: ALWAYS })).toMatchObject({ plan: { layout: 'cartesian', tldrValue: true }, fit: { parts: ['number', 'y-axis', 'plot', 'x-axis'] } });
   });
   it('reports a comparison it could not draw', () => {
     expect(run(trend, 346, null, 'no-prior').plan.dropped).toContain('comparison series (no prior data)');
@@ -315,21 +318,18 @@ describe('the ratio scene (dom-painter-plan section 3)', () => {
   const unbounded = (spec: Spec) => { const { plan, scene } = ofUnbounded(spec); return { plan, ratio: scene }; };
   const numbers = (d: string) => (d.match(/-?[\d.]+/g) || []).map(Number);
 
-  it('has a part on every node, ratios from 0 to 1, unique keys, and the keys place() keeps', () => {
-    for (const [name, spec] of Object.entries(specs)) for (const sc of scenarios) for (const h of heights) for (const w of widths) {
-      const at = [name, sc, w, h].join(' '), { ratio, scene } = run(spec, w, h, sc), keys = ratio.nodes.map((n) => n.key);
+  it('has a part on every node, ratios from 0 to 1 and unique keys', () => {
+    for (const [name, spec] of Object.entries(specs)) for (const sc of scenarios) {
+      const at = [name, sc].join(' '), { ratio } = run(spec, 346, null, sc), keys = ratio.nodes.map((n) => n.key);
       expect(new Set(keys).size, 'duplicate keys: ' + at).toBe(keys.length);
       expect(ratio.parts.every((p) => PARTS[ratio.layout]!.includes(p)), 'parts: ' + at).toBe(true);
       for (const n of ratio.nodes as any[]) {
         expect(PARTS[ratio.layout], 'part: ' + at + ' ' + n.key).toContain(n.part);
         for (const f of ['x', 'w', 'v', 't']) if (n[f] != null) expect(n[f] >= 0 && n[f] <= 1, f + ': ' + at + ' ' + n.key).toBe(true);
       }
-      // Placing changes no key and no order. It only leaves out what the size has no room for.
-      const placed = scene.nodes.map((n) => n.key);
-      expect(keys.filter((k) => placed.includes(k)), 'placed keys: ' + at).toEqual(placed);
     }
   });
-  it('needs no size: a plan for a container with no limits drops nothing', () => {
+  it('needs no size, and drops nothing', () => {
     for (const name of Object.keys(samples)) expect(unbounded(specs[name]!).plan.dropped, name).toEqual([]);
     const { ratio } = unbounded(trend);
     expect(ratio).toMatchObject({ layout: 'cartesian', parts: ['y-axis', 'plot', 'x-axis'], scale: 'point' });
@@ -339,41 +339,19 @@ describe('the ratio scene (dom-painter-plan section 3)', () => {
     // The number is there to be shown in compensation, though this plan does not show it.
     expect(ratio.nodes.filter((n) => n.part === 'number').map((n) => n.key)).toEqual(['value', 'delta', 'sub']);
   });
-  it('the unbounded container is one of no width limit and no height, and the convention it names still works', () => {
-    expect(unboundedContainer()).toMatchObject({ width: Infinity, height: null, painter: 'svg' });
-    expect(resolve(trend, runQuery(trend.query), makeContainer(Infinity), catalog)).toEqual(unbounded(trend).plan);
-  });
-  it('agrees with the placed pixels: a ratio times its part is where place() puts it', () => {
-    // Bars at 346 px. With axes the plot is x 36 to 340 and y 162 down to 10.
-    const bars = run(specs.layers!, 346);
-    for (const n of bars.ratio.nodes as any[]) {
-      const px = bars.scene.nodes.find((m) => m.key === n.key) as any;
-      if (n.kind === 'rect') { expect(px.x).toBeCloseTo(36 + n.x * 304, 9); expect(px.w).toBeCloseTo(n.w * 304, 9); expect(px.h).toBeCloseTo(n.v * 152, 9); }
-      if (n.part === 'y-axis') expect(px.y).toBeCloseTo(162 - n.t * 152, 9);
-    }
-    // Lines sit 2 px inside each edge. The 100 by 100 path, stretched to that box, is the placed path to well within a pixel.
-    const lines = run(trend, 346);
-    for (const n of lines.ratio.nodes) if (n.kind === 'path') {
-      const px = numbers((lines.scene.nodes.find((m) => m.key === n.key) as any).d);
-      numbers(n.d!).forEach((v, i) => expect(Math.abs((i % 2 ? 10 + v * 1.52 : 38 + v * 3) - px[i]!), n.key).toBeLessThan(0.01));
-    }
-  });
-  it('a band carries both legends, each in its own part, and `parts` names the one the plan shows', () => {
-    for (const [w, part] of [[346, 'legend'], [150, 'legend-top']] as const) {
-      const { ratio, scene } = run(specs.mix!, w);
-      expect(ratio.parts).toEqual(['band', part]);
+  it('a band carries both legends, each in its own part: `parts` names the whole one, and a rule sets the one line', () => {
+    for (const [w, legend] of [[346, undefined], [150, 'top']] as const) {
+      const { ratio, fit } = run(specs.mix!, w);
+      expect([ratio.parts, fit.parts, fit.set.legend]).toEqual([['band', 'legend'], ['band', 'legend'], legend]);
       expect(ratio.nodes.filter((n) => n.part === 'legend').length).toBe(18);
       expect(ratio.nodes.filter((n) => n.part === 'legend-top').map((n) => n.key)).toEqual(['legend-top']);
-      // place() draws one of them, as before.
-      expect(scene.nodes.filter((n) => /^(legend|swatch|share):|^legend-top$/.test(n.key)).length).toBe(part === 'legend' ? 18 : 1);
     }
   });
   for (const name of Object.keys(samples)) it(`${name}, with no size`, () => expect(lessRows(unbounded(specs[name]!).ratio)).toMatchSnapshot());
-  it('a `rows` scene has a node for each row, ahead of what is drawn in it, and place() leaves it out', () => {
-    const { ratio, scene } = run(specs.pages!, 346), mine = ratio.nodes.filter((n) => n.row === '/blog/launch-notes').map((n) => n.key);
+  it('a `rows` scene has a node for each row, ahead of what is drawn in it', () => {
+    const { ratio } = run(specs.pages!, 346), mine = ratio.nodes.filter((n) => n.row === '/blog/launch-notes').map((n) => n.key);
     expect(ratio.nodes.filter((n) => n.kind === 'row').map((n) => n.key)).toEqual(ratio.rows!.map((k) => 'row:' + k));
     expect(mine).toEqual(['row:/blog/launch-notes', 'primary:bar:/blog/launch-notes', 'primary:text:/blog/launch-notes', 'primary:text#2:/blog/launch-notes']);
-    expect(scene.nodes.some((n) => n.key.startsWith('row:'))).toBe(false);
   });
 });
 
@@ -399,76 +377,23 @@ describe('layer keys: a deliberate departure from the prototype (feedback, decis
   });
 });
 
-describe('the note is given up before prose: a deliberate departure from the prototype (feedback, decision 6 of October 7)', () => {
-  // The prototype goes to prose as soon as the number, its delta and its note are taller than the box. Narrower, the note
-  // stops fitting by width, the number fits again, and then prose returns. Ours gives up the note first, and goes to
-  // prose only if the number without it is still too tall. The DOM's measured pass has the same rule.
-  it('in each such case the prototype is prose; ours is the prototype\'s number in a box 16 px taller, less the note', () => {
-    expect(NOTE_FIRST.size).toBe(36);
-    let held = 0;
-    for (const at of NOTE_FIRST) {
-      const [name, sc, p, w, h] = at.split(' ') as [string, (typeof scenarios)[number], PainterName, string, string];
-      const spec = specs[name!]!, rules = name === 'headed' ? ALWAYS : CONTAINER_RULES, { plan, scene } = run(spec, +w, +h, sc, p, { rules });
-      const res0 = proto.runQuery(spec.query, sc), at0 = (height: number) => { const host0 = proto.makeHost(+w, height, p, 8), plan0 = proto.resolve(toProto(spec, rules), res0, host0); return { plan0, scene0: protoScene(plan0, spec.query, res0, host0) }; };
-      expect(at0(+h).plan0.layout, at).toBe('sentence');
-      expect(plan, at).toMatchObject({ layout: 'none', tldrValue: true });
-      expect(plan.dropped[plan.dropped.length - 1], at).toBe('the note under the number');
-      expect(plan.reductions.find((r) => r.id === 'prose')!.state, at).toBe('not needed');
-      expect(scene.nodes.map((n) => n.key).filter((k) => k === 'value' || k === 'sub'), at).toEqual(['value']);
-      expect(scene.height, at).toBeLessThanOrEqual(+h);
-      // 16 px is the note's line. With room for it the prototype shows the number alone, and that is ours but for the note.
-      const { plan0, scene0 } = at0(+h + 16), with0 = fromProto(plain(plan0));
-      if (plan0.layout !== 'none') continue;
-      expect(scene0.nodes.map((n: any) => n.key), at).toContain('sub');
-      expect(plain(scene), at).toEqual({ ...scene0, height: scene0.height - 16, nodes: scene0.nodes.filter((n: any) => n.key !== 'sub') });
-      expect(plain(plan), at).toEqual({ ...with0, preset: plan.preset, dropped: [...with0.dropped, 'the note under the number'], needs: { ...with0.needs, height: scene.height } });
-      held++;
-    }
-    // The share bar's four cases have no such twin: 16 px taller the band has room, so the prototype never shows that number alone.
-    expect(held).toBe(32);
-  });
-  it('narrowing a 60 px box no longer passes through prose and back', () => {
-    const layouts = (h: number) => [170, 120, 80, 54].map((w) => run(trend, w, h).plan.layout);
-    expect(layouts(60)).toEqual(['cartesian', 'none', 'none', 'prose']);
-    // Still prose where the number without its note is too tall.
-    expect(layouts(40)).toEqual(['prose', 'prose', 'prose', 'prose']);
-    expect(run(trend, 120, 40).plan.dropped).not.toContain('the note under the number');
-  });
-});
-
 describe('y ticks: a deliberate departure from the prototype (dom-painter-plan section 8, decision 3)', () => {
   // The prototype rounds the y scale to 2 ticks when the plot is under 120 px tall, so its domain changes with the size.
-  // A scene with no size cannot. We always round to 4, rank the ticks, and place() thins them on a short plot.
-  // Under the default rules a plot with axes is never under 120 px, so the sweep does not meet this. A context that allows shorter plots does.
-  const rules = { ...CONTAINER_RULES, fit: CONTAINER_RULES.fit.map((r) => (r.layout === 'cartesian' && r.id === 'axes' ? { ...r, needs: { ...r.needs, block: 80 } } : r)) };
-  const ticks = (scene: { nodes: { key: string }[] }) => scene.nodes.map((n) => n.key).filter((k) => /^(ytick|grid):/.test(k));
-  const short = (spec: Spec) => {
-    const ours = run(spec, 346, 100, 'typical', 'svg', { rules });
-    const host0 = { ...proto.makeHost(346, 100, 'svg', 8), rules: { ...proto.HOST_RULES, axes: { ...proto.HOST_RULES.axes, minHeight: 80 } } }, res0 = proto.runQuery(spec.query, 'typical');
-    const plan0 = proto.resolve(toProto(spec), res0, host0);
-    expect(ours.scene.plot).toEqual({ w: 346, h: 100 });
-    expect(plain(ours.plan), 'the plan is still the prototype\'s').toEqual({ ...fromProto(plain(plan0)), preset: ours.plan.preset });
-    return { ...ours, scene0: protoScene(plan0, spec.query, res0, host0) };
-  };
-  it('on a 100 px plot the prototype draws bars against another scale; ours is the tall plot\'s, thinned', () => {
-    const { ratio, scene, scene0 } = short(specs.layers!), tall = run(specs.layers!, 346);
-    expect(ticks(scene0)).toEqual(['grid:0', 'ytick:0', 'grid:1000', 'ytick:1000', 'grid:2000', 'ytick:2000']);
-    expect(ticks(scene)).toEqual(['grid:0', 'ytick:0', 'grid:1000', 'ytick:1000']);
-    expect(ticks(tall.scene)).toEqual(['grid:0', 'ytick:0', 'grid:500', 'ytick:500', 'grid:1000', 'ytick:1000', 'grid:1500', 'ytick:1500']);
-    expect(ratio).toEqual(tall.ratio);
-    // Nothing off the y scale departs: every placed node with no y in it is the prototype's.
-    const off = (s: any) => s.nodes.filter((n: any) => n.key.startsWith('xtick:'));
-    expect(off(plain(scene))).toEqual(off(scene0));
-  });
-  it('where rounding to 2 and to 4 give one scale, the short plot is still the prototype\'s', () => {
-    const { scene, scene0 } = short(trend);
-    expect(plain(scene)).toEqual(scene0);
+  // A scene with no size cannot. We always round to 4 and rank the ticks, and a surface thins them on a short plot.
+  const ticks = (scene: { nodes: { key: string; rank?: number }[] }, ranked = true) => scene.nodes.filter((n) => ranked || !n.rank).map((n) => n.key).filter((k) => /^(ytick|grid):/.test(k));
+  it('on a 100 px plot the prototype draws bars against another scale; ours is one scale, with the ticks a short plot gives up ranked', () => {
+    const spec = specs.layers!, res0 = proto.runQuery(spec.query, 'typical');
+    const host0 = { ...proto.makeHost(346, 100, 'svg', 8), rules: { ...proto.HOST_RULES, axes: { ...proto.HOST_RULES.axes, minHeight: 80 } } }, plan0 = proto.resolve(toProto(spec), res0, host0);
+    expect(ticks(protoScene(plan0, spec.query, res0, host0))).toEqual(['grid:0', 'ytick:0', 'grid:1000', 'ytick:1000', 'grid:2000', 'ytick:2000']);
+    const { ratio } = run(spec, 346, 100);
+    expect(ticks(ratio)).toEqual(['grid:0', 'ytick:0', 'grid:500', 'ytick:500', 'grid:1000', 'ytick:1000', 'grid:1500', 'ytick:1500']);
+    expect(ticks(ratio, false)).toEqual(['grid:0', 'ytick:0', 'grid:1000', 'ytick:1000']);
   });
   it('where a count of 2 and of 4 share only zero, every other tick stays: a short plot never shows zero alone', () => {
     // A top of 800: four ticks step by 200 and two by 500.
     const spec: Spec = { query: trend.query, layers: [{ mark: 'line', encode: { x: 'date.day', y: 'visitors' } }] }, result = runQuery(spec.query);
     result.rows.forEach((r, i) => { r.visitors = 420 + i * 10; });
-    const yticks = buildScene(resolve(spec, result, unboundedContainer(), catalog), spec.query, result, catalog).nodes.filter((n) => n.part === 'y-axis');
+    const yticks = buildScene(resolve(spec, result, catalog), spec.query, result, catalog).nodes.filter((n) => n.part === 'y-axis');
     expect(yticks.map((n) => n.key)).toEqual(['ytick:0', 'ytick:200', 'ytick:400', 'ytick:600', 'ytick:800']);
     expect(yticks.filter((n) => !n.rank).map((n) => n.key)).toEqual(['ytick:0', 'ytick:400', 'ytick:800']);
   });
@@ -480,22 +405,20 @@ describe('one row on a time axis: a deliberate departure from the prototype (fee
   const one = runQuery(trend.query), day = one.rows[0]![trend.query.by![0]!] as string;
   one.rows = one.rows.slice(0, 1);
   const xticks = (scene: { nodes: { key: string }[] }) => scene.nodes.map((n) => n.key).filter((k) => k.startsWith('xtick:'));
-  it('the prototype repeats the tick; ours has it once, and nothing else differs', () => {
-    const container = makeContainer(346), plan = resolve(trend, one, container, catalog);
-    const ratio = buildScene(plan, trend.query, one, catalog), scene = plain(place(ratio, container));
-    const host0 = proto.makeHost(346, null, 'svg', 8), plan0 = proto.resolve(toProto(trend), one, host0), scene0 = protoScene(plan0, trend.query, one, host0);
+  it('the prototype repeats the tick; ours has it once, and nothing else it holds differs', () => {
+    const plan = resolve(trend, one, catalog), ratio = buildScene(plan, trend.query, one, catalog);
+    const { plan0, scene0 } = roomy(trend, 'typical', CONTAINER_RULES, one);
     expect(xticks(scene0)).toEqual(['xtick:' + day, 'xtick:' + day]);
     expect(xticks(ratio)).toEqual(['xtick:' + day]);
-    expect(xticks(scene)).toEqual(['xtick:' + day]);
-    expect(plain(plan)).toEqual({ ...fromProto(plain(plan0)), preset: plan.preset });
+    expect(plain(plan)).toEqual({ ...plan0, preset: plan.preset });
     // The prototype's first copy is ours. Its second, anchored at the end, is the one dropped.
-    const second = scene0.nodes.findIndex((n: any, i: number) => n.key === 'xtick:' + day && scene0.nodes[i - 1].key === n.key);
-    expect(scene.nodes).toEqual(scene0.nodes.filter((_: unknown, i: number) => i !== second));
+    const second = scene0.nodes.findIndex((n: any, i: number) => n.key === 'xtick:' + day && scene0.nodes[i - 1].key === n.key), theirs = new Set<string>(scene0.nodes.map((n: any) => n.key));
+    expect(held(ratio.nodes, theirs)).toEqual(held(scene0.nodes.filter((_: unknown, i: number) => i !== second), theirs));
   });
   it('two rows still have two ticks, and three have three', () => {
     for (const n of [2, 3]) {
       const some = { ...runQuery(trend.query), rows: runQuery(trend.query).rows.slice(0, n) };
-      expect(xticks(buildScene(resolve(trend, some, unboundedContainer(), catalog), trend.query, some, catalog)).length).toBe(n);
+      expect(xticks(buildScene(resolve(trend, some, catalog), trend.query, some, catalog)).length).toBe(n);
     }
   });
 });
@@ -510,17 +433,17 @@ describe('a time dimension on rows and on a band: a deliberate departure from th
     rows: { spec: 'view/0', title: 'Page views by day', use: 'bar-list', query: { metrics: ['pageviews'], by: ['date.day'], range: '28d', limit: 8 } },
     band: { spec: 'view/0', title: 'Visitors by day', use: 'share-bar', query: { metrics: ['visitors'], by: ['date.day'], range: '28d', limit: 6 } },
   };
-  for (const [name, spec] of Object.entries(byDay)) for (const w of [700, 346, 150]) {
-    it(name + ' at ' + w + ': the prototype says the date raw; ours says the day, and nothing else differs', () => {
-      const { plan, scene, result } = run(spec, w);
-      const host0 = proto.makeHost(w, null, 'svg', 8), res0 = proto.runQuery(spec.query, 'typical'), plan0 = proto.resolve(toProto(spec), res0, host0), scene0 = protoScene(plan0, spec.query, res0, host0);
+  for (const [name, spec] of Object.entries(byDay)) {
+    it(name + ': the prototype says the date raw; ours says the day, and nothing else it holds differs', () => {
+      const { plan, ratio, result } = run(spec, 700), { res0, plan0, scene0 } = roomy(spec, 'typical');
       const texts = (sc: any): string[] => sc.nodes.filter((n: any) => n.kind === 'text').map((n: any) => n.text);
       expect(plain(result)).toEqual(plain(res0));
-      expect(plain(plan)).toEqual({ ...fromProto(plain(plan0)), preset: plan.preset });
+      expect(plain(plan)).toEqual({ ...plan0, preset: plan.preset });
       expect(texts(scene0).some((t) => day.test(t))).toBe(true);
-      expect(texts(scene).some((t) => day.test(t))).toBe(false);
-      expect(texts(scene).some((t) => /^[A-Z][a-z]{2} \d/.test(t))).toBe(true);
-      expect(plain(scene)).toEqual(ourDays(scene0));
+      expect(texts(ratio).some((t) => day.test(t))).toBe(false);
+      expect(texts(ratio).some((t) => /^[A-Z][a-z]{2} \d/.test(t))).toBe(true);
+      const theirs = new Set<string>(scene0.nodes.map((n: any) => n.key));
+      expect(held(lessRows(ratio).nodes, theirs)).toEqual(held(ourDays(scene0).nodes, theirs));
     });
   }
 });
@@ -529,12 +452,10 @@ describe('the one-line legend\'s key: a deliberate departure from the prototype 
   // A channel called "top", which no fixture has.
   const mix = samples.mix!.spec, named = runQuery(mix.query);
   named.rows = named.rows.map((r, i) => (i ? r : { ...r, channel: 'top' }));
-  it('a segment called "top" has its legend entry and the one-line legend has its own: every key is unique, in both scenes and at every form of the legend', () => {
-    for (const w of [346, 150]) {
-      const container = makeContainer(w), plan = resolve(mix, named, container, catalog), ratio = buildScene(plan, mix.query, named, catalog);
-      for (const scene of [ratio, place(ratio, container)]) { const keys = scene.nodes.map((n) => n.key); expect(new Set(keys).size, 'duplicate keys at ' + w).toBe(keys.length); }
-      expect(ratio.nodes.filter((n) => n.key === 'legend:top' || n.key === 'legend-top').map((n) => [n.key, n.part, (n as { text: string }).text])).toEqual([['legend:top', 'legend', 'top'], ['legend-top', 'legend-top', 'top 41%']]);
-    }
+  it('a segment called "top" has its legend entry and the one-line legend has its own: every key is unique, with both forms of the legend in the scene', () => {
+    const ratio = buildScene(resolve(mix, named, catalog), mix.query, named, catalog), keys = ratio.nodes.map((n) => n.key);
+    expect(new Set(keys).size, 'duplicate keys').toBe(keys.length);
+    expect(ratio.nodes.filter((n) => n.key === 'legend:top' || n.key === 'legend-top').map((n) => [n.key, n.part, (n as { text: string }).text])).toEqual([['legend:top', 'legend', 'top'], ['legend-top', 'legend-top', 'top 41%']]);
   });
   it('the prototype gives the two one key', () => {
     const host0 = proto.makeHost(346, null, 'svg', 8), full = plain(proto.buildScene(proto.resolve(toProto(mix), named, host0), mix.query, named, host0));
@@ -546,7 +467,7 @@ describe('the one-line legend\'s key: a deliberate departure from the prototype 
 describe('the words: a deliberate departure from the prototype (review of October 12)', () => {
   // The prototype's words are literals: visits, people, the site, and `rows[0].page`. Ours are the catalog's label and the
   // query's dimension, so a view of page views that is empty says so of page views. The sweep maps one to the other.
-  const texts = (name: string, sc: (typeof scenarios)[number], w = 346) => { const { plan, scene } = run(specs[name]!, w, null, sc); return [plan.text, ...scene.nodes.flatMap((n) => (n.key === 'sub' || n.key === 'notice' ? [(n as { text: string }).text] : []))]; };
+  const texts = (name: string, sc: (typeof scenarios)[number]) => { const { plan, ratio: scene } = run(specs[name]!, 346, null, sc); return [plan.text, ...scene.nodes.filter((n) => scene.parts.includes(n.part)).flatMap((n) => (n.key === 'sub' || n.key === 'notice' ? [(n as { text: string }).text] : []))]; };
   const texts0 = (name: string, sc: string) => { const host0 = proto.makeHost(346, null, 'svg', 8), res0 = proto.runQuery(specs[name]!.query, sc), plan0 = proto.resolve(toProto(specs[name]!), res0, host0); return [plan0.text, ...proto.buildScene(plan0, specs[name]!.query, res0, host0).nodes.filter((n: any) => n.key === 'sub' || n.key === 'notice').map((n: any) => n.text)]; };
   it('an empty range is said of its metric, the label first; the prototype calls page views visits', () => {
     expect(texts0('total', 'empty')).toEqual(['No page views recorded in the last 28 days.', 'No visits yet']);
@@ -554,7 +475,6 @@ describe('the words: a deliberate departure from the prototype (review of Octobe
     expect(texts0('pages', 'empty')[1]).toBe('No visits in this period yet');
     expect(texts('pages', 'empty')[1]).toBe('Page views: nothing in this period yet');
     expect(texts('trend', 'empty')[1]).toBe('Visitors: nothing in this period yet');
-    expect(texts('trend', 'empty', 150)[1]).toBe('Visitors: nothing in …');      // cut to its room, as the prototype's is: the label stays and the end goes
   });
   it('an instant metric is said by its label and the query\'s dimension; the prototype says people, the site and a page', () => {
     expect(texts0('live', 'typical')).toEqual(['7 people are on the site right now; the busiest page is / (3).', 'on the site right now']);
@@ -591,10 +511,10 @@ describe('the delta at zero and below it: a deliberate departure from the protot
     expect([delta(0, 0, 'up').state, delta(5, 0, 'up').state, delta(-5, -10, 'up').state, delta(-10, -5, 'up').state]).toEqual(['flat', 'new', 'up', 'down']);
   });
   it('the scene and the prose say it too', () => {
-    const res = at(-5, -10), plan = resolve(total, res, makeContainer(346), catalog), node = buildScene(plan, total.query, res, catalog).nodes.find((n) => n.key === 'delta') as any;
+    const res = at(-5, -10), plan = resolve(total, res, catalog), node = buildScene(plan, total.query, res, catalog).nodes.find((n) => n.key === 'delta') as any;
     expect([node.short, node.paint]).toEqual(['▲ 50%', 'delta.good']);
     expect(plan.text).toContain(', up 50% on the previous period');
-    expect(resolve(total, at(0, 0), makeContainer(346), catalog).text).toContain(', level with the previous period');
+    expect(resolve(total, at(0, 0), catalog).text).toContain(', level with the previous period');
   });
   it('the prototype says a rise from below zero is a fall', () => {
     const res = at(-5, -10), host0 = proto.makeHost(346, null, 'svg', 8), plan0 = proto.resolve(toProto(total), res, host0);
@@ -604,8 +524,7 @@ describe('the delta at zero and below it: a deliberate departure from the protot
 });
 
 describe('golden scenes', () => {
+  // The scenes themselves are above, with no size. These are what the fit rules make of each at three rooms.
   const sizes: [number, number | null][] = [[346, null], [234, null], [346, 100]];
-  for (const name of Object.keys(samples)) for (const [w, h] of sizes) {
-    it(`${name} at ${w} by ${h ?? 'any'}`, () => expect(run(specs[name]!, w, h).scene).toMatchSnapshot());
-  }
+  for (const name of Object.keys(samples)) it(name + ', at each room', () => expect(sizes.map(([w, h]) => [w, h, shown(run(specs[name]!, w, h))])).toMatchSnapshot());
 });

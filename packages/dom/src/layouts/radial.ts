@@ -1,5 +1,5 @@
-import { CONTAINER_RULES, SEATS_LEAST, arcD, declutter, ruleFor, type ArcNode, type CircleNode, type TextNode } from '@unified-analytics/core';
-import { LEGEND_FIT, LEGEND_SWAP, hideCutLegends, legendBlock, legendTop, paintLegend } from '../chrome/legend.ts';
+import { CONTAINER_RULES, SEATS_LEAST, arcD, declutter, ruleFor, type ArcNode, type CircleNode, type PathNode, type TextNode } from '@unified-analytics/core';
+import { LEGEND_FIT, LEGEND_SWAP, SPLIT_PLAIN, hideCutLegends, legendBlock, legendTop, paintLegend } from '../chrome/legend.ts';
 import { attr, ensure, hits, keyed, svg, paintVar, prop, text } from '../dom.ts';
 import { FROM_TOP, IN_BOX, NUMBER_ALONE, holdShape, type LayoutPainter } from '../layout.ts';
 import { FOCUS, HOVER, token } from '../tokens.ts';
@@ -7,13 +7,14 @@ import { paintUnitKey, unitDot } from '../chrome/unit.ts';
 import { LABEL } from '../chrome/label.ts';
 import { thinLabels } from '../measure.ts';
 import { IS } from '../rove.ts';
+import { paintPaths } from './points.ts';
 
 /* Arcs about one centre, and under them the legend a band has. The part holds its shape: it is as wide as the view up
  * to 160 px and its height follows from the scene's aspect, 1 for a circle and 2 for the top half of one. Its SVG has
  * a view box of that shape and the default preserveAspectRatio, so where a box leaves the part some other shape the
  * arcs sit in the middle of it and are not stretched. Paths are core's, drawn about the origin at a radius of 50.
  * The part is the `plot` container, which is what the `hole` rule asks about: the number sits over the hole of a
- * donut, and at the foot of a half circle. Sizes are the pixel painter's.
+ * donut, and at the foot of a half circle. Sizes are core's (sizes.ts).
  *
  * A circle's points are one arc for each of its rows, in the SVG that carries `data-hits`. Arcs that are no point of
  * their own lie in a second SVG under it, \`.uav-under\`: the whole ring behind a ring's value, and the arcs of a second
@@ -38,7 +39,16 @@ const css = `
 /* Two SVGs lie one on the other, so neither takes the pointer for its empty box: only an arc does. */
 .uav-radial svg { pointer-events: none; }
 .uav-radial svg path { pointer-events: auto; }
-.uav-radial svg.uav-under { position: absolute; inset: var(--uav-rim, 0px); inline-size: auto; block-size: auto; }
+.uav-radial svg:is(.uav-under, .uav-round) { position: absolute; inset: var(--uav-rim, 0px); inline-size: auto; block-size: auto; }
+/* What the plot draws about a centre (core's ROUND_MARKS): a line round the circle and the fill in from it, drawn by the
+ * plot's painter over the arcs, and dots at their places in the part's box, as seats are. None takes the pointer: a
+ * place round the circle is chosen by its slice, or by the share of the circle that stands in for one. */
+.uav-radial .uav-round path { fill: none; stroke: var(--uav-paint); stroke-width: ${token('stroke-width-line')}; stroke-linejoin: round; stroke-linecap: round; pointer-events: none; }
+.uav-radial .uav-round path[data-fill] { fill: var(--uav-paint); stroke: none; }
+.uav-radial > .uav-dots { inset: var(--uav-rim, 0px); }
+.uav-radial > .uav-dots i:not([data-unit]) { pointer-events: none; }
+/* A place with no slice of its own is still a place to point at and step to: its share of the circle, with nothing painted but the outline of the one chosen. */
+.uav-radial svg path[data-bare] { fill: transparent; stroke: none; }
 /* An arc of a second ring that is chosen wears the outline, and its segment, chosen with it, gives its own up. */
 .uav-radial .uav-under path${IS.highlighted}${IS.focus} { ${FOCUS.stroke} }
 .uav-radial .uav-under path${IS.highlighted}${IS.hover} { ${HOVER.stroke} }
@@ -72,7 +82,7 @@ ${IN_BOX} {
   .uav[data-layout="radial"] :is(.uav-legend, .uav-legend-top) { flex: none; }
   .uav[data-layout="radial"]:not([data-keep~="guides"]) .uav-legend { ${LEGEND_SWAP.full} }
   .uav[data-layout="radial"][data-parts~="legend"]:not([data-keep~="guides"]) .uav-legend-top { ${LEGEND_SWAP.top} }
-  /* Seats keep 80 px of height under the full legend, the least place() builds them to, where arcs keep 64. */
+  /* Seats keep 80 px of height under the full legend, the least they are built to, where arcs keep 64. */
   .uav[data-layout="radial"] .uav-body:has(.uav-dots > [data-unit]) { --uav-legend-block: ${legendBlock(SEATS_LEAST / 2)}; }
 }`;
 
@@ -110,8 +120,8 @@ export const radial: LayoutPainter = {
   fit: {
     // As the band's: the rule's data only sets a switch, and this is the swap.
     legend: LEGEND_FIT,
-    // The circle takes back the margin it gave the labels.
-    rim: { '.uav-radial': '--uav-rim: 0px;' },
+    // With no legend left, the segments are in one paint, parted by their gaps.
+    'legend-top': SPLIT_PLAIN,
     // The number alone. The body goes whole, and so does its grid row.
     marks: NUMBER_ALONE,
   },
@@ -127,21 +137,31 @@ export const radial: LayoutPainter = {
     let below = part.querySelector<SVGSVGElement>(':scope > svg.uav-under');
     if (!below && under.length) { below = part.insertBefore(svg('svg'), own); below.setAttribute('class', 'uav-under'); below.setAttribute('aria-hidden', 'true'); }
     if (below) { below.setAttribute('viewBox', box); keyed(below, under, () => 'path', (el, n) => turn(el as SVGElement, n)); }
-    const seats = scene.nodes.filter((n): n is CircleNode => n.part === 'radial' && n.kind === 'circle');
+    const circles = scene.nodes.filter((n): n is CircleNode => n.part === 'radial' && n.kind === 'circle'), seats = circles.filter((n) => n.w != null);
+    // What the plot draws about the centre: its paths, in an SVG of their own over the arcs.
+    const lines = scene.nodes.filter((n): n is PathNode => n.part === 'radial' && n.kind === 'path');
+    let over = part.querySelector<SVGSVGElement>(':scope > svg.uav-round');
+    if (!over && lines.length) { over = part.appendChild(svg('svg')); over.setAttribute('class', 'uav-round'); over.setAttribute('aria-hidden', 'true'); }
+    if (over) { over.setAttribute('viewBox', box); paintPaths(over, lines); }
+    // Where no arc is a row's own, each row's share of the circle stands in for one: there is still a place to point at and step to.
+    const points = arcs.filter((n) => !under.includes(n)), bare: ArcNode[] = points.some((n) => n.row != null) || seats.length ? [] : rows.map((k, j) => {
+      const a = { a0: j / rows.length, a1: (j + 1) / rows.length, r0: 0, r1: 1 };
+      return { key: 'at:' + k, part: 'radial', kind: 'arc', ...a, d: arcD(a), row: k, paint: 'ink', layer: 'guide' };
+    });
     // Each segment is its own hit target. Arcs that read one value against a range have no row to step to, and
     // where a unit's seats stand there are no arcs: the seats are the targets, a group of them to a row (keys.ts).
     hits(own, rows.length && !seats.length ? 'x' : null);
     part.toggleAttribute('data-half', aspect !== 1);
     prop(part, '--uav-aspect', aspect); prop(body, '--uav-rows', rows.length); prop(part, '--uav-radial-most', seats.length ? '240px' : null);
-    keyed(own, arcs.filter((n) => !under.includes(n)), () => 'path', (el, n) => turn(el as SVGElement, n));
+    keyed(own, points.concat(bare), () => 'path', (el, n) => { turn(el as SVGElement, n); el.toggleAttribute('data-bare', bare.includes(n)); });
     const dots = ensure(part, 'div', 'uav-dots');
     attr(dots, 'data-hits', seats.length ? 'x' : null);
-    keyed(dots, seats, () => 'i', (el, n) => { prop(el, '--uav-x', n.x); prop(el, '--uav-t', n.t); unitDot(el, n); });
+    keyed(dots, circles, () => 'i', (el, n) => { prop(el, '--uav-x', n.x); prop(el, '--uav-t', n.y); unitDot(el, n); });
     const hole = ensure(part, 'b', 'uav-hole'), number = scene.nodes.find((n) => n.part === 'hole');
     if (number?.kind === 'text') { text(hole, number); prop(hole, '--uav-paint', paintVar(number.paint)); } else hole.textContent = '';
     const rim = ensure(part, 'div', 'uav-rim');
     rim.setAttribute('aria-hidden', 'true');                                 // each slice is named by its readout, which says this and its value
-    keyed(rim, scene.nodes.filter((n): n is TextNode => n.part === 'rim' && n.kind === 'text'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-x', n.x); prop(el, '--uav-t', n.t); });
+    keyed(rim, scene.nodes.filter((n): n is TextNode => n.part === 'rim' && n.kind === 'text'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-x', n.x); prop(el, '--uav-t', n.y); });
     paintUnitKey(body, scene);
     paintLegend(body, scene);
   },
@@ -149,7 +169,12 @@ export const radial: LayoutPainter = {
   // Labels round the rim that would meet: the one of higher rank is hidden, and keeps its box. Read where they stand:
   // a label moves only when the slices change, and the pass runs again when they have.
   measure(body) {
-    thinLabels(body, '.uav-rim > span:not([data-exit])', (labels) => declutter(labels.map((el) => { const r = el.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height, rank: Number(el.dataset.rank) || 0 }; })));
+    // Those that would meet, and those to either side that the view is too narrow to hold: a name is whole or gone.
+    const view = body.getBoundingClientRect();
+    thinLabels(body, '.uav-rim > span:not([data-exit])', (labels) => {
+      const boxes = labels.map((el) => el.getBoundingClientRect()), met = declutter(boxes.map((r, i) => ({ x: r.left, y: r.top, w: r.width, h: r.height, rank: Number(labels[i]!.dataset.rank) || 0 })));
+      return boxes.map((r, i) => met[i]! || r.left < view.left - 0.5 || r.right > view.right + 0.5);
+    });
     hideCutLegends(body);
   },
 };

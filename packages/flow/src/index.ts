@@ -1,5 +1,5 @@
-import { SERIES, applies, declutter, formatDimension, isDim, isMetric, layerKeys, registerMark, registerPreset, roleOf, rowKeys, ruleFor, tooManySeries } from '@unified-analytics/core';
-import type { CustomMark, FitRule, Part, PathNode, PlacedNode, RectNode, Row, SceneNode, TextNode } from '@unified-analytics/core';
+import { SERIES, formatDimension, isDim, isMetric, layerKeys, registerMark, registerPreset, roleOf, rowKeys, tooManySeries } from '@unified-analytics/core';
+import type { CustomMark, FitRule, Part, PathNode, RectNode, Row, SceneNode, TextNode } from '@unified-analytics/core';
 
 /* The `link` mark: a ribbon from a value of one dimension to a value of another, as a custom mark (core's marks.ts).
  * One layer of it, alone, is a Sankey of one step. This is its half for core: a scene in ratios and its place in
@@ -21,14 +21,13 @@ const GAP = 0.02;       // of the plot's height, between one node and the next
 export const NODE = 8;
 /** px between a node and its label. */
 export const LABEL = 6;
-const LINE = 14;        // px a label's line takes, for a painter that cannot measure one
 
-/* Labels go first, and then the view is not a smaller Sankey: it becomes the grid of the same pairs, which reads at any
- * width. The first dimension is down its side and the second across, so the sources are its rows and the targets its columns. */
+/* A node's name is the key to it, and a Sankey with no names says only that things flow. So the names stay as long as
+ * the ribbons do, and short of the room they need the view is not a smaller Sankey: it becomes the grid of the same
+ * pairs, which reads at any width. The first dimension is down its side and the second across, so the sources are its
+ * rows and the targets its columns. */
 export const LINK_RULES: FitRule[] = [
-  { id: 'guides', layout: 'link', container: 'view', needs: { inline: 320, block: 140 },      // a label inside each column, and ribbons between
-    hide: ['labels'], keep: 'guides' },
-  { id: 'marks',  layout: 'link', container: 'view', needs: { inline: 280, block: 120 },      // ribbons too short, or nodes too thin, to follow
+  { id: 'marks',  layout: 'link', container: 'view', needs: { inline: 320, block: 140 },      // a name inside each column, and ribbons between
     hide: [], fallback: 'heatmap', keep: 'marks' },
 ];
 
@@ -40,6 +39,7 @@ interface Node { key: string; value: Row[string]; v: number; i: number; y: numbe
 
 export const linkMark: CustomMark = {
   rules: LINK_RULES,
+  reads: { x: ['dimension'], y: ['dimension'], size: ['metric'] },
 
   scene({ layers, guides, query, result, catalog }) {
     const l = layers[0]!, { x: src, y: tgt, size: m } = l.encode || {}, by = query.by || [];
@@ -78,11 +78,11 @@ export const linkMark: CustomMark = {
     const nodes: SceneNode[] = flows.map((f): PathNode => ({ key: id + ':' + key(f.r), part: 'plot', kind: 'path', d: ribbon(f.y0, ends(f)[0], f.y1, ends(f)[1]), points: [], fill: true,
       paint: paint(f.s), opacity: 0.35, tone: 'soft', row: key(f.r), layer: 'data', role }));
     const dims = [src, tgt];
-    cols.forEach((c, side) => nodes.push(...c.map((n): RectNode => ({ key: 'node:' + dims[side] + ':' + n.key, part: 'plot', kind: 'rect', x: side, y: n.y, h: n.h, paint: side ? 'ink.muted' : paint(n), layer: 'data', role }))));
+    cols.forEach((c, side) => nodes.push(...c.map((n): RectNode => ({ key: 'node:' + dims[side] + ':' + n.key, part: 'plot', kind: 'rect', x: side, y: Math.max(0, 1 - (n.y + n.h)), h: n.h, paint: side ? 'ink.muted' : paint(n), layer: 'data', role }))));
     // A label for each node, ranked by its node's size within its column: where two would meet, the larger node's stands.
     cols.forEach((c, side) => {
       const ranks = c.slice().sort((a, b) => b.v - a.v);
-      nodes.push(...c.map((n): TextNode => ({ key: 'label:' + dims[side] + ':' + n.key, part: 'labels', kind: 'text', text: formatDimension(n.value, catalog.dimensions[dims[side]!]!), x: side, t: 1 - (n.y + n.h / 2),
+      nodes.push(...c.map((n): TextNode => ({ key: 'label:' + dims[side] + ':' + n.key, part: 'labels', kind: 'text', text: formatDimension(n.value, catalog.dimensions[dims[side]!]!), x: side, y: 1 - (n.y + n.h / 2),
         anchor: side ? 'end' : 'start', baseline: 'middle', font: 'tick', paint: 'ink', layer: 'guide', rank: ranks.indexOf(n) + 1 })));
     });
     // A plan's guides are on or off together, and the labels are this mark's.
@@ -90,28 +90,6 @@ export const linkMark: CustomMark = {
     return { nodes, rows: result.rows.map(key), parts };
   },
 
-  // A box as wide as the view and as tall as a plot with axes is, or as the room where that is less. The nodes stand at
-  // its edges, the ribbons run between them, and each label is inside its column, over the ribbons.
-  place(scene, W, room, container) {
-    const rule = (id: string) => ruleFor(container.rules.fit.concat(LINK_RULES), scene.layout, id);
-    const h = room == null ? container.rules.axes.height : Math.max(rule('marks')?.needs.block ?? 0, Math.min(container.rules.axes.height, room));
-    // Core asks a custom mark's `guides` rule only for a ramp or a key to sizes, so the labels' room is asked here.
-    const guides = rule('guides'), labelled = scene.parts.includes('labels') && !(guides && applies(guides, { view: { inline: W, block: room } }));
-    const kx = (W - 2 * NODE) / 100, ky = h / 100, nodes: PlacedNode[] = [], labels: TextNode[] = [];
-    for (const n of scene.nodes) {
-      if (n.part === 'plot' && n.kind === 'path') nodes.push({ key: n.key, kind: 'path', d: n.d!.replace(/([\d.]+),([\d.]+)/g, (_, x: string, y: string) => round(NODE + Number(x) * kx) + ',' + round(Number(y) * ky)), fill: true, paint: n.paint, layer: n.layer, ...(n.opacity != null && { opacity: n.opacity }) });
-      else if (n.part === 'plot' && n.kind === 'rect') nodes.push({ key: n.key, kind: 'rect', x: n.x ? W - NODE : 0, y: round(n.y! * h), w: NODE, h: round(n.h! * h), rx: 0, paint: n.paint, layer: n.layer });
-      else if (n.part === 'labels' && n.kind === 'text' && labelled) labels.push(n);
-    }
-    // A label stays inside the box, and gives way to the label of a larger node it would meet.
-    const at = (n: TextNode) => Math.min(Math.max((1 - n.t!) * h, LINE / 2), h - LINE / 2);
-    for (const side of [0, 1]) {
-      // One column's labels, each a line tall about its middle: the larger node's first, and one that would meet a label that stands goes.
-      const col = labels.filter((n) => n.x === side), gone = declutter(col.map((n) => ({ x: 0, w: 1, y: at(n) - LINE / 2, h: LINE, rank: n.rank })), 0);
-      nodes.push(...col.filter((_, i) => !gone[i]).map((n): PlacedNode => ({ key: n.key, kind: 'text', x: side ? W - NODE - LABEL : NODE + LABEL, y: round(at(n)), text: n.text, anchor: n.anchor, baseline: 'middle', font: n.font, paint: n.paint, layer: n.layer })));
-    }
-    return { nodes, height: h, plot: { w: W, h } };
-  },
 };
 
 /** Register the `link` mark, and the preset that draws it. A spec then names the mark in `mark`, or the preset in `use`. */

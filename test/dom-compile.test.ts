@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CONTAINER_RULES, FIT_RULES, type FitRule, type Spec } from '@unified-analytics/core';
-import { compileFitRules } from '@unified-analytics/dom';
+import { UaView, check as checked, compileFitRules, defineUaView } from '@unified-analytics/dom';
 import { catalog, moreSamples, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
 import { GEO_RULES } from '@unified-analytics/geo';
 import { geoPainter } from '@unified-analytics/geo/dom';
@@ -16,15 +16,15 @@ describe('compileFitRules', () => {
     expect(css).toBe([
       '/* cartesian axes */',
       '@container uav-view (inline-size < 279.5px) {',
-      '  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) :is(.uav-x-axis, .uav-y-axis, .uav-grid) { display: none; }',
+      '  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) :is(.uav-x-axis, .uav-y-axis, .uav-y-axis-2, .uav-grid, [data-axis="2"], .uav-size) { display: none; }',
       '  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) .uav-number { display: block; }',
-      '  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) { --uav-arrange: side; }',
+      '  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) { --uav-arrange: side; --uav-dots: one; }',
       '}',
       '/* cartesian axes */',
       '@container uav-view (block-size < 119.5px) {',
-      '  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) :is(.uav-x-axis, .uav-y-axis, .uav-grid) { display: none; }',
+      '  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) :is(.uav-x-axis, .uav-y-axis, .uav-y-axis-2, .uav-grid, [data-axis="2"], .uav-size) { display: none; }',
       '  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) .uav-number { display: block; }',
-      '  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) { --uav-arrange: side; }',
+      '  .uav[data-layout="cartesian"]:not([data-keep~="guides"]) { --uav-arrange: side; --uav-dots: one; }',
       '}',
     ].join('\n'));
     expect(compileFitRules(FIT_RULES)).not.toMatch(/\bor\b/);
@@ -50,7 +50,7 @@ describe('compileFitRules', () => {
     const fig = '.uav[data-layout="cartesian"]:not([data-keep~="marks"])';
     expect(css.split('\n').slice(0, 6)).toEqual([
       '/* cartesian marks */', '@container uav-view (inline-size < 151.5px) {',
-      '  ' + fig + ' .uav-plot { display: none; }', '  ' + fig + ' .uav-number { display: block; }',
+      '  ' + fig + ' :is(.uav-plot, .uav-points, .uav-point-labels, .uav-x-axis, .uav-y-axis, .uav-y-axis-2, .uav-labels, .uav-legend, .uav-ramp, .uav-size, .uav-unit-key) { display: none; }', '  ' + fig + ' .uav-number { display: block; }',
       '  ' + fig + ' { grid-template: none; }', '  ' + fig + ' .uav-body { display: none; }',
     ]);
   });
@@ -58,7 +58,7 @@ describe('compileFitRules', () => {
   // A page may name a container of its own "view" or "plot". Ours are `uav-view` and `uav-plot`, so its does not answer our queries.
   it('names its containers uav-view and uav-plot wherever one is declared or queried', () => {
     const painters = [...Object.values(LAYOUTS).filter((p) => p.layout !== 'geo'), geoPainter];
-    const compiled = compileFitRules([...FIT_RULES, ...GEO_RULES, ...painters.flatMap((p) => p.rules?.(CONTAINER_RULES) ?? [])], Object.fromEntries(painters.map((p) => [p.layout, p.fit ?? {}])));
+    const compiled = compileFitRules([...FIT_RULES, ...GEO_RULES], Object.fromEntries(painters.map((p) => [p.layout, p.fit ?? {}])));
     const css = [BASE_CSS, FALLBACK_CSS, ...painters.map((p) => p.css), compiled].join('\n');
     expect(css).toContain(':host { display: block; container: uav-view / inline-size;');
     expect(css).toContain('container: uav-plot / size;');
@@ -88,6 +88,27 @@ describe('compileFitRules', () => {
 });
 
 // The element's own checks are plain functions, so they are held here too. The element itself is checked on the bench.
+describe('defining <ua-view>', () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const page = (defined: unknown) => { const define = vi.fn(), warn = vi.fn(); vi.stubGlobal('customElements', { get: () => defined, define }); vi.stubGlobal('console', { ...console, warn }); return { define, warn }; };
+  it('says so where another copy of the library has defined it, and names the fix: nothing else would tell a page it has two', () => {
+    const { define, warn } = page(class Other {});
+    defineUaView();
+    expect(define).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]![0]).toMatch(/<ua-view> is already defined on this page by another copy of this library.*Load one copy: have every bundle take "@unified-analytics\/dom" from the same place\./);
+  });
+  it('is quiet where this copy has defined it already: defining twice is defining once', () => {
+    const { define, warn } = page(UaView);
+    defineUaView();
+    expect(define).not.toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalled();
+  });
+  it('and a host can check a view\'s inputs itself: the package gives the element\'s own check', () => {
+    expect(checked).toBe(check);
+  });
+});
+
 describe('what <ua-view> checks before it paints', () => {
   const trend = samples.trend!.spec, result = runQuery(trend.query);
   it('says how to write a list that a spec gives as a bare value', () => {

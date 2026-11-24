@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { FIT_RULES, arcD, buildScene, expand, makeContainer, place, resolve, tldrProse, type ArcNode, type PainterName, type Result, type Spec, type TextNode } from '@unified-analytics/core';
+import { FIT_RULES, arcD, buildScene, expand, resolve, tldrProse, type ArcNode, type Result, type Spec, type TextNode } from '@unified-analytics/core';
 import { compileFitRules } from '@unified-analytics/dom';
 import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
 import { radial } from '../packages/dom/src/layouts/radial.ts';
-import { err, round, run, validView as view } from './helpers.ts';
+import { err, round, run, shown, validView as view } from './helpers.ts';
 
 // Step 2 of docs/uncommon-coverage-plan.md: an `arc` that reads data on `angle` and `radius`, and a second ring by
 // `detail`. Held to its own sweep, facts and golden scenes, as test/radial.test.ts holds the circle divided by colour.
@@ -13,34 +13,31 @@ const arcs = (spec: Spec, w = 346) => run(spec, w).ratio.nodes.filter((n): n is 
 const arc = (encode: Record<string, string | number>, by = ['channel'], more = {}): Spec => ({ spec: 'view/0', query: { metrics: ['visitors'], by }, layers: [{ mark: 'arc', encode, ...more }] });
 
 describe('the sweep, with data on angle and radius', () => {
-  const painters: PainterName[] = ['svg', 'dots'], heights = [null, 300, 160, 100, 60, 40], widths = [54, 80, 120, 170, 229, 250, 290, 346, 500, 700];
+  const heights = [null, 300, 160, 100, 60, 40], widths = [54, 80, 120, 170, 229, 250, 290, 346, 500, 700];
   for (const [name, spec] of Object.entries(specs)) {
-    it(name + ': unique keys, no NaN, nothing taller than the container allows, arcs inside the circle, and a part that holds its shape', () => {
-      for (const sc of scenarios) for (const p of painters) for (const h of heights) for (const w of widths) {
-        const at = [name, sc, p, w, h].join(' ');
-        const { plan, ratio, scene } = run(spec!, w, h, sc, p);
-        const keys = scene.nodes.map((n) => n.key), all = ratio.nodes.map((n) => n.key);
-        expect(new Set(keys).size, 'duplicate keys: ' + at).toBe(keys.length);
-        expect(new Set(all).size, 'duplicate keys in the ratio scene: ' + at).toBe(all.length);
-        expect(JSON.stringify([scene, ratio], (_, v) => (typeof v === 'number' && isNaN(v) ? 'NaN' : v)), 'NaN: ' + at).not.toMatch(/NaN/);
-        if (h != null && plan.layout !== 'prose') expect(scene.height, 'too tall: ' + at).toBeLessThanOrEqual(h);
-        expect(all.filter((k) => keys.includes(k)), 'placed keys: ' + at).toEqual(keys);
+    it(name + ': unique keys, no NaN, arcs inside the circle, and at every room parts the scene has', () => {
+      for (const sc of scenarios) for (const h of heights) for (const w of widths) {
+        const at = [name, sc, w, h].join(' ');
+        const { ratio, fit } = run(spec!, w, h, sc);
+        const all = ratio.nodes.map((n) => n.key);
+        expect(new Set(all).size, 'duplicate keys: ' + at).toBe(all.length);
+        expect(JSON.stringify(ratio, (_, v) => (typeof v === 'number' && isNaN(v) ? 'NaN' : v)), 'NaN: ' + at).not.toMatch(/NaN/);
+        expect(fit.parts.filter((p) => !ratio.nodes.some((n) => n.part === p)), 'parts with nothing in them: ' + at).toEqual([]);
         for (const n of ratio.nodes) if (n.kind === 'arc') {
           expect(n.a0 >= 0 && n.a0 <= n.a1 && n.a1 <= 1 && n.r0 >= 0 && n.r0 < n.r1 && n.r1 <= 1, 'arc: ' + at + ' ' + n.key).toBe(true);
           expect(n.d, at).toBe(arcD(n));
         }
-        if (plan.layout !== 'radial') continue;
-        expect(scene.plot!.w / scene.plot!.h, 'shape: ' + at).toBe(1);
-        expect(scene.plot!.w, 'width: ' + at).toBeLessThanOrEqual(Math.min(w, 160));
       }
     });
-    it(name + ': resolves in every data state, and steps down to the number and then the prose, as a donut does', () => {
+    it(name + ': resolves in every data state, and steps down to the number, as a donut does', () => {
       expect(view(spec), JSON.stringify(view.errors)).toBe(true);
       expect(view(expand(spec!)), JSON.stringify(view.errors)).toBe(true);
       for (const sc of scenarios) {
-        expect([346, 120, 10].map((w) => run(spec!, w, null, sc).plan.layout), sc).toEqual(sc === 'empty' ? ['notice', 'none', 'prose'] : ['radial', 'radial', 'prose']);
-        if (sc !== 'empty') expect(run(spec!, 346, 60, sc).plan, sc).toMatchObject({ layout: 'none', tldrValue: true });
-        expect(run(spec!, 700, null, sc).plan.dropped, sc).toEqual([]);
+        expect(run(spec!, 346, null, sc).plan.layout, sc).toBe(sc === 'empty' ? 'notice' : 'radial');
+        // Under the room its marks need a circle is its number, and so is a notice under its own.
+        expect(run(spec!, 346, 60, sc).fit.parts, sc).toEqual(sc === 'empty' ? ['notice'] : ['number']);
+        expect(run(spec!, 120, null, sc).fit.parts.join() === 'number', sc).toBe(sc === 'empty');
+        expect(run(spec!, 700, null, sc).fit.held, sc).toEqual([]);
       }
     });
   }
@@ -48,9 +45,7 @@ describe('the sweep, with data on angle and radius', () => {
 
 describe('golden scenes', () => {
   const sizes: [number, number | null][] = [[346, null], [150, null], [346, 100]];
-  for (const name of Object.keys(specs)) for (const [w, h] of sizes) {
-    it(`${name} at ${w} by ${h ?? 'any'}`, () => expect(run(specs[name]!, w, h).scene).toMatchSnapshot());
-  }
+  for (const name of Object.keys(specs)) it(name + ', at each room', () => expect(sizes.map(([w, h]) => [w, h, shown(run(specs[name]!, w, h))])).toMatchSnapshot());
   for (const name of Object.keys(specs)) it('the ratio scene of ' + name, () => expect(run(specs[name]!, 346).ratio).toMatchSnapshot());
 });
 
@@ -76,7 +71,7 @@ describe('a rose: a dimension on angle and a metric on radius', () => {
   it('a row with no value, or none above zero, has no slice and keeps its place and its label', () => {
     const result = runQuery(rose!.query);
     result.rows[1]!.visitors = null; result.rows[2]!.visitors = 0;
-    const ratio = buildScene(resolve(rose!, result, makeContainer(346), catalog), rose!.query, result, catalog);
+    const ratio = buildScene(resolve(rose!, result, catalog), rose!.query, result, catalog);
     expect(ratio.nodes.filter((n) => n.kind === 'arc').map((n) => n.row).slice(0, 2)).toEqual(['12am', '3am']);
     expect(ratio.rows!.slice(0, 4)).toEqual(['12am', '1am', '2am', '3am']);
     expect(ratio.nodes.filter((n) => n.part === 'rim')).toHaveLength(24);
@@ -88,9 +83,9 @@ describe('a rose: a dimension on angle and a metric on radius', () => {
     expect(labels.filter((n) => n.rank === 1).map((n) => n.text)).toEqual(['3am', '9am', '3pm', '9pm']);
     expect(labels.filter((n) => n.rank === 2)).toHaveLength(16);
     // The sixth hour starts at a quarter turn, so its middle is a little past the right of the circle.
-    expect([round(labels[6]!.x!), round(labels[6]!.t!), labels[6]!.anchor]).toEqual([round(0.5 + Math.sin(Math.PI * 13 / 24) / 2), round(0.5 + Math.cos(Math.PI * 13 / 24) / 2), 'start']);
+    expect([round(labels[6]!.x!), round(labels[6]!.y!), labels[6]!.anchor]).toEqual([round(0.5 + Math.sin(Math.PI * 13 / 24) / 2), round(0.5 + Math.cos(Math.PI * 13 / 24) / 2), 'start']);
     // Seven values: four stay and the three between them go first.
-    const week = buildScene(resolve({ ...rose!, query: { metrics: ['visitors'], by: ['weekday'] } }, runQuery({ metrics: ['visitors'], by: ['weekday'] }), makeContainer(346), catalog), { metrics: ['visitors'], by: ['weekday'] }, runQuery({ metrics: ['visitors'], by: ['weekday'] }), catalog);
+    const week = buildScene(resolve({ ...rose!, query: { metrics: ['visitors'], by: ['weekday'] } }, runQuery({ metrics: ['visitors'], by: ['weekday'] }), catalog), { metrics: ['visitors'], by: ['weekday'] }, runQuery({ metrics: ['visitors'], by: ['weekday'] }), catalog);
     expect(week.nodes.filter((n) => n.part === 'rim').map((n) => n.rank ?? 0)).toEqual([0, 1, 0, 1, 0, 1, 0]);
   });
   it('the ranked sentence, and the note under the number, are true of rows that came in clock order', () => {
@@ -99,22 +94,20 @@ describe('a rose: a dimension on angle and a metric on radius', () => {
     expect((ratio.nodes.find((n) => n.key === 'sub') as TextNode).text).toBe('Top: 11am');
     expect(plan.share).toBe(false);
   });
-  it('the labels are a guide: the `rim` rule gives them up, the circle takes its margin back, and place() thins the ones that would meet', () => {
+  it('the labels are the key to the slices: under the `rim` rule\'s need they thin to the ones with no rank, and stay as long as the circle', () => {
     const rule = FIT_RULES.find((r) => r.layout === 'radial' && r.id === 'rim')!;
-    expect(rule).toMatchObject({ needs: { inline: 230, block: 120 }, hide: ['rim'], keep: 'guides' });
-    const wide = run(rose!, 346), narrow = run(rose!, 229), seg = (r: typeof wide) => r.scene.nodes.find((n) => n.key === 'primary:arc:11am')!, node = wide.ratio.nodes.find((n): n is ArcNode => n.key === 'primary:arc:11am')!;
-    expect(wide.plan).toMatchObject({ guides: { rim: true }, dropped: [], needs: { width: 230 } });
-    expect(seg(wide)).toMatchObject({ kind: 'path', tx: 173, ty: 80, d: arcD(node, 66) });
-    expect(narrow.plan).toMatchObject({ guides: {}, dropped: ['the labels round the rim'] });
-    expect(narrow.ratio.parts).toEqual(['radial']);
-    expect(seg(narrow)).toMatchObject({ tx: 114.5, ty: 80, d: arcD(node, 80) });
-    expect(run(rose!, 346, 119).plan.dropped).toEqual(['the labels round the rim']);
-    expect(run({ ...rose!, keep: ['guides'] }, 229).plan.layout).toBe('none');
-    // The four that are not ranked always stand, and no two that stand are closer than a label is wide.
-    const placed = wide.scene.nodes.filter((n) => n.key.startsWith('rim:')).map((n) => n.key.slice(4));
-    expect(placed).toEqual(expect.arrayContaining(['12am', '6am', '12pm', '6pm']));
-    expect(placed.length).toBeGreaterThan(4);
-    expect(placed.length).toBeLessThan(24);
+    expect(rule).toMatchObject({ needs: { inline: 230, block: 120 }, hide: ['rim.ranked'], keep: 'guides' });
+    const wide = run(rose!, 346), narrow = run(rose!, 229);
+    expect(wide.plan.guides.rim).toBe(true);
+    expect(shown(wide)).toMatchObject({ parts: ['radial', 'rim'], hidden: [], rules: [] });
+    // They all went once, and left 24 slices with nothing to say which hour was which.
+    expect(shown(narrow)).toMatchObject({ parts: ['radial', 'rim'], hidden: ['rim.ranked'], rules: ['rim'] });
+    expect(shown(run(rose!, 346, 119))).toMatchObject({ parts: ['radial', 'rim'], hidden: ['rim.ranked'] });
+    // They go with the circle, and not before it.
+    expect(shown(run(rose!, 100)).parts).toEqual(['radial', 'rim']);
+    expect(shown(run(rose!, 71)).parts).toEqual(['number']);
+    // A spec that keeps its guides holds the rule off, and every name stays.
+    expect(shown(run({ ...rose!, keep: ['guides'] }, 229))).toMatchObject({ parts: ['radial', 'rim'], hidden: [], rules: ['kept:rim'] });
   });
 });
 
@@ -137,7 +130,7 @@ describe('a radial bar: a dimension on radius and a metric on angle', () => {
     const { ratio } = run(rings!, 346), says = (key: string) => (ratio.nodes.find((n) => n.key === key) as TextNode).text;
     expect([says('legend:Direct'), says('share:Direct'), says('legend-top')]).toEqual(['Direct', '2,949', 'Search 4,318']);
     expect(ratio.nodes.find((n) => n.key === 'swatch:Direct')!.paint).toBe('series.2');
-    expect([[346, null], [169, null], [346, 87]].map(([w, h]) => run(rings!, w!, h).plan.guides.legend ?? 'none')).toEqual(['full', 'top', 'none']);
+    expect([[346, null], [169, null], [346, 87]].map(([w, h]) => { const f = shown(run(rings!, w!, h)); return !f.parts.includes('legend') ? 'none' : f.set.legend ?? 'full'; })).toEqual(['full', 'top', 'none']);
   });
   it('against the catalog domain where the metric has one, and in one paint with no legend where nothing is on color', () => {
     const spec: Spec = { spec: 'view/0', query: { metrics: ['signups'], by: ['device'] }, layers: [{ mark: 'arc', encode: { angle: 'signups', radius: 'device' } }] };
@@ -172,7 +165,7 @@ describe('a sunburst: detail on an arc split by color', () => {
   });
   it('a segment\'s span is the engine\'s, never the sum of the rows received', () => {
     const result = runQuery(sunburst!.query), cut = { ...result, rows: result.rows.filter((r) => r.channel !== 'Search') };
-    const of = (r: Result) => buildScene(resolve(sunburst!, r, makeContainer(346), catalog), sunburst!.query, r, catalog).nodes.filter((n): n is ArcNode => n.kind === 'arc');
+    const of = (r: Result) => buildScene(resolve(sunburst!, r, catalog), sunburst!.query, r, catalog).nodes.filter((n): n is ArcNode => n.kind === 'arc');
     expect(of(cut).filter((n) => n.series == null)).toEqual(of(result).filter((n) => n.series == null));
     // The second ring then stops short of its segment's end, as a circle with a `limit` stops short of closing.
     const short = of(cut).filter((n) => n.row === 'Desktop' && n.series != null), whole = of(result).find((n) => n.key === 'primary:arc:Desktop')!;
@@ -244,9 +237,10 @@ describe('the prose ranks rows by comparing them, whatever order they came in', 
 // String work only, as test/dom-radial.test.ts. What the browser makes of it is checked on the bench.
 describe('the radial layout paints the new forms', () => {
   const css = compileFitRules(FIT_RULES.filter((r) => r.layout === 'radial'), { radial: radial.fit! }), fig = '.uav[data-layout="radial"]:not([data-keep~="guides"])';
-  it('the `rim` rule takes the labels away and gives the circle its margin back, before the legend steps down', () => {
+  it('the `rim` rule thins the labels to the ones with no rank and leaves the circle its margin, before the legend steps down', () => {
     for (const need of ['inline-size < 229.5px', 'block-size < 119.5px'])
-      expect(css).toContain('@container uav-view (' + need + ') {\n  ' + fig + ' .uav-rim { display: none; }\n  ' + fig + ' .uav-radial { --uav-rim: 0px; }\n}');
+      expect(css).toContain('@container uav-view (' + need + ') {\n  ' + fig + ' .uav-rim [data-rank] { display: none; }\n}');
+    expect(css).not.toContain('--uav-rim: 0px');
     expect(css.indexOf('inline-size < 229.5px')).toBeLessThan(css.indexOf('inline-size < 71.5px'));
   });
   it('the circle gives up a margin to the labels only where the plan shows them, and has a measured pass to thin them', () => {
@@ -255,7 +249,7 @@ describe('the radial layout paints the new forms', () => {
     expect(typeof radial.measure).toBe('function');
   });
   it('arcs that are no point of their own lie in a layer under the points, and one of a second ring wears the outline when chosen', () => {
-    expect(radial.css).toContain('.uav-radial svg.uav-under { position: absolute;');
+    expect(radial.css).toContain('.uav-radial svg:is(.uav-under, .uav-round) { position: absolute;');
     expect(radial.css).toContain('.uav-radial .uav-under path[data-emphasis="highlighted"][data-focus] {');
   });
 });

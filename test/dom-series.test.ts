@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, expand, pathD, type PathNode, type RectNode } from '@unified-analytics/core';
+import { CONTAINER_RULES, RAMP_BLOCK, SIZE_KEY_BLOCK, expand, pathD, type PathNode, type RectNode } from '@unified-analytics/core';
 import { catalog, moreSamples, runQuery, type Scenario } from '@unified-analytics/fixtures';
 import { compileFitRules } from '../packages/dom/src/compile.ts';
-import { LEGEND_CSS } from '../packages/dom/src/chrome/legend.ts';
+import { LEGEND_CSS, SPLIT_PLAIN } from '../packages/dom/src/chrome/legend.ts';
 import { cartesian } from '../packages/dom/src/layouts/cartesian.ts';
 import { KEYS_CSS, hitNodes, readout, readoutAt, readoutLines, rowsAt, stepSeries } from '../packages/dom/src/keys.ts';
 import { apart, thinLabels } from '../packages/dom/src/measure.ts';
@@ -31,9 +31,9 @@ describe('bars', () => {
   });
   it('have a start to read in a stack and below zero, and none in a group', () => {
     const rects = (sample: string) => of(sample).scene.nodes.filter((n): n is RectNode => n.part === 'plot' && n.kind === 'rect');
-    expect(rects('stacked').filter((n) => n.series !== 'Desktop').every((n) => n.v0! > 0 && n.v! >= n.v0!)).toBe(true);
-    expect(rects('diverging').some((n) => n.v! < n.v0!)).toBe(true);
-    expect(rects('grouped').every((n) => n.v0 == null)).toBe(true);
+    expect(rects('stacked').filter((n) => n.series !== 'Desktop').every((n) => n.y2! > 0 && n.y! >= n.y2!)).toBe(true);
+    expect(rects('diverging').some((n) => n.y! < n.y2!)).toBe(true);
+    expect(rects('grouped').every((n) => n.y2 == null)).toBe(true);
   });
 });
 
@@ -49,14 +49,14 @@ describe('a split path', () => {
   });
   it('morphs where it starts as well as where it ends, and lands on the shape core drew', () => {
     const from = areas('28d')[1]!, to = areas('7d')[1]!, old = resample(from.points, to.points);
-    expect(old.every((p) => p.v0! > 0 && p.v0! < p.v)).toBe(true);
+    expect(old.every((p) => p.y2! > 0 && p.y2! < p.y)).toBe(true);
     const half = mix(old, to.points, 0.5);
-    half.forEach((p, i) => expect(p.v0).toBeCloseTo((old[i]!.v0! + to.points[i]!.v0!) / 2, 9));
+    half.forEach((p, i) => expect(p.y2).toBeCloseTo((old[i]!.y2! + to.points[i]!.y2!) / 2, 9));
     expect(pathD(mix(old, to.points, 1), to.curve, to.fill)).toBe(to.d);
   });
   it('gains a start when it had none, and loses one', () => {
-    expect(mix([{ x: 0, v: 0.4 }], [{ x: 0, v: 0.8, v0: 0.2 }], 0.5)).toEqual([{ x: 0, v: 0.6000000000000001, v0: 0.1 }]);
-    expect(mix([{ x: 0, v: 0.8, v0: 0.2 }], [{ x: 0, v: 0.4 }], 1)).toEqual([{ x: 0, v: 0.4, v0: 0 }]);
+    expect(mix([{ x: 0, y: 0.4 }], [{ x: 0, y: 0.8, y2: 0.2 }], 0.5)).toEqual([{ x: 0, y: 0.6000000000000001, y2: 0.1 }]);
+    expect(mix([{ x: 0, y: 0.8, y2: 0.2 }], [{ x: 0, y: 0.4 }], 1)).toEqual([{ x: 0, y: 0.4, y2: 0 }]);
   });
 });
 
@@ -64,17 +64,39 @@ describe('the cartesian layout\'s guides', () => {
   const rules = (id: string) => CONTAINER_RULES.fit.filter((r) => r.layout === 'cartesian' && r.id === id);
   const fig = '.uav[data-layout="cartesian"]:not([data-keep~="guides"])';
 
-  it('swaps the legend for the labels at the line ends, as a grid, and then gives those up', () => {
+  it('swaps the legend for the labels at the line ends, as a grid, where there are ends to label', () => {
+    // Bars and dots have none, so the rule asks for a line (or, by its twin, an area) and their legend stays.
+    // The condition is in :where(), which weighs nothing: a rule further down the ladder still overrides this one.
+    const lines = fig.replace(':not', ':where([data-marks~="line"]):not');
     expect(compileFitRules(rules('legend'), { cartesian: cartesian.fit! }).split('\n').slice(0, 6)).toEqual([
       '/* cartesian legend */', '@container uav-view (inline-size < 319.5px) {',
-      '  ' + fig + ' .uav-legend { display: none; }', '  ' + fig + ' .uav-labels { display: block; }', '  ' + fig + ' .uav-labels { display: grid; }', '}',
+      '  ' + lines + ' .uav-legend { display: none; }', '  ' + lines + ' .uav-labels { display: block; }', '  ' + lines + ' .uav-labels { display: grid; }', '}',
     ]);
-    const css = compileFitRules(CONTAINER_RULES.fit, { cartesian: cartesian.fit! });
-    expect(css.indexOf(fig + ' .uav-labels { display: none; }')).toBeGreaterThan(css.lastIndexOf(fig + ' .uav-labels { display: grid; }'));
+    expect(compileFitRules(rules('legend-area'), { cartesian: cartesian.fit! })).toBe(compileFitRules(rules('legend'), { cartesian: cartesian.fit! }).replaceAll('"line"', '"area"').replaceAll('legend */', 'legend-area */'));
+    expect(CONTAINER_RULES.fit.filter((r) => r.layout === 'cartesian' && r.hide.includes('legend') && !r.hide.includes('plot')).map((r) => [r.id, r.mark ?? 'any'])).toEqual([['legend', 'line'], ['legend-area', 'area'], ['labels', 'any']]);
   });
-  it('gives up the second axis before the first, and with it whenever the axes go', () => {
-    expect(compileFitRules(rules('axis-2'))).toBe('/* cartesian axis-2 */\n@container uav-view (inline-size < 339.5px) {\n  ' + fig + ' .uav-y-axis-2 { display: none; }\n}');
-    expect(compileFitRules(rules('axes'), { cartesian: cartesian.fit! })).toContain(fig + ' .uav-y-axis-2 { display: none; }');
+  // A key under the plot takes a line of its own, and a view with the key to sizes states its height: so it states the ramp's line too.
+  it('is taller by the ramp\'s line where dots are painted by one metric and sized by another', () => {
+    expect(cartesian.css).toContain('.uav[data-layout="cartesian"] .uav-ramp { grid-column: 1 / -1; }');
+    expect(cartesian.css).toMatch(new RegExp('\\[data-parts~="size"\\]\\[data-parts~="ramp"\\] \\{ --uav-body-block: calc\\(.* \\+ ' + (SIZE_KEY_BLOCK + RAMP_BLOCK) + 'px\\); \\}'));
+  });
+  it('gives both up with the axes, and with them the colours they were the key to', () => {
+    const css = compileFitRules(CONTAINER_RULES.fit, { cartesian: cartesian.fit! });
+    expect(css.indexOf(fig + ' :is(.uav-labels, .uav-legend, .uav-ramp) { display: none; }')).toBeGreaterThan(css.lastIndexOf(' .uav-labels { display: grid; }'));
+    expect(css.match(/\[data-layout="cartesian"\]\[data-marks/)).toBeNull();
+    expect(compileFitRules(rules('labels'), { cartesian: cartesian.fit! }).split('\n').slice(0, 7)).toEqual([
+      '/* cartesian labels */', '@container uav-view (inline-size < 279.5px) {', '  ' + fig + ' :is(.uav-labels, .uav-legend, .uav-ramp) { display: none; }', '  ' + fig + ' { --uav-split: plain; }',
+      ...Object.entries(SPLIT_PLAIN).map(([sel, decl]) => '  ' + fig + ' ' + sel + ' { ' + decl + ' }'), '}',
+    ]);
+    // What a legend keyed is the first series' colour, and a tint of it where the mark was a tint.
+    expect(SPLIT_PLAIN).toEqual({
+      '[data-legend]:not([data-tone])': '--uav-paint: var(--ua-charts-color-series-1, currentColor) !important;',
+      '[data-legend][data-tone]': '--uav-paint: var(--ua-charts-color-series-1-soft, color-mix(in srgb, var(--ua-charts-color-series-1, currentColor) 14%, transparent)) !important;',
+    });
+  });
+  it('keeps the second axis as long as the first, and takes what is drawn on it when the axes go', () => {
+    expect(rules('axis-2')).toEqual([]);
+    expect(compileFitRules(rules('axes'), { cartesian: cartesian.fit! })).toContain(fig + ' :is(.uav-x-axis, .uav-y-axis, .uav-y-axis-2, .uav-grid, [data-axis="2"], .uav-size) { display: none; }');
   });
   it('keeps the labels out until a rule brings them in, and the legend out of a plot that is not split', () => {
     expect(cartesian.css).toContain('.uav-labels { grid-area: labels; display: none; }');
@@ -116,7 +138,7 @@ describe('apart', () => {
     expect(apart([], 14, 100)).toEqual([]);
   });
   it('holds the series\' labels of a three-line plot apart in a 152 px plot', () => {
-    const ys = of('series').scene.nodes.filter((n) => n.part === 'labels').map((n) => (1 - (n as { t: number }).t) * 152);
+    const ys = of('series').scene.nodes.filter((n) => n.part === 'labels').map((n) => (1 - (n as { y: number }).y) * 152);
     const at = apart(ys, 14, 152).filter((y): y is number => y != null).sort((a, b) => a - b);
     expect(at).toHaveLength(3);
     at.slice(1).forEach((y, i) => expect(y - at[i]!).toBeGreaterThanOrEqual(14));

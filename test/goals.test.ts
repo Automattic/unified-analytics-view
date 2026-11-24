@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildScene, resolve, unboundedContainer } from '@unified-analytics/core';
+import { buildScene, resolve } from '@unified-analytics/core';
 import { scenarios } from '@unified-analytics/fixtures';   // registers the geo mark, as the page's import does
 import { SITES, catalog, runQuery } from '../apps/bench-archive/src/goals-data.ts';
 import { GOALS, METRICS } from '../apps/bench-archive/src/goals-views.ts';
@@ -17,7 +17,7 @@ describe('the goals page', () => {
     for (const name of [...g.headline, ...g.also]) for (const { spec } of METRICS[name]!.cards) for (const scenario of scenarios) for (const range of ['28d', '7d']) {
       const query = spec.query.range ? { ...spec.query, range } : spec.query, at = [g.id, name, spec.title, scenario, range].join(' / ');
       try {
-        const result = runQuery(query, scenario, SITES[g.id]), plan = resolve({ ...spec, query }, result, unboundedContainer(), catalog);
+        const result = runQuery(query, scenario, SITES[g.id]), plan = resolve({ ...spec, query }, result, catalog);
         expect(buildScene(plan, query, result, catalog).nodes.length, at).toBeGreaterThan(0);
       } catch (e) { throw new Error(at + ': ' + (e as Error).message); }
     }

@@ -1,9 +1,12 @@
-import { buildScene, resolve, unboundedContainer } from '@unified-analytics/core';
+import { buildScene, facets, resolve } from '@unified-analytics/core';
 import { UaView } from '@unified-analytics/dom';
 import { catalog, runQuery, type Scenario } from '@unified-analytics/fixtures';
 import { resizable } from './resizer.ts';
 import { heading } from './page.ts';
-import { boxIn, register, samples } from './setup.ts';
+import { boxIn, faceted, register, samples } from './setup.ts';
+
+// Every sample, and after them the ones with a facet.
+const all = { ...samples, ...faceted };
 
 /* The bench: every sample, in frames that stand in for containers.
  * Controls live in the URL, so a reload or a shared link keeps them. */
@@ -19,7 +22,7 @@ const state = () => Object.fromEntries(new FormData(controls)) as { scenario: Sc
 register();
 
 function paint(frame: HTMLElement) {
-  const { scenario, range, height } = state(), sample = samples[frame.dataset.sample!]!.spec;
+  const { scenario, range, height } = state(), sample = all[frame.dataset.sample!]!.spec;
   // The range changes how many rows come back, which is what shows keys entering and leaving. A query with none keeps none.
   const spec = sample.query.range ? { ...sample, query: { ...sample.query, range } } : sample;
   const caption = frame.nextElementSibling!;
@@ -30,7 +33,9 @@ function paint(frame: HTMLElement) {
     // Planned once, with no limits. Nothing here runs when the frame is resized, so the caption says only what the plan holds.
     const view = frame.querySelector<UaView>('ua-view') ?? frame.appendChild(new UaView());
     view.spec = spec; view.result = result; view.catalog = catalog;
-    const plan = resolve(spec, result, unboundedContainer(), catalog), scene = buildScene(plan, spec.query, result, catalog);
+    // A facet has no one plan: it is a view for each value, and the caption says how many.
+    if (spec.facet != null) { caption.textContent = 'a facet: ' + facets(spec, result, catalog).length + ' views, one for each value of "' + spec.facet + '", on the same scales · CSS wraps them at this size'; return; }
+    const plan = resolve(spec, result, catalog), scene = buildScene(plan, spec.query, result, catalog);
     caption.textContent = 'planned with no limits: ' + plan.layout + ', parts ' + scene.parts.join(', ') + ' · CSS decides what shows at this size · ' + plan.text;
   } catch (e) {
     caption.className = 'meta error';
@@ -38,7 +43,7 @@ function paint(frame: HTMLElement) {
   }
 }
 
-for (const [name, sample] of Object.entries(samples)) {
+for (const [name, sample] of Object.entries(all)) {
   const h2 = heading(sample.label, JSON.stringify(sample.spec)), sizes = document.createElement('div');
   sizes.className = 'sizes';
   for (const w of WIDTHS) {

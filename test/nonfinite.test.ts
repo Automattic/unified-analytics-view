@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { buildScene, makeContainer, resolve } from '@unified-analytics/core';
+import { buildScene, resolve } from '@unified-analytics/core';
 import type { Result, Row } from '@unified-analytics/core';
 import { catalog, moreSamples, runQuery, samples } from '@unified-analytics/fixtures';
 import { errOf as err } from './helpers.ts';
 
 // A metric's value is a finite number or null. Anything else used to reach a line's `d`, a bar's ratios and the tldr
 // value as "NaN"; it is refused once, in buildScene (checkValues in packages/core/src/scene.ts), which resolve() goes through.
-const c = makeContainer(600, null), spec = samples.trend!.spec, q = spec.query;
+const spec = samples.trend!.spec, q = spec.query;
 const fresh = (): Result => structuredClone(runQuery(q, 'typical'));
 const rest = ', and a metric\'s value is a finite number or null. Send null from the query layer where there is no figure: it is drawn as a gap and written as a dash.';
-const scene = (result: Result) => { const plan = resolve(spec, result, c, catalog); return { plan, scene: buildScene(plan, q, result, catalog) }; };
+const scene = (result: Result) => { const plan = resolve(spec, result, catalog); return { plan, scene: buildScene(plan, q, result, catalog) }; };
 // JSON writes NaN as null, so the numbers are looked at themselves.
 const numbers = (v: unknown): number[] => (typeof v === 'number' ? [v] : v && typeof v === 'object' ? Object.values(v).flatMap(numbers) : []);
 
@@ -17,10 +17,10 @@ describe('a value that is not a finite number', () => {
   it.each([[NaN, 'NaN'], [Infinity, 'Infinity'], [-Infinity, '-Infinity'], ['abc', '"abc"'], [undefined, 'undefined']])('%s in a row is refused, by field and row', (v, said) => {
     const result = fresh();
     result.rows[2]!.visitors = v as number;
-    expect(err(() => resolve(spec, result, c, catalog))).toBe('The result has "visitors": ' + said + ' in row 3' + rest);
+    expect(err(() => resolve(spec, result, catalog))).toBe('The result has "visitors": ' + said + ' in row 3' + rest);
   });
   it('is refused in the totals, in a companion and in totalsBy, and by buildScene called alone', () => {
-    const plan = resolve(spec, fresh(), c, catalog);
+    const plan = resolve(spec, fresh(), catalog);
     const put = (at: (r: Result) => Row, f: string) => { const result = fresh(); at(result)[f] = NaN; return err(() => buildScene(plan, q, result, catalog)); };
     expect(put((r) => r.totals, 'visitors')).toBe('The result has "visitors": NaN in its totals' + rest);
     expect(put((r) => r.rows[0]!, 'visitors@previous')).toBe('The result has "visitors@previous": NaN in row 1' + rest);
@@ -41,19 +41,19 @@ describe('a value that is not a finite number', () => {
     for (const f of ['load_time', 'load_time@end']) {
       const result = structuredClone(runQuery(h.query, 'typical'));
       result.rows[1]![f] = v as number;
-      expect(err(() => resolve(h, result, c, catalog))).toBe('The result has "' + f + '": ' + said + ' in row 2' + tail);
+      expect(err(() => resolve(h, result, catalog))).toBe('The result has "' + f + '": ' + said + ' in row 2' + tail);
     }
   });
   it('null in a number dimension is still no value, as it was: no NaN in the scene', () => {
     const h = moreSamples.histogram!.spec, result = structuredClone(runQuery(h.query, 'typical'));
     result.rows[1]!.load_time = null;
     result.rows[2]!['load_time@end'] = null;
-    const plan = resolve(h, result, c, catalog), s = buildScene(plan, h.query, result, catalog);
+    const plan = resolve(h, result, catalog), s = buildScene(plan, h.query, result, catalog);
     expect(numbers(s.nodes).every(Number.isFinite)).toBe(true);
   });
   it('a dimension\'s value is not a metric\'s, and is written as it comes', () => {
     const result = runQuery(samples.pages!.spec.query, 'typical');
     result.rows[0]!.page = 'NaN';
-    expect(() => resolve(samples.pages!.spec, result, c, catalog)).not.toThrow();
+    expect(() => resolve(samples.pages!.spec, result, catalog)).not.toThrow();
   });
 });

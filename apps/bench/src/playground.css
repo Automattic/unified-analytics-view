@@ -16,3 +16,14 @@
 #catalog p { margin: 0; break-inside: avoid; }
 #catalog code { font-size: var(--ua-font-size-xs); }
 summary { cursor: pointer; color: var(--ua-color-muted-foreground); }
+/* Why the view looks as it does: an entry a line, its part first, the place in the spec it came from, why, and the lever. */
+#why h2 { margin-block-start: 0; }
+#why ol { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--ua-space-2xs); }
+#why li { display: grid; grid-template-columns: 7em 1fr; column-gap: var(--ua-space-xs); }
+#why li > b { grid-row: 1 / span 4; color: var(--ua-color-muted-foreground); font-weight: 500; }
+#why li > :not(b) { grid-column: 2; }
+#why li > code { font-family: var(--ua-font-family-code); font-size: var(--ua-font-size-xs); }
+#why li > .meta { margin: 0; }
+#why li > em { font-style: normal; font-size: var(--ua-font-size-xs); }
+#why li > em::before { content: "⇢ "; }
+#why li[data-part]:hover { background: var(--ua-color-foreground-8); cursor: default; }

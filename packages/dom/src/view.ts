@@ -1,5 +1,5 @@
-import { CONTAINER_RULES, DELTA_FULL, NOTE_LEAST, NUMBER_SHORT, buildScene, customMarks, expand, fallbackRule, fills, gaveWay, resolve, unboundedContainer } from '@unified-analytics/core';
-import type { Catalog, ContainerRules, Layout, Result, SceneNode, Spec } from '@unified-analytics/core';
+import { CONTAINER_RULES, DELTA_FULL, FACET_GAP, FACET_LEAST, NOTE_LEAST, NUMBER_SHORT, buildScene, customMarks, expand, explain, facetBecause, facets, fallbackRule, fills, gaveWay, hasOf, resolve, selectedBecause } from '@unified-analytics/core';
+import type { Because, Catalog, ContainerRules, Explanation, Layout, Result, SceneNode, Spec, Where } from '@unified-analytics/core';
 import { compileFitRules } from './compile.ts';
 import { LEGEND_LINE } from './chrome/legend.ts';
 import { CHROME_CSS, swatch } from './chrome/index.ts';
@@ -36,7 +36,7 @@ const stylesOf = (painters: LayoutPainter[]) => `@layer uav {
  * is a container itself, the same token would give another. They are registered as lengths (motion.ts), which is what
  * makes each a size here and not a formula handed down. Where that fails a part reads the token for itself.
  * What follows from a face is written from it: a line of the legend, and the x axis, are as tall as their text needs. */
-.uav, .uav-ruler, .uav-error { ${FACES.map((f) => `--uav-font-${f}: ${token('font-size-' + f)};`).join(' ')} font-size: var(--uav-font-tick);
+.uav, .uav-ruler, .uav-error, .uav-facets { ${FACES.map((f) => `--uav-font-${f}: ${token('font-size-' + f)};`).join(' ')} font-size: var(--uav-font-tick);
   --uav-legend-line: calc(var(--uav-font-label) * ${LEGEND_LINE} / ${DRAWN.label}); --uav-x-axis-block: ${X_AXIS_FACE}; }
 .uav { position: relative; box-sizing: border-box; block-size: 100%; margin: 0; display: grid; grid-template: "number" auto "body" minmax(0, 1fr) / minmax(0, 1fr); print-color-adjust: exact; }
 /* A bar, a segment, a swatch and a rule are backgrounds. A printer leaves those out unless told, and forced colours
@@ -86,7 +86,7 @@ ${shortForm('.uav-number[data-fit~="short"] > .uav-f-display', '.uav-number[data
 .uav-number[data-fit~="small"] > .uav-f-display { ${NUMBER_SMALL} }
 .uav-number[data-fit~="no-note"] > .uav-f-tick { display: none; }
 /* A number the pass has not set carries no data-fit: one beside a bare plot, which its layout sets, or any number
- * where the pass does not run. For that one the widths at which place() takes the shorter forms stand in. */
+ * where the pass does not run. For that one core's widths for the shorter forms stand in (sizes.ts). */
 @container uav-view (inline-size < ${DELTA_FULL}px) { ${shortForm('.uav-number:not([data-fit]) > .uav-f-value')} }
 @container uav-view (inline-size < ${NUMBER_SHORT}px) {
   ${shortForm('.uav-number:not([data-fit]) > .uav-f-display')}
@@ -154,6 +154,16 @@ export const FALLBACK_CSS = `@layer uav {
 ${IN_BOX} { .uav-fallback { block-size: 100%; container-type: size; } }
 :host([table]) .uav { display: block !important; }
 :host([table]) .uav-fallback { display: none !important; }
+}`;
+/* A spec with a `facet` is a small board (reference, Decided 26 and 45). This view then draws nothing of its own: it
+ * holds a view for each value, in a grid that wraps where one would have less than FACET_LEAST. Each is its own
+ * container, with its own rules, keyboard and measured pass, so nothing runs on resize. A view paints no title, so
+ * the name of its value stands over each. In a box the rows share its height, and each view is handed its part. */
+export const FACET_CSS = `@layer uav {
+.uav-facets { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, ${FACET_LEAST}px), 1fr)); gap: ${FACET_GAP}px; }
+.uav-facet { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 4px; min-inline-size: 0; }
+.uav-facet-name { font-size: var(--uav-font-label); color: ${paintVar('ink.muted')}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+${IN_BOX} { .uav-facets { block-size: 100%; grid-auto-rows: minmax(0, 1fr); } .uav-facet-view { block-size: 100%; container-type: size; } }
 }`;
 // One sheet per text and per document: a constructed sheet cannot be adopted outside the document it was made for,
 // and a view may be put into another one (a preview frame, a window opened from the page).
@@ -234,10 +244,14 @@ export class UaView extends Base {
   #room: HTMLElement; #ruler: HTMLElement[]; #seen = '';
   #keys: Keys;
   #fallback: UaView | null = null;
+  // The grid of a facet's views, while the spec has a facet.
+  #board: HTMLElement | null = null;
   #frame = 0;
   /** What the views this one is the fallback of gave up, set by the view that holds it. A fallback that leads back to one of them is an error. */
   via: string[] = [];
-  // The one observer of the measured pass. It watches the room and the ruler, whose sizes nothing it writes can change.
+  // The one observer of the measured pass. It watches the room and the ruler, whose sizes nothing it writes can change,
+  // and everything the view stands in (connectedCallback), since a view is moved by what is round it and nothing says
+  // that a box has moved: what grows above it changes the size of something it stands in, and that is said.
   // It only asks for a frame. A write in its callback can resize something the page observes, and the browser then
   // reports a "ResizeObserver loop" error to the page's window. So a view that crosses a threshold paints one frame
   // in the old state. However many callbacks come before the frame, it reads once, then, and writes once.
@@ -284,11 +298,54 @@ export class UaView extends Base {
    * painted one without the other. An input left out keeps what it had. */
   get inputs(): Inputs { return { ...this.#given } as Inputs; }
   set inputs(v: Inputs) { for (const name of INPUTS) if (Object.hasOwn(v ?? {}, name)) this.#set(name, v[name]); }
-  /** The key of the datum the host keeps selected, or null. The view proposes one with `ua-select` when the user
-   * activates a datum, and marks every atom of the one set here. It is no input: setting it paints nothing again. */
-  get selected(): string | null { return this.#selected; }
-  set selected(v: string | null) { this.#selected = v ?? null; this.#keys.select(this.#selected); }
-  #selected: string | null = null;
+  /** What the host keeps selected, or null: a filter, as a query's `where` is one. The view proposes one with
+   * `ua-select` when the user activates a datum (its `detail.where`), and marks every atom whose rows all hold the one
+   * set here. It is no input: setting it paints nothing again, and it filters nothing, which is the query's to do. */
+  get selected(): Where | null { return this.#selected; }
+  set selected(v: Where | null) { this.#selected = v ?? null; this.#keys.select(this.#selected); for (const view of this.#views()) view.selected = this.#selected; }
+  #selected: Where | null = null;
+
+  /** Why the view looks as it does at the size it has now, in the words of its spec: core's explain() for this room,
+   * what it marks of the selection the host set on it, and after them what the measured pass decided here, which no
+   * rule says. An invalid spec is one entry, its error.
+   * ponytail: core's default fit rules, as the plan is explained; a context's own `rules.fit` is not read here yet. */
+  explain(): Explanation {
+    const { spec, result, catalog } = this;
+    if (!spec || !result || !catalog) return { layout: 'none', entries: [{ what: 'not drawn', from: 'inputs', why: 'it waits for ' + (['spec', 'result', 'catalog'] as const).filter((k) => !this[k]).join(', ') }] };
+    // A facet is explained by its first view, which knows its own room, after what is said of them all.
+    const [first] = this.#views();
+    if (first) { const e = first.explain(); return { ...e, entries: [facetBecause(spec, catalog, this.#board!.children.length, first.spec?.title ?? ''), ...e.entries] }; }
+    // A view that has given way to its fallback has no box of its own: the room is the one the fallback stands in.
+    const box = (this.#fallback && !this.#room.getClientRects().length ? this.#fallback.#room : this.#room).getBoundingClientRect();
+    const plot = this.#body.querySelector(':scope > :is(.uav-plot, .uav-radial)')?.getBoundingClientRect();
+    let e: Explanation;
+    try { e = explain(spec, result, catalog, { inline: box.width, block: box.height || null, plot: plot?.width ? { inline: plot.width, block: plot.height } : null }); }
+    catch (err) { return { layout: 'none', entries: [{ what: 'not drawn', from: 'spec', why: (err as Error).message }] }; }
+    // What is selected is the host's and no plan knows it, so it is said here: after the layout and the filter, which it is read beside.
+    const marked = selectedBecause(this.#selected, spec.query.by ?? [], catalog), at = e.entries.findIndex((b) => b.from === 'query.where') + 1 || 1;
+    return { ...e, entries: [...e.entries.slice(0, at), ...(marked ? [marked] : []), ...e.entries.slice(at), ...this.#measured(e)] };
+  }
+
+  /* What the measured pass decided, read off what it wrote: the number's form, the prose rung, and labels given up or cut short. */
+  #measured(e: Explanation): Because[] {
+    const out: Because[] = [], from = (part: string) => e.entries.find((b) => b.part === part)?.from ?? 'the layout';
+    if (this.#fig.dataset.fit === 'prose') return [{ what: 'shown as its sentence', from: 'query.metrics[0]', why: 'measured: the number fits the room in none of its forms' }];
+    const fit = this.#number.dataset.fit?.split(' ') ?? [];
+    const forms: Record<string, string> = { short: 'its value set shorter', small: 'its value set smaller', 'delta-short': 'its change set shorter', 'no-note': 'shown without its note' };
+    for (const f of fit) if (forms[f]) out.push({ part: 'number', what: forms[f]!, from: 'query.metrics[0]', why: 'measured: the fuller form is wider or taller than the room' });
+    // Labels by the part they are in: the parts the explanation names, which have a class of their name.
+    // A label is its innermost part's: one in a part that stands inside another (a plot's labels, a circle's rim) is said once.
+    const parts = new Map([...new Set(e.entries.map((b) => b.part).filter((p): p is string => !!p))].map((p) => [p, this.#fig.querySelector<HTMLElement>('.uav-' + p)]));
+    for (const [p, el] of parts) {
+      if (!el?.getClientRects().length) continue;
+      const within = [...parts.values()].filter((q): q is HTMLElement => !!q && q !== el && el.contains(q));
+      const labels = [...el.querySelectorAll<HTMLElement>('span, b, text')].filter((n) => n.getClientRects().length && !within.some((q) => q.contains(n))), thin = labels.filter((n) => n.hasAttribute('data-thin')).length;
+      const cut = labels.filter((n) => getComputedStyle(n).textOverflow === 'ellipsis' && n.scrollWidth > n.clientWidth + 1).length;
+      if (thin) out.push({ part: p, what: thin + ' of ' + labels.length + ' labels given up', from: from(p), why: 'measured: they would meet the labels beside them' });
+      if (cut) out.push({ part: p, what: cut + ' labels cut short', from: from(p), why: 'measured: they are longer than the room they are given' });
+    }
+    return out;
+  }
 
   connectedCallback(): void {
     // A property set before the element was defined sits on the instance and hides the accessor.
@@ -297,6 +354,11 @@ export class UaView extends Base {
     if (Object.hasOwn(this, 'selected')) { const v = this.selected; delete (this as Partial<UaView>).selected; this.selected = v; }
     this.#children.observe(this, { childList: true, characterData: true, subtree: true });
     for (const el of [this.#room, ...this.#ruler]) this.#sizes?.observe(el);
+    // And what it stands in, out through any shadow root, to the document's root: when one of those changes size the
+    // view may have moved, and its plot is set on whole px again where it now is (pixels.ts). The pass reads the
+    // room too and stops there where that is as it was.
+    const out = (el: Element): Element | null => el.parentElement ?? (el.getRootNode() as Partial<ShadowRoot>).host ?? null;
+    for (let el = out(this); el; el = out(el)) this.#sizes?.observe(el);
     this.#queue();
   }
   disconnectedCallback(): void {
@@ -365,19 +427,21 @@ export class UaView extends Base {
       const rules = rulesOver(this.#input('rules', false) as Partial<ContainerRules> | undefined);
       check(spec, result, catalog);
       if (!Array.isArray(rules.fit)) throw new Error('The rules need "fit", an array of fit rules. Leave it out to use the defaults.');
-      if (!Array.isArray(rules.order)) throw new Error('The rules need "order", a list of reductions such as ["drop-guides", "prose"]. Leave it out to use the defaults.');
+      if (spec.facet != null) return this.#facets(spec, result, catalog, rules);
+      this.#board?.remove(); this.#board = null;
       // Every painter's extras and rules, the built-in ones' and those registered since this module loaded, for custom
       // marks. A custom mark's rules are its own, as core holds them (marks.ts); a painter's `rules` stand in where no
       // mark of its name gives any.
       const doc = this.ownerDocument, all = Object.values(LAYOUTS);
-      const fits = [...rules.fit, ...all.flatMap((p) => customMarks().get(p.layout)?.rules ?? p.rules?.(rules) ?? [])];
+      const fits = [...rules.fit, ...all.flatMap((p) => customMarks().get(p.layout)?.rules ?? [])];
       const fit = sheet(doc, compileFitRules(fits, Object.fromEntries(all.map((p) => [p.layout, p.fit ?? {}]))));
-      const plan = resolve(spec, result, { ...unboundedContainer(), rules }, catalog);
+      const plan = resolve(spec, result, catalog, rules);
       const scene = buildScene(plan, spec.query, result, catalog), fig = this.#fig;
 
       painting = true;
       this.#root.adoptedStyleSheets = [sheet(doc, allStyles()), sheet(doc, FALLBACK_CSS), fit];
-      fig.dataset.layout = scene.layout; fig.dataset.keep = (spec.keep || []).join(' '); fig.dataset.parts = scene.parts.join(' ');
+      fig.dataset.layout = scene.layout; fig.dataset.keep = (spec.keep || []).join(' '); fig.dataset.parts = scene.parts.join(' '); fig.dataset.has = hasOf(scene).join(' ');
+      fig.dataset.marks = [...new Set(plan.layers.map((l) => l.mark))].join(' ');
       if (spec.title) fig.setAttribute('aria-label', spec.title); else fig.removeAttribute('aria-label');
       // The plot's natural heights are the context's, read by the stylesheet. The painter hard-codes neither.
       fig.style.setProperty('--uav-axes-height', rules.axes.height + 'px'); fig.style.setProperty('--uav-bare-height', rules.bare.height + 'px');
@@ -391,7 +455,7 @@ export class UaView extends Base {
       if (!this.hasAttribute('table')) this.#table.replaceChildren();
       else if (painter?.table) painter.table(this.#table, spec.title, scene, data); else paintTable(this.#table, spec.title, data.query, result, catalog, plan.layers);
       this.#keys.paint(scene, expand(spec).query, result, catalog, plan.layers);
-      // The rule this view gives way under, if one is for what it holds and its query can fill the rule's preset: as resolve() asks.
+      // The rule this view gives way under, if one is for what it holds and its query can fill the rule's preset: as fitTo() asks.
       const swap = fallbackRule(fits, scene.layout, spec.keep, this.via, { marks: plan.layers.map((l) => l.mark), fills: (use) => fills(use, data.query) }), { layers: _layers, ...rest } = spec;
       if (swap) {
         const beside = this.#fallback ??= this.#root.appendChild(Object.assign(document.createElement(this.localName) as UaView, { className: 'uav-fallback' }));
@@ -402,6 +466,36 @@ export class UaView extends Base {
       fig.hidden = false; this.#error.hidden = true; this.#loading.hidden = true; clearTimeout(this.#late);
       return true;
     } catch (e) { this.#fail(e, painting); return false; }
+  }
+
+  #views(): UaView[] { return [...(this.#board?.querySelectorAll<UaView>(':scope > .uav-facet > .uav-facet-view') ?? [])]; }
+  /** A facet: a view of its own for each value, kept by its value where it was there before. Nothing of this view's is
+   * painted, so nothing of it is measured. The table is each view's own, and what is selected is marked in them all. */
+  #facets(spec: Spec, result: Result, catalog: Catalog, rules: ContainerRules): boolean {
+    const views = facets(spec, result, catalog, rules), doc = this.ownerDocument;
+    this.#root.adoptedStyleSheets = [sheet(doc, BASE_CSS), sheet(doc, FACET_CSS)];
+    const board = this.#board ??= this.#root.appendChild(Object.assign(doc.createElement('div'), { className: 'uav-facets' }));
+    board.setAttribute('role', 'group');
+    if (spec.title) board.setAttribute('aria-label', spec.title); else board.removeAttribute('aria-label');
+    const had = new Map([...board.children].map((c) => [(c as HTMLElement).dataset.key, c as HTMLElement]));
+    const cells = views.map((v) => {
+      let cell = had.get(v.key);
+      if (!cell) {
+        cell = Object.assign(doc.createElement('div'), { className: 'uav-facet' }); cell.dataset.key = v.key;
+        const name = Object.assign(doc.createElement('div'), { className: 'uav-facet-name' });
+        name.setAttribute('aria-hidden', 'true');                             // the view under it is labelled with the same words
+        cell.append(name, Object.assign(doc.createElement(this.localName), { className: 'uav-facet-view' }));
+      }
+      cell.firstElementChild!.textContent = v.label;
+      const view = cell.lastElementChild as UaView;
+      view.toggleAttribute('table', this.hasAttribute('table'));
+      Object.assign(view, { spec: v.spec, result: v.result, catalog, rules, selected: this.#selected });
+      return cell;
+    });
+    if (cells.length !== board.children.length || cells.some((c, i) => board.children[i] !== c)) board.replaceChildren(...cells);
+    this.#fallback?.remove(); this.#fallback = null;
+    this.#fig.hidden = true; this.#layout = null; this.#error.hidden = true; this.#loading.hidden = true; clearTimeout(this.#late);
+    return false;
   }
 
   /** After every view queued with this one has painted: what reads sizes. */
@@ -428,7 +522,7 @@ export class UaView extends Base {
     // view already drawn stays drawn until it comes. One that never comes is said in the console, with its fix.
     // ponytail: "long" is ten seconds, fixed; a host whose queries take longer is warned about a fetch still running.
     if (e instanceof Missing) {
-      this.#loading.hidden = this.#layout != null && !this.#fig.hidden; this.#error.hidden = true;
+      this.#loading.hidden = !!this.#board || (this.#layout != null && !this.#fig.hidden); this.#error.hidden = true;   // a facet's views stay up too
       clearTimeout(this.#late);
       this.#late = window.setTimeout(() => console.warn('<ua-view> is still waiting. ' + e.message, this), 10000);
       return;
@@ -437,7 +531,7 @@ export class UaView extends Base {
     // Never out of a lifecycle callback: the view says what is wrong where it would have drawn.
     // Inputs refused before anything was written leave the last view whole: it stays drawn, with what is wrong under it.
     const kept = !painting && this.#layout != null && !this.#fig.hidden;
-    if (!kept) { this.#root.adoptedStyleSheets = [sheet(doc, BASE_CSS)]; this.#fallback?.remove(); this.#fallback = null; }
+    if (!kept) { this.#root.adoptedStyleSheets = [sheet(doc, BASE_CSS)]; this.#fallback?.remove(); this.#fallback = null; this.#board?.remove(); this.#board = null; }
     this.#error.textContent = e instanceof Error ? e.message : String(e);
     this.#fig.hidden = !kept; this.#error.hidden = false;
   }
@@ -480,9 +574,15 @@ export class UaView extends Base {
   }
 }
 
-/** Define <ua-view>, once. Called by the page, not at import, so a page can be ready for it first. */
+/** Define <ua-view>, once. Called by the page, not at import, so a page can be ready for it first.
+ * A page has one <ua-view>. Where another copy of this library has defined it already, this copy defines nothing, and
+ * every view on the page is drawn by that one, whatever its version: it says so, since nothing else would.
+ * ponytail: it warns and does not throw, so a module evaluated again as it is edited does not take its page down, and
+ * it says nothing of versions, since the packages have none yet. A version on the element, when one is published. */
 export function defineUaView(): void {
-  if (customElements.get('ua-view')) return;
+  const defined = customElements.get('ua-view');
+  if (defined === UaView) return;
+  if (defined) { console.warn('defineUaView(): <ua-view> is already defined on this page by another copy of this library, so this copy defines nothing and its views are drawn by that one, whatever its version. Load one copy: have every bundle take "@unified-analytics/dom" from the same place.'); return; }
   register();
   customElements.define('ua-view', UaView);
 }

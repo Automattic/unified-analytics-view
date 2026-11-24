@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { FIT_RULES, expand, glyphRadius, place, resolve, unitWorth } from '@unified-analytics/core';
-import type { Catalog, CircleNode, Layer, PainterName, PlacedCircle, PlacedRect, RectNode, Result, Spec, TextNode } from '@unified-analytics/core';
+import { FIT_RULES, expand, unitWorth } from '@unified-analytics/core';
+import type { Catalog, CircleNode, Layer, RectNode, Result, Spec, TextNode } from '@unified-analytics/core';
 import { catalog, moreSamples, scenarios } from '@unified-analytics/fixtures';
-import { err as shared, run, validView as view } from './helpers.ts';
+import { err as shared, run, shown, validView as view } from './helpers.ts';
 
 // Step 6 of docs/uncommon-coverage-plan.md: the `unit` mark, which draws a value as counted glyphs. It has no prototype
 // to match, so it is held to its own sweep, facts and golden scenes, as test/radial.test.ts holds the arcs. The rules its
@@ -12,11 +12,12 @@ const err = (s: Spec, result?: Result, c?: Catalog) => shared(s, result, c) ?? '
 const NAMES = ['waffle', 'units', 'wilkinson', 'isotype', 'parliament', 'icons'];
 const specs = Object.fromEntries(NAMES.map((k) => [k, moreSamples[k]!.spec])) as Record<string, Spec>;
 const { waffle, units, wilkinson, isotype, parliament, icons } = specs as Record<string, Spec>;
-/** The layout each form draws in, the preset it gives way to, and the layout that one draws in. */
+/** The layout each form draws in, the preset it gives way to, and the layout that one draws in. What a form gives way from is said as `gave` says it. */
 const FORMS: Record<string, [layout: string, fallback: string, then: string]> = {
   waffle: ['band', 'share-bar', 'band'], units: ['cartesian', 'bar', 'cartesian'], wilkinson: ['cartesian', 'bar', 'cartesian'],
   isotype: ['rows', 'bar-list', 'rows'], parliament: ['radial', 'pie-semi-circle', 'radial'], icons: ['band', 'gauge', 'radial'],
 };
+const GAVE = (name: string) => FORMS[name]![0] + ' (unit)';
 const by = (m: string, d: string, layers: Layer[]): Spec => ({ spec: 'view/0', query: { metrics: [m], by: [d], range: '28d' }, layers });
 const answer = (rows: Result['rows'], totals: Result['totals']): Result => ({ rows, totals, meta: { range: '28d', compare: null, notes: [] } });
 const glyphs = (nodes: { key: string; part?: string }[]) => nodes.filter((n) => /^primary:unit[:#]/.test(n.key));
@@ -24,48 +25,46 @@ const count = <T>(of: T[]) => of.reduce((m, k) => m.set(k, (m.get(k) ?? 0) + 1),
 const keyOf = (ratio: { nodes: { part: string }[] }) => (ratio.nodes.filter((n) => n.part === 'unit-key') as TextNode[]).map((n) => n.text);
 
 describe('the sweep, in glyphs', () => {
-  const painters: PainterName[] = ['svg', 'dots'], heights = [null, 300, 200, 160, 100, 60, 40], widths = [54, 80, 120, 170, 250, 290, 346, 500, 700];
+  const heights = [null, 300, 200, 160, 100, 60, 40], widths = [54, 80, 120, 170, 250, 290, 346, 500, 700];
   for (const [name, spec] of Object.entries(specs)) {
-    it(name + ': unique keys, no NaN, nothing taller than the container allows, ratios from 0 to 1, and a glyph for every key place() keeps', () => {
-      for (const sc of scenarios) for (const p of painters) for (const h of heights) for (const w of widths) {
-        const at = [name, sc, p, w, h].join(' ');
-        const { plan, ratio, scene } = run(spec, w, h, sc, p);
-        const keys = scene.nodes.map((n) => n.key), all = ratio.nodes.map((n) => n.key);
-        expect(new Set(keys).size, 'duplicate keys: ' + at).toBe(keys.length);
-        expect(new Set(all).size, 'duplicate keys in the ratio scene: ' + at).toBe(all.length);
-        expect(JSON.stringify([scene, ratio], (_, v) => (typeof v === 'number' && isNaN(v) ? 'NaN' : v)), 'NaN: ' + at).not.toMatch(/NaN/);
-        if (h != null && plan.layout !== 'prose') expect(scene.height, 'too tall: ' + at).toBeLessThanOrEqual(h);
+    it(name + ': unique keys, no NaN, ratios from 0 to 1, and at every room parts the scene has', () => {
+      for (const sc of scenarios) for (const h of heights) for (const w of widths) {
+        const at = [name, sc, w, h].join(' ');
+        const { ratio, fit } = run(spec, w, h, sc);
+        const all = ratio.nodes.map((n) => n.key);
+        expect(new Set(all).size, 'duplicate keys: ' + at).toBe(all.length);
+        expect(JSON.stringify(ratio, (_, v) => (typeof v === 'number' && isNaN(v) ? 'NaN' : v)), 'NaN: ' + at).not.toMatch(/NaN/);
         for (const n of ratio.nodes as any[]) for (const f of ['x', 'w', 'y', 'h', 'v', 'v0', 't']) if (n.kind !== 'arc' && n[f] != null) expect(n[f] >= 0 && n[f] <= 1, f + ': ' + at + ' ' + n.key).toBe(true);
-        expect(all.filter((k) => keys.includes(k)), 'placed keys: ' + at).toEqual(keys);
-        // While the form is drawn every glyph is: a count is not thinned for room. Rows a height limit trims go whole.
-        if (plan.layers.some((l) => l.mark === 'unit')) expect(glyphs(scene.nodes).length, 'glyphs: ' + at).toBe(glyphs(ratio.nodes).length);
-        // A part that holds its shape is never stretched to its room.
-        if (plan.layers.some((l) => l.mark === 'unit') && ratio.aspect) expect(scene.plot!.w / scene.plot!.h, 'shape: ' + at).toBeCloseTo(ratio.aspect, 9);
+        expect(fit.parts.filter((p) => !ratio.nodes.some((n) => n.part === p)), 'parts with nothing in them: ' + at).toEqual([]);
       }
     });
-    it(name + ': resolves in every data state, gives way to the preset that needs less room, and steps down to the number and then the prose', () => {
+    it(name + ': resolves in every data state, gives way to the preset that needs less room, and steps down to the number', () => {
       expect(view(spec), JSON.stringify(view.errors)).toBe(true);
-      const [layout, fallback, then] = FORMS[name]!;
+      const [layout, , then] = FORMS[name]!, fallback = FORMS[name]![1];
       for (const sc of scenarios) {
-        // 346 has room for the glyphs and 250 has not. 10 px is narrower than any number, "0" included.
-        const plans = [700, 346, 250, 10].map((w) => run(spec, w, null, sc).plan);
-        expect(plans.map((p) => p.layout), sc).toEqual(sc === 'empty' ? ['notice', 'notice', 'notice', 'prose'] : [layout, layout, then, 'prose']);
-        expect(plans.map((p) => p.layers.some((l) => l.mark === 'unit')), sc).toEqual(sc === 'empty' ? [false, false, false, false] : [true, true, false, false]);
-        expect(plans[0]!.dropped, sc).toEqual([]);
-        expect(plans[1]!.dropped, sc).toEqual([]);
-        if (sc !== 'empty') expect(plans[2]!.dropped[0], sc).toBe('the ' + layout + ' marks (drawn as "' + fallback + '")');
+        // 346 has room for the glyphs and 250 has not.
+        const runs = [700, 346, 250].map((w) => run(spec, w, null, sc));
+        expect(runs.map((r) => r.plan.layout), sc).toEqual(sc === 'empty' ? ['notice', 'notice', 'notice'] : [layout, layout, then]);
+        expect(runs.map((r) => r.plan.layers.some((l) => l.mark === 'unit')), sc).toEqual(sc === 'empty' ? [false, false, false] : [true, true, false]);
+        expect(runs.map((r) => r.gave), sc).toEqual(sc === 'empty' ? [[], [], []] : [[], [], [GAVE(name)]]);
+        // Nothing else gives way there but the inner ticks of a binned axis, which go under 380 px as a date axis's middle one does.
+        expect(runs.slice(0, 2).map((r) => shown(r).rules), sc).toEqual([[], sc !== 'empty' && name === 'wilkinson' ? ['mid-tick'] : []]);
+        if (sc !== 'empty') expect(runs[2]!.plan.preset, sc).toBe(fallback);
+        // Under every need it is the number alone.
+        expect(run(spec, 54, 40, sc).fit.parts, sc).toEqual(['number']);
       }
     });
   }
 });
 
 describe('golden scenes', () => {
-  // With room for the glyphs, without it, and in a box.
-  const sizes: [number, number | null][] = [[346, null], [250, null], [346, 200]];
-  for (const name of NAMES) for (const [w, h] of sizes) {
-    it(`${name} at ${w} by ${h ?? 'any'}`, () => expect(run(specs[name]!, w, h).scene).toMatchSnapshot());
-  }
+  // With room for the glyphs, without it, and in a box: the least tall that every form still draws its glyphs in.
+  const sizes: [number, number | null][] = [[346, null], [250, null], [346, 220]];
   it('the unit chart: the ratio scene', () => expect(run(units!, 346).ratio).toMatchSnapshot());
+  for (const name of NAMES) {
+    if (name !== 'units') it(name, () => expect(run(specs[name]!, 346).ratio).toMatchSnapshot());
+    it(name + ', at each room', () => expect(sizes.map(([w, h]) => { const r = run(specs[name]!, w, h); return [w, h, r.gave, shown(r)]; })).toMatchSnapshot());
+  }
 });
 
 describe('a stack up from the axis', () => {
@@ -82,24 +81,12 @@ describe('a stack up from the axis', () => {
   it('is on the plot\'s own scale: a dot is its worth tall, the stack ends at its whole glyphs, and the axis reads true against it', () => {
     const { ratio } = run(units!, 346), dots = glyphs(ratio.nodes) as CircleNode[], tue = dots.filter((n) => n.row === 'Tue');
     // The scale is rounded to 2,000, so a dot of 200 has a tenth of the height, and the nine of Tuesday end at 1,800.
-    expect(tue.map((n) => Math.round(n.t! * 1000) / 1000)).toEqual([0.05, 0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85]);
+    expect(tue.map((n) => Math.round(n.y! * 1000) / 1000)).toEqual([0.05, 0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85]);
     expect(new Set(dots.map((n) => Math.round(n.h! * 1e6) / 1e6))).toEqual(new Set([0.1]));
-    expect(ratio.nodes.filter((n) => n.part === 'y-axis').map((n) => [(n as TextNode).text, (n as TextNode).t])).toEqual([['0', 0], ['500', 0.25], ['1k', 0.5], ['1.5k', 0.75], ['2k', 1]]);
+    expect(ratio.nodes.filter((n) => n.part === 'y-axis').map((n) => [(n as TextNode).text, (n as TextNode).y])).toEqual([['0', 0], ['500', 0.25], ['1k', 0.5], ['1.5k', 0.75], ['2k', 1]]);
     // Each has the width of its band, which is every row's alike.
     expect(new Set(dots.map((n) => n.w)).size).toBe(1);
     expect(tue.every((n) => n.x === tue[0]!.x)).toBe(true);
-  });
-  it('holds its shape: the painter draws the largest circle the room holds, by the lesser side in pixels, so a stack never overlaps and is never stretched', () => {
-    for (const [w, h] of [[346, null], [700, null], [346, 150], [290, 130]] as [number, number | null][]) {
-      const { scene, ratio } = run(units!, w, h), dots = glyphs(scene.nodes) as PlacedCircle[], tue = dots.filter((n) => n.key.startsWith('primary:unit:Tue:'));
-      const pitch = tue[0]!.cy - tue[1]!.cy, band = (glyphs(ratio.nodes)[0] as CircleNode).w! * (scene.plot!.w - 42);
-      expect(new Set(dots.map((n) => n.r)).size, w + ' ' + h).toBe(1);
-      expect(tue[0]!.r, w + ' ' + h).toBeCloseTo(glyphRadius(band, pitch), 6);
-      expect(2 * tue[0]!.r, w + ' ' + h).toBeLessThanOrEqual(Math.min(band, pitch));
-    }
-    expect(glyphRadius(30, 12)).toBe(5.5);
-    expect(glyphRadius(8, 12)).toBe(3.5);
-    expect(glyphRadius(0.4, 12)).toBe(0.5);                                   // never nothing
   });
   it('on a binned number dimension it is the Wilkinson dot plot: a column to a bin, as wide as the bin', () => {
     const { ratio, result, plan } = run(wilkinson!, 346), dots = glyphs(ratio.nodes) as CircleNode[];
@@ -112,7 +99,7 @@ describe('a stack up from the axis', () => {
   });
   it('a value above nothing has one glyph at least, a value of nothing has none, and a row with no value has no mark', () => {
     const spec = by('visitors', 'device', [{ mark: 'unit', encode: { x: 'device', y: 'visitors' } }]);
-    const { ratio } = run(spec, 346, null, 'typical', 'svg', { result: answer([{ device: 'Desktop', visitors: 4820 }, { device: 'Mobile', visitors: 3 }, { device: 'Tablet', visitors: 0 }, { device: 'Watch', visitors: null }], { visitors: 4823 }) });
+    const { ratio } = run(spec, 346, null, 'typical', { result: answer([{ device: 'Desktop', visitors: 4820 }, { device: 'Mobile', visitors: 3 }, { device: 'Tablet', visitors: 0 }, { device: 'Watch', visitors: null }], { visitors: 4823 }) });
     expect([...count((glyphs(ratio.nodes) as CircleNode[]).map((n) => n.row))]).toEqual([['Desktop', 10], ['Mobile', 1]]);
     expect(keyOf(ratio)).toEqual(['Each is 500']);
   });
@@ -120,7 +107,7 @@ describe('a stack up from the axis', () => {
     const spec = by('visitors', 'weekday', [{ mark: 'unit', encode: { x: 'weekday', y: 'visitors' }, paint: 'series.3' }, { mark: 'rule', encode: { y: 1500 }, label: 'Target', role: 'reference' }]);
     const { ratio, plan } = run(spec, 346);
     expect(plan.layers.map((l) => [l.mark, l.role])).toEqual([['unit', 'primary'], ['rule', 'reference']]);
-    expect(ratio.nodes.find((n) => n.key === 'reference:rule')).toMatchObject({ kind: 'line', t: 0.75 });
+    expect(ratio.nodes.find((n) => n.key === 'reference:rule')).toMatchObject({ kind: 'line', y: 0.75 });
     expect((glyphs(ratio.nodes) as CircleNode[]).every((n) => n.paint === 'series.3')).toBe(true);
   });
   it('an unfinished day\'s glyphs are faded, as its bar is', () => {
@@ -139,22 +126,12 @@ describe('a run along a row\'s track', () => {
     expect(dots.filter((n) => n.row === 'Direct').map((n) => n.key)).toEqual([1, 2, 3, 4, 5, 6].map((n) => 'primary:unit:Direct:' + n));
     // The track ends at the longest run, nine glyphs, so each has a ninth of it, and the first stands half of that in.
     expect(dots.filter((n) => n.row === 'Search').map((n) => Math.round(n.x! * 18))).toEqual([1, 3, 5, 7, 9, 11, 13, 15, 17]);
-    expect(dots.every((n) => n.kind === 'circle' && n.part === 'rows' && n.t === 0.5 && n.h === 1 && Math.abs(n.w! - 1 / 9) < 1e-9 && n.paint === 'series.1')).toBe(true);
+    expect(dots.every((n) => n.kind === 'circle' && n.part === 'rows' && n.y === 0.5 && n.h === 1 && Math.abs(n.w! - 1 / 9) < 1e-9 && n.paint === 'series.1')).toBe(true);
     expect(ratio.nodes.filter((n) => n.part === 'rows' && n.kind === 'text' && n.row === 'Search').map((n) => (n as TextNode).text)).toEqual(['Search', '4,318']);
   });
-  it('placed, a run is round dots that touch at most, in a row\'s height', () => {
-    for (const w of [346, 500, 700]) {
-      const dots = glyphs(run(isotype!, w).scene.nodes) as PlacedCircle[], search = dots.filter((n) => n.key.startsWith('primary:unit:Search:'));
-      expect(new Set(dots.map((n) => n.r)).size, String(w)).toBe(1);
-      expect(2 * search[0]!.r, String(w)).toBeLessThanOrEqual(Math.min(search[1]!.cx - search[0]!.cx, 28 - 8));
-      expect(new Set(search.map((n) => n.cy)).size, String(w)).toBe(1);
-    }
-  });
-  it('what a glyph is worth holds when a height limit trims the rows: it is worked out from every row of the result', () => {
-    const { plan, ratio } = run(isotype!, 346, 100);
-    expect(plan).toMatchObject({ layout: 'rows', rowLimit: 3, dropped: ['rows 4 to 6', 'the key to what a glyph is worth'] });
-    expect([...count((glyphs(ratio.nodes) as CircleNode[]).map((n) => n.row))]).toEqual([['Search', 9], ['Direct', 6], ['Social', 3]]);
-    // Trimmed to the small rows alone, they would be counted finer were the worth theirs.
+  it('what a glyph is worth is worked out from every row of the result', () => {
+    expect(keyOf(run(isotype!, 346).ratio)).toEqual(['Each is 500']);
+    // Of the two largest rows alone it is the same: were it worked out from fewer, the small rows would be counted finer.
     const small = run({ ...isotype!, query: { ...isotype!.query, limit: 2 } }, 346).ratio;
     expect(keyOf(small)).toEqual(['Each is 500']);
   });
@@ -168,10 +145,10 @@ describe('a grid of a hundred, divided by share', () => {
   it('a cell for each hundredth, ten rows of ten in reading order, a run of cells and a series colour for each value, and the band\'s legend', () => {
     const { ratio, plan } = run(waffle!, 346), cells = glyphs(ratio.nodes) as RectNode[];
     expect(ratio).toMatchObject({ layout: 'band', aspect: 1, parts: ['band', 'legend'], rows: ['Desktop', 'Mobile', 'Tablet'] });
-    expect(plan).toMatchObject({ preset: 'waffle', share: true, tldrValue: false, guides: { legend: 'full' } });
+    expect(plan).toMatchObject({ preset: 'waffle', share: true, tldrValue: false, guides: { legend: true } });
     expect(cells).toHaveLength(100);
     expect([...count(cells.map((n) => n.row + ' ' + n.paint))]).toEqual([['Desktop series.1', 52], ['Mobile series.2', 41], ['Tablet series.3', 7]]);
-    expect(cells.map((n) => [Math.round(n.x! * 10), Math.round(n.y! * 10)])).toEqual(Array.from({ length: 100 }, (_, i) => [i % 10, Math.floor(i / 10)]));
+    expect(cells.map((n) => [Math.round(n.x! * 10), Math.round(n.y! * 10)])).toEqual(Array.from({ length: 100 }, (_, i) => [i % 10, 9 - Math.floor(i / 10)]));
     expect(cells.every((n) => n.kind === 'rect' && n.part === 'band' && n.w === 0.1 && n.h === 0.1 && n.role === 'primary')).toBe(true);
     expect([cells[0]!.key, cells[51]!.key, cells[52]!.key, cells[99]!.key]).toEqual(['primary:unit:Desktop:1', 'primary:unit:Desktop:52', 'primary:unit:Mobile:1', 'primary:unit:Tablet:7']);
     // A cell is a hundredth, which wants no key. The legend says each share, as a share bar's does.
@@ -185,29 +162,20 @@ describe('a grid of a hundred, divided by share', () => {
     expect([...count(cells.map((n) => (n.row ?? 'no row') + ' ' + n.paint))]).toEqual([['Search series.1', 41], ['Direct series.2', 28], ['no row seq.none', 31]]);
     expect(cells.slice(69, 71).map((n) => n.key)).toEqual(['primary:unit#rest:1', 'primary:unit#rest:2']);
     // The same rows against a total twice as large hold half the cells: nothing is worked out from their sum.
-    const twice = run(top2, 346, null, 'typical', 'svg', { result: { ...result, totals: { visitors: result.totals.visitors! * 2 } } }).ratio;
+    const twice = run(top2, 346, null, 'typical', { result: { ...result, totals: { visitors: result.totals.visitors! * 2 } } }).ratio;
     expect([...count((glyphs(twice.nodes) as RectNode[]).map((n) => n.row ?? 'no row'))]).toEqual([['Search', 21], ['Direct', 14], ['no row', 65]]);
   });
   it('with no total, or one of zero, no cell is any value\'s: the legend says each value, and the rows are never summed', () => {
     const { result } = run(waffle!, 346);
     for (const total of [null, 0]) {
-      const { ratio } = run(waffle!, 346, null, 'typical', 'svg', { result: { ...result, totals: { visitors: total } } });
+      const { ratio } = run(waffle!, 346, null, 'typical', { result: { ...result, totals: { visitors: total } } });
       expect([...count((glyphs(ratio.nodes) as RectNode[]).map((n) => n.paint))], String(total)).toEqual([['seq.none', 100]]);
       expect(ratio.nodes.filter((n) => n.part === 'legend' && n.kind === 'text' && n.font === 'value').map((n) => (n as TextNode).text), String(total)).toEqual(result.rows.map((r) => (r.visitors as number).toLocaleString('en-US')));
     }
   });
   it('rows that hold more than the total fill the grid and no more: a hundred cells, whatever is sent', () => {
-    const { ratio } = run(waffle!, 346, null, 'typical', 'svg', { result: answer([{ device: 'Desktop', visitors: 80 }, { device: 'Mobile', visitors: 70 }], { visitors: 100 }) });
+    const { ratio } = run(waffle!, 346, null, 'typical', { result: answer([{ device: 'Desktop', visitors: 80 }, { device: 'Mobile', visitors: 70 }], { visitors: 100 }) });
     expect([...count((glyphs(ratio.nodes) as RectNode[]).map((n) => n.row))]).toEqual([['Desktop', 80], ['Mobile', 20]]);
-  });
-  it('holds its shape: a square of square cells, in the middle of the width, and smaller in a box that is short', () => {
-    for (const [w, h, side] of [[346, null, 160], [700, null, 160], [346, 300, 160], [346, 220, 142], [290, 190, 112]] as [number, number | null, number][]) {
-      const { scene, plan } = run(waffle!, w, h), cells = glyphs(scene.nodes) as PlacedRect[];
-      expect(plan.layers.some((l) => l.mark === 'unit'), w + ' ' + h).toBe(true);
-      expect(scene.plot, w + ' ' + h).toEqual({ w: side, h: side });
-      expect(cells.every((n) => Math.abs(n.w - n.h) < 1e-9 && Math.abs(n.w - (side / 10 - 1)) < 1e-9), w + ' ' + h).toBe(true);
-      expect([cells[0]!.x, cells[0]!.y, cells[99]!.x + cells[99]!.w + 1], w + ' ' + h).toEqual([(w - side) / 2, 0, (w + side) / 2]);
-    }
   });
   it('writing stack: "normalize" on it changes nothing: a grid divided by color is shares already', () => {
     const written = by('visitors', 'device', [{ mark: 'unit', encode: { x: 'visitors', color: 'device' }, stack: 'normalize' }]);
@@ -231,7 +199,7 @@ describe('a grid with no dimension, read against the metric\'s range', () => {
     expect(plan).toMatchObject({ preset: 'icon-array', tldrValue: true, share: false, guides: { unitKey: true } });
   });
   it('a cell that stays lit keeps its key when the value moves, and the grid is full at the top of the range and empty at the foot of it', () => {
-    const lit = (signups: number | null) => (glyphs(run(icons!, 346, null, 'typical', 'svg', { result: answer([], { signups }) }).ratio.nodes) as RectNode[]).filter((n) => n.tone == null).map((n) => n.key);
+    const lit = (signups: number | null) => (glyphs(run(icons!, 346, null, 'typical', { result: answer([], { signups }) }).ratio.nodes) as RectNode[]).filter((n) => n.tone == null).map((n) => n.key);
     expect(lit(100)).toEqual(lit(303).slice(0, 20));
     expect([lit(0), lit(null), lit(-20)].map((k) => k.length)).toEqual([0, 0, 0]);
     expect([lit(1), lit(2), lit(8), lit(500), lit(9000)].map((k) => k.length)).toEqual([1, 1, 2, 100, 100]);
@@ -246,25 +214,25 @@ describe('seats round a half circle', () => {
   it('a seat for each so-many of the engine\'s total, a wedge and a series colour for each value, in the half circle\'s own box', () => {
     const { ratio, plan, result } = run(parliament!, 346), seats = glyphs(ratio.nodes) as CircleNode[];
     expect(ratio).toMatchObject({ layout: 'radial', aspect: 2, parts: ['radial', 'unit-key', 'legend'], rows: ['Search', 'Direct', 'Social', 'AI assistants', 'Email', 'Other'] });
-    expect(plan).toMatchObject({ preset: 'parliament', share: true, guides: { legend: 'full', unitKey: true } });
+    expect(plan).toMatchObject({ preset: 'parliament', share: true, guides: { legend: true, unitKey: true } });
     // 10,531 visitors is more than a hundred seats of one: at 200 each it is 53.
     expect([result.totals.visitors, unitWorth(result.totals.visitors!, 100, true), keyOf(ratio)]).toEqual([10531, 200, ['Each is 200']]);
     expect([...count(seats.map((n) => n.row + ' ' + n.paint))]).toEqual(result.rows.map((r, i) => [r.channel + ' series.' + (i + 1), Math.round((r.visitors as number) / 200)]));
     expect(seats.slice(0, 2).map((n) => n.key)).toEqual(['primary:unit:Search:1', 'primary:unit:Search:2']);
     expect(seats.every((n) => n.kind === 'circle' && n.part === 'radial' && n.role === 'primary' && n.h === 2 * n.w!)).toBe(true);
     // From the left end to the right, so each value's seats are a wedge: no seat of a later value stands to the left of an earlier one's first.
-    const first = result.rows.map((r) => Math.min(...seats.filter((n) => n.row === r.channel).map((n) => Math.atan2(n.t!, 0.5 - n.x!))));
+    const first = result.rows.map((r) => Math.min(...seats.filter((n) => n.row === r.channel).map((n) => Math.atan2(n.y!, 0.5 - n.x!))));
     expect(first).toEqual([...first].sort((a, b) => a - b));
     expect(ratio.nodes.filter((n) => n.part === 'legend' && n.kind === 'text' && n.font === 'label').map((n) => (n as TextNode).text)).toEqual(['Search', 'Direct', 'Social', 'AI assistants', 'Email', 'Other']);
   });
   it('a seat is one of the metric while the total is a hundred or fewer, and then there is no key', () => {
     const house = by('signups', 'device', [{ mark: 'unit', encode: { angle: 'signups', color: 'device' }, sweep: 'half' }]);
-    const { ratio } = run(house, 346, null, 'typical', 'svg', { result: answer([{ device: 'Desktop', signups: 48 }, { device: 'Mobile', signups: 37 }, { device: 'Tablet', signups: 15 }], { signups: 100 }) });
+    const { ratio } = run(house, 346, null, 'typical', { result: answer([{ device: 'Desktop', signups: 48 }, { device: 'Mobile', signups: 37 }, { device: 'Tablet', signups: 15 }], { signups: 100 }) });
     expect([...count((glyphs(ratio.nodes) as CircleNode[]).map((n) => n.row))]).toEqual([['Desktop', 48], ['Mobile', 37], ['Tablet', 15]]);
     expect(keyOf(ratio)).toEqual([]);
     expect(ratio.parts).toEqual(['radial', 'legend']);
     // One more, and a seat is two.
-    const more = run(house, 346, null, 'typical', 'svg', { result: answer([{ device: 'Desktop', signups: 49 }, { device: 'Mobile', signups: 37 }, { device: 'Tablet', signups: 15 }], { signups: 101 }) }).ratio;
+    const more = run(house, 346, null, 'typical', { result: answer([{ device: 'Desktop', signups: 49 }, { device: 'Mobile', signups: 37 }, { device: 'Tablet', signups: 15 }], { signups: 101 }) }).ratio;
     expect([keyOf(more), [...count((glyphs(more.nodes) as CircleNode[]).map((n) => n.row))]]).toEqual([['Each is 2'], [['Desktop', 25], ['Mobile', 19], ['Tablet', 8]]]);
   });
   it('with a limit, the seats of the rows past it are there and are no value\'s; with no total a seat\'s worth is the largest row\'s', () => {
@@ -272,17 +240,8 @@ describe('seats round a half circle', () => {
     const { ratio, result } = run(top2, 346), seats = glyphs(ratio.nodes) as CircleNode[];
     expect([...count(seats.map((n) => (n.row ?? 'no row') + ' ' + n.paint))]).toEqual([['Search series.1', 22], ['Direct series.2', 15], ['no row seq.none', 16]]);
     expect(seats[37]!.key).toBe('primary:unit#rest:1');
-    const none = run(top2, 346, null, 'typical', 'svg', { result: { ...result, totals: { visitors: null } } }).ratio;
+    const none = run(top2, 346, null, 'typical', { result: { ...result, totals: { visitors: null } } }).ratio;
     expect([keyOf(none), [...count((glyphs(none.nodes) as CircleNode[]).map((n) => n.row))]]).toEqual([['Each is 500'], [['Search', 9], ['Direct', 6]]]);
-  });
-  it('placed, the seats are round, of one size, inside the half circle, and no two overlap', () => {
-    for (const [w, h, across] of [[346, null, 240], [700, null, 240], [300, null, 240], [346, 220, 240], [346, 160, 240]] as [number, number | null, number][]) {
-      const { scene, plan } = run(parliament!, w, h), seats = glyphs(scene.nodes) as PlacedCircle[], r = seats[0]!.r;
-      expect(plan.layers.some((l) => l.mark === 'unit'), w + ' ' + h).toBe(true);
-      expect(scene.plot, w + ' ' + h).toEqual({ w: across, h: across / 2 });
-      expect(seats.every((n) => n.r === r && n.cx - r >= (w - across) / 2 - 0.5 && n.cx + r <= (w + across) / 2 + 0.5 && n.cy - r >= -0.5 && n.cy + r <= across / 2 + 1), w + ' ' + h).toBe(true);
-      for (let i = 0; i < seats.length; i++) for (let j = i + 1; j < seats.length; j++) expect(Math.hypot(seats[i]!.cx - seats[j]!.cx, seats[i]!.cy - seats[j]!.cy), w + ' ' + h + ': ' + i + ' and ' + j).toBeGreaterThan(2 * r * 0.95);
-    }
   });
   it('an arc may stand behind the seats, as a range stands behind a gauge', () => {
     const spec = by('visitors', 'device', [{ mark: 'arc', encode: { radius: 0.3 }, sweep: 'half', role: 'context' }, { mark: 'unit', encode: { angle: 'visitors', color: 'device' }, sweep: 'half' }]);
@@ -297,25 +256,21 @@ describe('the key to what a glyph is worth', () => {
     expect(key).toEqual({ key: 'unit-key:primary:unit', part: 'unit-key', kind: 'text', text: 'Each is 200', anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' });
     const money = run(by('revenue', 'device', [{ mark: 'unit', encode: { x: 'device', y: 'revenue' } }]), 346).ratio;
     expect(keyOf(money)).toEqual(['Each is $5,000']);
-    const few = run(by('visitors', 'device', [{ mark: 'unit', encode: { x: 'device', y: 'visitors' } }]), 346, null, 'typical', 'svg', { result: answer([{ device: 'Desktop', visitors: 9 }, { device: 'Mobile', visitors: 4 }], { visitors: 13 }) });
+    const few = run(by('visitors', 'device', [{ mark: 'unit', encode: { x: 'device', y: 'visitors' } }]), 346, null, 'typical', { result: answer([{ device: 'Desktop', visitors: 9 }, { device: 'Mobile', visitors: 4 }], { visitors: 13 }) });
     expect([keyOf(few.ratio), few.ratio.parts, few.plan.guides.unitKey, few.plan.dropped]).toEqual([[], ['y-axis', 'plot', 'x-axis'], true, []]);
   });
-  it('is placed in a line under the glyphs, and the view is that much taller for it', () => {
-    const { scene } = run(units!, 346), key = scene.nodes.find((n) => n.key === 'unit-key:primary:unit');
-    expect(key).toMatchObject({ kind: 'text', text: 'Each is 200', x: 0, y: 12, ty: 184 });
-    expect(scene.height).toBe(184 + 20);
-    for (const name of ['isotype', 'parliament', 'icons']) { const { scene } = run(specs[name]!, 346); expect(scene.nodes.some((n) => n.key === 'unit-key:primary:unit'), name).toBe(true); }
+  it('is in a part of its own, in every form whose glyph is worth more than one', () => {
+    for (const name of ['units', 'wilkinson', 'isotype', 'parliament', 'icons']) { const { ratio } = run(specs[name]!, 346); expect(ratio.parts.includes('unit-key') && ratio.nodes.some((n) => n.key === 'unit-key:primary:unit'), name).toBe(true); }
   });
-  it('goes with the guides, before the glyphs do: by its own rule in a box that is short, and first of what a reduction drops', () => {
-    expect(FIT_RULES.filter((r) => r.id === 'unit-key').map((r) => [r.layout, r.needs, r.hide, r.keep])).toEqual([
-      ['cartesian', { block: 160 }, ['unit-key'], 'guides'], ['rows', { block: 120 }, ['unit-key'], 'guides'], ['band', { block: 220 }, ['unit-key'], 'guides'], ['radial', { block: 200 }, ['unit-key'], 'guides']]);
-    expect(run(units!, 346, 160).plan).toMatchObject({ guides: { unitKey: true }, dropped: [] });
-    expect(run(units!, 346, 159).plan).toMatchObject({ layout: 'cartesian', guides: { x: true }, dropped: ['the key to what a glyph is worth'] });
-    expect(run(units!, 346, 159).ratio.parts).toEqual(['y-axis', 'plot', 'x-axis']);
-    // A spec that keeps its guides keeps it.
-    expect(run({ ...units!, keep: ['guides'] }, 346, 159).ratio.parts).toContain('unit-key');
-    // Rows as tall as their rule asks, and not as tall as six of them and the line: the line goes, and then rows are trimmed.
-    expect(run(isotype!, 346, 190).plan).toMatchObject({ rowLimit: null, guides: { unitKey: false }, dropped: ['the key to what a glyph is worth'] });
+  it('is the key to the glyphs, and stays as long as they do: no rule takes it but one that leaves the number alone, and short of the height the two need the form gives way', () => {
+    expect(FIT_RULES.filter((r) => r.hide.includes('unit-key')).every((r) => r.show?.includes('number') && r.hide.some((p) => ['plot', 'rows', 'band', 'radial'].includes(p)))).toBe(true);
+    expect(run(units!, 346, 160)).toMatchObject({ plan: { guides: { unitKey: true }, dropped: [] }, gave: [], fit: { parts: ['y-axis', 'plot', 'x-axis', 'unit-key'] } });
+    // A pixel under that, the glyphs once stayed with nothing to say what one was worth. Now the view is its bars.
+    expect(run(units!, 346, 159)).toMatchObject({ plan: { layout: 'cartesian', preset: 'bar' }, gave: ['cartesian (unit)'] });
+    expect(run(units!, 346, 159).plan.layers.some((l) => l.mark === 'unit')).toBe(false);
+    // Rows in a box not as tall as six of them and the line, and seats in one their legend does not fit: the line stays.
+    expect(shown(run(isotype!, 346, 190)).parts).toEqual(['rows', 'unit-key']);
+    expect(shown(run(parliament!, 346, 200)).parts).toEqual(['radial', 'unit-key', 'legend']);
   });
 });
 
@@ -382,19 +337,20 @@ describe('refusals, each naming its fix', () => {
 describe('fallbacks: under the room its glyphs need, a form becomes the preset of the same query that needs less', () => {
   it('each form has a rule that names the mark and the preset, by the room a plot with axes needs across', () => {
     expect(FIT_RULES.filter((r) => r.fallback).map((r) => [r.layout, r.id, r.mark, r.fallback, r.needs, r.keep])).toEqual([
-      ['cartesian', 'unit', 'unit', 'bar', { inline: 280, block: 120 }, 'marks'], ['rows', 'unit', 'unit', 'bar-list', { inline: 280 }, 'marks'],
-      ['band', 'unit', 'unit', 'share-bar', { inline: 280, block: 180 }, 'marks'], ['band', 'unit-alone', 'unit', 'gauge', { inline: 280, block: 180 }, 'marks'],
-      ['radial', 'unit', 'unit', 'pie-semi-circle', { inline: 280, block: 160 }, 'marks']]);
+      // Each form's height is its glyphs' and the line's that says what one is worth. A grid divided by a dimension has no line.
+      ['cartesian', 'unit', 'unit', 'bar', { inline: 280, block: 160 }, 'marks'], ['rows', 'unit', 'unit', 'bar-list', { inline: 280, block: 120 }, 'marks'],
+      ['band', 'unit', 'unit', 'share-bar', { inline: 280, block: 180 }, 'marks'], ['band', 'unit-alone', 'unit', 'gauge', { inline: 280, block: 220 }, 'marks'],
+      ['radial', 'unit', 'unit', 'pie-semi-circle', { inline: 280, block: 200 }, 'marks']]);
   });
   for (const name of NAMES) it(name + ': at 279 px it is that preset\'s scene to the node, and from there steps down by that preset\'s own rules', () => {
     const spec = specs[name]!, [layout, fallback] = FORMS[name]!, other: Spec = { ...spec, layers: undefined, use: fallback };
     expect(run(spec, 280).plan.layers.some((l) => l.mark === 'unit')).toBe(true);
-    expect(run(spec, 280).plan.dropped).toEqual([]);
-    // Rows have no height of their own to be short of: a list is trimmed, in glyphs as in bars.
-    for (const [w, h] of ([[279, null], [250, null], [170, null], [120, null], [80, null], [346, 110], [346, 60]] as [number, number | null][]).filter(([, h]) => h == null || layout !== 'rows')) {
+    expect(run(spec, 280).gave).toEqual([]);
+    for (const [w, h] of [[279, null], [250, null], [170, null], [120, null], [80, null], [346, 110], [346, 60]] as [number, number | null][]) {
       const here = run(spec, w, h), there = run(other, w, h);
-      expect(here.scene, w + ' ' + h).toEqual(there.scene);
-      expect(here.plan.dropped, w + ' ' + h).toEqual(['the ' + layout + ' marks (drawn as "' + fallback + '")', ...there.plan.dropped]);
+      expect(here.ratio, w + ' ' + h).toEqual(there.ratio);
+      expect(shown(here), w + ' ' + h).toEqual(shown(there));
+      expect([here.gave, there.gave], w + ' ' + h).toEqual([[layout + ' (unit)'], []]);
       expect(here.plan.preset, w + ' ' + h).toBe(fallback);
     }
   });
@@ -405,13 +361,13 @@ describe('fallbacks: under the room its glyphs need, a form becomes the preset o
   it('a spec that keeps its marks keeps its glyphs, and an empty range has nothing to give way from', () => {
     for (const name of NAMES) {
       expect(run({ ...specs[name]!, keep: ['marks'] }, 250).plan.layers.some((l) => l.mark === 'unit'), name).toBe(true);
-      expect(run(specs[name]!, 250, null, 'empty').plan.dropped, name).toEqual([]);
+      expect(run(specs[name]!, 250, null, 'empty').gave, name).toEqual([]);
     }
   });
   it('no other view of those layouts is asked: a share bar, a bar list, a half pie and bars are what they were', () => {
-    for (const name of ['mix', 'pages']) expect(run({ spec: 'view/0', query: { metrics: ['visitors'], by: ['channel'], range: '28d' }, use: name === 'mix' ? 'share-bar' : 'bar-list' }, 250).plan.dropped, name).toEqual([]);
-    expect(run(moreSamples.half!.spec, 250).plan).toMatchObject({ preset: 'pie-semi-circle', dropped: [] });
-    expect(run(moreSamples.histogram!.spec, 250).plan.dropped).toEqual(['axes and grid (added the number to make up for them)']);
+    for (const name of ['mix', 'pages']) expect(run({ spec: 'view/0', query: { metrics: ['visitors'], by: ['channel'], range: '28d' }, use: name === 'mix' ? 'share-bar' : 'bar-list' }, 250).gave, name).toEqual([]);
+    expect(run(moreSamples.half!.spec, 250)).toMatchObject({ plan: { preset: 'pie-semi-circle' }, gave: [] });
+    expect(run(moreSamples.histogram!.spec, 250)).toMatchObject({ gave: [], fit: { set: { arrange: 'side' } } });
   });
 });
 
@@ -430,7 +386,7 @@ describe('the prose is the query\'s, and names no glyph', () => {
     expect(run(isotype!, 346).plan.text).toBe('Top channels by visitors, last 28 days: Search (4,318), Direct (2,949), Social (1,474).');
     expect(run(parliament!, 346).plan.text).toBe('Search is the largest channel at 41% of visitors, followed by Direct at 28%.');
     expect(run(icons!, 346).plan.text).toBe('Sign-ups: 303 in the last 28 days, 76% of its target of 400.');
-    // The sentence is the same at every size, the last rung among them.
-    for (const name of NAMES) expect(run(specs[name]!, 10).ratio.text, name).toBe(run(specs[name]!, 700).plan.text);
+    // The sentence is the same where the form has given way.
+    for (const name of NAMES) expect(run(specs[name]!, 250).plan.text, name).toBe(run(specs[name]!, 700).plan.text);
   });
 });

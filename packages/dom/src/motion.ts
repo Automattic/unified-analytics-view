@@ -64,16 +64,16 @@ export const MOTION_CSS = `
 @keyframes uav-beat-down { 0%, 88% { translate: 0 0; } 94% { translate: 0 100%; } 94.001% { translate: 0 -100%; } 100% { translate: 0 0; } }`;
 
 /** A point of a path: where it is, for an area where it starts when that is not the bottom, and over bins how wide its step is. */
-export interface XV { x: number; v: number; v0?: number; w?: number }
+export interface XV { x: number; y: number; y2?: number; w?: number }
 
 /** `from`, read at each x of `to`. A morph moves values and never x, so the two sets need not share their rows:
  * when they do, this is `from` itself. */
 export function resample(from: XV[], to: XV[]): XV[] {
-  const based = from.some((p) => p.v0 != null);
+  const based = from.some((p) => p.y2 != null);
   return to.map(({ x }) => {
     const i = from.findIndex((p) => p.x >= x), a = from[i - 1], b = from[i] ?? from[from.length - 1];
     const at = (of: (p: XV) => number) => (!b ? 0 : !a || b.x <= x ? of(b) : of(a) + (of(b) - of(a)) * (x - a.x) / (b.x - a.x));
-    return { x, v: at((p) => p.v), ...(based && { v0: at((p) => p.v0 || 0) }) };
+    return { x, y: at((p) => p.y), ...(based && { y2: at((p) => p.y2 || 0) }) };
   });
 }
 /** The points `p` of the way from one set to the other, x taken from `to`, and with it how wide a step is: a morph
@@ -82,8 +82,8 @@ export function resample(from: XV[], to: XV[]): XV[] {
  * `free` is for a line that joins the points of two metrics: a point there has a value on x as well, so it moves across too. */
 export function mix(from: XV[], to: XV[], p: number, free = false): XV[] {
   return to.map((t, i) => {
-    const f = from[i]!, f0 = f.v0 || 0, t0 = t.v0 || 0;
-    return { x: free ? f.x + (t.x - f.x) * p : t.x, v: f.v + (t.v - f.v) * p, ...((f0 || t0) && { v0: f0 + (t0 - f0) * p }), ...(t.w != null && { w: t.w }) };
+    const f = from[i]!, f0 = f.y2 || 0, t0 = t.y2 || 0;
+    return { x: free ? f.x + (t.x - f.x) * p : t.x, y: f.y + (t.y - f.y) * p, ...((f0 || t0) && { y2: f0 + (t0 - f0) * p }), ...(t.w != null && { w: t.w }) };
   });
 }
 /** `from` for a line that joins the points of two metrics: point for point in the order of the rows, which is the

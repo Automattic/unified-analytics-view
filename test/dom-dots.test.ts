@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildScene, resolve, unboundedContainer } from '@unified-analytics/core';
+import { buildScene, resolve } from '@unified-analytics/core';
 import { catalog, runQuery, samples } from '@unified-analytics/fixtures';
 import { CELL, DOTS_CSS, FACE, FAMILY, amount, declared, dotted, rolls, unit } from '../packages/dom/src/dots.ts';
 import { NUMBER_FITS, SCREEN_LEAST, fitNumber } from '../packages/dom/src/measure.ts';
@@ -31,7 +31,7 @@ describe('the dot-matrix face', () => {
   });
   it('has every character of the number in each sample the bench shows', () => {
     for (const [name, { spec }] of Object.entries(samples)) for (const scenario of ['typical', 'no-prior', 'empty'] as const) {
-      const result = runQuery(spec.query, scenario), scene = buildScene(resolve(spec, result, unboundedContainer(), catalog), spec.query, result, catalog);
+      const result = runQuery(spec.query, scenario), scene = buildScene(resolve(spec, result, catalog), spec.query, result, catalog);
       for (const n of scene.nodes) if (n.kind === 'text' && n.font === 'display') for (const s of [n.text, n.short ?? n.text]) expect(dotted(s), name + ': ' + s).not.toBeNull();
     }
   });

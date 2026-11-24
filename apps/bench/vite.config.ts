@@ -3,7 +3,7 @@ import { basename } from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 
 /* The pages, in the nav's order: what the nav links and what the build takes in. */
-const PAGES = { 'playground.html': 'Playground', 'index.html': 'Views', 'marks.html': 'Marks', 'parts.html': 'Parts', 'tokens.html': 'Tokens' };
+const PAGES = { 'playground.html': 'Playground', 'index.html': 'Views', 'board.html': 'Board', 'marks.html': 'Marks', 'parts.html': 'Parts', 'tokens.html': 'Tokens' };
 
 /** A fieldset of radios, the first checked. */
 const radios = (legend: string, name: string, choices: [string, string][]) => `<fieldset><legend>${legend}</legend>`

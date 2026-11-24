@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "capture": "node capture.ts"
+    "capture": "node capture.ts",
+    "check": "node check.ts"
   },
   "dependencies": {
     "@unified-analytics/core": "workspace:*",

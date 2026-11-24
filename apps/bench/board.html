@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Board</title>
+  <link rel="stylesheet" href="/src/bench.css">
+</head>
+<body>
+  <!-- bench:nav -->
+  <form id="controls">
+    <!-- bench:data -->
+    <fieldset><legend>Range</legend>
+      <label><input type="radio" name="range" value="28d" checked> 28 days</label>
+      <label><input type="radio" name="range" value="14d"> 14</label>
+      <label><input type="radio" name="range" value="7d"> 7</label>
+    </fieldset>
+    <fieldset><legend>Compare</legend>
+      <label><input type="checkbox" name="compare" checked> previous period</label>
+    </fieldset>
+    <fieldset><legend>Picking</legend>
+      <label><input type="checkbox" name="several"> several at once</label>
+    </fieldset>
+  </form>
+  <h1 id="title"></h1>
+  <p id="filter" class="meta" role="status"></p>
+  <main id="board"></main>
+  <details open><summary>The board as it stands: its <code>query</code> is its params, at their values now</summary><pre id="state"></pre></details>
+  <script type="module" src="/src/board.ts"></script>
+</body>
+</html>

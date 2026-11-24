@@ -1,16 +1,17 @@
-import { BARE_PAD, PLOT_TOP, POINT_INSET, SHORT_PLOT, X_AXIS_BLOCK, type LineNode, type PathNode, type RectNode, type SceneNode, type TextNode } from '@unified-analytics/core';
+import { BARE_PAD, PLOT_TOP, POINT_INSET, X_AXIS_BLOCK, type LineNode, type PathNode, type RectNode, type SceneNode, type TextNode } from '@unified-analytics/core';
 import { ensure, ensureSvg, keyed, prop, text } from '../dom.ts';
 import { paintAxes, thinAxis } from '../chrome/axes.ts';
-import { paintLegend } from '../chrome/legend.ts';
-import { paintSize } from '../chrome/size.ts';
+import { SPLIT_PLAIN, paintLegend } from '../chrome/legend.ts';
+import { paintRamp } from '../chrome/ramp.ts';
+import { SIZE_MOST, paintSize } from '../chrome/size.ts';
 import { RULE } from '../chrome/rule.ts';
 import { token } from '../tokens.ts';
 import { LABEL, cut } from '../chrome/label.ts';
 import { hitNodes } from '../keys.ts';
 import { AXES_HEIGHT, BARE_HEIGHT, FROM_TOP, IN_BOX, NUMBER_ALONE, NUMBER_SMALL, type LayoutPainter } from '../layout.ts';
 import { apart, thinLabels } from '../measure.ts';
-import { morph, once } from '../motion.ts';
-import { POINTS_CSS, POINTS_FIT, measurePoints, paintPoints } from './points.ts';
+import { once } from '../motion.ts';
+import { ONE_SIZE, POINTS_CSS, POINTS_FIT, measurePoints, paintPoints, paintPaths } from './points.ts';
 import { RANGES_CSS, paintRanges } from './ranges.ts';
 import { paintUnitKey } from '../chrome/unit.ts';
 
@@ -20,7 +21,7 @@ import { paintUnitKey } from '../chrome/unit.ts';
  * A second unit's axis and the labels at the line ends are columns on the far side, each as wide as its content and
  * no wider than nothing when it is empty or hidden. The legend of a split plot is a row under it all.
  * The height stated is the plot's and not the body's (--uav-plot-block, not --uav-body-block), so a legend adds its own
- * lines to a view of natural height, as place() adds them. What comes off it is the 10 px above the plot and the x axis,
+ * lines to a view of natural height. What comes off it is the 10 px above the plot and the x axis,
  * which is 22 px where a tick is 11 px and follows the tick's face from there (--uav-x-axis-block, view.ts).
  * In a box the plot takes what is left, and the legend's lines come out of it. */
 const css = `
@@ -41,6 +42,9 @@ ${IN_BOX} { .uav[data-layout="cartesian"] .uav-body { --uav-plot-block: minmax(0
   box-sizing: border-box; padding-inline-start: 6px; ${LABEL} ${cut('14ch')} }
 /* The legend of a split plot is a swatch and a name per series, in a row that wraps (chrome/legend.ts). */
 .uav[data-layout="cartesian"] .uav-legend { grid-area: legend; }
+/* The ramp of a plot whose bars or dots a metric paints (chrome/ramp.ts): a line of its own under the plot, as the key to sizes is. */
+.uav[data-layout="cartesian"] .uav-ramp { grid-column: 1 / -1; }
+.uav[data-layout="cartesian"] .uav-ramp:empty { display: none; }
 .uav-plot { grid-area: plot; position: relative; container: uav-plot / size; }
 /* Time and x run from left to right whichever way the page reads, as the paths in the SVG do whatever it is told. So
  * the whole frame is set that way: the plot, the axes on every side of it and the labels at the line ends stand
@@ -66,8 +70,9 @@ ${IN_BOX} { .uav[data-layout="cartesian"] .uav-body { --uav-plot-block: minmax(0
 /* A point scale puts its first and last marks 2 px inside the plot. */
 .uav-body[data-scale="point"] svg { inset-inline-start: ${POINT_INSET}px; inline-size: calc(100% - ${2 * POINT_INSET}px); }
 .uav-body[data-scale="point"] .uav-x-axis { margin-inline: ${POINT_INSET}px; }
-.uav-plot path { fill: none; stroke: var(--uav-paint); stroke-width: ${token('stroke-width-line')}; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke-linecap: round; }
-.uav-plot path[data-fill] { fill: var(--uav-paint); stroke: none; }
+/* A path is drawn so wherever the plot's painter draws one: in a plot, and down the rows of a list (rows.ts). */
+:is(.uav-plot, .uav-track) path { fill: none; stroke: var(--uav-paint); stroke-width: ${token('stroke-width-line')}; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke-linecap: round; }
+:is(.uav-plot, .uav-track) path[data-fill] { fill: var(--uav-paint); stroke: none; }
 /* When a plot first shows, its lines and the fills under them draw in from the start of x to its end, as the readout
  * sketch's curve does. Only then: paint() marks the SVG it has just made, and the mark comes off when the drawing is
  * done (motion.ts). A change of data moves the line that is there, and does not draw it again. */
@@ -85,26 +90,27 @@ export const cartesian: LayoutPainter = {
     // Without its axes the plot is a sparkline beside the number, which takes its short forms and gives up its note.
     // A number the measured pass has set carries data-fit and is left to it: that is the number alone, under `marks`.
     axes: {
-      '': `--uav-plot-block: calc(${BARE_HEIGHT} - ${2 * BARE_PAD}px); grid-template: "number body" minmax(0, 1fr) / auto minmax(0, 1fr); column-gap: 12px;`,
+      // A view with a key to sizes states its body's height, for the key's line. Bare, it has no key, and is as tall as its plot.
+      '': `--uav-plot-block: calc(${BARE_HEIGHT} - ${2 * BARE_PAD}px); --uav-body-block: initial; grid-template: "number body" minmax(0, 1fr) / auto minmax(0, 1fr); column-gap: 12px;`,
       '.uav-body': `grid-template: "plot" var(--uav-plot-block) / minmax(0, 1fr); padding-block: ${BARE_PAD}px;`,
-      // Its own rule asks only for width, so in a short box it would stand with no column to stand in.
-      '.uav-y-axis-2': 'display: none;',
       '.uav-number': 'align-self: center; margin: 0;',
+      // With no key to say what a size is, every dot is one size.
+      '.uav-dots i': ONE_SIZE,
       '.uav-number:not([data-fit]) .uav-f-display': NUMBER_SMALL,
       '.uav-number:not([data-fit]) :is(.uav-full, [data-rank])': 'display: none;',
       '.uav-number:not([data-fit]) .uav-short': 'display: inline;',
     },
     // `show` compiles to a block, and the labels are a grid, as the axes are.
-    legend: { '.uav-labels': 'display: grid;' },
+    legend: { '.uav-labels': 'display: grid;' }, 'legend-area': { '.uav-labels': 'display: grid;' },
+    // With the axes go the legend and the labels, and with those the colours they were the key to.
+    labels: SPLIT_PLAIN,
+    // The key to sizes as its largest step alone.
+    size: SIZE_MOST,
     'y-ticks': { '.uav-y-axis-2 [data-rank]': 'display: none;' },
     // The number alone. The body goes whole, so kept axes do not stand with no plot between them.
     marks: NUMBER_ALONE,
     ...POINTS_FIT,
   },
-  // ponytail: no rule in core carries the 120 px under which place() drops ranked y ticks, and the y axis sits outside the
-  // plot container, so this asks the view: 120 for the plot, 10 above it and 22 for the x axis. Wrong when the number
-  // is above the plot. A `plot` rule in core, and the y axis inside that container, would say it properly.
-  rules: () => [{ id: 'y-ticks', layout: 'cartesian', container: 'view', needs: { block: SHORT_PLOT + PLOT_TOP + X_AXIS_BLOCK }, hide: ['y-tick.ranked'] }],
 
   // X labels that would collide, by their real widths (chrome/axes.ts).
   // ponytail: a label at a line's end is set from where it is going, at once, while its line morphs there.
@@ -137,36 +143,32 @@ export const cartesian: LayoutPainter = {
     const line = (el: HTMLElement | SVGElement, n: LineNode) => {
       const [on, off] = (n.dash || '').split(' ');
       el.classList.add('uav-line'); el.toggleAttribute('data-dash', !!n.dash);
-      prop(el, '--uav-t', n.t); prop(el, '--uav-stroke', n.width && n.width + 'px'); prop(el, '--uav-dash', on && on + 'px'); prop(el, '--uav-gap', on && (off || on) + 'px');
+      prop(el, '--uav-t', n.y); prop(el, '--uav-stroke', n.width && n.width + 'px'); prop(el, '--uav-dash', on && on + 'px'); prop(el, '--uav-gap', on && (off || on) + 'px');
     };
 
-    keyed(labels, texts('labels'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-t', n.t); });
+    keyed(labels, texts('labels'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-t', n.y); });
     keyed(grid, nodes.filter((n): n is LineNode => inPlot(n) && n.kind === 'line' && n.layer === 'guide'), () => 'i', line);
     // Which rows hold bars side by side, and which hold a stack: more than one bar, at different places along x or at one.
     const rects = nodes.filter((n): n is RectNode => inPlot(n) && n.kind === 'rect'), places = new Map<string, Set<number>>(), counts = new Map<string, number>();
     for (const n of rects) { const row = n.row ?? ''; places.set(row, (places.get(row) ?? new Set()).add(n.x ?? 0)); counts.set(row, (counts.get(row) ?? 0) + 1); }
     keyed(bars, rects, () => 'i', (el, n) => {
-      prop(el, '--uav-x', n.x); prop(el, '--uav-w', n.w); prop(el, '--uav-v', n.v); prop(el, '--uav-v0', n.v0);
+      prop(el, '--uav-x', n.x); prop(el, '--uav-w', n.w); prop(el, '--uav-v', n.y); prop(el, '--uav-v0', n.y2);
       const here = places.get(n.row ?? '')!.size, all = counts.get(n.row ?? '')!;
       // Columns of widths of their own stand edge to edge, each a series' on a linear x, and are parted as bars side by side are.
       el.toggleAttribute('data-beside', here > 1 || (scene.scale === 'linear' && n.series != null)); el.toggleAttribute('data-stacked', all > here);
     });
     // A path that joins the points of two metrics is in their part, `points`, and is drawn in the same SVG, under the dots.
-    keyed(svg, nodes.filter((n): n is PathNode => (inPlot(n) || n.part === 'points') && n.kind === 'path'), () => 'path', (el, n) => {
-      morph(el as SVGElement, n); el.toggleAttribute('data-fill', !!n.fill);
-      // A scene's width is a weight, against the 2 it gives a line of the data: the line token is that line's width here,
-      // and a comparison's or a rule's is the same share of it.
-      prop(el, 'stroke-width', n.fill || !n.width ? null : `calc(${token('stroke-width-line')} * ${n.width / 2})`); prop(el, 'stroke-dasharray', n.dash);
-    });
+    paintPaths(svg, nodes.filter((n): n is PathNode => (inPlot(n) || n.part === 'points') && n.kind === 'path'));
     keyed(refs, nodes.filter((n): n is LineNode | TextNode => inPlot(n) && ((n.kind === 'line' && n.layer === 'data' && n.row == null) || n.kind === 'text')), (n) => (n.kind === 'line' ? 'i' : 'span'), (el, n) => {
       if (n.kind === 'line') return line(el, n);
-      text(el, n); prop(el, '--uav-t', n.t); el.toggleAttribute('data-halo', !!n.halo);
+      text(el, n); prop(el, '--uav-t', n.y); el.toggleAttribute('data-halo', !!n.halo);
     });
     // A line is one path, so the points to hover and step through are a layer of their own, above the marks.
     const hits = ensure(plot, 'div', 'uav-hits');
     hits.setAttribute('data-hits', 'x');
     keyed(hits, hitNodes(scene), () => 'i', (el, n) => { prop(el, '--uav-x', n.x); prop(el, '--uav-w', n.w); prop(el, '--uav-c', n.c); });
     paintPoints(plot, scene);
+    paintRamp(body, scene);
     paintSize(body, scene);
     paintRanges(plot, scene);
     paintUnitKey(body, scene);

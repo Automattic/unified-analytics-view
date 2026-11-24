@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { buildScene, makeContainer, place, resolve, rowKeys, unboundedContainer, type Catalog, type Spec } from '@unified-analytics/core';
+import { buildScene, resolve, rowKeys, type Catalog, type Spec } from '@unified-analytics/core';
 import { catalog, runQuery, samples, type Scenario } from '@unified-analytics/fixtures';
 import { TIP_CSS, centred } from '../packages/dom/src/chrome/tip.ts';
 import { Keys, crossMarks, hitNodes, readout, rowsAt, step, written } from '../packages/dom/src/keys.ts';
@@ -78,7 +78,7 @@ describe('readout', () => {
 // A line is read against the axes, so at a point of one the readout is a crosshair, and these are what it says on them.
 describe('crossMarks', () => {
   const marks = (sample: string, scenario: Scenario = 'typical') => {
-    const spec = samples[sample]!.spec, result = runQuery(spec.query, scenario), plan = resolve(spec, result, unboundedContainer(), catalog);
+    const spec = samples[sample]!.spec, result = runQuery(spec.query, scenario), plan = resolve(spec, result, catalog);
     const scene = buildScene(plan, spec.query, result, catalog), { rows, split } = rowsAt(scene, spec.query, result);
     return { scene, result, at: crossMarks(scene, plan.layers, rows, catalog, split) };
   };
@@ -88,7 +88,7 @@ describe('crossMarks', () => {
     const first = at.get(scene.rows![0]!)!, row = result.rows[0]!, own = first.find((m) => m.role === 'primary')!;
     expect(first.map((m) => m.role).sort()).toEqual(['comparison', 'primary']);
     expect(own.text).toBe(String(row.visitors));
-    expect(own.t).toBe(line!.kind === 'path' ? line!.points[0]!.v : NaN);
+    expect(own.t).toBe(line!.kind === 'path' ? line!.points[0]!.y : NaN);
     expect(first.find((m) => m.role === 'comparison')!.text).toBe(String(row['visitors@previous']));
     expect(first.every((m) => m.side === 0)).toBe(true);
   });
@@ -129,11 +129,11 @@ describe('row keys', () => {
     const result = { rows: [{ hour: 9, hits: 12 }, { hour: 10, hits: 30 }, { hour: 11, hits: 7 }], totals: { hits: 49 }, meta: { range: '28d', compare: null, notes: [] } };
     const query = { metrics: ['hits'], by: ['hour'] }, bars: Spec = { query, layers: [{ mark: 'bar', encode: { x: 'hour', y: 'hits' } }] };
     for (const spec of [bars, { query, use: 'bar-list' }, { query, use: 'share-bar' }] as Spec[]) {
-      const scene = buildScene(resolve(spec, result, unboundedContainer(), hours), spec.query, result, hours);
+      const scene = buildScene(resolve(spec, result, hours), spec.query, result, hours);
       expect(scene.rows, scene.layout).toEqual(['9', '10', '11']);
       expect(scene.nodes.filter((n) => n.row != null).every((n) => typeof n.row === 'string'), scene.layout).toBe(true);
     }
-    expect(hitNodes(buildScene(resolve(bars, result, unboundedContainer(), hours), query, result, hours)).map((h) => h.row)).toEqual(['9', '10', '11']);
+    expect(hitNodes(buildScene(resolve(bars, result, hours), query, result, hours)).map((h) => h.row)).toEqual(['9', '10', '11']);
   });
 });
 
@@ -147,7 +147,7 @@ describe('two rows of one value', () => {
     bars: { query, layers: [{ mark: 'bar', encode: { x: 'src', y: 'v' } }] }, line: { query, layers: [{ mark: 'line', encode: { x: 'src', y: 'v' } }] },
     list: { query, use: 'bar-list' }, band: { query, use: 'share-bar' }, donut: { query, use: 'donut' },
   };
-  const sceneOf = (spec: Spec, res: typeof result) => { const plan = resolve(spec, res, unboundedContainer(), sources); return { plan, scene: buildScene(plan, spec.query, res, sources) }; };
+  const sceneOf = (spec: Spec, res: typeof result) => { const plan = resolve(spec, res, sources); return { plan, scene: buildScene(plan, spec.query, res, sources) }; };
 
   it('counts the second (`Google#2`), and leaves a value said once as it is', () => {
     expect([...rowKeys(result.rows, 'src').values()]).toEqual(['Google', 'Google#2', 'Bing', 'Duck']);
@@ -158,8 +158,6 @@ describe('two rows of one value', () => {
     const spec = specs[name]!, { plan, scene } = sceneOf(spec, result), keys = scene.nodes.map((n) => n.key);
     expect(scene.rows).toEqual(['Google', 'Google#2', 'Bing', 'Duck']);
     expect(new Set(keys).size, 'duplicate keys').toBe(keys.length);
-    const placed = place(scene, makeContainer(400)).nodes.map((n) => n.key);
-    expect(new Set(placed).size, 'duplicate keys, placed').toBe(placed.length);
     // The point of each row holds that row and no other, so its name, its readout and the event it sends are its own.
     const at = rowsAt(scene, spec.query, result);
     expect(at.rows).toEqual(result.rows.map((r) => [r]));
@@ -185,7 +183,7 @@ describe('two rows of one value', () => {
   });
   it('changes nothing where no value is said twice', () => {
     for (const { spec } of Object.values(samples)) {
-      const res = runQuery(spec.query), scene = buildScene(resolve(spec, res, unboundedContainer(), catalog), spec.query, res, catalog);
+      const res = runQuery(spec.query), scene = buildScene(resolve(spec, res, catalog), spec.query, res, catalog);
       expect(scene.nodes.filter((n) => /#\d+$/.test(n.row ?? ''))).toEqual([]);
     }
   });
@@ -212,7 +210,7 @@ describe('the mouse leaving', () => {
     const points: ReturnType<typeof el>[] = [], body = el({ dataset: { hits: 'x' }, children: points, matches: (sel: string) => (sel === ':hover' ? hovered : focused), querySelector: () => body, querySelectorAll: () => points, closest: () => points[1] });
     for (const row of ['a', 'b', 'c']) { const p = el({ parentElement: body }); p.setAttribute('data-row', row); points.push(p); }
     const keys = new Keys(host as unknown as HTMLElement, fig as unknown as HTMLElement, body as unknown as HTMLElement);
-    const paint = () => keys.paint({ rows: ['a', 'b', 'c'] } as never, { metrics: [], by: [] } as never, { rows: [{}, {}, {}] } as never, { metrics: {}, dimensions: {} } as never, []);
+    const paint = () => keys.paint({ rows: ['a', 'b', 'c'] } as never, { metrics: [], by: ['letter'] } as never, { rows: [{ letter: 'a' }, { letter: 'b' }, { letter: 'c' }] } as never, { metrics: {}, dimensions: { letter: { label: 'Letter', type: 'categorical' } } } as never, []);
     paint();
     let activated = 0; host.addEventListener('ua-activate', () => activated++);
     const send = (type: string, init: object) => body.dispatchEvent(Object.assign(new Event(type, { cancelable: true }), init));
@@ -229,20 +227,39 @@ describe('the mouse leaving', () => {
     v.send('keydown', { key: 'ArrowRight' });
     expect(v.chosen()).toEqual(['a']);
   });
-  it('proposes the activated point as the selection, marks it Selected once the host keeps it, through a paint, and proposes letting it go on a second activation', () => {
-    const v = view(true), proposed: (string | null)[] = [];
+  it('proposes the activated point as the selection, as the filter it is, marks it Selected once the host keeps it, through a paint, and proposes letting it go on a second activation', () => {
+    const v = view(true), proposed: unknown[] = [], marked = () => v.points.filter((p) => p.hasAttribute('data-selected')).map((p) => p.getAttribute('data-row'));
     v.send('keydown', { key: 'ArrowRight' });
-    const heard = (e: Event) => proposed.push((e as CustomEvent<{ key: string | null }>).detail.key);
-    v.host.addEventListener('ua-select', heard);
+    v.host.addEventListener('ua-select', (e) => proposed.push((e as CustomEvent).detail));
     v.send('keydown', { key: 'Enter' });
-    expect(proposed).toEqual(['a']);
-    v.keys.select('a'); v.paint();
-    expect(v.points.filter((p) => p.hasAttribute('data-selected')).map((p) => p.getAttribute('data-row'))).toEqual(['a']);
+    expect(proposed).toEqual([{ key: 'a', where: { letter: 'a' }, how: 'pick' }]);
+    v.keys.select({ letter: 'a' }); v.paint();
+    expect(marked()).toEqual(['a']);
     // Escape lets go of focus, never of the selection.
     v.send('keydown', { key: 'Escape' });
     expect(v.points[0]!.hasAttribute('data-selected')).toBe(true);
+    // A second activation proposes the same datum: letting it go is the host's fold, not the view's.
     v.send('keydown', { key: 'ArrowRight' }); v.send('keydown', { key: 'Enter' });
-    expect(proposed).toEqual(['a', null]);
+    expect(proposed[1]).toEqual({ key: 'a', where: { letter: 'a' }, how: 'pick' });
+    // What is held with the key or the click says what the activation is for.
+    v.send('keydown', { key: 'ArrowRight' }); v.send('keydown', { key: 'Enter', metaKey: true }); v.send('keydown', { key: ' ', shiftKey: true });
+    expect(proposed.slice(2)).toEqual([{ key: 'b', where: { letter: 'b' }, how: 'toggle' }, { key: 'b', where: { letter: 'b' }, how: 'extend' }]);
+    // A filter is of values, so it marks every point whose row holds it: a list of them, and none for a dimension the rows lack.
+    v.keys.select({ letter: ['a', 'c'] }); expect(marked()).toEqual(['a', 'c']);
+    // And it is said to assistive technology, of every thing that can be chosen: whether it is selected.
+    expect(v.points.map((p) => p.getAttribute('aria-selected'))).toEqual(['true', 'false', 'true']);
+    v.keys.select({ other: 'a' }); expect(marked()).toEqual([]);
+    v.keys.select(null); expect(marked()).toEqual([]);
+  });
+  it('marks by what an atom stands for: a mark at a point of a series, a point, and a series whole', () => {
+    const v = view(true), atoms = [['a', 's'], ['a', 't'], ['b', 's'], ['b', 't'], ['a', null], [null, 's']].map(([row, series]) => { const a = el({ parentElement: v.body }); if (row) a.setAttribute('data-row', row); if (series) a.setAttribute('data-series', series); return a; });
+    v.points.splice(0, v.points.length, ...atoms);
+    const rows = ['a', 'b'].flatMap((letter) => ['s', 't'].map((kind) => ({ letter, kind })));
+    v.keys.paint({ rows: ['a', 'b'], series: ['s', 't'], nodes: [] } as never, { metrics: [], by: ['letter', 'kind'] } as never, { rows } as never, { metrics: {}, dimensions: { letter: { label: 'Letter', type: 'categorical' }, kind: { label: 'Kind', type: 'categorical' } } } as never, []);
+    const marked = () => atoms.filter((a) => a.hasAttribute('data-selected')).map((a) => [a.getAttribute('data-row'), a.getAttribute('data-series')].join(':'));
+    v.keys.select({ kind: 's' }); expect(marked()).toEqual(['a:s', 'b:s', ':s']);                // the series: its marks and what stands for it whole, and no point
+    v.keys.select({ letter: 'a' }); expect(marked()).toEqual(['a:s', 'a:t', 'a:']);              // the point: every mark at it
+    v.keys.select({ letter: 'a', kind: 't' }); expect(marked()).toEqual(['a:t']);                // one mark
   });
   it('keeps a point the mouse still holds through a paint, and the click that follows activates it', () => {
     // New data under a resting mouse sends no pointerover: the element under it was kept.

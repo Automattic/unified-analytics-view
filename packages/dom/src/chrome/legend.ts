@@ -1,6 +1,6 @@
 import { lineOf } from '../layout.ts';
-import type { Scene, TextNode } from '@unified-analytics/core';
-import { attr, ensure, keyed, pageWay, paintVar, prop, text } from '../dom.ts';
+import { TINT, type Scene, type TextNode } from '@unified-analytics/core';
+import { attr, ensure, keyed, nodePaint, pageWay, paintVar, prop, text } from '../dom.ts';
 import { SWATCH, swatch as asSwatch } from './swatch.ts';
 
 /* The legend: what each colour is. One component, in the two forms a scene asks for, told apart by its nodes.
@@ -35,6 +35,14 @@ export const LEGEND_CSS = `
 .uav-legend[data-names] span { line-height: var(--uav-legend-line); }
 .uav-legend[data-names] span::before { margin-inline-end: 6px; vertical-align: -1px; }`;
 
+/** A view with no legend left and nothing in its place, for a layout's `fit` under the rule that sets `split: plain`:
+ * every mark whose colour the legend was the key to is in the first series' paint, over what each wrote on itself, and
+ * a tint among them in that paint's tint. The series are still parted, by their gaps and their lines. */
+export const SPLIT_PLAIN: Record<string, string> = {
+  '[data-legend]:not([data-tone])': '--uav-paint: ' + paintVar('series.1') + ' !important;',
+  '[data-legend][data-tone]': '--uav-paint: ' + nodePaint({ paint: 'series.1', kind: 'rect', tone: TINT.tone, opacity: TINT.opacity }) + ' !important;',
+};
+
 /** Both legends, after whatever the body holds already: the full one in the form its nodes ask for, and the one line.
  * Each is there, empty, where the scene has none, and reads the way the page does whichever way the body is set. */
 export function paintLegend(body: HTMLElement, scene: Scene): void {
@@ -42,10 +50,11 @@ export function paintLegend(body: HTMLElement, scene: Scene): void {
   pageWay(legend, body); pageWay(top, body);
   const nodes = scene.nodes.filter((n) => n.part === 'legend'), names = nodes.length > 0 && !nodes.some((n) => n.kind === 'text' && n.font === 'value');
   attr(legend, 'data-names', names ? '' : null);
-  const swatch = new Map(nodes.filter((n) => n.kind === 'rect').map((n) => [n.series, n.paint]));
+  // An entry's swatch and its name share what follows the colon in their keys: a series' value, or a metric's name.
+  const id = (key: string) => key.slice(key.indexOf(':') + 1), swatch = new Map(nodes.filter((n) => n.kind === 'rect').map((n) => [id(n.key), n.paint]));
   keyed(legend, names ? nodes.filter((n) => n.kind === 'text') : nodes, (n) => (n.kind === 'text' ? 'span' : 'i'), (el, n) => {
     if (n.kind !== 'text') { asSwatch(el, String(SWATCH.legend)); return; }
-    asSwatch(el, names ? String(SWATCH.legend) : null, true); text(el, n); prop(el, '--uav-swatch', names ? paintVar(swatch.get(n.series) ?? n.paint) : null);
+    asSwatch(el, names ? String(SWATCH.legend) : null, true); text(el, n); prop(el, '--uav-swatch', names ? paintVar(swatch.get(id(n.key)) ?? n.paint) : null);
   });
   keyed(top, scene.nodes.filter((n): n is TextNode => n.part === 'legend-top' && n.kind === 'text'), () => 'span', text);
 }

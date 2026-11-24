@@ -4,6 +4,9 @@ import type { FitRule, Spec } from '@unified-analytics/core';
 import { compileFitRules } from '@unified-analytics/dom';
 import { catalog, runQuery, samples } from '@unified-analytics/fixtures';
 import { errOf as err, shown } from './helpers.ts';
+import { useExamples } from './examples.ts';
+
+useExamples();   // the presets the library no longer ships, which these cases still write `use` with
 
 // Step 8 of docs/chart-coverage-plan.md, part 3: `fallback` on a fit rule, the preset a view becomes below the rule's
 // need. No default rule names one, so a context hands the samples a rule that does. A custom mark with a fallback of

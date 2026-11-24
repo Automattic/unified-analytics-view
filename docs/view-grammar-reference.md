@@ -115,7 +115,7 @@ Rules the front end relies on:
 - **How each unit reads.** `count` is a number, shortened where room is short ("13.4k"). `ratio` and `percent` are both written as a percentage ("5.8%"). `ms` and `s` are a length of time ("27.6s", "3m 48s"). `bytes` is a size. A currency is written with its symbol ("$4,333"). A `rank` is written as a place, "1st", "2nd", "23rd", and as the bare number on a scale of ranks. A value that is null is written as a dash, and never as zero.
 - **The unit `rank` has a scale of its own** (built October 12). On y it runs from 1 at the top down to the largest rank in the rows, with a tick and a grid line for each rank, and for every few of them past ten. On a short plot the first and the last stay. It holds no zero: what is no rank, such as the zero a bar or an area starts from, is at the foot. A metric may be in it, and so may a companion.
 - **A companion's unit is its metric's, unless the catalog has an entry for the companion** (decided October 12). `response_time@p25` is in milliseconds because `response_time` is, and nothing need say so. A companion that is not in its metric's unit, a rank or a share of a count, has an entry in `metrics` under its whole name, `"pageviews@rank": { "label": "Rank", "unit": "rank", "polarity": "down" }`, and its unit, label and polarity are read from there: its axis, its ticks, the readout and the table all follow. Core reads no suffix to know any of this, so `@rank` and `@share` mean nothing to it: the same companion under a catalog that has no entry for it is drawn in its metric's unit. An entry does not make a companion something a query can ask for (section 5). In rows, a `text` layer on a companion that has an entry is a column of values with a header, as a metric's is.
-- **A metric may say what it is read against,** with `domain` (least, then most), `target` and `bands`. The `gauge` preset needs `domain`; a gauge and the `bullet` preset mark `target`. A dimension of type `number` is one the engine has cut into bins: each row holds where its bin starts, and where it ends as `<dimension>@end`. These are built here and are in the schema. They are still proposals to the API's owners (section 19, Open 11).
+- **A metric may say what it is read against,** with `domain` (least, then most), `target` and `bands`. The `gauge` preset needs `domain`; a gauge and a bullet graph mark `target`. A dimension of type `number` is one the engine has cut into bins: each row holds where its bin starts, and where it ends as `<dimension>@end`. These are built here and are in the schema. They are still proposals to the API's owners (section 19, Open 11).
 - **A name is an opaque string.** `date.day`, `bucket`, `revenue.usd` and `page_views` are all names; a dot means nothing to the grammar. Only `@` is read: `<name>@<suffix>` is a companion of `<name>`.
 - **Unknown is null, not zero.**
 
@@ -509,7 +509,7 @@ With `stack: "diverge"` and two series that is a population pyramid; with five i
 
 **Several marks to a row** (built October 12). A `dot` or a `tick` in rows with the second dimension on `detail` has one mark for each pair, each at its own value on the row's track, all in the layer's paint and at half strength. That is a strip plot. There is no legend and no limit of six. The readout of a row says how many it holds and which has the most.
 
-**The range behind a row's marks** (built October 12). A `bar` in rows with nothing on `x` is no mark of a value: it is the catalog `domain` of the metric the row's other marks put on the track, drawn as tall as the row and under them, in a part for each of the catalog's `bands`, painted `band.1` to `band.3` from the least. The track's scale then holds the whole domain. A metric with no `domain` has no range drawn, and that is no error, as a metric with no `target` has no tick at one. The `bullet` preset has this layer. The gauge's bands are not drawn yet.
+**The range behind a row's marks** (built October 12). A `bar` in rows with nothing on `x` is no mark of a value: it is the catalog `domain` of the metric the row's other marks put on the track, drawn as tall as the row and under them, in a part for each of the catalog's `bands`, painted `band.1` to `band.3` from the least. The track's scale then holds the whole domain. A metric with no `domain` has no range drawn, and that is no error, as a metric with no `target` has no tick at one. The bench's bullet graph has this layer. The gauge's bands are not drawn yet.
 
 **The plot's marks about a centre** (built November 23, the fourth stage of Decided 44). The circle is the bend: a place round it is what a plot has along x, and how far out from the middle what it has up y. A spec says so as `arc` does, with `angle` and `radius`, and nothing else. With a dimension on `angle` and a metric on `radius`, a `line` runs round from each value's place to the next and closes, an `area` fills in from it to the middle, and a `dot` stands at each place: a radar. Each is drawn by the plot's own function and then bent, so a line's path is drawn about the middle as an arc's is, straight from place to place, and a dot is set in the part's box as a seat is. They are on the circle's one scale out, from nothing at the middle to the most of the layers at the rim: by distance where only lines and dots reach, and by area where a slice does, so over a rose a line meets the slices' ends. The layers reach by one metric, and `series: "previous"` is the period before. The names round the rim are said once, the rows are the places, and where no slice stands a place's share of the circle is what a reader points at and steps to.
 
@@ -596,7 +596,7 @@ A preset is a saved fragment of a spec with slots filled from the query: `$metri
 }
 ```
 
-The library ships these (`packages/core/src/presets.ts`). The three above are written out; the rest expand the same way.
+The library ships the common charts and no more (`packages/core/src/presets.ts`; Decided 54). The three above are written out; the rest expand the same way. A form that is less common is written as its layers: the bench's samples show each one, a box plot and a waterfall, a bump chart and a waffle, and a code base that wants a name for one registers it, or hands `resolve()` a library of its own.
 
 | Preset | The query needs | Draws |
 |---|---|---|
@@ -611,65 +611,28 @@ The library ships these (`packages/core/src/presets.ts`). The three above are wr
 | `donut` | The same | A ring divided by share, with the total in the middle |
 | `pie-semi-circle` | The same | Half a ring |
 | `gauge` | No dimension, and a metric with a catalog `domain` | The metric against its range, with its `target` marked and its `bands` behind |
-| `rose` | One dimension, in the engine's order: an hour, a weekday, a month | An equal slice for each value, reaching out to its value by area. A working name |
-| `radial-bar` | One categorical dimension of six values or fewer (`limit`) | A ring for each value, in a colour of its own, swept to its value against the largest, or the metric's `domain`. A working name |
-| `sunburst` | Two dimensions: the segments, then what divides each. Needs `totalsBy` | A circle divided by share, and round it a ring that divides each segment again. A working name |
 | `heatmap` | Two dimensions: down the side, then across | A grid of cells coloured by the metric |
 | `funnel` | Two metrics, a count then a rate, by a dimension in the engine's order | Rows with a bar, the count and the rate |
-| `box-plot` | Companions `@min`, `@p25`, `@p50`, `@p75`, `@max` | A box and whiskers for each value |
-| `error-bars` | Companions `@lower`, `@upper` | A bar and the interval it is known to |
-| `waterfall` | Companions `@before`, `@running` | Floating bars, each from the running total before it |
-| `candlestick` | Companions `@open`, `@close`, `@min`, `@max` | A body and a wick for each value |
-| `fan` | Companions `@lower`, `@upper` | A line inside the band it is known to |
-| `dumbbell` | One categorical dimension, and `compare` | Rows with a dot for now and one for before, joined. Without `compare`, a dot each |
-| `bullet` | One categorical dimension, and a metric with a catalog `target` | Rows with a bar and a tick at the target, over the metric's catalog `domain` divided at its `bands` |
-| `waffle` | One categorical dimension | A grid of a hundred cells divided by share, with a legend. Under 280 px it is the `share-bar` |
-| `unit-chart` | One dimension. On a binned number dimension it is the Wilkinson dot plot | Glyphs stacked up from the axis, one for so many. Under 280 px it is the `bar` |
-| `isotype` | One categorical dimension | Rows with a run of glyphs, the label and the value. Under 280 px it is the `bar-list` |
-| `parliament` | One categorical dimension of six values or fewer (`limit`) | Seats round a half circle, a colour for each value. Under 280 px it is the `pie-semi-circle` |
-| `icon-array` | No dimension, and a metric with a catalog `domain` | A grid of a hundred, filled to the metric's place in its range, under the number. Under 280 px it is the `gauge` |
-| `bump` | Two dimensions: the axis, then the split. The companion `@rank`, with a catalog entry that gives it the unit `rank` | A line for each value of the split by its place, first at the top |
-| `spaghetti` | Two dimensions: the axis, then the split | A line for each value of the split, all in one paint, with no legend |
-| `difference` | One dimension, time or ordered, and `compare` | The metric and the period before as two lines, and the area between them painted as a gain where the metric is ahead and a loss where it is behind. Without `compare`, the line alone |
-| `connected-scatter` | Two metrics, x then y, by one dimension in the engine's order | A point for each value at the two metrics, joined in that order: by a time dimension, the path the two took together |
-| `ecdf` | One `number` dimension, and the companion `@cumulative`, with a catalog entry that gives it the unit `ratio` | The share of the whole held up to each value, as a line that steps over the bins |
-| `lollipop` | One categorical dimension | Rows with a stem from zero to a dot, the label and the value |
-| `pyramid` | Two dimensions: the rows, then the split | Rows with a bar divided about zero: the first half of the split's values to one side and the second half to the other. Two values are a population pyramid, five a Likert chart |
-| `strip` | Two dimensions: the rows, then the split | Rows with a dot for each value of the split, all in one paint |
-| `marimekko` | Two dimensions: the axis, then the split | Columns as wide as their share of the total, each divided by share |
-| `ohlc` | Companions `@open`, `@close`, `@min`, `@max` | A stroke from the least to the most for each value, with a tick for the opening to its start and one for the close to its end |
 
-A companion is something the engine returns with a metric. A query cannot yet ask for one by name (section 5), so a preset that needs companions works only against a result that has them.
-
-**A custom mark's package registers its own presets.** Core cannot name a custom mark, so the library cannot hold a preset that draws one. The package that registers the mark registers its presets beside it, with `registerPreset(name, { layers })` (`packages/core/src/presets.ts`), written in the same slots. `expand` looks in the library first and then in the registry, so a spec uses a registered name as it uses any other, and a fit rule's `fallback` may name one. `registerGeo` registers two (built October 12):
+**A custom mark's package registers its own presets.** Core cannot name a custom mark, so the library cannot hold a preset that draws one. The package that registers the mark registers its presets beside it, with `registerPreset(name, { layers })` (`packages/core/src/presets.ts`), written in the same slots. `expand` looks in the library first and then in the registry, so a spec uses a registered name as it uses any other, and a fit rule's `fallback` may name one. Each registers the one that draws its mark, and `packages/partition` the list its treemap gives way to:
 
 | Preset | The query needs | Draws |
 |---|---|---|
 | `choropleth` | One dimension whose values are region keys | A map, each region filled by the metric on the sequential ramp |
-| `symbol-map` | The same | A map with a symbol on each region, sized by the metric |
+| `sankey` | Two dimensions, the source and then the target, and `totalsBy` in the result | A Sankey of one step: a node for each value, and a ribbon for each pair |
 | `treemap` | Two categorical dimensions, a parent and its children, and `totalsBy` in the result | A box divided by area among the first dimension's values, and each part divided again among the second's (`packages/partition`) |
 | `pair-list` | Two categorical dimensions | Rows, one for each pair, named by both. What a treemap of two dimensions becomes below the room it needs |
 
-A page that registers the mark again for a set of tiles (section 7) names the presets that draw it. The fixtures register two, for the marks `geo-tiles` and `geo-hexes` (built October 12):
+A page that registers the `geo` mark again for a set of tiles (section 7) may name a preset for it. The fixtures name none: their tile maps and their map of symbols are written as layers.
 
-| Preset | The query needs | Draws |
-|---|---|---|
-| `tile-grid-map` | One dimension whose values are region keys | A tile grid map: an equal square for each region, filled by the metric on the sequential ramp |
-| `hex-tile-map` | The same | A hex tile map: an equal hexagon for each region, filled the same way |
+`gauge` is the one preset that takes no dimension. The schema does not say which presets take one (it cannot know a library's or the registry's): `resolve()` does, by name.
 
-`registerLink`, in `packages/flow`, registers one (built October 12):
+A name must be letters, digits, `_` and `-`, and cannot be one the library has. A name already registered is replaced. `customPresets()` lists what is registered. The registry is a map and two functions, as the one for marks is, and a name in it is unknown until its package has been loaded: the error for an unknown preset lists the library and the registry, and names `registerPreset`.
 
-| Preset | The query needs | Draws |
-|---|---|---|
-| `sankey` | Two dimensions, the source and then the target, and `totalsBy` in the result | A Sankey of one step: a node for each value, and a ribbon for each pair |
-
-`waffle`, `unit-chart`, `isotype`, `parliament` and `icon-array` are working names as well, and `bar` follows `BarChart`. `gauge` and `icon-array` are the two presets that take no dimension. The schema does not say which presets take one (it cannot know a library's or the registry's): `resolve()` does, by name.
-
-All seven are working names, to check against `@automattic/charts`. A name must be letters, digits, `_` and `-`, and cannot be one the library has. A name already registered is replaced. `customPresets()` lists what is registered. The registry is a map and two functions, as the one for marks is, and a name in it is unknown until its package has been loaded: the error for an unknown preset lists the library and the registry, and names `registerPreset`.
-
-- The library ships the basics. Users and agents add their own presets to it.
+- The library ships the common charts. Users and agents add their own presets to it.
 - A preset is named after the `@automattic/charts` component it replaces, where one exists: `line` for `LineChart`, `bar-list` for `BarListChart`.
 - A `previous` layer is left out on expansion when the query has no `compare`.
+- A companion is something the engine returns with a metric. A query cannot yet ask for one by name (section 5), so a preset that needs companions works only against a result that has them.
 - **Proposed:** a preset may pin a hand-tuned form for a size where the derived result is not good enough. The format for this is Open.
 - **The health check for the whole approach:** count how many presets need pins or custom marks. If most do, this has become a chart-type library with extra steps.
 
@@ -1090,6 +1053,7 @@ docs/
 51. One vocabulary for where a node is, begun. Every node says its place in the same fields, whatever its kind and its layout: `x` and `y` where it is, `x2` and `y2` its other end, `w` and `h` an extent (section 11). `v`, `v0`, `t` and `t2` are gone, and with them a list's bar that ran from `v0` to `v` beside a rule from `x` to `x2`. It is the step Decided 44 named as the one that would let each layout's own marks be the plot's. The first stage was the names alone: no number changed, which a comparison of every node of every sample's scene before and after holds, and the capture. The second made `y` count up everywhere: a grid's cell, a cell of a `unit`'s grid, a treemap's box and a Sankey's node had counted down from the top, and each now stands on `y` from the bottom, where it stood before. The third made a row's marks the plot's, turned. A list had five functions of its own, for a bar, a rule, a tick, a dot and a unit, each a copy of the plot's on its side. A row's track now draws the plot's own, handed one row and the track's scale, and each node is turned once: what was up the plot runs along the track, and what was across a band runs up the row, from the top. A list's layer is turned the same way going in, its `y` read as `x` and its `x` as `y`. What a list alone does is said after the turn: a bar behind its label is a tint and is never faded as an unfinished bucket is, a dot or a tick of a mass lets the ones under it show, and a rule with one end at a number lies from zero in each row. What it found: every node of every sample's scene is as it was, ten of them to the last digit of a float; a list already drew every mark a plot does, so it gained none; and the code is no shorter, seven lines longer. What it gives is one definition of each mark, so what is added to the plot's reaches a list where its painter draws it. Still to come, if they are wanted: the share bar as a list of one row, and a slice as a bar, bent. (November 24)
 52. The prototype is gone, and nothing is held to it. It was an artifact of development: the port was proven against it, and since Decided 43 it was held to less of it at each step. Its three files and the comparison in `test/core.test.ts` are removed, and git keeps them. The sweep holds what it held of its own, unique keys and no `NaN` in every data state, and each departure that was asserted against the prototype is asserted for itself. It is the first step of `docs/focus-plan.md`. (November 24)
 53. The tldr prose is the number block in words, and then the filter: one shape for every view. It says each metric's total from the engine with its change and its target, and the value that leads the query's first dimension where the number's note names one. The sentences a kind of view had of its own are gone: for a ranking and for shares, for two dimensions, for a grid, for ranks, for a range, for a difference and for a path of points. A sentence stays derived, since a view's data is live and an authored one is not, and it stays the accessible description and the last rung. What a view shows beyond its number is for whoever reads the result to say. A total the engine does not give is said as "no figure". It is the second step of `docs/focus-plan.md`. (November 24)
+54. The library ships the common charts and no more: thirteen presets, the charts `@automattic/charts` has and the ones a fit rule falls back to. The twenty-five it had beyond them are gone from it, and so are three a custom mark's package registered: a form that is less common is more likely to be written to its case than taken whole, so it is written as its layers, and the bench keeps a sample of each. `use`, `registerPreset` and a library handed to `resolve()` are as they were. Every sample's scene is what it was, node for node. It is the third step of `docs/focus-plan.md`. (November 24)
 
 ### Open
 

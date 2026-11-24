@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { buildScene, resolve, unitsOf, type Layer, type Result, type Spec } from '@unified-analytics/core';
-import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
+import { catalog, moreSamples as written, runQuery, scenarios } from '@unified-analytics/fixtures';
 import { errOf, run as runAt, shown, startingWith as of, validView as view } from './helpers.ts';
+import { inUse, useExamples } from './examples.ts';
+
+useExamples();   // the presets the library no longer ships, which these cases still write `use` with
+const moreSamples = inUse(written);   // and the samples as they were written with them
 
 // Step 4 of docs/uncommon-coverage-plan.md: what rows, bars, ticks and rules take that they refused. Each part of the
 // step has its facts here. The samples are swept, and have their golden scenes, at the foot of this file.

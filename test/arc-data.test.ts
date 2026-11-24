@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { FIT_RULES, arcD, buildScene, expand, resolve, tldrProse, type ArcNode, type Result, type Spec, type TextNode } from '@unified-analytics/core';
 import { compileFitRules } from '@unified-analytics/dom';
-import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
+import { catalog, moreSamples as written, runQuery, scenarios } from '@unified-analytics/fixtures';
 import { radial } from '../packages/dom/src/layouts/radial.ts';
 import { err, round, run, shown, validView as view } from './helpers.ts';
+import { inUse, useExamples } from './examples.ts';
+
+useExamples();   // the presets the library no longer ships, which these cases still write `use` with
+const moreSamples = inUse(written);   // and the samples as they were written with them
 
 // Step 2 of docs/uncommon-coverage-plan.md: an `arc` that reads data on `angle` and `radius`, and a second ring by
 // `detail`. Held to its own sweep, facts and golden scenes, as test/radial.test.ts holds the circle divided by colour.

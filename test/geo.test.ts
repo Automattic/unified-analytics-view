@@ -107,18 +107,18 @@ describe('geo, filled by a metric', () => {
     expect([plan.layout, ratio.layout, plan.preset]).toEqual(['geo', 'geo', 'choropleth']);
   });
   it('its presets are registered with it, since core cannot name it: a view that uses one is the layers written out, to the node', () => {
-    expect([...customPresets().keys()]).toEqual(['choropleth', 'symbol-map', 'sankey', 'tile-grid-map', 'hex-tile-map', 'treemap', 'pair-list']);
+    expect([...customPresets().keys()]).toEqual(['choropleth', 'sankey', 'treemap', 'pair-list']);
     expect(PRESETS).not.toHaveProperty('choropleth');
-    expect(map.layers ?? symbols.layers).toBeUndefined();
+    expect(map.layers).toBeUndefined();
     expect(expand(map).layers).toEqual([{ mark: 'geo', encode: { x: 'country', color: 'visitors' } }]);
-    expect(expand(symbols).layers).toEqual([{ mark: 'geo', encode: { x: 'country', size: 'pageviews' } }]);
-    for (const spec of [map, symbols]) {
+    expect(symbols.layers).toEqual([{ mark: 'geo', encode: { x: 'country', size: 'pageviews' } }]);   // a map of symbols has no preset, and is written as its layer
+    for (const spec of [map]) {
       const { use: _use, ...rest } = spec, written: Spec = { ...rest, layers: expand(spec).layers };
       for (const [w, h] of [[346, null], [300, null], [250, null], [346, 100], [120, null]] as [number, number | null][]) { const a = run(spec, w, h), b = run(written, w, h); expect([a.ratio, a.fit, a.gave], spec.use + ' ' + w + ' ' + h).toEqual([b.ratio, b.fit, b.gave]); }
       expect(run(written, 346).plan.preset).toBeNull();
       expect(view(spec), JSON.stringify(view.errors)).toBe(true);
     }
-    expect(run(symbols, 346).plan).toMatchObject({ layout: 'geo', preset: 'symbol-map' });
+    expect(run(symbols, 346).plan).toMatchObject({ layout: 'geo', preset: null });
     expect(err(() => expand({ ...map, query: { metrics: ['visitors'] } }))).toBe('The "choropleth" preset needs a dimension in query.by.');
   });
   it('draws every shape handed in, in the shapes\' order whatever the ranking, each a path in a box 100 wide', () => {

@@ -132,15 +132,15 @@ export function eachGeoName(f: (name: string) => void): void { NAMES.forEach((n)
  * `mark`, or a preset in `use`.
  *
  * Other shapes are the same mark registered again under a name of its own, and `presets` names the presets that draw
- * it: the one that fills each region on `color`, and the one that stands a symbol on each on `size`. Under `geo` they
- * are `choropleth` and `symbol-map`, and under another name there are only the ones given.
+ * it: the one that fills each region on `color`, and the one that stands a symbol on each on `size`. Under `geo` there
+ * is `choropleth`, and under another name there are only the ones given. A map of symbols is written as its layer.
  * Each name is a custom mark, and counts against the grammar as one. */
 export function registerGeo(shapes: Shapes, { presets, ...options }: GeoOptions & { presets?: { color?: string; size?: string } } = {}): void {
   const name = options.name ?? 'geo';
   registerMark(name, geoMark(shapes, options));
   if (!NAMES.has(name)) { NAMES.add(name); HEARD.forEach((f) => f(name)); }
   // Core cannot name this mark, so its presets are registered here. Working names: check each against @automattic/charts before it ships.
-  const { color, size } = presets ?? (name === 'geo' ? { color: 'choropleth', size: 'symbol-map' } : {});
+  const { color, size } = presets ?? (name === 'geo' ? { color: 'choropleth' } : {});
   if (color) registerPreset(color, { layers: [{ mark: name, encode: { x: '$by', color: '$metric' } }] });
   if (size) registerPreset(size, { layers: [{ mark: name, encode: { x: '$by', size: '$metric' } }] });
 }

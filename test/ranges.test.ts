@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { CONTAINER_RULES, FIT_RULES, expand, resolve, type Catalog, type Room, type Spec } from '@unified-analytics/core';
-import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
+import { catalog, moreSamples as written, runQuery, scenarios } from '@unified-analytics/fixtures';
 import { hitNodes } from '../packages/dom/src/keys.ts';
 import { at, err, run, shown, validView as view } from './helpers.ts';
+import { inUse, useExamples } from './examples.ts';
+
+useExamples();   // the presets the library no longer ships, which these cases still write `use` with
+const moreSamples = inUse(written);   // and the samples as they were written with them
 
 // Ranges and `tick` (docs/chart-coverage-plan.md, step 3): companion fields, a second end on a bar, a rule and an
 // area, a rule with fields, the tick, dots in a row's track, and paint by direction. All of it

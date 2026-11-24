@@ -1,6 +1,6 @@
 # Focus plan
 
-As of November 24, 2026. **Status: steps 1 and 2 are built.** On November 24 David said to go ahead with the rest by best judgement, weighed against the vision, and to keep what wants his opinion for the end: it is under "For David, at the end".
+As of November 24, 2026. **Status: steps 1 to 3 are built.** On November 24 David said to go ahead with the rest by best judgement, weighed against the vision, and to keep what wants his opinion for the end: it is under "For David, at the end".
 
 ## Why
 
@@ -72,6 +72,13 @@ The sentence is the number block in words, then the filter. The number block alr
 - `test/docs.test.ts` holds the library, the reference and the schema to one another, so the cut is mechanical.
 
 **Done when** `PRESETS` is the kept list, and every sample's scene is what it was, node for node.
+
+**Built November 24** (reference, Decided 54). What it found:
+
+- 31 samples were written with a cut preset. Each is its layers now, and all 300 plans and scenes of every sample in every data state, 9,889 nodes, are what they were.
+- Three presets a custom mark's package registered went too: `symbol-map`, `tile-grid-map` and `hex-tile-map`. `registerGeo` still takes names for them from a page that wants them.
+- The cut presets are kept as slots in `test/examples.ts`, since the suites exercise the preset mechanism with them: a second dimension, a second metric, a companion's suffix. No package holds them.
+- `apps/bench-archive` used two of them and was kept on the terms that it not change, so it was deleted first, in a commit of its own (To decide, 7).
 
 ### 4. Nothing dropped without a word
 
@@ -173,3 +180,5 @@ Calls made by best judgement while building, each to confirm or turn over.
 1. **"The top page is /."** The sentence names the leader with the number's own word, "top", whatever the metric's polarity: for response time the top page is the slowest. The note under the number has always said "Top:" the same way.
 2. **Every metric of the query is said,** not the first alone, though the number block shows only the first. It was so before, and a table of three metrics reads better for it.
 3. **A capture is not independent of where a frame stands on the page.** After step 2 the frames 40 px wide changed height, as they should: they show the sentence. That moved the frames at free width under them, and 28 of those set their x axis 1 px from where it was, because a plot is set on whole device px from its place on the page. Two captures of the same code still agree on every frame. The parts page could give each frame a place that no other frame moves.
+4. **The kept presets.** Thirteen, as recommended in step 3, and four that custom marks' packages register (`choropleth`, `sankey`, `treemap`, `pair-list`). `gauge` stays because an icon array falls back to it, not because it is common.
+5. **The archive is deleted,** with the test that swept its seventeen goal dashboards. The dashboards were the only record in the tree of which views serve which goal. One command brings it back (To decide, 7).

@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { FIT_RULES, expand, unitWorth } from '@unified-analytics/core';
 import type { Catalog, CircleNode, Layer, RectNode, Result, Spec, TextNode } from '@unified-analytics/core';
-import { catalog, moreSamples, scenarios } from '@unified-analytics/fixtures';
+import { catalog, moreSamples as written, scenarios } from '@unified-analytics/fixtures';
 import { err as shared, run, shown, validView as view } from './helpers.ts';
+import { inUse, useExamples } from './examples.ts';
+
+useExamples();   // the presets the library no longer ships, which these cases still write `use` with
+const moreSamples = inUse(written);   // and the samples as they were written with them
 
 // Step 6 of docs/uncommon-coverage-plan.md: the `unit` mark, which draws a value as counted glyphs. It
 // is held to its own sweep, facts and golden scenes, as test/radial.test.ts holds the arcs. The rules its

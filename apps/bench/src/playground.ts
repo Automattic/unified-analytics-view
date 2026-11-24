@@ -26,7 +26,7 @@ view.catalog = catalog;
 // The host keeps the selection: what the view proposes is folded into the filter kept (core's select), which is set
 // back on the view and said here, since it has no look yet.
 const selected = $('#selected');
-view.addEventListener('ua-select', (e) => { view.selected = select(view.selected, (e as CustomEvent<Proposal>).detail, catalog); selected.textContent = view.selected == null ? 'Nothing selected. Activate a point, with a click or Enter, to select it, and again to let it go. With Cmd or Ctrl it joins those selected; with Shift a run of days or bins reaches to it.' : 'Selected: ' + JSON.stringify(view.selected); });
+view.addEventListener('ua-select', (e) => { view.selected = select(view.selected, (e as CustomEvent<Proposal>).detail, catalog); selected.textContent = view.selected == null ? 'Nothing selected. Activate a point, with a click or Enter, to select it, and again to let it go. With Cmd or Ctrl it joins those selected; with Shift a run of days or bins reaches to it.' : 'Selected: ' + JSON.stringify(view.selected); later(); });
 view.dispatchEvent(new CustomEvent('ua-select', { detail: { key: null, where: {} } }));
 
 for (const [name, s] of Object.entries(samples)) picker.add(new Option(s.label, name));

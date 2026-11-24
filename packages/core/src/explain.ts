@@ -7,7 +7,7 @@ import { facets, layoutOf, resolve } from './plan.ts';
 import { filterSaid } from './prose.ts';
 import { buildScene, layerKeys, measuresOf } from './scene.ts';
 import { baseOf } from './types.ts';
-import type { Catalog, Layout, PresetLibrary, Result, Spec } from './types.ts';
+import type { Catalog, Layout, PresetLibrary, Result, Spec, Where } from './types.ts';
 
 /* Why a view looks as it does, said in the words of its spec. Every entry names the place in the spec it came from,
  * and the lever that changes it, where the spec has one. A decision with no lever is a default, and the rules are
@@ -54,6 +54,14 @@ export const facetBecause = (spec: Spec, catalog: Catalog, count: number, first:
   why: 'a facet is a view for each value of "' + spec.facet + '", every one on the same scales, and where they stand is the surface\'s. What follows is said of the first, "' + first + '", at its own room',
   lever: 'remove "facet" to draw them as one view',
 });
+
+/** What is said of a selection a host has set on a view (`selected`): what the view marks by it, which is what the
+ * selection says of the dimensions the view draws (`by`), and that it is not filtered by it. Null where it marks
+ * nothing. A plan knows no selection, so this is a surface's to add: `UaView.explain()` does. */
+export const selectedBecause = (selected: Where | null | undefined, by: readonly string[], catalog: Catalog): Because | null => {
+  const said = filterSaid(Object.fromEntries(Object.entries(selected ?? {}).filter(([d]) => by.includes(d) && catalog.dimensions[d])), catalog);
+  return said ? { what: 'marked as selected: ' + said, from: 'selected', why: 'the host keeps this selection and set it on the view. A view marks what it draws of a selection and is not filtered by it: what it is of is its query\'s "where". Activating what is marked again proposes letting it go' } : null;
+};
 
 export function explain(spec0: Spec, result: Result, catalog: Catalog, room?: ExplainRoom, presets: PresetLibrary = PRESETS): Explanation {
   // A facet is explained by its first view, at the room that view has, after what is said of them all.

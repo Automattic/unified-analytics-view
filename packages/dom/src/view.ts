@@ -1,4 +1,4 @@
-import { CONTAINER_RULES, DELTA_FULL, FACET_GAP, FACET_LEAST, NOTE_LEAST, NUMBER_SHORT, buildScene, customMarks, expand, explain, facetBecause, facets, fallbackRule, fills, gaveWay, hasOf, resolve } from '@unified-analytics/core';
+import { CONTAINER_RULES, DELTA_FULL, FACET_GAP, FACET_LEAST, NOTE_LEAST, NUMBER_SHORT, buildScene, customMarks, expand, explain, facetBecause, facets, fallbackRule, fills, gaveWay, hasOf, resolve, selectedBecause } from '@unified-analytics/core';
 import type { Because, Catalog, ContainerRules, Explanation, Layout, Result, SceneNode, Spec, Where } from '@unified-analytics/core';
 import { compileFitRules } from './compile.ts';
 import { LEGEND_LINE } from './chrome/legend.ts';
@@ -304,7 +304,8 @@ export class UaView extends Base {
   #selected: Where | null = null;
 
   /** Why the view looks as it does at the size it has now, in the words of its spec: core's explain() for this room,
-   * and after it what the measured pass decided here, which no rule says. An invalid spec is one entry, its error.
+   * what it marks of the selection the host set on it, and after them what the measured pass decided here, which no
+   * rule says. An invalid spec is one entry, its error.
    * ponytail: core's default fit rules, as the plan is explained; a context's own `rules.fit` is not read here yet. */
   explain(): Explanation {
     const { spec, result, catalog } = this;
@@ -318,7 +319,9 @@ export class UaView extends Base {
     let e: Explanation;
     try { e = explain(spec, result, catalog, { inline: box.width, block: box.height || null, plot: plot?.width ? { inline: plot.width, block: plot.height } : null }); }
     catch (err) { return { layout: 'none', entries: [{ what: 'not drawn', from: 'spec', why: (err as Error).message }] }; }
-    return { ...e, entries: e.entries.concat(this.#measured(e)) };
+    // What is selected is the host's and no plan knows it, so it is said here: after the layout and the filter, which it is read beside.
+    const marked = selectedBecause(this.#selected, spec.query.by ?? [], catalog), at = e.entries.findIndex((b) => b.from === 'query.where') + 1 || 1;
+    return { ...e, entries: [...e.entries.slice(0, at), ...(marked ? [marked] : []), ...e.entries.slice(at), ...this.#measured(e)] };
   }
 
   /* What the measured pass decided, read off what it wrote: the number's form, the prose rung, and labels given up or cut short. */

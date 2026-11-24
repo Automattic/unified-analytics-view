@@ -1,6 +1,6 @@
 import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { boardSelect, boardViews, holds, resolve, select, whereOf, type Board, type Gesture, type Where } from '@unified-analytics/core';
+import { boardSelect, boardViews, holds, resolve, select, selectedBecause, whereOf, type Board, type Gesture, type Where } from '@unified-analytics/core';
 import boardSchema from '@unified-analytics/core/schema/board.schema.json';
 import viewSchema from '@unified-analytics/core/schema/view.schema.json';
 import { boardSamples, catalog, runQuery, scenarios } from '@unified-analytics/fixtures';
@@ -101,6 +101,19 @@ describe('a proposal folded into the filter held', () => {
   it('and every filter it makes is one a query may hold', () => {
     const made = [fold({ channel: 'Search' }, { channel: 'Social' }, 'toggle')!, fold({ 'date.day': '2026-09-21' }, { 'date.day': '2026-09-27' }, 'extend')!];
     for (const where of made) expect(() => runQuery({ metrics: ['visitors'], where })).not.toThrow();
+  });
+});
+
+describe('what a view says of a selection set on it', () => {
+  it('is what it marks, which is what the selection says of the dimensions it draws, and that it is not filtered by it', () => {
+    const v = of(pick(pick(board, { channel: 'Search' }), { device: 'Mobile' })), said = (key: string) => selectedBecause(v[key]!.selected, v[key]!.spec.query.by ?? [], catalog);
+    expect(said('Channels')).toMatchObject({ what: 'marked as selected: channel Search', from: 'selected' });
+    expect(said('Channels')!.why).toMatch(/marks what it draws of a selection and is not filtered by it/);
+    expect(said('Visitors')).toBeNull();
+    // A selection of a dimension the view does not draw, or that the catalog lacks, marks nothing and is not said.
+    expect(selectedBecause({ device: 'Mobile', nope: 'x' }, ['channel', 'nope'], catalog)).toBeNull();
+    expect(selectedBecause({ channel: ['Search', 'Social'], 'date.day': { from: '2026-09-21', to: '2026-09-27' } }, ['channel', 'date.day'], catalog)!.what).toBe('marked as selected: channel Search or Social, and day from Sep 21 to Sep 27');
+    expect(selectedBecause(null, ['channel'], catalog)).toBeNull();
   });
 });
 

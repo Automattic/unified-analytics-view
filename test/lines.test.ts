@@ -43,7 +43,7 @@ describe('a companion\'s unit', () => {
     expect(unitsOf(catalog, withLine('hits@p50').layers!)).toEqual(['count']);
     const s = scene(withLine('hits@p50'), bySource);
     expect(s.scene.parts).toEqual(['y-axis', 'plot', 'x-axis']);
-    expect(paths(s)[0]!.points.map((p) => p.v)).toEqual([300 / 1000, 250 / 1000, 100 / 1000]);
+    expect(paths(s)[0]!.points.map((p) => p.y)).toEqual([300 / 1000, 250 / 1000, 100 / 1000]);
   });
   it('is its own where the catalog has an entry under its whole name: a share beside a count has the far axis, and is not flat on the count\'s', () => {
     expect(metricOf(catalog, 'hits@share')).toBe(catalog.metrics['hits@share']);
@@ -52,12 +52,12 @@ describe('a companion\'s unit', () => {
     // A companion with an entry of its own is a quantity of its own, so the two are told apart in a legend.
     expect(s.scene.parts).toEqual(['y-axis', 'plot', 'y-axis-2', 'x-axis', 'legend']);
     expect(ticks(s, 'y-axis-2')).toEqual(['0%', '20%', '40%', '60%', '80%', '100%']);
-    expect(paths(s)[0]!.points.map((p) => p.v)).toEqual([0.438, 0.84, 1]);
+    expect(paths(s)[0]!.points.map((p) => p.y)).toEqual([0.438, 0.84, 1]);
   });
   it('core reads no suffix to know it: the same companion under a catalog that says nothing of it is a count', () => {
     const { 'hits@share': _share, ...metrics } = catalog.metrics, bare = { ...catalog, metrics };
     expect(unitsOf(bare, withLine('hits@share').layers!)).toEqual(['count']);
-    expect(paths(scene(withLine('hits@share'), bySource, bare))[0]!.points.map((p) => p.v)).toEqual([0.438 / 1000, 0.84 / 1000, 1 / 1000]);
+    expect(paths(scene(withLine('hits@share'), bySource, bare))[0]!.points.map((p) => p.y)).toEqual([0.438 / 1000, 0.84 / 1000, 1 / 1000]);
   });
   it('is how its value is written in the readout, under its own label, where one with no entry is under its suffix', () => {
     const layers = [bars, { mark: 'line' as const, encode: { x: 'source', y: 'hits@share' } }, { mark: 'tick' as const, encode: { x: 'source', y: 'hits@p50' } }];
@@ -77,12 +77,12 @@ describe('the unit rank', () => {
   });
   it('has a scale that runs from 1 at the top to the last rank at the foot, with a tick and a grid line for each', () => {
     const s = scene(bump, pairs), lines = paths(s);
-    expect(s.scene.nodes.filter((n) => n.part === 'y-axis').map((n) => [n.key, (n as { text: string }).text, (n as { t: number }).t, n.rank])).toEqual([['ytick:1', '1', 1, undefined], ['ytick:2', '2', 0.5, 1], ['ytick:3', '3', 0, undefined]]);
-    expect(s.scene.nodes.filter((n) => n.key.startsWith('grid:')).map((n) => [(n as { t: number }).t, n.paint])).toEqual([[1, 'grid'], [0.5, 'grid'], [0, 'grid']]);
+    expect(s.scene.nodes.filter((n) => n.part === 'y-axis').map((n) => [n.key, (n as { text: string }).text, (n as { y: number }).y, n.rank])).toEqual([['ytick:1', '1', 1, undefined], ['ytick:2', '2', 0.5, 1], ['ytick:3', '3', 0, undefined]]);
+    expect(s.scene.nodes.filter((n) => n.key.startsWith('grid:')).map((n) => [(n as { y: number }).y, n.paint])).toEqual([[1, 'grid'], [0.5, 'grid'], [0, 'grid']]);
     // First place is at the top, and the two that change places on the last day cross.
-    expect(lines.map((n) => [n.series, n.points.map((p) => p.v)])).toEqual([['Search', [1, 1, 0.5]], ['Direct', [0.5, 0.5, 1]], ['Social', [0, 0, 0]]]);
+    expect(lines.map((n) => [n.series, n.points.map((p) => p.y)])).toEqual([['Search', [1, 1, 0.5]], ['Direct', [0.5, 0.5, 1]], ['Social', [0, 0, 0]]]);
     // A label stands where its line ends, so the labels read in the last day's order.
-    expect(s.scene.nodes.filter((n) => n.part === 'labels').map((n) => [(n as { text: string }).text, (n as { t: number }).t])).toEqual([['Search', 0.5], ['Direct', 1], ['Social', 0]]);
+    expect(s.scene.nodes.filter((n) => n.part === 'labels').map((n) => [(n as { text: string }).text, (n as { y: number }).y])).toEqual([['Search', 0.5], ['Direct', 1], ['Social', 0]]);
   });
   it('is said in prose: who is first and on how many of the rows, and who rose and fell the furthest from the first to the last', () => {
     expect(scene(bump, pairs).plan.text).toBe('In the last 3 days, Search is first by hits on 2 of 3 days. Direct rose from 2nd to 1st, and Search fell from 1st to 2nd.');
@@ -101,7 +101,7 @@ describe('the unit rank', () => {
     const cat: Catalog = { ...catalog, metrics: { place: { label: 'Place', unit: 'rank', polarity: 'down' } } };
     const result: Result = { rows: [{ source: 'Search', place: 1 }, { source: 'Direct', place: 2 }, { source: 'Social', place: 3 }], totals: { place: null }, meta: { compare: null, notes: [] } };
     const s = scene({ query: { metrics: ['place'], by: ['source'] }, layers: [{ mark: 'bar', encode: { x: 'source', y: 'place' } }] }, result, cat);
-    expect(s.scene.nodes.filter((n) => n.kind === 'rect').map((n) => [(n as { v: number }).v, (n as { v0?: number }).v0])).toEqual([[1, undefined], [0.5, undefined], [0, undefined]]);
+    expect(s.scene.nodes.filter((n) => n.kind === 'rect').map((n) => [(n as { y: number }).y, (n as { y2?: number }).y2])).toEqual([[1, undefined], [0.5, undefined], [0, undefined]]);
     expect(readout(result.rows[1]!, { metrics: ['place'], by: ['source'] }, cat, [])).toBe('Direct: Place 2nd');
   });
 });
@@ -116,7 +116,7 @@ describe('a line in a plot of points', () => {
     expect([line!.key, line!.part, line!.curve, tail!.key, tail!.part, tail!.dash]).toEqual(['primary:line', 'points', undefined, 'primary:line:partial', 'points', '2 4']);
     // A point for each whole day, in the days' order, each where its dot is. The order is time's and not x's: the line turns back on itself.
     expect(line!.points.map((p) => p.row)).toEqual(result.rows.slice(0, -1).map((r) => r['date.day']));
-    expect(line!.points.map((p) => [p.x, p.v])).toEqual(dots.slice(0, -1).map((n) => [n.x, n.t]));
+    expect(line!.points.map((p) => [p.x, p.y])).toEqual(dots.slice(0, -1).map((n) => [n.x, n.y]));
     expect(line!.points.some((p, i, all) => i > 0 && p.x < all[i - 1]!.x)).toBe(true);
     expect(line!.d).toMatch(/^M[\d.]+,[\d.]+(L[\d.]+,[\d.]+){26}$/);
     // The unfinished day is joined on by a dashed stroke, as on any line.
@@ -143,12 +143,12 @@ describe('a line in a plot of points', () => {
     expect(readout(result.rows[0]!, q, fixtures, plan.layers)).toBe('Sep 8: Visitors 416; Sign-ups ' + result.rows[0]!.signups);
   });
   it('morphs point for point, across as well as up: a point is at a value on x too', () => {
-    const from = [{ x: 0.2, v: 0.2 }, { x: 0.8, v: 0.4 }], to = [{ x: 0.6, v: 0.6 }, { x: 0.4, v: 0.8 }, { x: 0.1, v: 0.1 }];
+    const from = [{ x: 0.2, y: 0.2 }, { x: 0.8, y: 0.4 }], to = [{ x: 0.6, y: 0.6 }, { x: 0.4, y: 0.8 }, { x: 0.1, y: 0.1 }];
     expect(pairUp(from, to)).toEqual([from[0], from[1], from[1]]);
     expect(pairUp([], to)).toEqual(to);
-    expect(mix(pairUp(from, to), to, 0.5, true).map((p) => [+p.x.toFixed(3), +p.v.toFixed(3)])).toEqual([[0.4, 0.4], [0.6, 0.6], [0.45, 0.25]]);
+    expect(mix(pairUp(from, to), to, 0.5, true).map((p) => [+p.x.toFixed(3), +p.y.toFixed(3)])).toEqual([[0.4, 0.4], [0.6, 0.6], [0.45, 0.25]]);
     // At its end a morph draws the scene's own path (motion.ts), so nothing rests on this sum.
-    expect(mix(pairUp(from, to), to, 1, true).map((p) => [+p.x.toFixed(9), +p.v.toFixed(9)])).toEqual(to.map((p) => [p.x, p.v]));
+    expect(mix(pairUp(from, to), to, 1, true).map((p) => [+p.x.toFixed(9), +p.y.toFixed(9)])).toEqual(to.map((p) => [p.x, p.y]));
   });
   it('an area there is refused: there is no one way along x to fill under', () => {
     expect(errOf(() => of({ ...joined, layers: [{ mark: 'area', encode: at }] })))

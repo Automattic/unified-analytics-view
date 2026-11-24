@@ -128,7 +128,7 @@ export const rows: LayoutPainter = {
       keyed(el, by.get(r.row) ?? [], (n) => (n.kind === 'text' ? 'span' : 'i'), (c, n) => {
         if (n.kind === 'text') cell(c, n);
         // A bar lies from where its track has zero to its value. A part of the range behind the marks is a guide, and says so.
-        else if (n.kind === 'rect') { const from = n.v0 ?? 0; prop(c, '--uav-x', Math.min(from, n.v!) || null); prop(c, '--uav-v', Math.abs(n.v! - from)); attr(c, 'data-mark', n.layer === 'guide' ? 'band' : null); }
+        else if (n.kind === 'rect') { const from = n.x2 ?? 0; prop(c, '--uav-x', Math.min(from, n.x!) || null); prop(c, '--uav-v', Math.abs(n.x! - from)); attr(c, 'data-mark', n.layer === 'guide' ? 'band' : null); }
         else if (n.kind === 'line' || n.kind === 'circle') trackMark(c, n);
       });
     });

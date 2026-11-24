@@ -149,7 +149,7 @@ describe('the grids of the Uncommon types', () => {
     expect(ratio).toMatchObject({ layout: 'matrix', parts: ['y-axis', 'plot', 'x-axis', 'ramp', 'size'] });
     expect([cells(ratio).length, dots(ratio).length]).toEqual([0, 36]);
     // In the middle of its pair, in the grid's reading order, keyed by the pair as a cell is.
-    expect(dots(ratio)[7]).toMatchObject({ key: 'primary:dot:Traffic:Traffic', pair: ['Traffic', 'Traffic'], x: 1.5 / 6, t: 1 - 1.5 / 6, size: 4, paint: 'div.9', layer: 'data', role: 'primary' });
+    expect(dots(ratio)[7]).toMatchObject({ key: 'primary:dot:Traffic:Traffic', pair: ['Traffic', 'Traffic'], x: 1.5 / 6, y: 1 - 1.5 / 6, size: 4, paint: 'div.9', layer: 'data', role: 'primary' });
     expect(dots(ratio).every((n) => n.row == null)).toBe(true);
     // The size steps are a plot's, by area, of the magnitude: the most is the farther end of the stated domain, 1.
     for (const n of dots(ratio)) expect([n.size, n.paint], n.key).toEqual([sizeStep(Math.abs(value(n)), 1), 'div.' + Math.min(9, 1 + Math.floor(((value(n) + 1) / 2) * 9))]);
@@ -177,7 +177,7 @@ describe('the grids of the Uncommon types', () => {
     expect(labels.every((n) => n.row == null)).toBe(true);
     // In the middle of the pair's place on each axis, which is where its cell's middle is.
     const cellOf = (n: any) => cells(ratio).find((c) => c.pair!.join() === n.pair.join())!;
-    for (const n of labels) { const c = cellOf(n); expect(n.x, n.key).toBeCloseTo(c.x! + c.w! / 2, 12); expect(n.t, n.key).toBeCloseTo(1 - (c.y! + c.h! / 2), 12); }
+    for (const n of labels) { const c = cellOf(n); expect(n.x, n.key).toBeCloseTo(c.x! + c.w! / 2, 12); expect(n.y, n.key).toBeCloseTo(1 - (c.y! + c.h! / 2), 12); }
     // What it says is the metric as the catalog writes it, and it is ranked by it, the largest first.
     expect(labels.map((n) => n.text)).toEqual(result.rows.map((r) => formatValue(r.correlation as number, catalog.metrics.correlation!)));
     expect([...labels].sort((a, b) => a.rank - b.rank).map((n) => n.text).slice(0, 6)).toEqual(Array(6).fill('1'));

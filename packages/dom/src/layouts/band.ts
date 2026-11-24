@@ -53,7 +53,7 @@ export const band: LayoutPainter = {
     hits(segs, rows.length ? 'x' : null);
     attr(segs, 'data-unit', scene.aspect ? '' : null);
     prop(body, '--uav-rows', rows.length);
-    keyed(segs, nodes('band').filter((n): n is RectNode => n.kind === 'rect'), () => 'i', (el, n) => prop(el, '--uav-v', n.v));
+    keyed(segs, nodes('band').filter((n): n is RectNode => n.kind === 'rect'), () => 'i', (el, n) => prop(el, '--uav-v', n.w));
     paintUnitKey(body, scene);
     paintLegend(body, scene);
   },

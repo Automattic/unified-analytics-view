@@ -186,7 +186,7 @@ describe('what a tile could hold, and does not', () => {
     expect([ratio.parts, dots.length]).toEqual([['plot', 'points', 'size'], 15]);
     for (const n of dots) {
       const c = corners(shapes(ratio).find((s) => s.row === n.row)!.d!).slice(0, 4);
-      [n.x! * 100, (1 - n.t!) * 100 / ratio.aspect!].forEach((v, i) => expect(v, n.key).toBeCloseTo(c.reduce((s, p) => s + p[i]!, 0) / 4, 1));
+      [n.x! * 100, (1 - n.y!) * 100 / ratio.aspect!].forEach((v, i) => expect(v, n.key).toBeCloseTo(c.reduce((s, p) => s + p[i]!, 0) / 4, 1));
     }
   });
   it('no node names a region: a tile has no label', () => {

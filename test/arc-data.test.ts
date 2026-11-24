@@ -83,7 +83,7 @@ describe('a rose: a dimension on angle and a metric on radius', () => {
     expect(labels.filter((n) => n.rank === 1).map((n) => n.text)).toEqual(['3am', '9am', '3pm', '9pm']);
     expect(labels.filter((n) => n.rank === 2)).toHaveLength(16);
     // The sixth hour starts at a quarter turn, so its middle is a little past the right of the circle.
-    expect([round(labels[6]!.x!), round(labels[6]!.t!), labels[6]!.anchor]).toEqual([round(0.5 + Math.sin(Math.PI * 13 / 24) / 2), round(0.5 + Math.cos(Math.PI * 13 / 24) / 2), 'start']);
+    expect([round(labels[6]!.x!), round(labels[6]!.y!), labels[6]!.anchor]).toEqual([round(0.5 + Math.sin(Math.PI * 13 / 24) / 2), round(0.5 + Math.cos(Math.PI * 13 / 24) / 2), 'start']);
     // Seven values: four stay and the three between them go first.
     const week = buildScene(resolve({ ...rose!, query: { metrics: ['visitors'], by: ['weekday'] } }, runQuery({ metrics: ['visitors'], by: ['weekday'] }), catalog), { metrics: ['visitors'], by: ['weekday'] }, runQuery({ metrics: ['visitors'], by: ['weekday'] }), catalog);
     expect(week.nodes.filter((n) => n.part === 'rim').map((n) => n.rank ?? 0)).toEqual([0, 1, 0, 1, 0, 1, 0]);

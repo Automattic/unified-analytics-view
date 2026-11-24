@@ -89,7 +89,7 @@ describe('the scales a facet\'s views share', () => {
     for (const v of views) {
       const bars = (sceneOf(v).nodes as RectNode[]).filter((n) => n.part === 'rows' && n.kind === 'rect' && n.role === 'primary');
       expect(bars.length).toBe(v.result.rows.length);
-      bars.forEach((b) => expect(b.v).toBeCloseTo((v.result.rows.find((r) => r.page === b.row)!.visitors as number) / most));
+      bars.forEach((b) => expect(b.x).toBeCloseTo((v.result.rows.find((r) => r.page === b.row)!.visitors as number) / most));
     }
   });
 

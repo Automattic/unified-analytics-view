@@ -161,25 +161,25 @@ describe('a second end in the plot', () => {
   it('a bar runs from one of the engine\'s values to another, and the scale holds both', () => {
     const { ratio, result } = run(box!, 346), r = result.rows[1]!, bar = at(ratio.nodes, 'context:bar:/blog/launch-notes');
     // The most of any row is 2,600, so the scale is rounded to 3,000.
-    expect(bar).toMatchObject({ kind: 'rect', part: 'plot', v0: (r['response_time@p25'] as number) / 3000, v: (r['response_time@p75'] as number) / 3000, row: '/blog/launch-notes', role: 'context' });
+    expect(bar).toMatchObject({ kind: 'rect', part: 'plot', y2: (r['response_time@p25'] as number) / 3000, y: (r['response_time@p75'] as number) / 3000, row: '/blog/launch-notes', role: 'context' });
   });
   it('a rule with fields is a segment for each row, standing at the middle of its band', () => {
     const { ratio } = run(box!, 346), rule = at(ratio.nodes, 'context:rule:/blog/launch-notes'), bar = at(ratio.nodes, 'context:bar:/blog/launch-notes');
-    expect(rule).toMatchObject({ kind: 'line', part: 'plot', t: 180 / 3000, t2: 2350 / 3000, row: '/blog/launch-notes', paint: 'ink', layer: 'data', role: 'context' });
+    expect(rule).toMatchObject({ kind: 'line', part: 'plot', y: 180 / 3000, y2: 2350 / 3000, row: '/blog/launch-notes', paint: 'ink', layer: 'data', role: 'context' });
     expect(rule.x).toBeCloseTo(bar.x + bar.w / 2, 12);
     expect(rule.x2).toBe(rule.x);
     expect(rule.dash).toBe(undefined);
     // With one end it stands up from zero: the stem of a lollipop.
     const stem = run({ query: box!.query, layers: [{ mark: 'rule', encode: { x: 'page', y: 'response_time' } }, { mark: 'dot', encode: { x: 'page', y: 'response_time' } }] }, 346).ratio;
-    expect(at(stem.nodes, 'reference:rule:/')).toMatchObject({ t: 0, t2: 412 / 800 });
+    expect(at(stem.nodes, 'reference:rule:/')).toMatchObject({ y: 0, y2: 412 / 800 });
     // A rule at a constant is what it was.
-    expect(at(run(moreSamples.quadrant!.spec, 346).ratio.nodes, 'reference:rule#2')).toMatchObject({ t: 0.5, paint: 'rule', dash: '5 3' });
+    expect(at(run(moreSamples.quadrant!.spec, 346).ratio.nodes, 'reference:rule#2')).toMatchObject({ y: 0.5, paint: 'rule', dash: '5 3' });
   });
   it('an area with two ends is a band: each point starts at the first', () => {
     const { ratio, result } = run(fan!, 346), [area, line] = ratio.nodes.filter((n) => n.kind === 'path') as any[];
     expect([area.key, area.fill, area.opacity, area.role, line.key]).toEqual(['context:area', true, 0.14, 'context', 'primary:line']);
     expect(area.points.length).toBe(27);                                          // the unfinished day is the line's to say
-    area.points.forEach((p: any, i: number) => { const r = result.rows[i]!; expect([p.v0, p.v]).toEqual([(r['response_time@lower'] as number) / 600, (r['response_time@upper'] as number) / 600]); });
+    area.points.forEach((p: any, i: number) => { const r = result.rows[i]!; expect([p.y2, p.y]).toEqual([(r['response_time@lower'] as number) / 600, (r['response_time@upper'] as number) / 600]); });
     expect(area.d).toMatch(/Z$/);
   });
   it('a row with either end missing has no mark', () => {
@@ -194,7 +194,7 @@ describe('a second end in the plot', () => {
 describe('tick', () => {
   it('is a short stroke across its band at a value, and gives a plot a band scale as a bar does', () => {
     const { ratio } = run(box!, 346), tick = at(ratio.nodes, 'primary:tick:/blog/launch-notes'), bar = at(ratio.nodes, 'context:bar:/blog/launch-notes');
-    expect(tick).toMatchObject({ kind: 'line', part: 'plot', t: 590 / 3000, t2: 590 / 3000, width: 2, paint: 'ink', row: '/blog/launch-notes', role: 'primary' });
+    expect(tick).toMatchObject({ kind: 'line', part: 'plot', y: 590 / 3000, y2: 590 / 3000, width: 2, paint: 'ink', row: '/blog/launch-notes', role: 'primary' });
     expect([tick.x, tick.x2 - tick.x]).toEqual([bar.x, bar.w]);
     const alone = run({ query: box!.query, layers: [{ mark: 'tick', encode: { x: 'page', y: 'response_time@p50' } }] }, 346);
     expect(alone.ratio.scale).toBe('band');
@@ -252,12 +252,12 @@ describe('paint by direction and polarity', () => {
     expect(pieces.length).toBe(1 + side.filter((d, i) => i && d !== side[i - 1]).length);
     expect(pieces.length).toBeGreaterThan(2);
     pieces.forEach((n, i) => {
-      const rows = n.points.filter((p: any) => p.row != null), up = rows[0].v > rows[0].v0;
-      expect(rows.every((p: any) => (p.v > p.v0) === up), n.key).toBe(true);
+      const rows = n.points.filter((p: any) => p.row != null), up = rows[0].y > rows[0].y2;
+      expect(rows.every((p: any) => (p.y > p.y2) === up), n.key).toBe(true);
       expect([n.key, n.paint, n.opacity, n.tone, n.role], n.key).toEqual(['context:area:' + rows[0].row, up ? 'delta.good' : 'delta.bad', 0.14, 'soft', 'context']);
       // It ends where the ends meet, which is no row's, and the next begins at that very point.
       const next = pieces[i + 1], last = n.points[n.points.length - 1];
-      if (next) { expect(last.row).toBe(undefined); expect(last.v0).toBe(last.v); expect(next.points[0]).toEqual(last); expect(last.x).toBeGreaterThan(n.points[n.points.length - 2].x); expect(last.x).toBeLessThan(next.points[1].x); }
+      if (next) { expect(last.row).toBe(undefined); expect(last.y2).toBe(last.y); expect(next.points[0]).toEqual(last); expect(last.x).toBeGreaterThan(n.points[n.points.length - 2].x); expect(last.x).toBeLessThan(next.points[1].x); }
     });
     expect(new Set(ratio.nodes.map((n) => n.key)).size).toBe(ratio.nodes.length);
     // A metric that is better when it falls turns every piece, and one with no better way has one area in the layer's own paint.
@@ -280,7 +280,7 @@ describe('paint by direction and polarity', () => {
   it('a waterfall\'s bars each start where the one before ended', () => {
     const bars = run(waterfall!, 700).ratio.nodes.filter((n) => n.kind === 'rect') as any[];
     expect(bars.length).toBe(28);
-    bars.forEach((b, i) => { if (i) expect(b.v0 ?? 0).toBeCloseTo(bars[i - 1].v, 12); });
+    bars.forEach((b, i) => { if (i) expect(b.y2 ?? 0).toBeCloseTo(bars[i - 1].y, 12); });
   });
 });
 
@@ -322,8 +322,8 @@ describe('a row\'s track', () => {
     const { ratio, result } = run(dumbbell!, 346), r = result.rows[2]!, top = 4820;
     expect(r).toMatchObject({ page: '/blog/launch-notes', pageviews: 2105, 'pageviews@previous': 640 });
     expect(ratio.nodes.filter((n) => n.row === r.page).map((n) => n.key)).toEqual(['row:/blog/launch-notes', 'context:rule:/blog/launch-notes', 'comparison:dot:/blog/launch-notes', 'primary:dot:/blog/launch-notes', 'primary:text:/blog/launch-notes', 'primary:text#2:/blog/launch-notes']);
-    expect(at(ratio.nodes, 'context:rule:/blog/launch-notes')).toEqual({ key: 'context:rule:/blog/launch-notes', part: 'rows', kind: 'line', x: 640 / top, x2: 2105 / top, t: 0.5, row: '/blog/launch-notes', paint: 'ink', layer: 'data', role: 'context' });
-    expect(at(ratio.nodes, 'comparison:dot:/blog/launch-notes')).toEqual({ key: 'comparison:dot:/blog/launch-notes', part: 'rows', kind: 'circle', pulse: false, x: 640 / top, t: 0.5, row: '/blog/launch-notes', paint: 'compare', layer: 'data', role: 'comparison' });
+    expect(at(ratio.nodes, 'context:rule:/blog/launch-notes')).toEqual({ key: 'context:rule:/blog/launch-notes', part: 'rows', kind: 'line', x: 640 / top, x2: 2105 / top, y: 0.5, row: '/blog/launch-notes', paint: 'ink', layer: 'data', role: 'context' });
+    expect(at(ratio.nodes, 'comparison:dot:/blog/launch-notes')).toEqual({ key: 'comparison:dot:/blog/launch-notes', part: 'rows', kind: 'circle', pulse: false, x: 640 / top, y: 0.5, row: '/blog/launch-notes', paint: 'compare', layer: 'data', role: 'comparison' });
     expect(at(ratio.nodes, 'primary:dot:/blog/launch-notes')).toMatchObject({ x: 2105 / top, paint: 'series.1', role: 'primary' });
     // The scale holds the second end and the previous period, not only the first metric: a row that fell from further out is inside it.
     const far = { ...result, rows: result.rows.map((row, i) => (i === 7 ? { ...row, 'pageviews@previous': 9640 } : row)) };
@@ -347,7 +347,7 @@ describe('a row\'s track', () => {
     expect(new Set(run(plain, 346).ratio.nodes.filter((n) => n.kind === 'rect').map((n) => n.paint))).toEqual(new Set(['series.1']));
     const { ratio } = run(moved, 346), bars = ratio.nodes.filter((n) => n.kind === 'rect') as any[];
     expect(bars.length).toBe(7);
-    expect(bars[1]).toEqual({ key: 'primary:bar:/pricing', part: 'rows', kind: 'rect', v: 2960 / 4820, v0: 2310 / 4820, row: '/pricing', paint: 'delta.good', layer: 'data', role: 'primary' });
+    expect(bars[1]).toEqual({ key: 'primary:bar:/pricing', part: 'rows', kind: 'rect', x: 2960 / 4820, x2: 2310 / 4820, row: '/pricing', paint: 'delta.good', layer: 'data', role: 'primary' });
     expect(bars.map((b) => b.paint)).toEqual(['delta.good', 'delta.good', 'delta.good', 'delta.bad', 'delta.bad', 'delta.good', 'delta.bad']);
     // Beside its label nothing is behind a bar to tint for.
     expect(bars.every((b) => b.opacity === undefined)).toBe(true);
@@ -357,8 +357,8 @@ describe('a row\'s track', () => {
     expect(result.rows.map((r) => r.signups)).toEqual([158, 124, 21]);
     // The track holds the metric's whole domain since the range is drawn behind the marks (uncommon plan, step 4): it ran to the target, the most there was.
     const [, most] = catalog.metrics.signups!.domain!;
-    expect(at(ratio.nodes, 'reference:tick:Mobile')).toEqual({ key: 'reference:tick:Mobile', part: 'rows', kind: 'line', x: top / most, x2: top / most, t: 0, t2: 1, row: 'Mobile', paint: 'ink', width: 2, layer: 'data', role: 'reference' });
-    expect(at(ratio.nodes, 'primary:bar:Mobile')).toMatchObject({ v: 124 / most, paint: 'series.1' });
+    expect(at(ratio.nodes, 'reference:tick:Mobile')).toEqual({ key: 'reference:tick:Mobile', part: 'rows', kind: 'line', x: top / most, x2: top / most, y: 0, y2: 1, row: 'Mobile', paint: 'ink', width: 2, layer: 'data', role: 'reference' });
+    expect(at(ratio.nodes, 'primary:bar:Mobile')).toMatchObject({ x: 124 / most, paint: 'series.1' });
     // A tick of its own value, and a metric with no target: no mark, and no error.
     const own: Spec = { query: bullet!.query, layers: [{ mark: 'tick', encode: { y: 'device', x: 'signups' } }, { mark: 'text', encode: { y: 'device', text: 'device' } }] };
     expect(marks(run(own, 346).ratio.nodes).map((n) => n.x)).toEqual([1, 124 / 158, 21 / 158]);
@@ -372,7 +372,7 @@ describe('a row\'s track', () => {
   });
   it('in the plot a reference tick stands at the target too', () => {
     const { ratio } = run({ query: { metrics: ['signups'], by: ['device'] }, layers: [{ mark: 'bar', encode: { x: 'device', y: 'signups' } }, { mark: 'tick', encode: { x: 'device', y: 'signups' }, role: 'reference' }] }, 346);
-    expect(ratio.nodes.filter((n) => n.key.startsWith('reference:tick:')).map((n) => (n as any).t)).toEqual([1, 1, 1]);
+    expect(ratio.nodes.filter((n) => n.key.startsWith('reference:tick:')).map((n) => (n as any).y)).toEqual([1, 1, 1]);
   });
 });
 

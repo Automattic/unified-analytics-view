@@ -796,6 +796,22 @@ The fit rules are the contract it reads, so a part the element hides that no rul
 
 **Status: the ratio form is Proven. `buildScene` returns it, `<ua-view>` in `packages/dom` paints from it, and the golden scenes hold it; its fields are in `packages/core/src/types.ts`. What follows describes the placed scene, which is the prototype's. Core made one with `place()` until November 23 (Decided 43) and no longer does: this stays as the record of what a placed node holds, for the surface that next needs one.**
 
+**The ratio scene's fields (Decided 51, November 24).** A node says where it is in the box it is in, its part's or in a list its row's track, in the same fields whatever its kind and whatever the layout:
+
+| Field | What it says |
+|---|---|
+| `x`, `y` | Where it is. For a mark that runs along an axis, a bar or the fill under a line, where it reaches |
+| `x2`, `y2` | Its other end, where it has one that is not the start of the axis |
+| `w`, `h` | An extent: from `x` and `y` for a rect, about them for a glyph's room |
+
+So a bar in a plot is `x` and `w` across, and up to `y` from `y2`. A row's bar reaches `x` from `x2` along its track, as a rule on the same track runs from `x` to `x2`. A band's segment is its share, `w`. A line is from (`x`, `y`) to (`x2`, `y2`), a dot and a label are at (`x`, `y`), and a path's point is (`x`, `y`), with `y2` where the fill under it starts above the bottom. An arc keeps its own fields, `a0`, `a1`, `r0` and `r1`. A custom mark's `places` gives `x` and `y` too.
+
+`x` runs across from the start and `y` up from the bottom. One thing is not yet so: a rect with `y` and `h`, which is a grid's cell, a treemap's box and a Sankey's node, still counts down from the top. Making those count up is the next stage of the same work.
+
+The number, a legend and a list's rows carry no position: a surface sets them in order. So this is what a generic placer needs (Open 20) and not that placer.
+
+Until this the height up a plot was `v` on a bar and on a path's point and `t` on a line, a dot and a label, and a row's bar ran from `v0` to `v` beside a rule from `x` to `x2`. The plans that record earlier steps (`docs/chart-coverage-plan.md`, `docs/uncommon-coverage-plan.md`) use those names, as they were then.
+
 A placed scene is `{ width, height, nodes, plot? }`. Nodes are flat and drawn in order.
 
 | Kind | Fields |
@@ -1069,6 +1085,7 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 49. A board is views and what they share, and a selection is a filter. This settles the rest of Open 9's model and the board of Open 12. A board's `query` holds `range`, `compare` and `where`, laid under each view's own: those are its params, and there is no variable, reference or expression. Views are combined by one rule with no field: each is filtered by every dimension of the board's `where` but the ones it draws, and on those it marks what is held. A board has no layout and no state apart from itself, so a surface that changes a param holds a new board. Core gives the views (`boardViews`) and the board after a selection (`boardSelect`), and fetches nothing. `<ua-view>` proposes a selection as the filter the activated datum is (`ua-select`, `detail.where`) and marks by any filter set back on it (`selected`), which replaces the key it took before. It draws no board: that is a surface's, and the bench has the reference one. (November 24)
 
 50. A view says what was activated and how, and core decides what that does to the selection. `ua-select` carries a proposal: the datum's filter, and `how`, which is `pick`, `toggle` or `extend` by the modifier held (none, Cmd or Ctrl, Shift), the same for a click and for Enter or Space. Core's `select` folds a proposal into the filter held, and `boardSelect` is that fold on a board, so it no longer asks which view proposed. The view keeps no anchor and no set, and no longer sends `null` to let a datum go: picking it again does that, in the fold. A set is a list on a dimension and a run is `from` and `to`, which a filter already held and a view already marked by. Extend is for a time or a number. There is no drag yet. What is selected is said to assistive technology. This settles how a set and an interval are picked, which Open 9 left. (November 24)
+51. One vocabulary for where a node is, begun. Every node says its place in the same fields, whatever its kind and its layout: `x` and `y` where it is, `x2` and `y2` its other end, `w` and `h` an extent (section 11). `v`, `v0`, `t` and `t2` are gone, and with them a list's bar that ran from `v0` to `v` beside a rule from `x` to `x2`. It is the step Decided 44 named as the one that would let each layout's own marks be the plot's. This first stage is the names alone: no number changed, which a comparison of every node of every sample's scene before and after holds, and the capture. Still to come, each its own stage: the grid, the treemap and the Sankey counting up as the rest do; a list's marks as the plot's, turned; the share bar as a list of one row; and a slice as a bar, bent. (November 24)
 
 ### Open
 

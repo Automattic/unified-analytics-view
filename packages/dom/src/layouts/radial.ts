@@ -156,12 +156,12 @@ export const radial: LayoutPainter = {
     keyed(own, points.concat(bare), () => 'path', (el, n) => { turn(el as SVGElement, n); el.toggleAttribute('data-bare', bare.includes(n)); });
     const dots = ensure(part, 'div', 'uav-dots');
     attr(dots, 'data-hits', seats.length ? 'x' : null);
-    keyed(dots, circles, () => 'i', (el, n) => { prop(el, '--uav-x', n.x); prop(el, '--uav-t', n.t); unitDot(el, n); });
+    keyed(dots, circles, () => 'i', (el, n) => { prop(el, '--uav-x', n.x); prop(el, '--uav-t', n.y); unitDot(el, n); });
     const hole = ensure(part, 'b', 'uav-hole'), number = scene.nodes.find((n) => n.part === 'hole');
     if (number?.kind === 'text') { text(hole, number); prop(hole, '--uav-paint', paintVar(number.paint)); } else hole.textContent = '';
     const rim = ensure(part, 'div', 'uav-rim');
     rim.setAttribute('aria-hidden', 'true');                                 // each slice is named by its readout, which says this and its value
-    keyed(rim, scene.nodes.filter((n): n is TextNode => n.part === 'rim' && n.kind === 'text'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-x', n.x); prop(el, '--uav-t', n.t); });
+    keyed(rim, scene.nodes.filter((n): n is TextNode => n.part === 'rim' && n.kind === 'text'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-x', n.x); prop(el, '--uav-t', n.y); });
     paintUnitKey(body, scene);
     paintLegend(body, scene);
   },

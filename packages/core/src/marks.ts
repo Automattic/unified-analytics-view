@@ -32,7 +32,7 @@ export interface CustomMark {
    * where the value `key` of the dimension on its `x` is, across and up its `plot` part's box from 0 to 1, or null
    * where that value has no place. A mark that gives this lets a `text` layer on the same `x` say something at each
    * place, drawn by the plot's own function. One that does not is drawn alone, as before. */
-  places?(view: MarkView): (key: string) => { x: number; t: number } | null;
+  places?(view: MarkView): (key: string) => { x: number; y: number } | null;
 }
 
 const REGISTERED = new Map<string, CustomMark>();

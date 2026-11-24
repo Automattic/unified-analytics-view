@@ -81,9 +81,9 @@ describe('a stack up from the axis', () => {
   it('is on the plot\'s own scale: a dot is its worth tall, the stack ends at its whole glyphs, and the axis reads true against it', () => {
     const { ratio } = run(units!, 346), dots = glyphs(ratio.nodes) as CircleNode[], tue = dots.filter((n) => n.row === 'Tue');
     // The scale is rounded to 2,000, so a dot of 200 has a tenth of the height, and the nine of Tuesday end at 1,800.
-    expect(tue.map((n) => Math.round(n.t! * 1000) / 1000)).toEqual([0.05, 0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85]);
+    expect(tue.map((n) => Math.round(n.y! * 1000) / 1000)).toEqual([0.05, 0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85]);
     expect(new Set(dots.map((n) => Math.round(n.h! * 1e6) / 1e6))).toEqual(new Set([0.1]));
-    expect(ratio.nodes.filter((n) => n.part === 'y-axis').map((n) => [(n as TextNode).text, (n as TextNode).t])).toEqual([['0', 0], ['500', 0.25], ['1k', 0.5], ['1.5k', 0.75], ['2k', 1]]);
+    expect(ratio.nodes.filter((n) => n.part === 'y-axis').map((n) => [(n as TextNode).text, (n as TextNode).y])).toEqual([['0', 0], ['500', 0.25], ['1k', 0.5], ['1.5k', 0.75], ['2k', 1]]);
     // Each has the width of its band, which is every row's alike.
     expect(new Set(dots.map((n) => n.w)).size).toBe(1);
     expect(tue.every((n) => n.x === tue[0]!.x)).toBe(true);
@@ -107,7 +107,7 @@ describe('a stack up from the axis', () => {
     const spec = by('visitors', 'weekday', [{ mark: 'unit', encode: { x: 'weekday', y: 'visitors' }, paint: 'series.3' }, { mark: 'rule', encode: { y: 1500 }, label: 'Target', role: 'reference' }]);
     const { ratio, plan } = run(spec, 346);
     expect(plan.layers.map((l) => [l.mark, l.role])).toEqual([['unit', 'primary'], ['rule', 'reference']]);
-    expect(ratio.nodes.find((n) => n.key === 'reference:rule')).toMatchObject({ kind: 'line', t: 0.75 });
+    expect(ratio.nodes.find((n) => n.key === 'reference:rule')).toMatchObject({ kind: 'line', y: 0.75 });
     expect((glyphs(ratio.nodes) as CircleNode[]).every((n) => n.paint === 'series.3')).toBe(true);
   });
   it('an unfinished day\'s glyphs are faded, as its bar is', () => {
@@ -126,7 +126,7 @@ describe('a run along a row\'s track', () => {
     expect(dots.filter((n) => n.row === 'Direct').map((n) => n.key)).toEqual([1, 2, 3, 4, 5, 6].map((n) => 'primary:unit:Direct:' + n));
     // The track ends at the longest run, nine glyphs, so each has a ninth of it, and the first stands half of that in.
     expect(dots.filter((n) => n.row === 'Search').map((n) => Math.round(n.x! * 18))).toEqual([1, 3, 5, 7, 9, 11, 13, 15, 17]);
-    expect(dots.every((n) => n.kind === 'circle' && n.part === 'rows' && n.t === 0.5 && n.h === 1 && Math.abs(n.w! - 1 / 9) < 1e-9 && n.paint === 'series.1')).toBe(true);
+    expect(dots.every((n) => n.kind === 'circle' && n.part === 'rows' && n.y === 0.5 && n.h === 1 && Math.abs(n.w! - 1 / 9) < 1e-9 && n.paint === 'series.1')).toBe(true);
     expect(ratio.nodes.filter((n) => n.part === 'rows' && n.kind === 'text' && n.row === 'Search').map((n) => (n as TextNode).text)).toEqual(['Search', '4,318']);
   });
   it('what a glyph is worth is worked out from every row of the result', () => {
@@ -221,7 +221,7 @@ describe('seats round a half circle', () => {
     expect(seats.slice(0, 2).map((n) => n.key)).toEqual(['primary:unit:Search:1', 'primary:unit:Search:2']);
     expect(seats.every((n) => n.kind === 'circle' && n.part === 'radial' && n.role === 'primary' && n.h === 2 * n.w!)).toBe(true);
     // From the left end to the right, so each value's seats are a wedge: no seat of a later value stands to the left of an earlier one's first.
-    const first = result.rows.map((r) => Math.min(...seats.filter((n) => n.row === r.channel).map((n) => Math.atan2(n.t!, 0.5 - n.x!))));
+    const first = result.rows.map((r) => Math.min(...seats.filter((n) => n.row === r.channel).map((n) => Math.atan2(n.y!, 0.5 - n.x!))));
     expect(first).toEqual([...first].sort((a, b) => a - b));
     expect(ratio.nodes.filter((n) => n.part === 'legend' && n.kind === 'text' && n.font === 'label').map((n) => (n as TextNode).text)).toEqual(['Search', 'Direct', 'Social', 'AI assistants', 'Email', 'Other']);
   });

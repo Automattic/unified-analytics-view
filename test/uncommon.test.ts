@@ -104,19 +104,19 @@ describe('dots and stems in rows: Cleveland dot plot, ordered dot plot, lollipop
   });
   it('the same marks stand on an axis: a stem up from zero under each dot', () => {
     const up: Spec = { query: S('lollipop').query, layers: [{ mark: 'rule', encode: { x: 'channel', y: 'visitors' }, role: 'context' }, { mark: 'dot', encode: { x: 'channel', y: 'visitors' } }] };
-    const { ratio } = run(up), stems = of<{ x: number; t: number; t2: number }>(ratio.nodes, 'context:rule:'), dots = of<{ x: number; t: number }>(ratio.nodes, 'primary:dot:');
-    stems.forEach((s, i) => expect([s.x, s.t, s.t2]).toEqual([dots[i]!.x, 0, dots[i]!.t]));
+    const { ratio } = run(up), stems = of<{ x: number; y: number; y2: number }>(ratio.nodes, 'context:rule:'), dots = of<{ x: number; y: number }>(ratio.nodes, 'primary:dot:');
+    stems.forEach((s, i) => expect([s.x, s.y, s.y2]).toEqual([dots[i]!.x, 0, dots[i]!.y]));
   });
 });
 
 describe('bars in rows: tornado, bullet', () => {
   it('a tornado is two bars a row that meet at zero, the loss to one side and the gain to the other', () => {
-    const { ratio, plan } = run(S('tornado'), 346), low = of<{ v: number; v0: number; paint: string }>(ratio.nodes, 'primary:bar:'), high = of<{ v: number; v0: number; paint: string }>(ratio.nodes, 'primary:bar#2:');
+    const { ratio, plan } = run(S('tornado'), 346), low = of<{ x: number; x2: number; paint: string }>(ratio.nodes, 'primary:bar:'), high = of<{ x: number; x2: number; paint: string }>(ratio.nodes, 'primary:bar#2:');
     const zero = 6200 / (6200 + 7800);
     expect(ratio.track).toBe('beside');
     // Each runs from zero, which is a number on its first end, out to its value.
-    for (const [i, n] of low.entries()) { expect(n.v0).toBeCloseTo(zero, 12); expect(high[i]!.v0).toBeCloseTo(zero, 12); expect(n.v).toBeLessThan(zero); expect(high[i]!.v).toBeGreaterThan(zero); }
-    expect([low[0]!.v, high[0]!.v]).toEqual([0, 1]);
+    for (const [i, n] of low.entries()) { expect(n.x2).toBeCloseTo(zero, 12); expect(high[i]!.x2).toBeCloseTo(zero, 12); expect(n.x).toBeLessThan(zero); expect(high[i]!.x).toBeGreaterThan(zero); }
+    expect([low[0]!.x, high[0]!.x]).toEqual([0, 1]);
     expect([...new Set(low.map((n) => n.paint)), ...new Set(high.map((n) => n.paint))]).toEqual(['delta.bad', 'delta.good']);
     // There is no total of effects, so the number is a dash.
     expect(plan.text).toBe('Top factors by effect on revenue, last 28 days: Conversion rate ($800), Traffic ($250), Average order ($250).');
@@ -143,7 +143,7 @@ describe('bars in rows: tornado, bullet', () => {
     const { ratio } = run(S('bullet'));
     expect(catalog.metrics.signups!.bands).toEqual([200, 400]);
     expect(ratio.nodes.filter((n) => n.part === 'rows').map((n) => n.key.split(':').slice(0, 2).join(':')).filter((k, i, a) => a.indexOf(k) === i)).toEqual(['row:Desktop', 'context:bar', 'primary:bar', 'reference:tick', 'primary:text', 'primary:text#2', 'row:Mobile', 'row:Tablet']);
-    expect(of<{ v: number; v0?: number; paint: string }>(ratio.nodes, 'context:bar:Desktop:').map((n) => [n.v0 ?? 0, n.v, n.paint])).toEqual([[0, 0.4, 'band.1'], [0.4, 0.8, 'band.2'], [0.8, 1, 'band.3']]);
+    expect(of<{ x: number; x2?: number; paint: string }>(ratio.nodes, 'context:bar:Desktop:').map((n) => [n.x2 ?? 0, n.x, n.paint])).toEqual([[0, 0.4, 'band.1'], [0.4, 0.8, 'band.2'], [0.8, 1, 'band.3']]);
   });
 });
 
@@ -152,8 +152,8 @@ describe('lines and areas: Pareto, sparkline, fan, streamgraph, slopegraph, cumu
     const { ratio, plan } = run(S('pareto'), 346), line = paths(ratio.nodes)[0]!;
     expect(ratio.parts).toEqual(['y-axis', 'plot', 'y-axis-2', 'x-axis', 'legend']);
     expect(of<{ text: string }>(ratio.nodes, 'ytick:ratio:').map((n) => n.text)).toEqual(['0%', '20%', '40%', '60%', '80%', '100%']);
-    expect(line.points.map((p) => p.v)).toEqual([0.38, 0.627, 0.785, 0.875, 0.932, 0.969, 1]);
-    expect(of<{ v: number }>(ratio.nodes, 'primary:bar:')[0]!.v).toBeCloseTo(412 / 500, 12);
+    expect(line.points.map((p) => p.y)).toEqual([0.38, 0.627, 0.785, 0.875, 0.932, 0.969, 1]);
+    expect(of<{ y: number }>(ratio.nodes, 'primary:bar:')[0]!.y).toBeCloseTo(412 / 500, 12);
     expect(plan.text).toBe('Top causes by errors, last 28 days: Timeout (412), Not found (268), Server error (171). Overall, cumulative share 100%.');
   });
   it('the same share as a companion of the errors is drawn the same way: the catalog has an entry for it, which says its unit', () => {
@@ -172,7 +172,7 @@ describe('lines and areas: Pareto, sparkline, fan, streamgraph, slopegraph, cumu
     // With no entry a companion is in its metric's unit, as a quantile is: a rank beside the count it ranks is still on the count's scale.
     const ranked: Spec = { query: { metrics: ['pageviews'], by: ['page'], range: '28d', compare: 'previous', limit: 8 }, layers: [{ mark: 'bar', encode: { x: 'page', y: 'pageviews' } }, { mark: 'line', encode: { x: 'page', y: 'pageviews@rank' }, paint: 'series.2' }] };
     expect(catalog.metrics['pageviews@rank']).toBe(undefined);
-    expect(paths(run(ranked, 346).ratio.nodes)[0]!.points.map((p) => p.v)).toEqual([1, 2, 3, 4, 5, 6, 7, 8].map((n) => n / 5000));
+    expect(paths(run(ranked, 346).ratio.nodes)[0]!.points.map((p) => p.y)).toEqual([1, 2, 3, 4, 5, 6, 7, 8].map((n) => n / 5000));
   });
   it('a sparkline is a line where there is no room for its axes: bare, beside the number', () => {
     const wide = run(S('sparkline'), 346), narrow = run(S('sparkline'), 234);
@@ -184,7 +184,7 @@ describe('lines and areas: Pareto, sparkline, fan, streamgraph, slopegraph, cumu
   it('a fan of two bands is two areas, one inside the other, about the line', () => {
     const { ratio, plan } = run(S('fans'), 346), [outer, inner, line] = paths(ratio.nodes) as [PathNode, PathNode, PathNode];
     expect([outer.key, inner.key, line.key]).toEqual(['context:area', 'context:area#2', 'primary:line']);
-    inner.points.forEach((p, i) => { const o = outer.points[i]!, l = line.points[i]!; expect(o.v0! < p.v0! && p.v0! < l.v && l.v < p.v && p.v < o.v, p.row).toBe(true); });
+    inner.points.forEach((p, i) => { const o = outer.points[i]!, l = line.points[i]!; expect(o.y2! < p.y2! && p.y2! < l.y && l.y < p.y && p.y < o.y, p.row).toBe(true); });
     expect([outer.opacity, inner.opacity, outer.paint, inner.paint]).toEqual([0.14, 0.14, 'series.1', 'series.1']);
     // The sentence says the first range the layers give, which is the wider.
     expect(plan.text).toBe('Response time: 436ms in the last 28 days. Between 199ms and 631ms across 28 days.');
@@ -194,14 +194,14 @@ describe('lines and areas: Pareto, sparkline, fan, streamgraph, slopegraph, cumu
   it('a streamgraph is areas stacked about the middle, read by how thick each is: it has no value axis and no grid', () => {
     const { ratio } = run(S('streamgraph'), 346), areas = paths(ratio.nodes).filter((n) => !n.note), first = areas[0]!, last = areas[areas.length - 1]!;
     expect(areas.map((n) => n.series)).toEqual(['Search', 'Direct', 'Social', 'AI assistants', 'Email', 'Other']);
-    first.points.forEach((p, i) => expect(((p.v0 ?? 0) + last.points[i]!.v) / 2).toBeCloseTo(0.5, 12));
-    areas.slice(1).forEach((a, j) => expect(a.points.map((p) => p.v0)).toEqual(areas[j]!.points.map((p) => p.v)));
+    first.points.forEach((p, i) => expect(((p.y2 ?? 0) + last.points[i]!.y) / 2).toBeCloseTo(0.5, 12));
+    areas.slice(1).forEach((a, j) => expect(a.points.map((p) => p.y2)).toEqual(areas[j]!.points.map((p) => p.y)));
     expect(areas.every((n) => n.opacity == null)).toBe(true);
     expect(ratio.nodes.filter((n) => n.key.startsWith('ytick:') || n.key.startsWith('grid:'))).toEqual([]);
     expect(ratio.parts).toEqual(['plot', 'x-axis', 'legend']);
     // With no scale to round, the thickest day takes the whole height of the plot.
-    expect(Math.min(...first.points.map((p) => p.v0 ?? 0))).toBe(0);
-    expect(Math.max(...last.points.map((p) => p.v))).toBe(1);
+    expect(Math.min(...first.points.map((p) => p.y2 ?? 0))).toBe(0);
+    expect(Math.max(...last.points.map((p) => p.y))).toBe(1);
   });
   it('a slopegraph is a line for each series between two whole weeks, with a name at each line\'s end', () => {
     const { ratio, plan } = run(S('slopegraph'), 300), lines = paths(ratio.nodes);
@@ -222,11 +222,11 @@ describe('lines and areas: Pareto, sparkline, fan, streamgraph, slopegraph, cumu
   it('a cumulative flow is areas stacked on a running total, so every edge only rises', () => {
     const { ratio, result } = run(S('cumulative'), 346), areas = paths(ratio.nodes).filter((n) => !n.note);
     expect(areas.length).toBe(6);
-    for (const a of areas) a.points.slice(1).forEach((p, i) => expect(p.v, a.key + ' ' + p.row).toBeGreaterThanOrEqual(a.points[i]!.v));
+    for (const a of areas) a.points.slice(1).forEach((p, i) => expect(p.y, a.key + ' ' + p.row).toBeGreaterThanOrEqual(a.points[i]!.y));
     // The top edge is everything so far. A stacked area's whole stops at the last whole day; the unfinished one is a piece of its own.
     const top = areas[5]!.points, whole = result.totalsBy!['date.day']!.slice(0, -1).reduce((s, r) => s + (r.signups as number), 0), ticks = of<{ text: string }>(ratio.nodes, 'ytick:');
     expect(top.length).toBe(27);
-    expect(top[26]!.v).toBeCloseTo(whole / Number(ticks[ticks.length - 1]!.text), 12);
+    expect(top[26]!.y).toBeCloseTo(whole / Number(ticks[ticks.length - 1]!.text), 12);
   });
 });
 
@@ -259,7 +259,7 @@ describe('what a line and an area take beyond the trend: connected scatterplot, 
     const { ratio, result } = run(S('ecdf'), 346), [line] = paths(ratio.nodes);
     expect(expand(S('ecdf')).layers).toEqual([{ mark: 'line', encode: { x: 'load_time', y: 'pageviews@cumulative' } }]);
     expect(line!.curve).toBe('step');
-    expect(line!.points.map((p) => p.v)).toEqual(result.rows.map((r) => r['pageviews@cumulative']));
+    expect(line!.points.map((p) => p.y)).toEqual(result.rows.map((r) => r['pageviews@cumulative']));
     expect(line!.points.every((p) => p.w === 1 / 16)).toBe(true);
     // Flat across each bin and upright at its edge: from the start of the first bin to the end of the last, where it is the whole.
     const at = line!.d!.slice(1).split('L').map((c) => c.split(',').map(Number));
@@ -273,8 +273,8 @@ describe('what a line and an area take beyond the trend: connected scatterplot, 
   it('a bump chart is a line for each page by its place in each week, first at the top', () => {
     const { ratio, plan } = run(S('bump'), 346), lines = paths(ratio.nodes);
     expect(expand(S('bump')).layers).toEqual([{ mark: 'line', encode: { x: 'date.week', y: 'visitors@rank', color: 'page' } }]);
-    expect(of<{ text: string; t: number }>(ratio.nodes, 'ytick:').map((n) => [n.text, n.t])).toEqual([['1', 1], ['2', 0.8], ['3', 0.6], ['4', 0.4], ['5', 0.2], ['6', 0]]);
-    expect(lines.map((n) => [n.series, n.points.map((p) => Math.round(6 - p.v * 5))])).toEqual([['/', [1, 1, 1, 1]], ['/pricing', [2, 2, 3, 2]], ['/blog/launch-notes', [3, 3, 2, 3]], ['/docs/getting-started', [4, 4, 4, 4]], ['/changelog', [5, 5, 6, 5]], ['/about', [6, 6, 5, 6]]]);
+    expect(of<{ text: string; y: number }>(ratio.nodes, 'ytick:').map((n) => [n.text, n.y])).toEqual([['1', 1], ['2', 0.8], ['3', 0.6], ['4', 0.4], ['5', 0.2], ['6', 0]]);
+    expect(lines.map((n) => [n.series, n.points.map((p) => Math.round(6 - p.y * 5))])).toEqual([['/', [1, 1, 1, 1]], ['/pricing', [2, 2, 3, 2]], ['/blog/launch-notes', [3, 3, 2, 3]], ['/docs/getting-started', [4, 4, 4, 4]], ['/changelog', [5, 5, 6, 5]], ['/about', [6, 6, 5, 6]]]);
     expect(ratio.series).toEqual(lines.map((n) => n.series));
     expect(plan.text).toBe('In the last 28 days, / is first by visitors on all 4 weeks. Places changed along the way, and each page ended where it began.');
     // Bare, the lines still cross where the places changed.

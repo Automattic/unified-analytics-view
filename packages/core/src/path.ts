@@ -5,20 +5,20 @@ export interface PathBox<P> { x(p: P): number; y(v: number): number }
 // The scene's box: 100 by 100, y down, for a painter to stretch.
 const BOX: PathBox<{ x: number }> = { x: (p) => 100 * p.x, y: (v) => 100 * (1 - v) };
 
-/** The path through `points`: a line, or with `fill` an area down to the baseline, or to each point's `v0` where it
- * has one. `curve` is `monotone`, smoothed and never past the values it joins, `step`, or none for straight segments. Each point has its `x` across and its value `v` up, both 0 to 1. This is the one place a path string is made: the scene's `d` is
+/** The path through `points`: a line, or with `fill` an area down to the baseline, or to each point's `y2` where it
+ * has one. `curve` is `monotone`, smoothed and never past the values it joins, `step`, or none for straight segments. Each point has its `x` across and its value `y` up, both 0 to 1. This is the one place a path string is made: the scene's `d` is
  * `pathD(points, curve, fill)`, so a painter that moves the points between two scenes draws the scene's own `d` at rest.
  * A surface with a size of its own passes its box as `to`. Null when there are no points.
  * With `radial` the points are about a centre: `x` is the place round the circle, in turns clockwise from the top, and
- * `v` how far out from the middle, with the rim at 1. The path runs straight from each to the next and closes, and is
+ * `y` how far out from the middle, with the rim at 1. The path runs straight from each to the next and closes, and is
  * drawn about the origin at a radius of 50, as an arc is (arcD), whatever `to` says. */
-export function pathD<P extends { x: number; v: number; v0?: number; w?: number }>(points: P[], curve?: 'monotone' | 'step' | 'radial', fill?: boolean, to: PathBox<P> = BOX): string | null {
+export function pathD<P extends { x: number; y: number; y2?: number; w?: number }>(points: P[], curve?: 'monotone' | 'step' | 'radial', fill?: boolean, to: PathBox<P> = BOX): string | null {
   if (curve === 'radial') {
     const at = (n: number) => String(Math.round(n * 1000) / 1000), turn = 2 * Math.PI;
-    return points.length ? 'M' + points.map((p) => at(50 * p.v * Math.sin(p.x * turn)) + ',' + at(-50 * p.v * Math.cos(p.x * turn))).join('L') + 'Z' : null;
+    return points.length ? 'M' + points.map((p) => at(50 * p.y * Math.sin(p.x * turn)) + ',' + at(-50 * p.y * Math.cos(p.x * turn))).join('L') + 'Z' : null;
   }
-  const y = (p: P) => to.y(p.v);
-  const d = fill ? area<P>().x(to.x).y0((p) => to.y(p.v0 || 0)).y1(y) : line<P>().x(to.x).y(y);
+  const y = (p: P) => to.y(p.y);
+  const d = fill ? area<P>().x(to.x).y0((p) => to.y(p.y2 || 0)).y1(y) : line<P>().x(to.x).y(y);
   if (curve === 'monotone') d.curve(curveMonotoneX);
   // Steps: each point is a flat run across its own width, `w` about its `x`, so a bin is drawn from where it starts to
   // where it ends, as its bar is, and the line steps where one bin meets the next.

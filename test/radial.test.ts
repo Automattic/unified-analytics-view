@@ -113,14 +113,14 @@ describe('the plot\'s marks about a centre', () => {
     expect(marks.find((m) => m.key === 'context:area')).toMatchObject({ opacity: 0.14, role: 'context' });
     // A point for each row: its place round the circle, at the middle of its share, and its reach, by distance, on a scale from nothing at the middle to the most of all the layers at the rim.
     expect(line.points.map((p: any) => [p.row, p.x])).toEqual(result.rows.map((r, j) => [r.weekday, (j + 0.5) / n]));
-    line.points.forEach((p: any, j: number) => expect(p.v, p.row).toBeCloseTo((result.rows[j]!.visitors as number) / top, 12));
+    line.points.forEach((p: any, j: number) => expect(p.y, p.row).toBeCloseTo((result.rows[j]!.visitors as number) / top, 12));
     // It is the path the one place a path is made draws of them, about the origin at a radius of 50, as an arc is: straight, and closed.
     expect(line.d).toBe(pathD(line.points, 'radial'));
     expect(line.d).toMatch(new RegExp('^M-?[\\d.]+,-?[\\d.]+(L-?[\\d.]+,-?[\\d.]+){' + (n - 1) + '}Z$'));
     // A dot is where its place and its reach put it in the part's box, as a seat is: on the line's own corner.
     expect(dots.map((d) => d.key)).toEqual(result.rows.map((r) => 'primary:dot:' + r.weekday));
     const corners = line.d.slice(1, -1).split('L').map((c: string) => c.split(',').map(Number));
-    dots.forEach((d, j) => { expect(100 * (d.x - 0.5), d.key).toBeCloseTo(corners[j][0], 2); expect(-100 * (d.t - 0.5), d.key).toBeCloseTo(corners[j][1], 2); });
+    dots.forEach((d, j) => { expect(100 * (d.x - 0.5), d.key).toBeCloseTo(corners[j][0], 2); expect(-100 * (d.y - 0.5), d.key).toBeCloseTo(corners[j][1], 2); });
     // The names round the rim are said once, whatever the number of layers, and the rows are the places, for the keys to step through.
     expect(ratio.nodes.filter((m) => m.part === 'rim').map((m) => (m as any).text)).toEqual(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
     // With no period before there is no line of it.
@@ -128,7 +128,7 @@ describe('the plot\'s marks about a centre', () => {
   });
   it('is on the circle\'s one scale out: by distance where only lines and dots reach, and by area under a rose\'s slices, which it then meets', () => {
     const rose = { mark: 'arc' as const, encode: at }, line = { mark: 'line' as const, encode: at };
-    const reaches = (r: ReturnType<typeof of>) => (r.ratio.nodes.find((m) => m.key === 'primary:line') as any).points.map((p: any) => p.v);
+    const reaches = (r: ReturnType<typeof of>) => (r.ratio.nodes.find((m) => m.key === 'primary:line') as any).points.map((p: any) => p.y);
     const alone = of(line), top = Math.max(...alone.result.rows.map((r) => r.visitors as number));
     alone.result.rows.forEach((r, j) => expect(reaches(alone)[j]).toBeCloseTo((r.visitors as number) / top, 12));
     for (const both of [of(rose, line), of(line, rose)]) {

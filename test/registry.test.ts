@@ -70,13 +70,13 @@ describe('a custom mark in a view', () => {
       .toBe('The "toy" mark is laid out by its own code, and layer 2 is a "text". Keep the "toy" layers alone, and draw the others as a view of their own.');
     // With `places`, the text is the plot's own, at the place the mark gives each value of the dimension on its x.
     const toy = customMarks().get('toy')!;
-    registerMark('toy', { ...toy, places: () => (key) => ({ x: 0.25, t: key.length / 100 }) });
+    registerMark('toy', { ...toy, places: () => (key) => ({ x: 0.25, y: key.length / 100 }) });
     try {
       const { ratio, plan } = run(over, 346), labels = ratio.nodes.filter((n) => n.part === 'point-labels') as any[];
       expect(plan.guides.pointLabels).toBe(true);
       expect(ratio.parts.at(-1)).toBe('point-labels');
       expect(labels.length).toBe(ratio.rows!.length);
-      expect(labels[0]).toMatchObject({ key: 'primary:text:' + ratio.rows![0], row: ratio.rows![0], x: 0.25, t: ratio.rows![0]!.length / 100, part: 'point-labels' });
+      expect(labels[0]).toMatchObject({ key: 'primary:text:' + ratio.rows![0], row: ratio.rows![0], x: 0.25, y: ratio.rows![0]!.length / 100, part: 'point-labels' });
       expect(err(() => run({ ...tiles, layers: [...tiles.layers!, { mark: 'bar', encode: { x: 'page', y: 'pageviews' } }] }, 346))).toMatch(/^The "toy" mark is laid out by its own code, and layer 2 is a "bar"\. Over it a text may be drawn, at each of its places, and nothing else\./);
     } finally { registerMark('toy', toy); }
   });

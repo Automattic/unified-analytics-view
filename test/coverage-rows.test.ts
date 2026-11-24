@@ -122,18 +122,18 @@ describe('a delta per row', () => {
 describe('the track', () => {
   const bars: Spec = { query: { metrics: ['net_subscribers'], by: ['channel'] }, layers: [{ mark: 'bar', encode: { y: 'channel', x: 'net_subscribers' } }, { mark: 'text', encode: { y: 'channel', text: 'channel' } }] };
   it('is a linear scale that holds zero: bars with nothing below it start at the track\'s start, and carry no v0', () => {
-    const rects = run(bars, 346).ratio.nodes.filter((n) => n.kind === 'rect') as { v: number; v0?: number }[];
-    expect(rects[0]).toMatchObject({ v: 1 });
-    expect(rects.every((n) => n.v0 === undefined && n.v >= 0 && n.v <= 1)).toBe(true);
+    const rects = run(bars, 346).ratio.nodes.filter((n) => n.kind === 'rect') as { x: number; x2?: number }[];
+    expect(rects[0]).toMatchObject({ x: 1 });
+    expect(rects.every((n) => n.x2 === undefined && n.x >= 0 && n.x <= 1)).toBe(true);
   });
   it('covers what is below zero: every bar starts at zero, and one below it lies to the left of there', () => {
     const result = runQuery(bars.query), signed = { ...result, rows: result.rows.map((r, i) => ({ ...r, net_subscribers: [60, 30, -20, -40, 10, 0][i]! })) };
-    const { ratio } = run(bars, 346, null, 'typical', { result: signed }), rects = ratio.nodes.filter((n) => n.kind === 'rect') as { v: number; v0: number }[];
-    expect(rects.map((n) => n.v0)).toEqual(Array(6).fill(0.4));
-    expect(rects.map((n) => n.v)).toEqual([1, 0.7, 0.2, 0, 0.5, 0.4]);
+    const { ratio } = run(bars, 346, null, 'typical', { result: signed }), rects = ratio.nodes.filter((n) => n.kind === 'rect') as { x: number; x2: number }[];
+    expect(rects.map((n) => n.x2)).toEqual(Array(6).fill(0.4));
+    expect(rects.map((n) => n.x)).toEqual([1, 0.7, 0.2, 0, 0.5, 0.4]);
     // Nothing but values below zero, and the scale ends there.
     const down = { ...result, rows: result.rows.map((r, i) => ({ ...r, net_subscribers: -10 * (i + 1) })) };
-    expect((run(bars, 346, null, 'typical', { result: down }).ratio.nodes.filter((n) => n.kind === 'rect') as { v0: number }[]).every((n) => n.v0 === 1)).toBe(true);
+    expect((run(bars, 346, null, 'typical', { result: down }).ratio.nodes.filter((n) => n.kind === 'rect') as { x2: number }[]).every((n) => n.x2 === 1)).toBe(true);
   });
   it('errors name the fix: marks in two units, and a mark the track has no rule for', () => {
     const two: Spec = { query: conversions.query, layers: [...conversions.layers!, { mark: 'bar', encode: { y: 'event', x: 'conversion_value' } }] };
@@ -157,8 +157,8 @@ describe('the track', () => {
     const before = result.rows.map((r, i) => ({ k: rows[i]!, at: (i + 0.5) / rows.length, was: r['pageviews@previous'] as number | null })).filter((r) => r.was != null);
     expect(before.length).toBeGreaterThan(5);                               // a row with no period before has no point, and the line passes it by
     expect(line.points.map((p: any) => [p.row, p.x])).toEqual(before.map((r) => [r.k, r.at]));
-    line.points.forEach((p: any, i: number) => expect(p.v, p.row).toBeCloseTo(before[i]!.was! / top, 12));
-    bars.forEach((b, i) => expect(b.v, b.key).toBeCloseTo((result.rows[i]!.pageviews as number) / top, 12));
+    line.points.forEach((p: any, i: number) => expect(p.y, p.row).toBeCloseTo(before[i]!.was! / top, 12));
+    bars.forEach((b, i) => expect(b.x, b.key).toBeCloseTo((result.rows[i]!.pageviews as number) / top, 12));
     // It is the path a plot draws of the same points: one function, and a surface turns it.
     expect(line.d).toBe(pathD(line.points, 'monotone'));
     // With no period before there is no line, and no part for one.
@@ -168,7 +168,7 @@ describe('the track', () => {
     const area: Spec = { query: profile.query, layers: [{ mark: 'area', encode: { y: 'page', x: 'pageviews' } }, { mark: 'text', encode: { y: 'page', text: 'page' } }] };
     const filled = run(area, 500).ratio.nodes.find((n) => n.part === 'track') as any;
     expect(filled).toMatchObject({ key: 'primary:area', kind: 'path', fill: true, paint: 'series.1', opacity: 0.14 });
-    expect(filled.points.every((p: any) => p.v0 === undefined)).toBe(true);
+    expect(filled.points.every((p: any) => p.y2 === undefined)).toBe(true);
     // Read by where its marks are, such a list stands its track beside its labels, and under the room that needs it is its number.
     expect([160, 159].map((w) => shown(run(area, w)).parts)).toEqual([['rows', 'track'], ['number']]);
     expect(shown(run(profile, 346, 20)).parts).toEqual(['number']);
@@ -195,7 +195,7 @@ describe('the funnel preset', () => {
     // The rate shown is the row's own field. Nothing here divides one count by another.
     const told = { ...result, rows: result.rows.map((r) => ({ ...r, conversion_rate: 0.5 })) };
     expect(texts(run(funnel, 346, null, 'typical', { result: told }).ratio.nodes, /^primary:text#3:/)).toEqual(['50%', '50%', '50%', '50%']);
-    expect((ratio.nodes.filter((n) => n.kind === 'rect') as { v: number }[]).map((n) => +n.v.toFixed(3))).toEqual([1, 0.162, 0.062, 0.039]);
+    expect((ratio.nodes.filter((n) => n.kind === 'rect') as { x: number }[]).map((n) => +n.x.toFixed(3))).toEqual([1, 0.162, 0.062, 0.039]);
   });
   it('needs a second metric, and says so', () => {
     expect(err({ use: 'funnel', query: { metrics: ['visitors'], by: ['step'] } })).toBe('The "funnel" preset needs two metrics in query.metrics, and this query has one. Add the second: a funnel\'s is the rate the engine returns for its count, and a connected scatter\'s is the metric on y.');

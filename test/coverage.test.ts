@@ -62,7 +62,7 @@ describe('shares are of the engine\'s total', () => {
   const mix = samples.mix!.spec, top3: Spec = { ...mix, query: { ...mix.query, limit: 3 } };
   it('with a limit, the band, its legend, the note and the prose say a share of everything, not of the rows shown', () => {
     const { ratio, plan } = run(top3, 346), text = (key: string) => (ratio.nodes.find((n) => n.key === key) as { text: string }).text;
-    const band = ratio.nodes.filter((n) => n.part === 'band').map((n) => (n as { v: number }).v);
+    const band = ratio.nodes.filter((n) => n.part === 'band').map((n) => (n as { w: number }).w);
     expect(band.map((v) => Math.round(v * 100))).toEqual([41, 28, 14]);
     expect(['share:Search', 'share:Direct', 'share:Social', 'legend-top', 'sub'].map(text)).toEqual(['41%', '28%', '14%', 'Search 41%', 'Search 41%']);
     expect(plan.text).toBe('Search is the largest channel at 41% of visitors, followed by Direct at 28%.');
@@ -273,34 +273,34 @@ describe('a split plot\'s legend', () => {
     }
   });
   it('a label is level with the last point of its line', () => {
-    const { ratio } = key(300), tail = ratio.nodes.find((n) => n.key === 'primary:line:Desktop:partial') as { points: { v: number }[] };
-    expect(ratio.nodes.find((n) => n.key === 'label:Desktop')).toMatchObject({ t: tail.points.at(-1)!.v, text: 'Desktop', anchor: 'start', baseline: 'middle' });
+    const { ratio } = key(300), tail = ratio.nodes.find((n) => n.key === 'primary:line:Desktop:partial') as { points: { y: number }[] };
+    expect(ratio.nodes.find((n) => n.key === 'label:Desktop')).toMatchObject({ y: tail.points.at(-1)!.y, text: 'Desktop', anchor: 'start', baseline: 'middle' });
   });
 });
 
 describe('stacking, and bars side by side', () => {
   const plot = (spec: Spec, result = runQuery(spec.query)) => ({ ratio: buildScene(resolve(spec, result, catalog), spec.query, result, catalog), result });
-  const rects = (ratio: { nodes: any[] }, row: string) => ratio.nodes.filter((n) => n.kind === 'rect' && n.part === 'plot' && n.row === row) as { key: string; x: number; w: number; v: number; v0?: number; series: string }[];
+  const rects = (ratio: { nodes: any[] }, row: string) => ratio.nodes.filter((n) => n.kind === 'rect' && n.part === 'plot' && n.row === row) as { key: string; x: number; w: number; y: number; y2?: number; series: string }[];
   // The samples are presets. These are their layers, with the stack swapped.
   const stacked = expand(specs.stacked!), as = (stack: string | undefined, spec = stacked): Spec => { const laid = expand(spec); return { ...laid, layers: [{ ...laid.layers![0]!, stack } as any] }; };
   it('stack: "zero" starts each series where the one under it ends, in the series\' order', () => {
     const { ratio, result } = plot(stacked), [desktop, mobile, tablet] = rects(ratio, '2026-09-08');
     expect([desktop!.series, mobile!.series, tablet!.series]).toEqual(['Desktop', 'Mobile', 'Tablet']);
-    expect(desktop!.v0).toBe(undefined);
-    expect([mobile!.v0, tablet!.v0]).toEqual([desktop!.v, mobile!.v]);
+    expect(desktop!.y2).toBe(undefined);
+    expect([mobile!.y2, tablet!.y2]).toEqual([desktop!.y, mobile!.y]);
     expect(new Set([desktop!.x, mobile!.x, tablet!.x]).size).toBe(1);
     // The top of a stack is its day's total on the y scale, which runs to 600 here.
     expect(ratio.nodes.filter((n) => n.part === 'y-axis').map((n) => (n as { text: string }).text)).toEqual(['0', '200', '400', '600']);
-    expect(tablet!.v).toBeCloseTo((result.totalsBy!['date.day']![0]!.visitors as number) / 600, 12);
+    expect(tablet!.y).toBeCloseTo((result.totalsBy!['date.day']![0]!.visitors as number) / 600, 12);
   });
   it('stack: "normalize" makes each a share of the engine\'s total for its x, so a limit leaves the stack short', () => {
     const shares = as('normalize'), { ratio } = plot(shares);
     expect(ratio.nodes.filter((n) => n.part === 'y-axis').map((n) => (n as { text: string }).text)).toEqual(['0%', '20%', '40%', '60%', '80%', '100%']);
-    for (const row of ratio.rows!) expect(rects(ratio, row).pop()!.v, row).toBeCloseTo(1, 12);
+    for (const row of ratio.rows!) expect(rects(ratio, row).pop()!.y, row).toBeCloseTo(1, 12);
     const top2 = plot({ ...shares, query: { ...shares.query, limit: 2 } }), all = top2.result.totalsBy!['date.day']![0]!.visitors as number, [d, m] = top2.result.rows;
     expect(rects(top2.ratio, '2026-09-08').map((n) => n.series)).toEqual(['Desktop', 'Mobile']);
-    expect(rects(top2.ratio, '2026-09-08').pop()!.v).toBeCloseTo(((d!.visitors as number) + (m!.visitors as number)) / all, 12);
-    expect(rects(top2.ratio, '2026-09-08').pop()!.v).toBeLessThan(0.95);
+    expect(rects(top2.ratio, '2026-09-08').pop()!.y).toBeCloseTo(((d!.visitors as number) + (m!.visitors as number)) / all, 12);
+    expect(rects(top2.ratio, '2026-09-08').pop()!.y).toBeLessThan(0.95);
   });
   it('stack: "center" sets each stack half on either side of the middle of the plot, and has no value axis', () => {
     const { ratio } = plot(as('center')), zero = 0.5;
@@ -311,36 +311,36 @@ describe('stacking, and bars side by side', () => {
     for (const row of ratio.rows!) {
       const [desktop, mobile, tablet] = rects(ratio, row);
       // The tallest stack runs from the foot of the plot to its top: with no axis the scale is not rounded.
-      expect(((desktop!.v0 ?? 0) + tablet!.v) / 2, row).toBeCloseTo(zero, 12);
-      expect((desktop!.v0 ?? 0) < zero && tablet!.v > zero, row).toBe(true);
-      expect([mobile!.v0, tablet!.v0], row).toEqual([desktop!.v, mobile!.v]);
+      expect(((desktop!.y2 ?? 0) + tablet!.y) / 2, row).toBeCloseTo(zero, 12);
+      expect((desktop!.y2 ?? 0) < zero && tablet!.y > zero, row).toBe(true);
+      expect([mobile!.y2, tablet!.y2], row).toEqual([desktop!.y, mobile!.y]);
     }
   });
   it('a bar with color and no stack sits beside its neighbours, and they fill the room one bar had', () => {
     const grouped = plot(specs.grouped!), [a, b, c] = rects(grouped.ratio, 'Search'), one = rects(plot(as('zero', specs.grouped!)).ratio, 'Search')[0]!;
     expect([a!.key, b!.key, c!.key]).toEqual(['primary:bar:Search:Desktop', 'primary:bar:Search:Mobile', 'primary:bar:Search:Tablet']);
-    expect([a!.v0, b!.v0, c!.v0]).toEqual([undefined, undefined, undefined]);
+    expect([a!.y2, b!.y2, c!.y2]).toEqual([undefined, undefined, undefined]);
     expect(a!.x).toBe(one.x);
     expect(b!.x).toBeCloseTo(a!.x + a!.w, 12);
     expect(a!.w * 3).toBeCloseTo(one.w, 12);
     // Lines and areas with no stack overlay: every series starts at the baseline.
     const overlay = plot(as(undefined, specs.area!)).ratio.nodes.filter((n) => n.kind === 'path');
-    expect(overlay.every((n) => n.points.every((p) => p.v0 == null) && n.opacity === 0.14)).toBe(true);
+    expect(overlay.every((n) => n.points.every((p) => p.y2 == null) && n.opacity === 0.14)).toBe(true);
   });
   it('stacked areas share their edges, are the mark itself and not a tint, and are labelled half way up', () => {
     const { ratio } = plot(specs.area!), paths = ratio.nodes.filter((n) => n.kind === 'path'), areas = paths.filter((n) => !n.note);
     expect(areas.map((n) => n.key)).toEqual(['primary:area:Search', 'primary:area:Direct', 'primary:area:Social', 'primary:area:AI assistants', 'primary:area:Email', 'primary:area:Other']);
-    expect(areas[1]!.points.map((p) => p.v0)).toEqual(areas[0]!.points.map((p) => p.v));
+    expect(areas[1]!.points.map((p) => p.y2)).toEqual(areas[0]!.points.map((p) => p.y));
     expect(areas.map((n) => n.opacity)).toEqual(Array(6).fill(undefined));
     // The unfinished day is drawn too, as a bar of one is: faded, out from the last whole day, on the same edges.
     const tails = paths.filter((n) => n.note === 'incomplete bucket');
     // A label stands where its band ends, at the plot's edge, as a split line's does at the end of its tail.
     const end = tails[1]!.points[tails[1]!.points.length - 1]!;
-    expect((ratio.nodes.find((n) => n.key === 'label:Direct') as { t: number }).t).toBe((end.v0! + end.v) / 2);
+    expect((ratio.nodes.find((n) => n.key === 'label:Direct') as { y: number }).y).toBe((end.y2! + end.y) / 2);
     expect(tails.map((n) => n.key)).toEqual(areas.map((n) => n.key + ':partial'));
     expect(tails.every((n) => n.opacity === 0.4 && n.fill)).toBe(true);
     tails.forEach((t, i) => expect(t.points[0]).toEqual(areas[i]!.points[areas[i]!.points.length - 1]));
-    expect(tails[1]!.points.map((p) => p.v0)).toEqual(tails[0]!.points.map((p) => p.v));
+    expect(tails[1]!.points.map((p) => p.y2)).toEqual(tails[0]!.points.map((p) => p.y));
   });
   it('errors name the fix: a stack with nothing to stack, and shares with no total to divide by', () => {
     expect(err({ query: { metrics: ['visitors'], by: ['date.day'] }, layers: [{ mark: 'bar', encode: { x: 'date.day', y: 'visitors' }, stack: 'zero' }] }))
@@ -359,23 +359,23 @@ describe('a signed domain', () => {
     expect(() => runQuery({ metrics: ['net_subscribers'], by: ['page'] })).toThrow('The fixture has "net_subscribers" by day, channel or device, and not page by page. Query it by one of those.');
   });
   it('the scale covers what is below zero, and the axis line sits at zero', () => {
-    const { ratio, result } = at(346), ticks = ratio.nodes.filter((n) => n.part === 'y-axis') as { text: string; t: number }[];
+    const { ratio, result } = at(346), ticks = ratio.nodes.filter((n) => n.part === 'y-axis') as { text: string; y: number }[];
     expect(ticks.map((n) => n.text)).toEqual(['-20', '-10', '0', '10', '20']);
-    const zero = ticks.find((n) => n.text === '0')!.t, axis = ratio.nodes.filter((n) => n.paint === 'axis');
+    const zero = ticks.find((n) => n.text === '0')!.y, axis = ratio.nodes.filter((n) => n.paint === 'axis');
     expect(zero).toBe(0.5);
-    expect(axis.map((n) => [n.key, (n as { t: number }).t])).toEqual([['grid:0', zero]]);
+    expect(axis.map((n) => [n.key, (n as { y: number }).y])).toEqual([['grid:0', zero]]);
     // Every bar starts at zero. One for a day below it hangs down from there.
-    const bars = ratio.nodes.filter((n) => n.kind === 'rect') as { row: string; v: number; v0: number }[];
-    expect(bars.every((n) => n.v0 === zero)).toBe(true);
-    for (const r of result.rows) expect(bars.find((n) => n.row === r['date.day'])!.v < zero, String(r['date.day'])).toBe((r.net_subscribers as number) < 0);
+    const bars = ratio.nodes.filter((n) => n.kind === 'rect') as { row: string; y: number; y2: number }[];
+    expect(bars.every((n) => n.y2 === zero)).toBe(true);
+    for (const r of result.rows) expect(bars.find((n) => n.row === r['date.day'])!.y < zero, String(r['date.day'])).toBe((r.net_subscribers as number) < 0);
   });
   it('an area fills to zero, and a scale of nothing but values below zero ends there', () => {
     const area = run({ ...diverging, layers: [{ mark: 'area', encode: diverging.layers![0]!.encode }] }, 346).ratio.nodes.find((n) => n.kind === 'path')!;
-    expect(new Set(area.points.map((p) => p.v0))).toEqual(new Set([0.5]));
+    expect(new Set(area.points.map((p) => p.y2))).toEqual(new Set([0.5]));
     const result = runQuery(diverging.query), down = { ...result, rows: result.rows.map((r) => ({ ...r, net_subscribers: -Math.abs(r.net_subscribers as number) - 1 })) };
     const ratio = buildScene(resolve(diverging, down, catalog), diverging.query, down, catalog);
     expect((ratio.nodes.filter((n) => n.part === 'y-axis') as { text: string }[]).map((n) => n.text).pop()).toBe('0');
-    expect((ratio.nodes.filter((n) => n.kind === 'rect') as { v0: number }[]).every((n) => n.v0 === 1)).toBe(true);
+    expect((ratio.nodes.filter((n) => n.kind === 'rect') as { y2: number }[]).every((n) => n.y2 === 1)).toBe(true);
   });
 });
 
@@ -390,9 +390,9 @@ describe('a scale per unit', () => {
     expect(ticks(ratio, 'y-axis-2')).toEqual(['$0', '$1k', '$2k', '$3k', '$4k']);
     expect(ratio.nodes.filter((n) => n.part === 'y-axis-2').map((n) => [n.key, (n as { anchor: string }).anchor])[1]).toEqual(['ytick:usd:1000', 'start']);
     // Each mark is on its own scale. The grid is the first scale's.
-    const first = result.rows[0]!, bar = ratio.nodes.find((n) => n.key === 'primary:bar:' + first['date.day']) as { v: number }, line = ratio.nodes.find((n) => n.key === 'primary:line') as { points: { v: number }[] };
-    expect(bar.v).toBeCloseTo((first.visitors as number) / 600, 12);
-    expect(line.points[0]!.v).toBeCloseTo((first.revenue as number) / 4000, 12);
+    const first = result.rows[0]!, bar = ratio.nodes.find((n) => n.key === 'primary:bar:' + first['date.day']) as { y: number }, line = ratio.nodes.find((n) => n.key === 'primary:line') as { points: { y: number }[] };
+    expect(bar.y).toBeCloseTo((first.visitors as number) / 600, 12);
+    expect(line.points[0]!.y).toBeCloseTo((first.revenue as number) / 4000, 12);
     expect(ratio.nodes.filter((n) => n.key.startsWith('grid:')).map((n) => n.key)).toEqual(['grid:0', 'grid:200', 'grid:400', 'grid:600']);
   });
   it('two metrics of one unit share a scale, and a constant is on the first', () => {
@@ -401,7 +401,7 @@ describe('a scale per unit', () => {
     expect(plan.guides.y2).toBe(undefined);
     expect(ratio.parts).toEqual(['y-axis', 'plot', 'x-axis', 'legend']);
     expect(ticks(ratio, 'y-axis')).toEqual(['0', '500', '1k', '1.5k']);
-    expect((ratio.nodes.find((n) => n.key === 'reference:rule') as { t: number }).t).toBeCloseTo(1000 / 1500, 12);
+    expect((ratio.nodes.find((n) => n.key === 'reference:rule') as { y: number }).y).toBeCloseTo(1000 / 1500, 12);
   });
   it('layers that differ by metric are told apart as series are: a colour each where none is stated, an entry each in the legend, and a label where a line ends', () => {
     const counts: Spec = { query: { metrics: ['visitors', 'pageviews'], by: ['date.day'] }, layers: [{ mark: 'area', encode: { x: 'date.day', y: 'visitors' }, role: 'context' }, { mark: 'line', encode: { x: 'date.day', y: 'visitors' } }, { mark: 'line', encode: { x: 'date.day', y: 'pageviews' } }] };
@@ -512,7 +512,7 @@ describe('a rule at a value of x', () => {
   it('stands the height of the plot where that value is, with its label beside it', () => {
     const [line, label] = rules(launch), dates = runQuery(launch.query).rows.map((r) => r['date.day']), i = dates.indexOf('2026-09-21');
     expect(i).toBeGreaterThan(0);
-    expect(line).toMatchObject({ key: 'reference:rule:2026-09-21', kind: 'line', t: 0, t2: 1, paint: 'rule', dash: '5 3' });
+    expect(line).toMatchObject({ key: 'reference:rule:2026-09-21', kind: 'line', y: 0, y2: 1, paint: 'rule', dash: '5 3' });
     expect(line!.x).toBeCloseTo(i / (dates.length - 1));
     expect(line!.x2).toBe(line!.x);
     expect(label).toMatchObject({ key: 'reference:rule:2026-09-21:label', kind: 'text', text: 'Launch', anchor: 'start' });

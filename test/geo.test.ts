@@ -25,7 +25,7 @@ describe('the sweep', () => {
         expect(new Set(all).size, 'duplicate keys: ' + at).toBe(all.length);
         expect(JSON.stringify(ratio, (_, v) => (typeof v === 'number' && isNaN(v) ? 'NaN' : v)), 'NaN: ' + at).not.toMatch(/NaN/);
         expect(fit.parts.filter((p) => !ratio.nodes.some((n) => n.part === p)), 'parts with nothing in them: ' + at).toEqual([]);
-        for (const n of dots(ratio)) expect(n.x! >= 0 && n.x! <= 1 && n.t! >= 0 && n.t! <= 1 && n.size! >= 1 && n.size! <= 4, 'symbol: ' + at + ' ' + n.key).toBe(true);
+        for (const n of dots(ratio)) expect(n.x! >= 0 && n.x! <= 1 && n.y! >= 0 && n.y! <= 1 && n.size! >= 1 && n.size! <= 4, 'symbol: ' + at + ' ' + n.key).toBe(true);
         if (plan.layout === 'geo') expect(ratio.aspect, at).toBe(ASPECT);
       }
     });
@@ -180,7 +180,7 @@ describe('geo, with a symbol for each region', () => {
     expect(dots(ratio).find((n) => n.row === 'US')).toMatchObject({ key: 'primary:geo:US:symbol', size: 4, paint: 'series.1', opacity: 0.7, layer: 'data', role: 'primary' });
     // Brazil is south of the equator and west of Greenwich; Australia is east of both.
     const at = (k: string) => dots(ratio).find((n) => n.row === k)!;
-    expect(at('BR').x! < 0.5 && at('BR').t! < 0.5 && at('AU').x! > 0.5 && at('AU').t! < at('BR').t! + 0.2).toBe(true);
+    expect(at('BR').x! < 0.5 && at('BR').y! < 0.5 && at('AU').x! > 0.5 && at('AU').y! < at('BR').y! + 0.2).toBe(true);
   });
   it('the regions are the ground they stand on: every shape in the tone of no value, as context', () => {
     expect(shapes(ratio).length).toBe(123);
@@ -214,7 +214,7 @@ describe('text over a map', () => {
     expect(labels.find((n) => n.row === 'US')).toMatchObject({ key: 'primary:text:US', kind: 'text', text: '3,265', anchor: 'middle', font: 'tick', paint: 'ink', halo: true, layer: 'guide', role: 'primary' });
     // Its place is the mark's own: where a symbol stands on the same map.
     const marks = run({ query: q, layers: [{ mark: 'geo', encode: { x: 'country', size: 'visitors' } }] }, 480).ratio.nodes.filter((n) => n.part === 'points') as any[];
-    for (const n of labels) { const m = marks.find((d) => d.row === n.row)!; expect([n.x, n.t], n.key).toEqual([m.x, m.t]); }
+    for (const n of labels) { const m = marks.find((d) => d.row === n.row)!; expect([n.x, n.y], n.key).toEqual([m.x, m.y]); }
     // Ranked by what it says, the largest first: where two would meet, a surface keeps the one that says more.
     expect([...labels].sort((a, b) => a.rank - b.rank).map((n) => n.row).slice(0, 3)).toEqual([...result.rows].sort((a, b) => (b.visitors as number) - (a.visitors as number)).slice(0, 3).map((r) => r.country));
     // It may say the region's own name, and a row with no place on the map says nothing.

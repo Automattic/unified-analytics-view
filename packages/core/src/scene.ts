@@ -151,14 +151,14 @@ type Pt = PathNode['points'][number];
  * ponytail: a crossing is found on the straight line between two rows, and the pieces are then drawn with the curve of
  * the lines beside them. So a piece's tip is a hair from where those curves cross. Solve the curves if it ever shows. */
 function cut(pts: Pt[]): { up: boolean; pts: Pt[] }[] {
-  const out: { up: boolean; pts: Pt[] }[] = [], gap = (p: Pt) => p.v - (p.v0 || 0);
+  const out: { up: boolean; pts: Pt[] }[] = [], gap = (p: Pt) => p.y - (p.y2 || 0);
   let cur: Pt[] = [], way = 0;
   pts.forEach((p, i) => {
     const d = Math.sign(gap(p));
     if (d && way && d !== way) {
-      const a = pts[i - 1]!, da = gap(a), f = da / (da - gap(p)), v = a.v + (p.v - a.v) * f;
+      const a = pts[i - 1]!, da = gap(a), f = da / (da - gap(p)), v = a.y + (p.y - a.y) * f;
       // Where the ends meet between two rows, which is no row's: the piece before ends there and the next begins. Level at a row, that row is where.
-      const at: Pt = da ? { x: a.x + (p.x - a.x) * f, v, ...(v && { v0: v }) } : a;
+      const at: Pt = da ? { x: a.x + (p.x - a.x) * f, y: v, ...(v && { y2: v }) } : a;
       if (da) cur.push(at);
       out.push({ up: way > 0, pts: cur }); cur = [at];
     }
@@ -175,7 +175,7 @@ export const TINT = { opacity: 0.14, tone: 'soft' as const };
 /** How a reference line is drawn: a dashed rule, thinner than a series' line. */
 const REFERENCE = { paint: 'rule', dash: '5 3', width: 1.5 };
 /** A reference rule's label, in the rule's paint, at `at` in the plot. */
-const ruleLabel = (id: string, text: string, role: Role, at: { x?: number; t: number }, anchor: TextNode['anchor']): TextNode => ({ key: id + ':label', part: 'plot', kind: 'text', ...at, text, anchor, font: 'tick', paint: 'rule', halo: true, layer: 'guide', role });
+const ruleLabel = (id: string, text: string, role: Role, at: { x?: number; y: number }, anchor: TextNode['anchor']): TextNode => ({ key: id + ':label', part: 'plot', kind: 'text', ...at, text, anchor, font: 'tick', paint: 'rule', halo: true, layer: 'guide', role });
 const path: MarkFn = (l, { id: layer, series, mass, role: role0, paint, prev, rows: pts, k, unit, ends, polarity, step, points: joined, part: own, bend }) => {
   const id = series == null ? layer : layer + ':' + series, role = series == null ? { role: role0 } : { role: role0, series };
   const whole = pts.filter((r) => prev || !r.partial);
@@ -186,7 +186,7 @@ const path: MarkFn = (l, { id: layer, series, mass, role: role0, paint, prev, ro
   // About a centre it runs straight from each place to the next and back to the first: a curve would bow out past the values it joins.
   const curve = bend ? 'radial' as const : joined ? undefined : step ? 'step' as const : 'monotone' as const, part: Part = own ?? (joined ? 'points' : 'plot'), bent = curve && { curve };
   // An area's points say where it starts only when that is not the bottom of the plot.
-  const points = (rs: Row[]): Pt[] => rs.map((r) => { const [v0, v] = ends(r); return { row: k(r), x: unit.cx(k(r)), v, ...(l.mark === 'area' && v0 && { v0 }), ...(step && { w: unit.span!(k(r)) }) }; });
+  const points = (rs: Row[]): Pt[] => rs.map((r) => { const [v0, v] = ends(r); return { row: k(r), x: unit.cx(k(r)), y: v, ...(l.mark === 'area' && v0 && { y2: v0 }), ...(step && { w: unit.span!(k(r)) }) }; });
   if (l.mark === 'area') {
     // An area under a line is a tint. Stacked, each is the mark itself.
     const area = (key: string, ps: Pt[], paint: string): SceneNode => ({ key, part, kind: 'path', d: pathD(ps, curve, true), points: ps, ...bent, fill: true, paint, ...(!(l.stack && series != null) && TINT), layer: 'data', ...role });
@@ -207,7 +207,7 @@ const path: MarkFn = (l, { id: layer, series, mass, role: role0, paint, prev, ro
 };
 const bar: MarkFn = (_l, { id, series, role, paint, prev, rows, k, unit, ends, polarity, slot: [j, n] = [0, 1] }) => rows.map((r) => {
   const [v0, v] = ends(r), w = (unit.span ? unit.span(k(r)) : unit.w) / n;
-  return { ...markOf(id, k(r), series), part: 'plot', kind: 'rect', x: unit.x(k(r)) + j * w, w, v, ...(v0 && { v0 }),
+  return { ...markOf(id, k(r), series), part: 'plot', kind: 'rect', x: unit.x(k(r)) + j * w, w, y: v, ...(v0 && { y2: v0 }),
     paint: toned(polarity, v0, v, paint), opacity: r.partial && !prev ? FADED : 1, layer: 'data', role };
 });
 /** Whether a rule runs across the plot from one place to another: it has both ends on both axes. */
@@ -220,7 +220,7 @@ const rule: MarkFn = (l, { id, series, role, rows, k, unit, ends, v, xv, at }) =
     if (on.length) throw new Error('A rule "at" a value stands the height of the plot at that value of x, and this one also has ' + orList(on) + ' encoded. Remove "at" for the rule those make, or remove them.');
     return at.flatMap(({ value, x: place }): SceneNode[] => {
       const key = id + ':' + value;
-      return [{ key, part: 'plot', kind: 'line', x: place, x2: place, t: 0, t2: 1, ...REFERENCE, layer: 'data', role }, ...(l.label ? [ruleLabel(key, l.label, role, { x: place, t: 1 }, place > 0.5 ? 'end' : 'start')] : [])];
+      return [{ key, part: 'plot', kind: 'line', x: place, x2: place, y: 0, y2: 1, ...REFERENCE, layer: 'data', role }, ...(l.label ? [ruleLabel(key, l.label, role, { x: place, y: 1 }, place > 0.5 ? 'end' : 'start')] : [])];
     });
   }
   // Both ends on both axes: one line across the plot, from (x, y) to (x2, y2). Numbers make the one line, drawn as a
@@ -233,7 +233,7 @@ const rule: MarkFn = (l, { id, series, role, rows, k, unit, ends, v, xv, at }) =
     const line = (key: string, r?: Row): SceneNode[] => {
       const [x0, y0, x1, y1] = [x, y, x2, y2].map((f) => at(f, r));
       if (x0 == null || y0 == null || x1 == null || y1 == null) return [];   // a row with an end missing has no line
-      const points = [{ row: r ? k(r) : '', x: xv(x0), v: v(y0) }, { row: r ? k(r) : '', x: xv(x1), v: v(y1) }];
+      const points = [{ row: r ? k(r) : '', x: xv(x0), y: v(y0) }, { row: r ? k(r) : '', x: xv(x1), y: v(y1) }];
       return [{ key, part: 'plot', kind: 'path', d: pathD(points), points, ...(r ? { row: k(r), paint: l.paint || 'ink', width: 2 } : REFERENCE), layer: 'data', role }];
     };
     return [x, y, x2, y2].every((f) => typeof f === 'number') ? line(id) : rows.flatMap((r) => line(id + ':' + k(r), r));
@@ -242,19 +242,19 @@ const rule: MarkFn = (l, { id, series, role, rows, k, unit, ends, v, xv, at }) =
   if ((typeof y === 'string' || y2 != null) && l.label) throw new Error('A rule for each row has no place for its label yet. Remove "label", and name what the strokes are in the view\'s title.');
   if (typeof y === 'string' || y2 != null) return rows.map((r): SceneNode => {
     const [t, t2] = ends(r), at = unit.cx(k(r));
-    return { ...markOf(id, k(r), series), part: 'plot', kind: 'line', x: at, x2: at, t, t2, paint: l.paint || 'ink', layer: 'data', role };
+    return { ...markOf(id, k(r), series), part: 'plot', kind: 'line', x: at, x2: at, y: t, y2: t2, paint: l.paint || 'ink', layer: 'data', role };
   });
   // A constant on x stands the height of the plot. Its label sits beside it, at the top, on the side with more room.
   if (typeof x === 'number') {
     if (!xv) throw new Error('A rule at x: ' + x + ' needs a scale to be measured on, and this plot has a time or a category on x. Put the rule on y, or a metric or a number dimension on x.');
-    const at = xv(x), up: SceneNode[] = [{ key: id, part: 'plot', kind: 'line', x: at, x2: at, t: 0, t2: 1, ...REFERENCE, layer: 'data', role }];
-    if (l.label) up.push(ruleLabel(id, l.label, role, { x: at, t: 1 }, at > 0.5 ? 'end' : 'start'));
+    const at = xv(x), up: SceneNode[] = [{ key: id, part: 'plot', kind: 'line', x: at, x2: at, y: 0, y2: 1, ...REFERENCE, layer: 'data', role }];
+    if (l.label) up.push(ruleLabel(id, l.label, role, { x: at, y: 1 }, at > 0.5 ? 'end' : 'start'));
     return up;
   }
   if (typeof y !== 'number') throw new Error('A rule is drawn at a number, and this one has none on x or on y. Encode one, for example { "y": 1000 }.');
   const t = v(y);
-  const nodes: SceneNode[] = [{ key: id, part: 'plot', kind: 'line', t, ...REFERENCE, layer: 'data', role }];
-  if (l.label) nodes.push(ruleLabel(id, l.label, role, { t }, 'end'));
+  const nodes: SceneNode[] = [{ key: id, part: 'plot', kind: 'line', y: t, ...REFERENCE, layer: 'data', role }];
+  if (l.label) nodes.push(ruleLabel(id, l.label, role, { y: t }, 'end'));
   return nodes;
 };
 export const SIZES = 4;    // the steps a value on `size` falls into. How big each is, in pixels, is the painter's
@@ -263,7 +263,7 @@ export const sizeStep = (n: number, top: number) => Math.min(SIZES, Math.max(1, 
 // A point for each row, at its values on x and y. One that is sized lets what is under it show.
 const dot: MarkFn = (l, { id, series, role, paint, rows, k, unit, ends, size, points, part }) => {
   const sized = l.encode!.size != null && size;
-  return rows.map((r): SceneNode => ({ ...markOf(id, k(r), series), part: part ?? (points ? 'points' : 'plot'), kind: 'circle', pulse: false, x: unit.cx(k(r)), t: ends(r)[1],
+  return rows.map((r): SceneNode => ({ ...markOf(id, k(r), series), part: part ?? (points ? 'points' : 'plot'), kind: 'circle', pulse: false, x: unit.cx(k(r)), y: ends(r)[1],
     ...(sized && { size: sizeStep(num(r, sized.field), sized.top), opacity: 0.7 }), paint, layer: 'data', role }));
 };
 // A label on each row's point, in a part of its own over the plot, so a rule can give them all up. Each has its place
@@ -274,7 +274,7 @@ const label: MarkFn = (l, { id, series, role, rows, k, unit, ends, size, say, of
   // In a plot a label sits at its row's value on y. Where the space says what a mark is known by, it says where it stands as well.
   if (typeof f !== 'string' || (!of && typeof y !== 'string')) throw new Error('A "text" layer in a plot needs a field on y, for where each label sits, and one on text, for what it says: for example { "x": "<a metric>", "y": "<a metric>", "text": "<the dimension>" }.');
   const by = size ? size.field : rank ?? (y as string), order = rows.slice().sort((a, b) => num(b, by) - num(a, by));
-  return rows.map((r): TextNode => ({ ...(of ? of(r) : markOf(id, k(r), series)), part: 'point-labels', kind: 'text', x: unit.cx(k(r)), t: ends(r)[1], text: say(r, f),
+  return rows.map((r): TextNode => ({ ...(of ? of(r) : markOf(id, k(r), series)), part: 'point-labels', kind: 'text', x: unit.cx(k(r)), y: ends(r)[1], text: say(r, f),
     anchor: 'middle', font: 'tick', paint: 'ink', halo: true, rank: order.indexOf(r) + 1, layer: 'guide', role }));
 };
 const RUG = 0.05;    // how far up the plot a stroke of a rug stands
@@ -284,9 +284,9 @@ const RUG = 0.05;    // how far up the plot a stroke of a rug stands
 // there: a rug. Strokes lie over each other where rows are close, so each lets the ones under it show.
 const tick: MarkFn = (l, { id, series, role, rows, k, unit, ends, xv }) => rows.map((r): SceneNode => {
   const own = { ...markOf(id, k(r), series), part: 'plot' as const, kind: 'line' as const, paint: l.paint || 'ink', layer: 'data' as const, role };
-  if (l.encode!.y == null) { const at = xv!(num(r, l.encode!.x as string)); return { ...own, x: at, x2: at, t: 0, t2: RUG, opacity: MASS }; }
+  if (l.encode!.y == null) { const at = xv!(num(r, l.encode!.x as string)); return { ...own, x: at, x2: at, y: 0, y2: RUG, opacity: MASS }; }
   const w = unit.span ? unit.span(k(r)) : unit.w, x = unit.x(k(r)) + (l.align === 'end' ? w / 2 : 0), t = ends(r)[1];
-  return { ...own, x, x2: x + (l.align ? w / 2 : w), t, t2: t, width: 2 };
+  return { ...own, x, x2: x + (l.align ? w / 2 : w), y: t, y2: t, width: 2 };
 });
 // A stack of glyphs up from the axis, one for each `worth` of the row's value: its span runs from nothing to the whole
 // glyphs it is drawn as (sceneCartesian), so it is on the scale every other mark of the plot is on, and an axis or a rule
@@ -297,7 +297,7 @@ const unitStack: MarkFn = (l, { id, role, paint, rows, k, unit, ends, v, worth }
   const h = v(worth) - v(0);
   return rows.flatMap((r) => {
     const [from, to] = ends(r), w = unit.span ? unit.span(k(r)) : unit.w;
-    return Array.from({ length: Math.round((to - from) / h) }, (_, j): SceneNode => ({ key: id + ':' + k(r) + ':' + (j + 1), part: 'plot', kind: 'circle', pulse: false, x: unit.cx(k(r)), t: from + (j + 0.5) * h, w, h,
+    return Array.from({ length: Math.round((to - from) / h) }, (_, j): SceneNode => ({ key: id + ':' + k(r) + ':' + (j + 1), part: 'plot', kind: 'circle', pulse: false, x: unit.cx(k(r)), y: from + (j + 0.5) * h, w, h,
       row: k(r), paint, ...(r.partial && { opacity: FADED }), layer: 'data', role }));
   });
 };
@@ -531,7 +531,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     const rank = Number(!coarse.includes(t));
     // The second scale's ticks are on the far side, keyed by its unit. The grid is the first scale's alone.
     if (ui) { if (guides.y2) nodes.push(axisTick('y-axis-2', units[ui] + ':' + t, v(t), text(t), { rank })); return; }
-    if (guides.grid) nodes.push({ key: 'grid:' + t, part: 'plot', kind: 'line', t: v(t), paint: t === 0 ? 'axis' : 'grid', layer: 'guide', ...(rank && { rank }) });
+    if (guides.grid) nodes.push({ key: 'grid:' + t, part: 'plot', kind: 'line', y: v(t), paint: t === 0 ? 'axis' : 'grid', layer: 'guide', ...(rank && { rank }) });
     nodes.push(axisTick('y-axis', t, v(t), text(t), { rank }));
   }));
   if (guides.x && keys.length && !xOn) {
@@ -603,7 +603,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     };
     if (!splitOf(catalog, l, xField)) {
       const drawn = shade(on(draw(l, d), m != null && !prev && !l.paint), d.rows), last = m == null || prev ? undefined : drawn.filter((n): n is PathNode => n.kind === 'path').map((n) => n.points[n.points.length - 1]!).pop();
-      if (last) ends.set(m!, last.v);                                       // where the metric's line ends, for its label
+      if (last) ends.set(m!, last.y);                                       // where the metric's line ends, for its label
       return nodes.push(...drawn);
     }
     // Split by detail, every series is in the layer's own paint, and none has a label at its end: a label is in its series' colour.
@@ -615,7 +615,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
       nodes.push(...drawn);
       // Where the series' line ends, for its label: half way up its band where areas are stacked.
       const last = drawn.filter((n): n is PathNode => n.kind === 'path').map((n) => n.points[n.points.length - 1]!).pop();
-      if (last && !plain) ends.set(s, l.mark === 'area' && l.stack ? ((last.v0 || 0) + last.v) / 2 : last.v);
+      if (last && !plain) ends.set(s, l.mark === 'area' && l.stack ? ((last.y2 || 0) + last.y) / 2 : last.y);
     });
   });
   if (painted) {
@@ -623,14 +623,14 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     // A label sits beside the plot at the height its line ends. Two lines that end close have labels that collide:
     // that is the painter's to see to, since only it knows how tall a label is (reference, Open 5).
     series.forEach((s, j) => {
-      if (ends.has(s)) nodes.push({ key: 'label:' + s, part: 'labels', kind: 'text', series: s, t: ends.get(s)!, text: s, anchor: 'start', baseline: 'middle', font: 'tick', paint: 'series.' + (j + 1), layer: 'guide' });
+      if (ends.has(s)) nodes.push({ key: 'label:' + s, part: 'labels', kind: 'text', series: s, y: ends.get(s)!, text: s, anchor: 'start', baseline: 'middle', font: 'tick', paint: 'series.' + (j + 1), layer: 'guide' });
     });
     nodes.push(...seriesLegend(series));
   } else if (several) {
     // The same two keys, for metrics: an entry each, named by its label, and a label where its line ends.
     measures.forEach((f) => {
       const name = metricOf(catalog, f)!.label, paint = paints.get(f) ?? 'series.1';
-      if (ends.has(f)) nodes.push({ key: 'label:' + f, part: 'labels', kind: 'text', t: ends.get(f)!, text: name, anchor: 'start', baseline: 'middle', font: 'tick', paint, layer: 'guide' });
+      if (ends.has(f)) nodes.push({ key: 'label:' + f, part: 'labels', kind: 'text', y: ends.get(f)!, text: name, anchor: 'start', baseline: 'middle', font: 'tick', paint, layer: 'guide' });
       nodes.push(...legendEntry(f, {}, name, paint));
     });
   }
@@ -646,7 +646,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
  * a scale's round numbers, the first, middle and last of a run of days, every category, the edges of bins. */
 function axisTick(part: 'x-axis' | 'y-axis' | 'y-axis-2', k: string | number, at: number, text: string, { anchor, row, rank }: { anchor?: TextNode['anchor']; row?: string; rank?: number } = {}): TextNode {
   const x = part === 'x-axis';
-  return { key: (x ? 'xtick:' : 'ytick:') + k, part, kind: 'text', ...(x ? { x: at } : { t: at }), ...(row != null && { row }), text, anchor: anchor ?? (x ? 'middle' : part === 'y-axis' ? 'end' : 'start'),
+  return { key: (x ? 'xtick:' : 'ytick:') + k, part, kind: 'text', ...(x ? { x: at } : { y: at }), ...(row != null && { row }), text, anchor: anchor ?? (x ? 'middle' : part === 'y-axis' ? 'end' : 'start'),
     ...(!x && { baseline: 'middle' as const }), font: 'tick', paint: 'ink.muted', layer: 'guide', ...(rank && { rank }) };
 }
 /** The key to sizes: the metric's name, then each step with the most it stands for, in the metric's unit. */
@@ -715,20 +715,20 @@ type TrackFn = (l: Layer, d: Track) => SceneNode[];
 // it runs from its value to that, and where its layer says `paint: "direction"` it is painted by which way it goes. Behind a label it is a tint.
 const trackBar: TrackFn = (_l, d) => {
   const { role, paint, at, to, v, beside, polarity } = d, v0 = v(to == null ? 0 : at), v1 = v(to ?? at);
-  return [{ ...inRow(d), part: 'rows', kind: 'rect', v: v1, ...(v0 && { v0 }), paint: toned(polarity, v0, v1, paint), ...(!beside && { opacity: 0.2, tone: 'soft' as const }), layer: 'data', role }];
+  return [{ ...inRow(d), part: 'rows', kind: 'rect', x: v1, ...(v0 && { x2: v0 }), paint: toned(polarity, v0, v1, paint), ...(!beside && { opacity: 0.2, tone: 'soft' as const }), layer: 'data', role }];
 };
 // A rule lies along the track from one of the row's values to another, or from zero where it has one end.
-const trackRule: TrackFn = (l, { id, role, k, at, to, v }) => [{ key: id + ':' + k, part: 'rows', kind: 'line', x: v(at), x2: v(to ?? 0), t: 0.5, row: k, paint: l.paint || 'ink', layer: 'data', role }];
+const trackRule: TrackFn = (l, { id, role, k, at, to, v }) => [{ key: id + ':' + k, part: 'rows', kind: 'line', x: v(at), x2: v(to ?? 0), y: 0.5, row: k, paint: l.paint || 'ink', layer: 'data', role }];
 // A tick stands across the row at its value.
 // With `align` it is the half of that to one side of the row's middle: the start is the top of the row, where a page begins.
-const trackTick: TrackFn = (l, d) => [{ ...inRow(d), part: 'rows', kind: 'line', x: d.v(d.at), x2: d.v(d.at), t: l.align === 'start' ? 0.5 : 0, t2: l.align === 'end' ? 0.5 : 1, paint: l.paint || 'ink', width: 2, ...(d.mass && { opacity: MASS }), layer: 'data', role: d.role }];
+const trackTick: TrackFn = (l, d) => [{ ...inRow(d), part: 'rows', kind: 'line', x: d.v(d.at), x2: d.v(d.at), y: l.align === 'start' ? 0.5 : 0, y2: l.align === 'end' ? 0.5 : 1, paint: l.paint || 'ink', width: 2, ...(d.mass && { opacity: MASS }), layer: 'data', role: d.role }];
 // A dot stands on the track at its value, half way up the row. With a dimension on detail the row has one for each of its pairs.
-const trackDot: TrackFn = (_l, d) => [{ ...inRow(d), part: 'rows', kind: 'circle', pulse: false, x: d.v(d.at), t: 0.5, paint: d.paint, ...(d.mass && { opacity: MASS }), layer: 'data', role: d.role }];
+const trackDot: TrackFn = (_l, d) => [{ ...inRow(d), part: 'rows', kind: 'circle', pulse: false, x: d.v(d.at), y: 0.5, paint: d.paint, ...(d.mass && { opacity: MASS }), layer: 'data', role: d.role }];
 // A run of glyphs along the track from where it has zero, one for each `worth`. A glyph has its own share of the track
 // and the height of the row, and is as large as the lesser of the two lets it be: that is the painter's (types.ts, CircleNode).
 const trackUnit: TrackFn = (_l, { id, role, paint, k, at, v, worth = 1 }) => {
   const w = v(worth) - v(0);
-  return Array.from({ length: Math.round(at / worth) }, (_, j): SceneNode => ({ key: id + ':' + k + ':' + (j + 1), part: 'rows', kind: 'circle', pulse: false, x: v((j + 0.5) * worth), t: 0.5, w, h: 1, row: k, paint, layer: 'data', role }));
+  return Array.from({ length: Math.round(at / worth) }, (_, j): SceneNode => ({ key: id + ':' + k + ':' + (j + 1), part: 'rows', kind: 'circle', pulse: false, x: v((j + 0.5) * worth), y: 0.5, w, h: 1, row: k, paint, layer: 'data', role }));
 };
 /* The marks a row's track draws, by name. A new mark is a function here. Text is not among them: it is set in the row, not on the scale. */
 const TRACK_MARKS: Partial<Record<Mark, TrackFn>> = { bar: trackBar, rule: trackRule, tick: trackTick, dot: trackDot, unit: trackUnit };
@@ -824,7 +824,7 @@ function sceneRows(catalog: Catalog, layers: Layer[], result: Result, told = tru
     layers.forEach((l, li) => {
       const draw = TRACK_MARKS[l.mark], span = spans.get(l);
       // The range behind the marks: a part for each band, from the least. They are a guide, as a grid is, and in paints of their own.
-      if (ranged(l)) edges.slice(1).forEach((to, j) => nodes.push({ key: ids[li] + ':' + k + ':' + (j + 1), part: 'rows', kind: 'rect', v: v(to), ...(v(edges[j]!) && { v0: v(edges[j]!) }), row: k, paint: 'band.' + (j + 1), layer: 'guide', role: roleOf(l) }));
+      if (ranged(l)) edges.slice(1).forEach((to, j) => nodes.push({ key: ids[li] + ':' + k + ':' + (j + 1), part: 'rows', kind: 'rect', x: v(to), ...(v(edges[j]!) && { x2: v(edges[j]!) }), row: k, paint: 'band.' + (j + 1), layer: 'guide', role: roleOf(l) }));
       else if (draw && divides(l)) {
         // A mark for each of the row's pairs, in the series' order: a stacked bar's share, from where the one before it ends.
         // By detail it is a mark at each pair's own value, all in the layer's paint.
@@ -880,7 +880,7 @@ function sceneBand(catalog: Catalog, layer: Layer, rows: Row[], totals: Result['
   const nodes: SceneNode[] = [], m = layer.encode!.x as string, dim = layer.encode!.color as string;
   const total = totals[m] || Infinity, own = rowKeys(rows, dim), k = (r: Row) => own.get(r)!;
   rows.forEach((r, i) => {
-    nodes.push({ key: 'seg:' + k(r), part: 'band', kind: 'rect', v: num(r, m) / total, row: k(r), paint: 'series.' + ((i % SERIES) + 1), layer: 'data', role: roleOf(layer) });
+    nodes.push({ key: 'seg:' + k(r), part: 'band', kind: 'rect', w: num(r, m) / total, row: k(r), paint: 'series.' + ((i % SERIES) + 1), layer: 'data', role: roleOf(layer) });
   });
   return { nodes: nodes.concat(shareLegend(rows, k, dim, catalog.dimensions[dim]!, m, catalog.metrics[m]!, totals[m], (i) => 'series.' + ((i % SERIES) + 1))), rows: rows.map(k) };
 }
@@ -977,7 +977,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
     const dim = catalog.dimensions[one]!, every = Math.ceil(rows.length / 4), rank = (j: number) => (j % every ? { rank: every % 2 || j % (every / 2) ? 2 : 1 } : {});
     rows.forEach((r, j) => {
       const lo = j / rows.length, hi = (j + 1) / rows.length, mid = (lo + hi) * Math.PI;
-      rim.push({ key: 'rim:' + k(r), part: 'rim', kind: 'text', x: 0.5 + Math.sin(mid) / 2, t: 0.5 + Math.cos(mid) / 2, row: k(r), text: formatDimension(r[one], dim),
+      rim.push({ key: 'rim:' + k(r), part: 'rim', kind: 'text', x: 0.5 + Math.sin(mid) / 2, y: 0.5 + Math.cos(mid) / 2, row: k(r), text: formatDimension(r[one], dim),
         anchor: Math.sin(mid) > 0.2 ? 'start' : Math.sin(mid) < -0.2 ? 'end' : 'middle', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...rank(j) });
     });
   };
@@ -1005,7 +1005,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
       const rest = q.limit && total ? Math.max(0, Math.round(total / worth) - filled) : 0, { seats: at, pitch } = unitSeats(filled + rest);
       const seat = (key: string, more: Partial<SceneNode>) => {
         const { a, r } = at[seats.length]!, turn = Math.PI * (1 - a);
-        seats.push({ key, part: 'radial', kind: 'circle', pulse: false, x: 0.5 + r * Math.cos(turn) / 2, t: r * Math.sin(turn), w: pitch / 2, h: pitch, paint: 'seq.none', layer: 'data', role: roleOf(l), ...more } as SceneNode);
+        seats.push({ key, part: 'radial', kind: 'circle', pulse: false, x: 0.5 + r * Math.cos(turn) / 2, y: r * Math.sin(turn), w: pitch / 2, h: pitch, paint: 'seq.none', layer: 'data', role: roleOf(l), ...more } as SceneNode);
       };
       rows.forEach((r, j) => { for (let c = 1; c <= counts[j]!; c++) seat(ids[i] + ':' + k(r) + ':' + c, { row: k(r), paint: hue(j), legend: true }); });
       for (let c = 1; c <= rest; c++) seat(ids[i] + '#rest:' + c, {});
@@ -1024,7 +1024,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
       const rows = result.rows, own = rowKeys(rows, angle), k = (r: Row) => own.get(r)!, place = new Map(rows.map((r, j) => [k(r), j])), count = rows.length, prev = l.series === 'previous', by = outBy(l);
       const drawn = round(l, { id: ids[i]!, role: roleOf(l), paint: paintOf(l, catalog, result) || (prev ? 'compare' : 'series.1'), prev, rows: rows.filter((r) => r[by] != null), k, say: sayOf(catalog), v: reach, part: 'radial', bend: true,
         unit: { x: (key) => place.get(key)! / count, w: 1 / count, cx: (key) => (place.get(key)! + 0.5) / count }, ends: (r) => [0, reach(num(r, by))] });
-      bent.push(...drawn.map((node): SceneNode => (node.kind === 'circle' ? { ...node, x: 0.5 + node.t! * Math.sin(node.x! * TURN) / 2, t: 0.5 + node.t! * Math.cos(node.x! * TURN) / 2 } : node)));
+      bent.push(...drawn.map((node): SceneNode => (node.kind === 'circle' ? { ...node, x: 0.5 + node.y! * Math.sin(node.x! * TURN) / 2, y: 0.5 + node.y! * Math.cos(node.x! * TURN) / 2 } : node)));
       if (!rim.length) rimOf(rows, angle, k);
       keys = rows.map(k); around = angle; rings = '';
       return;
@@ -1203,7 +1203,7 @@ function sceneMatrix(catalog: Catalog, layers: Layer[], result: Result): Body {
   // A dot with no value is the least a painter draws, in the paint of no value: the pair is still there to be read.
   if (dot) each((x, y, i, j) => {
     const v = sizes!.get(x + '\n' + y), paint = v == null ? 'seq.none' : !cell && seq ? seq.paint(at!.get(x + '\n' + y)) : dot.paint || 'series.1';
-    return { key: ids[layers.indexOf(dot)] + ':' + x + ':' + y, part: 'plot', kind: 'circle', pulse: false, x: (i + 0.5) / nx, t: 1 - (j + 0.5) / ny, ...(v != null && { size: sizeStep(Math.abs(v), top) }), pair: [x, y], paint, layer: 'data', role: roleOf(dot) };
+    return { key: ids[layers.indexOf(dot)] + ':' + x + ':' + y, part: 'plot', kind: 'circle', pulse: false, x: (i + 0.5) / nx, y: 1 - (j + 0.5) / ny, ...(v != null && { size: sizeStep(Math.abs(v), top) }), pair: [x, y], paint, layer: 'data', role: roleOf(dot) };
   });
   // The plot's marks, each handed the grid's places: a row of the result is a pair, in the middle of its place on each axis.
   for (const i of sharedAt) {
@@ -1301,7 +1301,7 @@ function sceneOver(layers: Layer[], name: string, mark: CustomMark, view: MarkVi
     // A row says something where it has something to say and its value has a place.
     const rows = view.result.rows.filter((r) => r[f] != null && r[dim] != null && place(key(r)));
     return OVER_MARKS[own.mark]!(own, { id: ids[i]!, role: roleOf(own), paint: own.paint || 'ink', prev: false, rows, say: sayOf(view.catalog), v: (x) => x, k: key, rank: f,
-      unit: { x: (k) => place(k)!.x, w: 0, cx: (k) => place(k)!.x }, ends: (r) => { const t = place(key(r))!.t; return [t, t]; }, of: (r) => ({ key: ids[i] + ':' + key(r), row: key(r) }) });
+      unit: { x: (k) => place(k)!.x, w: 0, cx: (k) => place(k)!.x }, ends: (r) => { const y = place(key(r))!.y; return [y, y]; }, of: (r) => ({ key: ids[i] + ':' + key(r), row: key(r) }) });
   });
 }
 const TURN = 2 * Math.PI;

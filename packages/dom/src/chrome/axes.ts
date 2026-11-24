@@ -35,7 +35,7 @@ export const AXES_CSS = `
 export function paintAxes(body: HTMLElement, scene: Scene, far = false): HTMLElement {
   const yAxis = ensure(body, 'div', 'uav-y-axis'), plot = ensure(body, 'div', 'uav-plot'), xAxis = ensure(body, 'div', 'uav-x-axis');
   const texts = (part: string) => scene.nodes.filter((n): n is TextNode => n.part === part && n.kind === 'text');
-  const tick = (el: HTMLElement | SVGElement, n: TextNode) => { text(el, n); prop(el, '--uav-t', n.t); };
+  const tick = (el: HTMLElement | SVGElement, n: TextNode) => { text(el, n); prop(el, '--uav-t', n.y); };
   for (const el of [yAxis, xAxis]) el.setAttribute('aria-hidden', 'true');
   keyed(yAxis, texts('y-axis'), () => 'span', tick);
   if (far) { const yAxis2 = ensure(body, 'div', 'uav-y-axis-2'); yAxis2.setAttribute('aria-hidden', 'true'); keyed(yAxis2, texts('y-axis-2'), () => 'span', tick); }

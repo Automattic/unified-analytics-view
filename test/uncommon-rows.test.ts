@@ -20,14 +20,14 @@ describe('a row divided by a second dimension', () => {
     expect(ratio.rows).toEqual(['Search', 'Direct', 'Social', 'AI assistants', 'Email', 'Other']);
     expect(ratio.series).toEqual(['Desktop', 'Mobile', 'Tablet']);
     expect(ratio.track).toBe('beside');
-    const bars = of<{ key: string; v: number; v0?: number; paint: string; series: string; opacity?: number }>(ratio.nodes, 'primary:bar:Search:');
+    const bars = of<{ key: string; x: number; x2?: number; paint: string; series: string; opacity?: number }>(ratio.nodes, 'primary:bar:Search:');
     expect(bars.map((n) => [n.key, n.series, n.paint])).toEqual([['primary:bar:Search:Desktop', 'Desktop', 'series.1'], ['primary:bar:Search:Mobile', 'Mobile', 'series.2'], ['primary:bar:Search:Tablet', 'Tablet', 'series.3']]);
-    expect([bars[0]!.v0, bars[1]!.v0, bars[2]!.v0]).toEqual([undefined, bars[0]!.v, bars[1]!.v]);
+    expect([bars[0]!.x2, bars[1]!.x2, bars[2]!.x2]).toEqual([undefined, bars[0]!.x, bars[1]!.x]);
     expect(bars.every((n) => n.opacity == null)).toBe(true);
     // The longest row fills the track, and each bar is its pair's value on it.
     const top = result.totalsBy!.channel![0]!.visitors as number, pair = result.rows.find((r) => r.channel === 'Search' && r.device === 'Desktop')!;
-    expect(bars[2]!.v).toBe(1);
-    expect(bars[0]!.v).toBeCloseTo((pair.visitors as number) / top, 12);
+    expect(bars[2]!.x).toBe(1);
+    expect(bars[0]!.x).toBeCloseTo((pair.visitors as number) / top, 12);
     expect(of(ratio.nodes, 'primary:bar:').length).toBe(18);
   });
   it('says a row\'s value as the engine\'s total for it, and never sums its pairs', () => {
@@ -35,9 +35,9 @@ describe('a row divided by a second dimension', () => {
     expect(of<{ text: string }>(run(split('zero', [value])).ratio.nodes, 'primary:text#2:').map((n) => n.text)).toEqual(result.totalsBy!.channel!.map((r) => (r.visitors as number).toLocaleString('en-US')));
     expect(of<{ text: string }>(run(split('zero', [value]), 346, null, odd).ratio.nodes, 'primary:text#2:Search')[0]!.text).toBe('9,999');
     // And a share is of that total, so a stack of shares stops short of the end where the engine's total is more than its pairs.
-    const shares = of<{ v: number }>(run(split('normalize'), 346, null, odd).ratio.nodes, 'primary:bar:Search:');
-    expect(shares[2]!.v).toBeCloseTo((result.totalsBy!.channel![0]!.visitors as number) / 9999, 12);
-    expect(of<{ v: number }>(run(split('normalize')).ratio.nodes, 'primary:bar:Direct:')[2]!.v).toBeCloseTo(1, 12);
+    const shares = of<{ x: number }>(run(split('normalize'), 346, null, odd).ratio.nodes, 'primary:bar:Search:');
+    expect(shares[2]!.x).toBeCloseTo((result.totalsBy!.channel![0]!.visitors as number) / 9999, 12);
+    expect(of<{ x: number }>(run(split('normalize')).ratio.nodes, 'primary:bar:Direct:')[2]!.x).toBeCloseTo(1, 12);
   });
   it('has a legend in the series\' order, and one line for the series with the most, in its colour', () => {
     const { ratio, plan } = run(split());
@@ -77,7 +77,7 @@ describe('a row divided by a second dimension', () => {
 describe('stack: "diverge"', () => {
   const rows = (by: string[], limit: number): Spec => ({ query: { metrics: ['visitors'], by, limit }, layers: [{ mark: 'bar', encode: { y: by[0]!, x: 'visitors', color: by[1]! }, stack: 'diverge' }, label(by[0]!)] });
   const plot = (by: string[], limit: number): Spec => ({ query: { metrics: ['visitors'], by, limit }, layers: [{ mark: 'bar', encode: { x: by[0]!, y: 'visitors', color: by[1]! }, stack: 'diverge' }] });
-  const ends = (n: { v: number; v0?: number }) => [n.v0 ?? 0, n.v];
+  const ends = (n: { x: number; x2?: number }) => [n.x2 ?? 0, n.x];
 
   it('with two series sets one to each side of zero in a row\'s track: the population pyramid', () => {
     const { ratio, result } = run(rows(['channel', 'device'], 2)), pair = (c: string, d: string) => result.rows.find((r) => r.channel === c && r.device === d)!.visitors as number;
@@ -85,39 +85,39 @@ describe('stack: "diverge"', () => {
     // The track runs from the most on the first side to the most on the second, and zero is where the two meet in every row.
     const zero = pair('Search', 'Desktop') / (pair('Search', 'Desktop') + pair('Search', 'Mobile'));
     for (const c of ['Search', 'Direct']) {
-      const [a, b] = of<{ v: number; v0?: number }>(ratio.nodes, 'primary:bar:' + c + ':') as [any, any];
+      const [a, b] = of<{ x: number; x2?: number }>(ratio.nodes, 'primary:bar:' + c + ':') as [any, any];
       expect(ends(a)[1]).toBeCloseTo(zero, 12); expect(ends(b)[0]).toBeCloseTo(zero, 12);
       expect(ends(b)[1] - ends(b)[0]).toBeCloseTo(pair(c, 'Mobile') / (pair('Search', 'Desktop') + pair('Search', 'Mobile')), 12);
     }
-    expect(ends(of<{ v: number; v0?: number }>(ratio.nodes, 'primary:bar:Search:')[0]!)[0]).toBe(0);
+    expect(ends(of<{ x: number; x2?: number }>(ratio.nodes, 'primary:bar:Search:')[0]!)[0]).toBe(0);
     expect(ratio.track).toBe('beside');
   });
   it('with an odd count sets the middle series half on each side: five are the Likert chart', () => {
-    const { ratio, result } = run(rows(['device', 'channel'], 5)), bars = of<{ v: number; v0?: number; series: string }>(ratio.nodes, 'primary:bar:Desktop:');
+    const { ratio, result } = run(rows(['device', 'channel'], 5)), bars = of<{ x: number; x2?: number; series: string }>(ratio.nodes, 'primary:bar:Desktop:');
     expect(bars.map((n) => n.series)).toEqual(['Search', 'Direct', 'Social', 'AI assistants', 'Email']);
     bars.slice(1).forEach((n, i) => expect(ends(n)[0]).toBe(ends(bars[i]!)[1]));
     // Zero is the middle of the third in every row.
-    const mid = (row: string) => { const [, , m] = of<{ v: number; v0?: number }>(ratio.nodes, 'primary:bar:' + row + ':'); return (ends(m!)[0] + ends(m!)[1]) / 2; };
+    const mid = (row: string) => { const [, , m] = of<{ x: number; x2?: number }>(ratio.nodes, 'primary:bar:' + row + ':'); return (ends(m!)[0] + ends(m!)[1]) / 2; };
     expect(mid('Mobile')).toBeCloseTo(mid('Desktop'), 12); expect(mid('Tablet')).toBeCloseTo(mid('Desktop'), 12);
     expect(result.rows.length).toBe(15);
   });
   it('on an axis sets the first half below the zero line, and its ticks count away from zero on both sides', () => {
-    const { ratio, result } = run(plot(['channel', 'device'], 2)), [a, b] = of<{ v: number; v0?: number }>(ratio.nodes, 'primary:bar:Search:') as [any, any];
-    const ticks = of<{ t: number; text: string }>(ratio.nodes, 'ytick:'), zero = ticks.find((n) => n.text === '0')!.t;
+    const { ratio, result } = run(plot(['channel', 'device'], 2)), [a, b] = of<{ y: number; y2?: number }>(ratio.nodes, 'primary:bar:Search:') as [any, any];
+    const ticks = of<{ y: number; text: string }>(ratio.nodes, 'ytick:'), zero = ticks.find((n) => n.text === '0')!.y;
     expect(ticks.map((n) => n.text)).toEqual(['3k', '2k', '1k', '0', '1k', '2k']);
     expect(of(ratio.nodes, 'ytick:').map((n: any) => n.key)).toEqual(['ytick:-3000', 'ytick:-2000', 'ytick:-1000', 'ytick:0', 'ytick:1000', 'ytick:2000']);
-    expect([a.v, b.v0]).toEqual([zero, zero]);
-    expect(a.v0 ?? 0).toBeLessThan(zero); expect(b.v).toBeGreaterThan(zero);
-    expect(ratio.nodes.find((n) => n.key === 'grid:0')).toMatchObject({ paint: 'axis', t: zero });
+    expect([a.y, b.y2]).toEqual([zero, zero]);
+    expect(a.y2 ?? 0).toBeLessThan(zero); expect(b.y).toBeGreaterThan(zero);
+    expect(ratio.nodes.find((n) => n.key === 'grid:0')).toMatchObject({ paint: 'axis', y: zero });
     // The readout and the sentence say each value as it is: nothing is negative but where it is drawn.
     expect(result.rows.every((r) => (r.visitors as number) > 0)).toBe(true);
     expect(run(plot(['channel', 'device'], 2)).plan.text).toBe('Search is the largest channel at 41% of visitors, and Desktop the largest device at 50%.');
   });
   it('leaves "center" as it was: half of the whole stack on each side, whatever the count', () => {
     const centred: Spec = { ...plot(['channel', 'device'], 2), layers: [{ mark: 'bar', encode: { x: 'channel', y: 'visitors', color: 'device' }, stack: 'center' }] };
-    const [a, b] = of<{ v: number; v0?: number }>(run(centred).ratio.nodes, 'primary:bar:Search:') as [any, any], ticks = of<{ t: number; text: string }>(run(centred).ratio.nodes, 'ytick:');
+    const [a, b] = of<{ y: number; y2?: number }>(run(centred).ratio.nodes, 'primary:bar:Search:') as [any, any], ticks = of<{ y: number; text: string }>(run(centred).ratio.nodes, 'ytick:');
     // About the middle of the plot, and with no value axis to count away from it (step 3 of the same plan).
-    expect(((a.v0 ?? 0) + b.v) / 2).toBeCloseTo(0.5, 12);
+    expect(((a.y2 ?? 0) + b.y) / 2).toBeCloseTo(0.5, 12);
     expect(ticks).toEqual([]);
   });
   it('refuses a value below zero, which has no side of its own to be on', () => {
@@ -135,21 +135,21 @@ describe('several marks to a row, by detail', () => {
   const strip = (mark = 'dot', more: Record<string, string> = {}): Spec => ({ query: q, layers: [{ mark, encode: { y: 'channel', x: 'visitors', detail: 'country', ...more } }, label('channel')] });
 
   it('a dot for each pair of a row and a detail value, on the row\'s track, all in one paint at half strength: the strip plot', () => {
-    const { ratio, result } = run(strip()), dots = of<{ key: string; x: number; t: number; paint: string; opacity: number; series: string; row: string }>(ratio.nodes, 'primary:dot:');
+    const { ratio, result } = run(strip()), dots = of<{ key: string; x: number; y: number; paint: string; opacity: number; series: string; row: string }>(ratio.nodes, 'primary:dot:');
     expect(dots.length).toBe(6 * 15);
     expect(ratio.rows).toEqual(['Search', 'Direct', 'Social', 'AI assistants', 'Email', 'Other']);
     expect([ratio.series, ratio.detail!.length, ratio.parts, ratio.track]).toEqual([undefined, 15, ['rows'], 'beside']);
-    expect(new Set(dots.map((n) => [n.paint, n.opacity, n.t].join())).size).toBe(1);
-    expect(dots[0]).toMatchObject({ key: 'primary:dot:Search:US', row: 'Search', series: 'US', paint: 'series.1', opacity: 0.5, t: 0.5, x: 1 });
+    expect(new Set(dots.map((n) => [n.paint, n.opacity, n.y].join())).size).toBe(1);
+    expect(dots[0]).toMatchObject({ key: 'primary:dot:Search:US', row: 'Search', series: 'US', paint: 'series.1', opacity: 0.5, y: 0.5, x: 1 });
     // Each stands at its own pair's value: the track runs to the most any pair has, and no pair is added to another.
     const most = Math.max(...result.rows.map((r) => r.visitors as number));
     for (const r of result.rows.slice(0, 30)) expect(dots.find((n) => n.row === r.channel && n.series === r.country)!.x).toBeCloseTo((r.visitors as number) / most, 12);
     expect(new Set(dots.map((n) => n.key)).size).toBe(dots.length);
   });
   it('a tick the same way, and a colour for each row where the row\'s own dimension is on color', () => {
-    const ticks = of<{ x: number; x2: number; t: number; t2: number; opacity: number }>(run(strip('tick')).ratio.nodes, 'primary:tick:Email:');
+    const ticks = of<{ x: number; x2: number; y: number; y2: number; opacity: number }>(run(strip('tick')).ratio.nodes, 'primary:tick:Email:');
     expect(ticks.length).toBe(15);
-    expect(ticks.every((n) => n.x === n.x2 && n.t === 0 && n.t2 === 1 && n.opacity === 0.5)).toBe(true);
+    expect(ticks.every((n) => n.x === n.x2 && n.y === 0 && n.y2 === 1 && n.opacity === 0.5)).toBe(true);
     const { ratio } = run(strip('dot', { color: 'channel' }));
     expect(['Search', 'Direct', 'Other'].map((c) => [...new Set(of<{ paint: string }>(ratio.nodes, 'primary:dot:' + c + ':').map((n) => n.paint))])).toEqual([['series.1'], ['series.2'], ['series.6']]);
     expect(ratio.series).toBe(undefined);
@@ -209,9 +209,9 @@ describe('size on a bar: a column as wide as its share', () => {
     const { ratio, result, plan } = run(mekko()), all = result.totals.visitors!;
     let from = 0;
     for (const t of result.totalsBy!.channel!) {
-      const bars = of<{ x: number; w: number; v: number; v0?: number }>(ratio.nodes, 'primary:bar:' + t.channel + ':');
+      const bars = of<{ x: number; w: number; y: number; y2?: number }>(ratio.nodes, 'primary:bar:' + t.channel + ':');
       for (const n of bars) { expect(n.x).toBeCloseTo(from, 12); expect(n.w).toBeCloseTo((t.visitors as number) / all, 12); }
-      expect(bars[2]!.v).toBeCloseTo(1, 12);
+      expect(bars[2]!.y).toBeCloseTo(1, 12);
       from += (t.visitors as number) / all;
     }
     expect(from).toBeCloseTo(1, 12);
@@ -254,10 +254,10 @@ describe('a tick at the foot of a plot of points, and half a tick', () => {
   const rug = (x = 'embed_x', first = false): Spec => { const dot: Layer = { mark: 'dot', encode: { x: 'embed_x', y: 'embed_y' } }, tick: Layer = { mark: 'tick', encode: { x } }; return { query: q, layers: first ? [tick, dot] : [dot, tick] }; };
 
   it('with a metric on x and nothing on y is a short stroke for each row, where its dot is along x: the rug', () => {
-    const { ratio, plan } = run(rug()), strokes = of<{ x: number; x2: number; t: number; t2: number; row: string; opacity: number; paint: string; width?: number }>(ratio.nodes, 'primary:tick:');
+    const { ratio, plan } = run(rug()), strokes = of<{ x: number; x2: number; y: number; y2: number; row: string; opacity: number; paint: string; width?: number }>(ratio.nodes, 'primary:tick:');
     const dots = of<{ x: number; row: string }>(ratio.nodes, 'primary:dot:');
     expect(strokes.length).toBe(24);
-    strokes.forEach((n, i) => expect([n.x, n.x2, n.t, n.t2, n.row, n.paint, n.opacity, n.width]).toEqual([dots[i]!.x, dots[i]!.x, 0, 0.05, dots[i]!.row, 'ink', 0.5, undefined]));
+    strokes.forEach((n, i) => expect([n.x, n.x2, n.y, n.y2, n.row, n.paint, n.opacity, n.width]).toEqual([dots[i]!.x, dots[i]!.x, 0, 0.05, dots[i]!.row, 'ink', 0.5, undefined]));
     expect(strokes.every((n) => (n as any).part === 'plot')).toBe(true);
     expect([plan.layout, ratio.parts, ratio.scale]).toEqual(['cartesian', ['y-axis', 'plot', 'points', 'x-axis'], 'linear']);
   });
@@ -274,15 +274,15 @@ describe('a tick at the foot of a plot of points, and half a tick', () => {
     expect(err({ query: q, layers: [{ mark: 'tick', encode: { x: 'embed_x', y: 'embed_y' } }] })).toBe('Layer 1 is a tick with the metric "embed_x" on x, and a tick needs a dimension there to stand on. Use "dot" for a point at two metrics, or put a dimension on x.');
   });
   it('with align is the half of a tick to one side of its band\'s middle', () => {
-    const day = { metrics: ['response_time'], by: ['date.day'], range: '28d' }, at = (align?: Layer['align']) => of<{ x: number; x2: number; t: number; t2: number }>(run({ query: day, layers: [{ mark: 'tick', encode: { x: 'date.day', y: 'response_time@open' }, ...(align && { align }) }] }).ratio.nodes, 'primary:tick:')[3]!;
+    const day = { metrics: ['response_time'], by: ['date.day'], range: '28d' }, at = (align?: Layer['align']) => of<{ x: number; x2: number; y: number; y2: number }>(run({ query: day, layers: [{ mark: 'tick', encode: { x: 'date.day', y: 'response_time@open' }, ...(align && { align }) }] }).ratio.nodes, 'primary:tick:')[3]!;
     const whole = at(), start = at('start'), end = at('end'), mid = (whole.x + whole.x2) / 2;
     expect([start.x, start.x2]).toEqual([whole.x, mid]);
     expect([end.x, end.x2]).toEqual([mid, whole.x2]);
-    expect([start.t, start.t2, end.t]).toEqual([whole.t, whole.t, whole.t]);
+    expect([start.y, start.y2, end.y]).toEqual([whole.y, whole.y, whole.y]);
   });
   it('and in a row\'s track, where the start is the top of the row', () => {
     const list = (align?: Layer['align']): Spec => ({ query: { metrics: ['pageviews'], by: ['page'], limit: 3 }, layers: [{ mark: 'tick', encode: { y: 'page', x: 'pageviews' }, ...(align && { align }) }, label('page')] });
-    const ends = (align?: Layer['align']) => { const n = of<{ t: number; t2: number }>(run(list(align)).ratio.nodes, 'primary:tick:')[0]!; return [n.t, n.t2]; };
+    const ends = (align?: Layer['align']) => { const n = of<{ y: number; y2: number }>(run(list(align)).ratio.nodes, 'primary:tick:')[0]!; return [n.y, n.y2]; };
     expect([ends(), ends('start'), ends('end')]).toEqual([[0, 1], [0.5, 1], [0, 0.5]]);
   });
 });
@@ -294,10 +294,10 @@ describe('a rule from a number, and a rule across a plot', () => {
 
   it('on an axis a rule from a number to a row\'s value is the stroke from the value to the number', () => {
     const up = (encode: Record<string, string | number>): Spec => ({ query: pages, layers: [{ mark: 'rule', encode: { x: 'page', ...encode } }] });
-    const a = of<{ x: number; t: number; t2: number }>(run(up({ y: 200, y2: 'response_time@max' })).ratio.nodes, 'reference:rule:'), b = of<{ x: number; t: number; t2: number }>(run(up({ y: 'response_time@max', y2: 200 })).ratio.nodes, 'reference:rule:');
+    const a = of<{ x: number; y: number; y2: number }>(run(up({ y: 200, y2: 'response_time@max' })).ratio.nodes, 'reference:rule:'), b = of<{ x: number; y: number; y2: number }>(run(up({ y: 'response_time@max', y2: 200 })).ratio.nodes, 'reference:rule:');
     expect(a.length).toBe(4);
-    expect(a.map((n) => [n.x, n.t, n.t2])).toEqual(b.map((n) => [n.x, n.t2, n.t]));
-    expect(new Set(a.map((n) => n.t)).size).toBe(1);
+    expect(a.map((n) => [n.x, n.y, n.y2])).toEqual(b.map((n) => [n.x, n.y2, n.y]));
+    expect(new Set(a.map((n) => n.y)).size).toBe(1);
     // Both give the scale the same ends, so the ticks are the same.
     expect(of(run(up({ y: 200, y2: 'response_time@max' })).ratio.nodes, 'ytick:')).toEqual(of(run(up({ y: 'response_time@max', y2: 200 })).ratio.nodes, 'ytick:'));
   });
@@ -308,10 +308,10 @@ describe('a rule from a number, and a rule across a plot', () => {
   });
   it('a bar may start at a number too: the same bar as one written from its value to the number, and by direction one that runs the other way', () => {
     // At the merge, for the tornado (step 3, finding 18): a bar from zero to a gain is a gain.
-    const bars = (encode: Record<string, string | number>, paint?: string) => of<{ v: number; v0?: number; paint: string }>(run({ query: pages, layers: [{ mark: 'bar', encode: { x: 'page', ...encode }, ...(paint && { paint }) }] }).ratio.nodes, 'primary:bar:');
+    const bars = (encode: Record<string, string | number>, paint?: string) => of<{ y: number; y2?: number; paint: string }>(run({ query: pages, layers: [{ mark: 'bar', encode: { x: 'page', ...encode }, ...(paint && { paint }) }] }).ratio.nodes, 'primary:bar:');
     const from = bars({ y: 0, y2: 'response_time@max' }), to = bars({ y: 'response_time@max', y2: 0 });
     expect(from.length).toBeGreaterThan(0);
-    expect(from.map((n) => [n.v0 ?? 0, n.v, n.paint])).toEqual(to.map((n) => [n.v, n.v0 ?? 0, n.paint]));
+    expect(from.map((n) => [n.y2 ?? 0, n.y, n.paint])).toEqual(to.map((n) => [n.y, n.y2 ?? 0, n.paint]));
     // Response time is better lower: up from zero is a loss, and down to zero a gain.
     expect([...new Set(bars({ y: 0, y2: 'response_time@max' }, 'direction').map((n) => n.paint))]).toEqual(['delta.bad']);
     expect([...new Set(bars({ y: 'response_time@max', y2: 0 }, 'direction').map((n) => n.paint))]).toEqual(['delta.good']);
@@ -322,9 +322,9 @@ describe('a rule from a number, and a rule across a plot', () => {
   });
   it('with numbers at both ends on both axes is one line across a plot of points, drawn as a reference is', () => {
     const { ratio, plan } = run({ query: scatter, layers: [{ mark: 'rule', encode: { x: 0, y: 0, x2: 2000, y2: 4 } }, dot] }), line = ratio.nodes.find((n) => n.key === 'reference:rule') as any;
-    const ticks = (k: string) => of<{ text: string; x?: number; t?: number }>(ratio.nodes, k), x2k = ticks('xtick:').find((n) => n.text === '2k')!.x!, y4 = ticks('ytick:').find((n) => n.text === '4%')!.t!;
+    const ticks = (k: string) => of<{ text: string; x?: number; y?: number }>(ratio.nodes, k), x2k = ticks('xtick:').find((n) => n.text === '2k')!.x!, y4 = ticks('ytick:').find((n) => n.text === '4%')!.y!;
     expect(line).toMatchObject({ kind: 'path', part: 'plot', paint: 'rule', dash: '5 3', width: 1.5, role: 'reference', layer: 'data' });
-    expect(line.points).toEqual([{ row: '', x: ticks('xtick:').find((n) => n.text === '0')!.x, v: 0 }, { row: '', x: x2k, v: y4 }]);
+    expect(line.points).toEqual([{ row: '', x: ticks('xtick:').find((n) => n.text === '0')!.x, y: 0 }, { row: '', x: x2k, y: y4 }]);
     expect(line.fill).toBe(undefined);
     // It is a place on each scale, so the scales hold it, as they hold a rule at one number.
     const far = run({ query: scatter, layers: [{ mark: 'rule', encode: { x: 0, y: 0, x2: 9000, y2: 30 } }, dot] }).ratio;
@@ -336,11 +336,11 @@ describe('a rule from a number, and a rule across a plot', () => {
   it('with a field at an end is a line for each row, from its own values', () => {
     const then = { ...scatter, metrics: ['visitors', 'pageviews'], compare: 'previous' as const };
     const { ratio, result } = run({ query: then, layers: [{ mark: 'rule', encode: { x: 'visitors@previous', y: 'pageviews@previous', x2: 'visitors', y2: 'pageviews' }, role: 'context' }, { mark: 'dot', encode: { x: 'visitors', y: 'pageviews' } }] });
-    const lines = of<{ key: string; row: string; points: { x: number; v: number }[]; paint: string; dash?: string }>(ratio.nodes, 'context:rule:'), dots = of<{ x: number; t: number; row: string }>(ratio.nodes, 'primary:dot:');
+    const lines = of<{ key: string; row: string; points: { x: number; y: number }[]; paint: string; dash?: string }>(ratio.nodes, 'context:rule:'), dots = of<{ x: number; y: number; row: string }>(ratio.nodes, 'primary:dot:');
     // A page with no period before it has no line.
     expect(lines.length).toBe(result.rows.filter((r) => r['visitors@previous'] != null).length);
     expect(lines.length).toBe(7);
-    for (const n of lines) { const d = dots.find((o) => o.row === n.row)!; expect([n.points[1]!.x, n.points[1]!.v, n.paint, n.dash]).toEqual([d.x, d.t, 'ink', undefined]); }
+    for (const n of lines) { const d = dots.find((o) => o.row === n.row)!; expect([n.points[1]!.x, n.points[1]!.y, n.paint, n.dash]).toEqual([d.x, d.y, 'ink', undefined]); }
     expect(lines[0]!.key).toBe('context:rule:/');
   });
   it('is refused on a time or a category axis, and with a label it has no place for', () => {
@@ -357,8 +357,8 @@ describe('the range behind a row\'s marks, divided at the catalog\'s bands', () 
   const bands = (cat = catalog, spec: Spec = bullet) => { const result = runQuery(q), plan = resolve(spec, result, cat), ratio = buildScene(plan, q, result, cat); return { ratio }; };
 
   it('a bar with nothing on x is the metric\'s domain in every row, a part for each band, in paints of their own', () => {
-    const { ratio } = bands(), parts = of<{ key: string; v: number; v0?: number; paint: string; layer: string; role: string; row: string }>(ratio.nodes, 'context:bar:Mobile:');
-    expect(parts.map((n) => [n.key, n.v0 ?? 0, n.v, n.paint])).toEqual([['context:bar:Mobile:1', 0, 0.4, 'band.1'], ['context:bar:Mobile:2', 0.4, 0.8, 'band.2'], ['context:bar:Mobile:3', 0.8, 1, 'band.3']]);
+    const { ratio } = bands(), parts = of<{ key: string; x: number; x2?: number; paint: string; layer: string; role: string; row: string }>(ratio.nodes, 'context:bar:Mobile:');
+    expect(parts.map((n) => [n.key, n.x2 ?? 0, n.x, n.paint])).toEqual([['context:bar:Mobile:1', 0, 0.4, 'band.1'], ['context:bar:Mobile:2', 0.4, 0.8, 'band.2'], ['context:bar:Mobile:3', 0.8, 1, 'band.3']]);
     expect(parts.every((n) => n.layer === 'guide' && n.role === 'context' && n.row === 'Mobile')).toBe(true);
     // They come before the bar and the tick, so a painter that draws in order has them behind.
     const keys = ratio.nodes.map((n) => n.key);
@@ -367,11 +367,11 @@ describe('the range behind a row\'s marks, divided at the catalog\'s bands', () 
   });
   it('holds the track to the whole domain, so a value is read against it', () => {
     const { ratio } = bands();
-    expect((ratio.nodes.find((n) => n.key === 'primary:bar:Desktop') as any).v).toBeCloseTo(158 / 500, 12);
+    expect((ratio.nodes.find((n) => n.key === 'primary:bar:Desktop') as any).x).toBeCloseTo(158 / 500, 12);
     expect((ratio.nodes.find((n) => n.key === 'reference:tick:Desktop') as any).x).toBe(0.8);
   });
   it('is one part where the catalog gives no bands, and nothing where it gives no domain, as a target it does not give has no tick', () => {
-    expect(of<{ paint: string; v: number }>(bands(withMetric({ domain: [0, 500] })).ratio.nodes, 'context:bar:Desktop:').map((n) => [n.paint, n.v])).toEqual([['band.1', 1]]);
+    expect(of<{ paint: string; x: number }>(bands(withMetric({ domain: [0, 500] })).ratio.nodes, 'context:bar:Desktop:').map((n) => [n.paint, n.x])).toEqual([['band.1', 1]]);
     expect(of(bands(withMetric({ bands: [200, 400] })).ratio.nodes, 'context:bar:').length).toBe(0);
     // A band outside the domain divides nothing.
     expect(of(bands(withMetric({ domain: [0, 500], bands: [200, 900] })).ratio.nodes, 'context:bar:Desktop:').length).toBe(2);
@@ -417,8 +417,8 @@ describe('the samples of step 4', () => {
     expect(plan.preset).toBe('pyramid');
     expect(ratio.rows).toEqual(['18–24', '25–34', '35–44', '45–54', '55–64', '65+']);
     expect(ratio.series).toEqual(['Female', 'Male']);
-    const zero = of<{ v: number }>(ratio.nodes, 'primary:bar:18–24:')[0]!.v;
-    for (const age of ratio.rows!) { const [f, m] = of<{ v: number; v0?: number; paint: string }>(ratio.nodes, 'primary:bar:' + age + ':') as [any, any]; expect([f.v, m.v0, f.paint, m.paint]).toEqual([zero, zero, 'series.1', 'series.2']); }
+    const zero = of<{ x: number }>(ratio.nodes, 'primary:bar:18–24:')[0]!.x;
+    for (const age of ratio.rows!) { const [f, m] = of<{ x: number; x2?: number; paint: string }>(ratio.nodes, 'primary:bar:' + age + ':') as [any, any]; expect([f.x, m.x2, f.paint, m.paint]).toEqual([zero, zero, 'series.1', 'series.2']); }
     // The readout's and the sentence's numbers are the engine's, and no count is below zero.
     expect(result.rows.every((r) => (r.visitors as number) > 0)).toBe(true);
     expect(plan.text).toBe('25–34 is the largest age band at 27% of visitors, and Female the largest sex at 53%.');
@@ -426,7 +426,7 @@ describe('the samples of step 4', () => {
   it('a Likert chart: the same preset over five answers, the middle one half on each side of zero in every row', () => {
     const { ratio, plan } = run(S('likert'));
     expect(ratio.series).toEqual(['Strongly disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly agree']);
-    const mid = ratio.rows!.map((q) => { const n = of<{ v: number; v0: number }>(ratio.nodes, 'primary:bar:' + q + ':')[2]!; return (n.v0 + n.v) / 2; });
+    const mid = ratio.rows!.map((q) => { const n = of<{ x: number; x2: number }>(ratio.nodes, 'primary:bar:' + q + ':')[2]!; return (n.x2 + n.x) / 2; });
     mid.forEach((m) => expect(m).toBeCloseTo(mid[0]!, 12));
     expect(ratio.nodes.find((n) => n.key === 'legend-top')).toMatchObject({ text: 'Agree 33%', paint: 'series.4' });
     expect(plan.text).toBe('Easy to set up is the largest statement at 20% of responses, and Agree the largest answer at 33%.');
@@ -448,7 +448,7 @@ describe('the samples of step 4', () => {
     const { ratio, plan, result } = run(S('ohlc')), day = result.rows[5]!, k = day['date.day'] as string, node = (key: string) => ratio.nodes.find((n) => n.key === key + ':' + k) as any;
     const stroke = node('primary:rule'), open = node('primary:tick'), close = node('primary:tick#2'), v = (f: string) => (day['response_time@' + f] as number) / 800;
     expect(plan.layers.map((l) => l.role + ':' + l.mark)).toEqual(['primary:rule', 'primary:tick', 'primary:tick']);
-    expect([stroke.t, stroke.t2, open.t, close.t]).toEqual([v('min'), v('max'), v('open'), v('close')]);
+    expect([stroke.y, stroke.y2, open.y, close.y]).toEqual([v('min'), v('max'), v('open'), v('close')]);
     expect([open.x2, close.x]).toEqual([stroke.x, stroke.x]);
     expect(stroke.x - open.x).toBeCloseTo(close.x2 - stroke.x, 12);
     // Every mark is the central one, so a short plot keeps them all: a bare plot of 40 px has no role to give up.
@@ -459,7 +459,7 @@ describe('the samples of step 4', () => {
   });
   it('a Q-Q plot: a point for each quantile, and the line they would lie on were the times normal', () => {
     const { ratio, plan } = run(S('qq')), line = ratio.nodes.find((n) => n.key === 'reference:rule') as any;
-    expect(line.points.map((p: any) => [p.x, p.v])).toEqual([[0, 0], [1, 1]]);
+    expect(line.points.map((p: any) => [p.x, p.x])).toEqual([[0, 0], [1, 1]]);
     expect(ratio.nodes.filter((n) => n.part === 'points').length).toBe(19);
     expect(['xtick:', 'ytick:'].map((k) => of<{ text: string }>(ratio.nodes, k).map((n) => n.text))).toEqual([['0ms', '2s', '4s', '6s'], ['0ms', '2s', '4s', '6s']]);
     expect(plan.text).toBe('Across 19 quantiles in the last 28 days, the range of normal quantile is 760ms to 4s and of load time quantile is 1.1s to 5.6s. 95% is highest on both.');

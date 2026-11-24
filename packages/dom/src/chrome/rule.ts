@@ -4,7 +4,7 @@ import { IS } from '../rove.ts';
 
 /* A rule: a line painted as a background, so its stroke stays true at any size. Five things draw one, each placing
  * its own box: a reference line across a plot (`.uav-line`, cartesian.ts) or upright at an x (points.ts), a segment
- * from (x, t) to (x2, t2) (ranges.ts), a rule along a row's track and a tick across it (track.ts), and the crosshair's
+ * from (x, y) to (x2, y2) (ranges.ts), a rule along a row's track and a tick across it (track.ts), and the crosshair's
  * rule at a line's value and the hit's at a point (keys.ts). What they share is here, the Rule set in Figma:
  *
  * - Width: the scene's stroke (`--uav-stroke`), or the rule token. RULE is that, for the box that is as thick as it.

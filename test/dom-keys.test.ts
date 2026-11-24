@@ -88,7 +88,7 @@ describe('crossMarks', () => {
     const first = at.get(scene.rows![0]!)!, row = result.rows[0]!, own = first.find((m) => m.role === 'primary')!;
     expect(first.map((m) => m.role).sort()).toEqual(['comparison', 'primary']);
     expect(own.text).toBe(String(row.visitors));
-    expect(own.t).toBe(line!.kind === 'path' ? line!.points[0]!.v : NaN);
+    expect(own.t).toBe(line!.kind === 'path' ? line!.points[0]!.y : NaN);
     expect(first.find((m) => m.role === 'comparison')!.text).toBe(String(row['visitors@previous']));
     expect(first.every((m) => m.side === 0)).toBe(true);
   });

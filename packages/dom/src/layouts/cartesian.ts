@@ -143,16 +143,16 @@ export const cartesian: LayoutPainter = {
     const line = (el: HTMLElement | SVGElement, n: LineNode) => {
       const [on, off] = (n.dash || '').split(' ');
       el.classList.add('uav-line'); el.toggleAttribute('data-dash', !!n.dash);
-      prop(el, '--uav-t', n.t); prop(el, '--uav-stroke', n.width && n.width + 'px'); prop(el, '--uav-dash', on && on + 'px'); prop(el, '--uav-gap', on && (off || on) + 'px');
+      prop(el, '--uav-t', n.y); prop(el, '--uav-stroke', n.width && n.width + 'px'); prop(el, '--uav-dash', on && on + 'px'); prop(el, '--uav-gap', on && (off || on) + 'px');
     };
 
-    keyed(labels, texts('labels'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-t', n.t); });
+    keyed(labels, texts('labels'), () => 'span', (el, n) => { text(el, n); prop(el, '--uav-t', n.y); });
     keyed(grid, nodes.filter((n): n is LineNode => inPlot(n) && n.kind === 'line' && n.layer === 'guide'), () => 'i', line);
     // Which rows hold bars side by side, and which hold a stack: more than one bar, at different places along x or at one.
     const rects = nodes.filter((n): n is RectNode => inPlot(n) && n.kind === 'rect'), places = new Map<string, Set<number>>(), counts = new Map<string, number>();
     for (const n of rects) { const row = n.row ?? ''; places.set(row, (places.get(row) ?? new Set()).add(n.x ?? 0)); counts.set(row, (counts.get(row) ?? 0) + 1); }
     keyed(bars, rects, () => 'i', (el, n) => {
-      prop(el, '--uav-x', n.x); prop(el, '--uav-w', n.w); prop(el, '--uav-v', n.v); prop(el, '--uav-v0', n.v0);
+      prop(el, '--uav-x', n.x); prop(el, '--uav-w', n.w); prop(el, '--uav-v', n.y); prop(el, '--uav-v0', n.y2);
       const here = places.get(n.row ?? '')!.size, all = counts.get(n.row ?? '')!;
       // Columns of widths of their own stand edge to edge, each a series' on a linear x, and are parted as bars side by side are.
       el.toggleAttribute('data-beside', here > 1 || (scene.scale === 'linear' && n.series != null)); el.toggleAttribute('data-stacked', all > here);
@@ -161,7 +161,7 @@ export const cartesian: LayoutPainter = {
     paintPaths(svg, nodes.filter((n): n is PathNode => (inPlot(n) || n.part === 'points') && n.kind === 'path'));
     keyed(refs, nodes.filter((n): n is LineNode | TextNode => inPlot(n) && ((n.kind === 'line' && n.layer === 'data' && n.row == null) || n.kind === 'text')), (n) => (n.kind === 'line' ? 'i' : 'span'), (el, n) => {
       if (n.kind === 'line') return line(el, n);
-      text(el, n); prop(el, '--uav-t', n.t); el.toggleAttribute('data-halo', !!n.halo);
+      text(el, n); prop(el, '--uav-t', n.y); el.toggleAttribute('data-halo', !!n.halo);
     });
     // A line is one path, so the points to hover and step through are a layer of their own, above the marks.
     const hits = ensure(plot, 'div', 'uav-hits');

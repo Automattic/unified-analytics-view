@@ -156,7 +156,7 @@ export const geoPainter: LayoutPainter = {
     const shape = (el: HTMLElement | SVGElement, n: PathNode) => el.setAttribute('d', n.d ?? '');
     keyed(land, shapes.filter((n) => !listed(n)), () => 'path', shape);
     keyed(regions, shapes.filter(listed), () => 'path', shape);
-    keyed(points, symbols, () => 'i', (el, n) => { prop(el, '--uav-x', n.x); prop(el, '--uav-t', n.t); prop(el, '--uav-size', n.size); });
+    keyed(points, symbols, () => 'i', (el, n) => { prop(el, '--uav-x', n.x); prop(el, '--uav-t', n.y); prop(el, '--uav-size', n.size); });
     hits(regions, shapes.some(listed) ? 'y' : null); hits(points, symbols.length ? 'y' : null);
     paintLabels(part, scene);
     // The map stays where it was brought in to while its region is still in the list, and is whole otherwise.

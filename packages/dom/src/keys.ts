@@ -154,7 +154,7 @@ export function crossMarks(scene: Scene, layers: Layer[], rows: Row[][], catalog
         if (row?.[field] == null || seen.has(id)) continue;
         seen.add(id);
         const partial = prev ? '' : partialNote(row);
-        out.set(p.row, (out.get(p.row) ?? []).concat({ t: p.v, text: formatValue(row[field] as number, def) + (partial && ' ' + partial), side, ...(n.role && { role: n.role }), ...(n.series != null && { series: n.series }) }));
+        out.set(p.row, (out.get(p.row) ?? []).concat({ t: p.y, text: formatValue(row[field] as number, def) + (partial && ' ' + partial), side, ...(n.role && { role: n.role }), ...(n.series != null && { series: n.series }) }));
       }
     }
   });

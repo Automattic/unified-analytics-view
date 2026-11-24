@@ -101,7 +101,7 @@ export function geoMark(shapes: Shapes, { name = 'geo', projection }: GeoOptions
       // result has a row for carries it. Under symbols the regions are the ground they stand on, in the tone of no value.
       const nodes: SceneNode[] = regions.map((s): PathNode => ({ key: id + ':' + s.key, part: 'plot', kind: 'path', d: s.d, points: [], fill: true,
         paint: fill ? fill.paint(of(s.id, color)) : 'seq.none', layer: fill ? 'data' : 'guide', role: fill ? role : 'context', ...(at.has(s.id) && { row: s.id! }) }));
-      if (typeof size === 'string') nodes.push(...drawn.filter((s) => of(s.id, size) != null).map((s): CircleNode => ({ key: id + ':' + s.key + ':symbol', part: 'points', kind: 'circle', pulse: false, x: s.x, t: s.t,
+      if (typeof size === 'string') nodes.push(...drawn.filter((s) => of(s.id, size) != null).map((s): CircleNode => ({ key: id + ':' + s.key + ':symbol', part: 'points', kind: 'circle', pulse: false, x: s.x, y: s.t,
         size: sizeStep(of(s.id, size)!, top), opacity: 0.7, row: s.id!, paint: l.paint || 'series.1', layer: 'data', role })));
       // Rows the map has no shape for: a count of rows, and of nothing in them.
       const ids = new Set(regions.map((s) => s.id)), note = notShownNote(rows.length - named.filter((r) => ids.has(String(r[dim]))).length, catalog.dimensions[dim]!.label);
@@ -117,7 +117,7 @@ export function geoMark(shapes: Shapes, { name = 'geo', projection }: GeoOptions
     },
 
     // A region's place is where its symbol stands: the middle of its shape, in the map's box.
-    places: () => (key) => { const s = regions.find((r) => r.id === key); return s ? { x: s.x, t: s.t } : null; },
+    places: () => (key) => { const s = regions.find((r) => r.id === key); return s ? { x: s.x, y: s.t } : null; },
 
   };
 }

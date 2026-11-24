@@ -105,7 +105,7 @@ export function measurePoints(body: HTMLElement): void {
 /** A target for each row a joining line passes through, once, where it has a row: what stands in for dots that no layer drew. */
 export function pathTargets(paths: PathNode[]): CircleNode[] {
   const at = new Map<string, CircleNode>();
-  for (const n of paths) for (const p of n.points) if (p.row != null && !at.has(p.row)) at.set(p.row, { key: 'at:' + p.row, part: 'points', kind: 'circle', pulse: false, x: p.x, t: p.v, row: p.row, ...(n.series != null && { series: n.series }), paint: n.paint, layer: 'guide' });
+  for (const n of paths) for (const p of n.points) if (p.row != null && !at.has(p.row)) at.set(p.row, { key: 'at:' + p.row, part: 'points', kind: 'circle', pulse: false, x: p.x, y: p.y, row: p.row, ...(n.series != null && { series: n.series }), paint: n.paint, layer: 'guide' });
   return [...at.values()];
 }
 
@@ -126,14 +126,14 @@ export function paintLabels(plot: HTMLElement, scene: Scene, sizes?: Map<string 
   const labels = ensure(plot, 'div', 'uav-point-labels');
   labels.setAttribute('aria-hidden', 'true');
   keyed(labels, scene.nodes.filter((n): n is TextNode => n.part === 'point-labels' && n.kind === 'text'), () => 'span', (el, n) => {
-    text(el, n); prop(el, '--uav-x', n.x); prop(el, '--uav-t', n.t); prop(el, '--uav-size', sizes?.get(n.row)); el.toggleAttribute('data-halo', !!n.halo);
+    text(el, n); prop(el, '--uav-x', n.x); prop(el, '--uav-t', n.y); prop(el, '--uav-size', sizes?.get(n.row)); el.toggleAttribute('data-halo', !!n.halo);
   });
 }
 
 /** Paint them, after the plot's own parts. `plot` is the cartesian layout's `.uav-plot`. */
 export function paintPoints(plot: HTMLElement, scene: Scene): void {
   const nodes = scene.nodes, dots = (part: string) => nodes.filter((n): n is CircleNode => n.part === part && n.kind === 'circle');
-  const dot = (el: HTMLElement | SVGElement, n: CircleNode) => { prop(el, '--uav-x', n.x); prop(el, '--uav-t', n.t); prop(el, '--uav-size', n.size); unitDot(el, n); };
+  const dot = (el: HTMLElement | SVGElement, n: CircleNode) => { prop(el, '--uav-x', n.x); prop(el, '--uav-t', n.y); prop(el, '--uav-size', n.size); unitDot(el, n); };
   const drawn = dots('points'), sizes = new Map(drawn.concat(dots('plot')).map((n) => [n.row, n.size]));
   keyed(ensure(plot, 'div', 'uav-dots'), dots('plot'), () => 'i', dot);
   // A line that joins the points of two metrics (core puts its path in their part). Where no layer draws a dot on them,

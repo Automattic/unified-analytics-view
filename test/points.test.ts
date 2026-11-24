@@ -58,7 +58,7 @@ describe('a metric on x', () => {
   it('a dot is a circle at its two values, keyed by its row, in a part of its own', () => {
     const { ratio, result } = run(scatter!, 346), dots = ratio.nodes.filter((n) => n.kind === 'circle') as any[];
     expect(dots.length).toBe(8);
-    expect(dots[1]).toEqual({ key: 'primary:dot:/pricing', part: 'points', kind: 'circle', pulse: false, x: 1705 / 3000, t: 5.8 / 6, row: '/pricing', paint: 'series.1', layer: 'data', role: 'primary' });
+    expect(dots[1]).toEqual({ key: 'primary:dot:/pricing', part: 'points', kind: 'circle', pulse: false, x: 1705 / 3000, y: 5.8 / 6, row: '/pricing', paint: 'series.1', layer: 'data', role: 'primary' });
     expect(result.rows[1]!.page).toBe('/pricing');
   });
   it('has no bare plot: under the room its axes need it is the number alone, in every data state', () => {
@@ -128,7 +128,7 @@ describe('text in the plot', () => {
   it('is a label on each point, ranked by its y, or by the size of the dots where they have one', () => {
     const labels = (spec: Spec) => run(spec, 700).ratio.nodes.filter((n) => n.part === 'point-labels') as any[];
     const byY = labels(scatter!);
-    expect(byY[1]).toMatchObject({ key: 'primary:text:/pricing', kind: 'text', text: '/pricing', x: 1705 / 3000, t: 5.8 / 6, row: '/pricing', rank: 1, anchor: 'middle', layer: 'guide' });
+    expect(byY[1]).toMatchObject({ key: 'primary:text:/pricing', kind: 'text', text: '/pricing', x: 1705 / 3000, y: 5.8 / 6, row: '/pricing', rank: 1, anchor: 'middle', layer: 'guide' });
     expect(byY.slice().sort((a, b) => a.rank - b.rank).map((n) => n.text).slice(0, 3)).toEqual(['/pricing', '/contact', '/docs/getting-started']);
     const bySize = labels({ ...bubble!, layers: [...bubble!.layers!, scatter!.layers![1]!] });
     expect(bySize.slice().sort((a, b) => a.rank - b.rank).map((n) => n.text).slice(0, 3)).toEqual(['/', '/pricing', '/blog/launch-notes']);
@@ -158,9 +158,9 @@ describe('text in the plot', () => {
 describe('a rule at a constant on x', () => {
   it('stands the height of the plot, with its label beside it, and one on y lies as it did', () => {
     const { ratio } = run(quadrant!, 346), node = (k: string) => ratio.nodes.find((n) => n.key === k) as any;
-    expect(node('reference:rule')).toMatchObject({ kind: 'line', part: 'plot', x: 1 / 3, x2: 1 / 3, t: 0, t2: 1, paint: 'rule', role: 'reference' });
-    expect(node('reference:rule:label')).toMatchObject({ kind: 'text', x: 1 / 3, t: 1, text: '1,000 visitors', anchor: 'start' });
-    expect(node('reference:rule#2')).toMatchObject({ kind: 'line', t: 0.5 });
+    expect(node('reference:rule')).toMatchObject({ kind: 'line', part: 'plot', x: 1 / 3, x2: 1 / 3, y: 0, y2: 1, paint: 'rule', role: 'reference' });
+    expect(node('reference:rule:label')).toMatchObject({ kind: 'text', x: 1 / 3, y: 1, text: '1,000 visitors', anchor: 'start' });
+    expect(node('reference:rule#2')).toMatchObject({ kind: 'line', y: 0.5 });
     expect(node('reference:rule#2').x).toBe(undefined);
   });
   it('sets its label on the side with more room, so one near the far edge stays in the plot', () => {
@@ -198,7 +198,7 @@ describe('a numeric dimension', () => {
     const { ratio, result } = run(density!, 346), [area, line] = ratio.nodes.filter((n) => n.kind === 'path') as any[];
     expect([area.key, area.fill, line.key]).toEqual(['context:area', true, 'primary:line']);
     expect(line.points.length).toBe(16);
-    expect(line.points[0]).toEqual({ row: '0', x: 0.25 / 8, v: (result.rows[0]!['pageviews@density'] as number) / 0.4, w: 0.5 / 8 });
+    expect(line.points[0]).toEqual({ row: '0', x: 0.25 / 8, y: (result.rows[0]!['pageviews@density'] as number) / 0.4, w: 0.5 / 8 });
     // Its rows are bins, so the line is flat across each and steps at its edge, as a bar there has no gap. The area under it too.
     expect([area.curve, line.curve]).toEqual(['step', 'step']);
     expect(line.d.split('L').length).toBe(32);

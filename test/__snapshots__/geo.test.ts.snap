@@ -2989,8 +2989,8 @@ exports[`golden scenes > symbols 1`] = `
       "role": "primary",
       "row": "CA",
       "size": 2,
-      "t": 0.8946210224659029,
       "x": 0.2542843721447965,
+      "y": 0.8946210224659029,
     },
     {
       "key": "primary:geo:US:symbol",
@@ -3003,8 +3003,8 @@ exports[`golden scenes > symbols 1`] = `
       "role": "primary",
       "row": "US",
       "size": 4,
-      "t": 0.7902258259273308,
       "x": 0.1988697757874613,
+      "y": 0.7902258259273308,
     },
     {
       "key": "primary:geo:ID:symbol",
@@ -3017,8 +3017,8 @@ exports[`golden scenes > symbols 1`] = `
       "role": "primary",
       "row": "ID",
       "size": 2,
-      "t": 0.4210945323027864,
       "x": 0.8627087712111962,
+      "y": 0.4210945323027864,
     },
     {
       "key": "primary:geo:ZA:symbol",
@@ -3031,8 +3031,8 @@ exports[`golden scenes > symbols 1`] = `
       "role": "primary",
       "row": "ZA",
       "size": 1,
-      "t": 0.19531368897095736,
       "x": 0.5651056642105492,
+      "y": 0.19531368897095736,
     },
     {
       "key": "primary:geo:MX:symbol",
@@ -3045,8 +3045,8 @@ exports[`golden scenes > symbols 1`] = `
       "role": "primary",
       "row": "MX",
       "size": 2,
-      "t": 0.6432640628836932,
       "x": 0.17857896099731202,
+      "y": 0.6432640628836932,
     },
     {
       "key": "primary:geo:BR:symbol",
@@ -3059,8 +3059,8 @@ exports[`golden scenes > symbols 1`] = `
       "role": "primary",
       "row": "BR",
       "size": 2,
-      "t": 0.34940442888153744,
       "x": 0.32325099019749265,
+      "y": 0.34940442888153744,
     },
     {
       "key": "primary:geo:FR:symbol",
@@ -3073,8 +3073,8 @@ exports[`golden scenes > symbols 1`] = `
       "role": "primary",
       "row": "FR",
       "size": 2,
-      "t": 0.7729083772440608,
       "x": 0.4731424287297562,
+      "y": 0.7729083772440608,
     },
     {
       "key": "primary:geo:NG:symbol",
@@ -3087,8 +3087,8 @@ exports[`golden scenes > symbols 1`] = `
       "role": "primary",
       "row": "NG",
       "size": 2,
-      "t": 0.522822587553742,
       "x": 0.5152810658185585,
+      "y": 0.522822587553742,
     },
     {
       "key": "primary:geo:IN:symbol",
@@ -3101,8 +3101,8 @@ exports[`golden scenes > symbols 1`] = `
       "role": "primary",
       "row": "IN",
       "size": 3,
-      "t": 0.6343087445638771,
       "x": 0.7329610397814167,
+      "y": 0.6343087445638771,
     },
     {
       "key": "primary:geo:SE:symbol",
@@ -3115,8 +3115,8 @@ exports[`golden scenes > symbols 1`] = `
       "role": "primary",
       "row": "SE",
       "size": 1,
-      "t": 0.9195869526712861,
       "x": 0.5280858310691762,
+      "y": 0.9195869526712861,
     },
     {
       "key": "primary:geo:DE:symbol",
@@ -3129,8 +3129,8 @@ exports[`golden scenes > symbols 1`] = `
       "role": "primary",
       "row": "DE",
       "size": 3,
-      "t": 0.8509917049513507,
       "x": 0.5167503846498317,
+      "y": 0.8509917049513507,
     },
     {
       "key": "primary:geo:ES:symbol",
@@ -3143,8 +3143,8 @@ exports[`golden scenes > symbols 1`] = `
       "role": "primary",
       "row": "ES",
       "size": 2,
-      "t": 0.7745071214511385,
       "x": 0.4798477782965451,
+      "y": 0.7745071214511385,
     },
     {
       "key": "primary:geo:AU:symbol",
@@ -3157,8 +3157,8 @@ exports[`golden scenes > symbols 1`] = `
       "role": "primary",
       "row": "AU",
       "size": 2,
-      "t": 0.22409307601246276,
       "x": 0.8961572293481589,
+      "y": 0.22409307601246276,
     },
     {
       "key": "primary:geo:GB:symbol",
@@ -3171,8 +3171,8 @@ exports[`golden scenes > symbols 1`] = `
       "role": "primary",
       "row": "GB",
       "size": 3,
-      "t": 0.8688697614130838,
       "x": 0.4829261108356505,
+      "y": 0.8688697614130838,
     },
     {
       "key": "primary:geo:JP:symbol",
@@ -3185,8 +3185,8 @@ exports[`golden scenes > symbols 1`] = `
       "role": "primary",
       "row": "JP",
       "size": 2,
-      "t": 0.7528363093664298,
       "x": 0.8839489030068285,
+      "y": 0.7528363093664298,
     },
     {
       "anchor": "start",

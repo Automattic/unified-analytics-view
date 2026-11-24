@@ -31,9 +31,9 @@ describe('bars', () => {
   });
   it('have a start to read in a stack and below zero, and none in a group', () => {
     const rects = (sample: string) => of(sample).scene.nodes.filter((n): n is RectNode => n.part === 'plot' && n.kind === 'rect');
-    expect(rects('stacked').filter((n) => n.series !== 'Desktop').every((n) => n.v0! > 0 && n.v! >= n.v0!)).toBe(true);
-    expect(rects('diverging').some((n) => n.v! < n.v0!)).toBe(true);
-    expect(rects('grouped').every((n) => n.v0 == null)).toBe(true);
+    expect(rects('stacked').filter((n) => n.series !== 'Desktop').every((n) => n.y2! > 0 && n.y! >= n.y2!)).toBe(true);
+    expect(rects('diverging').some((n) => n.y! < n.y2!)).toBe(true);
+    expect(rects('grouped').every((n) => n.y2 == null)).toBe(true);
   });
 });
 
@@ -49,14 +49,14 @@ describe('a split path', () => {
   });
   it('morphs where it starts as well as where it ends, and lands on the shape core drew', () => {
     const from = areas('28d')[1]!, to = areas('7d')[1]!, old = resample(from.points, to.points);
-    expect(old.every((p) => p.v0! > 0 && p.v0! < p.v)).toBe(true);
+    expect(old.every((p) => p.y2! > 0 && p.y2! < p.y)).toBe(true);
     const half = mix(old, to.points, 0.5);
-    half.forEach((p, i) => expect(p.v0).toBeCloseTo((old[i]!.v0! + to.points[i]!.v0!) / 2, 9));
+    half.forEach((p, i) => expect(p.y2).toBeCloseTo((old[i]!.y2! + to.points[i]!.y2!) / 2, 9));
     expect(pathD(mix(old, to.points, 1), to.curve, to.fill)).toBe(to.d);
   });
   it('gains a start when it had none, and loses one', () => {
-    expect(mix([{ x: 0, v: 0.4 }], [{ x: 0, v: 0.8, v0: 0.2 }], 0.5)).toEqual([{ x: 0, v: 0.6000000000000001, v0: 0.1 }]);
-    expect(mix([{ x: 0, v: 0.8, v0: 0.2 }], [{ x: 0, v: 0.4 }], 1)).toEqual([{ x: 0, v: 0.4, v0: 0 }]);
+    expect(mix([{ x: 0, y: 0.4 }], [{ x: 0, y: 0.8, y2: 0.2 }], 0.5)).toEqual([{ x: 0, y: 0.6000000000000001, y2: 0.1 }]);
+    expect(mix([{ x: 0, y: 0.8, y2: 0.2 }], [{ x: 0, y: 0.4 }], 1)).toEqual([{ x: 0, y: 0.4, y2: 0 }]);
   });
 });
 
@@ -138,7 +138,7 @@ describe('apart', () => {
     expect(apart([], 14, 100)).toEqual([]);
   });
   it('holds the series\' labels of a three-line plot apart in a 152 px plot', () => {
-    const ys = of('series').scene.nodes.filter((n) => n.part === 'labels').map((n) => (1 - (n as { t: number }).t) * 152);
+    const ys = of('series').scene.nodes.filter((n) => n.part === 'labels').map((n) => (1 - (n as { y: number }).y) * 152);
     const at = apart(ys, 14, 152).filter((y): y is number => y != null).sort((a, b) => a - b);
     expect(at).toHaveLength(3);
     at.slice(1).forEach((y, i) => expect(y - at[i]!).toBeGreaterThanOrEqual(14));

@@ -82,7 +82,7 @@ export const linkMark: CustomMark = {
     // A label for each node, ranked by its node's size within its column: where two would meet, the larger node's stands.
     cols.forEach((c, side) => {
       const ranks = c.slice().sort((a, b) => b.v - a.v);
-      nodes.push(...c.map((n): TextNode => ({ key: 'label:' + dims[side] + ':' + n.key, part: 'labels', kind: 'text', text: formatDimension(n.value, catalog.dimensions[dims[side]!]!), x: side, t: 1 - (n.y + n.h / 2),
+      nodes.push(...c.map((n): TextNode => ({ key: 'label:' + dims[side] + ':' + n.key, part: 'labels', kind: 'text', text: formatDimension(n.value, catalog.dimensions[dims[side]!]!), x: side, y: 1 - (n.y + n.h / 2),
         anchor: side ? 'end' : 'start', baseline: 'middle', font: 'tick', paint: 'ink', layer: 'guide', rank: ranks.indexOf(n) + 1 })));
     });
     // A plan's guides are on or off together, and the labels are this mark's.

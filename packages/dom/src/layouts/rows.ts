@@ -1,9 +1,10 @@
-import { COLUMNS_BLOCK, columnRooms, inColumn, ruleFor, type RowNode, type Scene, type SceneNode, type TextNode } from '@unified-analytics/core';
+import { COLUMNS_BLOCK, columnRooms, inColumn, ruleFor, type PathNode, type RowNode, type Scene, type SceneNode, type TextNode } from '@unified-analytics/core';
 import { SPLIT_PLAIN, paintLegend } from '../chrome/legend.ts';
-import { attr, ensure, keyed, prop, text } from '../dom.ts';
+import { attr, ensure, ensureSvg, keyed, prop, svg, text } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { IN_BOX, NUMBER_ALONE, type LayoutPainter } from '../layout.ts';
 import { TRACK_CSS, TRACK_FIT, trackMark } from './track.ts';
+import { paintPaths } from './points.ts';
 import { paintUnitKey } from '../chrome/unit.ts';
 
 /* A dimension on y: a row for each of its values. The body is one grid, with a track for the label, which gives way,
@@ -61,8 +62,21 @@ const css = `
 :is(.uav-row, .uav-columns) > [data-anchor="end"] { text-align: end; }
 :is(.uav-row, .uav-columns) > [data-rank] { max-inline-size: max(0px, ${short}); padding-inline: min(${PAD}px, max(0px, ${short})); }
 .uav[data-layout="rows"] :is(.uav-legend, .uav-legend-top) { grid-column: 1 / -1; grid-row: 3; }
+/* What runs down a list from row to row (core's \`track\` part): the plot's lines and areas, drawn by the plot's painter
+ * in one SVG laid over the tracks of all the rows and turned on its side. A place along a plot's x is then a place down
+ * the rows, and a value up its y a value along the track. The SVG is as tall as the rows with half a gap above each and
+ * below it, so the middle of a row is the middle of its share, and as wide as a row's marks have: a gap inside each end
+ * of the track (track.ts). Its holder is the rows' own box, and in a box it is clipped as they are, to the rows that show. */
+.uav-track { grid-row: 2; grid-column: var(--uav-track); position: relative; align-self: start; pointer-events: none;
+  block-size: calc(var(--uav-n) * (var(--uav-row-block) + var(--uav-row-gap)) - var(--uav-row-gap)); }
+.uav[data-layout="rows"]:not([data-parts~="track"]) .uav-track { display: none; }
+.uav-track svg { position: absolute; inset-block-start: calc(var(--uav-row-gap) / -2); inset-inline-start: var(--uav-row-gap); inline-size: calc(100% - 2 * var(--uav-row-gap));
+  block-size: calc(var(--uav-n) * (var(--uav-row-block) + var(--uav-row-gap))); overflow: visible; }
+/* A track is read from the side the page starts on, and a turned plot from the left: where the page reads from the right, it is turned over. */
+.uav-track:dir(rtl) svg { scale: -1 1; }
 ${IN_BOX} {
-  .uav-rows { max-block-size: calc(round(down, 100% + var(--uav-row-gap), var(--uav-row-block) + var(--uav-row-gap)) - var(--uav-row-gap)); }
+  :is(.uav-rows, .uav-track) { max-block-size: calc(round(down, 100% + var(--uav-row-gap), var(--uav-row-block) + var(--uav-row-gap)) - var(--uav-row-gap)); }
+  .uav-track { overflow: hidden; }
 }`;
 
 /** What the measured pass needs to set each column's room again from the widths it reads: the scene, the label's room,
@@ -118,6 +132,11 @@ export const rows: LayoutPainter = {
         else if (n.kind === 'line' || n.kind === 'circle') trackMark(c, n);
       });
     });
+    // What runs down the list from row to row: the plot's paths, in one SVG over the rows' tracks, turned on its side
+    // by the group they are in. Along a path's x is down the rows, and up its y is along the track from its start.
+    const track = ensure(body, 'div', 'uav-track'), sheet = ensureSvg(track), turned = sheet.querySelector('g') ?? sheet.appendChild(svg('g'));
+    turned.setAttribute('transform', 'matrix(0 1 -1 0 100 0)'); prop(track, '--uav-n', scene.rows?.length ?? 0);
+    paintPaths(turned, scene.nodes.filter((n): n is PathNode => n.part === 'track' && n.kind === 'path'));
     paintUnitKey(body, scene);
     // The key to a divided row's series, and the one line that stands in for it.
     paintLegend(body, scene);

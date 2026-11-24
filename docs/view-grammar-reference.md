@@ -294,12 +294,15 @@ A custom mark registered in code and referenced by name is the escape hatch for 
 | `rows` | `dot` | `y` dimension; **`x`** metric, number; `color` dimension, companion; `detail` dimension |  |
 | `rows` | `unit` | `y` dimension; **`x`** metric; `color` dimension, companion |  |
 | `rows` | `text` | `y` dimension; **`text`** dimension, metric, companion | `align` |
+| `rows` | `line` | `y` dimension; **`x`** metric |  |
+| `rows` | `area` | `y` dimension; **`x`** metric |  |
 | `band` | `bar` | **`x`** metric; **`color`** dimension |  |
 | `band` | `unit` | **`x`** metric; `color` dimension |  |
 | `radial` | `arc` | `angle` dimension, metric, number; `radius` dimension, metric, number; `color` dimension; `detail` dimension | `sweep` |
 | `radial` | `unit` | **`angle`** metric; **`color`** dimension | `sweep` |
 | `matrix` | `cell` | `x` dimension; `y` dimension; **`color`** metric |  |
 | `matrix` | `dot` | **`x`** dimension; **`y`** dimension; `color` metric; **`size`** metric |  |
+| `matrix` | `text` | `x` dimension; `y` dimension; **`text`** dimension, metric, companion |  |
 | `geo` | `geo` | `x` dimension; `color` metric; `size` metric |  |
 | `link` | `link` | `x` dimension; `y` dimension; `size` metric |  |
 | `geo-tiles` | `geo-tiles` | `x` dimension; `color` metric; `size` metric |  |
@@ -327,10 +330,10 @@ The table says what one channel may hold. What a mark asks of several together i
 | Layout | Trigger | Draws |
 |---|---|---|
 | `cartesian` | A dimension on x | line, area, bar, rule over a category or time axis, and a `unit`'s stacks |
-| `rows` | A dimension on y | The ranked bar list: a bar behind a label and a value per row. A `unit` is a run of glyphs in the track |
+| `rows` | A dimension on y | The ranked bar list: a bar behind a label and a value per row. A `unit` is a run of glyphs in the track. A `line` or an `area` runs down the list from row to row |
 | `band` | A dimension on color only, or a `unit` with a metric on x and no dimension at all | One stacked, normalized bar with a legend, or a `unit`'s grid of a hundred |
 | `cartesian` | A metric on x and on y | Points: `dot`, `text`, rules on either axis, and a `line` that joins them in the engine's order |
-| `matrix` | A dimension on x and on y, or a `cell` with one on either alone | A grid of `cell`s with a ramp, of `dot`s with a key to sizes, or of both: one `cell` layer, one `dot` layer on the same x and y, or the two together. A diverging ramp says its low end, zero and its high end |
+| `matrix` | A dimension on x and on y, or a `cell` with one on either alone | A grid of `cell`s with a ramp, of `dot`s with a key to sizes, or of both: one `cell` layer, one `dot` layer on the same x and y, or the two together. A diverging ramp says its low end, zero and its high end A `text` on the same x and y says a value in the middle of each pair, over the cells or the dots |
 | `radial` | Anything on `angle` | `arc`s about one centre, and a `unit`'s seats, in a part that holds its shape. Under it the legend of what is on `color`, or round it a label for each slice of a dimension on `angle` (the `rim` part, which the `rim` fit rule gives up first). Its rows are the segments, slices or rings: the keys step through them, and up and down step out to a second ring and back |
 | a custom mark's name | A layer with that mark | Whatever the mark draws, alone |
 
@@ -343,6 +346,16 @@ The table says what one channel may hold. What a mark asks of several together i
   { "mark": "text", "encode": { "y": "page", "text": "pageviews" }, "align": "end" },
   { "mark": "text", "encode": { "y": "page", "text": "engaged_time" }, "align": "end" }
 ]
+```
+
+**A grid draws the plot's `text`** (built November 23, the first stage of Decided 44). A grid is a plot whose two axes are both lists, so a mark of the plot's that needs no quantity to stand at is drawn there by the plot's own function, handed the grid's places. A `text` on the grid's x and y says what is on `text` in the middle of each pair, over a `cell` or a `dot`: a heatmap with its values in its cells. A pair with no value says nothing. A surface shows the values in every pair or in none, by whether each fits its cell, which it measures. A `text` alone is refused, since the cells and dots are what a reader steps through, and so is a second one. A `tick`, a `rule`, a `line` and a `bar` are measured along an axis and have no place between two lists.
+
+```json
+{ "query": { "metrics": ["correlation"], "by": ["factor", "other_factor"] },
+  "layers": [
+    { "mark": "cell", "encode": { "y": "factor", "x": "other_factor", "color": "correlation" } },
+    { "mark": "text", "encode": { "y": "factor", "x": "other_factor", "text": "correlation" } }
+  ] }
 ```
 
 **The `geo` mark** draws a map, and was the first custom mark. It takes one layer, alone in the view. `x` is the dimension whose values are region keys (a `country` dimension holds ISO 3166-1 alpha-2 codes). `color` is a metric to fill each region by, on the sequential ramp, or the diverging one where its values cross zero, as a `cell` is; `size` is a metric for a symbol on each region. Either or both. The boundary shapes and the projection are handed over in code, not in the spec.
@@ -388,6 +401,17 @@ With `stack: "diverge"` and two series that is a population pyramid; with five i
 **Several marks to a row** (built October 12). A `dot` or a `tick` in rows with the second dimension on `detail` has one mark for each pair, each at its own value on the row's track, all in the layer's paint and at half strength. That is a strip plot. There is no legend and no limit of six. The readout of a row says how many it holds and which has the most.
 
 **The range behind a row's marks** (built October 12). A `bar` in rows with nothing on `x` is no mark of a value: it is the catalog `domain` of the metric the row's other marks put on the track, drawn as tall as the row and under them, in a part for each of the catalog's `bands`, painted `band.1` to `band.3` from the least. The track's scale then holds the whole domain. A metric with no `domain` has no range drawn, and that is no error, as a metric with no `target` has no tick at one. The `bullet` preset has this layer. The gauge's bands are not drawn yet.
+
+**A line down a list** (built November 23, the second stage of Decided 44). A list draws the plot's `line` and `area`, by the plot's own function, on their side: a row's place down the list is what a plot has along x, and the track's scale what it has up y. A `line` with a metric on `x` runs from each row's value to the next, through the middle of each row, and an `area` fills back to where the track has nothing. It is on the scale the row's other marks are on, so it is in their unit, and a row with no value has no point. With `series: "previous"` it is the period before, dashed, down a list of this period's bars. Such a list is read by where its marks are, so its track stands beside its labels. The line is one mark to the list and not one to a row: its nodes are in a part of their own, `track`, which lies over the tracks of every row, and a surface turns them. It takes no `color` and no `detail`, and a reader steps through the rows as before.
+
+```json
+{ "query": { "metrics": ["pageviews"], "by": ["page"], "compare": "previous" },
+  "layers": [
+    { "mark": "bar",  "encode": { "y": "page", "x": "pageviews" } },
+    { "mark": "line", "encode": { "y": "page", "x": "pageviews" }, "series": "previous" },
+    { "mark": "text", "encode": { "y": "page", "text": "page" } }
+  ] }
+```
 
 `rows` is a track per row: a label, a track with a linear scale that bars, dots, rules and ticks draw in, and columns of values. Facets are not built (section 19, Decided 26). The plan and what building it found are in `docs/chart-coverage-plan.md`.
 
@@ -626,7 +650,7 @@ Changing the data is a resolver's work and is not built: Top-N plus "other", coa
 - whole rows trimmed to a height, and a ranked column given up by the width of its values;
 - the number's shorter forms (under 160, 200 and 120 px, in `sizes.ts`), its note, and the prose rung where the number itself does not fit;
 - a number wider than the hole of its donut;
-- labels thinned where they would meet: ticks, line ends, points, the names round a rim, a Sankey's columns, a treemap's names;
+- labels thinned where they would meet: ticks, line ends, points, the names round a rim, a Sankey's columns, a treemap's names, and the values in a grid's cells, which show in every cell or in none;
 - a legend that wraps out of its room, and anything else that depends on how tall the content is.
 
 The rules on the plot (`secondary` and `hole`) ask for the plot's own box, which only a surface that has laid the view out knows. `fitTo` passes over them where the room gives no plot, and `explain()` says they were not asked.
@@ -851,7 +875,7 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 3. Comparison is a role on a layer (`series: "previous"`), not a second metric.
 4. Sizes and thresholds belong to the container and the design system. The spec has none; `keep` is the author's only lever.
 5. Totals come from the engine, never from summing rows.
-6. `arc` will be its own mark. No general polar coordinates. It reads data on `angle` and on `radius`, one a metric and the other a dimension, and that is a closed set of forms of one mark and not a coordinate system: no other mark is drawn about a centre, and nothing has an angle and a radius both from metrics. A slice that reaches to its value starts at the centre: there is no hole in a rose. (Extended October 12)
+6. `arc` will be its own mark. No general polar coordinates. It reads data on `angle` and on `radius`, one a metric and the other a dimension, and that is a closed set of forms of one mark and not a coordinate system: no other mark is drawn about a centre, and nothing has an angle and a radius both from metrics. A slice that reaches to its value starts at the centre: there is no hole in a rose. (Extended October 12) Reopened November 23: see Open 21.
 7. The scene is the seam between structure and rendering. Paint tokens, never colours.
 8. Text stays in the DOM. Data marks may go to any renderer.
 9. Every view has a derived tldr prose.
@@ -868,7 +892,7 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 20. One scene, in ratios, with a `part` on every node. Pixel painters go through `place(scene, size)`. (October 7) The second sentence is amended by 43.
 21. Y ticks always round to 4, thinned by a rule on short plots. A deliberate departure from the prototype. (October 7)
 22. In the DOM, bars are HTML and lines and areas are a stretched SVG. (October 7)
-23. Layouts stay, as arrangements of parts that fit rules and painters hang on. A channel's scale comes from its field; `rows` becomes a track per row; `radial` is added for `arc`. Detail and the build order are in `docs/chart-coverage-plan.md`. (October 7)
+23. Layouts stay, as arrangements of parts that fit rules and painters hang on. A channel's scale comes from its field; `rows` becomes a track per row; `radial` is added for `arc`. Detail and the build order are in `docs/chart-coverage-plan.md`. (October 7) Reopened November 23, to be narrowed and not undone: see Open 21.
 24. A query may have two dimensions in `by`, no more. The second goes to `color`, to `facet`, or to the other axis. (October 7)
 25. Statistics (bins, quantiles, density, running totals) come from the engine as companion fields, as `metric@previous` does. Core gains no transform for them. (October 7)
 26. A facet is a small board: a plan per value with one shared domain, laid out by the container. (October 7)
@@ -889,6 +913,7 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 41. A key with no shorter form stays as long as its marks, or its marks give way with it. The second y axis stays as long as the first, and in the bare plot what is drawn on it goes too. What a glyph is worth stays as long as the glyphs, which give way to their plainer preset at the height the two need. A row's column headers stay as long as two columns do, and a list gives up rows instead. A Sankey becomes its grid at the size its node names need. (November 23)
 42. Where a key cannot stay whole it is cut down, or the marks give up what it was the key to. A legend with nothing to stand in for it takes the colours with it, and its marks are drawn in one paint; bars and dots, which have no line end to label, keep theirs as long as the axes. The ramp becomes a thin strip of every step between its two ends, chosen over its two ends alone when both were looked at. The key to sizes becomes its largest step, and dots are one size in the bare plot. The names round a rim are thinned to about four. With that no rule takes a key from marks that are still drawn. (November 23)
 43. A plan takes no size, and core places nothing. How a view gives way when room is short is the fit rules, as data, and one function reads them at a room with no browser: `fitTo`, with `viewAt` to follow a rule's `fallback`. The reducer in `resolve()`, `place()` and each custom mark's `place` are parked: nothing shipped read them, and they were a second reading of the rules and a second layout engine, both written by hand for each layout. Parity with the prototype is held for what takes no size: the engine's answer, the plan, the sentence and what each scene holds, node for node. Where a node is placed is no longer compared, and the tag `prototype-parity` marks the last commit that did. Two conditions joined the rule format so that the data says what the element does: a rule names every part it takes, and may be for one kind of view (`has`). The rules the DOM's painters had made for themselves are core's now. (November 23)
+44. One space for the marks, which reopens 6 and narrows 23. A view's space is two axes, each a list of values (a dimension), a quantity (a metric or a binned number) or nothing, and it is flat or bent about a centre. A spec asks for the bend as `arc` does, by writing `angle` and `radius` where a flat view writes `x` and `y`, and says nothing else. A mark is one function of that space: on an axis that is a list it takes its value's place, and on one that is a quantity it is measured along it. A layout stays as what stands round the marks and how the view takes its size, and no longer says which marks may be drawn. It is built a layout at a time and held to the bench's capture, frame for frame, since a scene's nodes change shape on the way. Stage 1, the grid, is built: it draws the plot's `text` by the plot's function, handed a pair's place and what the pair is known by (`GRID_MARKS` and `Draw.of` in `scene.ts`), and the element paints it with the plot's label painter. Between two lists only `cell`, `dot` and `text` have a place. Stage 2, the list, is built: it draws the plot's `line` and `area` by the plot's function, on their side (`LIST_MARKS`), in a part of their own, `track`, that lies over the rows, and the element paints them with the plot's path painter in one SVG it turns. A row's own five marks are still the track's own functions (`TRACK_MARKS`): each is a line or two and belongs to its row's element, so making them the plot's would add more than it took away until a node says its place one way in every layout. To come: the share bar as a list of one row, the circle as the bend, and a custom mark that offers its space to other layers. (November 23)
 
 ### Open
 
@@ -912,6 +937,7 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 18. Settled November 23: see Decided 41 and 42. Built that day.
 19. What the fit rules do not say (section 10.2 lists it): rows trimmed to a height, columns given up by width, the number's shorter forms and the prose rung, a number too wide for its hole, labels that would meet, and anything that depends on the content's height. The element measures these, and the reader is silent on them. Recommendation: write each as a rule where its need can be stated in px, starting with the number's forms and whole rows, and leave label collision to the surface (Open 5). The two rules on the plot need the plot's box, which a rule on the view could state where the plot's share of the view is known.
 20. A placer for surfaces with no CSS. Recommendation: one generic function, written when a pixel painter is wanted and after the layouts share one coordinate space, so that it maps a ratio and its part's box to pixels and knows no layout. Until then such a surface gets the scene and `fitTo`.
+21. Settled November 23: see Decided 44. Its first stage was built that day.
 
 ---
 

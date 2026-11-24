@@ -538,6 +538,9 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
   candlestick: { label: 'Candlestick: response time by day', spec: { spec: 'view/0', title: 'Response time by day', use: 'candlestick', query: { metrics: ['response_time'], by: ['date.day'], range: '28d' } } },
   fan:     { label: 'Fan: response time by day, in the interval it is known to', spec: { spec: 'view/0', title: 'Response time', use: 'fan', query: { metrics: ['response_time'], by: ['date.day'], range: '28d' } } },
   dumbbell: { label: 'Dumbbell: page views by page, this period against the one before', spec: { spec: 'view/0', title: 'Page views, then and now', use: 'dumbbell', query: { metrics: ['pageviews'], by: ['page'], range: '28d', compare: 'previous', limit: 8 } } },
+  // The same pages as a ranked list of bars, with the period before as a line down the rows: the plot's `line`, drawn in a list on its side.
+  profile: { label: 'Bar list with a line down it: page views by page, and the period before as the line', spec: { spec: 'view/0', title: 'Page views, and the period before', query: { metrics: ['pageviews'], by: ['page'], range: '28d', compare: 'previous', limit: 8 },
+            layers: [{ mark: 'bar', encode: { y: 'page', x: 'pageviews' } }, { mark: 'line', encode: { y: 'page', x: 'pageviews' }, series: 'previous' }, { mark: 'text', encode: { y: 'page', text: 'page' } }, { mark: 'text', encode: { y: 'page', text: 'pageviews' }, align: 'end' }] } },
   bullet:  { label: 'Bullet: sign-ups by device, against the target', spec: { spec: 'view/0', title: 'Sign-ups against target', use: 'bullet', query: { metrics: ['signups'], by: ['device'], range: '28d' } } },
   map:     { label: 'A map: visitors by country', spec: { spec: 'view/0', title: 'Visitors by country', use: 'choropleth', query: { metrics: ['visitors'], by: ['country'], range: '28d' } } },
   symbols: { label: 'Symbols on a map: page views by country', spec: { spec: 'view/0', title: 'Page views by country', use: 'symbol-map', query: { metrics: ['pageviews'], by: ['country'], range: '28d' } } },
@@ -589,6 +592,9 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
             layers: [{ mark: 'cell', encode: { x: 'date.day', color: 'net_subscribers' } }] } },
   // A correlation matrix: the catalog states that a correlation runs from -1 to 1, so zero is the ramp's neutral middle.
   correlogram: { label: 'Correlogram: how far each assumption moves with each other, from -1 to 1', spec: { spec: 'view/0', title: 'How the assumptions move together', use: 'heatmap', query: { metrics: ['correlation'], by: ['factor', 'other_factor'], range: '28d' } } },
+  // The same matrix with each pair's value said in its cell: the plot's `text`, drawn in a grid. A highlight table.
+  highlight: { label: 'Highlight table: the correlogram, with each correlation said in its cell', spec: { spec: 'view/0', title: 'How the assumptions move together', query: { metrics: ['correlation'], by: ['factor', 'other_factor'], range: '28d' },
+            layers: [{ mark: 'cell', encode: { y: 'factor', x: 'other_factor', color: 'correlation' } }, { mark: 'text', encode: { y: 'factor', x: 'other_factor', text: 'correlation' } }] } },
   // The same matrix as circles: a dot for each pair, sized by how far its correlation is from zero and painted by which side it is on.
   circles: { label: 'Correlogram, as circles: sized by how strong each correlation is, and painted by its sign', spec: { spec: 'view/0', title: 'How the assumptions move together', query: { metrics: ['correlation'], by: ['factor', 'other_factor'], range: '28d' },
             layers: [{ mark: 'dot', encode: { y: 'factor', x: 'other_factor', size: 'correlation', color: 'correlation' } }] } },

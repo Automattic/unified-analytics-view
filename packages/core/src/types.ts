@@ -190,6 +190,11 @@ export type Part = 'number' | 'plot' | 'x-axis' | 'y-axis' | 'y-axis-2' | 'label
   /* `points` holds the dots of a plot that sets one metric against another, and `point-labels` the labels on a plot's
    * points. Both lie over the plot and share its box. `size` is the key to the sizes of its dots. */
   | 'points' | 'point-labels' | 'size'
+  /* `track` holds what runs down a list from row to row: a line or an area, which are the plot's marks on their side.
+   * Its box lies over the tracks of all the rows. A node in it is as the plot's is, with the two axes exchanged: its
+   * `x` is its place down the rows, from the top of the first at 0 to the foot of the last at 1, and its `v` is its
+   * value along the track. A surface turns it so. A row's own marks are in `rows`. */
+  | 'track'
   /* `rim` holds the labels round a circle of slices. It shares the `radial` part's box, and the circle gives up a margin to it. */
   | 'rim'
   /* `note` is a line of text under a custom mark's own parts, saying what they could not draw. It goes with the guides. */

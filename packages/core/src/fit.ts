@@ -46,7 +46,7 @@ export interface Room { inline: number; block?: number | null }
  * nesting to go by, and test/fit.test.ts holds a view to be its number alone wherever a rule takes its marks. */
 /** Every part of a plot's body, and of a list's: what a rule takes where the view is its number alone. */
 const PLOT = ['plot', 'points', 'point-labels', 'x-axis', 'y-axis', 'y-axis-2', 'labels', 'legend', 'size', 'unit-key'];
-const ROWS = ['rows', 'columns', 'legend', 'legend-top', 'unit-key'];
+const ROWS = ['rows', 'track', 'columns', 'legend', 'legend-top', 'unit-key'];
 export const FIT_RULES: FitRule[] = [
   // A plot with axes. The second y axis is the key to what is measured in a second unit, which is read against nothing
   // else: it stays as long as the first does, and what is drawn on it goes when it goes. A bare plot is of one unit.
@@ -105,7 +105,7 @@ export const FIT_RULES: FitRule[] = [
   { id: 'ramp',      layout: 'matrix',    container: 'view', needs: { inline: 240, block: 150 },
     hide: [], set: { ramp: 'strip', 'size-key': 'most' }, keep: 'guides' },
   { id: 'marks',     layout: 'matrix',    container: 'view', needs: { inline: 150, block: 90 },       // its labels thin by rank where they would meet, which is measured
-    hide: ['plot', 'x-axis', 'y-axis', 'ramp', 'size'], show: ['number'], keep: 'marks' },
+    hide: ['plot', 'point-labels', 'x-axis', 'y-axis', 'ramp', 'size'], show: ['number'], keep: 'marks' },
   { id: 'notice',    layout: 'notice',    container: 'view', needs: { inline: 150, block: 40 },
     hide: ['notice'], show: ['number'], keep: 'marks' },
   { id: 'track',     layout: 'rows',      has: 'track', container: 'view', needs: { inline: 160 },    // a track beside its label: the label's 90 px and 70 to read a mark's place in. The value's room is measured
@@ -170,7 +170,7 @@ export interface FitView { keep?: KeepPart[]; marks?: string[]; fills?: (preset:
 
 /** What a view has, for a rule that is for one kind of view (`has`): each part its scene shows, and `track` where a
  * row's track stands beside its label. A surface says the same of its figure, for the compiled rules to ask. */
-export const hasOf = (scene: { parts: string[]; track?: string | undefined }): string[] => (scene.track ? [...scene.parts, 'track'] : scene.parts);
+export const hasOf = (scene: { parts: string[]; track?: string | undefined }): string[] => (scene.track && !scene.parts.includes('track') ? [...scene.parts, 'track'] : scene.parts);
 
 /** A view at a room, read off its fit rules with no browser. It is the reading a stylesheet compiled from the same
  * rules gives (`compileFitRules` in packages/dom): every rule of the layout whose container is short of its need

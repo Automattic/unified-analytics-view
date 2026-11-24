@@ -111,8 +111,17 @@ interface Draw {
   worth?: number | undefined;
   /** x is a number dimension the engine cut into bins: a line or an area is flat across each, and steps at its edges, as a bar there has no gap. */
   step?: boolean;
+  /** What a row's mark is known by, where the space says it and not the row alone: in a grid a mark is of a pair of
+   * values, one on each axis. A mark that asks takes its key from here, and whatever else says which it is. */
+  of?: (r: Row) => { key: string; row?: string; series?: string; pair?: [string, string] };
+  /** The field labels are ranked by, the largest first, where that is not the one on y: in a grid y is a list, and a label is ranked by what it says. */
+  rank?: string;
+  /** The part its marks are in, where that is not the plot: a list's `track`, where they are drawn on their side. */
+  part?: Part;
 }
 type MarkFn = (l: Layer, d: Draw) => SceneNode[];
+/** What a row says of a field, in a catalog's terms. */
+const sayOf = (catalog: Catalog): Draw['say'] => (r, f) => { const M = metricOf(catalog, f); return typeof r[f] !== 'number' ? String(r[f]) : formatMetric(r[f] as number, M); };
 /** A mark's key and what it came from: its layer, its row, and its series where the row has one of it for each. */
 const markOf = (id: string, k: string, series?: string) => ({ key: id + ':' + k + (series == null ? '' : ':' + series), row: k, ...(series != null && { series }) });
 /** A field's definition: its own, where the catalog has one under its whole name, and for a companion with none the
@@ -154,14 +163,14 @@ export const TINT = { opacity: 0.14, tone: 'soft' as const };
 const REFERENCE = { paint: 'rule', dash: '5 3', width: 1.5 };
 /** A reference rule's label, in the rule's paint, at `at` in the plot. */
 const ruleLabel = (id: string, text: string, role: Role, at: { x?: number; t: number }, anchor: TextNode['anchor']): TextNode => ({ key: id + ':label', part: 'plot', kind: 'text', ...at, text, anchor, font: 'tick', paint: 'rule', halo: true, layer: 'guide', role });
-const path: MarkFn = (l, { id: layer, series, mass, role: role0, paint, prev, rows: pts, k, unit, ends, polarity, step, points: joined }) => {
+const path: MarkFn = (l, { id: layer, series, mass, role: role0, paint, prev, rows: pts, k, unit, ends, polarity, step, points: joined, part: own }) => {
   const id = series == null ? layer : layer + ':' + series, role = series == null ? { role: role0 } : { role: role0, series };
   const whole = pts.filter((r) => prev || !r.partial);
   if (!whole.length) return [];
   // Between rows a line is smoothed, with a curve that never leaves the values it joins. Not where it joins the points of
   // two metrics, which run in no order along x: straight from each to the next, since a curve there would say a path nobody
   // took. And not over bins, where a value holds across its bin and changes at its edge.
-  const curve = joined ? undefined : step ? 'step' as const : 'monotone' as const, part: Part = joined ? 'points' : 'plot', bent = curve && { curve };
+  const curve = joined ? undefined : step ? 'step' as const : 'monotone' as const, part: Part = own ?? (joined ? 'points' : 'plot'), bent = curve && { curve };
   // An area's points say where it starts only when that is not the bottom of the plot.
   const points = (rs: Row[]): Pt[] => rs.map((r) => { const [v0, v] = ends(r); return { row: k(r), x: unit.cx(k(r)), v, ...(l.mark === 'area' && v0 && { v0 }), ...(step && { w: unit.span!(k(r)) }) }; });
   if (l.mark === 'area') {
@@ -237,11 +246,11 @@ const dot: MarkFn = (l, { id, series, role, paint, rows, k, unit, ends, size, po
 // A label on each row's point, in a part of its own over the plot, so a rule can give them all up. Each has its place
 // among them, the largest point first: by the metric the dots are sized by, or else by its own y. A painter gives up
 // the ones that collide from the last, since only it knows how wide a label is (reference, Open 5).
-const label: MarkFn = (l, { id, series, role, rows, k, unit, ends, size, say }) => {
+const label: MarkFn = (l, { id, series, role, rows, k, unit, ends, size, say, of, rank }) => {
   const { y, text: f } = l.encode || {};
   if (typeof y !== 'string' || typeof f !== 'string') throw new Error('A "text" layer in a plot needs a field on y, for where each label sits, and one on text, for what it says: for example { "x": "<a metric>", "y": "<a metric>", "text": "<the dimension>" }.');
-  const by = size ? size.field : y, order = rows.slice().sort((a, b) => num(b, by) - num(a, by));
-  return rows.map((r): TextNode => ({ ...markOf(id, k(r), series), part: 'point-labels', kind: 'text', x: unit.cx(k(r)), t: ends(r)[1], text: say(r, f),
+  const by = size ? size.field : rank ?? y, order = rows.slice().sort((a, b) => num(b, by) - num(a, by));
+  return rows.map((r): TextNode => ({ ...(of ? of(r) : markOf(id, k(r), series)), part: 'point-labels', kind: 'text', x: unit.cx(k(r)), t: ends(r)[1], text: say(r, f),
     anchor: 'middle', font: 'tick', paint: 'ink', halo: true, rank: order.indexOf(r) + 1, layer: 'guide', role }));
 };
 const RUG = 0.05;    // how far up the plot a stroke of a rug stands
@@ -525,7 +534,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   // Bars of one metric that fall below nothing as well as rise from it: each is a gain or a loss, and is painted as one.
   // A split plot's bars are painted by their series, and are not these.
   const diverges = (l: Layer) => { const y = l.encode!.y; return typeof y === 'string' && !splitOf(catalog, l, xField) && rows.some((r) => (r[y] as number) < 0); };
-  const say: Draw['say'] = (r, f) => { const M = metricOf(catalog, f); return typeof r[f] !== 'number' ? String(r[f]) : formatMetric(r[f] as number, M); };
+  const say = sayOf(catalog);
   layers.forEach((l, i) => {
     const draw = PLOT_MARKS[l.mark], prev = l.series === 'previous', span = spans[i]!;
     if (!draw) throw new Error('The "' + l.mark + '" mark has no rule for a time or category axis yet. Use ' + orList(Object.keys(PLOT_MARKS)) + '.');
@@ -679,9 +688,9 @@ const trackUnit: TrackFn = (_l, { id, role, paint, k, at, v, worth = 1 }) => {
 };
 /* The marks a row's track draws, by name. A new mark is a function here. Text is not among them: it is set in the row, not on the scale. */
 const TRACK_MARKS: Partial<Record<Mark, TrackFn>> = { bar: trackBar, rule: trackRule, tick: trackTick, dot: trackDot, unit: trackUnit };
-/** Whether a row's track is read by where its marks are, and so stands beside the label and not behind it: any mark but a bar from zero, a bar that is divided into a stack, and the range behind the marks. */
+/** Whether a row's track is read by where its marks are, and so stands beside the label and not behind it: any mark but a bar from zero, a bar that is divided into a stack, the range behind the marks, and a line or an area down the list. */
 export function trackBeside(layers: Layer[]): boolean {
-  return layers.some((l) => TRACK_MARKS[l.mark] && (l.mark !== 'bar' || !!l.stack || (l.encode && (l.encode.x2 != null || l.encode.x == null))));
+  return layers.some((l) => LIST_MARKS[l.mark] || (TRACK_MARKS[l.mark] && (l.mark !== 'bar' || !!l.stack || (l.encode && (l.encode.x2 != null || l.encode.x == null)))));
 }
 
 /** The dimension the rows of a list are divided by, where a layer divides them: the query's other dimension, on the
@@ -718,7 +727,7 @@ function sceneRows(catalog: Catalog, layers: Layer[], result: Result, told = tru
   // nothing on angle is a gauge's. It is the catalog `domain` of the metric the other marks put on the track, divided
   // where the catalog's `bands` divide it. The track's scale holds it whole.
   const ranged = (l: Layer) => l.mark === 'bar' && l.encode!.x == null && l.encode!.x2 == null, fieldOn = (l: Layer) => [l.encode!.x, l.encode!.x2].find((f) => typeof f === 'string') as string | undefined;
-  const tracked = layers.filter((l) => TRACK_MARKS[l.mark] && !ranged(l)), units = [...new Set(tracked.map((l) => metricOf(catalog, fieldOn(l))?.unit).filter((u) => u != null))];   // a mark at a number alone has no unit, and stands on the track's scale as it is
+  const tracked = layers.filter((l) => (TRACK_MARKS[l.mark] || LIST_MARKS[l.mark]) && !ranged(l)), units = [...new Set(tracked.map((l) => metricOf(catalog, fieldOn(l))?.unit).filter((u) => u != null))];   // a mark at a number alone has no unit, and stands on the track's scale as it is
   const behind = layers.findIndex(ranged), of = baseOf(tracked.map(fieldOn).find(Boolean) || ''), range = behind < 0 ? undefined : catalog.metrics[of];
   if (behind >= 0 && !range) throw new Error('Layer ' + (behind + 1) + ' is a bar with nothing on x, which is the range a row\'s marks are read against, and no other mark in these rows puts a metric on x for it to be the range of. Add one, for example { "mark": "bar", "encode": { "y": "' + dim + '", "x": a metric } }, or encode a metric on this bar\'s x.');
   // Where each part of the range starts and ends: the domain's two ends, and each band between them. A metric the
@@ -792,10 +801,21 @@ function sceneRows(catalog: Catalog, layers: Layer[], result: Result, told = tru
         const cell = cellOf(catalog, l, r);
         nodes.push({ key: ids[li] + ':' + k, part: 'rows', kind: 'text', row: k, text: cell.text,
           anchor: l.align === 'end' ? 'end' : 'start', baseline: 'middle', font: cols.includes(l) ? 'value' : 'label', paint: cell.paint, layer: 'data', role: roleOf(l), ...rank(l) });
-      } else {
-        throw new Error('The "' + l.mark + '" mark has no rule for rows yet. Use ' + orList([...Object.keys(TRACK_MARKS), 'text']) + '.');
+      } else if (!LIST_MARKS[l.mark]) {
+        throw new Error('The "' + l.mark + '" mark has no rule for rows yet. Use ' + orList([...Object.keys(TRACK_MARKS), ...Object.keys(LIST_MARKS), 'text']) + '.');
       }
     });
+  });
+  // The plot's marks that run down a list, by the plot's own functions, on their side (LIST_MARKS): a row's place down
+  // the list is what a plot has along x, and the track's scale what it has up y. One mark to the list and not one to a
+  // row, so they are in a part of their own, `track`, that lies over every row's track, and a surface turns them.
+  const place = new Map(items.map((i, j) => [i.k, j])), count = items.length;
+  layers.forEach((l, li) => {
+    const draw = LIST_MARKS[l.mark], prev = l.series === 'previous';
+    if (draw) nodes.push(...draw(l, {
+      id: ids[li]!, role: roleOf(l), paint: paintOf(l, catalog, result) || (prev ? 'compare' : 'series.1'), prev, rows: rows.filter((r) => on(l, r)[0] != null), k: (r) => keyOf.get(r)!, say: sayOf(catalog), v, part: 'track',
+      unit: { x: (k) => place.get(k)! / count, w: 1 / count, cx: (k) => (place.get(k)! + 0.5) / count }, ends: (r) => [v(0), v(on(l, r)[0] as number)],
+    }));
   });
   worths.forEach((worth, l) => nodes.push(...unitKey(ids[layers.indexOf(l)]!, worth, metricOf(catalog, l.encode!.x))));
   if (painted) {
@@ -1053,15 +1073,30 @@ export function seqScale(vals: number[], metric?: MetricDef): { paint(v: number 
 // `seq.none` and not the lowest step: nothing is not a little. A pair the result has no row for is drawn the same way.
 // A `dot` stands in the middle of each pair, in place of the cell or over it, sized by a metric in a plot's size steps:
 // by how far the value is from zero, whichever side it is on. Alone, it may be painted by a metric too, as a cell is.
+// A grid is a plot whose two axes are both lists, so a mark of the plot's that needs no quantity to stand at is drawn
+// here by the plot's own function, handed the grid's places (GRID_MARKS): a `text` says a value in the middle of each pair.
 function sceneMatrix(catalog: Catalog, layers: Layer[], result: Result): Body {
-  const cell = layers.find((l) => l.mark === 'cell'), dot = layers.find((l) => l.mark === 'dot'), l = cell || dot || layers[0]!, { x: xf, y: yf } = l.encode || {};
+  const rest = layers.filter((l) => !GRID_MARKS[l.mark]);
+  const cell = rest.find((l) => l.mark === 'cell'), dot = rest.find((l) => l.mark === 'dot'), l = cell || dot || layers[0]!, { x: xf, y: yf } = l.encode || {};
   const metric = (f: unknown): f is string => typeof f === 'string' && f in catalog.metrics, of = (r: Row, f: string | undefined) => (f == null ? '' : String(r[f]));
   // One colour scale to a grid: the cell's, or the dot's where it stands alone.
   const m = cell ? cell.encode!.color : dot && dot.encode!.color, sized = dot && dot.encode!.size;
-  if (layers.length !== (cell ? 1 : 0) + (dot ? 1 : 0) || layers.length > 2 || (xf != null && !isDim(catalog, xf)) || (yf != null && !isDim(catalog, yf)) || (xf == null && yf == null) || (cell && !metric(m))
+  if (rest.length !== (cell ? 1 : 0) + (dot ? 1 : 0) || rest.length > 2 || (xf != null && !isDim(catalog, xf)) || (yf != null && !isDim(catalog, yf)) || (xf == null && yf == null) || (cell && !metric(m))
     || (dot && (!metric(sized) || xf == null || yf == null || dot.encode!.x !== xf || dot.encode!.y !== yf || (cell ? dot.encode!.color != null : m != null && !metric(m))))) {
-    throw new Error('A dimension on both x and y makes a grid, and a grid draws a "cell" with a metric on color, a "dot" with a metric on size, or the two together on the same x and y. Write { "mark": "cell", "encode": { "x": "' + xf + '", "y": "' + yf + '", "color": a metric } }, or { "mark": "dot", "encode": { "x": "' + xf + '", "y": "' + yf + '", "size": a metric } }, which may have a metric on color where no cell has one. Leave x or y out of a cell alone for one column or one row, or move a dimension off an axis.');
+    throw new Error('A dimension on both x and y makes a grid, and a grid draws a "cell" with a metric on color, a "dot" with a metric on size, or the two together on the same x and y. Write { "mark": "cell", "encode": { "x": "' + xf + '", "y": "' + yf + '", "color": a metric } }, or { "mark": "dot", "encode": { "x": "' + xf + '", "y": "' + yf + '", "size": a metric } }, which may have a metric on color where no cell has one. A "text" on the same x and y says a value over either. Leave x or y out of a cell alone for one column or one row, or move a dimension off an axis.');
   }
+  // What a plot's mark needs of a grid: something under it, the grid's own axes, and one layer of each.
+  // A layer is known by where it stands among the layers, since a spec may hold one object twice.
+  const sharedAt = layers.flatMap((o, i) => (GRID_MARKS[o.mark] ? [i] : []));
+  sharedAt.forEach((i) => {
+    const own = layers[i]!, first = sharedAt.find((j) => layers[j]!.mark === own.mark)!;
+    const n = 'Layer ' + (i + 1) + ' is a "' + own.mark + '" in a grid', xy = '"x": ' + JSON.stringify(xf) + ', "y": ' + JSON.stringify(yf);
+    // ponytail: a cell or a dot is what a reader steps to and a pointer finds, so a text has to stand over one. Text alone is a table of values, which the element gives as its table already: let it be a grid of its own if that is ever asked for.
+    if (!cell && !dot) throw new Error(n + ' with no cell or dot under it, and it is the cells and dots that a reader steps through. Add { "mark": "cell", "encode": { ' + xy + ', "color": a metric } } before it, or a "dot" with a metric on size.');
+    if (own.encode?.x !== xf || own.encode?.y !== yf) throw new Error(n + ' whose axes are not the grid\'s. Encode { ' + xy + ' } on it, as the ' + (cell ? 'cell' : 'dot') + ' does.');
+    if (own.mark === 'text' && typeof own.encode?.text !== 'string') throw new Error(n + ' with nothing on text, so it has nothing to say. Encode what each pair should say there, for example { ' + xy + ', "text": ' + JSON.stringify(cell?.encode?.color ?? dot?.encode?.size) + ' }.');
+    if (first !== i) throw new Error(n + ', and layer ' + (first + 1) + ' is one already: a pair has room for one. Remove one of the two.');
+  });
   // Each dimension in its own order, which is the engine's, so the grid does not turn with the ranking.
   // A binned quantity has an order of its own, least first, whatever the engine ranked its rows by.
   const binned = (f: string | undefined) => (f == null ? [''] : catalog.dimensions[f]!.type === 'number' ? orderOf(result, f).sort((a, b) => Number(a) - Number(b)) : orderOf(result, f));
@@ -1093,6 +1128,17 @@ function sceneMatrix(catalog: Catalog, layers: Layer[], result: Result): Body {
     const v = sizes!.get(x + '\n' + y), paint = v == null ? 'seq.none' : !cell && seq ? seq.paint(at!.get(x + '\n' + y)) : dot.paint || 'series.1';
     return { key: ids[layers.indexOf(dot)] + ':' + x + ':' + y, part: 'plot', kind: 'circle', pulse: false, x: (i + 0.5) / nx, t: 1 - (j + 0.5) / ny, ...(v != null && { size: sizeStep(Math.abs(v), top) }), pair: [x, y], paint, layer: 'data', role: roleOf(dot) };
   });
+  // The plot's marks, each handed the grid's places: a row of the result is a pair, in the middle of its place on each axis.
+  for (const i of sharedAt) {
+    const own = layers[i]!, f = own.encode?.text, rows = result.rows.filter((r) => typeof f !== 'string' || r[f] != null);
+    nodes.push(...GRID_MARKS[own.mark]!(own, {
+      id: ids[i]!, role: roleOf(own), paint: own.paint || 'ink', prev: false, rows, say: sayOf(catalog), v: (n) => n,
+      k: (r) => of(r, xf) + '\n' + of(r, yf), unit: { x: (k) => xs.indexOf(k.split('\n')[0]!) / nx, w: 1 / nx, cx: (k) => (xs.indexOf(k.split('\n')[0]!) + 0.5) / nx },
+      ends: (r) => { const t = 1 - (ys.indexOf(of(r, yf)) + 0.5) / ny; return [t, t]; },
+      of: (r) => ({ key: ids[i] + ':' + of(r, xf) + ':' + of(r, yf), pair: [of(r, xf), of(r, yf)] }),
+      ...(metric(sized) && { size: { field: sized, top } }), ...(typeof f === 'string' && { rank: f }),
+    }));
+  }
   if (seq) nodes.push(...seq.ramp(vals.length < nx * ny));
   if (sizes) nodes.push(...sizeKey(catalog.metrics[sized as string]!, top));
   return { nodes, rows: xs, ys };
@@ -1149,6 +1195,14 @@ function checkValues(result: Result, catalog: Catalog): void {
   for (const d in result.totalsBy) result.totalsBy[d]!.forEach((r, i) => check(r, 'row ' + (i + 1) + ' of totalsBy["' + d + '"]'));
 }
 
+/* The plot's marks that a grid draws too, by the plot's own functions: the ones that need no quantity to stand at.
+ * A tick, a rule, a line and a bar are measured along an axis, and a grid has two lists. A new one is a name here. */
+const GRID_MARKS: Partial<Record<Mark, MarkFn>> = { text: label };
+/* And the ones a list draws, on their side: a mark that joins the rows, where a row's own marks are its track's
+ * (TRACK_MARKS). A line runs down the list from each row's value to the next, and an area fills back to where the
+ * track has nothing. */
+const LIST_MARKS: Partial<Record<Mark, MarkFn>> = { line: path, area: path };
+
 /** The scene for a plan, in ratios. Neither takes a size, so this is everything the spec asks for. */
 export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Catalog): Scene {
   checkValues(result, catalog);
@@ -1177,6 +1231,7 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
     body = sceneMatrix(catalog, p.layers, result);
     if (p.guides.y && body.nodes.some((n) => n.part === 'y-axis')) parts.push('y-axis');   // one row of cells has no label down its side
     parts.push('plot');
+    if (p.guides.pointLabels && body.nodes.some((n) => n.part === 'point-labels')) parts.push('point-labels');
     if (p.guides.x) parts.push('x-axis');
     keyTo('ramp', p.guides.ramp);
     keyTo('size', p.guides.size);
@@ -1184,6 +1239,7 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
     if (p.guides.columns) parts.push('columns');
     parts.push('rows');
     body = sceneRows(catalog, p.layers, result, !!p.guides.legend);
+    if (body.nodes.some((n) => n.part === 'track')) parts.push('track');
     unitKeyed();
     // The key to a divided row's series, under the rows.
     if (body.series && p.guides.legend) parts.push('legend');

@@ -4,6 +4,7 @@ import { attr, ensure, keyed, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { RULE } from '../chrome/rule.ts';
 import { thinLabels } from '../measure.ts';
+import { morph } from '../motion.ts';
 import { ANCHOR, LABEL, cut } from '../chrome/label.ts';
 import { DOT } from '../chrome/swatch.ts';
 import { centred } from '../chrome/tip.ts';
@@ -32,8 +33,9 @@ export const POINTS_CSS = `
 .uav-dots, .uav-points, .uav-point-labels { pointer-events: none; }
 .uav-points i { pointer-events: auto; }
 /* A plot with no points has the holder and nothing in it, and a holder of nothing takes no box: the rule that takes
- * the points is for a plot that has them (core's \`points\` rule, \`has\`), and is not asked of this one. */
-.uav-points:empty { display: none; }
+ * the points is for a plot that has them (core's \`points\` rule, \`has\`), and is not asked of this one. The same of the
+ * labels' holder, which a grid has too. */
+:is(.uav-points, .uav-point-labels):empty { display: none; }
 /* A point of a line that has no dot drawn on it: there to be pointed at and stepped to, and it wears only the outline. */
 .uav-points i[data-bare] { background: none; }
 :is(.uav-dots, .uav-points) i { position: absolute; inset-inline-start: calc(var(--uav-x) * 100%); inset-block-start: ${FROM_TOP}; translate: -50% -50%;
@@ -105,6 +107,27 @@ export function pathTargets(paths: PathNode[]): CircleNode[] {
   return [...at.values()];
 }
 
+/** A path for each line and area of `paths`, under `holder`, which is an SVG of a 100 by 100 box or a group in one: the
+ * one painter of a path, for a plot's lines and for the ones a list has down its rows. */
+export function paintPaths(holder: Element, paths: PathNode[]): void {
+  keyed(holder, paths, () => 'path', (el, n) => {
+    morph(el as SVGElement, n); el.toggleAttribute('data-fill', !!n.fill);
+    // A scene's width is a weight, against the 2 it gives a line of the data: the line token is that line's width here,
+    // and a comparison's or a rule's is the same share of it.
+    prop(el, 'stroke-width', n.fill || !n.width ? null : `calc(${token('stroke-width-line')} * ${n.width / 2})`); prop(el, 'stroke-dasharray', n.dash);
+  });
+}
+
+/** A label for each place the scene has one at, in a holder over the marks: for any layout whose marks stand at a
+ * place in a box, a plot's points and a grid's pairs. `sizes` are the dots' own, by row, for a label that keeps clear of one. */
+export function paintLabels(plot: HTMLElement, scene: Scene, sizes?: Map<string | undefined, number | undefined>): void {
+  const labels = ensure(plot, 'div', 'uav-point-labels');
+  labels.setAttribute('aria-hidden', 'true');
+  keyed(labels, scene.nodes.filter((n): n is TextNode => n.part === 'point-labels' && n.kind === 'text'), () => 'span', (el, n) => {
+    text(el, n); prop(el, '--uav-x', n.x); prop(el, '--uav-t', n.t); prop(el, '--uav-size', sizes?.get(n.row)); el.toggleAttribute('data-halo', !!n.halo);
+  });
+}
+
 /** Paint them, after the plot's own parts. `plot` is the cartesian layout's `.uav-plot`. */
 export function paintPoints(plot: HTMLElement, scene: Scene): void {
   const nodes = scene.nodes, dots = (part: string) => nodes.filter((n): n is CircleNode => n.part === part && n.kind === 'circle');
@@ -122,11 +145,7 @@ export function paintPoints(plot: HTMLElement, scene: Scene): void {
   attr(holder, 'data-hits', points.length ? (joined.length ? 'path' : 'xy') : null);
   if (points.length) plot.querySelector(':scope > .uav-hits')?.removeAttribute('data-hits');
 
-  const labels = ensure(plot, 'div', 'uav-point-labels');
-  labels.setAttribute('aria-hidden', 'true');
-  keyed(labels, nodes.filter((n): n is TextNode => n.part === 'point-labels' && n.kind === 'text'), () => 'span', (el, n) => {
-    text(el, n); prop(el, '--uav-x', n.x); prop(el, '--uav-t', n.t); prop(el, '--uav-size', sizes.get(n.row)); el.toggleAttribute('data-halo', !!n.halo);
-  });
+  paintLabels(plot, scene, sizes);
 
   // The layout painted every rule as a line across the plot. One at a value on x is stood up, and its label with it.
   const upright = new Map(nodes.filter((n: SceneNode) => n.part === 'plot' && (n.kind === 'line' || n.kind === 'text') && n.x != null).map((n) => [n.key, n as TextNode]));

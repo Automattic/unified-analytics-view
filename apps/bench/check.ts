@@ -23,8 +23,8 @@ import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { FIT_RULES, fitTo, type FitRule, type KeepPart } from '@unified-analytics/core';
 import type { Record } from './capture.ts';
 
-/** Pairs drawn one over the other on purpose: labels on their points, and the ring's labels and its number on the ring. */
-const OVERLAPS = [['points', 'point-labels'], ['radial', 'rim'], ['radial', 'hole']].map((p) => p.sort().join('×'));
+/** Pairs drawn one over the other on purpose: labels on their points, the ring's labels and its number on the ring, and what runs down a list over its rows. */
+const OVERLAPS = [['points', 'point-labels'], ['radial', 'rim'], ['radial', 'hole'], ['rows', 'track']].map((p) => p.sort().join('×'));
 /** Each part drawn under a class of its name: the ones a rule may name. A rule's other names are roles, the grid and ticks. */
 const PARTS = new Set(['number', 'plot', 'x-axis', 'y-axis', 'y-axis-2', 'labels', 'columns', 'rows', 'band', 'legend', 'legend-top', 'radial', 'hole', 'rim',
   'ramp', 'notice', 'points', 'point-labels', 'size', 'note', 'unit-key', 'track']);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FIT_RULES, buildScene, columnRooms, expand, formatValue, resolve, type Spec } from '@unified-analytics/core';
+import { FIT_RULES, buildScene, columnRooms, expand, formatValue, hasOf, pathD, resolve, type Spec } from '@unified-analytics/core';
 import { catalog, moreSamples, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
 import { at, err, ofUnbounded, run, shown, validView as view } from './helpers.ts';
 
@@ -138,7 +138,47 @@ describe('the track', () => {
   it('errors name the fix: marks in two units, and a mark the track has no rule for', () => {
     const two: Spec = { query: conversions.query, layers: [...conversions.layers!, { mark: 'bar', encode: { y: 'event', x: 'conversion_value' } }] };
     expect(err(two)).toBe('These rows have marks that measure in 2 units (count, usd), and a row has one track. Keep the marks of one unit, and show the other metric as a text layer.');
-    expect(err({ query: conversions.query, layers: [{ mark: 'line', encode: { y: 'event', x: 'conversions' } }] })).toBe('The "line" mark has no rule for rows yet. Use bar, rule, tick, dot, unit or text.');
+    expect(err({ query: conversions.query, layers: [{ mark: 'arc', encode: { y: 'event', x: 'conversions' } }] })).toBe('The "arc" mark has no rule for rows yet. Use bar, rule, tick, dot, unit, line, area or text.');
+  });
+
+  // Step 3 of the refinement plan, stage 2 (reference, Decided 44): a list draws the plot's `line` and `area`, by the
+  // plot's own function, on their side. A row's place down the list is what a plot has along x, and the track's scale
+  // what it has up y.
+  const profile = moreSamples.profile!.spec;
+  it('a line runs down the list from each row\'s value to the next: the plot\'s own path, in the track', () => {
+    const { ratio, plan, result } = run(profile, 500), line = ratio.nodes.find((n) => n.part === 'track') as any;
+    expect(plan.layout).toBe('rows');
+    expect(ratio).toMatchObject({ parts: ['rows', 'track'], track: 'beside' });
+    expect(hasOf(ratio)).toEqual(['rows', 'track']);
+    expect(ratio.nodes.filter((n) => n.part === 'track').map((n) => [n.key, n.kind])).toEqual([['comparison:line', 'path']]);
+    expect(line).toMatchObject({ curve: 'monotone', paint: 'compare', width: 1.5, dash: '3 3', layer: 'data', role: 'comparison' });
+    // A point for each row, at the middle of the row's place down the list and at its value along the track, on the scale the bars are on.
+    const rows = ratio.rows!, bars = ratio.nodes.filter((n) => n.kind === 'rect') as any[], top = Math.max(...result.rows.flatMap((r) => [r.pageviews as number, (r['pageviews@previous'] as number | null) ?? 0]));
+    const before = result.rows.map((r, i) => ({ k: rows[i]!, at: (i + 0.5) / rows.length, was: r['pageviews@previous'] as number | null })).filter((r) => r.was != null);
+    expect(before.length).toBeGreaterThan(5);                               // a row with no period before has no point, and the line passes it by
+    expect(line.points.map((p: any) => [p.row, p.x])).toEqual(before.map((r) => [r.k, r.at]));
+    line.points.forEach((p: any, i: number) => expect(p.v, p.row).toBeCloseTo(before[i]!.was! / top, 12));
+    bars.forEach((b, i) => expect(b.v, b.key).toBeCloseTo((result.rows[i]!.pageviews as number) / top, 12));
+    // It is the path a plot draws of the same points: one function, and a surface turns it.
+    expect(line.d).toBe(pathD(line.points, 'monotone'));
+    // With no period before there is no line, and no part for one.
+    expect(run(profile, 500, null, 'no-prior').ratio.parts).toEqual(['rows']);
+  });
+  it('an area fills back to where the track has nothing, and both go where the rows go', () => {
+    const area: Spec = { query: profile.query, layers: [{ mark: 'area', encode: { y: 'page', x: 'pageviews' } }, { mark: 'text', encode: { y: 'page', text: 'page' } }] };
+    const filled = run(area, 500).ratio.nodes.find((n) => n.part === 'track') as any;
+    expect(filled).toMatchObject({ key: 'primary:area', kind: 'path', fill: true, paint: 'series.1', opacity: 0.14 });
+    expect(filled.points.every((p: any) => p.v0 === undefined)).toBe(true);
+    // Read by where its marks are, such a list stands its track beside its labels, and under the room that needs it is its number.
+    expect([160, 159].map((w) => shown(run(area, w)).parts)).toEqual([['rows', 'track'], ['number']]);
+    expect(shown(run(profile, 346, 20)).parts).toEqual(['number']);
+    expect(FIT_RULES.filter((r) => r.layout === 'rows' && r.hide.includes('rows')).every((r) => r.hide.includes('track'))).toBe(true);
+  });
+  it('errors name the fix: a line in another unit, one that is split, and one with nothing to run through', () => {
+    const line = (encode: Record<string, string>): Spec => ({ query: conversions.query, layers: [...conversions.layers!, { mark: 'line', encode: { y: 'event', ...encode } }] });
+    expect(err(line({ x: 'conversion_value' }))).toBe('These rows have marks that measure in 2 units (count, usd), and a row has one track. Keep the marks of one unit, and show the other metric as a text layer.');
+    expect(err(line({ x: 'conversions', color: 'event' }))).toBe('Layer 6 encodes "event" on color, and the "line" mark in a "rows" layout reads no color. It reads: y (a dimension), x (a metric). Remove "color", or use a mark that reads it there: bar, dot or unit.');
+    expect(err(line({}))).toBe('Layer 6 has the mark "line" and nothing on x, and the "line" mark in a "rows" layout is not drawn without it. Encode a metric on x.');
   });
 });
 

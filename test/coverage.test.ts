@@ -37,10 +37,10 @@ describe('the sweep, for what the prototype does not know', () => {
       for (const sc of scenarios) {
         expect(run(spec, 346, null, sc).plan.layout, sc).toBe(sc === 'empty' ? 'notice' : marks);
         // Under the room its axes need a plot is bare beside the number, and under the room its marks need the number alone.
-        // Rows ask for their label's 90 px. What their values need beside it is measured, and is no rule's to say.
-        const parts = [250, 120, 80].map((w) => run(spec, w, null, sc).fit.parts);
+        // Rows ask for their label's 90 px, and 160 where their track stands beside it. What their values need beside it is measured, and is no rule's to say.
+        const parts = [250, 120, 80].map((w) => run(spec, w, null, sc).fit.parts), whole = run(spec, 700, null, sc).ratio;
         expect(parts, sc).toEqual(sc === 'empty' ? [['notice'], ['number'], ['number']]
-          : marks === 'cartesian' ? [points ? ['number'] : ['number', 'plot'], ['number'], ['number']] : [run(spec, 700, null, sc).ratio.parts, run(spec, 700, null, sc).ratio.parts, ['number']]);
+          : marks === 'cartesian' ? [points ? ['number'] : ['number', 'plot'], ['number'], ['number']] : [whole.parts, whole.track === 'beside' ? ['number'] : whole.parts, ['number']]);
         if (marks === 'cartesian' && sc !== 'empty') expect(run(spec, 250, null, sc).fit.set.arrange, sc).toBe('side');
         // With room for everything no rule holds, and all that is missing is what there is no prior period to say.
         expect(run(spec, 700, null, sc).fit.held, sc).toEqual([]);

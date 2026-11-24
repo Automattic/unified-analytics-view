@@ -59,7 +59,7 @@ describe('a track beside its label', () => {
     const fig = '.uav[data-layout="rows"]:where([data-has~="track"]):not([data-keep~="marks"])';
     expect(css.split('\n')).toEqual([
       '/* rows track */', '@container uav-view (inline-size < 159.5px) {',
-      '  ' + fig + ' :is(.uav-rows, .uav-columns, .uav-legend, .uav-legend-top, .uav-unit-key) { display: none; }', '  ' + fig + ' .uav-number { display: block; }',
+      '  ' + fig + ' :is(.uav-rows, .uav-track, .uav-columns, .uav-legend, .uav-legend-top, .uav-unit-key) { display: none; }', '  ' + fig + ' .uav-number { display: block; }',
       '  ' + fig + ' .uav-body[data-track] { display: none; }', '  ' + fig + ' .uav-number:has(~ .uav-body[data-track]) { display: block; margin: 0; }',
       '}',
     ]);

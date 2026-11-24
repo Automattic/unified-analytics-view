@@ -38,6 +38,8 @@ export const READS: Record<string, Record<string, Reads>> = {
     dot:  { y: [D], x: [M, N], color: [D, C], detail: [D] },
     unit: { y: [D], x: [M],    color: [D, C] },
     text: { y: [D], text: [D, M, C] },
+    line: { y: [D], x: [M] },
+    area: { y: [D], x: [M] },
   },
   band: {
     bar:  { x: [M], color: [D] },
@@ -50,6 +52,7 @@ export const READS: Record<string, Record<string, Reads>> = {
   matrix: {
     cell: { x: [D], y: [D], color: [M] },
     dot:  { x: [D], y: [D], color: [M], size: [M] },
+    text: { x: [D], y: [D], text: [D, M, C] },
   },
 };
 
@@ -57,10 +60,10 @@ export const READS: Record<string, Record<string, Reads>> = {
  * "undefined", or it broke its builder. Where a mark needs one of two (a rule, a number on x or on y) its builder says so. */
 export const NEEDS: Record<string, Record<string, readonly Channel[]>> = {
   cartesian: { line: ['y'], area: ['y'], bar: ['y'], dot: ['y'], text: ['y', 'text'], unit: ['y'] },
-  rows:      { rule: ['x'], tick: ['x'], dot: ['x'], unit: ['x'], text: ['text'] },
+  rows:      { rule: ['x'], tick: ['x'], dot: ['x'], unit: ['x'], text: ['text'], line: ['x'], area: ['x'] },
   band:      { bar: ['x', 'color'], unit: ['x'] },
   radial:    { unit: ['angle', 'color'] },
-  matrix:    { cell: ['color'], dot: ['x', 'y', 'size'] },
+  matrix:    { cell: ['color'], dot: ['x', 'y', 'size'], text: ['text'] },
 };
 
 /** The layer fields that only some marks read, and where. On any other mark one was dropped. `role` is read of every

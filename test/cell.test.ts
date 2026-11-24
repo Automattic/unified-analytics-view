@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildScene, expand, resolve, sizeStep, type CircleNode, type RectNode, type Spec } from '@unified-analytics/core';
+import { buildScene, expand, formatValue, resolve, sizeStep, type CircleNode, type RectNode, type Spec } from '@unified-analytics/core';
 import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
 import { err, run, shown, validView as view } from './helpers.ts';
 
@@ -54,7 +54,7 @@ describe('golden scenes', () => {
 // The grids step 0 of docs/uncommon-coverage-plan.md added: a calendar, a strip of days and a square of pages. And
 // step 5's: a correlation matrix and its circles, and a count by two binned quantities.
 describe('the grids of the Uncommon types', () => {
-  const grids = Object.fromEntries(['calendar', 'stripes', 'adjacency', 'correlogram', 'circles', 'bins2d'].map((k) => [k, moreSamples[k]!.spec]));
+  const grids = Object.fromEntries(['calendar', 'stripes', 'adjacency', 'correlogram', 'highlight', 'circles', 'bins2d'].map((k) => [k, moreSamples[k]!.spec]));
   for (const [name, spec] of Object.entries(grids)) {
     it(name + ': unique keys, no NaN, ratios from 0 to 1, parts the scene has at every room, and every data state', () => {
       expect(view(spec), JSON.stringify(view.errors)).toBe(true);
@@ -162,6 +162,47 @@ describe('the grids of the Uncommon types', () => {
     // The two keys step down together where there is no room, and stay as long as the grid: a strip, and the largest step alone.
     expect(shown(run(grids.circles!, 234))).toMatchObject({ parts: ['y-axis', 'plot', 'x-axis', 'ramp', 'size'], set: { ramp: 'strip', 'size-key': 'most' }, rules: ['ramp'] });
     expect(shown(run(grids.circles!, 346))).toMatchObject({ parts: ['y-axis', 'plot', 'x-axis', 'ramp', 'size'], set: {}, rules: [] });
+  });
+  // Step 3 of the refinement plan, stage 1 (reference, Open 21): a grid is a plot whose two axes are both lists, and it
+  // draws the plot's own `text`, by the plot's function, handed the grid's places.
+  it('a text says each pair\'s value in the middle of its place: the plot\'s own label, over the cells', () => {
+    const { ratio, plan, result } = run(grids.highlight!, 700), labels = ratio.nodes.filter((n) => n.part === 'point-labels') as any[];
+    expect(plan).toMatchObject({ layout: 'matrix', guides: { x: true, y: true, ramp: true, pointLabels: true } });
+    expect(ratio.parts).toEqual(['y-axis', 'plot', 'point-labels', 'x-axis', 'ramp']);
+    // Under them the grid is the correlogram's, node for node.
+    expect(ratio.nodes.filter((n) => n.part !== 'point-labels').map((n) => ({ ...n, key: n.key.replace('primary:cell', 'cell') }))).toEqual(run(grids.correlogram!, 700).ratio.nodes.map((n) => ({ ...n, key: n.key.replace('primary:cell', 'cell') })));
+    // One for each pair that has a value, keyed by the pair as its cell is, and no row's: a grid's marks are of pairs.
+    expect(labels.length).toBe(result.rows.length);
+    expect(labels.find((n) => n.pair[0] === 'Traffic' && n.pair[1] === 'Ad spend')).toMatchObject({ key: 'primary:text:Traffic:Ad spend', kind: 'text', text: '0.81', anchor: 'middle', font: 'tick', paint: 'ink', halo: true, layer: 'guide', role: 'primary' });
+    expect(labels.every((n) => n.row == null)).toBe(true);
+    // In the middle of the pair's place on each axis, which is where its cell's middle is.
+    const cellOf = (n: any) => cells(ratio).find((c) => c.pair!.join() === n.pair.join())!;
+    for (const n of labels) { const c = cellOf(n); expect(n.x, n.key).toBeCloseTo(c.x! + c.w! / 2, 12); expect(n.t, n.key).toBeCloseTo(1 - (c.y! + c.h! / 2), 12); }
+    // What it says is the metric as the catalog writes it, and it is ranked by it, the largest first.
+    expect(labels.map((n) => n.text)).toEqual(result.rows.map((r) => formatValue(r.correlation as number, catalog.metrics.correlation!)));
+    expect([...labels].sort((a, b) => a.rank - b.rank).map((n) => n.text).slice(0, 6)).toEqual(Array(6).fill('1'));
+    expect(new Set(labels.map((n) => n.rank)).size).toBe(labels.length);
+  });
+  it('a pair with no value says nothing, a dot may be what it stands over, and the labels go with the grid', () => {
+    const q = moreSamples.highlight!.spec.query, text = { mark: 'text' as const, encode: { y: 'factor', x: 'other_factor', text: 'correlation' } };
+    const holes = { ...runQuery(q), rows: runQuery(q).rows.map((r, i) => (i % 5 ? r : { ...r, correlation: null })) };
+    const said = (spec: Spec, result = runQuery(spec.query)) => run(spec, 700, null, 'typical', { result }).ratio.nodes.filter((n) => n.part === 'point-labels').length;
+    expect(said(grids.highlight!, holes)).toBe(holes.rows.filter((r) => r.correlation != null).length);
+    expect(said({ query: q, layers: [...grids.circles!.layers!, text] })).toBe(36);
+    // It may say a dimension, or a companion of one, as a plot's label may.
+    expect((run({ query: q, layers: [grids.highlight!.layers![0]!, { ...text, encode: { ...text.encode, text: 'factor' } }] }, 700).ratio.nodes.find((n) => n.part === 'point-labels') as any).text).toBe('Conversion rate');
+    // No rule takes the labels alone: where they do not fit their cells a surface gives them all up, which is measured. They go with the grid.
+    expect(shown(run(grids.highlight!, 346)).parts).toEqual(['y-axis', 'plot', 'point-labels', 'x-axis', 'ramp']);
+    expect(shown(run(grids.highlight!, 120)).parts).toEqual(['number']);
+  });
+  it('errors name the fix: a text with nothing under it, on other axes, twice, or with nothing to say', () => {
+    const q = moreSamples.highlight!.spec.query, [cell, text] = grids.highlight!.layers!, at = '"x": "other_factor", "y": "factor"';
+    expect(err({ query: q, layers: [text!] })).toBe('Layer 1 is a "text" in a grid with no cell or dot under it, and it is the cells and dots that a reader steps through. Add { "mark": "cell", "encode": { ' + at + ', "color": a metric } } before it, or a "dot" with a metric on size.');
+    expect(err({ query: q, layers: [cell!, { mark: 'text', encode: { x: 'factor', y: 'other_factor', text: 'correlation' } }] })).toBe('Layer 2 is a "text" in a grid whose axes are not the grid\'s. Encode { ' + at + ' } on it, as the cell does.');
+    expect(err({ query: q, layers: [cell!, text!, text!] })).toBe('Layer 3 is a "text" in a grid, and layer 2 is one already: a pair has room for one. Remove one of the two.');
+    expect(err({ query: q, layers: [cell!, { mark: 'text', encode: { y: 'factor', x: 'other_factor' } }] })).toBe('Layer 2 is a "text" in a grid with nothing on text, so it has nothing to say. Encode what each pair should say there, for example { ' + at + ', "text": "correlation" }.');
+    // What needs a quantity to stand at has no place between two lists, and the grid says what it does draw.
+    expect(err({ query: q, layers: [cell!, { mark: 'tick', encode: { y: 'factor', x: 'other_factor' } }] })).toMatch(/^A dimension on both x and y makes a grid, .* A "text" on the same x and y says a value over either\./);
   });
   it('a dot over a cell is sized by its own metric in its own paint, shrinks to its cell, and a pair with no value has the least dot in the paint of no value', () => {
     const over: Spec = { spec: 'view/0', query: { metrics: ['visitors', 'pageviews'], by: ['weekday', 'hour'], range: '28d' },
@@ -271,7 +312,7 @@ describe('prose, the preset and errors', () => {
     expect(err({ use: 'heatmap', query: { metrics: ['visitors'], by: ['weekday'] } })).toBe('The "heatmap" preset needs two dimensions in query.by: the one on the axis, then the one to split by.');
   });
   it('errors name the fix: a grid of anything but one cell layer, a cell with no metric on color, and a cell on a plot', () => {
-    const q = { metrics: ['visitors'], by: ['weekday', 'hour'] }, grid = 'A dimension on both x and y makes a grid, and a grid draws a "cell" with a metric on color, a "dot" with a metric on size, or the two together on the same x and y. Write { "mark": "cell", "encode": { "x": "hour", "y": "weekday", "color": a metric } }, or { "mark": "dot", "encode": { "x": "hour", "y": "weekday", "size": a metric } }, which may have a metric on color where no cell has one. Leave x or y out of a cell alone for one column or one row, or move a dimension off an axis.';
+    const q = { metrics: ['visitors'], by: ['weekday', 'hour'] }, grid = 'A dimension on both x and y makes a grid, and a grid draws a "cell" with a metric on color, a "dot" with a metric on size, or the two together on the same x and y. Write { "mark": "cell", "encode": { "x": "hour", "y": "weekday", "color": a metric } }, or { "mark": "dot", "encode": { "x": "hour", "y": "weekday", "size": a metric } }, which may have a metric on color where no cell has one. A "text" on the same x and y says a value over either. Leave x or y out of a cell alone for one column or one row, or move a dimension off an axis.';
     expect(err({ query: q, layers: [{ mark: 'bar', encode: { x: 'hour', y: 'weekday', color: 'visitors' } }] })).toBe(grid);
     expect(err({ query: q, layers: [{ mark: 'cell', encode: { x: 'hour', y: 'weekday' } }] })).toBe(grid);
     expect(err({ query: q, layers: [...expand(heatmap).layers!, { mark: 'rule', encode: { y: 3 } }] })).toBe(grid);

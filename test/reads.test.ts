@@ -15,7 +15,7 @@ describe('what each mark reads', () => {
   it('refuses a channel the mark does not read in its layout, and names the marks there that do', () => {
     expect(err(sized)).toBe(SIZED);
     expect(err({ query: byPage, layers: [{ mark: 'text', encode: { y: 'page', x: 'pageviews', text: 'pageviews' } }] }))
-      .toBe('Layer 1 encodes "pageviews" on x, and the "text" mark in a "rows" layout reads no x. It reads: y (a dimension), text (a dimension, a metric or a companion of a dimension). Remove "x", or use a mark that reads it there: bar, rule, tick, dot or unit.');
+      .toBe('Layer 1 encodes "pageviews" on x, and the "text" mark in a "rows" layout reads no x. It reads: y (a dimension), text (a dimension, a metric or a companion of a dimension). Remove "x", or use a mark that reads it there: bar, rule, tick, dot, unit, line or area.');
   });
 
   it('refuses what a channel holds where the mark takes no account of it, and says where that is read', () => {
@@ -27,7 +27,7 @@ describe('what each mark reads', () => {
 
   it('refuses a mark its layout does not draw, and says why the layout is that one', () => {
     expect(err({ query: byChannel, layers: [{ mark: 'bar', encode: { x: 'visitors', color: 'channel' }, stack: 'normalize' }, { mark: 'text', encode: { text: 'channel' } }] }))
-      .toBe('Layer 2 has the mark "text", and these layers are laid out as "band" (a dimension on color), which draws bar or unit. Use one of those, or change what the layers put on x, y and color: the "text" mark is drawn in cartesian or rows.');
+      .toBe('Layer 2 has the mark "text", and these layers are laid out as "band" (a dimension on color), which draws bar or unit. Use one of those, or change what the layers put on x, y and color: the "text" mark is drawn in cartesian, rows or matrix.');
     // An arc with nothing on angle is laid out as a band, whose builder breaks on it: what is unread is said in place of the break.
     expect(err({ query: byChannel, layers: [{ mark: 'arc', encode: { radius: 'channel', color: 'channel' } }] }))
       .toBe('Layer 1 has the mark "arc", and these layers are laid out as "band" (a dimension on color), which draws bar or unit. Use one of those, or change what the layers put on x, y and color: the "arc" mark is drawn in radial.');
@@ -133,6 +133,14 @@ describe('every cell of the table is read', () => {
     ['rows dot color companion', one(byPage, { mark: 'dot', encode: { y: 'page', x: 'pageviews', color: 'page@kind' } }), one(byPage, { mark: 'dot', encode: { y: 'page', x: 'pageviews' } }), kinds()],
     ['rows unit color dimension', one(byPage, { mark: 'unit', encode: { y: 'page', x: 'pageviews', color: 'page' } }), one(byPage, { mark: 'unit', encode: { y: 'page', x: 'pageviews' } })],
     ['rows unit color companion', one(byPage, { mark: 'unit', encode: { y: 'page', x: 'pageviews', color: 'page@kind' } }), one(byPage, { mark: 'unit', encode: { y: 'page', x: 'pageviews' } }), kinds()],
+    // A list draws the plot's `line` and `area`, on their side: a path in the list's `track`, the area's filled.
+    ...(['y dimension', 'x metric'] as const).map((cell): [string, Spec, (a: Spec) => boolean] =>
+      ['rows area ' + cell, one(byPage, row, { mark: 'area', encode: { y: 'page', x: 'pageviews' } }), (a) => ofUnbounded(a).scene.nodes.some((n) => n.part === 'track' && n.kind === 'path' && n.fill === true)]),
+    // A grid draws the plot's `text`, and what it says may be a dimension or a companion of one, as in a plot.
+    ['matrix text text dimension', one(byDayCountry, { mark: 'cell', encode: { x: 'date.day', y: 'country', color: 'visitors' } }, { mark: 'text', encode: { x: 'date.day', y: 'country', text: 'country' } }),
+      one(byDayCountry, { mark: 'cell', encode: { x: 'date.day', y: 'country', color: 'visitors' } }, { mark: 'text', encode: { x: 'date.day', y: 'country', text: 'visitors' } })],
+    ['matrix text text companion', one(byPage, { mark: 'cell', encode: { y: 'page', color: 'pageviews' } }, { mark: 'text', encode: { y: 'page', text: 'page@kind' } }),
+      one(byPage, { mark: 'cell', encode: { y: 'page', color: 'pageviews' } }, { mark: 'text', encode: { y: 'page', text: 'page' } }), kinds()],
     ['radial arc angle number', one({ metrics: ['signups'], range: '28d' }, { mark: 'arc', encode: { angle: 100, radius: 0.7 }, sweep: 'half' }), one({ metrics: ['signups'], range: '28d' }, { mark: 'arc', encode: { angle: 300, radius: 0.7 }, sweep: 'half' })],
   ];
 

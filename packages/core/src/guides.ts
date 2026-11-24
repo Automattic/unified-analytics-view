@@ -52,7 +52,7 @@ export const GUIDES: Record<keyof Guides, Guide> = {
   // On a bar a size is its column's width, which the axis under it says.
   size:        { parts: ['size'], channel: 'size', key: true, plain: ['dots', 'one'], from: (v) => some(v, (l) => l.mark !== 'bar' && l.encode?.size != null) },
   // Labels on the points of a plot are a layer of marks, and go as a guide goes. They key nothing.
-  pointLabels: { parts: ['point-labels'], channel: 'text', from: (v) => v.layout === 'cartesian' && some(v, (l) => l.mark === 'text') },
+  pointLabels: { parts: ['point-labels'], channel: 'text', from: (v) => (v.layout === 'cartesian' || v.layout === 'matrix') && some(v, (l) => l.mark === 'text') },
   columns:     { parts: ['columns'], key: true, from: (v) => v.layout === 'rows' && columnsOf(v.catalog, v.layers).length > 1 },
   rim:         { parts: ['rim'], channel: 'angle', key: true, from: (v) => some(v, (l) => isDim(v.catalog, l.encode?.angle)) },
   unitKey:     { parts: ['unit-key'], key: true, from: (v) => some(v, (l) => l.mark === 'unit') },

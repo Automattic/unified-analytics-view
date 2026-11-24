@@ -10,7 +10,7 @@ describe('the rows layout', () => {
     const fig = '.uav[data-layout="rows"]:not([data-keep~="marks"])';
     expect(css.split('\n').slice(0, 8)).toEqual([
       '/* rows marks */', '@container uav-view (inline-size < 89.5px) {',
-      '  ' + fig + ' :is(.uav-rows, .uav-columns, .uav-legend, .uav-legend-top, .uav-unit-key) { display: none; }', '  ' + fig + ' .uav-number { display: block; }',
+      '  ' + fig + ' :is(.uav-rows, .uav-track, .uav-columns, .uav-legend, .uav-legend-top, .uav-unit-key) { display: none; }', '  ' + fig + ' .uav-number { display: block; }',
       '  ' + fig + ' { grid-template: "number" auto / minmax(0, 1fr); }', '  ' + fig + ' .uav-body { display: none; }', '  ' + fig + ' .uav-number { align-self: start; margin: 0; }',
       '}',
     ]);
@@ -18,7 +18,7 @@ describe('the rows layout', () => {
 
   it('keeps its headers in a short box: no rule takes them but the ones that take the rows, and the rows under them are clipped to whole rows', () => {
     expect(compileFitRules(FIT_RULES.filter((r) => r.layout === 'rows' && !r.hide.includes('rows')), { rows: rows.fit! })).not.toContain('.uav-columns');
-    expect(rows.css).toContain('.uav-rows { max-block-size: calc(round(down, 100% + var(--uav-row-gap), var(--uav-row-block) + var(--uav-row-gap)) - var(--uav-row-gap)); }');
+    expect(rows.css).toContain(':is(.uav-rows, .uav-track) { max-block-size: calc(round(down, 100% + var(--uav-row-gap), var(--uav-row-block) + var(--uav-row-gap)) - var(--uav-row-gap)); }');
   });
 
   it('sets no column\'s width: the headers and the rows are subgrids, and a ranked column goes by a need written on its cell', () => {
@@ -27,6 +27,14 @@ describe('the rows layout', () => {
     expect(rows.css).not.toMatch(/\bch\b/);
   });
 
+  it('lays what runs down the list over the rows\' tracks, as tall as the rows and as wide as their marks have, and turned over where the page reads from the right', () => {
+    // The paths are the plot's, drawn by the plot's painter (points.ts): the list holds them in one SVG and turns it on its side in paint().
+    expect(rows.css).toContain('.uav-track { grid-row: 2; grid-column: var(--uav-track); position: relative; align-self: start; pointer-events: none;');
+    expect(rows.css).toContain('block-size: calc(var(--uav-n) * (var(--uav-row-block) + var(--uav-row-gap)) - var(--uav-row-gap)); }');
+    expect(rows.css).toContain('.uav-track svg { position: absolute; inset-block-start: calc(var(--uav-row-gap) / -2); inset-inline-start: var(--uav-row-gap); inline-size: calc(100% - 2 * var(--uav-row-gap));');
+    expect(rows.css).toContain('.uav[data-layout="rows"]:not([data-parts~="track"]) .uav-track { display: none; }');
+    expect(rows.css).toContain('.uav-track:dir(rtl) svg { scale: -1 1; }');
+  });
   it('gives up the list for the number in a box shorter than one row, by the same rule', () => {
     const [wide, tall] = compileFitRules(FIT_RULES.filter((r) => r.layout === 'rows' && r.id === 'marks'), { rows: rows.fit! }).split('/* rows marks */\n').filter(Boolean).map((block) => block.trim().split('\n'));
     expect([wide![0], tall![0]]).toEqual(['@container uav-view (inline-size < 89.5px) {', '@container uav-view (block-size < ' + (CONTAINER_RULES.rows.rowHeight - 0.5) + 'px) {']);

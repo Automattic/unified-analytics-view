@@ -19,8 +19,8 @@ describe('what each mark reads', () => {
   });
 
   it('refuses what a channel holds where the mark takes no account of it, and says where that is read', () => {
-    expect(err({ query: byPage, layers: [{ mark: 'bar', encode: { x: 'page', y: 'pageviews', color: 'visitors' } }] }))
-      .toMatch(/^Layer 1 encodes "visitors", a metric, on color, and the "bar" mark in a "cartesian" layout takes a dimension there\. Encode one, or remove "color"\. On color, a metric is read by: cell in matrix, dot in matrix, "geo", .*"partition"\.$/);
+    expect(err({ query: byPage, layers: [{ mark: 'line', encode: { x: 'page', y: 'pageviews', color: 'visitors' } }] }))
+      .toMatch(/^Layer 1 encodes "visitors", a metric, on color, and the "line" mark in a "cartesian" layout takes a dimension there\. Encode one, or remove "color"\. On color, a metric is read by: bar in cartesian, dot in cartesian, cell in matrix, dot in matrix, "geo", .*"partition"\.$/);
     expect(err({ query: byDay, layers: [{ mark: 'line', encode: { x: 'date.day', y: 1000 } }, { mark: 'bar', encode: { x: 'date.day', y: 'visitors' } }] }))
       .toBe('Layer 1 encodes 1000, a number, on y, and the "line" mark in a "cartesian" layout takes a metric there. Encode one, or remove "y". On y, a number is read by: bar in cartesian, rule in cartesian.');
   });
@@ -115,6 +115,7 @@ describe('every cell of the table is read', () => {
     ['cartesian rule x metric', one(byPage, dots, { mark: 'rule', encode: { x: 'pageviews', y: 'visitors', x2: 0, y2: 0 } }), one(byPage, dots, { mark: 'rule', encode: { x: 0, y: 'visitors', x2: 0, y2: 0 } })],
     ['cartesian rule x2 metric', one(byPage, dots, { mark: 'rule', encode: { x: 0, y: 0, x2: 'pageviews', y2: 'visitors' } }), one(byPage, dots, { mark: 'rule', encode: { x: 0, y: 0, x2: 5000, y2: 'visitors' } })],
     ['cartesian dot x dimension', one(byDayCountry, { mark: 'dot', encode: { x: 'date.day', y: 'visitors', detail: 'country' } }), one(byDayCountry, { mark: 'dot', encode: { x: 'country', y: 'visitors', detail: 'date.day' } })],
+    ['cartesian dot color metric', one(byPage, { mark: 'dot', encode: { x: 'page', y: 'pageviews', color: 'visitors' } }), one(byPage, { mark: 'dot', encode: { x: 'page', y: 'pageviews' } })],
     ['cartesian dot color dimension', one(byDayChannel, { mark: 'dot', encode: { x: 'date.day', y: 'pageviews', color: 'channel' } }), one(byDayChannel, { mark: 'dot', encode: { x: 'date.day', y: 'pageviews', detail: 'channel' } })],
     ['cartesian text x dimension', one(byDayCountry, { mark: 'text', encode: { x: 'date.day', y: 'visitors', text: 'visitors', detail: 'country' } }), one(byDayCountry, { mark: 'text', encode: { x: 'country', y: 'visitors', text: 'visitors', detail: 'date.day' } })],
     ['cartesian text text metric', one(byPage, bars, { mark: 'text', encode: { x: 'page', y: 'pageviews', text: 'pageviews' } }), one(byPage, bars, { mark: 'text', encode: { x: 'page', y: 'pageviews', text: 'page' } })],

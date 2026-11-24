@@ -1,5 +1,5 @@
 import { AXES_HEIGHT, FROM_TOP } from '../layout.ts';
-import { POINT_INSET, SIZE_KEY_BLOCK, declutter, dotRadius, type CircleNode, type PathNode, type Scene, type SceneNode, type TextNode } from '@unified-analytics/core';
+import { POINT_INSET, RAMP_BLOCK, SIZE_KEY_BLOCK, declutter, dotRadius, type CircleNode, type PathNode, type Scene, type SceneNode, type TextNode } from '@unified-analytics/core';
 import { attr, ensure, keyed, prop, text } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { RULE } from '../chrome/rule.ts';
@@ -49,6 +49,8 @@ export const POINTS_CSS = `
 .uav-refs span[data-upright][data-anchor="end"] { translate: calc(${ANCHOR.end} - 4px) 0; }
 /* The key to sizes takes a row of its own under whatever else the body holds, and the view is that much taller for it. */
 .uav[data-layout="cartesian"][data-parts~="size"] { --uav-body-block: calc(${AXES_HEIGHT} + ${SIZE_KEY_BLOCK}px); }
+/* And by the ramp's line as well, where dots are painted by one metric and sized by another. */
+.uav[data-layout="cartesian"][data-parts~="size"][data-parts~="ramp"] { --uav-body-block: calc(${AXES_HEIGHT} + ${SIZE_KEY_BLOCK + RAMP_BLOCK}px); }
 .uav[data-layout="cartesian"] .uav-size { grid-column: 1 / -1; }`;
 
 /* A plot of points has no sparkline form. Under its `points` rule the body goes whole, and the number that the rule

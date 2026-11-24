@@ -537,3 +537,48 @@ describe('a rule at a value of x', () => {
     expect(err(at({ mark: 'rule', at: 'Social', encode: { x: 100 } }, { metrics: ['visitors'], by: ['channel'], range: '28d' }, list))).toMatch(/Layer 3 has "at", and the "rule" mark in a "rows" layout reads none/);
   });
 });
+
+// A metric on color in a plot (reference, section 7, "Colour by a metric in a plot"; Decided 47): each bar or dot is a
+// step of the ramp by its row's value, and the ramp is the key, as under a grid of cells.
+describe('a metric on color in a plot', () => {
+  const tinted = moreSamples.tinted!.spec, rows = runQuery(tinted.query).rows, q3 = { metrics: ['visitors', 'page_conversion', 'pageviews'], by: ['page'], range: '28d' };
+  const of = (layers: object[], query: object = tinted.query) => ({ ...tinted, query, layers }) as Spec;
+  const marks = (s: Spec) => ofUnbounded(s).scene.nodes.filter((n) => (n.part === 'plot' || n.part === 'points') && n.layer === 'data' && n.row != null) as unknown as { row: string; paint: string; legend?: boolean }[];
+  const step = (paint: string) => Number(paint.split('.')[1]);
+  it('paints each bar a step of the ramp by its row\'s value, and the ramp runs from the least to the most', () => {
+    const bars = marks(tinted), by = new Map(rows.map((r) => [String(r.page), r.page_conversion as number])), sorted = [...bars].sort((a, b) => by.get(a.row)! - by.get(b.row)!);
+    expect(bars.length).toBe(rows.length);
+    expect(bars.every((b) => /^seq\.\d+$/.test(b.paint) && b.legend)).toBe(true);
+    expect(sorted.map((b) => step(b.paint))).toEqual(sorted.map((b) => step(b.paint)).sort((a, b) => a - b));
+    expect(step(sorted[0]!.paint)).toBe(1);
+    expect(step(sorted.at(-1)!.paint)).toBeGreaterThan(step(sorted[0]!.paint));
+    const { scene } = ofUnbounded(tinted), ramp = scene.nodes.filter((n) => n.part === 'ramp');
+    expect(scene.parts).toEqual(['y-axis', 'plot', 'x-axis', 'ramp']);
+    expect(ramp.filter((n) => n.kind === 'rect').length).toBeGreaterThan(2);
+    expect(view(tinted), JSON.stringify(view.errors)).toBe(true);
+  });
+  it('paints dots as it does bars, in a plot of points and with a key to their sizes beside the ramp', () => {
+    const points = of([{ mark: 'dot', encode: { x: 'visitors', y: 'pageviews', color: 'page_conversion', size: 'visitors' } }], q3);
+    expect(marks(points).every((d) => /^seq\.\d+$/.test(d.paint))).toBe(true);
+    expect(ofUnbounded(points).scene.parts).toEqual(['y-axis', 'plot', 'points', 'x-axis', 'ramp', 'size']);
+  });
+  it('paints the marks of a layer split by detail too, each by its own row', () => {
+    const byDay = { metrics: ['visitors', 'pageviews'], by: ['date.day', 'country'], range: '7d' }, split = of([{ mark: 'dot', encode: { x: 'date.day', y: 'visitors', detail: 'country', color: 'pageviews' } }], byDay);
+    const dots = marks(split);
+    expect(dots.length).toBeGreaterThan(7);
+    expect(dots.every((d) => /^seq\.\d+$/.test(d.paint) && d.legend)).toBe(true);
+    expect(new Set(dots.map((d) => d.paint)).size).toBeGreaterThan(1);
+  });
+  it('keeps the ramp as long as the axes, and under their need draws the bars in one paint with no ramp', () => {
+    expect(shown(run(tinted, 300))).toMatchObject({ parts: ['y-axis', 'plot', 'x-axis', 'ramp'] });
+    const bare = shown(run(tinted, 250));
+    expect(bare.parts).toEqual(['number', 'plot']);
+    expect(bare.set).toMatchObject({ split: 'plain' });
+  });
+  it('names the fix where a plot\'s colours would say two things', () => {
+    const bar = { mark: 'bar', encode: { x: 'page', y: 'visitors', color: 'page_conversion' } };
+    expect(err(of([{ ...bar, paint: 'series.2' }]))).toMatch(/Layer 1 has "page_conversion" on color and the paint "series\.2", and a mark has one paint\. Remove "paint" to paint each mark by its value, or take "page_conversion" off color\./);
+    expect(err(of([bar, { mark: 'dot', encode: { x: 'page', y: 'visitors', color: 'pageviews' } }], q3))).toMatch(/These layers put 2 metrics on color \(page_conversion, pageviews\), and a plot has one colour scale\./);
+    expect(err(of([bar, { mark: 'line', encode: { x: 'page', y: 'pageviews' } }], q3))).toMatch(/"page_conversion" is on color, which paints each mark by its value, and these layers are also told apart by colour: they measure visitors and pageviews\. Keep one: take "page_conversion" off color, or draw one metric\./);
+  });
+});

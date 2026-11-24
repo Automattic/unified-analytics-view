@@ -2,6 +2,7 @@ import { BARE_PAD, PLOT_TOP, POINT_INSET, X_AXIS_BLOCK, type LineNode, type Path
 import { ensure, ensureSvg, keyed, prop, text } from '../dom.ts';
 import { paintAxes, thinAxis } from '../chrome/axes.ts';
 import { SPLIT_PLAIN, paintLegend } from '../chrome/legend.ts';
+import { paintRamp } from '../chrome/ramp.ts';
 import { SIZE_MOST, paintSize } from '../chrome/size.ts';
 import { RULE } from '../chrome/rule.ts';
 import { token } from '../tokens.ts';
@@ -41,6 +42,9 @@ ${IN_BOX} { .uav[data-layout="cartesian"] .uav-body { --uav-plot-block: minmax(0
   box-sizing: border-box; padding-inline-start: 6px; ${LABEL} ${cut('14ch')} }
 /* The legend of a split plot is a swatch and a name per series, in a row that wraps (chrome/legend.ts). */
 .uav[data-layout="cartesian"] .uav-legend { grid-area: legend; }
+/* The ramp of a plot whose bars or dots a metric paints (chrome/ramp.ts): a line of its own under the plot, as the key to sizes is. */
+.uav[data-layout="cartesian"] .uav-ramp { grid-column: 1 / -1; }
+.uav[data-layout="cartesian"] .uav-ramp:empty { display: none; }
 .uav-plot { grid-area: plot; position: relative; container: uav-plot / size; }
 /* Time and x run from left to right whichever way the page reads, as the paths in the SVG do whatever it is told. So
  * the whole frame is set that way: the plot, the axes on every side of it and the labels at the line ends stand
@@ -164,6 +168,7 @@ export const cartesian: LayoutPainter = {
     hits.setAttribute('data-hits', 'x');
     keyed(hits, hitNodes(scene), () => 'i', (el, n) => { prop(el, '--uav-x', n.x); prop(el, '--uav-w', n.w); prop(el, '--uav-c', n.c); });
     paintPoints(plot, scene);
+    paintRamp(body, scene);
     paintSize(body, scene);
     paintRanges(plot, scene);
     paintUnitKey(body, scene);

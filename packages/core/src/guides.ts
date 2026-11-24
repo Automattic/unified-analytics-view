@@ -47,8 +47,9 @@ export const GUIDES: Record<keyof Guides, Guide> = {
   // Not where the dimension is the rows' own, which a row's label says already.
   legend:      { parts: ['legend', 'legend-top', 'labels'], channel: 'color', key: true, plain: ['split', 'plain'],
                  from: (v) => some(v, (l) => isDim(v.catalog, l.encode?.color) && l.encode!.color !== l.encode!.y) || (v.layout === 'cartesian' && measuresOf(v.catalog, v.layers).length > 1) },
-  // The colour scale, where its values are a metric's.
-  ramp:        { parts: ['ramp'], channel: 'color', key: true, from: (v) => some(v, (l) => isMetric(v.catalog, l.encode?.color)) },
+  // The colour scale, where its values are a metric's. A plot's bars and dots are still read by their place without it,
+  // so a plot's rule may take it and draw them in one paint, as it does a legend's series.
+  ramp:        { parts: ['ramp'], channel: 'color', key: true, plain: ['split', 'plain'], from: (v) => some(v, (l) => isMetric(v.catalog, l.encode?.color)) },
   // On a bar a size is its column's width, which the axis under it says.
   size:        { parts: ['size'], channel: 'size', key: true, plain: ['dots', 'one'], from: (v) => some(v, (l) => l.mark !== 'bar' && l.encode?.size != null) },
   // Labels on the points of a plot are a layer of marks, and go as a guide goes. They key nothing.

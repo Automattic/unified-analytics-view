@@ -553,6 +553,12 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   // color, whose series the colours are spent on.
   // Without its legend the colours say nothing, so a plan that shows none has every series in its layer's own paint.
   const measures = painted ? [] : measuresOf(catalog, layers), several = measures.length > 1, paints = new Map<string, string>(), told = !!guides.legend;
+  // One metric paints the bars and dots of a plot, whichever layers name it on color: each is a step of the ramp, by
+  // its row's value, and the ramp is the key. The colours of a plot say one thing, so not beside a split or several metrics.
+  const tints = layers.map((l) => l.encode && l.encode.color).filter((f): f is string => isMetric(catalog, f)), tint = tints[0];
+  if (new Set(tints).size > 1) throw new Error('These layers put ' + new Set(tints).size + ' metrics on color (' + [...new Set(tints)].join(', ') + '), and a plot has one colour scale. Put one of them on color, and show the other on y or as a size.');
+  if (tint && (painted || several)) throw new Error('"' + tint + '" is on color, which paints each mark by its value, and these layers are also told apart by colour: ' + (painted ? 'they are split by "' + split + '"' : 'they measure ' + measures.join(' and ')) + '. Keep one: take "' + tint + '" off color, or ' + (painted ? 'put "' + split + '" on detail' : 'draw one metric') + '.');
+  const ramp = tint ? seqScale(rows.map((r) => r[tint]).filter((n): n is number => typeof n === 'number'), metricOf(catalog, tint)!, result) : null;
   const unpainted = several ? layers.findIndex((l) => !l.paint && l.series !== 'previous' && measures.indexOf(measureOf(catalog, l)!) >= SERIES) : -1;
   if (unpainted >= 0) throw new Error('These layers measure ' + measures.length + ' metrics (' + measures.join(', ') + '), and there are ' + SERIES + ' series colours for the ones that state no paint. Give layer ' + (unpainted + 1) + ' a "paint", or draw fewer metrics on one plot.');
   // Bars of one metric that fall below nothing as well as rise from it: each is a gain or a loss, and is painted as one.
@@ -586,8 +592,17 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
       ...((l.paint === 'direction' ? l.encode!.y2 != null : l.mark === 'bar' && !l.paint && l.encode!.y2 == null && diverges(l)) && { polarity: metricOf(catalog, [l.encode!.y, l.encode!.y2].find((f) => typeof f === 'string'))?.polarity }) };
     // A metric's entry is in the paint of the layer that marks it: its primary one, where it has a fill under it too.
     if (m != null && !prev && (!paints.has(m) || d.role === 'primary')) paints.set(m, d.paint);
+    // A layer with the plot's metric on color: each of its marks is painted off the ramp by its row's value, split by `detail` or not.
+    const tinted = !!ramp && l.encode!.color === tint;
+    if (tinted && l.paint) throw new Error('Layer ' + (i + 1) + ' has "' + tint + '" on color and the paint "' + l.paint + '", and a mark has one paint. Remove "paint" to paint each mark by its value, or take "' + tint + '" off color.');
+    const shade = (drawn: SceneNode[], of: Row[]) => {
+      if (!tinted) return drawn;
+      const by = new Map(of.map((r) => [k(r), r]));                           // a mark's row, among the rows it was drawn from: one series' where the layer is split
+      for (const n of drawn) if (n.layer === 'data' && n.row != null) { n.paint = ramp!.paint(by.get(n.row)?.[tint!] as number | null | undefined); n.legend = true; }
+      return drawn;
+    };
     if (!splitOf(catalog, l, xField)) {
-      const drawn = on(draw(l, d), m != null && !prev && !l.paint), last = m == null || prev ? undefined : drawn.filter((n): n is PathNode => n.kind === 'path').map((n) => n.points[n.points.length - 1]!).pop();
+      const drawn = shade(on(draw(l, d), m != null && !prev && !l.paint), d.rows), last = m == null || prev ? undefined : drawn.filter((n): n is PathNode => n.kind === 'path').map((n) => n.points[n.points.length - 1]!).pop();
       if (last) ends.set(m!, last.v);                                       // where the metric's line ends, for its label
       return nodes.push(...drawn);
     }
@@ -595,7 +610,8 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     const plain = !paintedOf(catalog, l, xField);
     series.forEach((s, j) => {
       // Bars of one x that are not stacked sit side by side: overlapping bars are never what was meant. Lines and areas overlay.
-      const drawn = on(draw(l, { ...d, series: s, paint: prev || plain || !told ? d.paint : 'series.' + (j + 1), ...(plain && { mass: true }), rows: d.rows.filter((r) => str(r, split!) === s), ...(l.mark === 'bar' && !l.stack && { slot: [j, series.length] }) }), !prev && !plain);
+      const own = d.rows.filter((r) => str(r, split!) === s);
+      const drawn = shade(on(draw(l, { ...d, series: s, paint: prev || plain || !told ? d.paint : 'series.' + (j + 1), ...(plain && { mass: true }), rows: own, ...(l.mark === 'bar' && !l.stack && { slot: [j, series.length] }) }), !prev && !plain), own);
       nodes.push(...drawn);
       // Where the series' line ends, for its label: half way up its band where areas are stacked.
       const last = drawn.filter((n): n is PathNode => n.kind === 'path').map((n) => n.points[n.points.length - 1]!).pop();
@@ -619,6 +635,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     });
   }
   if (size) nodes.push(...sizeKey(metricOf(catalog, size.field)!, size.top));
+  if (ramp) nodes.push(...ramp.ramp(rows.some((r) => r[tint!] == null)));
   layers.forEach((l, i) => { if (worths[i] != null) nodes.push(...unitKey(ids[i]!, worths[i]!, metricOf(catalog, l.encode!.y))); });
   return { nodes, rows: keys, ...(split && (painted ? { series } : { detail: series })), scale };
 }
@@ -1311,6 +1328,7 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
     if (body.nodes.some((n) => n.part === 'y-axis-2')) parts.push('y-axis-2');
     if (p.guides.x) parts.push('x-axis');
     if (p.guides.legend && body.nodes.some((n) => n.part === 'legend')) parts.push('legend');
+    keyTo('ramp', p.guides.ramp);
     keyTo('size', p.guides.size);
     unitKeyed();
   } else if (p.layout === 'matrix') {

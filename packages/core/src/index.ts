@@ -17,6 +17,6 @@ export { FIELDS, NEEDS, READS, type Held, type Reads } from './reads.ts';
 export { GUIDES, guidesOf, type Guide } from './guides.ts';
 export { UNIT_CELLS, UNIT_MOST, UNIT_SEATS, unitCount, unitSeats, unitShares, unitWorth } from './unit.ts';
 export { COLUMN_PAD, columnRoom } from './scene.ts';
-export { BAND_BAR, BARE_PAD, DELTA_FULL, GRID_LEAST, NOTE_LEAST, NOTICE_HEIGHT, NUMBER_SHORT, PLOT_TOP, POINT_INSET, SEATS_LEAST, SIZE_KEY_BLOCK, X_AXIS_BLOCK } from './sizes.ts';
+export { BAND_BAR, BARE_PAD, DELTA_FULL, GRID_LEAST, NOTE_LEAST, NOTICE_HEIGHT, NUMBER_SHORT, PLOT_TOP, POINT_INSET, RAMP_BLOCK, SEATS_LEAST, SIZE_KEY_BLOCK, X_AXIS_BLOCK } from './sizes.ts';
 export { ruleFor } from './fit.ts';
 export { inProgressNote } from './prose.ts';

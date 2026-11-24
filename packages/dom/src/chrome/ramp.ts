@@ -1,4 +1,4 @@
-import type { Scene } from '@unified-analytics/core';
+import { RAMP_BLOCK, type Scene } from '@unified-analytics/core';
 import { ensure, keyed, pageWay, text } from '../dom.ts';
 import { swatch } from './swatch.ts';
 
@@ -6,7 +6,7 @@ import { swatch } from './swatch.ts';
  * it is the same line: the least value, a swatch for each step, the most, and a swatch for no value where there is one.
  * A layout says only where it stands (matrix.ts gives it a grid area) and what it does in a box. */
 export const RAMP_CSS = `
-.uav-ramp { display: flex; align-items: center; gap: 1px; block-size: 24px; overflow: hidden; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.uav-ramp { display: flex; align-items: center; gap: 1px; block-size: ${RAMP_BLOCK}px; overflow: hidden; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .uav-ramp span { color: var(--uav-paint); margin-inline: 5px; }
 .uav-ramp span:first-child { margin-inline-start: 0; }
 .uav-ramp [data-key="ramp:none"] { margin-inline-start: 5px; }

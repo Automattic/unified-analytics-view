@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, expand, pathD, type PathNode, type RectNode } from '@unified-analytics/core';
+import { CONTAINER_RULES, RAMP_BLOCK, SIZE_KEY_BLOCK, expand, pathD, type PathNode, type RectNode } from '@unified-analytics/core';
 import { catalog, moreSamples, runQuery, type Scenario } from '@unified-analytics/fixtures';
 import { compileFitRules } from '../packages/dom/src/compile.ts';
 import { LEGEND_CSS, SPLIT_PLAIN } from '../packages/dom/src/chrome/legend.ts';
@@ -75,12 +75,17 @@ describe('the cartesian layout\'s guides', () => {
     expect(compileFitRules(rules('legend-area'), { cartesian: cartesian.fit! })).toBe(compileFitRules(rules('legend'), { cartesian: cartesian.fit! }).replaceAll('"line"', '"area"').replaceAll('legend */', 'legend-area */'));
     expect(CONTAINER_RULES.fit.filter((r) => r.layout === 'cartesian' && r.hide.includes('legend') && !r.hide.includes('plot')).map((r) => [r.id, r.mark ?? 'any'])).toEqual([['legend', 'line'], ['legend-area', 'area'], ['labels', 'any']]);
   });
+  // A key under the plot takes a line of its own, and a view with the key to sizes states its height: so it states the ramp's line too.
+  it('is taller by the ramp\'s line where dots are painted by one metric and sized by another', () => {
+    expect(cartesian.css).toContain('.uav[data-layout="cartesian"] .uav-ramp { grid-column: 1 / -1; }');
+    expect(cartesian.css).toMatch(new RegExp('\\[data-parts~="size"\\]\\[data-parts~="ramp"\\] \\{ --uav-body-block: calc\\(.* \\+ ' + (SIZE_KEY_BLOCK + RAMP_BLOCK) + 'px\\); \\}'));
+  });
   it('gives both up with the axes, and with them the colours they were the key to', () => {
     const css = compileFitRules(CONTAINER_RULES.fit, { cartesian: cartesian.fit! });
-    expect(css.indexOf(fig + ' :is(.uav-labels, .uav-legend) { display: none; }')).toBeGreaterThan(css.lastIndexOf(' .uav-labels { display: grid; }'));
+    expect(css.indexOf(fig + ' :is(.uav-labels, .uav-legend, .uav-ramp) { display: none; }')).toBeGreaterThan(css.lastIndexOf(' .uav-labels { display: grid; }'));
     expect(css.match(/\[data-layout="cartesian"\]\[data-marks/)).toBeNull();
     expect(compileFitRules(rules('labels'), { cartesian: cartesian.fit! }).split('\n').slice(0, 7)).toEqual([
-      '/* cartesian labels */', '@container uav-view (inline-size < 279.5px) {', '  ' + fig + ' :is(.uav-labels, .uav-legend) { display: none; }', '  ' + fig + ' { --uav-split: plain; }',
+      '/* cartesian labels */', '@container uav-view (inline-size < 279.5px) {', '  ' + fig + ' :is(.uav-labels, .uav-legend, .uav-ramp) { display: none; }', '  ' + fig + ' { --uav-split: plain; }',
       ...Object.entries(SPLIT_PLAIN).map(([sel, decl]) => '  ' + fig + ' ' + sel + ' { ' + decl + ' }'), '}',
     ]);
     // What a legend keyed is the first series' colour, and a tint of it where the mark was a tint.

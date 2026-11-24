@@ -8,6 +8,8 @@ import type { Scene, SceneNode, TextNode } from './types.ts';
 /** The margins of a plot: above one with axes, the gutter under it for the x axis, and above and below a bare one.
  * The band's bar, and the line the key to sizes takes with the space above it. */
 export const PLOT_TOP = 10, X_AXIS_BLOCK = 22, BARE_PAD = 3, BAND_BAR = 24, SIZE_KEY_BLOCK = 28;
+/** The line the colour ramp takes under what it is the key to. */
+export const RAMP_BLOCK = 24;
 /** The least a half circle of seats is built to: a seat of 7. Under that the legend gives way before the seats do. */
 export const SEATS_LEAST = 160;
 /** The least a unit's grid of a hundred is built to: a cell of 9 px, a hairline apart. */

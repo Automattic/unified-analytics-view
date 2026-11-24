@@ -50,7 +50,7 @@ describe('compileFitRules', () => {
     const fig = '.uav[data-layout="cartesian"]:not([data-keep~="marks"])';
     expect(css.split('\n').slice(0, 6)).toEqual([
       '/* cartesian marks */', '@container uav-view (inline-size < 151.5px) {',
-      '  ' + fig + ' :is(.uav-plot, .uav-points, .uav-point-labels, .uav-x-axis, .uav-y-axis, .uav-y-axis-2, .uav-labels, .uav-legend, .uav-size, .uav-unit-key) { display: none; }', '  ' + fig + ' .uav-number { display: block; }',
+      '  ' + fig + ' :is(.uav-plot, .uav-points, .uav-point-labels, .uav-x-axis, .uav-y-axis, .uav-y-axis-2, .uav-labels, .uav-legend, .uav-ramp, .uav-size, .uav-unit-key) { display: none; }', '  ' + fig + ' .uav-number { display: block; }',
       '  ' + fig + ' { grid-template: none; }', '  ' + fig + ' .uav-body { display: none; }',
     ]);
   });

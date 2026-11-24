@@ -24,9 +24,9 @@ export const READS: Record<string, Record<string, Reads>> = {
   cartesian: {
     line: { x: [D, M],    y: [M],    color: [D], detail: [D] },
     area: { x: [D],       y: [M],    y2: [M, N], color: [D], detail: [D] },
-    bar:  { x: [D],       y: [M, N], y2: [M, N], color: [D], detail: [D], size: [M] },
+    bar:  { x: [D],       y: [M, N], y2: [M, N], color: [D, M], detail: [D], size: [M] },
     rule: { x: [D, M, N], y: [M, N], x2: [M, N], y2: [M, N], detail: [D] },
-    dot:  { x: [D, M],    y: [M],    color: [D], detail: [D], size: [M] },
+    dot:  { x: [D, M],    y: [M],    color: [D, M], detail: [D], size: [M] },
     tick: { x: [D, M],    y: [M],    detail: [D] },
     text: { x: [D, M],    y: [M],    text: [D, M, C], detail: [D] },
     unit: { x: [D],       y: [M] },

@@ -128,7 +128,8 @@ describe('what the rules promise, of every sample at every room', () => {
       const left = [
         gone('legend') && !parts.includes('labels') && !parts.includes('legend-top') && set.split !== 'plain' && 'legend',
         gone('size') && set.dots !== 'one' && 'size', gone('y-axis-2') && !hidden.includes('axis:2') && 'y-axis-2',
-        ...['ramp', 'unit-key', 'columns', 'rim'].map((key) => gone(key) && key),
+        gone('ramp') && set.split !== 'plain' && 'ramp',                   // a plot's bars and dots are then in one paint, as a legend's series are
+        ...['unit-key', 'columns', 'rim'].map((key) => gone(key) && key),
       ].filter(Boolean);
       if (left.length) wrong.push(at + ': ' + left.join(' '));
     });

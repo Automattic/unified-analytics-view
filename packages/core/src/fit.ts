@@ -45,7 +45,7 @@ export interface Room { inline: number; block?: number | null }
  * A rule names every part it takes, one that stands inside another among them: a reader with no browser has no
  * nesting to go by, and test/fit.test.ts holds a view to be its number alone wherever a rule takes its marks. */
 /** Every part of a plot's body, and of a list's: what a rule takes where the view is its number alone. */
-const PLOT = ['plot', 'points', 'point-labels', 'x-axis', 'y-axis', 'y-axis-2', 'labels', 'legend', 'size', 'unit-key'];
+const PLOT = ['plot', 'points', 'point-labels', 'x-axis', 'y-axis', 'y-axis-2', 'labels', 'legend', 'ramp', 'size', 'unit-key'];
 const ROWS = ['rows', 'track', 'columns', 'legend', 'legend-top', 'unit-key'];
 export const FIT_RULES: FitRule[] = [
   // A plot with axes. The second y axis is the key to what is measured in a second unit, which is read against nothing
@@ -61,7 +61,7 @@ export const FIT_RULES: FitRule[] = [
   { id: 'legend-area', layout: 'cartesian', mark: 'area', container: 'view', needs: { inline: 320, block: 180 },
     hide: ['legend'], show: ['labels'], keep: 'guides' },
   { id: 'labels',      layout: 'cartesian', container: 'view', needs: { inline: 280, block: 120 },
-    hide: ['labels', 'legend'], set: { split: 'plain' }, keep: 'guides' },
+    hide: ['labels', 'legend', 'ramp'], set: { split: 'plain' }, keep: 'guides' },   // and a ramp, which has no shorter form a bare plot has room for
   { id: 'point-labels', layout: 'cartesian', container: 'view', needs: { inline: 340, block: 180 },   // labels on points go first
     hide: ['point-labels'], keep: 'guides' },
   { id: 'size',      layout: 'cartesian', container: 'view', needs: { inline: 320, block: 160 },      // then the key to the sizes of dots, down to its largest step: it stays as long as sized dots do

@@ -40,8 +40,15 @@ describe('the fixture engine filters by the pairs it makes', () => {
     expect(none).toMatchObject({ rows: [], totals: { visitors: 0 }, meta: { empty: true, where: { channel: 'Nope' } } });
     expect(text({ ...trend, query: { ...byDay, where: { channel: 'Nope' } } })).toBe('Visitors: nothing recorded in the last 28 days. Filtered to channel Nope.');
   });
+  it('a dimension past the two it pairs scales the rest by the share its values hold', () => {
+    const search = runQuery({ ...byDay, where: { channel: 'Search' } }), both = runQuery({ ...byDay, where: { channel: 'Search', device: 'Mobile' } });
+    const devices = runQuery({ metrics: ['visitors'], by: ['device'], range: '28d' }).rows, share = (devices.find((r) => r.device === 'Mobile')!.visitors as number) / devices.reduce((s, r) => s + (r.visitors as number), 0);
+    expect(both.rows.length).toBe(28);
+    both.rows.forEach((r, i) => expect(r.visitors).toBe(Math.round((search.rows[i]!.visitors as number) * share)));
+    expect(both.totals.visitors).toBe(both.rows.reduce((s, r) => s + (r.visitors as number), 0));
+    expect(both.meta.where).toEqual({ channel: 'Search', device: 'Mobile' });
+  });
   it('says what it cannot filter, and the fix', () => {
-    expect(errOf(() => runQuery({ ...byDay, where: { channel: 'Search', device: 'Mobile' } }))).toMatch(/two dimensions at most, by and where together, and this query has 3: date\.day, channel, device\. Remove "device" from where\./);
     expect(errOf(() => runQuery({ metrics: ['page_conversion'], where: { page: '/' } }))).toMatch(/filters what adds up over rows, and "page_conversion" does not.*Query a count with "where", or remove "where"\./);
     expect(errOf(() => runQuery({ metrics: ['conversions'], by: ['event'], where: { channel: 'Search' } }))).toMatch(/cannot filter this query by "channel".*Remove "channel" from where\./);
   });

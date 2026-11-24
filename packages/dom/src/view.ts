@@ -1,5 +1,5 @@
 import { CONTAINER_RULES, DELTA_FULL, FACET_GAP, FACET_LEAST, NOTE_LEAST, NUMBER_SHORT, buildScene, customMarks, expand, explain, facetBecause, facets, fallbackRule, fills, gaveWay, hasOf, resolve } from '@unified-analytics/core';
-import type { Because, Catalog, ContainerRules, Explanation, Layout, Result, SceneNode, Spec } from '@unified-analytics/core';
+import type { Because, Catalog, ContainerRules, Explanation, Layout, Result, SceneNode, Spec, Where } from '@unified-analytics/core';
 import { compileFitRules } from './compile.ts';
 import { LEGEND_LINE } from './chrome/legend.ts';
 import { CHROME_CSS, swatch } from './chrome/index.ts';
@@ -296,11 +296,12 @@ export class UaView extends Base {
    * painted one without the other. An input left out keeps what it had. */
   get inputs(): Inputs { return { ...this.#given } as Inputs; }
   set inputs(v: Inputs) { for (const name of INPUTS) if (Object.hasOwn(v ?? {}, name)) this.#set(name, v[name]); }
-  /** The key of the datum the host keeps selected, or null. The view proposes one with `ua-select` when the user
-   * activates a datum, and marks every atom of the one set here. It is no input: setting it paints nothing again. */
-  get selected(): string | null { return this.#selected; }
-  set selected(v: string | null) { this.#selected = v ?? null; this.#keys.select(this.#selected); for (const view of this.#views()) view.selected = this.#selected; }
-  #selected: string | null = null;
+  /** What the host keeps selected, or null: a filter, as a query's `where` is one. The view proposes one with
+   * `ua-select` when the user activates a datum (its `detail.where`), and marks every atom whose rows all hold the one
+   * set here. It is no input: setting it paints nothing again, and it filters nothing, which is the query's to do. */
+  get selected(): Where | null { return this.#selected; }
+  set selected(v: Where | null) { this.#selected = v ?? null; this.#keys.select(this.#selected); for (const view of this.#views()) view.selected = this.#selected; }
+  #selected: Where | null = null;
 
   /** Why the view looks as it does at the size it has now, in the words of its spec: core's explain() for this room,
    * and after it what the measured pass decided here, which no rule says. An invalid spec is one entry, its error.

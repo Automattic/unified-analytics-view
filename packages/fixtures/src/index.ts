@@ -1,4 +1,4 @@
-import { inProgressNote, type Catalog, type Query, type Result, type Row, type Spec, type Where } from '@unified-analytics/core';
+import { holds, inProgressNote, type Board, type Catalog, type Query, type Result, type Row, type Spec } from '@unified-analytics/core';
 import { registerLink } from '@unified-analytics/flow';
 import { registerGeo, type Shapes } from '@unified-analytics/geo';
 import { registerPartition } from '@unified-analytics/partition';
@@ -312,32 +312,34 @@ const binRow = (d: string, i: number): Row => { const w = d === 'load_time' ? LO
 /** The engine's total of each field over some rows: none where no row has a value of it, which is not a total of nothing. */
 const sumBy = (rows: Row[], fields: string[]): Row => Object.fromEntries(fields.map((f) => [f, rows.some((r) => r[f] != null) ? rows.reduce((s, r) => s + ((r[f] as number) || 0), 0) : null]));
 
-/** Whether a row holds what a filter says of each dimension it names. A run is by the order of the values as they are written: a day's, a bin's start. */
-const holds = (r: Row, where: Where) => Object.entries(where).every(([d, h]) => {
-  const v = r[d] as string | number;
-  return Array.isArray(h) || typeof h !== 'object' ? [h].flat().some((x) => String(x) === String(v)) : (h.from == null || v >= h.from) && (h.to == null || v <= h.to);
-});
-
 /* A query with `where`. The fixture counts no events, so it has none to filter, and it answers by the pairs it already
  * makes: a dimension the query is not by is asked for beside the ones it is, the rows that hold are kept, and what is
  * left is added up by what the query is by. So a filter agrees with the query by the same dimension, row for row.
- * ponytail: two dimensions in all, by and where together, since the fixture makes pairs and no triples; and counts
- * only, since a rate over some rows is no sum of theirs. An engine with events filters them, and has neither limit. */
+ * ponytail: the fixture makes pairs and no triples, so a dimension filtered past two in all, by and where together, is
+ * taken as independent of them: the share its values hold of each metric scales what the pairs give. And counts only,
+ * since a rate over some rows is no sum of theirs. An engine with events filters them, and has neither limit. */
 function filtered(q: Query, scenario: Scenario): Result {
-  const { where = {}, limit, ...rest } = q, by = rest.by || [], beyond = Object.keys(where).filter((d) => by.indexOf(d) < 0), dims = by.concat(beyond);
-  if (dims.length > 2) throw new Error('The fixture answers by two dimensions at most, by and where together, and this query has ' + dims.length + ': ' + dims.join(', ') + '. Remove "' + beyond[beyond.length - 1] + '" from where' + (by.length > 1 ? ', or a dimension from by' : '') + '.');
+  const { where = {}, limit, ...rest } = q, by = rest.by || [], beyond = Object.keys(where).filter((d) => by.indexOf(d) < 0);
+  const exact = by.concat(beyond).slice(0, 2), scaled = beyond.filter((d) => exact.indexOf(d) < 0);
   const flat = (rest.metrics || []).find((m) => catalog.metrics[m] && !catalog.metrics[m]!.rangeTotal);
   if (flat) throw new Error('The fixture filters what adds up over rows, and "' + flat + '" does not: a rate, a time or a count of now over some rows is no sum of theirs. Query a count with "where", or remove "where".');
   // A filter that holds for nothing is an answer of nothing, as an empty range is.
   const none = (): Result => { const r = runQuery({ ...rest, limit }, 'empty'); return { ...r, meta: { ...r.meta, where } }; };
   if (scenario === 'empty') return none();
-  let all: Result;
-  try { all = runQuery({ ...rest, by: dims }, scenario); } catch (e) {
-    if (!beyond.length) throw e;
-    throw new Error('The fixture cannot filter this query by "' + beyond.join('" and "') + '": it would answer by ' + dims.join(' and ') + ' together, and has no such answer (' + (e as Error).message + ') Remove "' + beyond[beyond.length - 1] + '" from where.');
+  const ask = (dims: string[]): Result => {
+    try { return runQuery({ ...rest, by: dims }, scenario); } catch (e) {
+      const added = dims.filter((d) => by.indexOf(d) < 0);
+      if (!added.length) throw e;
+      throw new Error('The fixture cannot filter this query by "' + added.join('" and "') + '": it would answer by ' + dims.join(' and ') + ', and has no such answer (' + (e as Error).message + ') Remove "' + added[added.length - 1] + '" from where.');
+    }
+  };
+  const all = ask(exact), fields = Object.keys(all.totals), m0 = (rest.metrics || [])[0]!, only = (dims: string[]) => Object.fromEntries(Object.entries(where).filter(([d]) => dims.indexOf(d) >= 0));
+  let kept = all.rows.filter((r) => holds(r, only(exact)));
+  for (const d of scaled) {
+    const alone = ask([d]).rows, part = sumBy(alone.filter((r) => holds(r, only([d]))), fields), whole = sumBy(alone, fields);
+    kept = kept.map((r) => ({ ...r, ...Object.fromEntries(fields.map((f) => [f, r[f] == null || !whole[f] ? r[f] : Math.round((r[f] as number) * ((part[f] as number) || 0) / (whole[f] as number))])) }));
   }
-  const fields = Object.keys(all.totals), kept = all.rows.filter((r) => holds(r, where)), m0 = (rest.metrics || [])[0]!;
-  if (!kept.length) return none();
+  if (!kept.length || kept.every((r) => !r[m0])) return none();
   const totals = sumBy(kept, fields) as Result['totals'], meta = { ...all.meta, where };
   // One row for each value of a dimension that a kept row has, in the engine's order, holding what the kept rows of it add up to.
   const along = (d: string): Row[] => (all.totalsBy ? all.totalsBy[d]!.filter((o) => kept.some((r) => r[d] === o[d])).map((o) => ({ ...o, ...sumBy(kept.filter((r) => r[d] === o[d]), fields) })) : kept);
@@ -537,6 +539,18 @@ export const samples: Record<string, { label: string; spec: Spec }> = {
   live:   { label: 'Present now',        spec: { spec: 'view/0', title: 'Present now', use: 'bar-list',  query: { metrics: ['present'], by: ['page'] } } },
   layers: { label: 'Written as layers: bars and a target', spec: { spec: 'view/0', title: 'Daily page views', query: { metrics: ['pageviews'], by: ['date.day'], range: '28d' },
             layers: [{ mark: 'bar', encode: { x: 'date.day', y: 'pageviews' } }, { mark: 'rule', encode: { y: 1000 }, label: 'Target 1,000', role: 'reference' }] } },
+};
+
+/* Boards: views and the part of the query they share (reference, Decided 49). Apart from every list of samples, since
+ * a board is no view: core's boardViews() gives its views, and a surface runs and draws each. */
+export const boardSamples: Record<string, { label: string; board: Board }> = {
+  traffic: { label: 'Traffic: a number, a trend and three lists that filter one another', board: { spec: 'board/0', title: 'Traffic', query: { range: '28d', compare: 'previous' }, views: [
+    { spec: 'view/0', title: 'Visitors', query: { metrics: ['visitors'] } },
+    { spec: 'view/0', title: 'Visitors by day', use: 'line', query: { metrics: ['visitors'], by: ['date.day'] } },
+    { spec: 'view/0', title: 'Channels', use: 'bar-list', query: { metrics: ['visitors'], by: ['channel'] } },
+    { spec: 'view/0', title: 'Devices', use: 'bar-list', query: { metrics: ['visitors'], by: ['device'] } },
+    { spec: 'view/0', title: 'Top pages', use: 'bar-list', query: { metrics: ['visitors'], by: ['page'], limit: 5 } },
+  ] } },
 };
 
 /* Samples the prototype does not know (docs/chart-coverage-plan.md). The parity sweep is held to `samples` and never

@@ -1,4 +1,4 @@
-import { SIZES, SIZE_KEY_BLOCK, type CircleNode, type RectNode, type Row } from '@unified-analytics/core';
+import { SIZES, SIZE_KEY_BLOCK, whereOf, type CircleNode, type RectNode, type Row } from '@unified-analytics/core';
 import { attr, ensure, keyed, nodePaint, prop } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { chooseItem, dimName, readout, roveItems } from '../keys.ts';
@@ -69,7 +69,7 @@ export function stepCell(key: string, at: [x: number, y: number] | null, nx: num
 }
 
 /* What the listeners read. They are bound once to the grid, which outlives every paint, and this is set by each. */
-interface Grid { nx: number; ny: number; rows: Map<string, Row> }
+interface Grid { nx: number; ny: number; rows: Map<string, Row>; dims: (string | undefined)[] }
 const grids = new WeakMap<HTMLElement, Grid>();
 const id = (x: number, y: number) => 'cell-' + x + '-' + y;
 
@@ -79,7 +79,7 @@ function bind(cells: HTMLElement): void {
     const g = grids.get(cells)!, to = stepCell(e.key, on ? (on.id.split('-').slice(1).map(Number) as [number, number]) : null, g.nx, g.ny);
     if (to) e.preventDefault();
     return to && cells.querySelector<HTMLElement>('#' + id(...to));
-  }, (el) => { const row = grids.get(cells)!.rows.get(el.id); return row && { row }; });
+  }, (el) => { const g = grids.get(cells)!, row = g.rows.get(el.id); return row && { row, where: whereOf(row, g.dims) }; });
 }
 
 export const matrix: LayoutPainter = {
@@ -112,7 +112,7 @@ export const matrix: LayoutPainter = {
 
     if (!grids.has(cells)) bind(cells);
     const at = new Map(data.result.rows.map((r) => [(xf ? r[xf] : '') + '\n' + (yf ? r[yf] : ''), r])), rows = new Map<string, Row>();
-    grids.set(cells, { nx: xs.length, ny: ys.length, rows });
+    grids.set(cells, { nx: xs.length, ny: ys.length, rows, dims: [xf, yf] });
     prop(cells, '--uav-nx', xs.length); prop(cells, '--uav-ny', ys.length);
     attr(cells, 'role', 'grid'); attr(cells, 'tabindex', xs.length && ys.length ? 0 : null);
     attr(cells, 'aria-label', [yf, xf].filter(Boolean).map((f) => dims[f!]!.label).join(' by '));

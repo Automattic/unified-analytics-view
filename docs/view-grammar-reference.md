@@ -52,7 +52,7 @@ spec ──► expand ──► plan ──► scene ──► fit ──► pai
 
 Everything up to and including the scene is pure and has no DOM. d3 is used only for scales (`d3-scale`), path geometry (`d3-shape`) and array helpers (`d3-array`). No chart library.
 
-**Deliberately deferred:** the query coordinator, DuckDB-WASM, WebGPU, cross-filtering, boards, and the semantic compiler. See section 20.
+**Deliberately deferred:** the query coordinator, DuckDB-WASM, WebGPU, brushing, a board element, and the semantic compiler. See section 20.
 
 ---
 
@@ -191,7 +191,7 @@ An answer to a query with `where` has it in its `meta` too, as the query wrote i
 
 The fixture engine has three data states: `typical`, `no-prior` (comparison requested, none available) and `empty`. Keep all three as test fixtures.
 
-It counts no events, so it has none to filter. It answers `where` from the pairs it already makes: a dimension the query is not by is asked for beside the ones it is, the rows that hold are kept, and what is left is added up. So a filter agrees with the query by the same dimension row for row, which `test/where.test.ts` holds. Its limits are its own and each is refused by name: two dimensions in all, `by` and `where` together, and metrics that add up over rows.
+It counts no events, so it has none to filter. It answers `where` from the pairs it already makes: a dimension the query is not by is asked for beside the ones it is, the rows that hold are kept, and what is left is added up. So a filter agrees with the query by the same dimension row for row, which `test/where.test.ts` holds. Its limits are its own: it makes pairs and no triples, so a dimension filtered past two in all, `by` and `where` together, is taken as independent of them, and the share its values hold of each metric scales what the pairs give; and it filters only metrics that add up over rows, and refuses another by name. Its pairs do not add up to what a query by one dimension returns, which it has always said of itself, so two views of one board may differ by a few percent under one filter.
 
 ---
 
@@ -276,6 +276,34 @@ Core gives the views and draws none: `facets(spec, result, catalog)` returns eac
 
 Not built: the y axis on the first view of each row only (the coverage plan's step 7, item 3), because CSS cannot say which view starts a row of a wrapping grid, and a view that gave up its axis would have a wider plot than its neighbour; every view keeps its own. A view's sentence does not name its value. A facet down the rows, for a ridgeline, is still the Uncommon plan's step 11. `partition` shares only its colour ramp and `link` nothing: their areas and widths are shares of their own whole.
 
+**A board** (built November 24; Decided 45, 48 and 49). A board is views and the part of the query they share. It is a document of its own, `board/0`, and its schema is `packages/core/schema/board.schema.json`:
+
+```json
+{ "spec": "board/0", "title": "Traffic",
+  "query": { "range": "28d", "compare": "previous" },
+  "views": [
+    { "spec": "view/0", "title": "Visitors", "query": { "metrics": ["visitors"] } },
+    { "spec": "view/0", "title": "Visitors by day", "use": "line", "query": { "metrics": ["visitors"], "by": ["date.day"] } },
+    { "spec": "view/0", "title": "Channels", "use": "bar-list", "query": { "metrics": ["visitors"], "by": ["channel"] } }
+  ] }
+```
+
+| Field | Notes |
+|---|---|
+| `spec` | `"board/0"` |
+| `title` | Shown by the surface |
+| `query` | What the views share, each a part of a query: `range`, `compare` and `where`. Nothing else: metrics, `by` and `limit` are each view's own, and anything else here is refused by name |
+| `views` | View specs, each whole and valid alone. Each needs a `title`, and no two the same: it is the view's key |
+
+- **Params are the board's `query`.** There is no named variable, no reference and no expression. `range` and `compare` stand where a view states none, and a view that states its own keeps it.
+- **One rule combines the views, and no field changes it.** A view is filtered by every dimension of the board's `where` but the ones it draws, which are those in its own `by`. On one it draws it keeps every value and is told which to mark (`selected`). So a list shows what was picked among the rest, and every other view is of the pick. A view's own `where` is its own, and wins.
+- **A board has no state apart from itself.** Its `query` is its params at their values now. A surface that changes one, by a control or by a selection, holds a new board; the one it began with is how it resets.
+- **Core gives the views and fetches nothing.** `boardViews(board, catalog)` returns each view's `key` (its title), the `spec` to run and draw, and what it is to mark, `selected`. A surface runs each query with the function it was handed and draws each view as it draws any. `boardSelect(board, key, where)` is the board after the view of that key proposes a selection: the filter joins the board's `where`, one value of a dimension at a time, and `null` lets go of every dimension that view draws.
+- **No layout.** Where each view stands is the surface's. `<ua-view>` does not draw a board: a board needs a query function and something to keep it, and the element has neither. The bench's Board page is the reference surface, in about twenty lines.
+
+Not built: a set or an interval picked by pointer or by keyboard (Open 9); a view that turns the board's `compare` off, which `compare` has no value for; and a board inside a board.
+
+
 **Several metrics on one plot** (built November 20). Each is a layer of its own, and the layers are told apart as the series of a split are. A metric has a series colour, in the order the layers first name them, and every layer of it that states no `paint` is drawn in it: the fill under a line with its line. A `paint` that is stated stands. Each metric has an entry in the legend, named by its catalog label and in the paint its layer is drawn in, and where the legend's rule gives it up, a label where its line ends. A companion is its metric's, so a box's quartiles are one quantity and have no legend; one with a catalog entry of its own (`pageviews@rank`) is a quantity of its own. A `rule`, a `tick` and a `text` are set in ink and count for none. More than six metrics that state no paint is an error. Beside a split by a dimension on `color` the colours are the series', and the legend is theirs. Metrics of one unit share the y axis, however far apart their values are. Metrics of two units get an axis each; three units is an error.
 
 The same spec, written as layers:
@@ -301,7 +329,7 @@ Rules:
 - There is no `intent` field. An earlier version had one; it was a chart type under a new name and was removed.
 - There is no `headline` field and no `guides` field. Both were presentation switches and were removed on October 7; the schema rejects them. The container's rules decide what they used to.
 
-The JSON Schema for a spec is `packages/core/schema/view.schema.json`, and the catalog's is beside it. It is the contract agents write against. It cannot check a field against a result, a preset's name, or a custom mark's: `resolve()` does, and its error names the fix.
+The JSON Schema for a spec is `packages/core/schema/view.schema.json`, and the catalog's is beside it. A board's is `board.schema.json`, which holds each of its views to the view's. It is the contract agents write against. It cannot check a field against a result, a preset's name, or a custom mark's: `resolve()` does, and its error names the fix.
 
 ---
 
@@ -850,15 +878,26 @@ view.inputs = { spec, result };          // or { spec, result, catalog, rules };
 
 Set a task apart, the new spec meets the old result. The view checks the first row and the totals for the query's `by` fields and metrics, refuses a result that lacks one, and names it. A result with no rows is an answer, and is held to its totals alone.
 
-### Selection (Proposed)
+### Selection (Built November 24)
 
-A datum the user picks stays picked: it is **Selected**, one of the states every atom has (`docs/component-states-plan.md`). The view does not keep it, because the host is what outlives a re-render. When the user activates a datum, with a click, Enter or Space, the view sends `ua-select` with the datum's key, or with `null` where that datum was already the one selected. The host keeps it and sets it back:
+A datum the user picks stays picked: it is **Selected**, one of the states every atom has (`docs/component-states-plan.md`). A selection is a filter, as a query's `where` is one (Decided 49): what is picked is said by its values, never by pixels or row ids. The view does not keep it, because the host is what outlives a re-render. When the user activates a datum, with a click, Enter or Space, the view sends `ua-select`. Its `detail.where` is the filter that datum is, its value of each dimension it is of, and `detail.key` is its key in the view. Both are `null` where the datum was already selected, which lets it go. The host keeps the filter and sets it back:
 
 ```js
-view.addEventListener('ua-select', (e) => { view.selected = e.detail.key; });
+view.addEventListener('ua-select', (e) => { view.selected = e.detail.where; });
 ```
 
-The view marks every atom of the selected datum `data-selected`: its mark, its rug tick, its legend entry. A key is a row's (stable and unique), or the key of a thing that is no row, a treemap's box or a grid's cell. A selection outlives a new result where its datum does. One datum at a time. Escape lets go of hover and focus, never of the selection. A spec says nothing of it: like a size, it is the container's. Selected has no look of its own yet; that is design's to set.
+In a board the host gives the proposal to core, and sets on each view what `boardViews` says it is to mark:
+
+```js
+surface.addEventListener('ua-select', (e) => { board = boardSelect(board, e.target.dataset.key, e.detail.where); draw(); });
+```
+
+- **What a datum is.** A point of a plot or a row of a list is its value of the dimension along it. Where a series is chosen at a point, by the keys or on a ring, it is that series' mark: both dimensions. A grid's cell is both of its dimensions, a treemap's parent its own value, and a child both.
+- **What is marked.** `selected` takes any filter, and the view marks `data-selected` on every atom whose rows all hold it (`holds` in core). So a filter on the dimension along x marks every mark at a point; one on the split marks a whole series, its line and its legend entry with it; and one on both marks a single mark. A dimension the view does not draw marks nothing.
+- **It filters nothing.** `selected` paints nothing again and takes no row away. What a view is of is its query's `where`, and the host's to ask for.
+- **It stays.** A selection outlives a new result where its data do. Escape lets go of hover and focus, never of the selection. A spec says nothing of it: like a size, it is the container's.
+
+Selected has no look of its own yet; that is design's to set. The bench's Board page lends one so that a selection can be seen there.
 
 ---
 
@@ -1013,6 +1052,8 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 47. A metric on `color` paints a plot's bars and dots off the ramp, as it paints a grid's cells, and the ramp is its key. A guide is read off a scale, so the ramp was already a view's wherever a metric is on `color`; a plot now draws it. One metric paints a plot, and not beside colours that tell series or metrics apart. The ramp leaves with the axes, and the marks are then in one paint. (November 23)
 48. A filter is part of the query, and a param is a part of the query that views share. That settles how Open 9 begins. A query's `where` holds a dimension to one of its values, to any of a list, or to a run from one to another: the three kinds Open 9 named, point, set and interval. Dimensions are joined by "and" and there is nothing else: no "or", no "not", no threshold. The engine applies it and carries it back as `meta.where`, a view says it after its sentence and of itself, and `resolve` refuses an answer that is not of its query's filter. Core filters no row. Proposed to the API's owners with it: `where` on the request and on the answer's `meta`. What follows from it and is not built: a board's `query` laid under each of its views' as their params, a selection as a `where` that a view proposes, and views combined by one rule with no field, each filtered by every dimension but the ones it draws, where it marks what is selected. (November 24)
 
+49. A board is views and what they share, and a selection is a filter. This settles the rest of Open 9's model and the board of Open 12. A board's `query` holds `range`, `compare` and `where`, laid under each view's own: those are its params, and there is no variable, reference or expression. Views are combined by one rule with no field: each is filtered by every dimension of the board's `where` but the ones it draws, and on those it marks what is held. A board has no layout and no state apart from itself, so a surface that changes a param holds a new board. Core gives the views (`boardViews`) and the board after a selection (`boardSelect`), and fetches nothing. `<ua-view>` proposes a selection as the filter the activated datum is (`ua-select`, `detail.where`) and marks by any filter set back on it (`selected`), which replaces the key it took before. It draws no board: that is a surface's, and the bench has the reference one. (November 24)
+
 ### Open
 
 1. The format for per-element fit rules, such that they compile to container queries and also run in code. Proposed in `docs/dom-painter-plan.md`, section 2. Built: the rules are compiled (`packages/dom/src/compile.ts`) and read in code by `fitTo` (Decided 43), and `keep` holds a rule off in both. One difference step 1 of that plan found is still open: a rule on the view cannot say the plot's room when the number sits above the plot, which is why the `y-ticks` rule carries a note and Open 19 its last sentence.
@@ -1023,10 +1064,10 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 6. Bar list behaviour when narrow, and what a collapsed ranking should show.
 7. Whether a trend shows the tldr value above the plot by default. This is now the container rule `tldrValue.above` and not a spec field; the default says no.
 8. Whether deltas exclude the partial day.
-9. Params and selections. Settled in part November 24: see Decided 48. The filter is built, and the model for the rest is agreed and not built: a board's shared query, a selection as a filter a view proposes, and cross-filtering by one rule. Still open within it: how a set and an interval are selected by pointer and by keyboard, which is to be put before it is built; and whether Spacefast's API takes a filter in this form, which its recorded answers do not show.
+9. Params and selections. Settled in part November 24: see Decided 48 and 49. The filter, the board's shared query, a selection as a filter a view proposes and cross-filtering by one rule are built. Still open: how a set and an interval are selected by pointer and by keyboard, which is to be put before it is built (a filter already holds both, and a view already marks by both); and whether Spacefast's API takes a filter in this form, which its recorded answers do not show.
 10. Settled October 7: see Decided 24. Built October 8.
 11. Catalog properties beyond the stub, and where polarity and thresholds are declared. Among them, what a metric counts, one and many ("person", "people"): without it an instant metric reads "Present now: 7 right now" and not "7 people are here right now". What this repo will propose to the API's owners is listed in `docs/chart-coverage-plan.md`, section 3.5: a `number` dimension type; `domain`, `target` and `bands` on a metric; a colour role per dimension value; and totals per split on the result. All but the colour role are built here and are in the schema, so a catalog may use them; what is open is whether the API will send them.
-12. Settled in part November 23: see Decided 45. A board holds views and no layout, and the facet is built. Still open: the board as a spec of several views, which waits for params (Open 9).
+12. Settled November 23 and 24: see Decided 45 and 49. A board holds views and no layout; the facet and the board are built.
 13. The name.
 14. Which survives at the smallest size, the marks or the tldr value. Today the tldr value does; a sparkline in a table cell wants the line alone. To settle in testing.
 15. Whether the tldr prose rung can be anything but measured. The plan proposes a measured pass, because the threshold is the width of the number itself. It is the one place the fit is not intrinsic.
@@ -1044,7 +1085,7 @@ Map from the prototype's sections to modules: catalog (1), fixtures and query (2
 - **Query coordinator.** The layer that collects each view's request, merges duplicates, caches and routes to an engine.
 - **Local engine.** DuckDB-WASM slicing server results in the browser. An in-page panel should lean on the server tier because of download size.
 - **WebGPU and canvas renderers for dense data.**
-- **Cross-filtering and brushing.** Next after static views feel right.
+- **Brushing.** Cross-filtering by a picked value is built (Decided 49). A set and an interval, by pointer and by keyboard, are Open 9.
 - **Semantic compiler.** Turning catalog names into SQL is server-side.
-- **Boards.** A board is a spec whose body is a list of child specs sharing params, with no layout in it (Decided 45). Its small case, the facet, is built. The board itself is not started.
+- **A board element.** The board is built as data and two functions (Decided 49), and the bench has the reference surface. An element that is handed a board and a query function, and keeps the board, is the shell's (`docs/shell-plan.md`).
 - **Agent surface.** Returning a view through an MCP server. The spec and the tldr prose are designed for it; nothing is built.

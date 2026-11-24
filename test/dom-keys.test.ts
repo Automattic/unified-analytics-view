@@ -210,7 +210,7 @@ describe('the mouse leaving', () => {
     const points: ReturnType<typeof el>[] = [], body = el({ dataset: { hits: 'x' }, children: points, matches: (sel: string) => (sel === ':hover' ? hovered : focused), querySelector: () => body, querySelectorAll: () => points, closest: () => points[1] });
     for (const row of ['a', 'b', 'c']) { const p = el({ parentElement: body }); p.setAttribute('data-row', row); points.push(p); }
     const keys = new Keys(host as unknown as HTMLElement, fig as unknown as HTMLElement, body as unknown as HTMLElement);
-    const paint = () => keys.paint({ rows: ['a', 'b', 'c'] } as never, { metrics: [], by: [] } as never, { rows: [{}, {}, {}] } as never, { metrics: {}, dimensions: {} } as never, []);
+    const paint = () => keys.paint({ rows: ['a', 'b', 'c'] } as never, { metrics: [], by: ['letter'] } as never, { rows: [{ letter: 'a' }, { letter: 'b' }, { letter: 'c' }] } as never, { metrics: {}, dimensions: { letter: { label: 'Letter', type: 'categorical' } } } as never, []);
     paint();
     let activated = 0; host.addEventListener('ua-activate', () => activated++);
     const send = (type: string, init: object) => body.dispatchEvent(Object.assign(new Event(type, { cancelable: true }), init));
@@ -227,20 +227,33 @@ describe('the mouse leaving', () => {
     v.send('keydown', { key: 'ArrowRight' });
     expect(v.chosen()).toEqual(['a']);
   });
-  it('proposes the activated point as the selection, marks it Selected once the host keeps it, through a paint, and proposes letting it go on a second activation', () => {
-    const v = view(true), proposed: (string | null)[] = [];
+  it('proposes the activated point as the selection, as the filter it is, marks it Selected once the host keeps it, through a paint, and proposes letting it go on a second activation', () => {
+    const v = view(true), proposed: unknown[] = [], marked = () => v.points.filter((p) => p.hasAttribute('data-selected')).map((p) => p.getAttribute('data-row'));
     v.send('keydown', { key: 'ArrowRight' });
-    const heard = (e: Event) => proposed.push((e as CustomEvent<{ key: string | null }>).detail.key);
-    v.host.addEventListener('ua-select', heard);
+    v.host.addEventListener('ua-select', (e) => proposed.push((e as CustomEvent).detail));
     v.send('keydown', { key: 'Enter' });
-    expect(proposed).toEqual(['a']);
-    v.keys.select('a'); v.paint();
-    expect(v.points.filter((p) => p.hasAttribute('data-selected')).map((p) => p.getAttribute('data-row'))).toEqual(['a']);
+    expect(proposed).toEqual([{ key: 'a', where: { letter: 'a' } }]);
+    v.keys.select({ letter: 'a' }); v.paint();
+    expect(marked()).toEqual(['a']);
     // Escape lets go of focus, never of the selection.
     v.send('keydown', { key: 'Escape' });
     expect(v.points[0]!.hasAttribute('data-selected')).toBe(true);
     v.send('keydown', { key: 'ArrowRight' }); v.send('keydown', { key: 'Enter' });
-    expect(proposed).toEqual(['a', null]);
+    expect(proposed[1]).toEqual({ key: null, where: null });
+    // A filter is of values, so it marks every point whose row holds it: a list of them, and none for a dimension the rows lack.
+    v.keys.select({ letter: ['a', 'c'] }); expect(marked()).toEqual(['a', 'c']);
+    v.keys.select({ other: 'a' }); expect(marked()).toEqual([]);
+    v.keys.select(null); expect(marked()).toEqual([]);
+  });
+  it('marks by what an atom stands for: a mark at a point of a series, a point, and a series whole', () => {
+    const v = view(true), atoms = [['a', 's'], ['a', 't'], ['b', 's'], ['b', 't'], ['a', null], [null, 's']].map(([row, series]) => { const a = el({ parentElement: v.body }); if (row) a.setAttribute('data-row', row); if (series) a.setAttribute('data-series', series); return a; });
+    v.points.splice(0, v.points.length, ...atoms);
+    const rows = ['a', 'b'].flatMap((letter) => ['s', 't'].map((kind) => ({ letter, kind })));
+    v.keys.paint({ rows: ['a', 'b'], series: ['s', 't'], nodes: [] } as never, { metrics: [], by: ['letter', 'kind'] } as never, { rows } as never, { metrics: {}, dimensions: { letter: { label: 'Letter', type: 'categorical' }, kind: { label: 'Kind', type: 'categorical' } } } as never, []);
+    const marked = () => atoms.filter((a) => a.hasAttribute('data-selected')).map((a) => [a.getAttribute('data-row'), a.getAttribute('data-series')].join(':'));
+    v.keys.select({ kind: 's' }); expect(marked()).toEqual(['a:s', 'b:s', ':s']);                // the series: its marks and what stands for it whole, and no point
+    v.keys.select({ letter: 'a' }); expect(marked()).toEqual(['a:s', 'a:t', 'a:']);              // the point: every mark at it
+    v.keys.select({ letter: 'a', kind: 't' }); expect(marked()).toEqual(['a:t']);                // one mark
   });
   it('keeps a point the mouse still holds through a paint, and the click that follows activates it', () => {
     // New data under a resting mouse sends no pointerover: the element under it was kept.

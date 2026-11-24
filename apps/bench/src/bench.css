@@ -26,6 +26,15 @@ h2 small { font-weight: 400; }
 .meta { inline-size: 0; min-inline-size: 100%; margin: var(--ua-space-xs) 0 0; font-size: var(--ua-font-size-xs); color: var(--ua-color-muted-foreground); overflow-wrap: anywhere; }
 .meta.error { color: var(--ua-color-destructive-text); }
 
+/* The board page is a surface, and where a board's views stand is the surface's: a grid that wraps, the trend across it. */
+#board { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: var(--ua-space-l); align-items: start; max-inline-size: 1100px; margin-block: var(--ua-space-m); }
+#board .card { min-inline-size: 0; }
+#board .card:nth-child(2) { grid-column: 1 / -1; }
+#board h2 { margin-block-start: 0; }
+#filter button { font: inherit; }
+#title { font-size: var(--ua-font-size-lg); margin: var(--ua-space-m) 0 0; }
+#state { font-size: var(--ua-font-size-xs); overflow: auto; }
+
 /* A page embedded in another (a theme's half on the marks and parts pages) shows neither nav nor controls, and never scrolls itself. */
 .embed nav, .embed #controls { display: none; }
 html:has(.embed) { overflow: hidden; }

@@ -1,11 +1,11 @@
-import { expand, facets, resolve, type Spec } from '@unified-analytics/core';
+import { expand, facets, resolve, type Spec, type Where } from '@unified-analytics/core';
 import { UaView } from '@unified-analytics/dom';
 import { catalog, runQuery, type Scenario } from '@unified-analytics/fixtures';
 import { resizable } from './resizer.ts';
-import { boards, boxIn, focus, register, samples as plain } from './setup.ts';
+import { boxIn, faceted, focus, register, samples as plain } from './setup.ts';
 
 // Every sample, and after them the ones with a facet.
-const samples = { ...plain, ...boards };
+const samples = { ...plain, ...faceted };
 
 /* The playground: write a spec, see the view it makes on the fixture engine. The spec and the controls live in the
  * URL's hash, so a reload or a shared link keeps them. */
@@ -23,10 +23,10 @@ const later = () => { clearTimeout(settle); settle = window.setTimeout(explainVi
 const view = frame.appendChild(new UaView());
 resizable(frame);
 view.catalog = catalog;
-// The host keeps the selection: what the view proposes is set back on it, and said here, since it has no look yet.
+// The host keeps the selection: the filter the view proposes is set back on it, and said here, since it has no look yet.
 const selected = $('#selected');
-view.addEventListener('ua-select', (e) => { view.selected = (e as CustomEvent<{ key: string | null }>).detail.key; selected.textContent = view.selected == null ? 'Nothing selected. Activate a point, with a click or Enter, to select it; again to let it go.' : 'Selected: ' + view.selected; });
-view.dispatchEvent(new CustomEvent('ua-select', { detail: { key: null } }));
+view.addEventListener('ua-select', (e) => { view.selected = (e as CustomEvent<{ where: Where | null }>).detail.where; selected.textContent = view.selected == null ? 'Nothing selected. Activate a point, with a click or Enter, to select it; again to let it go.' : 'Selected: ' + JSON.stringify(view.selected); });
+view.dispatchEvent(new CustomEvent('ua-select', { detail: { key: null, where: null } }));
 
 for (const [name, s] of Object.entries(samples)) picker.add(new Option(s.label, name));
 // What a query can ask for: every metric and dimension, by the name a spec uses.

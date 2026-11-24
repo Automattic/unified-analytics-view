@@ -113,8 +113,8 @@ describe('roveItems', () => {
     roveItems(holder, '.a, .b', () => null, (el) => ({ id: el.id }));
     holder.dispatchEvent(Object.assign(new Event('keydown', { cancelable: true }), { key: 'Enter' }));
     expect(asked).toEqual([':is(.a, .b):is([data-interaction], [data-focus])']);
-    // It proposes the chosen one as the selection, by its own key: it is no row.
-    expect(heard).toEqual([{ id: 'b' }, { key: 'box:b' }]);
+    // It proposes the chosen one as the selection: its key, and the filter its holder says it is, which this one says none of.
+    expect(heard).toEqual([{ id: 'b' }, { key: 'box:b', where: null }]);
   });
 });
 

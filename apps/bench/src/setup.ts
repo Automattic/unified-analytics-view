@@ -10,7 +10,7 @@ import './theme.ts';
 /** Every sample the fixtures have: the prototype's, then the rest. */
 export const samples = { ...known, ...moreSamples };
 /** The specs with a `facet`. They are a view for each value and have no one plan, so the pages that read a sample's plan (parts, and the capture off it) do not hold them. */
-export const boards = facetSamples;
+export const faceted = facetSamples;
 
 /** `<ua-view>` and the painters of the custom marks, and the surface layouts, which the page adopts: it is the surface. */
 export function register(): void {

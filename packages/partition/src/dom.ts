@@ -1,4 +1,4 @@
-import { formatDimension, type MarkView, type RectNode, type Row, type TextNode } from '@unified-analytics/core';
+import { formatDimension, whereOf, type MarkView, type RectNode, type Row, type TextNode, type Where } from '@unified-analytics/core';
 import { FOCUS, FROM_TOP, HOVER, IN_BOX, IS, attr, chooseItem, emptyTable, ensure, fieldLabel, heldBy, holdShape, keyed, LABEL, lineOf, nodePaint, paintRamp, prop, RAMP_STRIP, readout, registerPainter, roveItems, tableRow, text, token, valueText, type Cell, type LayoutPainter } from '@unified-analytics/dom';
 import { ASPECT, GAP, HEAD, HEAD_MOST, KID_GAP, LINE, MAX, boxesOf } from './index.ts';
 
@@ -60,7 +60,7 @@ ${IN_BOX} {
 }`;
 
 /* What the listeners read. They are bound once to the part, which outlives every paint, and this is set by each. */
-interface Tree { rows: Map<string, { row: Row; rows: Row[] }> }
+interface Tree { rows: Map<string, { row: Row; rows: Row[]; where: Where }> }
 const trees = new WeakMap<HTMLElement, Tree>();
 const ITEM = '[role="treeitem"]:not([data-exit])';
 
@@ -92,12 +92,12 @@ function bind(plot: HTMLElement): void {
 /** What each box says, by its node's key: the readout every mark's row has (dom's readout), of the row it came from,
  * named by its parent's value and then its own. A parent's values are the engine's totals for it. This is a box's
  * accessible name and its readout, so no value is said by area or colour alone. `rows` are the rows inside it. */
-export function boxNames(view: Omit<MarkView, 'guides'>): Map<string, { says: string; row: Row; rows: Row[] }> {
+export function boxNames(view: Omit<MarkView, 'guides'>): Map<string, { says: string; row: Row; rows: Row[]; where: Where }> {
   const { query, catalog, layers } = view, [dim, detail] = [layers[0]!.encode!.x as string, layers[0]!.encode!.detail as string];
   const says = (r: Row, by: string[]) => readout(r, { ...query, by }, catalog, layers);
-  type Said = [string, { says: string; row: Row; rows: Row[] }];
-  return new Map(boxesOf(view).flatMap((g): Said[] => [[g.key, { says: says(g.row, [dim]), row: g.row, rows: g.rows }],
-    ...g.kids.map((c): Said => [c.key, { says: says(c.row, [dim, detail]), row: c.row, rows: [c.row] }])]));
+  type Said = [string, { says: string; row: Row; rows: Row[]; where: Where }];
+  return new Map(boxesOf(view).flatMap((g): Said[] => [[g.key, { says: says(g.row, [dim]), row: g.row, rows: g.rows, where: whereOf(g.row, [dim]) }],
+    ...g.kids.map((c): Said => [c.key, { says: says(c.row, [dim, detail]), row: c.row, rows: [c.row], where: whereOf(c.row, [dim, detail]) }])]));
 }
 
 /** A name fits where the box it stands in is as wide and as tall as it is, to half a pixel. */
@@ -147,7 +147,7 @@ export const partitionPainter: LayoutPainter = {
       keyed(group, mine, () => 'i', (c, k) => { box(c, k, 2); name(c, labels.get(k.key)); });
     });
     if (!trees.has(plot)) bind(plot);
-    trees.set(plot, { rows: new Map([...names].map(([k, v]) => [k, { row: v.row, rows: v.rows }])) });
+    trees.set(plot, { rows: new Map([...names].map(([k, v]) => [k, { row: v.row, rows: v.rows, where: v.where }])) });
     attr(plot, 'role', 'tree'); attr(plot, 'tabindex', parents.length ? 0 : null);
     attr(plot, 'aria-label', data.catalog.dimensions[(data.layers[0]?.encode?.x ?? '') as string]?.label);
     // A box that a data change took away takes the choice with it. One that is still here keeps it.

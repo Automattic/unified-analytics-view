@@ -262,8 +262,8 @@ describe('names, prose and errors', () => {
   it('every box says its value: a parent the engine\'s total for it, a child its own under its parent\'s name', () => {
     const result = runQuery(treemap.query), said = boxNames({ layers: expand(treemap).layers!, query: treemap.query, result, catalog });
     expect(said.size).toBe(20);
-    expect(said.get('primary:partition:Marketing')).toEqual({ says: 'Marketing: Page views 10.5k', row: result.totalsBy!.section![0], rows: result.rows.slice(0, 5) });
-    expect(said.get('primary:partition:Marketing:/pricing')).toEqual({ says: 'Marketing, /pricing: Page views 3,282', row: result.rows[1], rows: [result.rows[1]] });
+    expect(said.get('primary:partition:Marketing')).toEqual({ says: 'Marketing: Page views 10.5k', row: result.totalsBy!.section![0], rows: result.rows.slice(0, 5), where: { section: 'Marketing' } });
+    expect(said.get('primary:partition:Marketing:/pricing')).toEqual({ says: 'Marketing, /pricing: Page views 3,282', row: result.rows[1], rows: [result.rows[1]], where: { section: 'Marketing', page: '/pricing' } });
     expect([...said.keys()]).toEqual(rects(run(treemap, 346).ratio).map((n) => n.key));
     const both = runQuery(ramped.query);
     expect(boxNames({ layers: ramped.layers!, query: ramped.query, result: both, catalog }).get('primary:partition:Docs:/docs/api')!.says).toMatch(/^Docs, \/docs\/api: Page views [\d,]+; Visitors [\d,]+$/);

@@ -1,4 +1,4 @@
-import { POINT_INSET, formatBin, formatDimension, formatValue, layerKeys, many, metricOf, most, partialNote, rowKeys, unitsOf, type Catalog, type Layer, type Query, type RectNode, type Result, type Row, type Scene } from '@unified-analytics/core';
+import { POINT_INSET, formatBin, formatDimension, formatValue, holds, layerKeys, many, metricOf, most, partialNote, rowKeys, unitsOf, whereOf, type Catalog, type Layer, type Query, type RectNode, type Result, type Row, type Scene, type Where } from '@unified-analytics/core';
 import { attr, ensure, paintVar, prop } from './dom.ts';
 import { centred, say, tip as chip } from './chrome/tip.ts';
 import { apart } from './measure.ts';
@@ -332,8 +332,10 @@ export class Keys {
   // At each point of a plot split into series painted apart, the readout's lines, and the paint of each series.
   #lines: (ReturnType<typeof readoutLines> | null)[] = []; #paints = new Map<string, string>();
   #at: string | null = null;
-  // The datum the host keeps selected, by its key. The element only proposes one (#activate).
-  #selected: string | null = null;
+  // What the host keeps selected: a filter, and every atom whose rows all hold it is marked. The element only proposes one (#activate).
+  #selected: Where | null = null;
+  // The dimension a series is a value of, whether or not a point has series to step through.
+  #of: string | undefined;
   // The series of a split plot, the one chosen at the point, and what a readout of one needs.
   #order: string[] = []; #series: string | null = null; #split: string | undefined; #q: Query | null = null; #catalog: Catalog | null = null; #layers: Layer[] = [];
   // How the chosen point was chosen. Each has its own look, and a paint keeps the one it found.
@@ -383,7 +385,7 @@ export class Keys {
   paint(scene: Scene, q: Query, result: Result, catalog: Catalog, layers: Layer[]): void {
     // A point of a plot of points is one row whatever colours it, so it is read as a row, and has no series to step through.
     const found = rowsAt(scene, q, result), { rows, x } = found, split = scene.parts?.includes('points') ? undefined : found.split, totals = (x != null && split != null && result.totalsBy?.[x]) || [];
-    this.#keys = scene.rows ?? []; this.#rows = rows; this.#order = split == null ? [] : scene.series ?? scene.detail ?? []; this.#split = split; this.#q = q; this.#catalog = catalog; this.#layers = layers;
+    this.#of = found.split; this.#keys = scene.rows ?? []; this.#rows = rows; this.#order = split == null ? [] : scene.series ?? scene.detail ?? []; this.#split = split; this.#q = q; this.#catalog = catalog; this.#layers = layers;
     this.#x = x; this.#cross = crossMarks(scene, layers, rows, catalog, split);
     this.#says = this.#keys.map((k, i) => (split == null ? readout(rows[i]![0] ?? {}, q, catalog, layers) : readoutAt(rows[i]!, totals.find((t) => String(t[x!]) === k), q, catalog, x!, split, !scene.series)));
     // A mass is in one paint, so it is said in words alone (readoutAt). Series painted apart each have a line and a swatch.
@@ -405,11 +407,21 @@ export class Keys {
     this.select(this.#selected);
   }
 
-  /** Mark every atom of the selected datum Selected, and every other not: by its row, or, in a holder whose things are
-   * no rows (roveItems), by its own key. A selection outlives a paint where its datum does. */
-  select(key: string | null): void {
-    this.#selected = key;
-    this.#body.querySelectorAll('[data-row], [data-key]').forEach((el) => el.toggleAttribute(STATE.selected, key != null && (el.getAttribute('data-row') ?? el.getAttribute('data-key')) === key));
+  /** Mark Selected every atom whose rows all hold the filter the host keeps, and every other not. So a filter on the
+   * dimension along x marks every mark at a point, one on the split marks a whole series, its line and its legend
+   * entry with it, and one on both marks a single mark. A selection outlives a paint where its data do. */
+  select(where: Where | null): void {
+    const held = (this.#selected = where && Object.keys(where).length ? where : null);
+    this.#body.querySelectorAll('[data-row], [data-series], [data-key]').forEach((el) => { const of = held ? this.#stands(el) : []; el.toggleAttribute(STATE.selected, of.length > 0 && of.every((r) => holds(r, held!))); });
+  }
+  /** The rows an element stands for: what its holder says of it where its things are no rows (roveItems); the rows at
+   * its point (`data-row`), of its series where it is one's (`data-series`); or every row of its series. */
+  #stands(el: Element): Row[] {
+    for (let up = el.parentElement; up; up = up.parentElement) { const d = stood.get(up)?.(el as HTMLElement) as { row?: Row; rows?: Row[] } | undefined; if (d) return d.rows ?? (d.row ? [d.row] : []); }
+    const k = el.getAttribute('data-row'), s = el.getAttribute('data-series');
+    if (k == null && s == null) return [];
+    const at = k == null ? this.#rows.flat() : this.#rows[this.#keys.indexOf(k)] ?? [];
+    return s == null || this.#of == null ? (k == null ? [] : at) : at.filter((r) => String(r[this.#of!]) === s);
   }
 
   /** Name the options: after each paint, and after the measured pass, which can take points away. A point is an option
@@ -544,7 +556,10 @@ export class Keys {
     if (this.#at == null || (how === 'keys' && (!box || !this.#points(box).some((el) => el.getAttribute('data-row') === this.#at)))) return false;
     const i = this.#keys.indexOf(this.#at!), rows = this.#rows[i] ?? [], row = this.#pair(i) ?? rows[0];
     if (row) this.#host.dispatchEvent(new CustomEvent('ua-activate', { bubbles: true, composed: true, detail: { row, rows } }));
-    propose(this.#host, this.#selected === this.#at ? null : this.#at);
+    // The datum is the point, or the chosen series' mark at it: its value along x, and of the split where a series is chosen.
+    const one = this.#pair(i), of = one ? [one] : rows, where = row ? whereOf(row, [this.#x, one ? this.#split : undefined]) : {};
+    const was = !!this.#selected && of.length > 0 && of.every((r) => holds(r, this.#selected!));
+    propose(this.#host, was ? null : this.#at, was || !Object.keys(where).length ? null : where);
     return true;
   }
 }
@@ -561,19 +576,25 @@ export function chooseItem(holder: HTMLElement, el: HTMLElement | null, how: How
   placeReadout(tip, fig, el);
 }
 
-/** Propose a selection to the host: the key of the datum activated, or null where it was the one selected, which a
- * second activation lets go. One at a time. The host keeps it, and sets it back on the view (`selected`). */
-function propose(from: Element, key: string | null): void {
-  from.dispatchEvent(new CustomEvent('ua-select', { bubbles: true, composed: true, detail: { key } }));
+/** Propose a selection to the host: `where` is the filter the activated datum is, its value of each dimension it is
+ * of, and `key` its key in the view. Both are null where it was already selected, which a second activation lets go.
+ * The host keeps the filter, and sets it back on the view (`selected`), or on a board (core's boardSelect). */
+function propose(from: Element, key: string | null, where: Where | null): void {
+  from.dispatchEvent(new CustomEvent('ua-select', { bubbles: true, composed: true, detail: { key, where } }));
 }
+
+/* What each thing of a holder bound by roveItems activates with, by the holder: read where a selection is marked, for the rows the thing stands for. */
+const stood = new WeakMap<Element, (el: HTMLElement) => object | undefined>();
 
 /** rove() for a holder whose things are its own elements, each named by its readout: a grid's cells, a treemap's
  * boxes, a custom mark's. `item` selects them, and `step` says where a key goes from the chosen one, or from none.
- * `detail` is what the chosen one activates with, if it has anything to. Bind it once, to a holder that outlives
+ * `detail` is what the chosen one activates with, if it has anything to: its `row`, the `rows` it stands for where
+ * they are several, and the filter it is (`where`), which is what it proposes as the selection. Bind it once, to a holder that outlives
  * every paint; a paint that lets go of the chosen one, or keeps it, says so with chooseItem(). */
 export function roveItems(holder: HTMLElement, item: string, step: (e: KeyboardEvent, on: HTMLElement | null) => HTMLElement | null, detail: (el: HTMLElement) => object | undefined): void {
   // `item` may be a list of selectors, each of which the chosen one may match.
   const chosen = () => holder.querySelector<HTMLElement>(':is(' + item + ')' + IS.held);
+  stood.set(holder, detail);
   rove<HTMLElement>(holder, {
     hit: (e) => (e.target as Element).closest?.<HTMLElement>(item) ?? null,
     chosen,
@@ -583,7 +604,7 @@ export function roveItems(holder: HTMLElement, item: string, step: (e: KeyboardE
       // From the view's element where the holder is in its shadow root, and from the holder where it is not.
       const from = (holder.getRootNode() as Partial<ShadowRoot>).host ?? holder;
       if (d) from.dispatchEvent(new CustomEvent('ua-activate', { bubbles: true, composed: true, detail: d }));
-      if (on) propose(from, on.hasAttribute(STATE.selected) ? null : on.getAttribute('data-key'));
+      if (on) { const was = on.hasAttribute(STATE.selected); propose(from, was ? null : on.getAttribute('data-key'), was ? null : (d as { where?: Where } | undefined)?.where ?? null); }
       return !!on;
     },
     step: (e) => step(e, chosen()),

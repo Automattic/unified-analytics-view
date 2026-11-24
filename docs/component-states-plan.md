@@ -152,7 +152,7 @@ Steps 1–5 were built on October 15: #32 (Plot label and its parents), #33 (the
 
 **In code, steps 4 and 5 needed nothing more.** The relay of #33 already writes the states on every mark, rug tick and legend entry, and #34 writes Selected. Two gaps remain:
 - the table the view offers in place of the plot takes no states;
-- a holder of things that are no rows (a grid's cells, a treemap's boxes) is selected by its own key, not by the row's.
+- a holder of things that are no rows (a grid's cells, a treemap's boxes) is selected by its own key, not by the row's. Closed November 24: a selection is a filter (reference, Decided 49 and section 13), so every atom is marked by the rows it stands for, a cell and a box among them, and `selected` takes a filter where it took a key.
 
 **Where the plan did not hold up in Figma.**
 - **Focus sits on top of a stroked shape, not underneath.** An arc, a region or a hex draws its gap as a stroke in the background colour, which would hide a layer underneath. On top, the focus layer has no fill, so it draws only the ring, as code's `FOCUS.stroke` does. Rule 6 holds for boxes. For these shapes it reads "a focus stroke along the path, drawn over it".

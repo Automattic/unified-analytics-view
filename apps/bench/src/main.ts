@@ -3,10 +3,10 @@ import { UaView } from '@unified-analytics/dom';
 import { catalog, runQuery, type Scenario } from '@unified-analytics/fixtures';
 import { resizable } from './resizer.ts';
 import { heading } from './page.ts';
-import { boards, boxIn, register, samples } from './setup.ts';
+import { boxIn, faceted, register, samples } from './setup.ts';
 
 // Every sample, and after them the ones with a facet.
-const all = { ...samples, ...boards };
+const all = { ...samples, ...faceted };
 
 /* The bench: every sample, in frames that stand in for containers.
  * Controls live in the URL, so a reload or a shared link keeps them. */

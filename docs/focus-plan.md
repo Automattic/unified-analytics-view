@@ -1,6 +1,6 @@
 # Focus plan
 
-As of November 24, 2026. **Status: steps 1 to 5 are built.** On November 24 David said to go ahead with the rest by best judgement, weighed against the vision, and to keep what wants his opinion for the end: it is under "For David, at the end".
+As of November 24, 2026. **Status: steps 1 to 6 are built.** On November 24 David said to go ahead with the rest by best judgement, weighed against the vision, and to keep what wants his opinion for the end: it is under "For David, at the end".
 
 ## Why
 
@@ -114,6 +114,12 @@ The reference's section 7 lists what is still drawn wrong, or not at all, with n
 The capture takes the bench's samples off the parts page. It should take any spec, result and catalog handed to it, and give the pictures, what was measured, and the check's findings.
 
 **Done when** one command does that for a spec that is not a sample.
+
+**Built November 24.** `pnpm --filter @unified-analytics/bench capture spec=<file>` takes a JSON file that is a spec, drawn on the fixtures' engine and catalog, or `{ spec, result, catalog }` for one drawn on its own, and `check` holds that capture as it holds any. What it found:
+
+- The page takes the view before its own script runs, so nothing of the capture or the check changed: a capture of every sample differs from the last on no frame.
+- `check` took the newest entry in `captures/` for the latest capture, and a stray picture there stopped it. It takes the newest that is a capture.
+- It was first used on step 4: two bar layers on one x, side by side with their legend, at eight widths.
 
 ### 7. The agent surface
 

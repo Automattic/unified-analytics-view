@@ -19,7 +19,7 @@
  *
  * With no capture, the latest. Writes check.json and check.md into the capture; with `against`, says what is new and
  * what is gone since that one. */
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { FIT_RULES, fitTo, type FitRule, type KeepPart } from '@unified-analytics/core';
 import type { Record } from './capture.ts';
 
@@ -32,7 +32,8 @@ const WIDTHS = ['free', '480', '346', '250', '170', '120', '80', '40'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => a.split('=') as [string, string]));
 const root = new URL('./captures/', import.meta.url).pathname;
-const latest = () => { const all = readdirSync(root).filter((d) => !d.startsWith('.')).sort(); if (!all.length) throw new Error('no capture yet: run pnpm --filter @unified-analytics/bench capture first.'); return root + all.at(-1) + '/'; };
+const latest = () => { const all = readdirSync(root).filter((d) => existsSync(root + d + '/capture.json')).sort();   // a capture, and no stray file beside them
+  if (!all.length) throw new Error('no capture yet: run pnpm --filter @unified-analytics/bench capture first.'); return root + all.at(-1) + '/'; };
 const dir = (d?: string) => (d ? (d.includes('/') ? d : root + d).replace(/\/?$/, '/') : latest());
 const read = (d: string): { records: Record[]; commit: string; taken: string } => JSON.parse(readFileSync(d + 'capture.json', 'utf8'));
 

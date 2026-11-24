@@ -6,10 +6,15 @@
  *   parts/<part>/<sample>-<theme>-<height>-<width>.png    one part of it, cropped
  *   capture.json    how it was taken, and a record for each frame
  *
- *   pnpm capture [samples=a,b] [themes=light,dark] [heights=natural,100] [scenario=typical]
+ *   pnpm capture [samples=a,b] [themes=light,dark] [heights=natural,100] [scenario=typical] [spec=<file>]
+ *
+ * `spec=<file>` takes a view that is no sample: a JSON file that is a spec, drawn on the fixtures' engine and catalog,
+ * or { "spec", "result", "catalog", "name" } for one drawn on an answer and a catalog of its own. The path is from
+ * where the command was run. The capture is then of that view alone, and `check` holds it as it holds any.
  */
 import { execSync } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { resolve as path } from 'node:path';
 import { chromium, type Page } from 'playwright';
 import { createServer } from 'vite';
 import type { FrameMeasure } from './src/parts.ts';
@@ -18,6 +23,8 @@ const args = Object.fromEntries(process.argv.slice(2).map((a) => a.split('=') as
 const list = (key: string, fallback: string) => (args[key] ?? fallback).split(',').filter(Boolean);
 const themes = list('themes', 'light,dark'), heights = list('heights', 'natural,100'), scenario = args.scenario ?? 'typical';
 const VIEWPORT = { width: 1280, height: 800 }, PAGES = 4;
+/** A view of one's own, from `spec=<file>`: the file is a spec, or holds one beside its answer and catalog. */
+const given = args.spec ? ((file) => { const g = file.spec?.query ? file : { spec: file }; return { name: 'given', ...g } as { name: string; spec: unknown }; })(JSON.parse(readFileSync(path(process.env.INIT_CWD ?? process.cwd(), args.spec), 'utf8'))) : null;
 
 const out = new URL(`./captures/${new Date().toISOString().replace(/[:.]/g, '-')}/`, import.meta.url).pathname;
 const server = await createServer({ configFile: new URL('./vite.config.ts', import.meta.url).pathname, server: { port: 5199 }, logLevel: 'error' });
@@ -25,6 +32,8 @@ await server.listen();
 const base = server.resolvedUrls!.local[0]!;
 // Reduced motion: the element then draws each state at once, so what is taken is where it ends, not a step on the way.
 const browser = await chromium.launch(), context = await browser.newContext({ viewport: VIEWPORT, reducedMotion: 'reduce', deviceScaleFactor: 2 });
+// The page takes a view handed to it before its own script runs (src/parts.ts, `benchGiven`).
+if (given) await context.addInitScript((g) => { (window as unknown as { benchGiven: unknown }).benchGiven = g; }, given);
 
 /** What the view plans, and what a fit rule may ask of its scene: `has` is core's hasOf, and `drawn` the parts the scene has anything for. A capture taken before the two were kept has neither. */
 export interface Plan { layout: string; parts: string[]; keep: string[]; marks: string[]; has?: string[]; drawn?: string[] }
@@ -73,7 +82,7 @@ try {
   const first = await context.newPage();
   await first.goto(`${base}parts.html?embed`);
   const all = await first.$$eval('[name="sample"] option', (os) => os.map((o) => (o as HTMLOptionElement).value));
-  const samples = args.samples ? list('samples', '') : all;
+  const samples = given ? [given.name] : args.samples ? list('samples', '') : all;
   const unknown = samples.filter((s) => !all.includes(s));
   if (unknown.length) throw new Error(`no sample called ${unknown.join(', ')}: pick from ${all.join(', ')}.`);
   const jobs = samples.flatMap((s) => themes.flatMap((t) => heights.map((h) => [s, t, h] as const)));

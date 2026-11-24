@@ -16,7 +16,7 @@ pnpm test         # vitest: sweep, plan, fit, schema, golden scenes
 pnpm typecheck    # tsc --noEmit, strict
 pnpm test -u      # rewrite golden scenes; read the diff before committing it
 pnpm bench        # the bench at localhost:5173, on Vite
-pnpm --filter @unified-analytics/bench capture   # every sample × width × theme × height off the parts page, to apps/bench/captures/<time>/ (ignored by git)
+pnpm --filter @unified-analytics/bench capture   # every sample × width × theme × height off the parts page, to apps/bench/captures/<time>/ (ignored by git); spec=<file> for a view that is no sample
 pnpm --filter @unified-analytics/bench check     # hold the latest capture to the parts' promises (the fit rules, and cut, overlap, theme, steady); against=<capture> for what moved
 pnpm --filter @unified-analytics/tokens generate   # rewrite packages/tokens/generated from its config
 ```

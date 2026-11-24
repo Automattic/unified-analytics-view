@@ -153,6 +153,13 @@ export function resolve(spec0: Spec, result: Result, catalog: Catalog, rules: Co
   // A name the catalog does not carry is refused here, once, before anything reads its definition.
   for (const [kind, where, names, has] of [['metric', 'metrics', q.metrics, catalog.metrics], ['dimension', 'by', q.by || [], catalog.dimensions], ['dimension', 'where', Object.keys(q.where || {}), catalog.dimensions]] as const) for (const f of names)
     if (!Object.hasOwn(has, f)) throw new Error('The catalog has no ' + kind + ' "' + f + '". It has: ' + (Object.keys(has).join(', ') || 'none') + '. Add it to the catalog passed in, or correct the name in query.' + where + '.');
+  // A metric the catalog gives by some dimensions only cannot be answered by another, and is refused before anything is drawn.
+  for (const f of q.metrics) {
+    const takes = catalog.metrics[f]!.by, where = takes && (['by', 'where'] as const).find((w) => (w === 'by' ? q.by || [] : Object.keys(q.where || {})).some((d) => !takes.includes(d)));
+    if (!where) continue;
+    const d = (where === 'by' ? q.by! : Object.keys(q.where!)).find((x) => !takes!.includes(x))!;
+    throw new Error('The metric "' + f + '" is not answered by "' + d + '": the catalog gives it by ' + (takes!.length ? orList(takes!) : 'no dimension') + '. ' + (takes!.length ? 'Ask it by one of those, or take' : 'Take') + ' "' + d + '" out of query.' + where + '.');
+  }
   checkWhere(q, result, catalog);
   const m = q.metrics[0]!, M = catalog.metrics[m]!, by = (q.by || [])[0], dropped: string[] = [];
   let layers = (spec.layers || []).slice();

@@ -29,6 +29,10 @@ export interface MetricDef {
   /** Where the domain is divided, in ascending order: each is where one band ends and the next begins. Drawn behind a
    * row's marks by a `bar` with nothing on x, in the paints `band.1` to `band.3`, the least first. */
   bands?: number[];
+  /** The dimensions the engine can answer it by, where it cannot by all the catalog has: a query that asks it by
+   * another, in `by` or in `where`, is refused before it is run. Left out, it is asked by any. Proposed to the API's
+   * owners (docs/focus-plan.md, step 10). */
+  by?: string[];
 }
 export interface DimensionDef {
   label: string;

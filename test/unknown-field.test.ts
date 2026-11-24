@@ -35,3 +35,19 @@ describe('a field a spec, its query or a layer does not take', () => {
   it('a field that is written and holds nothing is no field', () => expect(refused({ spec: 'view/0', use: 'bar-list', query: q, width: undefined } as Spec)).toBe('no error'));
 });
 
+// A catalog may say which dimensions the engine answers a metric by (`by` on the metric). A query that asks it by
+// another is refused before it is run or drawn, in `by` and in `where` alike: its engine has no answer for it.
+describe('a metric asked by a dimension its catalog does not give it by', () => {
+  const some: Catalog = { metrics: { revenue: { ...catalog.metrics.revenue!, by: ['day', 'sku'] }, orders: { ...catalog.metrics.orders!, by: [] } }, dimensions: { ...catalog.dimensions, channel: { label: 'Channel', type: 'categorical' } } };
+  it('in by', () => expect(refused({ spec: 'view/0', use: 'bar-list', query: { metrics: ['revenue'], by: ['channel'] } }, some))
+    .toBe('The metric "revenue" is not answered by "channel": the catalog gives it by day or sku. Ask it by one of those, or take "channel" out of query.by.'));
+  it('in where', () => expect(refused({ spec: 'view/0', use: 'bar-list', query: { metrics: ['revenue'], by: ['sku'], where: { channel: 'Search' } } }, some))
+    .toBe('The metric "revenue" is not answered by "channel": the catalog gives it by day or sku. Ask it by one of those, or take "channel" out of query.where.'));
+  it('a second metric, by none', () => expect(refused({ spec: 'view/0', use: 'bar-list', query: { metrics: ['revenue', 'orders'], by: ['sku'] } }, some))
+    .toBe('The metric "orders" is not answered by "sku": the catalog gives it by no dimension. Take "sku" out of query.by.'));
+  it('by one it gives, and a metric that says nothing is asked by any', () => {
+    expect(refused({ spec: 'view/0', use: 'bar-list', query: { metrics: ['revenue'], by: ['sku'] } }, some)).toBe('no error');
+    expect(refused({ spec: 'view/0', use: 'bar-list', query: { metrics: ['revenue'], by: ['sku'] } })).toBe('no error');
+  });
+});
+

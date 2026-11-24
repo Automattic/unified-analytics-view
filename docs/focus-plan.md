@@ -1,6 +1,6 @@
 # Focus plan
 
-As of November 24, 2026. **Status: steps 1 to 7 and 9 are built, and the first stage of step 8.** On November 24 David said to go ahead with the rest by best judgement, weighed against the vision, and to keep what wants his opinion for the end: it is under "For David, at the end".
+As of November 24, 2026. **Status: steps 1 to 7 and 9 are built, with the first stage of step 8 and the part of step 10 that has a reader here.** On November 24 David said to go ahead with the rest by best judgement, weighed against the vision, and to keep what wants his opinion for the end: it is under "For David, at the end".
 
 ## Why
 
@@ -196,6 +196,12 @@ With the API's owners; this repo proposes and then reads what they accept.
 
 **Done when** the proposals are with the owners, and what they accept is in the schema and said by the view.
 
+**Built November 24, in part** (reference, Decided 60 and Open 23). What is built is the one thing with a reader here: a metric may say the dimensions it is answered by (`by`), and a query that asks it by another is refused before it is run. The fixture catalog states none yet. What is not built, and why:
+
+- **Grains, and whether a metric adds up.** Nothing in this repository would read either. They go to the owners as proposals.
+- **Fresh, filtered, not available.** Each is a state a view has to show somewhere, and where is a look (For David, 14).
+- **The proposals are not with the owners.** That is a conversation, and yours.
+
 ### 11. Accessibility and theming that need no effort
 
 From `docs/positioning.md`'s list of what is not there: a live region, patterns as a second channel beside colour, a pass with a screen reader, and the `--wpds-*` alias sheet. With them a look for Selected, and a bench page that re-themes every view from tokens alone. The visual design pass is David's.
@@ -240,3 +246,4 @@ Calls made by best judgement while building, each to confirm or turn over.
 11. **`keep` stays.** The plan said to remove it, since no sample uses it. You said on November 24 that no system does without overrides in practice, and `keep` is the one a spec has. It is still provisional in the reference.
 12. **Step 8 stops at its first stage.** The needs are counted and named, and no number moved. The three stages proposed under step 8 each change what views do at some size, so I left them for you to see first.
 13. **What moves a custom mark into core** is four things I proposed in the reference's section 7: drawn in more than one product's views, takes the plot's marks over it, needs no new dependency, and gives way by ladders core has. They are a first guess with no case behind them.
+14. **What an answer says of itself.** How fresh it is, what was filtered from it, that a metric is not available here: I proposed all three (reference, Open 23) and built none, because each needs a place on the view, and the shape is the API's owners' to agree. The catalog's `by` is built, as a proposal to them.

@@ -23,7 +23,8 @@
           "instant": { "type": "boolean", "description": "No range and no prior period, such as people present now." },
           "domain": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2, "description": "The range a value is read against, least then most: the two ends of a gauge." },
           "target": { "type": "number", "description": "The value to reach." },
-          "bands": { "type": "array", "items": { "type": "number" }, "description": "Where the domain is divided, in ascending order: each is where one band ends and the next begins." }
+          "bands": { "type": "array", "items": { "type": "number" }, "description": "Where the domain is divided, in ascending order: each is where one band ends and the next begins." },
+          "by": {"type": "array", "items": {"type": "string"}, "description": "The dimensions the engine can answer this metric by, where it cannot by all of them. A query that asks it by another, in by or in where, is refused before it is run. Left out, it is asked by any. Proposed to the API's owners."}
         }
       }
     },

@@ -1,5 +1,5 @@
 import { geoEqualEarth, geoIdentity, geoPath, type ExtendedFeatureCollection, type GeoProjection } from 'd3-geo';
-import { common, isDim, isMetric, layerKeys, metricOf, notShownNote, registerMark, registerPreset, roleOf, seqScale, sizeKey, sizeStep } from '@unified-analytics/core';
+import { common, isDim, isMetric, layerKeys, metricOf, notShownNote, registerMark, registerPreset, roleOf, seqScale, sizeKey, sizeStep, steady } from '@unified-analytics/core';
 import type { CircleNode, CustomMark, FitRule, Part, PathNode, Row, SceneNode } from '@unified-analytics/core';
 
 /* The `geo` mark: a map of regions, as a custom mark (core's marks.ts). This is its half for core: a scene in ratios
@@ -71,7 +71,7 @@ export function geoMark(shapes: Shapes, { name = 'geo', projection }: GeoOptions
   const height = path.bounds(all)[1][1], aspect = Math.round(BOX / height * 1000) / 1000;
   // ponytail: a symbol stands at the centroid of the whole shape, which for a country with far-flung parts is not on
   // its mainland. The centroid of its largest polygon, if that shows.
-  const regions = all.features.map((f) => { const [cx, cy] = path.centroid(f); return { id: f.id == null ? null : String(f.id), key: String(f.id ?? f.properties!.name), d: path(f), x: cx / BOX, t: 1 - cy / height }; }).filter((s) => s.d && Number.isFinite(s.x + s.t));
+  const regions = all.features.map((f) => { const [cx, cy] = path.centroid(f); return { id: f.id == null ? null : String(f.id), key: String(f.id ?? f.properties!.name), d: path(f), x: steady(cx / BOX), t: steady(1 - cy / height) }; }).filter((s) => s.d && Number.isFinite(s.x + s.t));
 
   return {
     rules,

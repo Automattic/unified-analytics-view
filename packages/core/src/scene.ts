@@ -1,7 +1,7 @@
 import { max, min } from 'd3-array';
 import { scaleBand, scaleLinear, scalePoint, scaleQuantize } from 'd3-scale';
 import { CHAR_W, delta, fmtPct, fmtTime, formatBin, formatDimension, formatMetric, formatUnit, formatValue, orList } from './format.ts';
-import { arcD, pathD } from './path.ts';
+import { arcD, pathD, steady } from './path.ts';
 import { customMarks, type CustomMark, type MarkView } from './marks.ts';
 import { NOW, crossesZero, emptyNote, endsOf, leader, portion } from './prose.ts';
 import { UNIT_CELLS, UNIT_MOST, UNIT_SEATS, unitCount, unitSeats, unitShares, unitWorth } from './unit.ts';
@@ -984,7 +984,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
     const dim = catalog.dimensions[one]!, every = Math.ceil(rows.length / 4), rank = (j: number) => (j % every ? { rank: every % 2 || j % (every / 2) ? 2 : 1 } : {});
     rows.forEach((r, j) => {
       const lo = j / rows.length, hi = (j + 1) / rows.length, mid = (lo + hi) * Math.PI;
-      rim.push({ key: 'rim:' + k(r), part: 'rim', kind: 'text', x: 0.5 + Math.sin(mid) / 2, y: 0.5 + Math.cos(mid) / 2, row: k(r), text: formatDimension(r[one], dim),
+      rim.push({ key: 'rim:' + k(r), part: 'rim', kind: 'text', x: steady(0.5 + Math.sin(mid) / 2), y: steady(0.5 + Math.cos(mid) / 2), row: k(r), text: formatDimension(r[one], dim),
         anchor: Math.sin(mid) > 0.2 ? 'start' : Math.sin(mid) < -0.2 ? 'end' : 'middle', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...rank(j) });
     });
   };
@@ -1012,7 +1012,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
       const rest = q.limit && total ? Math.max(0, Math.round(total / worth) - filled) : 0, { seats: at, pitch } = unitSeats(filled + rest);
       const seat = (key: string, more: Partial<SceneNode>) => {
         const { a, r } = at[seats.length]!, turn = Math.PI * (1 - a);
-        seats.push({ key, part: 'radial', kind: 'circle', pulse: false, x: 0.5 + r * Math.cos(turn) / 2, y: r * Math.sin(turn), w: pitch / 2, h: pitch, paint: 'seq.none', layer: 'data', role: roleOf(l), ...more } as SceneNode);
+        seats.push({ key, part: 'radial', kind: 'circle', pulse: false, x: steady(0.5 + r * Math.cos(turn) / 2), y: steady(r * Math.sin(turn)), w: pitch / 2, h: pitch, paint: 'seq.none', layer: 'data', role: roleOf(l), ...more } as SceneNode);
       };
       rows.forEach((r, j) => { for (let c = 1; c <= counts[j]!; c++) seat(ids[i] + ':' + k(r) + ':' + c, { row: k(r), paint: hue(j), legend: true }); });
       for (let c = 1; c <= rest; c++) seat(ids[i] + '#rest:' + c, {});
@@ -1031,7 +1031,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
       const rows = result.rows, own = rowKeys(rows, angle), k = (r: Row) => own.get(r)!, place = new Map(rows.map((r, j) => [k(r), j])), count = rows.length, prev = l.series === 'previous', by = outBy(l);
       const drawn = round(l, { id: ids[i]!, role: roleOf(l), paint: paintOf(l, catalog, result) || (prev ? 'compare' : 'series.1'), prev, rows: rows.filter((r) => r[by] != null), k, say: sayOf(catalog), v: reach, part: 'radial', bend: true,
         unit: { x: (key) => place.get(key)! / count, w: 1 / count, cx: (key) => (place.get(key)! + 0.5) / count }, ends: (r) => [0, reach(num(r, by))] });
-      bent.push(...drawn.map((node): SceneNode => (node.kind === 'circle' ? { ...node, x: 0.5 + node.y! * Math.sin(node.x! * TURN) / 2, y: 0.5 + node.y! * Math.cos(node.x! * TURN) / 2 } : node)));
+      bent.push(...drawn.map((node): SceneNode => (node.kind === 'circle' ? { ...node, x: steady(0.5 + node.y! * Math.sin(node.x! * TURN) / 2), y: steady(0.5 + node.y! * Math.cos(node.x! * TURN) / 2) } : node)));
       if (!rim.length) rimOf(rows, angle, k);
       keys = rows.map(k); around = angle; rings = '';
       return;

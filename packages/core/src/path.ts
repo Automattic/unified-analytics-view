@@ -1,5 +1,10 @@
 import { arc, area, curveMonotoneX, line } from 'd3-shape';
 
+/** A place worked out with a sine or a cosine, to a millionth of its box. Those functions differ in their last digits
+ * from one machine to the next, where sums and products do not, and a scene is the same wherever it is built: its
+ * golden scenes are held to the digit, on a laptop and in CI. A millionth of a box is far under a px. */
+export const steady = (n: number): number => Math.round(n * 1e6) / 1e6;
+
 /** Where a point falls in the box a path is drawn in. */
 export interface PathBox<P> { x(p: P): number; y(v: number): number }
 // The scene's box: 100 by 100, y down, for a painter to stretch.

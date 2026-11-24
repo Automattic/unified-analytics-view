@@ -6,7 +6,7 @@ export { facets, layoutOf, resolve, viewAt, type Facet, type LayoutChoice } from
 export { explain, facetBecause, selectedBecause, type Because, type Explanation, type ExplainRoom } from './explain.ts';
 export { buildScene, detailOf, isDim, isMetric, layerKeys, metricOf, roleOf, rowKeys, uniqueKeys, unitsOf } from './scene.ts';
 export { COLUMNS_BLOCK, FACET_GAP, FACET_LEAST, columnRooms, declutter, facetColumns, inColumn, type LabelBox } from './sizes.ts';
-export { arcD, pathD, type PathBox } from './path.ts';
+export { arcD, pathD, steady, type PathBox } from './path.ts';
 export { filterSaid, gridProse, many, most, notShownNote, partialNote, plural, tldrProse } from './prose.ts';
 export { UNITS, formatBin, formatDimension, formatUnit, formatValue, orList, rangeLabel } from './format.ts';
 export { SERIES, SIZES, TINT, common, seqScale, sizeKey, sizeStep, tooManySeries } from './scene.ts';

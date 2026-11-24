@@ -148,7 +148,7 @@ describe('a grid of a hundred, divided by share', () => {
     expect(plan).toMatchObject({ preset: 'waffle', share: true, tldrValue: false, guides: { legend: true } });
     expect(cells).toHaveLength(100);
     expect([...count(cells.map((n) => n.row + ' ' + n.paint))]).toEqual([['Desktop series.1', 52], ['Mobile series.2', 41], ['Tablet series.3', 7]]);
-    expect(cells.map((n) => [Math.round(n.x! * 10), Math.round(n.y! * 10)])).toEqual(Array.from({ length: 100 }, (_, i) => [i % 10, Math.floor(i / 10)]));
+    expect(cells.map((n) => [Math.round(n.x! * 10), Math.round(n.y! * 10)])).toEqual(Array.from({ length: 100 }, (_, i) => [i % 10, 9 - Math.floor(i / 10)]));
     expect(cells.every((n) => n.kind === 'rect' && n.part === 'band' && n.w === 0.1 && n.h === 0.1 && n.role === 'primary')).toBe(true);
     expect([cells[0]!.key, cells[51]!.key, cells[52]!.key, cells[99]!.key]).toEqual(['primary:unit:Desktop:1', 'primary:unit:Desktop:52', 'primary:unit:Mobile:1', 'primary:unit:Tablet:7']);
     // A cell is a hundredth, which wants no key. The legend says each share, as a share bar's does.

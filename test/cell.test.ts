@@ -137,7 +137,7 @@ describe('the grids of the Uncommon types', () => {
     expect(texts(ratio, 'xtick:')).toEqual(Array.from({ length: 17 }, (_, i) => String(i / 2)));
     // The bottom left cell is the least of both, and the engine's order does not move it.
     const corner = cells(ratio).find((n) => n.pair![0] === '0' && n.pair![1] === '0')!;
-    expect(corner).toMatchObject({ key: 'primary:cell:0:0', x: 0, y: 7 / 8 });
+    expect(corner).toMatchObject({ key: 'primary:cell:0:0', x: 0, y: 0 });
     expect(cells(run(grids.bins2d!, 700, null, 'typical', { result: { ...result, rows: result.rows.slice().reverse() } }).ratio)).toEqual(cells(ratio));
     // A pair nothing fell in is a count of none, a step of the ramp, and not no value.
     expect(result.rows.some((r) => r.pageviews === 0)).toBe(true);
@@ -177,7 +177,7 @@ describe('the grids of the Uncommon types', () => {
     expect(labels.every((n) => n.row == null)).toBe(true);
     // In the middle of the pair's place on each axis, which is where its cell's middle is.
     const cellOf = (n: any) => cells(ratio).find((c) => c.pair!.join() === n.pair.join())!;
-    for (const n of labels) { const c = cellOf(n); expect(n.x, n.key).toBeCloseTo(c.x! + c.w! / 2, 12); expect(n.y, n.key).toBeCloseTo(1 - (c.y! + c.h! / 2), 12); }
+    for (const n of labels) { const c = cellOf(n); expect(n.x, n.key).toBeCloseTo(c.x! + c.w! / 2, 12); expect(n.y, n.key).toBeCloseTo(c.y! + c.h! / 2, 12); }
     // What it says is the metric as the catalog writes it, and it is ranked by it, the largest first.
     expect(labels.map((n) => n.text)).toEqual(result.rows.map((r) => formatValue(r.correlation as number, catalog.metrics.correlation!)));
     expect([...labels].sort((a, b) => a.rank - b.rank).map((n) => n.text).slice(0, 6)).toEqual(Array(6).fill('1'));
@@ -243,8 +243,9 @@ describe('cell', () => {
     expect(ratio).toMatchObject({ layout: 'matrix', parts: ['y-axis', 'plot', 'x-axis', 'ramp'], ys: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] });
     expect(ratio.rows!.length).toBe(24);
     expect(cells(ratio).length).toBe(7 * 24);
-    // A row of the grid at a time, from the top. Cells meet: the gap is the painter's.
-    expect(cells(ratio)[25]).toMatchObject({ key: 'primary:cell:1am:Tue', pair: ['1am', 'Tue'], x: 1 / 24, w: 1 / 24, y: 1 / 7, h: 1 / 7, layer: 'data', role: 'primary' });
+    // A row of the grid at a time, from the top, and each cell says its foot from the bottom, as every node does: the second row of seven stands on 5/7. Cells meet: the gap is the painter's.
+    expect(cells(ratio)[25]).toMatchObject({ key: 'primary:cell:1am:Tue', pair: ['1am', 'Tue'], x: 1 / 24, w: 1 / 24, h: 1 / 7, layer: 'data', role: 'primary' });
+    expect(cells(ratio)[25]!.y).toBeCloseTo(5 / 7, 12);
     expect(cells(ratio).every((n) => n.row == null)).toBe(true);
     const turned = { ...result, rows: result.rows.slice().reverse() };
     expect(cells(run(heatmap, 700, null, 'typical', { result: turned }).ratio)).toEqual(cells(ratio));

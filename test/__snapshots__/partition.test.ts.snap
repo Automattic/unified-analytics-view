@@ -63,7 +63,7 @@ exports[`golden scenes > painted by a second metric 1`] = `
       "role": "primary",
       "w": 1,
       "x": 0,
-      "y": 0,
+      "y": 0.50779,
     },
     {
       "anchor": "start",
@@ -91,7 +91,7 @@ exports[`golden scenes > painted by a second metric 1`] = `
       "role": "primary",
       "w": 0.61403,
       "x": 0,
-      "y": 0.49221,
+      "y": 0,
     },
     {
       "anchor": "start",
@@ -119,7 +119,7 @@ exports[`golden scenes > painted by a second metric 1`] = `
       "role": "primary",
       "w": 0.38597,
       "x": 0.61403,
-      "y": 0.49221,
+      "y": 0.29537,
     },
     {
       "anchor": "start",
@@ -147,7 +147,7 @@ exports[`golden scenes > painted by a second metric 1`] = `
       "role": "primary",
       "w": 0.38597,
       "x": 0.61403,
-      "y": 0.70463,
+      "y": 0.15433,
     },
     {
       "anchor": "start",
@@ -175,7 +175,7 @@ exports[`golden scenes > painted by a second metric 1`] = `
       "role": "primary",
       "w": 0.38597,
       "x": 0.61403,
-      "y": 0.84567,
+      "y": 0,
     },
     {
       "anchor": "start",
@@ -199,7 +199,7 @@ exports[`golden scenes > painted by a second metric 1`] = `
       "role": "context",
       "w": 0.57998,
       "x": 0.42002,
-      "y": 0,
+      "y": 0.5345,
     },
     {
       "anchor": "start",
@@ -254,7 +254,7 @@ exports[`golden scenes > painted by a second metric 1`] = `
       "role": "primary",
       "w": 0.37511,
       "x": 0.41886,
-      "y": 0,
+      "y": 0.42396,
     },
     {
       "anchor": "start",
@@ -282,7 +282,7 @@ exports[`golden scenes > painted by a second metric 1`] = `
       "role": "primary",
       "w": 0.37511,
       "x": 0.41886,
-      "y": 0.57604,
+      "y": 0,
     },
     {
       "anchor": "start",
@@ -310,7 +310,7 @@ exports[`golden scenes > painted by a second metric 1`] = `
       "role": "primary",
       "w": 0.20603,
       "x": 0.79397,
-      "y": 0,
+      "y": 0.35366,
     },
     {
       "anchor": "start",
@@ -338,7 +338,7 @@ exports[`golden scenes > painted by a second metric 1`] = `
       "role": "primary",
       "w": 0.20603,
       "x": 0.79397,
-      "y": 0.64634,
+      "y": 0,
     },
     {
       "anchor": "start",
@@ -362,7 +362,7 @@ exports[`golden scenes > painted by a second metric 1`] = `
       "role": "context",
       "w": 0.3929,
       "x": 0.42002,
-      "y": 0.4655,
+      "y": 0,
     },
     {
       "anchor": "start",
@@ -417,7 +417,7 @@ exports[`golden scenes > painted by a second metric 1`] = `
       "role": "primary",
       "w": 0.51682,
       "x": 0.48318,
-      "y": 0,
+      "y": 0.51103,
     },
     {
       "anchor": "start",
@@ -445,7 +445,7 @@ exports[`golden scenes > painted by a second metric 1`] = `
       "role": "primary",
       "w": 0.33537,
       "x": 0.48318,
-      "y": 0.48897,
+      "y": 0,
     },
     {
       "anchor": "start",
@@ -473,7 +473,7 @@ exports[`golden scenes > painted by a second metric 1`] = `
       "role": "primary",
       "w": 0.18144,
       "x": 0.81856,
-      "y": 0.48897,
+      "y": 0,
     },
     {
       "anchor": "start",
@@ -497,7 +497,7 @@ exports[`golden scenes > painted by a second metric 1`] = `
       "role": "context",
       "w": 0.18708,
       "x": 0.81292,
-      "y": 0.4655,
+      "y": 0,
     },
     {
       "anchor": "start",
@@ -524,7 +524,7 @@ exports[`golden scenes > painted by a second metric 1`] = `
       "role": "primary",
       "w": 1,
       "x": 0,
-      "y": 0,
+      "y": 0.19433,
     },
     {
       "anchor": "start",
@@ -552,7 +552,7 @@ exports[`golden scenes > painted by a second metric 1`] = `
       "role": "primary",
       "w": 1,
       "x": 0,
-      "y": 0.80567,
+      "y": 0,
     },
     {
       "anchor": "start",
@@ -763,7 +763,7 @@ exports[`golden scenes > tiles 1`] = `
       "role": "primary",
       "w": 0.58997,
       "x": 0.41003,
-      "y": 0,
+      "y": 0.52535,
     },
     {
       "anchor": "start",
@@ -786,7 +786,7 @@ exports[`golden scenes > tiles 1`] = `
       "role": "primary",
       "w": 0.26643,
       "x": 0.41003,
-      "y": 0.47465,
+      "y": 0,
     },
     {
       "anchor": "start",
@@ -809,7 +809,7 @@ exports[`golden scenes > tiles 1`] = `
       "role": "primary",
       "w": 0.18482,
       "x": 0.67646,
-      "y": 0.47465,
+      "y": 0.09274,
     },
     {
       "anchor": "start",
@@ -832,7 +832,7 @@ exports[`golden scenes > tiles 1`] = `
       "role": "primary",
       "w": 0.13872,
       "x": 0.86128,
-      "y": 0.47465,
+      "y": 0.09274,
     },
     {
       "anchor": "start",
@@ -855,7 +855,7 @@ exports[`golden scenes > tiles 1`] = `
       "role": "primary",
       "w": 0.32354,
       "x": 0.67646,
-      "y": 0.90726,
+      "y": 0,
     },
     {
       "anchor": "start",
@@ -995,7 +995,7 @@ exports[`golden scenes > treemap in ratios 1`] = `
       "role": "primary",
       "w": 1,
       "x": 0,
-      "y": 0,
+      "y": 0.50779,
     },
     {
       "anchor": "start",
@@ -1022,7 +1022,7 @@ exports[`golden scenes > treemap in ratios 1`] = `
       "role": "primary",
       "w": 0.61403,
       "x": 0,
-      "y": 0.49221,
+      "y": 0,
     },
     {
       "anchor": "start",
@@ -1049,7 +1049,7 @@ exports[`golden scenes > treemap in ratios 1`] = `
       "role": "primary",
       "w": 0.38597,
       "x": 0.61403,
-      "y": 0.49221,
+      "y": 0.29537,
     },
     {
       "anchor": "start",
@@ -1076,7 +1076,7 @@ exports[`golden scenes > treemap in ratios 1`] = `
       "role": "primary",
       "w": 0.38597,
       "x": 0.61403,
-      "y": 0.70463,
+      "y": 0.15433,
     },
     {
       "anchor": "start",
@@ -1103,7 +1103,7 @@ exports[`golden scenes > treemap in ratios 1`] = `
       "role": "primary",
       "w": 0.38597,
       "x": 0.61403,
-      "y": 0.84567,
+      "y": 0,
     },
     {
       "anchor": "start",
@@ -1128,7 +1128,7 @@ exports[`golden scenes > treemap in ratios 1`] = `
       "tone": "soft",
       "w": 0.57998,
       "x": 0.42002,
-      "y": 0,
+      "y": 0.5345,
     },
     {
       "anchor": "start",
@@ -1182,7 +1182,7 @@ exports[`golden scenes > treemap in ratios 1`] = `
       "role": "primary",
       "w": 0.37511,
       "x": 0.41886,
-      "y": 0,
+      "y": 0.42396,
     },
     {
       "anchor": "start",
@@ -1209,7 +1209,7 @@ exports[`golden scenes > treemap in ratios 1`] = `
       "role": "primary",
       "w": 0.37511,
       "x": 0.41886,
-      "y": 0.57604,
+      "y": 0,
     },
     {
       "anchor": "start",
@@ -1236,7 +1236,7 @@ exports[`golden scenes > treemap in ratios 1`] = `
       "role": "primary",
       "w": 0.20603,
       "x": 0.79397,
-      "y": 0,
+      "y": 0.35366,
     },
     {
       "anchor": "start",
@@ -1263,7 +1263,7 @@ exports[`golden scenes > treemap in ratios 1`] = `
       "role": "primary",
       "w": 0.20603,
       "x": 0.79397,
-      "y": 0.64634,
+      "y": 0,
     },
     {
       "anchor": "start",
@@ -1288,7 +1288,7 @@ exports[`golden scenes > treemap in ratios 1`] = `
       "tone": "soft",
       "w": 0.3929,
       "x": 0.42002,
-      "y": 0.4655,
+      "y": 0,
     },
     {
       "anchor": "start",
@@ -1342,7 +1342,7 @@ exports[`golden scenes > treemap in ratios 1`] = `
       "role": "primary",
       "w": 0.51682,
       "x": 0.48318,
-      "y": 0,
+      "y": 0.51103,
     },
     {
       "anchor": "start",
@@ -1369,7 +1369,7 @@ exports[`golden scenes > treemap in ratios 1`] = `
       "role": "primary",
       "w": 0.33537,
       "x": 0.48318,
-      "y": 0.48897,
+      "y": 0,
     },
     {
       "anchor": "start",
@@ -1396,7 +1396,7 @@ exports[`golden scenes > treemap in ratios 1`] = `
       "role": "primary",
       "w": 0.18144,
       "x": 0.81856,
-      "y": 0.48897,
+      "y": 0,
     },
     {
       "anchor": "start",
@@ -1421,7 +1421,7 @@ exports[`golden scenes > treemap in ratios 1`] = `
       "tone": "soft",
       "w": 0.18708,
       "x": 0.81292,
-      "y": 0.4655,
+      "y": 0,
     },
     {
       "anchor": "start",
@@ -1448,7 +1448,7 @@ exports[`golden scenes > treemap in ratios 1`] = `
       "role": "primary",
       "w": 1,
       "x": 0,
-      "y": 0,
+      "y": 0.19433,
     },
     {
       "anchor": "start",
@@ -1475,7 +1475,7 @@ exports[`golden scenes > treemap in ratios 1`] = `
       "role": "primary",
       "w": 1,
       "x": 0,
-      "y": 0.80567,
+      "y": 0,
     },
     {
       "anchor": "start",

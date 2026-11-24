@@ -126,9 +126,9 @@ export const partitionPainter: LayoutPainter = {
     plot.toggleAttribute('data-divided', divided);
     let count = 0;
     // The ratios are set in the names the element can move on a data change (motion.ts): x and w across, and a box's
-    // top as how far up the room it is, with how far down it runs from there.
+    // top as how far up the room it is, which is its foot and its height together, with how far down it runs from there.
     const box = (el: HTMLElement | SVGElement, n: RectNode, level: number) => {
-      prop(el, '--uav-x', n.x); prop(el, '--uav-w', n.w); prop(el, '--uav-t', 1 - (n.y ?? 0)); prop(el, '--uav-v', n.h);
+      prop(el, '--uav-x', n.x); prop(el, '--uav-w', n.w); prop(el, '--uav-t', (n.y ?? 0) + (n.h ?? 0)); prop(el, '--uav-v', n.h);
       attr(el, 'role', 'treeitem'); attr(el, 'aria-level', level); attr(el, 'id', 'box-' + count++); attr(el, 'aria-label', names.get(n.key)?.says);
     };
     const name = (slot: Element, n: TextNode | undefined) => {

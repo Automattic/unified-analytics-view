@@ -145,13 +145,13 @@ export const partitionMark: CustomMark = {
       labels.push([n, area]); nodes.push(n);
     };
     for (const g of groups) {
-      const b = g.box, at = { x: round(b.x), y: round(b.y), w: round(b.w), h: round(b.h) };
+      const b = g.box, at = { x: round(b.x), y: round(Math.max(0, 1 - (b.y + b.h))), w: round(b.w), h: round(b.h) };
       // A parent that is divided is the ground its children stand on: a tint of its colour, or the tone of no value.
       // What its children do not cover is what the rows past a `limit` hold.
       nodes.push({ key: g.key, part: 'plot', kind: 'rect', ...at, paint: g.paint, ...(two && !fill && { opacity: 0.14, tone: 'soft' as const }), layer: two && fill ? 'guide' : 'data', role: two && fill ? 'context' : role });
       label(g, b.w * b.h, two ? (fill ? 'ink.muted' : g.paint) : on, !two && !!fill);
       for (const c of g.kids) {
-        nodes.push({ key: c.key, part: 'plot', kind: 'rect', x: round(c.box.x), y: round(c.box.y), w: round(c.box.w), h: round(c.box.h), pair: [String(g.row[dim]), String(c.row[view.layers[0]!.encode!.detail as string])], paint: c.paint, layer: 'data', role } satisfies RectNode);
+        nodes.push({ key: c.key, part: 'plot', kind: 'rect', x: round(c.box.x), y: round(Math.max(0, 1 - (c.box.y + c.box.h))), w: round(c.box.w), h: round(c.box.h), pair: [String(g.row[dim]), String(c.row[view.layers[0]!.encode!.detail as string])], paint: c.paint, layer: 'data', role } satisfies RectNode);
         label(c, b.w * b.h * c.box.w * c.box.h, on, !!fill);
       }
     }

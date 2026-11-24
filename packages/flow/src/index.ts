@@ -78,7 +78,7 @@ export const linkMark: CustomMark = {
     const nodes: SceneNode[] = flows.map((f): PathNode => ({ key: id + ':' + key(f.r), part: 'plot', kind: 'path', d: ribbon(f.y0, ends(f)[0], f.y1, ends(f)[1]), points: [], fill: true,
       paint: paint(f.s), opacity: 0.35, tone: 'soft', row: key(f.r), layer: 'data', role }));
     const dims = [src, tgt];
-    cols.forEach((c, side) => nodes.push(...c.map((n): RectNode => ({ key: 'node:' + dims[side] + ':' + n.key, part: 'plot', kind: 'rect', x: side, y: n.y, h: n.h, paint: side ? 'ink.muted' : paint(n), layer: 'data', role }))));
+    cols.forEach((c, side) => nodes.push(...c.map((n): RectNode => ({ key: 'node:' + dims[side] + ':' + n.key, part: 'plot', kind: 'rect', x: side, y: Math.max(0, 1 - (n.y + n.h)), h: n.h, paint: side ? 'ink.muted' : paint(n), layer: 'data', role }))));
     // A label for each node, ranked by its node's size within its column: where two would meet, the larger node's stands.
     cols.forEach((c, side) => {
       const ranks = c.slice().sort((a, b) => b.v - a.v);

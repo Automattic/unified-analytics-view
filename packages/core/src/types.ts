@@ -211,9 +211,8 @@ export interface Plan extends PlanShape {
  *   x, y     where it is. For a mark that runs along an axis, a bar or the fill under a line, where it reaches.
  *   x2, y2   its other end, where it has one that is not the start of the axis.
  *   w, h     an extent: from `x` and `y` for a rect, about them for a glyph's room.
- * `x` runs across the box from its start. `y` runs up it from the bottom, but for a rect with `y` and `h`, a cell of a
- * grid, a treemap's box and a Sankey's node, which still count down from the top: making those count up is the next
- * stage of the same work, and until it is done a surface reads `h` as the sign of it. */
+ * `x` runs across the box from its start, and `y` up it from the bottom, for every node. So a rect with an extent stands
+ * on `y` and is `h` tall: a cell of a grid, a treemap's box, which is in its parent's, and a Sankey's node. */
 export type Part = 'number' | 'plot' | 'x-axis' | 'y-axis' | 'y-axis-2' | 'labels' | 'columns' | 'rows' | 'band' | 'legend' | 'legend-top' | 'radial' | 'hole' | 'ramp' | 'notice'
   /* `points` holds the dots of a plot that sets one metric against another, and `point-labels` the labels on a plot's
    * points. Both lie over the plot and share its box. `size` is the key to the sizes of its dots. */
@@ -261,7 +260,7 @@ interface NodeBase {
  * A bar with a second end runs from the first, its other end here, to it, and is painted by which way it goes. */
 export interface RectNode extends NodeBase {
   kind: 'rect'; x?: number; w?: number; x2?: number; y2?: number;
-  /** In a plot, where a bar reaches. In a cell of a grid, with `h`: `y` and `h` down the plot from its top, as `x` and `w` run across it. */
+  /** In a plot, where a bar reaches. In a cell of a grid, with `h`: its foot, `y` up the plot from the bottom, and how tall it is, as `x` and `w` run across it. */
   y?: number; h?: number;
   /** The two dimension values a cell came from: the one on x, then the one on y. A cell has no `row`. */
   pair?: [x: string, y: string];

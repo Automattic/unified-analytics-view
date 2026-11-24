@@ -895,7 +895,7 @@ function sceneGrid(catalog: Catalog, layer: Layer, id: string, result: Result): 
   const m = layer.encode!.x, dim = layer.encode!.color, M = metricOf(catalog, m), side = Math.sqrt(UNIT_CELLS), role = roleOf(layer);
   if (typeof m !== 'string' || !M || m.includes('@')) throw new Error('A "unit" with no dimension on x or y is a grid of a hundred, and needs a metric on x to share it out by. This one has ' + held(m) + ' there. Encode { "x": <a metric>, "color": <a dimension> }.');
   const nodes: SceneNode[] = [], own = paintOf(layer, catalog, result) || 'series.1';
-  const cell = (key: string, more: Partial<RectNode>): number => nodes.push({ key, part: 'band', kind: 'rect', x: (nodes.length % side) / side, w: 1 / side, y: Math.floor(nodes.length / side) / side, h: 1 / side, paint: own, layer: 'data', role, ...more });
+  const cell = (key: string, more: Partial<RectNode>): number => nodes.push({ key, part: 'band', kind: 'rect', x: (nodes.length % side) / side, w: 1 / side, y: 1 - (Math.floor(nodes.length / side) + 1) / side, h: 1 / side, paint: own, layer: 'data', role, ...more });
   if (!isDim(catalog, dim)) {
     if (!M.domain) throw new Error('A "unit" with no dimension reads "' + m + '" against a range, and the catalog gives that metric no "domain". Add "domain": [least, most] to it in the catalog, or encode a dimension on color to divide the grid by it.');
     const v = result.totals[m], [least, most] = M.domain, lit = v == null || !(v > least) ? 0 : Math.max(1, Math.round(along(M.domain, v) * UNIT_CELLS));
@@ -1199,7 +1199,7 @@ function sceneMatrix(catalog: Catalog, layers: Layer[], result: Result): Body {
   if (edges) nodes.push(axisTick('x-axis', 'end', 1, String(end(xf!, xs[nx - 1]!)), { anchor: 'end' }));
   // A row of the grid at a time, from the top: reading order. A layer at a time, the cells under the dots.
   const each = (draw: (x: string, y: string, i: number, j: number) => SceneNode) => ys.forEach((y, j) => xs.forEach((x, i) => nodes.push(draw(x, y, i, j))));
-  if (cell) each((x, y, i, j) => ({ key: ids[layers.indexOf(cell)] + ':' + x + ':' + y, part: 'plot', kind: 'rect', x: i / nx, w: 1 / nx, y: j / ny, h: 1 / ny, pair: [x, y], paint: seq!.paint(at!.get(x + '\n' + y)), layer: 'data', role: roleOf(cell) }));
+  if (cell) each((x, y, i, j) => ({ key: ids[layers.indexOf(cell)] + ':' + x + ':' + y, part: 'plot', kind: 'rect', x: i / nx, w: 1 / nx, y: 1 - (j + 1) / ny, h: 1 / ny, pair: [x, y], paint: seq!.paint(at!.get(x + '\n' + y)), layer: 'data', role: roleOf(cell) }));
   // A dot with no value is the least a painter draws, in the paint of no value: the pair is still there to be read.
   if (dot) each((x, y, i, j) => {
     const v = sizes!.get(x + '\n' + y), paint = v == null ? 'seq.none' : !cell && seq ? seq.paint(at!.get(x + '\n' + y)) : dot.paint || 'series.1';

@@ -100,7 +100,8 @@ describe('link: two columns of nodes and a ribbon for each row', () => {
       let y = 0;
       for (const t of result.totalsBy![d]!) {
         const n = nodes.find((r) => r.key === 'node:' + d + ':' + t[d])!;
-        expect([n.x, n.y, n.h].map((v) => +v!.toFixed(9)), n.key).toEqual([x, +y.toFixed(9), +((t.visitors as number) / total * ROOM).toFixed(9)]);
+        // A node stands on its foot, from the bottom: `y` here runs down from the top, so the foot is what is left under it.
+        expect([n.x, n.y, n.h].map((v) => +v!.toFixed(9)), n.key).toEqual([x, +Math.max(0, 1 - (y + n.h!)).toFixed(9), +((t.visitors as number) / total * ROOM).toFixed(9)]);
         y += n.h! + GAP;
       }
     }

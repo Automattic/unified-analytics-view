@@ -26,7 +26,6 @@ packages/
   dots/                       dot-grid painter (not started)
 apps/
   bench/                      where work is looked at: playground, samples, a board, marks, parts, tokens
-  bench-archive/              the bench as it was
 test/                         one suite across the packages
 ```
 

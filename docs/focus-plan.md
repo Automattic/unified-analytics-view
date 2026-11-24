@@ -157,7 +157,7 @@ From `docs/positioning.md`'s list of what is not there: a live region, patterns 
 4. **`keep`.** No sample uses it, so by Decided 17 it goes. Recommended: remove it at step 8, and take up what an author may say of what matters most with Open 14, when a view needs it.
 5. **A spec field for an author's description:** what a view is for, which does not change with its data. A grammar change.
 6. **Facts as data:** what the sentence is made of, for a surface to say in its own words. Recommended: with step 7, if the surface needs it.
-7. **`apps/bench-archive`.** Recommended: delete it; git keeps it.
+7. **`apps/bench-archive`.** Deleted on November 24, with `test/goals.test.ts`, which swept its dashboards: its goals pages used presets that step 3 cut, and it was kept on the terms that it not change. Git keeps it: `git checkout c46acd2 -- apps/bench-archive test/goals.test.ts` brings it back.
 8. **The two sketches left in `prototype/`.** Recommended: move them to `sketches/`, which holds the rest of the visual direction, so the folder goes.
 
 ## Not in this plan

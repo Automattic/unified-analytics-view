@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CONTAINER_RULES, FIT_RULES, type FitRule, type Spec } from '@unified-analytics/core';
-import { compileFitRules } from '@unified-analytics/dom';
+import { UaView, compileFitRules, defineUaView } from '@unified-analytics/dom';
 import { catalog, moreSamples, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
 import { GEO_RULES } from '@unified-analytics/geo';
 import { geoPainter } from '@unified-analytics/geo/dom';
@@ -88,6 +88,24 @@ describe('compileFitRules', () => {
 });
 
 // The element's own checks are plain functions, so they are held here too. The element itself is checked on the bench.
+describe('defining <ua-view>', () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const page = (defined: unknown) => { const define = vi.fn(), warn = vi.fn(); vi.stubGlobal('customElements', { get: () => defined, define }); vi.stubGlobal('console', { ...console, warn }); return { define, warn }; };
+  it('says so where another copy of the library has defined it, and names the fix: nothing else would tell a page it has two', () => {
+    const { define, warn } = page(class Other {});
+    defineUaView();
+    expect(define).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]![0]).toMatch(/<ua-view> is already defined on this page by another copy of this library.*Load one copy: have every bundle take "@unified-analytics\/dom" from the same place\./);
+  });
+  it('is quiet where this copy has defined it already: defining twice is defining once', () => {
+    const { define, warn } = page(UaView);
+    defineUaView();
+    expect(define).not.toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalled();
+  });
+});
+
 describe('what <ua-view> checks before it paints', () => {
   const trend = samples.trend!.spec, result = runQuery(trend.query);
   it('says how to write a list that a spec gives as a bare value', () => {

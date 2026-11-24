@@ -574,9 +574,15 @@ export class UaView extends Base {
   }
 }
 
-/** Define <ua-view>, once. Called by the page, not at import, so a page can be ready for it first. */
+/** Define <ua-view>, once. Called by the page, not at import, so a page can be ready for it first.
+ * A page has one <ua-view>. Where another copy of this library has defined it already, this copy defines nothing, and
+ * every view on the page is drawn by that one, whatever its version: it says so, since nothing else would.
+ * ponytail: it warns and does not throw, so a module evaluated again as it is edited does not take its page down, and
+ * it says nothing of versions, since the packages have none yet. A version on the element, when one is published. */
 export function defineUaView(): void {
-  if (customElements.get('ua-view')) return;
+  const defined = customElements.get('ua-view');
+  if (defined === UaView) return;
+  if (defined) { console.warn('defineUaView(): <ua-view> is already defined on this page by another copy of this library, so this copy defines nothing and its views are drawn by that one, whatever its version. Load one copy: have every bundle take "@unified-analytics/dom" from the same place.'); return; }
   register();
   customElements.define('ua-view', UaView);
 }

@@ -116,6 +116,8 @@ interface Draw {
   slot?: [number, number];
   /** For a bar or an area with two ends that is painted by direction, and for bars that go both ways from nothing: its metric's polarity, which turns the paint of the way it goes. */
   polarity?: Polarity | undefined;
+  /** For a rule `at` values of the list on x: each one the axis has, and where it stands. */
+  at?: { value: string; x: number }[] | undefined;
   /** For a `unit`: what one of its glyphs is worth, in its metric's own terms. */
   worth?: number | undefined;
   /** x is a number dimension the engine cut into bins: a line or an area is flat across each, and steps at its edges, as a bar there has no gap. */
@@ -210,8 +212,17 @@ const bar: MarkFn = (_l, { id, series, role, paint, prev, rows, k, unit, ends, p
 });
 /** Whether a rule runs across the plot from one place to another: it has both ends on both axes. */
 const across = (l: Layer) => l.mark === 'rule' && l.encode != null && l.encode.x2 != null && l.encode.y2 != null;
-const rule: MarkFn = (l, { id, series, role, rows, k, unit, ends, v, xv }) => {
+const rule: MarkFn = (l, { id, series, role, rows, k, unit, ends, v, xv, at }) => {
   const { x, y, x2, y2 } = l.encode || {};
+  // At values of the axis's own list: an upright line at each, the height of the plot, as one at a number is on a scale.
+  if (at) {
+    const on = Object.keys(l.encode || {});
+    if (on.length) throw new Error('A rule "at" a value stands the height of the plot at that value of x, and this one also has ' + orList(on) + ' encoded. Remove "at" for the rule those make, or remove them.');
+    return at.flatMap(({ value, x: place }): SceneNode[] => {
+      const key = id + ':' + value;
+      return [{ key, part: 'plot', kind: 'line', x: place, x2: place, t: 0, t2: 1, ...REFERENCE, layer: 'data', role }, ...(l.label ? [ruleLabel(key, l.label, role, { x: place, t: 1 }, place > 0.5 ? 'end' : 'start')] : [])];
+    });
+  }
   // Both ends on both axes: one line across the plot, from (x, y) to (x2, y2). Numbers make the one line, drawn as a
   // reference is. A field is a row's own value, so with any field there is a line for each row, in the layer's paint.
   // It is a path of two points, since a painter's line is level or upright.
@@ -560,12 +571,15 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     // An area fills down from a line that runs one way along x. The points of two metrics run in no order there.
     if (l.mark === 'area' && xOn && !xDim) throw new Error('Layer ' + (i + 1) + ' is an area with the metric "' + xOn + '" on x, and an area fills under a line that runs one way along x, which the points of two metrics do not. Use "line" to join the points in the order of their rows, or put a dimension on x.');
     if ((l.mark === 'bar' || l.mark === 'unit') && xOn && rows.length && rows[0]![xOn + '@end'] == null) throw new Error((l.mark === 'bar' ? 'Bars' : 'The glyphs of a unit') + ' on the number dimension "' + xOn + '" need its bins, and this result has no "' + xOn + '@end". Return where each bin ends from the query layer, or use line or dot.');
+    if (l.at != null && xOn && !xDim) throw new Error('Layer ' + (i + 1) + ' is a rule "at" a value of x, and this plot\'s x is the metric "' + xOn + '", which is a scale and has no values to stand at. Give the place as a number: { "encode": { "x": ' + (typeof l.at === 'number' ? l.at : 0) + ' } }.');
+    // Where each value a rule is `at` stands: the place of a row that has it on x. One no row has is not drawn.
+    const at = l.at == null ? undefined : [l.at].flat().flatMap((value) => { const key = [...said].find(([, has]) => has === String(value)); return key ? [{ value: String(value), x: unit.cx(key[0]) }] : []; });
     const v = scaleOf(l).v, far = units.indexOf(unitOf(catalog, l, xField)!) > 0;
     // What is on the second scale says so, node by node: it goes with the axis it is read against.
     // And what is painted a colour that the legend is the key to says so: it is drawn plain where there is no legend.
     const on = (drawn: SceneNode[], keyed = false) => { for (const n of drawn) { if (far) n.axis = 2; if (keyed) n.legend = true; } return drawn; };
     const m = several ? measureOf(catalog, l) : null;
-    const d: Draw = { say, id: ids[i]!, role: roleOf(l), paint: paintOf(l, catalog, result) || (prev ? 'compare' : 'series.' + (m == null || !told ? 1 : measures.indexOf(m) + 1)), prev, rows: rows.filter((r) => (rug ? r[xOn!] != null : across(l) || span.has(r))), k, unit, v, xv, size: guides.size ? size : undefined, points: !!xOn && !xDim, worth: worths[i],
+    const d: Draw = { say, id: ids[i]!, role: roleOf(l), paint: paintOf(l, catalog, result) || (prev ? 'compare' : 'series.' + (m == null || !told ? 1 : measures.indexOf(m) + 1)), prev, rows: rows.filter((r) => (rug ? r[xOn!] != null : across(l) || span.has(r))), k, unit, v, xv, at, size: guides.size ? size : undefined, points: !!xOn && !xDim, worth: worths[i],
       ends: (r) => { const [lo, hi] = span.get(r)!; return [v(lo), v(hi)]; },
       step: !!xDim && !!xOn && rows.length > 0 && rows[0]![xOn + '@end'] != null,
       // A mark with two ends is painted by which way it goes only where its layer says so: `paint: "direction"`.

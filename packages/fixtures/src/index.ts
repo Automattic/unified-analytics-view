@@ -563,6 +563,8 @@ export const moreSamples: Record<string, { label: string; spec: Spec }> = {
   // An arc that reads data on angle and radius (docs/uncommon-coverage-plan.md, step 2). Swept, with golden scenes, in test/arc-data.test.ts.
   rose:    { label: 'A rose: visitors by hour of the day', spec: { spec: 'view/0', title: 'Visitors by hour', use: 'rose', query: { metrics: ['visitors'], by: ['hour'], range: '28d' } } },
   // The plot's marks about a centre: a line round the circle from each day's place to the next, the fill in from it, a dot at each, and the period before as a second line.
+  launch:  { label: 'A day marked on a trend: visitors by day, and the day of a launch', spec: { spec: 'view/0', title: 'Visitors, and the launch', query: { metrics: ['visitors'], by: ['date.day'], range: '28d', compare: 'previous' },
+    layers: [{ mark: 'area', encode: { x: 'date.day', y: 'visitors' }, role: 'context' }, { mark: 'line', encode: { x: 'date.day', y: 'visitors' } }, { mark: 'line', encode: { x: 'date.day', y: 'visitors' }, series: 'previous' }, { mark: 'rule', at: '2026-09-21', label: 'Launch' }] } },
   radar:   { label: 'Radar: visitors by day of the week, this period and the one before', spec: { spec: 'view/0', title: 'Visitors by weekday', query: { metrics: ['visitors'], by: ['weekday'], range: '28d', compare: 'previous' },
             layers: [{ mark: 'area', encode: { angle: 'weekday', radius: 'visitors' }, role: 'context' }, { mark: 'line', encode: { angle: 'weekday', radius: 'visitors' }, series: 'previous' },
               { mark: 'line', encode: { angle: 'weekday', radius: 'visitors' } }, { mark: 'dot', encode: { angle: 'weekday', radius: 'visitors' } }] } },

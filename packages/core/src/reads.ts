@@ -71,8 +71,8 @@ export const NEEDS: Record<string, Record<string, readonly Channel[]>> = {
 
 /** The layer fields that only some marks read, and where. On any other mark one was dropped. `role` is read of every
  * layer, and `paint`, `series` and `stack` are refused where they are drawn, form by form: they are not here. */
-export const FIELDS: Record<string, Record<string, readonly ('label' | 'align' | 'sweep')[]>> = {
-  cartesian: { rule: ['label'], tick: ['align'] },
+export const FIELDS: Record<string, Record<string, readonly ('label' | 'align' | 'sweep' | 'at')[]>> = {
+  cartesian: { rule: ['label', 'at'], tick: ['align'] },
   rows:      { text: ['align'], tick: ['align'] },
   radial:    { arc: ['sweep'], unit: ['sweep'] },
 };
@@ -117,7 +117,7 @@ export function checkReads(layout: Layout, why: string, layers: Layer[], catalog
     }
     const missing = (own ? [] : NEEDS[layout]?.[l.mark] ?? []).find((ch) => l.encode?.[ch] == null);
     if (missing) throw new Error(n + ' has the mark "' + l.mark + '" and nothing on ' + missing + ', and ' + there + ' is not drawn without it. Encode ' + orList(reads[missing]!.map((h) => A[h])) + ' on ' + missing + '.');
-    for (const field of ['label', 'align', 'sweep'] as const) {
+    for (const field of ['label', 'align', 'sweep', 'at'] as const) {
       if (l[field] == null || (!own && FIELDS[layout]?.[l.mark]?.includes(field))) continue;
       const where = Object.entries(FIELDS).flatMap(([lay, ms]) => Object.keys(ms).filter((m) => ms[m]!.includes(field)).map((m) => m + ' in ' + lay));
       throw new Error(n + ' has "' + field + '", and ' + there + ' reads none. Remove it. It is read by: ' + where.join(', ') + '.');

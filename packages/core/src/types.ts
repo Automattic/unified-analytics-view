@@ -114,6 +114,10 @@ export interface Layer {
    * The one layer field that is neither data nor role. */
   sweep?: 'half';
   label?: string;
+  /** On a `rule` in a plot whose x is a list of values (a time, a category, a number in bins): the value, or the values,
+   * of that list it stands at, the height of the plot, as one at a number stands on a scale. It is a value, where what
+   * is on a channel is a field. One the axis does not have is not drawn: a date outside the range is no error. */
+  at?: string | number | (string | number)[];
   /** On a `text` layer in rows, `end` sets it as a column of values. On a `tick`, the half of it to that side of its band's middle. */
   align?: (typeof ALIGNS)[number];
   /** A paint token in place of the layer's own. `delta` is the paint of its metric's change over the range: good or bad by

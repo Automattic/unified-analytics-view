@@ -503,3 +503,37 @@ it('a metric on x with nothing above zero ends at zero', () => {
   const ticks = ofUnbounded(spec, res, query, cat).scene.nodes.filter((n) => n.key.startsWith('xtick:')).map((n) => (n as { text: string }).text);
   expect(ticks.at(-1)).toBe('0');
 });
+
+// A rule at a value of the list on x (reference, section 6, "A rule at a value"; Decided 46). A string on a channel
+// is a field, so the place is said in the layer field `at`.
+describe('a rule at a value of x', () => {
+  const launch = moreSamples.launch!.spec, at = (layer: object, query = launch.query, rest: object[] = launch.layers!.slice(0, 2)) => ({ ...launch, query, layers: [...rest, layer] }) as Spec;
+  const rules = (s: Spec) => ofUnbounded(s).scene.nodes.filter((n) => n.role === 'reference') as unknown as { key: string; x: number; x2: number }[];
+  it('stands the height of the plot where that value is, with its label beside it', () => {
+    const [line, label] = rules(launch), dates = runQuery(launch.query).rows.map((r) => r['date.day']), i = dates.indexOf('2026-09-21');
+    expect(i).toBeGreaterThan(0);
+    expect(line).toMatchObject({ key: 'reference:rule:2026-09-21', kind: 'line', t: 0, t2: 1, paint: 'rule', dash: '5 3' });
+    expect(line!.x).toBeCloseTo(i / (dates.length - 1));
+    expect(line!.x2).toBe(line!.x);
+    expect(label).toMatchObject({ key: 'reference:rule:2026-09-21:label', kind: 'text', text: 'Launch', anchor: 'start' });
+    expect(view(launch), JSON.stringify(view.errors)).toBe(true);
+  });
+  it('a list of values is a rule at each, keyed by its value, and on bars it stands at the middle of its band', () => {
+    expect(rules(at({ mark: 'rule', at: ['2026-09-21', '2026-09-30'] })).map((n) => n.key)).toEqual(['reference:rule:2026-09-21', 'reference:rule:2026-09-30']);
+    const byChannel = { metrics: ['visitors'], by: ['channel'], range: '28d' }, bars = at({ mark: 'rule', at: 'Social' }, byChannel, [{ mark: 'bar', encode: { x: 'channel', y: 'visitors' } }]);
+    const scene = ofUnbounded(bars).scene, bar = scene.nodes.find((n) => n.key === 'primary:bar:Social') as unknown as { x: number; w: number };
+    expect(rules(bars)[0]!.x).toBeCloseTo(bar.x + bar.w / 2);
+  });
+  it('a value the axis does not have is not drawn, and is no error', () => {
+    expect(rules(at({ mark: 'rule', at: '2025-01-01', label: 'Before the range' }))).toEqual([]);
+    expect(rules(at({ mark: 'rule', at: ['2025-01-01', '2026-09-21'] })).map((n) => n.key)).toEqual(['reference:rule:2026-09-21']);
+  });
+  it('names the fix where it cannot stand', () => {
+    expect(err(at({ mark: 'rule', at: '2026-09-21', encode: { y: 100 } }))).toMatch(/A rule "at" a value stands the height of the plot at that value of x, and this one also has y encoded\. Remove "at" for the rule those make, or remove them\./);
+    expect(err(at({ mark: 'dot', at: '2026-09-21', encode: { x: 'date.day', y: 'visitors' } }))).toMatch(/Layer 3 has "at", and the "dot" mark in a "cartesian" layout reads none\. Remove it\. It is read by: rule in cartesian\./);
+    const points = { metrics: ['visitors', 'pageviews'], by: ['channel'], range: '28d' };
+    expect(err(at({ mark: 'rule', at: 'Social' }, points, [{ mark: 'dot', encode: { x: 'visitors', y: 'pageviews' } }]))).toMatch(/Layer 2 is a rule "at" a value of x, and this plot's x is the metric "visitors", which is a scale and has no values to stand at\. Give the place as a number/);
+    const list = [{ mark: 'bar', encode: { y: 'channel', x: 'visitors' } }, { mark: 'text', encode: { y: 'channel', text: 'channel' } }];
+    expect(err(at({ mark: 'rule', at: 'Social', encode: { x: 100 } }, { metrics: ['visitors'], by: ['channel'], range: '28d' }, list))).toMatch(/Layer 3 has "at", and the "rule" mark in a "rows" layout reads none/);
+  });
+});

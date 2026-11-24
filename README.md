@@ -13,7 +13,6 @@ docs/
   focus-plan.md               the course: what is cut and what is built, a step at a time
   archive/                    the plans that are built, and what building each found
   design-inputs/              research behind the design: views, view spec, semantic model
-prototype/                    two sketches of materials, which the bench's were ported from
 sketches/                     visual direction: materials and the dot-matrix readout
 packages/
   core/                       spec types and schemas, presets, plan, scene, fit rules, tldr prose, the board

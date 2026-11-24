@@ -1,4 +1,4 @@
-/* Materials, ported from prototype/Clock under crystal.html, prototype/Glass drops.html and
+/* Materials, ported from sketches/Clock under crystal.html, sketches/Glass drops.html and
  * sketches/material-layers-toggle.html.
  * The surface of each is gradients, masks and shadows, and works everywhere. The crystal's lens is an SVG
  * filter on the backdrop, which only Chromium runs; elsewhere the crystal is the same, without the bending.

@@ -1,3 +1,4 @@
+import { BAND_BAR, PLOT_TOP, X_AXIS_BLOCK } from './sizes.ts';
 import type { KeepPart, Layout } from './types.ts';
 
 /* Fit rules: one declaration per part. Each names a container, the room the part
@@ -44,6 +45,34 @@ export interface Room { inline: number; block?: number | null }
  * column after it, and anything that depends on how tall the content is (reference, section 10.2).
  * A rule names every part it takes, one that stands inside another among them: a reader with no browser has no
  * nesting to go by, and test/fit.test.ts holds a view to be its number alone wherever a rule takes its marks. */
+/* What is picked (docs/focus-plan.md, step 8). Every need in the rules below is one of these, or a sum of them and of
+ * the gutters a surface builds to (sizes.ts). Each was set by eye, for the part it is of, at the default type sizes,
+ * and is in px: a theme that sets larger type moves none of them. They are what a need has yet to be worked out from,
+ * and they are said here once, so that what is picked can be counted. */
+const LEAST = {
+  /** A plot with its axes; with a legend under it; with a label on each point; with the whole key to its dots' sizes. */
+  plot: { inline: 280, block: 120 }, plotLegend: { inline: 320, block: 180 }, plotPointLabels: { inline: 340, block: 180 }, plotSizeKey: { inline: 320, block: 160 },
+  /** A plot wide enough for the date in the middle of its x axis. */
+  plotMidTick: 380,
+  /** A plot's own box, in which a comparison, a reference and a fill still read. */
+  secondary: { inline: 180, block: 90 },
+  /** A plot with no axes; the number that stands beside it; the gap between the two. */
+  bare: { inline: 64, block: 46 }, number: 76, gap: 12,
+  /** A row's label; a row; the gap between two rows; a track read by where its marks are, beside its label. */
+  label: 90, row: 28, rowGap: 4, track: 70,
+  /** A legend whole, across; its one line, tall; a list whose rows are divided, with its legend whole under it. */
+  legend: 170, legendLine: 24, dividedRows: 150,
+  /** A band's bar across. */
+  band: 110,
+  /** A circle; one with a name for each slice round its rim; one with the number in its hole, across its own box. */
+  circle: { inline: 72, block: 64 }, rim: { inline: 230, block: 120 }, hole: 120,
+  /** A grid; one with its ramp and its key to sizes whole. */
+  grid: { inline: 150, block: 90 }, gridKeys: { inline: 240, block: 150 },
+  /** A notice. */
+  notice: { inline: 150, block: 40 },
+  /** Counted glyphs, across, and each form of them, tall: a stack, a run of rows, a grid of a hundred with its legend, one under the number, seats. */
+  glyphs: 280, stack: 160, run: 120, hundred: 180, hundredAlone: 220, seats: 200,
+};
 /** Every part of a plot's body, and of a list's: what a rule takes where the view is its number alone. */
 const PLOT = ['plot', 'points', 'point-labels', 'x-axis', 'y-axis', 'y-axis-2', 'labels', 'legend', 'ramp', 'size', 'unit-key'];
 const ROWS = ['rows', 'track', 'columns', 'legend', 'legend-top', 'unit-key'];
@@ -51,64 +80,64 @@ export const FIT_RULES: FitRule[] = [
   // A plot with axes. The second y axis is the key to what is measured in a second unit, which is read against nothing
   // else: it stays as long as the first does, and what is drawn on it goes when it goes. A bare plot is of one unit.
   // It has no room for a key to sizes either, so its dots are drawn at one size: what a size meant goes with what said it.
-  { id: 'axes',      layout: 'cartesian', container: 'view', needs: { inline: 280, block: 120 },
+  { id: 'axes',      layout: 'cartesian', container: 'view', needs: LEAST.plot,
     hide: ['x-axis', 'y-axis', 'y-axis-2', 'grid', 'axis:2', 'size'], show: ['number'], set: { arrange: 'side', dots: 'one' }, keep: 'guides' },
   // A plot told apart by colour has a legend, which becomes a label at the end of each line. That is for a view with
   // a line or an area in it: bars have no ends to label, so their legend has nothing to give way to and stays. Both go
   // when the axes do, and the colours go with them: a bare plot's series are in one paint, as a split by `detail` is.
-  { id: 'legend',      layout: 'cartesian', mark: 'line', container: 'view', needs: { inline: 320, block: 180 },
+  { id: 'legend',      layout: 'cartesian', mark: 'line', container: 'view', needs: LEAST.plotLegend,
     hide: ['legend'], show: ['labels'], keep: 'guides' },
-  { id: 'legend-area', layout: 'cartesian', mark: 'area', container: 'view', needs: { inline: 320, block: 180 },
+  { id: 'legend-area', layout: 'cartesian', mark: 'area', container: 'view', needs: LEAST.plotLegend,
     hide: ['legend'], show: ['labels'], keep: 'guides' },
-  { id: 'labels',      layout: 'cartesian', container: 'view', needs: { inline: 280, block: 120 },
+  { id: 'labels',      layout: 'cartesian', container: 'view', needs: LEAST.plot,
     hide: ['labels', 'legend', 'ramp'], set: { split: 'plain' }, keep: 'guides' },   // and a ramp, which has no shorter form a bare plot has room for
-  { id: 'point-labels', layout: 'cartesian', container: 'view', needs: { inline: 340, block: 180 },   // labels on points go first
+  { id: 'point-labels', layout: 'cartesian', container: 'view', needs: LEAST.plotPointLabels,   // labels on points go first
     hide: ['point-labels'], keep: 'guides' },
-  { id: 'size',      layout: 'cartesian', container: 'view', needs: { inline: 320, block: 160 },      // then the key to the sizes of dots, down to its largest step: it stays as long as sized dots do
+  { id: 'size',      layout: 'cartesian', container: 'view', needs: LEAST.plotSizeKey,      // then the key to the sizes of dots, down to its largest step: it stays as long as sized dots do
     hide: [], set: { 'size-key': 'most' }, keep: 'guides' },
-  { id: 'points',    layout: 'cartesian', has: 'points', container: 'view', needs: { inline: 280, block: 120 },   // a plot of points has no sparkline form: under the axes' need it is the number alone
+  { id: 'points',    layout: 'cartesian', has: 'points', container: 'view', needs: LEAST.plot,   // a plot of points has no sparkline form: under the axes' need it is the number alone
     hide: PLOT, show: ['number'], keep: 'marks' },
-  { id: 'mid-tick',  layout: 'cartesian', container: 'view', needs: { inline: 380 }, hide: ['x-tick.mid'] },
+  { id: 'mid-tick',  layout: 'cartesian', container: 'view', needs: { inline: LEAST.plotMidTick }, hide: ['x-tick.mid'] },
   // A short plot keeps its unranked y ticks: 120 px for the plot, 10 above it and 22 for the x axis.
   // ponytail: it asks the view, since the y axis stands outside the plot's container. Wrong when the number is above
   // the plot. A rule on the plot, and the y axis inside that container, would say it properly.
-  { id: 'y-ticks',   layout: 'cartesian', container: 'view', needs: { block: 152 }, hide: ['y-tick.ranked'] },
-  { id: 'secondary', layout: 'cartesian', container: 'plot', needs: { inline: 180, block: 90 },       // comparison and reference layers stay legible above this
+  { id: 'y-ticks',   layout: 'cartesian', container: 'view', needs: { block: LEAST.plot.block + PLOT_TOP + X_AXIS_BLOCK }, hide: ['y-tick.ranked'] },
+  { id: 'secondary', layout: 'cartesian', container: 'plot', needs: LEAST.secondary,       // comparison and reference layers stay legible above this
     hide: ['role:comparison', 'role:reference', 'role:context'], keep: 'secondary' },
-  { id: 'marks',     layout: 'cartesian', container: 'view', needs: { inline: 152, block: 46 },       // 76 for the number, a 12 px gap and a 64 px bare plot
+  { id: 'marks',     layout: 'cartesian', container: 'view', needs: { inline: LEAST.number + LEAST.gap + LEAST.bare.inline, block: LEAST.bare.block },       // 76 for the number, a 12 px gap and a 64 px bare plot
     hide: PLOT, show: ['number'], keep: 'marks' },
-  { id: 'legend',     layout: 'rows',     container: 'view', needs: { inline: 170, block: 150 },      // a divided row's legend becomes one line, as the band's does, and where the rows have under three of their own
+  { id: 'legend',     layout: 'rows',     container: 'view', needs: { inline: LEAST.legend, block: LEAST.dividedRows },      // a divided row's legend becomes one line, as the band's does, and where the rows have under three of their own
     hide: ['legend'], show: ['legend-top'], keep: 'guides' },
-  { id: 'legend-top', layout: 'rows',     container: 'view', needs: { block: 84 },                    // and that line goes where it would leave no two rows, and the series' colours with it
+  { id: 'legend-top', layout: 'rows',     container: 'view', needs: { block: 2 * LEAST.row + LEAST.rowGap + LEAST.legendLine },                    // and that line goes where it would leave no two rows, and the series' colours with it
     hide: ['legend', 'legend-top'], set: { split: 'plain' }, keep: 'guides' },
   // After the legend's rules, as every layout's is: where two rules say otherwise of a part the later one wins, and the one that takes the marks has the last word.
-  { id: 'marks',     layout: 'rows',      container: 'view', needs: { inline: 90, block: 28 },        // the label, and one row: a surface shows whole rows, so a box shorter than one shows none. The value's room is measured, and each ranked column's
+  { id: 'marks',     layout: 'rows',      container: 'view', needs: { inline: LEAST.label, block: LEAST.row },        // the label, and one row: a surface shows whole rows, so a box shorter than one shows none. The value's room is measured, and each ranked column's
     hide: ROWS, show: ['number'], keep: 'marks' },
-  { id: 'legend',    layout: 'band',      container: 'view', needs: { inline: 170 },                  // the full legend becomes the largest segment's label
+  { id: 'legend',    layout: 'band',      container: 'view', needs: { inline: LEAST.legend },                  // the full legend becomes the largest segment's label
     hide: [], set: { legend: 'top' }, keep: 'guides' },
-  { id: 'marks',     layout: 'band',      container: 'view', needs: { inline: 110, block: 48 },       // the bar and the one-line legend, 24 px each
+  { id: 'marks',     layout: 'band',      container: 'view', needs: { inline: LEAST.band, block: BAND_BAR + LEAST.legendLine },       // the bar and the one-line legend, 24 px each
     hide: ['band', 'legend', 'legend-top', 'unit-key'], show: ['number'], keep: 'marks' },
-  { id: 'legend',     layout: 'radial', container: 'view', needs: { inline: 170 },                    // as the band's
+  { id: 'legend',     layout: 'radial', container: 'view', needs: { inline: LEAST.legend },                    // as the band's
     hide: [], set: { legend: 'top' }, keep: 'guides' },
-  { id: 'legend-top', layout: 'radial', container: 'view', needs: { block: 88 },                      // the least circle, and one line under it. Under that the legend goes, and the segments' colours with it
+  { id: 'legend-top', layout: 'radial', container: 'view', needs: { block: LEAST.circle.block + LEAST.legendLine },                      // the least circle, and one line under it. Under that the legend goes, and the segments' colours with it
     hide: ['legend', 'legend-top'], set: { split: 'plain' }, keep: 'guides' },
   // Labels round the rim: the circle, and a label's width to either side of it. They are the key to which slice is
   // which, so under that they thin to the ones with no rank, about four, and stay as long as the circle does.
-  { id: 'rim',        layout: 'radial', container: 'view', needs: { inline: 230, block: 120 },
+  { id: 'rim',        layout: 'radial', container: 'view', needs: LEAST.rim,
     hide: ['rim.ranked'], keep: 'guides' },
-  { id: 'hole',       layout: 'radial', container: 'plot', needs: { inline: 120 },                    // the number sits in a donut's hole while the circle is this wide
+  { id: 'hole',       layout: 'radial', container: 'plot', needs: { inline: LEAST.hole },                    // the number sits in a donut's hole while the circle is this wide
     hide: ['hole'] },
-  { id: 'marks',      layout: 'radial', container: 'view', needs: { inline: 72, block: 64 },          // the least circle, and what stands in it and round it
+  { id: 'marks',      layout: 'radial', container: 'view', needs: LEAST.circle,          // the least circle, and what stands in it and round it
     hide: ['radial', 'hole', 'rim', 'legend', 'legend-top', 'unit-key'], show: ['number'], keep: 'marks' },
   // A grid has no bare form. Its ramp is the key to its colours and its key to sizes to its dots, so neither goes before
   // the grid: under this each is in its shorter form, the ramp a thin strip of every step and the sizes their largest alone.
-  { id: 'ramp',      layout: 'matrix',    container: 'view', needs: { inline: 240, block: 150 },
+  { id: 'ramp',      layout: 'matrix',    container: 'view', needs: LEAST.gridKeys,
     hide: [], set: { ramp: 'strip', 'size-key': 'most' }, keep: 'guides' },
-  { id: 'marks',     layout: 'matrix',    container: 'view', needs: { inline: 150, block: 90 },       // its labels thin by rank where they would meet, which is measured
+  { id: 'marks',     layout: 'matrix',    container: 'view', needs: LEAST.grid,       // its labels thin by rank where they would meet, which is measured
     hide: ['plot', 'point-labels', 'x-axis', 'y-axis', 'ramp', 'size'], show: ['number'], keep: 'marks' },
-  { id: 'notice',    layout: 'notice',    container: 'view', needs: { inline: 150, block: 40 },
+  { id: 'notice',    layout: 'notice',    container: 'view', needs: LEAST.notice,
     hide: ['notice'], show: ['number'], keep: 'marks' },
-  { id: 'track',     layout: 'rows',      has: 'track', container: 'view', needs: { inline: 160 },    // a track beside its label: the label's 90 px and 70 to read a mark's place in. The value's room is measured
+  { id: 'track',     layout: 'rows',      has: 'track', container: 'view', needs: { inline: LEAST.label + LEAST.track },    // a track beside its label: the label's 90 px and 70 to read a mark's place in. The value's room is measured
     hide: ROWS, show: ['number'], keep: 'marks' },
   /* The `unit` mark, in each layout it draws in. Glyphs are counted, so under the room that takes they are not drawn
    * smaller: the view becomes the preset of the same query that needs less, whole, and that one steps down to the
@@ -119,15 +148,15 @@ export const FIT_RULES: FitRule[] = [
    * the same metric against the same range. A grid divided by a dimension has no line: its cells are hundredths.
    * ponytail: a form whose glyph is worth one has no line, and gives way at the height one would need all the same.
    * A rule cannot ask what a view shows. Let one name a part it is for (`has`), if those 40 px are ever missed. */
-  { id: 'unit',       layout: 'cartesian', mark: 'unit', container: 'view', needs: { inline: 280, block: 160 },                           // a stack, where a plot has its axes, and the line
+  { id: 'unit',       layout: 'cartesian', mark: 'unit', container: 'view', needs: { inline: LEAST.glyphs, block: LEAST.stack },                           // a stack, where a plot has its axes, and the line
     hide: [], fallback: 'bar', keep: 'marks' },
-  { id: 'unit',       layout: 'rows',      mark: 'unit', container: 'view', needs: { inline: 280, block: 120 },                           // a run of ten beside its label and its value: three rows and the line
+  { id: 'unit',       layout: 'rows',      mark: 'unit', container: 'view', needs: { inline: LEAST.glyphs, block: LEAST.run },                           // a run of ten beside its label and its value: three rows and the line
     hide: [], fallback: 'bar-list', keep: 'marks' },
-  { id: 'unit',       layout: 'band',      mark: 'unit', container: 'view', needs: { inline: 280, block: 180 },                           // a hundred cells, and a legend under them
+  { id: 'unit',       layout: 'band',      mark: 'unit', container: 'view', needs: { inline: LEAST.glyphs, block: LEAST.hundred },                           // a hundred cells, and a legend under them
     hide: [], fallback: 'share-bar', keep: 'marks' },
-  { id: 'unit-alone', layout: 'band',      mark: 'unit', container: 'view', needs: { inline: 280, block: 220 },                           // a hundred cells under the number, and the line
+  { id: 'unit-alone', layout: 'band',      mark: 'unit', container: 'view', needs: { inline: LEAST.glyphs, block: LEAST.hundredAlone },                           // a hundred cells under the number, and the line
     hide: [], fallback: 'gauge', keep: 'marks' },
-  { id: 'unit',       layout: 'radial',    mark: 'unit', container: 'view', needs: { inline: 280, block: 200 },                           // up to a hundred seats, the line and the legend
+  { id: 'unit',       layout: 'radial',    mark: 'unit', container: 'view', needs: { inline: LEAST.glyphs, block: LEAST.seats },                           // up to a hundred seats, the line and the legend
     hide: [], fallback: 'pie-semi-circle', keep: 'marks' },
 ];
 

@@ -1,6 +1,6 @@
 # Focus plan
 
-As of November 24, 2026. **Status: steps 1 to 7 are built.** On November 24 David said to go ahead with the rest by best judgement, weighed against the vision, and to keep what wants his opinion for the end: it is under "For David, at the end".
+As of November 24, 2026. **Status: steps 1 to 7 are built, and the first stage of step 8.** On November 24 David said to go ahead with the rest by best judgement, weighed against the vision, and to keep what wants his opinion for the end: it is under "For David, at the end".
 
 ## Why
 
@@ -155,6 +155,21 @@ The direction: a need is the sum of the sizes of what its part holds, said once.
 
 Not every threshold can go. A container query compares against a length, so something says when the axes leave. What goes is the picking.
 
+**The first stage is built** (November 24; reference, Decided 58), and it changes no number: the 30 rules are the same data, compared before and after. What it found:
+
+- **Forty numbers are picked.** They are in one table now, `LEAST` in `fit.ts`, each named for the part it is the least room of. Every rule's need is one of them or a sum.
+- **Five needs were sums already,** typed as their totals: the short plot's ticks (120 + 10 + 22), the bare plot beside its number (76 + 12 + 64), a band (24 + 24), a list's one-line legend (two rows, a gap and a line) and a circle's (the least circle and a line). So the legend's ladder is one ladder already, said three times with the same parts.
+- **All forty are px at the default type sizes.** A theme that sets larger type moves none of them, so a view themed large gives way too late. This is where a need most plainly fails to follow what its part holds.
+- **Nine rules are for one kind of view.** Two exist because a legend can become labels only where a line has an end (`legend`, `legend-area`), one because points have no bare form, one for a track read by position, and five for the forms of `unit`.
+
+**Proposed for the next stage, and not built,** because each changes what a view looks like at some size and wants an eye on it:
+
+1. **A need in the type's own units.** The picked numbers become multiples of the face their part is set in, so a need follows the type scale. A container query can compare against `em`, to verify, and `fitTo` would take the face's size with the room.
+2. **One ladder for a legend,** written once and applied to a band, a list and a circle, with each layout's least for its marks as the one thing that differs.
+3. **Glyphs as the last rule for one kind of view.** `unit` has five of the nine. Its forms give way to plainer presets by height, which is the only place a rule names a preset.
+
+`unit` stays in core: it stands on the plot's own axes, which a custom mark cannot. `keep` stays too (For David, 11).
+
 ### 9. Custom marks as candidates
 
 A custom mark is where something enters the system, far upstream, and not a way round it. It is held to what a core mark is held to.
@@ -215,3 +230,5 @@ Calls made by best judgement while building, each to confirm or turn over.
 8. **`background` is a paint token a custom mark brought in.** `partition` sets a name in it on a filled box. It is in the scene schema, since scenes hold it, and in no token list of the element's. It should be a token of the system's or go.
 9. **The MCP server speaks a protocol I wrote out by hand,** to add no dependency. It answers `initialize`, `ping`, `tools/list` and `tools/call`, which is what a client of tools sends, and I have not connected a real client to it. The MCP SDK is the other choice, and the plan said to ask before adding it.
 10. **A spec, a query and a layer now refuse a field they do not take.** It is stricter than before for every surface, the element among them: a host that kept a field of its own on a spec object will be refused, by name.
+11. **`keep` stays.** The plan said to remove it, since no sample uses it. You said on November 24 that no system does without overrides in practice, and `keep` is the one a spec has. It is still provisional in the reference.
+12. **Step 8 stops at its first stage.** The needs are counted and named, and no number moved. The three stages proposed under step 8 each change what views do at some size, so I left them for you to see first.

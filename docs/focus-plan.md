@@ -239,7 +239,7 @@ Once the steps were built he went through every call made by judgement, twenty-t
 - `apps/bench-archive` stays deleted. Git keeps it: `git checkout c46acd2 -- apps/bench-archive test/goals.test.ts`.
 - The built plans stay in `docs/archive/`.
 - A spec, a query and a layer refuse a field they do not take.
-- The MCP server speaks its protocol by hand, with no SDK. A real client is still to be connected to it.
+- The MCP server speaks its protocol by hand, with no SDK. A real client has since been connected to it (step 20).
 - What moves a custom mark into core stays a proposal in the reference.
 - `unit` stays in core.
 - No size is held in CI yet.
@@ -259,7 +259,7 @@ Once the steps were built he went through every call made by judgement, twenty-t
 17. A fit rule's need in the type's own units, held to the capture at the default type, where nothing should move.
 18. A proposal for the API's owners: a metric's `by`, grains, whether a metric adds up, and the three states of an answer.
 19. The reference, rewritten as one concise document.
-20. A real MCP client connected to the server.
+20. A real MCP client connected to the server. Done: Claude Code 2.1, handed a one-off config that runs `packages/agent/src/server.ts`, started it over stdio, listed its tools and called `check_view`, and got the view's sentence and its parts at 250 px back. So the protocol as written is one a real client speaks. `draw_view` was not called through it.
 
 **How the work is committed:** each step locally, on a feature branch, and nothing pushed or opened as a pull request without his word.
 

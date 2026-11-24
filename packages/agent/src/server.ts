@@ -16,6 +16,10 @@ import { ROOMS, check, describe, type Checked, type Room } from './index.ts';
  * A view is drawn on the answer and the catalog it is handed. With neither it is drawn on the fixtures' engine, in the
  * data state asked for, which is how an author tries a spec before there is an engine to ask.
  *
+ * A client is told to run this file, and needs Node 24 or later, which runs TypeScript as it is:
+ *   { "mcpServers": { "ua-view": { "command": "node", "args": ["<this repository>/packages/agent/src/server.ts"] } } }
+ * Claude Code 2.1 was connected to it that way on November 24, 2026: it listed the tools and called check_view.
+ *
  * ponytail: the protocol is written out here, JSON-RPC 2.0 with a message to a line, for the three methods a server of
  * tools needs. It adds no dependency. If this grows resources or prompts, take the MCP SDK and delete the loop below. */
 

@@ -793,6 +793,8 @@ So a bar in a plot is `x` and `w` across, and up to `y` from `y2`. A row's bar r
 
 The number, a legend and a list's rows carry no position: a surface sets them in order. So this is what a generic placer needs (Open 20) and not that placer.
 
+**The scene has a schema** (built November 24; Decided 56): `packages/core/schema/scene.schema.json`, `scene/0`. It is a draft, and says the scene as it is built: the fields above, an arc's own, each kind of node and what it must hold, the parts, and the paint tokens. `test/scene-schema.test.ts` holds every scene a sample builds to it, in every data state, so a field a builder adds without the schema fails there. A surface that paints a scene, or an author who writes one, has it to go by.
+
 Until this the height up a plot was `v` on a bar and on a path's point and `t` on a line, a dot and a label, and a row's bar ran from `v0` to `v` beside a rule from `x` to `x2`. The plans that record earlier steps (`docs/chart-coverage-plan.md`, `docs/uncommon-coverage-plan.md`) use those names, as they were then.
 
 A placed scene is `{ width, height, nodes, plot? }`. Nodes are flat and drawn in order.
@@ -817,7 +819,7 @@ Every node also has:
   "width": 2, "dash": "2 4", "opacity": 0.75, "layer": "data", "note": "incomplete bucket" }
 ```
 
-Paint tokens in use: `ink`, `ink.muted`, `grid`, `axis`, `series.1` to `series.6`, `compare`, `rule`, `delta.good`, `delta.bad`, `live`.
+Paint tokens in use: `ink`, `ink.muted`, `grid`, `axis`, `series.1` to `series.6`, `compare`, `rule`, `delta.good`, `delta.bad`, `live`, the steps of the two ramps (`seq.1` to `seq.10`, `seq.none`, `div.1` to `div.9`), `band.1` to `band.3`, and `background`, which the `partition` mark sets a name on a filled box in.
 
 **Decided October 7: one scene, in ratios.** A pixel scene needs a size before it can exist, which is the opposite of intrinsic. Every node gets a `part` and coordinates from 0 to 1 within that part's box. The DOM painter lets CSS turn them into pixels. The dot-grid and canvas painters get today's pixel scene from a pure function, `place(scene, size)`, which is held to the existing golden scenes. Keys, paint tokens, roles and `layer` are identical in both. Detail is in `docs/dom-painter-plan.md`, section 3.
 
@@ -1074,6 +1076,7 @@ docs/
 53. The tldr prose is the number block in words, and then the filter: one shape for every view. It says each metric's total from the engine with its change and its target, and the value that leads the query's first dimension where the number's note names one. The sentences a kind of view had of its own are gone: for a ranking and for shares, for two dimensions, for a grid, for ranks, for a range, for a difference and for a path of points. A sentence stays derived, since a view's data is live and an authored one is not, and it stays the accessible description and the last rung. What a view shows beyond its number is for whoever reads the result to say. A total the engine does not give is said as "no figure". It is the second step of `docs/focus-plan.md`. (November 24)
 54. The library ships the common charts and no more: thirteen presets, the charts `@automattic/charts` has and the ones a fit rule falls back to. The twenty-five it had beyond them are gone from it, and so are three a custom mark's package registered: a form that is less common is more likely to be written to its case than taken whole, so it is written as its layers, and the bench keeps a sample of each. `use`, `registerPreset` and a library handed to `resolve()` are as they were. Every sample's scene is what it was, node for node. It is the third step of `docs/focus-plan.md`. (November 24)
 55. Nothing a layer says is dropped without a word. `paint`, `series` and `stack` join the table of what each mark reads, and are refused on a mark with no use for one; a custom mark says the fields it reads, in `fields`. A `paint` beside a dimension on `color` is refused, and so is `series: "previous"` on a layer that encodes no metric. A band is one layer, and its bar takes no `stack` but `"normalize"`. Bars of several layers on one x sit side by side, as the bars of a split do: of the ways to settle two bars in one place, that is the one that draws what was asked. Each limit of the grammar is listed with the reason it holds (section 7). It is the fourth step of `docs/focus-plan.md`. (November 24)
+56. The scene has a schema, `scene/0`, a draft: `packages/core/schema/scene.schema.json`. It is the node vocabulary of Decided 51 as data, with an arc's own fields and the parts that carry no position said as such, and every scene a sample builds is held to it. Writing it found two things no type said: a `text` in a grid carries the `pair` it stands at, and the `partition` mark paints in a token of its own, `background`. It is the fifth step of `docs/focus-plan.md`. (November 24)
 
 ### Open
 

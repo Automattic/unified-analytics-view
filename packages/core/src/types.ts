@@ -313,6 +313,8 @@ export interface TextNode extends NodeBase {
   baseline?: 'middle';
   font: 'tick' | 'label' | 'value' | 'display';
   halo?: boolean;
+  /** In a grid: the two dimension values it stands at, as a cell's. */
+  pair?: [x: string, y: string];
 }
 /** An arc about the centre of the `radial` part. `a0` and `a1` are in turns, clockwise from the top, and below zero to the
  * left of it. `r0` and `r1` are ratios of the part's radius. `d` is drawn about the origin at a radius of 50, so the

@@ -1,6 +1,6 @@
 # Focus plan
 
-As of November 24, 2026. **Status: steps 1 to 4 are built.** On November 24 David said to go ahead with the rest by best judgement, weighed against the vision, and to keep what wants his opinion for the end: it is under "For David, at the end".
+As of November 24, 2026. **Status: steps 1 to 5 are built.** On November 24 David said to go ahead with the rest by best judgement, weighed against the vision, and to keep what wants his opinion for the end: it is under "For David, at the end".
 
 ## Why
 
@@ -103,6 +103,12 @@ The reference's section 7 lists what is still drawn wrong, or not at all, with n
 
 **Done when** every sample's scene in every data state validates against it. Ajv is already in the tests.
 
+**Built November 24** (reference, Decided 56). What it found:
+
+- Every scene validates: each sample in each data state, each view of a facet and of a board, the custom marks' among them.
+- Two things no type said. A `text` in a grid carries the `pair` it stands at, which is in the type now. And `partition` paints a name in `background`, a token no list had: the reference's list has it now.
+- The schema is strict: a node may hold only what it lists. So a custom mark that wants a field of its own has to add it to the schema, which is the conversation step 9 is about.
+
 ### 6. Capture and check for any spec
 
 The capture takes the bench's samples off the parts page. It should take any spec, result and catalog handed to it, and give the pictures, what was measured, and the check's findings.
@@ -192,3 +198,4 @@ Calls made by best judgement while building, each to confirm or turn over.
 5. **The archive is deleted,** with the test that swept its seventeen goal dashboards. The dashboards were the only record in the tree of which views serve which goal. One command brings it back (To decide, 7).
 6. **Two bar layers on one x sit side by side,** in place of one drawn over the other. The other answer was to refuse them. No sample has such a spec, so nothing drawn today changed.
 7. **A `text` layer takes no `paint`.** It was dropped, and is refused now. Letting a label be muted (`ink.muted`) is a small thing to build if it is wanted.
+8. **`background` is a paint token a custom mark brought in.** `partition` sets a name in it on a filled box. It is in the scene schema, since scenes hold it, and in no token list of the element's. It should be a token of the system's or go.

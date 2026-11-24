@@ -43,6 +43,8 @@ const stylesOf = (painters: LayoutPainter[]) => `@layer uav {
  * repaint them as the page, so both are told to leave a mark its paint. */
 .uav-body i { forced-color-adjust: none; }
 .uav-prose { ${VISUALLY_HIDDEN} }
+/* What is said when the sentence changes under a reader. It stands outside the figure, which is hidden while a view loads. */
+.uav-live { ${VISUALLY_HIDDEN} }
 .uav-body { grid-area: body; box-sizing: border-box; min-inline-size: 0; block-size: var(--uav-body-block, auto); }
 .uav-error { margin: 0; font-size: var(--uav-font-label); overflow-wrap: anywhere; color: ${paintVar('delta.bad')}; }
 /* Loading: until the view has an input it has not been handed, or until its turn to paint has come. A plot's natural
@@ -238,7 +240,7 @@ export class UaView extends Base {
   // Whether an input changed since the last paint. A view that is only moved in the page paints again, and nothing in it moves.
   #changed = false;
   #layout: Layout | null = null;
-  #root: ShadowRoot; #fig: HTMLElement; #prose: HTMLElement; #number: HTMLElement; #body: HTMLElement; #table: HTMLTableElement; #error: HTMLElement; #loading: HTMLElement;
+  #root: ShadowRoot; #fig: HTMLElement; #prose: HTMLElement; #live: HTMLElement; #said: string | null = null; #number: HTMLElement; #body: HTMLElement; #table: HTMLTableElement; #error: HTMLElement; #loading: HTMLElement;
   // The timer that says, in the console, which input a view still waits for when it has waited long.
   #late = 0;
   #room: HTMLElement; #ruler: HTMLElement[]; #seen = '';
@@ -266,6 +268,9 @@ export class UaView extends Base {
     this.#fig = ensure(this.#root as unknown as Element, 'figure', 'uav');
     this.#prose = ensure(this.#fig, 'figcaption', 'uav-prose');
     this.#prose.id = 'prose'; this.#fig.setAttribute('aria-describedby', 'prose');
+    // A live region: a view drawn again with new data is not focused again, so nothing else would say that its sentence changed.
+    this.#live = ensure(this.#root as unknown as Element, 'div', 'uav-live');
+    this.#live.setAttribute('aria-live', 'polite'); this.#live.setAttribute('aria-atomic', 'true');
     this.#number = ensure(this.#fig, 'div', 'uav-number');
     this.#body = ensure(this.#fig, 'div', 'uav-body');
     this.#table = ensure(this.#fig, 'table', 'uav-table');
@@ -447,6 +452,9 @@ export class UaView extends Base {
       fig.style.setProperty('--uav-axes-height', rules.axes.height + 'px'); fig.style.setProperty('--uav-bare-height', rules.bare.height + 'px');
       begin(fig, changed && this.#layout === scene.layout);
       this.#prose.textContent = plan.text;
+      // The first sentence is the view's description, and is read with it. One that takes its place is said, once.
+      if (this.#said != null && this.#said !== plan.text) this.#live.textContent = plan.text;
+      this.#said = plan.text;
       for (const el of [this.#number, ...this.#ruler]) paintNumber(el, scene.nodes.filter((n) => n.part === 'number'));
       if (this.#layout !== scene.layout) { this.#body.replaceChildren(); this.#body.removeAttribute('data-scale'); this.#layout = scene.layout; }
       const painter = painterOf(scene.layout), data = { layers: plan.layers, query: expand(spec).query, result, catalog };

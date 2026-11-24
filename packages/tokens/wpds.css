@@ -1,0 +1,48 @@
+/* <ua-view> on a page themed by the WordPress Design System: each public token of the view that names a role the
+ * design system has is that role's own token. A draft (docs/focus-plan.md, step 11): the pairs are a first reading
+ * of the two lists, to be checked by eye on a WordPress page, and they are few on purpose.
+ *
+ * What is not here has no role in the design system to take, and keeps the charts tier's value: every series colour
+ * but the first, the two ramps, the bands, the live colour, and the sizes of type, which are the view's own scale.
+ *
+ * Load it after the page's own tokens. A `--wpds-*` token the page does not define leaves the view's token undefined,
+ * and the view falls back to what it does unthemed (packages/dom/src/tokens.ts), so a pair that is wrong is not a
+ * view that breaks. test/wpds.test.ts holds every name on the left to be a public token of the view. */
+:root {
+  /* Text and lines. */
+  --ua-charts-color-label: var(--wpds-color-foreground-content-neutral);
+  --ua-charts-color-label-secondary: var(--wpds-color-foreground-content-neutral-weak);
+  --ua-charts-color-label-axis: var(--wpds-color-foreground-content-neutral-weak);
+  --ua-charts-color-annotation: var(--wpds-color-foreground-content-neutral-weak);
+  --ua-charts-color-comparison: var(--wpds-color-foreground-content-neutral-weak);
+  --ua-charts-color-grid: var(--wpds-color-stroke-surface-neutral-weak);
+  --ua-charts-color-axis-x: var(--wpds-color-stroke-surface-neutral);
+  --ua-charts-color-background: var(--wpds-color-background-surface-neutral);
+
+  /* A change, by direction and by judgement. */
+  --ua-charts-color-trend-up: var(--wpds-color-foreground-content-success);
+  --ua-charts-color-trend-down: var(--wpds-color-foreground-content-error);
+  --ua-charts-color-trend-neutral: var(--wpds-color-foreground-content-neutral-weak);
+  --ua-charts-color-delta-good: var(--wpds-color-foreground-content-success);
+  --ua-charts-color-delta-bad: var(--wpds-color-foreground-content-error);
+
+  /* The first series is the page's own accent, as the filled part of a meter is. The other five are the charts tier's. */
+  --ua-charts-color-series-1: var(--wpds-color-background-indicator-brand);
+
+  /* Focus and hover. */
+  --ua-charts-color-focus: var(--wpds-color-stroke-focus);
+  --ua-charts-stroke-width-focus: var(--wpds-border-width-focus);
+  --ua-charts-color-hover: var(--wpds-color-background-interactive-neutral-weak-active);
+
+  /* Shape, face and motion. */
+  --ua-charts-border-radius-bar: var(--wpds-border-radius-xs);
+  --ua-charts-border-radius-swatch: var(--wpds-border-radius-xs);
+  --ua-charts-font-family-tick: var(--wpds-typography-font-family-body);
+  --ua-charts-font-family-value: var(--wpds-typography-font-family-body);
+  --ua-charts-motion-duration-entrance: var(--wpds-motion-duration-md);
+  --ua-charts-motion-duration-update: var(--wpds-motion-duration-lg);
+  --ua-charts-motion-duration-exit: var(--wpds-motion-duration-sm);
+  --ua-charts-motion-easing-entrance: var(--wpds-motion-easing-expressive);
+  --ua-charts-motion-easing-update: var(--wpds-motion-easing-balanced);
+  --ua-charts-motion-easing-exit: var(--wpds-motion-easing-expressive);
+}

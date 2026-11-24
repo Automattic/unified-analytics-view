@@ -1,6 +1,6 @@
 # Focus plan
 
-As of November 24, 2026. **Status: steps 1 to 7 and 9 are built, with the first stage of step 8 and the part of step 10 that has a reader here.** On November 24 David said to go ahead with the rest by best judgement, weighed against the vision, and to keep what wants his opinion for the end: it is under "For David, at the end".
+As of November 24, 2026. **Status: steps 1 to 7 and 9 are built, with the first stage of step 8 and the parts of steps 10 and 11 that need no one else.** On November 24 David said to go ahead with the rest by best judgement, weighed against the vision, and to keep what wants his opinion for the end: it is under "For David, at the end".
 
 ## Why
 
@@ -206,6 +206,13 @@ With the API's owners; this repo proposes and then reads what they accept.
 
 From `docs/positioning.md`'s list of what is not there: a live region, patterns as a second channel beside colour, a pass with a screen reader, and the `--wpds-*` alias sheet. With them a look for Selected, and a bench page that re-themes every view from tokens alone. The visual design pass is David's.
 
+**Built November 24, in part** (reference, Decided 61). What is built is what needs no eye:
+
+- **A live region.** A view says its sentence when new data changes it, and not the first time. Tried in a browser: silent on first paint and on the same answer again, and the new sentence on a new total. A capture differs on no frame. Not heard through a screen reader.
+- **A draft of the WordPress alias sheet,** `packages/tokens/wpds.css`: 29 of the view's tokens, each as the WordPress Design System token of the same role. The series colours past the first, the ramps and the type sizes have no role there to take. A pair that is wrong leaves the view unthemed, never broken. Nobody has looked at it on a WordPress page (For David, 15).
+
+Not built, because each is a look: patterns beside colour, Selected, and the page that re-themes every view. `test/dom-tokens.test.ts` already holds that every colour, radius, stroke, weight, motion and face the element uses is a public token.
+
 ### 12. Docs for shipping
 
 - The reference keeps what an author needs and the decision log. Plans that are built leave the tree; git keeps them.
@@ -247,3 +254,5 @@ Calls made by best judgement while building, each to confirm or turn over.
 12. **Step 8 stops at its first stage.** The needs are counted and named, and no number moved. The three stages proposed under step 8 each change what views do at some size, so I left them for you to see first.
 13. **What moves a custom mark into core** is four things I proposed in the reference's section 7: drawn in more than one product's views, takes the plot's marks over it, needs no new dependency, and gives way by ladders core has. They are a first guess with no case behind them.
 14. **What an answer says of itself.** How fresh it is, what was filtered from it, that a metric is not available here: I proposed all three (reference, Open 23) and built none, because each needs a place on the view, and the shape is the API's owners' to agree. The catalog's `by` is built, as a proposal to them.
+15. **The WordPress alias sheet is a first reading of two lists.** I paired 29 tokens by role, with the design system's own reference open. The first series takes the page's accent (`indicator-brand`), which is the pair most worth a look. It needs to be seen on a WordPress page.
+16. **Step 11's design work is yours:** patterns as a second channel beside colour, a look for Selected, and the visual pass. A pass with a screen reader is owed by someone with one.

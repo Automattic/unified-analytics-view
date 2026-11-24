@@ -938,7 +938,7 @@ Selected has no look of its own yet; that is design's to set. The bench's Board 
 
 Write these once against the scene and the plan, not per preset.
 
-- Every view exposes its **tldr prose** as its accessible name or description.
+- Every view exposes its **tldr prose** as its accessible name or description, and says it again, politely, when new data changes it: a view drawn again is not focused again, so nothing else would (built November 24). The first sentence is not said twice.
 - Every view offers the **same query as a table**. Chart and table read one result.
 - **Keyboard navigation** over data marks, driven by keys and the row each mark came from. Announce the dimension value, the metric value in its catalog format, and the comparison if present.
 - A **canvas or dot-grid painter needs a hidden DOM mirror** carrying the same structure.
@@ -1100,6 +1100,7 @@ docs/
 58. What the fit rules pick is said once. Every need is one of forty numbers, or a sum of them and of a surface's gutters, and the forty are in one table, `LEAST` in `packages/core/src/fit.ts`, each named for the part it is the least room of. No rule changed: the thirty are the same data. It is the first stage of the eighth step of `docs/focus-plan.md`, which goes on to work the needs out, from the type a part is set in first, and that is proposed there and not built. (November 24)
 59. A custom mark is a candidate for the system, and not a way round it. It is held to what a core mark is held to, in one suite run for every mark registered (`test/admission.test.ts`): it says what it reads, a sample draws it, its scenes are valid against `scene/0`, it shows something at every room and gives way in the least. So the count of custom marks is a queue of candidates, and no longer a mark against the grammar. What moves one into core is proposed in section 7. It is the ninth step of `docs/focus-plan.md`. (November 24)
 60. A catalog may say which dimensions a metric is answered by, with `by` on the metric, and a query that asks it by another is refused before it is run. It is the one part of the tenth step of `docs/focus-plan.md` that is built, because it is the one with a reader here: `resolve()`. The rest is proposed to the API's owners and is Open 23. (November 24)
+61. A view says its sentence in a live region when new data changes it, and a draft of the alias sheet for a page themed by the WordPress Design System is in the token package (`packages/tokens/wpds.css`). These are the parts of the eleventh step of `docs/focus-plan.md` that need no eye. Patterns beside colour, a look for Selected and the visual design are design's, and a pass with a screen reader is still owed. (November 24)
 
 ### Open
 

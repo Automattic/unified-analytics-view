@@ -83,9 +83,9 @@ This is an honest list. Version 4 does each of these today. Tooltips, keyboard n
 - **Locale, time zone and strings.** The view formats in `en-US` and UTC and writes its prose in English.
 - **Packaging and a React binding.** Nothing is built for release. Two copies on one page are now said: the second warns that it defines nothing, and names the fix. There is no version on the element to compare, since the packages have none.
 - **Interactive legends, zoom and annotations anchored to a point,** and extra lines in the readout.
-- **A WordPress token alias sheet,** and accessibility checked against version 4's.
+- **A WordPress token alias sheet that has been looked at,** and accessibility checked against version 4's. A draft is there, `packages/tokens/wpds.css` (November 24): the view's tokens that name a role the WordPress Design System has, each as that role's token. Nobody has seen it on a WordPress page.
 - **Patterns as a second channel beside colour.** Version 4 has them. A view tells its series apart by colour, by a dash for the period before and by labels at the ends of its lines, and draws no pattern.
-- **A live region, and a pass with a screen reader.** The keyboard's readout is each point's accessible name, so a screen reader has it to say as focus moves. But nothing is said where a name changes under the focus, there is no `aria-live` in the package, and none of it has been listened to through a screen reader.
+- **A pass with a screen reader.** The keyboard's readout is each point's accessible name, so a screen reader has it to say as focus moves, and a view says its sentence in a live region when new data changes it (November 24). None of it has been listened to through a screen reader, and nothing is said where a point's name changes under the focus.
 - **Maps below country level.** Facets are built (November 23).
 - **A size it is held to.** The vision says light, and nothing measures it. Measured November 24, as one minified bundle with core and d3 inlined: `<ua-view>` is 92.5 kB gzip (319 kB minified), and 112.7 kB with the map, the Sankey and the treemap, before any map's shapes. Core alone, with no element, is 51.3 kB. The Stats team's review measured `master` at 90 kB and 97 kB, against 70 kB of version 4's own code. Nothing has been done to make it smaller, and no build fails when it grows.
 

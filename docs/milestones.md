@@ -94,7 +94,9 @@ Replace the fixture engine with the team's API behind the seam. If the API is no
 
 ## After Friday
 
-In rough order: params and selections (cross-filtering), boards, generalizing the three hard-coded layouts, the `arc` mark, the dot-grid painter ported to the packages, label collision, keyboard navigation and keyed transitions, the agent surface over MCP, and the parity list and port into the Jetpack monorepo that the positioning doc describes.
+Built since: params and selections with cross-filtering, and boards (November 24; reference, Decided 48 to 50). For where the rest of this list stands, see the reference's section 19 and `CLAUDE.md`.
+
+What was listed here, in rough order: params and selections (cross-filtering), boards, generalizing the three hard-coded layouts, the `arc` mark, the dot-grid painter ported to the packages, label collision, keyboard navigation and keyed transitions, the agent surface over MCP, and the parity list and port into the Jetpack monorepo that the positioning doc describes.
 
 The layouts, the `arc` mark and the rest of the marks are inventoried and ordered in `docs/chart-coverage-plan.md`: what it takes to draw every common chart type, in eight steps.
 

@@ -8,22 +8,28 @@ Tracking, storage and retrieval are built elsewhere. This repo starts at the que
 
 ```
 docs/
-  view-grammar-reference.md   the design: start here
+  vision.md                   what this is for: read first
+  view-grammar-reference.md   the design, and what is decided and open
   milestones.md               the course to the MVP
   claude-code-prompt.md       the brief for milestone 1 (typed core, no DOM)
   design-inputs/              research behind the design: views, view spec, semantic model
 prototype/                    read-only reference: the whole pipeline in one file, plus its sweep test
 sketches/                     visual direction: materials and the dot-matrix readout
 packages/
-  core/                       spec types and schema, validation, presets, plan, scene, tldr prose
+  core/                       spec types and schemas, presets, plan, scene, fit rules, tldr prose, the board
   fixtures/                   catalog, fixture query engine, sample specs
-  dom/                        HTML, CSS and SVG painter; the custom element
-  dots/                       dot-grid painter
+  tokens/                     build-time design tokens
+  dom/                        the <ua-view> custom element: HTML, CSS and SVG painter
+  geo/ flow/ partition/       custom marks: a map, a Sankey, a treemap
+  spacefast/                  the adapter from Spacefast's analytics query API
+  dots/                       dot-grid painter (not started)
 apps/
-  bench/                      the playground
+  bench/                      where work is looked at: playground, samples, a board, marks, parts, tokens
+  bench-archive/              the bench as it was
+test/                         one suite across the packages
 ```
 
-`core` and `fixtures` are built and tested (`pnpm install && pnpm test`). `dom`, `dots` and `bench` are not started. The course is in `docs/milestones.md`.
+Everything but `dots` is built. `pnpm install && pnpm test` runs the suite, and `pnpm bench` serves the bench at localhost:5173. `CLAUDE.md` says what each package holds and the rules the code keeps.
 
 ## Running the prototype
 

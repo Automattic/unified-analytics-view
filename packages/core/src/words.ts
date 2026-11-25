@@ -15,7 +15,8 @@
 export type Word = string | ({ other: string } & Partial<Record<Intl.LDMLPluralRule, string>>);
 
 export const WORDS = {
-  // A change from the period before, beside the number and in a list's column.
+  // A change from the period before, beside the number and in a list's column. The element draws the arrow that leads
+  // one as its own, in the change's colour: a template that leads with another sign is shown as it is written.
   up: '▲ {change}', down: '▼ {change}', noPrior: 'No prior period', isNew: 'New', noChange: 'No change',
   onPrevious: '{change} on the previous period',
   // A range, a bin by both its ends, a place in an order.

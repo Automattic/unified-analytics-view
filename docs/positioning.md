@@ -80,7 +80,7 @@ Stats' own rule for widgets is "the host owns all chrome; the widget renders bod
 This is an honest list. Version 4 does each of these today. Tooltips, keyboard navigation over points, pie, semi-circle, heatmap, map, funnel, and split, grouped and stacked bars, which this list named on October 5, are built.
 
 - **Rows that carry links, media and drill-downs.** Every Stats leaderboard puts a link, an avatar or a drill button in its rows; the view has none.
-- **Locale, time zone and strings.** The view formats in `en-US` and UTC and writes its prose in English.
+- **Translations, and a time zone.** A view speaks its container's locale, or the page's own `lang`: numbers, dates and the names of countries (November 25). Its own words are one table a host can hand in, and it ships English alone. A time is said as the engine wrote it, and no zone is applied.
 - **Packaging and a React binding.** Nothing is built for release. Two copies on one page are now said: the second warns that it defines nothing, and names the fix. There is no version on the element to compare, since the packages have none.
 - **Interactive legends, zoom and annotations anchored to a point,** and extra lines in the readout.
 - **A WordPress token alias sheet that has been looked at,** and accessibility checked against version 4's. A draft is there, `packages/tokens/wpds.css` (November 24): the view's tokens that name a role the WordPress Design System has, each as that role's token. Nobody has seen it on a WordPress page.

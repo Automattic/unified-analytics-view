@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { CONTAINER_RULES, WORDS, buildScene, expand, facets, formats, resolve, viewAt, type Row } from '@unified-analytics/core';
+import { spoken } from '@unified-analytics/dom';
 import { catalog, facetSamples, moreSamples, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
 import { errOf, trend } from './helpers.ts';
 
@@ -71,6 +72,19 @@ describe('a view is in its container\'s locale', () => {
     if (spec) { const result = runQuery(spec.query); expect(facets(spec, result, catalog, at('de')).map((v) => v.label)).not.toEqual(facets(spec, result, catalog).map((v) => v.label)); }
     const waffle = moreSamples.waffle!.spec, small = viewAt(waffle, runQuery(waffle.query), catalog, { view: { inline: 150, block: 100 } }, at(OTHER));
     expect([small.gave.length > 0, small.plan.locale]).toEqual([true, OTHER]);
+  });
+});
+
+describe('the element speaks the page\'s language where its container names none', () => {
+  it('a tag it can speak is the page\'s, and none, an empty one and one with no data here are English', () => {
+    expect(['de', 'pt-BR', 'en', '', null, undefined, 'tlh', 'not a tag'].map(spoken)).toEqual(['de', 'pt-BR', 'en', undefined, undefined, undefined, undefined, undefined]);
+  });
+  it('a page in plain English is as a view with no locale is: every sample\'s sentence and scene', { timeout: 60000 }, () => {
+    for (const [name, s] of Object.entries({ ...samples, ...moreSamples })) for (const scenario of scenarios) {
+      const result = runQuery(s.spec.query, scenario), q = expand(s.spec).query, plain = resolve(s.spec, result, catalog), { locale: _, ...en } = resolve(s.spec, result, catalog, at('en'));
+      expect(en, name).toEqual(plain);
+      expect(buildScene({ ...en, locale: 'en' }, q, result, catalog), name).toEqual(buildScene(plain, q, result, catalog));
+    }
   });
 });
 

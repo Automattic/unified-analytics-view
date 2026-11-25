@@ -1,5 +1,5 @@
 import { CONTAINER_RULES, DELTA_FULL, FACET_GAP, FACET_LEAST, NOTE_LEAST, NUMBER_SHORT, buildScene, customMarks, expand, explain, facetBecause, facets, fallbackRule, fills, formats, gaveWay, hasOf, resolve, selectedBecause } from '@unified-analytics/core';
-import type { Because, Catalog, ContainerRules, Explanation, Layout, Result, SceneNode, Spec, Where } from '@unified-analytics/core';
+import type { Because, Catalog, ContainerRules, Explanation, Formats, Layout, Result, SceneNode, Spec, Where } from '@unified-analytics/core';
 import { compileFitRules } from './compile.ts';
 import { LEGEND_LINE } from './chrome/legend.ts';
 import { CHROME_CSS, swatch } from './chrome/index.ts';
@@ -228,6 +228,25 @@ export function rulesOver(given: Partial<ContainerRules> = {}): ContainerRules {
   return { ...d, ...given, axes: { ...d.axes, ...given.axes }, bare: { ...d.bare, ...given.bare }, rows: { ...d.rows, ...given.rows }, tldrValue: { ...d.tldrValue, ...given.tldrValue } };
 }
 
+/** A language tag a view can speak here, or nothing: none, an empty one, which a page writes for "unknown", and one
+ * this machine has no data for are no language to speak, and the view is in English. */
+export function spoken(tag: string | null | undefined): string | undefined {
+  try { return tag && Intl.NumberFormat.supportedLocalesOf(tag).length ? tag : undefined; } catch { return undefined; }
+}
+/** The language of the page where an element stands: the nearest `lang` at or above it, through any shadow root it is
+ * in, as the page's own text is read. The machine's language is never asked.
+ * ponytail: read when the view is painted. A page that changes the `lang` of something above a view sets an input
+ * again, or the view's own `lang`, which is watched. */
+export function langOf(el: Element): string | undefined {
+  for (let at: Element | null = el; at;) {
+    const held = at.closest('[lang]');
+    if (held) return spoken(held.getAttribute('lang'));
+    const root = at.getRootNode();
+    at = root instanceof ShadowRoot ? root.host : null;
+  }
+  return undefined;
+}
+
 function paintNumber(el: HTMLElement, nodes: SceneNode[]): void {
   keyed(el, nodes, (n) => (n.kind === 'circle' ? 'i' : n.kind === 'text' && n.font === 'display' ? 'b' : 'span'), (c, n) => {
     if (n.kind === 'text') { text(c, n); (c as HTMLElement).title = n.note ?? ''; } else { c.classList.add('uav-pulse'); swatch(c, 'pulse circle'); }      // what the number counts, when it is pointed at
@@ -246,7 +265,7 @@ const Base = (globalThis.HTMLElement ?? class {}) as typeof HTMLElement;
 
 export class UaView extends Base {
   // The table switch changes what shows and resizes neither the room nor the ruler, so no observer follows it: the view paints again.
-  static observedAttributes = ['table'];
+  static observedAttributes = ['table', 'lang'];
   #given: Partial<Record<Input, unknown>> = {};
   #queued = false;
   // Whether an input changed since the last paint. A view that is only moved in the page paints again, and nothing in it moves.
@@ -442,7 +461,9 @@ export class UaView extends Base {
     let painting = false;
     try {
       const spec = this.#input('spec', true) as Spec, result = this.#input('result', true) as Result, catalog = this.#input('catalog', true) as Catalog;
-      const rules = rulesOver(this.#input('rules', false) as Partial<ContainerRules> | undefined);
+      // The language is the container's where it says one (`rules.locale`), and else the page's own, where the view stands.
+      const given = rulesOver(this.#input('rules', false) as Partial<ContainerRules> | undefined), lang = given.locale ?? langOf(this);
+      const rules = lang == null ? given : { ...given, locale: lang };
       check(spec, result, catalog);
       if (!Array.isArray(rules.fit)) throw new Error('The rules need "fit", an array of fit rules. Leave it out to use the defaults.');
       if (spec.facet != null) return this.#facets(spec, result, catalog, rules);
@@ -488,6 +509,11 @@ export class UaView extends Base {
       fig.hidden = false; this.#error.hidden = true; this.#loading.hidden = true; clearTimeout(this.#late);
       return true;
     } catch (e) { this.#fail(e, painting); return false; }
+  }
+
+  /** The view's formatters before it has a plan: its container's locale and words where the rules are there to read, and else the page's language. */
+  #words(): Formats {
+    try { const r = this.#input('rules', false) as Partial<ContainerRules> | undefined; return formats(r?.locale ?? langOf(this), r?.words); } catch { return formats(); }
   }
 
   #views(): UaView[] { return [...(this.#board?.querySelectorAll<UaView>(':scope > .uav-facet > .uav-facet-view') ?? [])]; }
@@ -548,6 +574,7 @@ export class UaView extends Base {
     // view already drawn stays drawn until it comes. One that never comes is said in the console, with its fix.
     // ponytail: "long" is ten seconds, fixed; a host whose queries take longer is warned about a fetch still running.
     if (e instanceof Missing) {
+      this.#loading.setAttribute('aria-label', this.#words().say('loading'));
       this.#loading.hidden = !!this.#board || (this.#layout != null && !this.#fig.hidden); this.#error.hidden = true;   // a facet's views stay up too
       clearTimeout(this.#late);
       this.#late = window.setTimeout(() => console.warn('<ua-view> is still waiting. ' + e.message, this), 10000);

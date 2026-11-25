@@ -172,7 +172,7 @@ export const partitionPainter: LayoutPainter = {
       row(body, [say(a!, top), 'All'], top);
       for (const r of result.rows) if (r[a!] === top[a!]) row(body, [say(a!, r), say(b, r)], r);
     }
-    row(table.createTFoot(), ['Total', ...by.slice(1).map(() => '')], result.totals);
+    row(table.createTFoot(), [F.say('total'), ...by.slice(1).map(() => '')], result.totals);
   },
 
   /* A name is read against the box it stands in, and one that does not fit is hidden, keeping its box. A child's goes

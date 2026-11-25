@@ -595,7 +595,7 @@ A preset is a saved fragment of a spec with slots filled from the query: `$metri
 
 **The language is where the view lands** (Decided 67). A container says it with its rules: `rules.locale`, a BCP 47 tag such as `de` or `pt-BR`. Every number, date and country's name a view says is then in that locale: in its sentence, its scene, its readout and its table. In a browser, where its rules name none, the element speaks the page's own language: the nearest `lang` at or above it, its own among them (Decided 69). With neither, or a language the machine has no data for, a view is in English. The machine's own language is never asked. A spec never says a locale, as it never says a size. What the engine sent as a value (a page's path, a bin's ends) and what an author wrote (a layer's `label`) are said as they came, and a time is said as it was written, with no zone asked, in any locale.
 
-**Its own words are one table** (Decided 68): 48 short templates, `WORDS` in `packages/core/src/words.ts`, for what a view says that is neither the catalog's, the engine's nor the author's: "No data", "last {count} days", "Top: {name}", the clauses of the sentence. A container hands its own with its rules, as `rules.words`: any of them, and English is said for the rest.
+**Its own words are one table** (Decided 68): 49 short templates, `WORDS` in `packages/core/src/words.ts`, for what a view says that is neither the catalog's, the engine's nor the author's: "No data", "last {count} days", "Top: {name}", the clauses of the sentence. A container hands its own with its rules, as `rules.words`: any of them, and English is said for the rest.
 
 ```json
 { "locale": "de", "words": { "noData": "Keine Daten", "lastDays": { "one": "letzten Tag", "other": "letzten {count} Tagen" } } }

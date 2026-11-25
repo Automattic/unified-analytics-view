@@ -162,14 +162,14 @@ export const matrix: LayoutPainter = {
       const f = (yf || xf)!;
       tableRow(head, [[catalog.dimensions[f]!.label, 'th'], [fieldLabel(m, catalog, F), 'th', true]]);
       for (const k of (yf ? scene.ys : xs) ?? []) tableRow(body, [[name(f, k), 'th'], value(at.get(yf ? '\n' + k : k + '\n'))]);
-      tableRow(foot, [['Total', 'th'], value(result.totals[m])]);
+      tableRow(foot, [[F.say('total'), 'th'], value(result.totals[m])]);
       return;
     }
-    tableRow(head, [[catalog.dimensions[yf]!.label, 'th'], ...xs.map((x): Cell => [name(xf, x), 'th', true]), ['Total', 'th', true]]);
+    tableRow(head, [[catalog.dimensions[yf]!.label, 'th'], ...xs.map((x): Cell => [name(xf, x), 'th', true]), [F.say('total'), 'th', true]]);
     // A quantity down the side is drawn from the foot, as a plot is, and listed from its least, as a table is.
     for (const y of catalog.dimensions[yf]!.type === 'number' ? (scene.ys ?? []).slice().reverse() : scene.ys ?? []) {
       tableRow(body, [[name(yf, y), 'th'], ...xs.map((x) => value(at.get(x + '\n' + y))), total(yf, y)]);
     }
-    tableRow(foot, [['Total', 'th'], ...xs.map((x) => total(xf, x)), value(result.totals[m])]);
+    tableRow(foot, [[F.say('total'), 'th'], ...xs.map((x) => total(xf, x)), value(result.totals[m])]);
   },
 };

@@ -68,12 +68,12 @@ export function paintTable(table: HTMLTableElement, title: string | undefined, q
     tableRow(table.createTHead(), [[catalog.dimensions[by[0]!]!.label, 'th'], ...p.cols.flatMap((c) => fields.map((f): Cell => [dim(1, c) + (fields.length > 1 ? ', ' + label(f) : ''), 'th', true])), ...fields.map((f): Cell => [label(f), 'th', true])]);
     const tbody = table.createTBody();
     for (const r of p.rows) tableRow(tbody, [[dim(0, r.key), 'th'], ...per(r.cells)]);
-    tableRow(table.createTFoot(), [['Total', 'th'], ...per(p.foot)]);
+    tableRow(table.createTFoot(), [[F.say('total'), 'th'], ...per(p.foot)]);
     return;
   }
   tableRow(table.createTHead(), [...by.map((d): Cell => [catalog.dimensions[d]!.label, 'th']), ...fields.map((f): Cell => [label(f), 'th', true])]);
   const body = table.createTBody(), totals = fields.map((f) => value(result.totals[f], f));
   for (const r of result.rows) tableRow(body, [...by.map((d): Cell => [dimName(r, d, catalog, F), 'th']), ...fields.map((f) => value(r[f], f))]);
   if (!by.length) tableRow(body, totals);
-  else tableRow(table.createTFoot(), [['Total', 'th'], ...by.slice(1).map((): Cell => ['', 'td']), ...totals]);
+  else tableRow(table.createTFoot(), [[F.say('total'), 'th'], ...by.slice(1).map((): Cell => ['', 'td']), ...totals]);
 }

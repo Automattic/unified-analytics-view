@@ -40,7 +40,7 @@ export const WORDS = {
   or: ' or ', comma: ', ', and: ', and ',
   // The readout, the table and the notes.
   soFar: 'so far', notShown: '{count} {dimension:plural} not shown', noData: 'No data', noDataOf: 'no data',
-  previous: 'previous period', theMost: 'the most {said}', counted: '{count} {dimension:plural}', by: '{a} by {b}', loading: 'Loading',
+  previous: 'previous period', theMost: 'the most {said}', counted: '{count} {dimension:plural}', by: '{a} by {b}', loading: 'Loading', total: 'Total',
 } satisfies Record<string, Word>;
 
 /** The table's entries by name. */

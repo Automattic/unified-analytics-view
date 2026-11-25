@@ -87,6 +87,7 @@ export function explain(spec0: Spec, result: Result, catalog: Catalog, room?: Ex
   }
   const only = filterSaid(result.meta.where, catalog);
   if (only) out.push({ what: 'filtered to ' + only, from: 'query.where', why: 'the engine answered for the rows where this holds, so every number and mark here is of those alone', lever: 'remove it from "where" to draw the whole' });
+  if (plan.readout) out.push({ what: 'read out: ' + plan.readout.join(', '), from: 'readout', why: 'the spec names what a row says beside its metric\'s value, in the readout and the table, whether or not a mark draws it', lever: 'take a field out of "readout" to leave it unsaid' });
   // Layers of the period before need it in the query and in the result.
   layers.forEach((l, i) => {
     if (!usesPrevious(l) || plan.layers.some((p) => p.series === l.series)) return;

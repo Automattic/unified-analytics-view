@@ -27,13 +27,13 @@ describe('a name the catalog does not carry', () => {
 describe('a field a spec, its query or a layer does not take', () => {
   const q = { metrics: ['revenue'], by: ['sku'] };
   it('a size in a spec', () => expect(refused({ spec: 'view/0', use: 'bar-list', query: q, width: 346 } as Spec))
-    .toBe('The spec has "width", which it does not take. It takes: spec, title, description, use, query, layers, facet. A view says what to show and nothing of how: no size, breakpoint or switch.'));
+    .toBe('The spec has "width", which it does not take. It takes: spec, title, description, use, query, layers, facet, readout. A view says what to show and nothing of how: no size, breakpoint or switch.'));
   it('a filter under another name', () => expect(refused({ spec: 'view/0', use: 'bar-list', query: { ...q, filter: { sku: 'A' } } } as unknown as Spec))
     .toBe('The spec\'s query has "filter", which it does not take. It takes: metrics, by, range, compare, limit, where. A filter is "where".'));
   it('a colour on a layer', () => expect(refused({ spec: 'view/0', query: q, layers: [{ mark: 'bar', encode: { y: 'sku', x: 'revenue' } }, { mark: 'text', encode: { y: 'sku', text: 'sku' }, color: 'red' }] } as unknown as Spec))
     .toBe('Layer 2 has "color", which it does not take. It takes: mark, encode, series, role, stack, sweep, label, at, align, paint. What a mark draws is on its channels, in "encode".'));
   // `keep` was the one lever a spec had over what a container gives up. It went on November 24: a spec has none.
-  it('keep, which a spec once took', () => expect(refused({ spec: 'view/0', use: 'bar-list', query: q, keep: ['guides'] } as unknown as Spec)).toMatch(/^The spec has "keep", which it does not take\. It takes: spec, title, description, use, query, layers, facet\./));
+  it('keep, which a spec once took', () => expect(refused({ spec: 'view/0', use: 'bar-list', query: q, keep: ['guides'] } as unknown as Spec)).toMatch(/^The spec has "keep", which it does not take\. It takes: spec, title, description, use, query, layers, facet, readout\./));
   it('a field that is written and holds nothing is no field', () => expect(refused({ spec: 'view/0', use: 'bar-list', query: q, width: undefined } as Spec)).toBe('no error'));
 });
 

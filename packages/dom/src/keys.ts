@@ -37,10 +37,17 @@ import { FROM_TOP, em } from './layout.ts';
  * step of several would shorten it, if a plot of that many is ever read by keyboard. */
 
 /** The companions of a metric the view asked for: the fields of `row` that came with `m` and that one of the plan's
- * layers encodes, in the engine's order. A result may carry more, and those are not the view's to say. The comparison
- * is not one of these: the query asks for it. The readout and the table both list by this. */
-export function companions(m: string, row: Row | undefined, layers: Layer[]): string[] {
-  return Object.keys(row ?? {}).filter((f) => f.startsWith(m + '@') && f !== m + '@previous' && layers.some((l) => Object.values(l.encode || {}).includes(f)));
+ * layers encodes or its spec names to be read out (`also`, the plan's `readout`), in the engine's order. A result may
+ * carry more, and those are not the view's to say. The comparison is not one of these: the query asks for it. The
+ * readout and the table both list by this. */
+export function companions(m: string, row: Row | undefined, layers: Layer[], also: readonly string[] = []): string[] {
+  return Object.keys(row ?? {}).filter((f) => f.startsWith(m + '@') && f !== m + '@previous' && (also.includes(f) || layers.some((l) => Object.values(l.encode || {}).includes(f))));
+}
+
+/** The fields a row's readout says a value of, for one of the query's metrics: the metric, its period before where the
+ * query compares, and its companions, each where the row has it. A crosshair that says fewer has the readout with it. */
+export function saidOf(m: string, row: Row, q: Query, layers: Layer[], also: readonly string[] = []): string[] {
+  return [m, ...(q.compare === 'previous' ? [m + '@previous'] : []), ...companions(m, row, layers, also)].filter((f) => row[f] != null);
 }
 
 /** What a companion is called beside its metric's value: its own label where the catalog has an entry for it ("rank"),
@@ -56,17 +63,17 @@ export function dimName(row: Row, d: string, catalog: Catalog, F: Formats = form
 
 /** What the readout says for one row of the result, in the catalog's formats: the dimension value, each metric
  * (marked when its bucket is unfinished), its comparison if the row has one, and each companion of it that a layer
- * encodes, under its suffix: what a range or a tick is drawn from is said as well as shown. */
-export function readout(row: Row, q: Query, catalog: Catalog, layers: Layer[], F: Formats = formats()): string {
+ * encodes or the spec names (`also`), under its suffix: what a range or a tick is drawn from is said as well as shown.
+ * A metric no layer draws is said as any other is: what is read out and never drawn is one more of the query's. */
+export function readout(row: Row, q: Query, catalog: Catalog, layers: Layer[], F: Formats = formats(), also: readonly string[] = []): string {
   // Two bins are each named by their dimension as well: two bare ranges do not say which is which.
   const both = (q.by || []).filter((d) => row[d + '@end'] != null).length > 1;
   const dims = (q.by || []).map((d) => (both && row[d + '@end'] != null ? catalog.dimensions[d]!.label + ' ' : '') + dimName(row, d, catalog, F)).join(', '), partial = partialNote(row, F);
   // Never a row of dashes: a row with nothing to say, no value, no period before and no companion, says so in words.
-  const said = (m: string) => row[m] != null || (q.compare === 'previous' && row[m + '@previous'] != null) || companions(m, row, layers).some((f) => row[f] != null);
-  if (!q.metrics.some(said)) return (dims ? dims + ': ' : '') + F.say('noData');
+  if (!q.metrics.some((m) => saidOf(m, row, q, layers, also).length)) return (dims ? dims + ': ' : '') + F.say('noData');
   const values = q.metrics.map((m) => {
     const def = catalog.metrics[m]!, prev = q.compare === 'previous' ? row[m + '@previous'] : null;
-    const more = companions(m, row, layers).filter((f) => row[f] != null).map((f) => ', ' + companionLabel(f, catalog) + ' ' + F.value(row[f] as number, metricOf(catalog, f)!)).join('');
+    const more = companions(m, row, layers, also).filter((f) => row[f] != null).map((f) => ', ' + companionLabel(f, catalog) + ' ' + F.value(row[f] as number, metricOf(catalog, f)!)).join('');
     return def.label + ' ' + F.value(row[m] as number | null, def) + (partial && ' ' + partial) + (prev == null ? '' : ', ' + F.say('previous') + ' ' + F.value(prev as number, def)) + more;
   }).join('; ');
   return dims ? dims + ': ' + values : values;
@@ -75,17 +82,19 @@ export function readout(row: Row, q: Query, catalog: Catalog, layers: Layer[], F
 /** Whether a row's own words already say every value its readout would: each metric's, the period before where the
  * query compares, and what the engine sent with it. Such a row has no readout to show: it would be the row again.
  * ponytail: by the values alone. A label cut short for room is not counted as unsaid; the table has it whole. */
-export function written(shown: string, row: Row, q: Query, catalog: Catalog, layers: Layer[], F: Formats = formats()): boolean {
+export function written(shown: string, row: Row, q: Query, catalog: Catalog, layers: Layer[], F: Formats = formats(), also: readonly string[] = []): boolean {
   return q.metrics.every((m) => {
-    const def = catalog.metrics[m]!, also = q.compare === 'previous' && row[m + '@previous'] != null ? [m + '@previous'] : [];
-    return [m, ...also, ...companions(m, row, layers).filter((f) => row[f] != null)].every((f) => shown.includes(F.value(row[f] as number | null, metricOf(catalog, f) ?? def)));
+    const def = catalog.metrics[m]!, prev = q.compare === 'previous' && row[m + '@previous'] != null ? [m + '@previous'] : [];
+    return [m, ...prev, ...companions(m, row, layers, also).filter((f) => row[f] != null)].every((f) => shown.includes(F.value(row[f] as number | null, metricOf(catalog, f) ?? def)));
   });
 }
 
 /** What the readout says for one point of a split plot, from the rows there: the x value, each metric with the
  * engine's total for that x when the result has one, and the value of every series. With `mass`, where the series
  * are in one paint and may be many, it says how many there are and the one with the most there, by name: a comparison
- * of the engine's rows, as the prose's leader is. */
+ * of the engine's rows, as the prose's leader is.
+ * ponytail: no companion is said of a point of several series, drawn or read out. A series chosen there says its own
+ * (readout). Each series' line can say them when a split view is read for them unchosen. */
 export function readoutAt(rows: Row[], total: Row | undefined, q: Query, catalog: Catalog, x: string, split: string, mass = false, F: Formats = formats()): string {
   const of = catalog.dimensions[split]!, { name, metrics } = headAt(rows, total, q, catalog, x, F);
   return name + ': ' + q.metrics.map((m, i) => {
@@ -235,7 +244,9 @@ svg[data-hits] path${IS.hover} { ${HOVER.stroke} }
  * one that lies at each line's value there, and that value said on the axis it is read from, with the point's own
  * name on the x axis. It is drawn in the plot's box and its words stand over the tick labels they are among. A value
  * wider than its axis's gutter grows into the plot and never out of the view. The second line of a comparison is
- * said more quietly, on the secondary surface. Each of its words is a tooltip chip on an axis (chrome/tip.ts). */
+ * said more quietly, on the secondary surface. Each of its words is a tooltip chip on an axis (chrome/tip.ts).
+ * It says each line's value and no more. Where the row says more, a metric no line draws, the ends of an area, a
+ * field the spec reads out, the readout is shown with it, over the plot (#show). */
 /* The crosshair's words hang past the plot, over the axes. The plot is a layer of its own, so it is the plot that is
  * raised while it has a crosshair, or the axis labels after it would be drawn over them. */
 .uav-plot:has(> .uav-cross) { z-index: 2; }
@@ -337,7 +348,7 @@ export class Keys {
   // The dimension a series is a value of, whether or not a point has series to step through.
   #of: string | undefined;
   // The series of a split plot, the one chosen at the point, and what a readout of one needs.
-  #order: string[] = []; #series: string | null = null; #split: string | undefined; #q: Query | null = null; #catalog: Catalog | null = null; #layers: Layer[] = []; #F: Formats = formats();
+  #order: string[] = []; #series: string | null = null; #split: string | undefined; #q: Query | null = null; #catalog: Catalog | null = null; #layers: Layer[] = []; #F: Formats = formats(); #also: readonly string[] = [];
   // How the chosen point was chosen. Each has its own look, and a paint keeps the one it found.
   #how: 'keys' | 'pointer' = 'pointer';
   // What a crosshair says at each row of a plot of lines, the dimension on x, and the crosshair once one is drawn.
@@ -382,13 +393,13 @@ export class Keys {
   }
 
   /** After each paint: name the points the layout made, and keep the chosen one if it is still there. */
-  paint(scene: Scene, q: Query, result: Result, catalog: Catalog, layers: Layer[], F: Formats = formats()): void {
-    this.#F = F;
+  paint(scene: Scene, q: Query, result: Result, catalog: Catalog, layers: Layer[], F: Formats = formats(), also: readonly string[] = []): void {
+    this.#F = F; this.#also = also;
     // A point of a plot of points is one row whatever colours it, so it is read as a row, and has no series to step through.
     const found = rowsAt(scene, q, result), { rows, x } = found, split = scene.parts?.includes('points') ? undefined : found.split, totals = (x != null && split != null && result.totalsBy?.[x]) || [];
     this.#of = found.split; this.#keys = scene.rows ?? []; this.#rows = rows; this.#order = split == null ? [] : scene.series ?? scene.detail ?? []; this.#split = split; this.#q = q; this.#catalog = catalog; this.#layers = layers;
     this.#x = x; this.#cross = crossMarks(scene, layers, rows, catalog, split, F);
-    this.#says = this.#keys.map((k, i) => (split == null ? readout(rows[i]![0] ?? {}, q, catalog, layers, F) : readoutAt(rows[i]!, totals.find((t) => String(t[x!]) === k), q, catalog, x!, split, !scene.series, F)));
+    this.#says = this.#keys.map((k, i) => (split == null ? readout(rows[i]![0] ?? {}, q, catalog, layers, F, also) : readoutAt(rows[i]!, totals.find((t) => String(t[x!]) === k), q, catalog, x!, split, !scene.series, F)));
     // A mass is in one paint, so it is said in words alone (readoutAt). Series painted apart each have a line and a swatch.
     this.#lines = this.#keys.map((k, i) => (split == null || !scene.series ? null : readoutLines(rows[i]!, totals.find((t) => String(t[x!]) === k), q, catalog, x!, split, F)));
     this.#paints = split == null || !scene.series ? new Map() : new Map(scene.nodes.filter((n) => n.series != null && n.layer === 'data').reverse().map((n) => [n.series!, n.paint]));
@@ -473,19 +484,21 @@ export class Keys {
     });
     this.#relay(lit, series != null, box);
     if (box) attr(box, 'aria-activedescendant', (point as Element | null)?.id);
-    const marks = point ? this.#crossAt(key!, series) : [];
-    if (!point || marks.length) hideReadout(tip);
+    const marks = point ? this.#crossAt(key!, series) : [], i = this.#keys.indexOf(key ?? ''), pair = this.#pair(i);
+    // A crosshair says each line's value there and no more. Where the row says more, a metric or a companion that no
+    // line draws, it would be said nowhere a reader looks: the readout stands with the crosshair.
+    const at = pair ?? this.#rows[i]?.[0], cross = marks.length > 0 && (!at || this.#q!.metrics.flatMap((m) => saidOf(m, at, this.#q!, this.#layers, this.#also)).length <= marks.length);
+    if (!point || cross) hideReadout(tip);
     this.#drawCross(point, marks, how);
     if (!point) return;
-    const i = this.#keys.indexOf(key!), pair = this.#pair(i);
-    const says = pair ? readout(pair, this.#q!, this.#catalog!, this.#layers, this.#F) : this.#says[i] ?? '';
+    const says = pair ? readout(pair, this.#q!, this.#catalog!, this.#layers, this.#F, this.#also) : this.#says[i] ?? '';
     // The option is named by what is read out, so a series chosen inside it is announced as it is shown.
     // ponytail: the name of the option in focus changes under it. Whether a screen reader says so is not checked.
     if (this.#order.length) for (const el of Array.from(box!.children)) attr(el, 'aria-label', el === point ? says : this.#says[this.#keys.indexOf(el.getAttribute('data-row') ?? '')]);
-    if (marks.length) return;
+    if (cross) return;
     // A row that has every value in writing is its own readout. The option's name above still says it to a screen reader.
     const row = pair ?? (this.#order.length ? undefined : this.#rows[i]?.[0]);
-    if (row && (point as Element).classList?.contains('uav-row') && written((point as Element).textContent ?? '', row, this.#q!, this.#catalog!, this.#layers, this.#F)) { hideReadout(tip); return; }
+    if (row && (point as Element).classList?.contains('uav-row') && written((point as Element).textContent ?? '', row, this.#q!, this.#catalog!, this.#layers, this.#F, this.#also)) { hideReadout(tip); return; }
     const lines = pair ? null : this.#lines[i];
     say(tip, !lines ? says : [el('b', lines.head), ...lines.lines.flatMap((l) => {
       const swatch = document.createElement('i'); swatchOf(swatch, 'readout');

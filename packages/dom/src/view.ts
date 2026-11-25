@@ -492,12 +492,12 @@ export class UaView extends Base {
       this.#said = plan.text;
       for (const el of [this.#number, ...this.#ruler]) paintNumber(el, scene.nodes.filter((n) => n.part === 'number'));
       if (this.#layout !== scene.layout) { this.#body.replaceChildren(); this.#body.removeAttribute('data-scale'); this.#layout = scene.layout; }
-      const painter = painterOf(scene.layout), data = { layers: plan.layers, query: expand(spec).query, result, catalog, formats: formats(plan.locale, plan.words) };
+      const painter = painterOf(scene.layout), data = { layers: plan.layers, query: expand(spec).query, result, catalog, formats: formats(plan.locale, plan.words), ...(plan.readout && { readout: plan.readout }) };
       painter?.paint(this.#body, scene, rules, data);
       // Only while it shows: nothing reads a hidden table, and it is a row per row of the result.
       if (!this.hasAttribute('table')) this.#table.replaceChildren();
-      else if (painter?.table) painter.table(this.#table, spec.title, scene, data); else paintTable(this.#table, spec.title, data.query, result, catalog, plan.layers, data.formats);
-      this.#keys.paint(scene, expand(spec).query, result, catalog, plan.layers, data.formats);
+      else if (painter?.table) painter.table(this.#table, spec.title, scene, data); else paintTable(this.#table, spec.title, data.query, result, catalog, plan.layers, data.formats, plan.readout);
+      this.#keys.paint(scene, expand(spec).query, result, catalog, plan.layers, data.formats, plan.readout);
       // The rule this view gives way under, if one is for what it holds and its query can fill the rule's preset: as fitTo() asks.
       const swap = fallbackRule(fits, scene.layout, this.via, { marks: plan.layers.map((l) => l.mark), fills: (use) => fills(use, data.query) }), { layers: _layers, ...rest } = spec;
       if (swap) {

@@ -92,9 +92,9 @@ function bind(plot: HTMLElement): void {
 /** What each box says, by its node's key: the readout every mark's row has (dom's readout), of the row it came from,
  * named by its parent's value and then its own. A parent's values are the engine's totals for it. This is a box's
  * accessible name and its readout, so no value is said by area or colour alone. `rows` are the rows inside it. */
-export function boxNames(view: Omit<MarkView, 'guides'>): Map<string, { says: string; row: Row; rows: Row[]; where: Where }> {
+export function boxNames(view: Omit<MarkView, 'guides'> & { readout?: readonly string[] }): Map<string, { says: string; row: Row; rows: Row[]; where: Where }> {
   const { query, catalog, layers, formats: F } = view, [dim, detail] = [layers[0]!.encode!.x as string, layers[0]!.encode!.detail as string];
-  const says = (r: Row, by: string[]) => readout(r, { ...query, by }, catalog, layers, F);
+  const says = (r: Row, by: string[]) => readout(r, { ...query, by }, catalog, layers, F, view.readout);
   type Said = [string, { says: string; row: Row; rows: Row[]; where: Where }];
   return new Map(boxesOf(view).flatMap((g): Said[] => [[g.key, { says: says(g.row, [dim]), row: g.row, rows: g.rows, where: whereOf(g.row, [dim]) }],
     ...g.kids.map((c): Said => [c.key, { says: says(c.row, [dim, detail]), row: c.row, rows: [c.row], where: whereOf(c.row, [dim, detail]) }])]));

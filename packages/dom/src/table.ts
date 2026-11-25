@@ -53,10 +53,10 @@ export function pivot(q: Query, result: Result, fields: string[]): { cols: Row[s
 }
 
 /** The element's table: a row of the table per row of the result, or with two dimensions the pivot. */
-export function paintTable(table: HTMLTableElement, title: string | undefined, q: Query, result: Result, catalog: Catalog, layers: Layer[], F: Formats = formats()): void {
+export function paintTable(table: HTMLTableElement, title: string | undefined, q: Query, result: Result, catalog: Catalog, layers: Layer[], F: Formats = formats(), also: readonly string[] = []): void {
   const by = q.by || [], prev = q.compare === 'previous';
-  // A companion of a metric that a layer encodes has a column after it, under its suffix, or its own label where the catalog has an entry for it, as the readout says it, and in its own unit. With two dimensions the table is a pivot, and has none.
-  const more = (m: string) => (by.length === 2 ? [] : companions(m, result.rows[0], layers));
+  // A companion of a metric that a layer encodes or the spec reads out (`also`) has a column after it, under its suffix, or its own label where the catalog has an entry for it, as the readout says it, and in its own unit. With two dimensions the table is a pivot, and has none.
+  const more = (m: string) => (by.length === 2 ? [] : companions(m, result.rows[0], layers, also));
   const fields = q.metrics.flatMap((m) => [m, ...(prev ? [m + '@previous'] : []), ...more(m)]);
   const label = (f: string) => fieldLabel(f, catalog, F), value = (v: Row[string] | undefined, f: string): Cell => [valueText(v, f, catalog, F), 'td', true];
   emptyTable(table, title);

@@ -203,6 +203,7 @@ The fixture engine (`packages/fixtures`) has three data states, `typical`, `no-p
 | `use` | A preset's name, which expands into `layers` (section 9). Ignored where `layers` is present |
 | `layers` | The layers, written out |
 | `facet` | One of the query's dimensions: the spec is then a view for each of its values |
+| `readout` | A list of companions the result returns with the query's metrics: each is read out, though no mark draws it |
 
 A spec says what to show and nothing of how. It has no lever over what a container gives up (Decided 63).
 
@@ -226,6 +227,14 @@ A spec says what to show and nothing of how. It has no lever over what a contain
 **Paint tokens an author may name:** `series.1` to `series.6`, `compare`, `rule`, `ink`, `ink.muted`, `delta`, `delta.good` and `delta.bad`. A layer with no `paint` takes `series.1`, or `compare` for a `previous` series. The ramps (`seq.1` to `seq.10`, `div.1` to `div.9`) are the colour scale's: a metric on `color` is quantized to one, diverging where its values cross zero (Decided 33).
 
 **A description** (Decided 62). A view's sentence is derived, since its data is live. What its author can say that the data cannot is what the view is for: "How many people came, day by day." It says nothing the data would make false: no number, no date, no "up". A facet says it once.
+
+**What is read out and not drawn** (Decided 70). A view says a row in words in three places: the readout at a point, that point's name to assistive technology, and the table. Every metric of the query is said there, whether or not a layer draws it. So a series that belongs in the readout alone is one more metric in `query.metrics`, labelled and written from the catalog. A companion is said where a mark draws it, or where the spec names it:
+
+```json
+{ "readout": ["response_time@min", "response_time@max"] }
+```
+
+The list holds companions of the query's metrics and nothing else. A metric there is refused, since it is said already, and so is the period before, which `compare` asks for. There is no hook, format or markup for a tooltip: what is said is a field, so a spec stays data. In a plot of lines a point is read by a crosshair, which says each line's value on its axis and no more. Where the row says more than its lines do, the readout stands with the crosshair. Not said yet: a companion at a point of several series before one is chosen, a companion in a table by two dimensions, and a companion of a dimension, which the list refuses.
 
 **A rule at a value** (Decided 46). A reference line at a number stands on a scale: `{ "mark": "rule", "encode": { "y": 1000 } }`. On an axis that is a list, a time or a category, a string on a channel would be a field, so the place is said as a value:
 
@@ -787,7 +796,7 @@ Written once against the scene and the plan, not for each preset.
 
 - Every view exposes its **tldr prose** as its accessible description, after its `description` where a spec has one, and says it again, politely, when new data changes it.
 - Every view offers the **same query as a table.** Chart and table read one result.
-- **Keyboard navigation** over data marks, by their keys and the row each came from, in the keyboard model of `@automattic/charts`. A mark announces its dimension's value, the metric's value in its catalog format, and the comparison where there is one.
+- **Keyboard navigation** over data marks, by their keys and the row each came from, in the keyboard model of `@automattic/charts`. A mark announces its dimension's value, each of the query's metrics in its catalog format, the comparison where there is one, and the companions its marks draw or its spec reads out (section 6).
 - **What is selected is said,** not only shown (section 13).
 - **Never colour alone.** Series also differ by dash, pattern or a direct label. Patterns are not built.
 - Visible focus, sufficient contrast in both themes, and `prefers-reduced-motion` respected.
@@ -930,6 +939,7 @@ Each entry is the decision. What led to it, and what building it found, is in gi
 67. A view speaks the language of where it lands. Its container says which, as `rules.locale`, and every number, date and country's name the view says is then in it. The formatters are a set made for a locale (`formats`), which the plan names and everything that builds a view's text is handed: nothing asks the machine its own language, and a tag the machine has no data for is refused, so a scene is the same on every machine. English where none is said. (November 25)
 68. The words a view says of its own are one table, `WORDS`: templates with named places, and a form for each plural category where one depends on a count. A container hands its own with its rules (`rules.words`), any of them, and English is said for the rest. The table is data, so a host's translation is JSON, and a word a view does not say is refused. The sentence is made of the table's clauses in English's order, and a unit's letters are not in it. (November 25)
 69. In a browser the element speaks the page's language where its container names none: the nearest `lang` at or above it, through any shadow root, as the page's own text is read. `rules.locale` is over it. A page in plain English is as it was, and a language the machine has no data for is English. (November 25)
+70. What is read out and not drawn is data. Every metric of the query is read out, whether or not a mark draws it, so the Stats review's case, a series in the tooltip alone, is a metric in the query. What was missing was a companion: a spec names those in `readout`, and the readout, the point's name and the table say each after its metric, as they say one a mark draws. The list takes nothing that is said without it, and no function, format or markup. Where a plot's crosshair says less than the row does, the readout is shown with it: until then a metric no line drew, and what an area was drawn from, were said to a screen reader and in the table and nowhere on the plot. It settles Open 22. (November 25)
 
 ### Open
 
@@ -954,7 +964,7 @@ Each entry is the decision. What led to it, and what building it found, is in gi
 19. What the fit rules do not say (section 10.2). Recommendation: write each as a rule where its need can be stated, starting with the number's forms and whole rows, and leave label collision to the surface (Open 5).
 20. A placer for surfaces with no CSS. Recommendation: one generic function that maps a ratio and its part's box to pixels and knows no layout, written when a pixel painter is wanted.
 21. Settled: Decided 44.
-22. A field that is read out and never drawn, proposed by the Jetpack Stats team's review in place of a hook that writes a tooltip: a view names fields that the readout and the table say and no mark draws. It is data and not a function, so a spec stays JSON. Recommendation: adopt it, as Proposed, as a list on the spec.
+22. Settled: Decided 70.
 23. What a catalog and an answer should say that they do not. Of the catalog: the grains a time dimension may be asked at, and whether a metric adds up over a dimension. Of the answer: how fresh it is, what was left out of it, and that a metric is not available here. Recommendation: propose all five to the API's owners, which `docs/api-proposal.md` does, and build none here before they are accepted.
 
 ---

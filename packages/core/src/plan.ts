@@ -136,6 +136,26 @@ function checkWhere(q: Query, result: Result, catalog: Catalog): void {
   if (filterOf(q.where) !== filterOf(result.meta.where)) throw new Error('The query ' + (Object.keys(q.where || {}).length ? 'filters by where: ' + JSON.stringify(q.where) : 'has no "where"') + ', and the answer says it is of ' + (result.meta.where ? 'where: ' + JSON.stringify(result.meta.where) : 'everything, with no "where" in its meta') + '. An engine that filters says so on its answer, as meta.where. Pass what this query returned, or make query.where the same.');
 }
 
+/** A spec's read-out fields, each once: companions the result returns with one of the query's metrics. One that is said
+ * without a place here, a metric of the query's or its period before, is refused by name, with where it is said from:
+ * a list that changed nothing would read as though it had. */
+function checkReadout(readout: unknown, q: Query, catalog: Catalog, result: Result): string[] {
+  if (readout == null) return [];
+  const eg = '"' + q.metrics[0] + '@rank"';
+  if (!Array.isArray(readout) || readout.some((f) => typeof f !== 'string')) throw new Error('The spec\'s "readout" is ' + JSON.stringify(readout) + ', and it is a list of fields, as [' + eg + '] is. Write the fields in a list, or remove "readout".');
+  const row = result.rows[0];
+  for (const f of readout as string[]) {
+    const of = baseOf(f), n = 'The spec\'s "readout" names "' + f + '"';
+    if (q.metrics.includes(f)) throw new Error(n + ', which is one of the query\'s metrics, and every one of those is read out already, whether or not a mark draws it. Remove it from "readout".');
+    if (!q.metrics.includes(of)) throw new Error(n + ', and a read-out field is a companion the result returns with one of the query\'s metrics (' + q.metrics.join(', ') + '), as ' + eg + ' is. '
+      + (Object.hasOwn(catalog.metrics, of) ? 'A metric is read out once the query asks for it: add "' + of + '" to query.metrics' + (f === of ? ', and remove it from "readout".' : '.') : 'Name one of those, or remove it from "readout".'));
+    if (f === of + '@previous') throw new Error(n + ', which is the period before, and that is read out wherever the query compares. ' + (q.compare === 'previous' ? 'Remove it from "readout".' : 'Write "compare": "previous" in the query, and remove it from "readout".'));
+    // The engine's to send, as a companion on a channel is, so it is looked for in the result. An empty result has none to show.
+    if (row && !(f in row)) throw new Error(n + ', which the result does not return. With "' + of + '" it returns: ' + (Object.keys(row).filter((c) => baseOf(c) === of && c !== of).join(', ') || 'nothing') + '.');
+  }
+  return [...new Set(readout as string[])];
+}
+
 /** The plan for a spec: its layout, its layers with their roles, its guides and its sentence. It takes no size, so
  * it is everything the spec asks for. What a room is short of is the fit rules' to say (`fitTo`, `viewAt`), and a
  * surface's to act on. `rules` are a context's own. Throws, with a message that names the fix, when the spec is invalid. */
@@ -165,6 +185,7 @@ export function resolve(spec0: Spec, result: Result, catalog: Catalog, rules: Co
   let layers = (spec.layers || []).slice();
   if (!layers.length && by) throw new Error('This spec has a dimension but no layers, so there is nothing to draw it with. Add "layers", or "use" one of: ' + presetNames(presets).join(', ') + '.');
   checkLayers(layers, q, catalog, result);
+  const readout = checkReadout(spec0.readout, q, catalog, result);
   // A time no view can read is refused here, once, before anything is built or painted. fmtTime's error names the forms.
   for (const d of q.by || []) if (catalog.dimensions[d]?.type === 'time') for (const r of result.rows) if (r[d] != null) timeOf(String(r[d]));
   if (result.meta.range) rangeOf(result.meta.range);                   // and a range the prose cannot say, the same way
@@ -223,7 +244,7 @@ export function resolve(spec0: Spec, result: Result, catalog: Catalog, rules: Co
   return {
     preset: spec0.use && !spec0.layers ? spec0.use : null, layout: p.layout,
     layers: p.layers.map((l) => Object.assign({}, l, { role: roleOf(l) })),
-    guides: p.guides, tldrValue: p.tldrValue, share: p.share, dropped, text: p.text, ...(p.locale != null && { locale: p.locale }), ...(p.words && { words: p.words }),
+    guides: p.guides, tldrValue: p.tldrValue, share: p.share, dropped, text: p.text, ...(p.locale != null && { locale: p.locale }), ...(p.words && { words: p.words }), ...(readout.length > 0 && { readout }),
   };
 }
 

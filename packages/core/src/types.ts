@@ -109,7 +109,7 @@ export const ROLES = ['primary', 'comparison', 'reference', 'context'] as const;
 export type Role = (typeof ROLES)[number];
 /** The fields a spec, its query and a layer take. One that is not among them is refused by name (resolve): a size or a
  * switch in a spec, or a filter written under another name, would otherwise be read past and the view drawn without it. */
-export const SPEC_FIELDS = ['spec', 'title', 'description', 'use', 'query', 'layers', 'facet'] as const;
+export const SPEC_FIELDS = ['spec', 'title', 'description', 'use', 'query', 'layers', 'facet', 'readout'] as const;
 export const QUERY_FIELDS = ['metrics', 'by', 'range', 'compare', 'limit', 'where'] as const;
 export const LAYER_FIELDS = ['mark', 'encode', 'series', 'role', 'stack', 'sweep', 'label', 'at', 'align', 'paint'] as const;
 export const LAYER_SERIES = ['previous', 'delta'] as const;
@@ -178,6 +178,11 @@ export interface Spec {
   /** One of the query's dimensions. The spec is then a view for each of its values, every one on the same scales, and
    * the surface lays them out: a facet is a small board (reference, Decided 26 and 45). `facets` gives the views. */
   facet?: string;
+  /** Fields that are read out and that no mark need draw: a surface says each beside its metric wherever it says a
+   * row in words, in its readout and its table. Each is a companion the result returns with one of the query's
+   * metrics (`pageviews@rank`), labelled and written from the catalog as one a mark draws is. A metric needs no place
+   * here: every one the query asks for is read out, drawn or not (reference, Decided 70). */
+  readout?: string[];
 }
 export type PresetLibrary = Record<string, { layers: Layer[] }>;
 
@@ -221,6 +226,8 @@ export interface Plan extends PlanShape {
   layers: (Layer & { role: Role })[];
   /** What the spec asked for and the result has no data to draw: a comparison with no period before. */
   dropped: string[];
+  /** The spec's read-out fields (`Spec.readout`), each once: what a surface says of a row beside what its marks draw. Absent where it names none. */
+  readout?: string[];
 }
 
 /* Scene: a flat list of shapes with stable keys and paint tokens, in ratios.

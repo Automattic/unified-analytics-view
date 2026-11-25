@@ -22,7 +22,7 @@ import { CONTAINER_RULES, type Catalog, type ContainerRules, type FitRule, type 
 /** What a view was planned from, for a layout that names its own points or lays out its own table: the plan's layers,
  * the query with its preset expanded, the result and catalog as they were given, and the formatters of the plan's
  * locale: what a painter says of a value goes through them. */
-export interface ViewData { layers: Layer[]; query: Query; result: Result; catalog: Catalog; formats: Formats }
+export interface ViewData { layers: Layer[]; query: Query; result: Result; catalog: Catalog; formats: Formats; /** The plan's read-out fields, for a painter that says a row in words (keys.ts, `readout`). */ readout?: readonly string[] }
 
 export interface LayoutPainter {
   layout: Layout;

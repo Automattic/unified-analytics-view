@@ -133,7 +133,7 @@ export const matrix: LayoutPainter = {
         attr(c, 'data-dot', dot ? (dot === n ? 'alone' : 'over') : null); prop(c, '--uav-size', dot?.size); prop(c, '--uav-dot', dot && dot !== n ? nodePaint(dot) : null);
         attr(c, 'role', 'gridcell'); attr(c, 'id', id(cx, cy));
         // Never colour alone: the value is in the cell's name, which is also its readout. No value says so in words.
-        attr(c, 'aria-label', readout(row ?? Object.fromEntries((data.query.by || []).map((d) => [d, d === xf ? x : y])), data.query, data.catalog, data.layers, data.formats));
+        attr(c, 'aria-label', readout(row ?? Object.fromEntries((data.query.by || []).map((d) => [d, d === xf ? x : y])), data.query, data.catalog, data.layers, data.formats, data.readout));
         if (row) rows.set(c.id, row);
       });
     });

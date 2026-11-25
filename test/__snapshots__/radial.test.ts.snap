@@ -24,14 +24,12 @@ exports[`golden scenes > donut, at each room 1`] = `
       "parts": [
         "radial",
         "hole",
-        "legend",
+        "legend-top",
       ],
       "rules": [
         "legend",
       ],
-      "set": {
-        "legend": "top",
-      },
+      "set": {},
     },
   ],
   [
@@ -405,14 +403,12 @@ exports[`golden scenes > half, at each room 1`] = `
       "parts": [
         "radial",
         "hole",
-        "legend",
+        "legend-top",
       ],
       "rules": [
         "legend",
       ],
-      "set": {
-        "legend": "top",
-      },
+      "set": {},
     },
   ],
   [
@@ -788,14 +784,12 @@ exports[`golden scenes > pie, at each room 1`] = `
       "hidden": [],
       "parts": [
         "radial",
-        "legend",
+        "legend-top",
       ],
       "rules": [
         "legend",
       ],
-      "set": {
-        "legend": "top",
-      },
+      "set": {},
     },
   ],
   [

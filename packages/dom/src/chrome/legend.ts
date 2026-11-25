@@ -66,15 +66,13 @@ export const LEGEND_SWAP = {
   full: `overflow: hidden; max-block-size: max(0px, (100cqb - var(--uav-legend-block) + 0.01px) * 999999);\n    margin-block-start: clamp(0px, (100cqb - var(--uav-legend-block) + 0.01px) * 999999, ${LEGEND_MARGIN}em);`,
   top: 'display: block; overflow: hidden; max-block-size: max(0px, (var(--uav-legend-block) - 100cqb) * 999999);',
 };
-/** The same swap under the `legend` rule, for a layout's `fit`: the rule's data only sets a switch, and this is the
- * swap, whatever the box's height says. */
-export const LEGEND_FIT: Record<string, string> = { '.uav-legend': 'display: none;', '.uav-legend-top': 'display: block; max-block-size: none;' };
+/** What the legend's ladder (core's fit rules) needs of a stylesheet beyond its data, for the `fit` of every layout that
+ * has it. Under `legend` the rule hides the whole legend and shows its one line, and that line stands whatever a box's
+ * height says of the swap above. Under `legend-top` neither is left, and the marks are in one paint. */
+export const LEGEND_FIT: Record<string, Record<string, string>> = { legend: { '.uav-legend-top': 'max-block-size: none;' }, 'legend-top': SPLIT_PLAIN };
 /** The height the full legend needs in a box, as --uav-legend-block: `least` px for what stands over it, the legend's
  * margin, and a line and its gap for each of --uav-rows, less the last gap. */
 export const legendBlock = (least: number): string => `calc(${+(least + LEGEND_MARGIN - LEGEND_GAP).toFixed(4)}em + var(--uav-rows, 1) * (var(--uav-legend-line) + ${LEGEND_GAP}em))`;
-/** The one-line legend, where the plan names it in place of the full one, in a layout that has both. */
-export const legendTop = (layout: string): string => `.uav[data-layout="${layout}"][data-parts~="legend-top"] .uav-legend-top { display: block; }`;
-
 /** For the measured pass of a layout whose legends a box clips to nothing rather than hides (band, radial): the one
  * with no height left is taken from assistive technology too, so a reader hears the legend that shows, and only it. */
 export function hideCutLegends(body: HTMLElement): void {

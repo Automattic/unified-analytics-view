@@ -1,5 +1,5 @@
 import { CONTAINER_RULES, SEATS_LEAST, arcD, declutter, ruleFor, type ArcNode, type CircleNode, type PathNode, type TextNode } from '@unified-analytics/core';
-import { LEGEND_FIT, LEGEND_SWAP, SPLIT_PLAIN, hideCutLegends, legendBlock, legendTop, paintLegend } from '../chrome/legend.ts';
+import { LEGEND_FIT, LEGEND_SWAP, hideCutLegends, legendBlock, paintLegend } from '../chrome/legend.ts';
 import { attr, ensure, hits, keyed, svg, paintVar, prop, text } from '../dom.ts';
 import { FROM_TOP, IN_BOX, NUMBER_ALONE, holdShape, type LayoutPainter } from '../layout.ts';
 import { FOCUS, HOVER, token } from '../tokens.ts';
@@ -70,8 +70,6 @@ const css = `
 .uav-hole.uav-f-display { font-size: clamp(1.05em, 18cqi, var(--uav-font-display-small)); line-height: 0.92; }
 .uav-radial[data-half] .uav-hole { place-items: end center; }
 .uav[data-layout="radial"][data-parts~="hole"] .uav-hole { display: grid; }
-/* The plan names one legend, as it does for a band, or neither. */
-${legendTop('radial')}
 /* In a box the part gives way to the height, down to nothing, and its width follows; it is no taller than the body's
  * width allows its shape, which cqi is here, the part being a container itself. The legends swap as a band's do:
  * the full one needs the least circle of 4.8 em, 0.75 em and a line and its 0.3 em gap for each row, less the last gap. Under the one-line legend's
@@ -118,10 +116,8 @@ export const radial: LayoutPainter = {
   layout: 'radial',
   css,
   fit: {
-    // As the band's: the rule's data only sets a switch, and this is the swap.
-    legend: LEGEND_FIT,
-    // With no legend left, the segments are in one paint, parted by their gaps.
-    'legend-top': SPLIT_PLAIN,
+    // The legend's ladder, as a band has it. With no legend left, the segments are in one paint, parted by their gaps.
+    ...LEGEND_FIT,
     // The number alone. The body goes whole, and so does its grid row.
     marks: NUMBER_ALONE,
   },

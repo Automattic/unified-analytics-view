@@ -1,5 +1,5 @@
 import { BAND_BAR, GRID_LEAST, type RectNode } from '@unified-analytics/core';
-import { LEGEND_FIT, LEGEND_SWAP, hideCutLegends, legendBlock, legendTop, paintLegend } from '../chrome/legend.ts';
+import { LEGEND_FIT, LEGEND_SWAP, hideCutLegends, legendBlock, paintLegend } from '../chrome/legend.ts';
 import { attr, ensure, hits, keyed, prop } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { IN_BOX, NUMBER_ALONE, holdShape, type LayoutPainter } from '../layout.ts';
@@ -13,8 +13,6 @@ const shape = holdShape('12em', 1);
 const css = `
 .uav-band { display: flex; gap: 0.15em; block-size: ${BAND_BAR}em; }
 .uav-band i { flex: var(--uav-v) 1 0px; min-inline-size: 0; background: var(--uav-paint); border-radius: ${token('border-radius-bar')}; }
-/* The plan names one legend, and with no limits it is the full one. */
-${legendTop('band')}
 /* In a box the body is a size container, so cqb is the room the band and its legend have. The full legend needs the
  * bar, 0.75 em and a line and its 0.3 em gap for each row, less the last gap: a height that depends on the data, which a container query cannot
  * hold, so paint() states the row count and a clamp does the swap. The legend that goes gives up its gap as well, or
@@ -39,8 +37,8 @@ export const band: LayoutPainter = {
   layout: 'band',
   css,
   fit: {
-    // The rule's data only sets a switch. This is the swap, whatever the box's height says.
-    legend: LEGEND_FIT,
+    // The legend's ladder: the one line stands under its rule, whatever the box's height says of the swap.
+    ...LEGEND_FIT,
     // The number alone. The body goes whole, the one-line legend with it, and so does its grid row.
     marks: NUMBER_ALONE,
   },

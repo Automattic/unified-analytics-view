@@ -24,8 +24,8 @@ describe('the radial layout', () => {
     expect(css).toContain('@container uav-plot (inline-size < calc(9em - 0.5px)) {\n  .uav[data-layout="radial"] .uav-hole { display: none; }\n}');
   });
   it('steps the legend down as the band does, then to arcs of one colour, then to the number alone, in that order', () => {
-    expect(css).toContain(['@container uav-view (inline-size < calc(12.75em - 0.5px)) {', '  ' + fig('guides') + ' { --uav-legend: top; }',
-      '  ' + fig('guides') + ' .uav-legend { display: none; }', '  ' + fig('guides') + ' .uav-legend-top { display: block; max-block-size: none; }', '}'].join('\n'));
+    expect(css).toContain(['@container uav-view (inline-size < calc(12.75em - 0.5px)) {', '  ' + fig('guides') + ' .uav-legend { display: none; }',
+      '  ' + fig('guides') + ' .uav-legend-top { display: block; }', '  ' + fig('guides') + ' .uav-legend-top { max-block-size: none; }', '}'].join('\n'));
     // The rule that takes the legend takes the colours it was the key to: what it painted is the first series' colour.
     expect(css).toContain(['@container uav-view (block-size < calc(6.6em - 0.5px)) {', '  ' + fig('guides') + ' :is(.uav-legend, .uav-legend-top) { display: none; }', '  ' + fig('guides') + ' { --uav-split: plain; }',
       ...Object.entries(SPLIT_PLAIN).map(([sel, decl]) => '  ' + fig('guides') + ' ' + sel + ' { ' + decl + ' }'), '}'].join('\n'));

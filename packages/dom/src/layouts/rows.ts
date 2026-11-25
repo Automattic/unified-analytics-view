@@ -1,5 +1,5 @@
 import { COLUMNS_BLOCK, EM, columnRooms, inColumn, ruleFor, type PathNode, type RowNode, type Scene, type SceneNode, type TextNode } from '@unified-analytics/core';
-import { SPLIT_PLAIN, paintLegend } from '../chrome/legend.ts';
+import { LEGEND_FIT, paintLegend } from '../chrome/legend.ts';
 import { attr, ensure, ensureSvg, keyed, prop, svg, text } from '../dom.ts';
 import { token } from '../tokens.ts';
 import { IN_BOX, NUMBER_ALONE, em, type LayoutPainter } from '../layout.ts';
@@ -98,7 +98,7 @@ export const rows: LayoutPainter = {
   // And with no legend left, a divided row's series are in one paint, parted by their gaps.
   // The wrap clips whole rows, so a box shorter than one row shows none: under a row's height the list goes and the
   // number stands in, as it does under the width. Both are the `marks` rule's needs, in core.
-  fit: { marks: NUMBER_ALONE, 'legend-top': SPLIT_PLAIN, ...TRACK_FIT },
+  fit: { ...LEGEND_FIT, marks: NUMBER_ALONE, ...TRACK_FIT },
 
   paint(body, scene, rules) {
     const head = ensure(body, 'div', 'uav-columns'), list = ensure(body, 'div', 'uav-rows'), by = new Map<string, SceneNode[]>();

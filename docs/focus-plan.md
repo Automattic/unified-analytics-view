@@ -165,7 +165,7 @@ Not every threshold can go. A container query compares against a length, so some
 **Proposed for the next stage, and not built,** because each changes what a view looks like at some size and wants an eye on it:
 
 1. **A need in the type's own units.** The picked numbers become multiples of the face their part is set in, so a need follows the type scale. A container query can compare against `em`, to verify, and `fitTo` would take the face's size with the room. Built since, for the label face alone (step 17).
-2. **One ladder for a legend,** written once and applied to a band, a list and a circle, with each layout's least for its marks as the one thing that differs.
+2. **One ladder for a legend,** written once and applied to a band, a list and a circle, with each layout's least for its marks as the one thing that differs. Built since (step 22).
 3. **Glyphs as the last rule for one kind of view.** `unit` has five of the nine. Its forms give way to plainer presets by height, which is the only place a rule names a preset.
 
 `unit` stays in core: it stands on the plot's own axes, which a custom mark cannot. `keep` stays too.
@@ -286,6 +286,15 @@ Once the steps were built he went through every call made by judgement, twenty-t
     - **It moves where the type does.** With the label at 20 px, or the page's type at 24 px, a list's rows are 42 px where they were 28, and the list gives way to its number at 120 px across.
     - **Left in px:** strokes, hairlines, radii, what is measured, and the cell of a number set in dots (`--uav-u`, 4 px), which is a grid of pixels. Making that one relative needs the cell rounded to a whole px (`round()`), and the measured pass told its size.
     - `test/dom-tokens.test.ts` holds the stylesheets to it: a size added in px fails there.
+
+22. One ladder for a legend, the second stage step 8 proposed. Done, on the branch `relative-units` (reference, Decided 66). What it found:
+    - **It was one ladder said two ways.** A list hid its whole legend and showed the one line, as two parts. A band and a circle kept the part and set a switch, `legend: top`, which a reader with no browser had to know meant the one line. Now all three hide the one and show the other, from one function, `legend()` in `fit.ts`, and the switch is gone with the five places that read it.
+    - **`fitTo` names what shows.** A band at 150 px was `band, legend` with `legend: top` set, and is `band, legend-top`. Of 46,410 readings, every sample at 14 widths, 13 heights and each state of its data, 2,184 changed so, 168 more are a band already down to its number that now holds the last step as well, and none changed any other way.
+    - **The stylesheet half is said once too:** `LEGEND_FIT`, which the three layouts take. A rule the element had for a plan that names the one line was dead, since no plan does, and is deleted.
+    - **Two things differ, not one.** The least of the marks, as proposed: two rows, a bar, the least circle. And a list's whole legend has a height a rule can say, since it wraps and the height is picked, where a band's and a circle's is a line for each entry: that depends on the data, and the stylesheet reads it. So the ladder takes that height where there is one, and only the list gives it.
+    - **A band has the last step and never shows it.** Its bar goes at the height the one line would, so the rule that takes the bar holds wherever the step does. A circle is drawn in one paint for a while and a band never is. Whether a band should be is David's to say: it is one number, the block need of the band's `marks`.
+    - **`explain` says it as it says a list's:** the legend hidden, and `legend-top` shown in its place, where it said "shown as one line".
+    - **Nothing moved:** 0 of 2,720 frames differ from the capture before it, and the check has 0 new and 0 gone. The compiled rules say the same thing with one custom property fewer. The capture's boxes are natural height and 100 px, so it has no band under the height of its last step: that one is held by the rules alone.
 
 **How the work is committed:** each step locally, on a feature branch, and nothing pushed or opened as a pull request without his word.
 

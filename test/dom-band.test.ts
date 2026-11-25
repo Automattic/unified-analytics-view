@@ -9,21 +9,20 @@ const fig = (_was?: string) => '.uav[data-layout="band"]';
 const css = compileFitRules(FIT_RULES.filter((r) => r.layout === 'band'), { band: band.fit! });
 
 describe('the band layout', () => {
-  it('hides the one-line legend until a rule or the plan asks for it', () => {
+  it('hides the one-line legend until a rule asks for it', () => {
     expect(LEGEND_CSS).toContain('.uav-legend-top { display: none; }');
-    expect(band.css).toContain('.uav[data-layout="band"][data-parts~="legend-top"] .uav-legend-top { display: block; }');
   });
 
   it('in a box, the full legend gives up its gap with its height, so the one-line legend is not pushed out', () => {
     expect(band.css).toMatch(/\.uav-legend \{ overflow: hidden; max-block-size: max\(0px, [^;]+;\s+margin-block-start: clamp\(0px, [^;]+, 0\.75em\); \}/);
   });
 
-  it('swaps the legends under the legend rule, which alone only sets a switch', () => {
+  it('swaps the legends under the legend rule, and the one line stands whatever the box says of the swap', () => {
     expect(css).toContain([
       '@container uav-view (inline-size < calc(12.75em - 0.5px)) {',
-      '  ' + fig('guides') + ' { --uav-legend: top; }',
       '  ' + fig('guides') + ' .uav-legend { display: none; }',
-      '  ' + fig('guides') + ' .uav-legend-top { display: block; max-block-size: none; }',
+      '  ' + fig('guides') + ' .uav-legend-top { display: block; }',
+      '  ' + fig('guides') + ' .uav-legend-top { max-block-size: none; }',
       '}',
     ].join('\n'));
   });

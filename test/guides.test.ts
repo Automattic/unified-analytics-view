@@ -42,7 +42,7 @@ describe('a key leaves no sooner than the marks it keys', () => {
   const windows = (rules: FitRule[]): string[] => [...new Set(rules.map((r) => r.layout))].flatMap((layout) => {
     const own = rules.filter((r) => r.layout === layout);
     return own.flatMap((r) => {
-      const keys = r.hide.filter((p) => keyOf(p)), shorter = (r.show ?? []).some((p) => keys.some((k) => keyOf(k) === keyOf(p))) || r.set?.legend === 'top';
+      const keys = r.hide.filter((p) => keyOf(p)), shorter = (r.show ?? []).some((p) => keys.some((k) => keyOf(k) === keyOf(p)));
       // A rule that takes the marks takes their keys with good reason: all of a view's marks, or the ones a key is for.
       // So does one that has the marks drawn without the encoding: dots of one size, series in one paint.
       const settled = (k: string) => { const g = keyOf(k)!; return r.hide.includes(g.marks ?? '') || (!!g.plain && r.set?.[g.plain[0]] === g.plain[1]); };

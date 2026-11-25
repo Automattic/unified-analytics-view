@@ -162,11 +162,11 @@ describe('fit rules', () => {
   const rule = (id: string) => FIT_RULES.find((r) => r.layout === 'radial' && r.id === id)!;
   const at = (spec: Spec, w: number, h: number | null = null, plot?: Room) => shown(run(spec, w, h, 'typical', { plot }));
   it('the legend steps down as the band\'s does, and then to arcs of one colour', () => {
-    const steps = (spec: Spec, sizes: [number, number | null][]) => sizes.map(([w, h]) => { const f = at(spec, w, h); return !f.parts.some((p) => p === 'radial' || p === 'band') ? 'number' : !f.parts.includes('legend') ? 'none' : f.set.legend ?? 'full'; });
+    const steps = (spec: Spec, sizes: [number, number | null][]) => sizes.map(([w, h]) => { const f = at(spec, w, h); return !f.parts.some((p) => p === 'radial' || p === 'band') ? 'number' : f.parts.includes('legend') ? 'full' : f.parts.includes('legend-top') ? 'top' : 'none'; });
     expect(steps(donut!, [[346, null], [169, null], [346, 100], [346, 87], [346, 63]])).toEqual(['full', 'top', 'full', 'none', 'number']);
     // The share bar at the same widths, which has no step with no legend.
     expect(steps(samples.mix!.spec, [[346, null], [169, null]])).toEqual(['full', 'top']);
-    expect(at(donut!, 169)).toMatchObject({ set: { legend: 'top' }, rules: ['legend'] });
+    expect(at(donut!, 169)).toMatchObject({ parts: ['radial', 'hole', 'legend-top'], rules: ['legend'] });
     // With no key the arcs are one colour: the gaps between them still say how the whole divides.
     expect(at(pie!, 346, 87)).toMatchObject({ parts: ['radial'], set: { split: 'plain' } });
     expect(at(pie!, 346, 100).set.split).toBeUndefined();

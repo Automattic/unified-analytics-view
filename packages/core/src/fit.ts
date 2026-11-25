@@ -17,9 +17,10 @@ export interface FitRule {
   /** Parts that appear in compensation, under the same condition. */
   show?: string[];
   /** Switches under the same condition, each a custom property on the figure that a layout's own rules answer to.
-   * `arrange: side` sets the number beside a bare plot, and `legend: top` a legend as its one line. A key's shorter form
-   * is one too: `ramp: strip`, `size-key: most`. So is a drawing without an encoding whose key the rule takes:
-   * `dots: one` for dots of one size, `split: plain` for series in one paint. */
+   * `arrange: side` sets the number beside a bare plot. A key's shorter form is one too, where it is the same part cut
+   * down: `ramp: strip`, `size-key: most`. So is a drawing without an encoding whose key the rule takes:
+   * `dots: one` for dots of one size, `split: plain` for series in one paint. A legend's one line is no switch: it is a
+   * part of its own, which a rule shows (`show`). */
   set?: Record<string, string>;
   /** A preset the view becomes under the same condition: the same query, drawn another way. It takes the place of the
    * whole view, so `hide` and `show` have nothing left to act on. `viewAt()` plans again with it. A browser container
@@ -79,6 +80,18 @@ const LEAST = {
 /** Every part of a plot's body, and of a list's: what a rule takes where the view is its number alone. */
 const PLOT = ['plot', 'points', 'point-labels', 'x-axis', 'y-axis', 'y-axis-2', 'labels', 'legend', 'ramp', 'size', 'unit-key'];
 const ROWS = ['rows', 'track', 'columns', 'legend', 'legend-top', 'unit-key'];
+/** A legend's ladder, said once, for the layouts whose legend has nothing but its own one line to give way to: a list
+ * divided into series, a band and a circle. It is whole while the view has its width, and its height where a rule can
+ * say one (`whole`): a list's wraps, and the height it is given is picked. A band's and a circle's is a line for each
+ * entry, which depends on the data and is the surface's to see to. Under that it is its one line. And where the view
+ * has no room for the least of its marks (`marks`, tall) with that line under them, the line goes and the colours go
+ * with it. What differs from one layout to the next is the least of its marks. */
+const legend = (layout: Layout, marks: number, whole?: number): FitRule[] => [
+  { id: 'legend',     layout, container: 'view', needs: { inline: LEAST.legend, ...(whole != null && { block: whole }) },
+    hide: ['legend'], show: ['legend-top'] },
+  { id: 'legend-top', layout, container: 'view', needs: { block: marks + LEAST.legendLine },
+    hide: ['legend', 'legend-top'], set: { split: 'plain' } },
+];
 export const FIT_RULES: FitRule[] = [
   // A plot with axes. The second y axis is the key to what is measured in a second unit, which is read against nothing
   // else: it stays as long as the first does, and what is drawn on it goes when it goes. A bare plot is of one unit.
@@ -109,21 +122,18 @@ export const FIT_RULES: FitRule[] = [
     hide: ['role:comparison', 'role:reference', 'role:context'] },
   { id: 'marks',     layout: 'cartesian', container: 'view', needs: { inline: LEAST.number + LEAST.gap + LEAST.bare.inline, block: LEAST.bare.block },       // 5.7 em for the number, a gap of 0.9 and a bare plot of 4.8
     hide: PLOT, show: ['number'] },
-  { id: 'legend',     layout: 'rows',     container: 'view', needs: { inline: LEAST.legend, block: LEAST.dividedRows },      // a divided row's legend becomes one line, as the band's does, and where the rows have under three of their own
-    hide: ['legend'], show: ['legend-top'] },
-  { id: 'legend-top', layout: 'rows',     container: 'view', needs: { block: 2 * LEAST.row + LEAST.rowGap + LEAST.legendLine },                    // and that line goes where it would leave no two rows, and the series' colours with it
-    hide: ['legend', 'legend-top'], set: { split: 'plain' } },
+  // A divided row's legend is whole while the rows have three of their own over it, and its one line goes where it would leave no two rows.
+  ...legend('rows', 2 * LEAST.row + LEAST.rowGap, LEAST.dividedRows),
   // After the legend's rules, as every layout's is: where two rules say otherwise of a part the later one wins, and the one that takes the marks has the last word.
   { id: 'marks',     layout: 'rows',      container: 'view', needs: { inline: LEAST.label, block: LEAST.row },        // the label, and one row: a surface shows whole rows, so a box shorter than one shows none. The value's room is measured, and each ranked column's
     hide: ROWS, show: ['number'] },
-  { id: 'legend',    layout: 'band',      container: 'view', needs: { inline: LEAST.legend },                  // the full legend becomes the largest segment's label
-    hide: [], set: { legend: 'top' } },
+  // A band's one line names its largest segment. Its last step never shows: the rule after it takes the bar at the
+  // height that step would leave it with no key, so a band is not drawn in one paint.
+  ...legend('band', BAND_BAR),
   { id: 'marks',     layout: 'band',      container: 'view', needs: { inline: LEAST.band, block: BAND_BAR + LEAST.legendLine },       // the bar and the one-line legend, 1.8 em each
     hide: ['band', 'legend', 'legend-top', 'unit-key'], show: ['number'] },
-  { id: 'legend',     layout: 'radial', container: 'view', needs: { inline: LEAST.legend },                    // as the band's
-    hide: [], set: { legend: 'top' } },
-  { id: 'legend-top', layout: 'radial', container: 'view', needs: { block: LEAST.circle.block + LEAST.legendLine },                      // the least circle, and one line under it. Under that the legend goes, and the segments' colours with it
-    hide: ['legend', 'legend-top'], set: { split: 'plain' } },
+  // A circle's one line stays while the least circle has room over it. Under that the segments are in one paint.
+  ...legend('radial', LEAST.circle.block),
   // Labels round the rim: the circle, and a label's width to either side of it. They are the key to which slice is
   // which, so under that they thin to the ones with no rank, about four, and stay as long as the circle does.
   { id: 'rim',        layout: 'radial', container: 'view', needs: LEAST.rim,

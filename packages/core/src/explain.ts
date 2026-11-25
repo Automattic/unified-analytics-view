@@ -39,7 +39,7 @@ export interface Explanation { layout: Layout; entries: Because[] }
 export interface ExplainRoom { inline: number; block?: number | null; plot?: Room | null; em?: number }
 
 /** A key's shorter form, by the switch a fit rule sets for it: the part, and what is said of it. */
-const SHORTER: Record<string, [part: string, what: string]> = { 'legend: top': ['legend', 'shown as one line'], 'ramp: strip': ['ramp', 'shown as a thin strip'], 'size-key: most': ['size', 'shown as its largest step'] };
+const SHORTER: Record<string, [part: string, what: string]> = { 'ramp: strip': ['ramp', 'shown as a thin strip'], 'size-key: most': ['size', 'shown as its largest step'] };
 /** What the marks give up when a rule takes their key, by the switch it sets: the parts that are that key, and what is said of them. */
 const PLAIN: Record<string, [parts: string[], what: string]> = { 'split: plain': [['legend', 'legend-top', 'labels', 'ramp'], 'hidden, and the marks it keyed drawn in one colour'], 'dots: one': [['size'], 'hidden, and the dots drawn at one size'] };
 /** A part a rule thins and does not take, by the target it names. */

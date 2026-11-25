@@ -110,6 +110,16 @@ describe('the rule set', () => {
     const ids = FIT_RULES.map((r) => r.layout + '/' + r.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
+  it('has one ladder for a legend, in a list, a band and a circle: the least of its marks is what differs', () => {
+    const ladder = (layout: string) => ['legend', 'legend-top'].map((id) => { const { layout: _, needs, ...what } = rule(layout, id); return [what, needs.inline]; });
+    expect(ladder('band')).toEqual(ladder('rows'));
+    expect(ladder('radial')).toEqual(ladder('rows'));
+    // The one line goes where the least of the marks has no room over it: two rows, a bar, the least circle.
+    expect(['rows', 'band', 'radial'].map((l) => +rule(l, 'legend-top').needs.block!.toFixed(4))).toEqual([6.3, 3.6, 6.6]);
+    // A band's bar goes at that same height, so a band is never drawn in one paint.
+    expect(rule('band', 'marks').needs.block).toBe(rule('band', 'legend-top').needs.block);
+    expect(shown(run(specs.mix!, 346, 40)).parts).toEqual(['number']);
+  });
   it('is the container\'s to replace', () => {
     const swap = (id: string, needs: FitRule['needs']) => ({ ...CONTAINER_RULES, fit: FIT_RULES.map((r) => (r.id === id ? { ...r, needs } : r)) });
     const at = (rules = CONTAINER_RULES, w = 250, h: number | null = null, sc: (typeof scenarios)[number] = 'typical') => shown(run(trend, w, h, sc, { rules }));

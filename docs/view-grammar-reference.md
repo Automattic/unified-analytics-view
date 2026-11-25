@@ -515,7 +515,7 @@ A tile map is the same mark with other shapes. A spec may not say which shapes t
 | Key | When room is short |
 |---|---|
 | A plot's legend | A label at each line's end, where there is a line. Bars and dots keep theirs as long as the axes |
-| A legend with nothing to stand in for it | One line that names the largest, and then it goes and takes the colours with it: its marks are drawn in one paint (`split: plain`) |
+| A legend with nothing to stand in for it: a divided list's, a band's, a circle's | One line that names the largest, a part of its own (`legend-top`). Then it goes and takes the colours with it: its marks are drawn in one paint (`split: plain`). One ladder for the three (Decided 66), and a band's bar goes with its line |
 | The ramp | A thin strip of every step, its two ends still numbered (`ramp: strip`) |
 | The key to sizes | Its largest step (`size-key: most`). In a bare plot the dots are one size |
 | The names round a rim | Thinned to about four |
@@ -916,6 +916,7 @@ Each entry is the decision. What led to it, and what building it found, is in gi
 63. `keep` is gone. A spec has no lever over what a container gives up: where a default is wrong for a view, the answer is a better rule, or a rule set a context hands its containers. (November 24)
 64. A need follows the type: a need of the view grows and shrinks with the view's label face. The element asks it in `em`, and a surface with no browser says the size with the room. It is narrower than proposed, the face each part is set in: a container query has one em. Its first form, px at a default type with the plot's needs left in px, was replaced the same day by 65. (November 24)
 65. Sizes are relative. A need is written in em, and so is every size in the element: a row, a gutter, a gap, a swatch, a dot, in em of the view's type or of the face it stands by. The view is set in its label face and everything in it inherits that, so one em is the unit of a need, on the view and on its plot, and of what the need is a sum of. px is for a stroke, a hairline, a radius, what is measured, and a grid of pixels: the cell of a number set in dots is the one size left in it. A room is still given in px, with the size of an em. On the bench nothing moved by more than 0.6 px, but for a legend that wraps, which fits one more name on a line where the theme sets its label smaller. (November 24)
+66. A legend has one ladder, in a divided list, a band and a circle, written once (`legend` in `fit.ts`): whole, then its one line, then neither, with its marks in one paint. The least of a layout's marks is what differs between the three. The one line is a part a rule shows in the whole legend's place, `legend-top`, so `fitTo` names what shows, and the switch `legend: top` is gone. A band's bar still goes at the height its line would, so a band is not drawn in one paint. A list's whole legend has a height a rule says, since it wraps; a band's and a circle's is a line for each entry, which the stylesheet reads. (November 25)
 
 ### Open
 

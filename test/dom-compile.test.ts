@@ -48,9 +48,9 @@ describe('compileFitRules', () => {
       '/* cartesian mid-tick */\n@container uav-view (inline-size < calc(28.5em - 0.5px)) {\n  .uav[data-layout="cartesian"] .uav-x-axis [data-rank] { display: none; }\n}');
   });
 
-  it('writes a set with nothing hidden, as the band legend has', () => {
-    expect(compileFitRules(only('band', 'legend'))).toBe(
-      '/* band legend */\n@container uav-view (inline-size < calc(12.75em - 0.5px)) {\n  .uav[data-layout="band"] { --uav-legend: top; }\n}');
+  it('writes a set with nothing hidden, as the key to sizes has', () => {
+    expect(compileFitRules(only('cartesian', 'size'))).toBe(['inline-size < calc(24em', 'block-size < calc(12em'].map((need) =>
+      '/* cartesian size */\n@container uav-view (' + need + ' - 0.5px)) {\n  .uav[data-layout="cartesian"] { --uav-size-key: most; }\n}').join('\n'));
   });
 
   it('adds what a layout says changes with a rule, under the same condition', () => {

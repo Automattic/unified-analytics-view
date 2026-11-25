@@ -132,7 +132,7 @@ describe('a radial bar: a dimension on radius and a metric on angle', () => {
     const { ratio } = run(rings!, 346), says = (key: string) => (ratio.nodes.find((n) => n.key === key) as TextNode).text;
     expect([says('legend:Direct'), says('share:Direct'), says('legend-top')]).toEqual(['Direct', '2,949', 'Search 4,318']);
     expect(ratio.nodes.find((n) => n.key === 'swatch:Direct')!.paint).toBe('series.2');
-    expect([[346, null], [169, null], [346, 87]].map(([w, h]) => { const f = shown(run(rings!, w!, h)); return !f.parts.includes('legend') ? 'none' : f.set.legend ?? 'full'; })).toEqual(['full', 'top', 'none']);
+    expect([[346, null], [169, null], [346, 87]].map(([w, h]) => { const f = shown(run(rings!, w!, h)); return f.parts.includes('legend') ? 'full' : f.parts.includes('legend-top') ? 'top' : 'none'; })).toEqual(['full', 'top', 'none']);
   });
   it('against the catalog domain where the metric has one, and in one paint with no legend where nothing is on color', () => {
     const spec: Spec = { spec: 'view/0', query: { metrics: ['signups'], by: ['device'] }, layers: [{ mark: 'arc', encode: { angle: 'signups', radius: 'device' } }] };

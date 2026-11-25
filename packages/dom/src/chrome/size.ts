@@ -6,11 +6,11 @@ import { swatch } from './swatch.ts';
  * a grid of dots, and a map of symbols, and a dot in it is a plot's dot, in a plot's steps (points.ts).
  * A layout says only where it stands, and how much taller its view is for it. */
 /** The space above the key, in px, and the line it takes: of core's SIZE_KEY_BLOCK, which a view with the key is taller by. */
-const SIZE_MARGIN = 4, SIZE_LINE = SIZE_KEY_BLOCK - SIZE_MARGIN;
+const SIZE_MARGIN = 0.3, SIZE_LINE = +(SIZE_KEY_BLOCK - SIZE_MARGIN).toFixed(4);
 export const SIZE_CSS = `
-.uav-size { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; block-size: ${SIZE_LINE}px; margin-block-start: ${SIZE_MARGIN}px; overflow: hidden; white-space: nowrap; }
+.uav-size { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3em; block-size: ${SIZE_LINE}em; margin-block-start: ${SIZE_MARGIN}em; overflow: hidden; white-space: nowrap; }
 .uav-size:empty { display: none; }
-.uav-size span { margin-inline-end: 6px; color: var(--uav-paint); }`;
+.uav-size span { margin-inline-end: 0.75em; color: var(--uav-paint); }`;
 
 /** The key as its largest step alone: the metric's name, the biggest dot and the most it stands for. Its shorter form,
  * for a layout's `fit` under the rule that sets `size-key: most`. The name is the key's first child and a step is a dot

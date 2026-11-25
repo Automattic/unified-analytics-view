@@ -203,6 +203,7 @@ The fixture engine (`packages/fixtures`) has three data states, `typical`, `no-p
 | `use` | A preset's name, which expands into `layers` (section 9). Ignored where `layers` is present |
 | `layers` | The layers, written out |
 | `facet` | One of the query's dimensions: the spec is then a view for each of its values |
+| `readout` | A list of companions the result returns with the query's metrics: each is read out, though no mark draws it |
 
 A spec says what to show and nothing of how. It has no lever over what a container gives up (Decided 63).
 
@@ -226,6 +227,14 @@ A spec says what to show and nothing of how. It has no lever over what a contain
 **Paint tokens an author may name:** `series.1` to `series.6`, `compare`, `rule`, `ink`, `ink.muted`, `delta`, `delta.good` and `delta.bad`. A layer with no `paint` takes `series.1`, or `compare` for a `previous` series. The ramps (`seq.1` to `seq.10`, `div.1` to `div.9`) are the colour scale's: a metric on `color` is quantized to one, diverging where its values cross zero (Decided 33).
 
 **A description** (Decided 62). A view's sentence is derived, since its data is live. What its author can say that the data cannot is what the view is for: "How many people came, day by day." It says nothing the data would make false: no number, no date, no "up". A facet says it once.
+
+**What is read out and not drawn** (Decided 70). A view says a row in words in three places: the readout at a point, that point's name to assistive technology, and the table. Every metric of the query is said there, whether or not a layer draws it. So a series that belongs in the readout alone is one more metric in `query.metrics`, labelled and written from the catalog. A companion is said where a mark draws it, or where the spec names it:
+
+```json
+{ "readout": ["response_time@min", "response_time@max"] }
+```
+
+The list holds companions of the query's metrics and nothing else. A metric there is refused, since it is said already, and so is the period before, which `compare` asks for. There is no hook, format or markup for a tooltip: what is said is a field, so a spec stays data. In a plot of lines a point is read by a crosshair, which says each line's value on its axis and no more. Where the row says more than its lines do, the readout stands with the crosshair. Not said yet: a companion at a point of several series before one is chosen, a companion in a table by two dimensions, and a companion of a dimension, which the list refuses.
 
 **A rule at a value** (Decided 46). A reference line at a number stands on a scale: `{ "mark": "rule", "encode": { "y": 1000 } }`. On an axis that is a list, a time or a category, a string on a channel would be a field, so the place is said as a value:
 
@@ -515,7 +524,7 @@ A tile map is the same mark with other shapes. A spec may not say which shapes t
 | Key | When room is short |
 |---|---|
 | A plot's legend | A label at each line's end, where there is a line. Bars and dots keep theirs as long as the axes |
-| A legend with nothing to stand in for it | One line that names the largest, and then it goes and takes the colours with it: its marks are drawn in one paint (`split: plain`) |
+| A legend with nothing to stand in for it: a divided list's, a band's, a circle's | One line that names the largest, a part of its own (`legend-top`). Then it goes and takes the colours with it: its marks are drawn in one paint (`split: plain`). One ladder for the three (Decided 66), and a band's bar goes with its line |
 | The ramp | A thin strip of every step, its two ends still numbered (`ramp: strip`) |
 | The key to sizes | Its largest step (`size-key: most`). In a bare plot the dots are one size |
 | The names round a rim | Thinned to about four |
@@ -593,6 +602,16 @@ A preset is a saved fragment of a spec with slots filled from the query: `$metri
 
 **Who decides what.** The spec is the seed: an author writes it and decides where it renders. A container fits the view by a rule set. The defaults ship with the design system and have to be good at any size. A context that wants its containers to behave otherwise hands them its own set once, as it hands them tokens (`rules`, whose `fit` list is the room each part needs).
 
+**The language is where the view lands** (Decided 67). A container says it with its rules: `rules.locale`, a BCP 47 tag such as `de` or `pt-BR`. Every number, date and country's name a view says is then in that locale: in its sentence, its scene, its readout and its table. In a browser, where its rules name none, the element speaks the page's own language: the nearest `lang` at or above it, its own among them (Decided 69). With neither, or a language the machine has no data for, a view is in English. The machine's own language is never asked. A spec never says a locale, as it never says a size. What the engine sent as a value (a page's path, a bin's ends) and what an author wrote (a layer's `label`) are said as they came, and a time is said as it was written, with no zone asked, in any locale.
+
+**Its own words are one table** (Decided 68): 49 short templates, `WORDS` in `packages/core/src/words.ts`, for what a view says that is neither the catalog's, the engine's nor the author's: "No data", "last {count} days", "Top: {name}", the clauses of the sentence. A container hands its own with its rules, as `rules.words`: any of them, and English is said for the rest.
+
+```json
+{ "locale": "de", "words": { "noData": "Keine Daten", "lastDays": { "one": "letzten Tag", "other": "letzten {count} Tagen" } } }
+```
+
+A `{name}` is filled with what the view has for it, already in the locale. An entry that depends on a count gives a form for each plural category the language has, with `other` for the rest. A word that is not in the table is refused by name. Two things are English still: the letters of a unit ("ms", "kB", "2m 05s"), and the order of the sentence's clauses, each of which is its own template.
+
 **Intrinsic by default.** A container does not know or care where it is. It fills the room it is handed and renders itself for that room.
 
 - With nothing said, a container fills the width and takes its natural height.
@@ -608,16 +627,16 @@ Each part has a rule that says the room it needs, and gives way on its own when 
 4. The marks go. The number stays.
 5. The number takes its shorter forms, and then the tldr prose is all that is left.
 
-Some of the room the default rules ask, in px at the default type:
+Some of the room the default rules ask, in em of the view's type, with what that is in px on a page of 16 px type:
 
-| Part | Needs |
-|---|---|
-| A plot with its axes | 280 wide, 120 tall |
-| Comparison and reference layers | A plot 180 by 90 |
-| A bare plot beside the number | 152 wide, 46 tall |
-| A list's row | 28, with 90 for its label |
-| A share bar | 110 wide, and 170 for its whole legend |
-| A circle | 72 by 64 |
+| Part | Needs | In px |
+|---|---|---|
+| A plot with its axes | 21 wide, 9 tall | 280 by 120 |
+| Comparison and reference layers | A plot 13.5 by 6.75 | 180 by 90 |
+| A bare plot beside the number | 11.4 wide, 3.45 tall | 152 by 46 |
+| A list's row | 2.1, with 6.75 for its label | 28, and 90 |
+| A share bar | 8.25 wide, and 12.75 for its whole legend | 110, and 170 |
+| A circle | 5.4 by 4.8 | 72 by 64 |
 
 Every need is one of forty picked numbers or a sum of them, said once in `LEAST` in `packages/core/src/fit.ts` (Decided 58).
 
@@ -633,13 +652,21 @@ Every need is one of forty picked numbers or a sum of them, said once in `LEAST`
 
 **One source of truth.** The rules are data (`FIT_RULES`): one for each part, naming a container (the view or its plot), the room the part needs, and what is hidden, shown or switched otherwise. A rule may be for a view that holds one mark (`mark`) or for one kind of view (`has`), and may name a `fallback`: a preset the view becomes. A rule names every part it takes, since a reader with no browser has no nesting to go by. `test/fit.test.ts` holds every sample at every room to what the rules promise: a view always shows something, it is its number alone wherever a rule takes its marks, and no key goes while its marks stay. The bench's `check` holds each captured frame to the same reading.
 
-**A need follows the type (Decided 64).** A need is written in px at the default type: the label face where no theme sets it, 13.33 px (`EM`). A need of the view grows and shrinks with that face, whole (`needAt`).
+**Sizes are relative (Decided 64 and 65).** Nothing in a view is a number of px but a stroke. A view's unit is its em: the size of its type, which is its label face.
 
-- The element sets itself in its label face and asks a need of the view in `em`, which a container query reads off its container. No script is in it.
-- A surface with no browser says the size with the room: `em` on the rooms `fitTo`, `viewAt`, `explain` and the agent's `check` take.
-- A need of the plot is of the plot's own box, where what is drawn is sized by the box, and stays in px.
+- **A need is in em.** The element sets itself in its label face, and its plot inherits that, so a fit rule's query asks in `em` on either and nothing is measured. A view set in larger type gives way sooner.
+- **So is every size in the element:** a row, a gutter, a gap, a swatch, a dot. Each is in em of the view's type, or of the face it stands by: the padding beside a tick follows the tick. Where two faces must line up, a header over a column of values, both take the view's em (`--uav-em`).
+- **A surface with no browser gives its room in px and says the size of an em with it:** `em` on the rooms `fitTo`, `viewAt`, `explain` and the agent's `check` take. Left out, an em is `EM`: 13.33 px, the label on a page of 16 px type.
+- **A view with no theme follows the reader's type size:** the faces fall back to sizes in rem.
+- **A view inside another takes that one's em:** the view a fit rule falls back to, and a facet's views.
 
-What it does not do: a need scales whole, so a part with no type in it gives way a little early under larger type. One size stands for the view's type, so a theme that changes its ticks alone moves no need. And the em is the element's own: a label token that is fluid in `cqi` is read there against what the element stands in, and inside the view against the view, which with the bench's theme differ by 7% at most.
+What is still in px: a stroke, a hairline between two marks, a radius, a shadow; the half px a need is read under; what the measured pass reads off the page; and the cell of a number set in dots, which is a grid of pixels (`dots.ts`).
+
+What it does not do:
+
+- **One size stands for the view's type** in a need. A theme that changes its ticks alone moves no threshold, though the tick's own padding follows it.
+- **The em is the element's own.** A label token that is fluid in `cqi` is read there against what the element stands in, or the viewport, and inside the view against the view. With the bench's theme the two differ by 7% at most.
+- **A size lands a 64th of a px under a whole px,** since an em of 13.33 px is no whole number: a row that was 28 px is 27.98.
 
 **What the rules do not say yet (Open 19).** The element settles these in its stylesheet or its measured pass, and a surface with no browser has to see to them itself:
 
@@ -649,7 +676,7 @@ What it does not do: a need scales whole, so a part with no type in it gives way
 - labels thinned where they would meet;
 - a legend that wraps out of its room, and anything else that depends on how tall the content is.
 
-The two rules on the plot (`secondary` and `hole`) ask for the plot's own box, which only a surface that has laid the view out knows. `fitTo` passes over them where the room gives no plot.
+The two rules on the plot (`secondary` and `hole`) ask for the plot's own box, in em as every need is, which only a surface that has laid the view out knows. `fitTo` passes over them where the room gives no plot.
 
 **Not built:** what changes the data. The first N and "other", a coarser grain and downsampling need a new query, not new styles.
 
@@ -705,7 +732,7 @@ A scene is the same on every machine, to the digit. Its y scale always rounds to
 **Status: the HTML and CSS painter is Proven (`packages/dom`, the `<ua-view>` element). No other is built.**
 
 - **Tokens, not colours.** A painter maps paint tokens to CSS custom properties, in the token structure of `@automattic/charts` under our own prefix: `series.1` is `--ua-charts-color-series-1`. `packages/dom/src/tokens.ts` lists the public tokens with the value each falls back to, so a page that loads none still gets a legible view. Light and dark are token sets.
-- **Intrinsic sizing.** The element plans once for each change of data, and CSS fits the view on resize. Bars are HTML placed by custom properties, and lines and areas are a stretched SVG.
+- **Intrinsic sizing.** The element plans once for each change of data, and CSS fits the view on resize. Bars are HTML placed by custom properties, and lines and areas are a stretched SVG. Every size is in em (section 10.2), so a theme's type is the one thing that sets how large a view is drawn.
 - **Text stays in the DOM,** so it stays crisp, takes tokens and is reachable by keyboard.
 - **Isolation.** A view must not inherit or leak styles on a page it does not own: it is a custom element with shadow DOM.
 - **Direction.** A plot's frame runs left to right whichever way the page reads, and a circle runs clockwise. What mirrors with the page is the legend, the keys, the number's block, the prose, a band and a list of rows.
@@ -769,7 +796,7 @@ Written once against the scene and the plan, not for each preset.
 
 - Every view exposes its **tldr prose** as its accessible description, after its `description` where a spec has one, and says it again, politely, when new data changes it.
 - Every view offers the **same query as a table.** Chart and table read one result.
-- **Keyboard navigation** over data marks, by their keys and the row each came from, in the keyboard model of `@automattic/charts`. A mark announces its dimension's value, the metric's value in its catalog format, and the comparison where there is one.
+- **Keyboard navigation** over data marks, by their keys and the row each came from, in the keyboard model of `@automattic/charts`. A mark announces its dimension's value, each of the query's metrics in its catalog format, the comparison where there is one, and the companions its marks draw or its spec reads out (section 6).
 - **What is selected is said,** not only shown (section 13).
 - **Never colour alone.** Series also differ by dash, pattern or a direct label. Patterns are not built.
 - Visible focus, sufficient contrast in both themes, and `prefers-reduced-motion` respected.
@@ -906,7 +933,13 @@ Each entry is the decision. What led to it, and what building it found, is in gi
 61. A view says its sentence in a live region when new data changes it. A draft of the alias sheet for the WordPress Design System is `packages/tokens/wpds.css`. (November 24)
 62. A spec may say what its view is for: `description`, the one authored sentence it has. (November 24)
 63. `keep` is gone. A spec has no lever over what a container gives up: where a default is wrong for a view, the answer is a better rule, or a rule set a context hands its containers. (November 24)
-64. A need follows the type. It is written in px at the default type (`EM`), and a need of the view grows and shrinks with the view's label face: the element asks it in `em`, and a surface with no browser says the size with the room. A need of the plot stays in px. It is narrower than proposed, the face each part is set in: a container query has one em. (November 24)
+64. A need follows the type: a need of the view grows and shrinks with the view's label face. The element asks it in `em`, and a surface with no browser says the size with the room. It is narrower than proposed, the face each part is set in: a container query has one em. Its first form, px at a default type with the plot's needs left in px, was replaced the same day by 65. (November 24)
+65. Sizes are relative. A need is written in em, and so is every size in the element: a row, a gutter, a gap, a swatch, a dot, in em of the view's type or of the face it stands by. The view is set in its label face and everything in it inherits that, so one em is the unit of a need, on the view and on its plot, and of what the need is a sum of. px is for a stroke, a hairline, a radius, what is measured, and a grid of pixels: the cell of a number set in dots is the one size left in it. A room is still given in px, with the size of an em. On the bench nothing moved by more than 0.6 px, but for a legend that wraps, which fits one more name on a line where the theme sets its label smaller. (November 24)
+66. A legend has one ladder, in a divided list, a band and a circle, written once (`legend` in `fit.ts`): whole, then its one line, then neither, with its marks in one paint. The least of a layout's marks is what differs between the three. The one line is a part a rule shows in the whole legend's place, `legend-top`, so `fitTo` names what shows, and the switch `legend: top` is gone. A band's bar still goes at the height its line would, so a band is not drawn in one paint. A list's whole legend has a height a rule says, since it wraps; a band's and a circle's is a line for each entry, which the stylesheet reads. (November 25)
+67. A view speaks the language of where it lands. Its container says which, as `rules.locale`, and every number, date and country's name the view says is then in it. The formatters are a set made for a locale (`formats`), which the plan names and everything that builds a view's text is handed: nothing asks the machine its own language, and a tag the machine has no data for is refused, so a scene is the same on every machine. English where none is said. (November 25)
+68. The words a view says of its own are one table, `WORDS`: templates with named places, and a form for each plural category where one depends on a count. A container hands its own with its rules (`rules.words`), any of them, and English is said for the rest. The table is data, so a host's translation is JSON, and a word a view does not say is refused. The sentence is made of the table's clauses in English's order, and a unit's letters are not in it. (November 25)
+69. In a browser the element speaks the page's language where its container names none: the nearest `lang` at or above it, through any shadow root, as the page's own text is read. `rules.locale` is over it. A page in plain English is as it was, and a language the machine has no data for is English. (November 25)
+70. What is read out and not drawn is data. Every metric of the query is read out, whether or not a mark draws it, so the Stats review's case, a series in the tooltip alone, is a metric in the query. What was missing was a companion: a spec names those in `readout`, and the readout, the point's name and the table say each after its metric, as they say one a mark draws. The list takes nothing that is said without it, and no function, format or markup. Where a plot's crosshair says less than the row does, the readout is shown with it: until then a metric no line drew, and what an area was drawn from, were said to a screen reader and in the table and nowhere on the plot. It settles Open 22. (November 25)
 
 ### Open
 
@@ -926,12 +959,12 @@ Each entry is the decision. What led to it, and what building it found, is in gi
 14. Which survives at the smallest size, the marks or the tldr value. Today the number does. A sparkline in a table's cell wants the line alone.
 15. Whether the prose rung can be anything but measured. Its threshold is the width of the number itself, which is the one place the fit is not intrinsic.
 16. What building the chart coverage left to decide: `docs/archive/chart-coverage-plan.md`, section 9.
-17. Time zone, grain and locale. A time is said as its string writes it, which needs no zone while an engine names buckets by its own clock, and dates and words are in `en-US` throughout. Raised again by the Jetpack Stats team's review, which asks that it be threaded through while the call sites are few. Recommendation: locale and time zone are where the view lands, as its theme is, so they are inputs a container hands a view beside `catalog` and `rules`, and never part of a spec. The words are an input too, with English where none is given. In three stages, each leaving every view as it is where nothing is handed in: the formatters made from the input; the words gathered into one table; the element reading the page's own language.
+17. Time zone and grain. The locale is settled, in three parts (Decided 67 to 69). What is open is the time zone, which was asked for with it. A time is said as its string writes it, which needs no zone while an engine names a bucket by the clock where it cut it, and `docs/api-proposal.md` asks the API's owners for exactly that. A zone handed to the view would move an instant to another clock, which is right for an hour and wrong for a day: a day cut in UTC is not a day anywhere else, and a view cannot tell the two apart until an answer says its grain (Open 23). Recommendation: no time zone input. The zone stays the engine's, and what is asked of the API is that a bucket is written as its own clock reads.
 18. Settled: Decided 41 and 42.
 19. What the fit rules do not say (section 10.2). Recommendation: write each as a rule where its need can be stated, starting with the number's forms and whole rows, and leave label collision to the surface (Open 5).
 20. A placer for surfaces with no CSS. Recommendation: one generic function that maps a ratio and its part's box to pixels and knows no layout, written when a pixel painter is wanted.
 21. Settled: Decided 44.
-22. A field that is read out and never drawn, proposed by the Jetpack Stats team's review in place of a hook that writes a tooltip: a view names fields that the readout and the table say and no mark draws. It is data and not a function, so a spec stays JSON. Recommendation: adopt it, as Proposed, as a list on the spec.
+22. Settled: Decided 70.
 23. What a catalog and an answer should say that they do not. Of the catalog: the grains a time dimension may be asked at, and whether a metric adds up over a dimension. Of the answer: how fresh it is, what was left out of it, and that a metric is not available here. Recommendation: propose all five to the API's owners, which `docs/api-proposal.md` does, and build none here before they are accepted.
 
 ---

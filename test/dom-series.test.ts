@@ -69,7 +69,7 @@ describe('the cartesian layout\'s guides', () => {
     // The condition is in :where(), which weighs nothing: a rule further down the ladder still overrides this one.
     const lines = fig + ':where([data-marks~="line"])';
     expect(compileFitRules(rules('legend'), { cartesian: cartesian.fit! }).split('\n').slice(0, 6)).toEqual([
-      '/* cartesian legend */', '@container uav-view (inline-size < calc(320em / 13.33 - 0.5px)) {',
+      '/* cartesian legend */', '@container uav-view (inline-size < calc(24em - 0.5px)) {',
       '  ' + lines + ' .uav-legend { display: none; }', '  ' + lines + ' .uav-labels { display: block; }', '  ' + lines + ' .uav-labels { display: grid; }', '}',
     ]);
     expect(compileFitRules(rules('legend-area'), { cartesian: cartesian.fit! })).toBe(compileFitRules(rules('legend'), { cartesian: cartesian.fit! }).replaceAll('"line"', '"area"').replaceAll('legend */', 'legend-area */'));
@@ -78,14 +78,14 @@ describe('the cartesian layout\'s guides', () => {
   // A key under the plot takes a line of its own, and a view with the key to sizes states its height: so it states the ramp's line too.
   it('is taller by the ramp\'s line where dots are painted by one metric and sized by another', () => {
     expect(cartesian.css).toContain('.uav[data-layout="cartesian"] .uav-ramp { grid-column: 1 / -1; }');
-    expect(cartesian.css).toMatch(new RegExp('\\[data-parts~="size"\\]\\[data-parts~="ramp"\\] \\{ --uav-body-block: calc\\(.* \\+ ' + (SIZE_KEY_BLOCK + RAMP_BLOCK) + 'px\\); \\}'));
+    expect(cartesian.css).toMatch(new RegExp('\\[data-parts~="size"\\]\\[data-parts~="ramp"\\] \\{ --uav-body-block: calc\\(.* \\+ ' + +(SIZE_KEY_BLOCK + RAMP_BLOCK).toFixed(4) + 'em\\); \\}'));
   });
   it('gives both up with the axes, and with them the colours they were the key to', () => {
     const css = compileFitRules(CONTAINER_RULES.fit, { cartesian: cartesian.fit! });
     expect(css.indexOf(fig + ' :is(.uav-labels, .uav-legend, .uav-ramp) { display: none; }')).toBeGreaterThan(css.lastIndexOf(' .uav-labels { display: grid; }'));
     expect(css.match(/\[data-layout="cartesian"\]\[data-marks/)).toBeNull();
     expect(compileFitRules(rules('labels'), { cartesian: cartesian.fit! }).split('\n').slice(0, 7)).toEqual([
-      '/* cartesian labels */', '@container uav-view (inline-size < calc(280em / 13.33 - 0.5px)) {', '  ' + fig + ' :is(.uav-labels, .uav-legend, .uav-ramp) { display: none; }', '  ' + fig + ' { --uav-split: plain; }',
+      '/* cartesian labels */', '@container uav-view (inline-size < calc(21em - 0.5px)) {', '  ' + fig + ' :is(.uav-labels, .uav-legend, .uav-ramp) { display: none; }', '  ' + fig + ' { --uav-split: plain; }',
       ...Object.entries(SPLIT_PLAIN).map(([sel, decl]) => '  ' + fig + ' ' + sel + ' { ' + decl + ' }'), '}',
     ]);
     // What a legend keyed is the first series' colour, and a tint of it where the mark was a tint.
@@ -187,7 +187,7 @@ describe('the readout of a split plot', () => {
       { series: 'Desktop', name: 'Desktop', value: '217' }, { series: 'Mobile', name: 'Mobile', value: '173' }, { series: 'Tablet', name: 'Tablet', value: '26' }] });
     expect(readoutLines(rows[27]!, result.totalsBy![x!]![27], q, catalog, x!, split!).head).toMatch(/^Oct 5: Visitors \d+ so far$/);
     expect(readoutLines(rows[0]!, undefined, q, catalog, x!, split!).head).toBe('Sep 8: Visitors');
-    expect(KEYS_CSS).toContain('.uav-readout[data-lines] { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto;');
+    expect(KEYS_CSS).toContain('.uav-readout[data-lines] { display: grid; grid-template-columns: calc(var(--uav-em) * 0.6) minmax(0, 1fr) auto;');
   });
   it('says a series with no value at a point in words, as the readout of that series alone does', () => {
     const { rows, x, split, q, result } = at('stacked'), total = result.totalsBy![x!]![0], none = rows[0]!.map((r, i) => (i ? r : { ...r, visitors: null }));

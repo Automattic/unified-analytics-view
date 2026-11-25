@@ -1,4 +1,5 @@
 import type { FitRule } from './fit.ts';
+import type { Words } from './words.ts';
 
 /* Catalog: the slice of the semantic model the front end needs.
  * Each `as const` list here is the one source of a union below and of the enum the schemas give it (test/core.test.ts compares them). */
@@ -108,7 +109,7 @@ export const ROLES = ['primary', 'comparison', 'reference', 'context'] as const;
 export type Role = (typeof ROLES)[number];
 /** The fields a spec, its query and a layer take. One that is not among them is refused by name (resolve): a size or a
  * switch in a spec, or a filter written under another name, would otherwise be read past and the view drawn without it. */
-export const SPEC_FIELDS = ['spec', 'title', 'description', 'use', 'query', 'layers', 'facet'] as const;
+export const SPEC_FIELDS = ['spec', 'title', 'description', 'use', 'query', 'layers', 'facet', 'readout'] as const;
 export const QUERY_FIELDS = ['metrics', 'by', 'range', 'compare', 'limit', 'where'] as const;
 export const LAYER_FIELDS = ['mark', 'encode', 'series', 'role', 'stack', 'sweep', 'label', 'at', 'align', 'paint'] as const;
 export const LAYER_SERIES = ['previous', 'delta'] as const;
@@ -177,6 +178,11 @@ export interface Spec {
   /** One of the query's dimensions. The spec is then a view for each of its values, every one on the same scales, and
    * the surface lays them out: a facet is a small board (reference, Decided 26 and 45). `facets` gives the views. */
   facet?: string;
+  /** Fields that are read out and that no mark need draw: a surface says each beside its metric wherever it says a
+   * row in words, in its readout and its table. Each is a companion the result returns with one of the query's
+   * metrics (`pageviews@rank`), labelled and written from the catalog as one a mark draws is. A metric needs no place
+   * here: every one the query asks for is read out, drawn or not (reference, Decided 70). */
+  readout?: string[];
 }
 export type PresetLibrary = Record<string, { layers: Layer[] }>;
 
@@ -185,12 +191,17 @@ export type PresetLibrary = Record<string, { layers: Layer[] }>;
 export interface ContainerRules {
   /** The room each part needs, and what is given up without it. */
   fit: FitRule[];
-  /* The natural heights a surface builds a plot and a row to, in px. */
+  /* The natural heights a surface builds a plot and a row to, in em of the view's type. */
   axes: { height: number };
   bare: { height: number; numberWidth: number };
   rows: { rowHeight: number; gap: number };
   /** When the tldr value sits above the marks while there is room for both. */
   tldrValue: { above: 'instant' | 'always' };
+  /** The language the view speaks: a BCP 47 tag, as "de" or "pt-BR". It is where the view lands, as its sizes are, and
+   * never a spec's. Numbers, dates and the names of countries are said in it. English where none is given. */
+  locale?: string;
+  /** The view's own words in that language (words.ts): any of them, as templates, and English is said for the rest. */
+  words?: Partial<Words>;
 }
 
 /* Plan: what a spec asks to have drawn, with no size. */
@@ -205,12 +216,18 @@ export interface PlanShape {
   tldrValue: boolean;
   share: boolean;
   text: string;
+  /** The locale the plan's text is in, and its scene's is built in: the container's (`rules.locale`). Absent for English. */
+  locale?: string;
+  /** The container's words (`rules.words`), which the scene is built with as the text was. Absent where it handed none. */
+  words?: Partial<Words>;
 }
 export interface Plan extends PlanShape {
   preset: string | null;
   layers: (Layer & { role: Role })[];
   /** What the spec asked for and the result has no data to draw: a comparison with no period before. */
   dropped: string[];
+  /** The spec's read-out fields (`Spec.readout`), each once: what a surface says of a row beside what its marks draw. Absent where it names none. */
+  readout?: string[];
 }
 
 /* Scene: a flat list of shapes with stable keys and paint tokens, in ratios.

@@ -37,7 +37,7 @@ export const shown = ({ fit: f, ratio }: { fit: Fit; ratio: { scale?: string | u
     // The middle date of an axis: a ranked tick, though not the label of a column of its own width, which is ranked for the measured pass alone.
     : t === 'x-tick.mid' && nodes.some((n) => n.part === 'x-axis' && n.rank && !(ratio.scale === 'linear' && n.row != null)));
   // What each switch is for. One that is for nothing a view has changes nothing in it.
-  const FOR: Record<string, string[]> = { legend: ['legend'], ramp: ['ramp'], 'size-key': ['size'], dots: ['size'], split: ['legend', 'labels', 'legend-top', 'ramp'] };
+  const FOR: Record<string, string[]> = { ramp: ['ramp'], 'size-key': ['size'], dots: ['size'], split: ['legend', 'labels', 'legend-top', 'ramp'] };
   const sets = (k: string) => !FOR[k] || FOR[k].some(drawn);
   const acts = (h: Fit['held'][number]) => h.hid.length || h.showed.length || Object.keys(h.rule.set ?? {}).some(sets) || h.rule.fallback || h.rule.hide.some((t) => there(t));
   return { parts: f.parts, set: Object.fromEntries(Object.entries(f.set).filter(([k]) => sets(k))), hidden: f.hidden.filter(there), rules: f.held.filter(acts).map((h) => h.rule.id), ...(f.fallback && { fallback: f.fallback.fallback }) };

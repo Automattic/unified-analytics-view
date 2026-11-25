@@ -55,11 +55,11 @@ export const TOKENS: Record<string, string> = {
   'font-family-tick': 'inherit',
   'font-family-value': 'inherit',
   // The four faces of a scene's text, and the smaller one the number takes where the larger does not fit.
-  'font-size-tick': '11px',
-  'font-size-label': '13.33px',
-  'font-size-value': '13px',
-  'font-size-display': '39.81px',
-  'font-size-display-small': '27.65px',
+  'font-size-tick': '0.6875rem',
+  'font-size-label': '0.8333rem',
+  'font-size-value': '0.8125rem',
+  'font-size-display': '2.4883rem',
+  'font-size-display-small': '1.728rem',
   'font-weight-value': '500',
   'font-weight-display': '600',
   'font-weight-heading': '600',
@@ -91,6 +91,8 @@ export const UNTHEMED: Record<string, string> = {
   'font-family-value': 'the page\'s own face, as Ans Mono is not loaded without the token package',
   'font-size-tick': 'sized for the page\'s own face, which it falls back to; the theme\'s 8px is Ans Mono\'s pixel grid',
   'font-size-value': 'sized for the page\'s own face, which it falls back to; the theme\'s 12px is Ans Mono\'s pixel grid',
+  'font-size-label': 'the upper end of the theme\'s fluid size, in rem, so that a view with no theme follows the reader\'s own type size',
+  'font-size-display': 'the upper end of the theme\'s fluid size, in rem, as the label is',
 };
 
 /** A colour a scene names that the table does not: `series.2` is `color-series-2`, a sequential step `color-seq-4`

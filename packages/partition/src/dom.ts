@@ -1,10 +1,10 @@
-import { formatDimension, whereOf, type MarkView, type RectNode, type Row, type TextNode, type Where } from '@unified-analytics/core';
+import { whereOf, type MarkView, type RectNode, type Row, type TextNode, type Where } from '@unified-analytics/core';
 import { FOCUS, FROM_TOP, HOVER, IN_BOX, IS, attr, chooseItem, emptyTable, ensure, fieldLabel, heldBy, holdShape, keyed, LABEL, lineOf, nodePaint, paintRamp, prop, RAMP_STRIP, readout, registerPainter, roveItems, tableRow, text, token, valueText, type Cell, type LayoutPainter } from '@unified-analytics/dom';
 import { ASPECT, GAP, HEAD, HEAD_MOST, KID_GAP, LINE, MAX, boxesOf } from './index.ts';
 
 /* The `partition` mark's half for the DOM: the painter of its layout, for registerPainter().
  *
- * The part holds its shape, as a map's does: as wide as the view up to 480 px, and its height follows from the scene's
+ * The part holds its shape, as a map's does: as wide as the view up to 36 em, and its height follows from the scene's
  * aspect. Boxes are HTML, set by the scene's ratios, so nothing here runs on resize but the measured pass.
  *
  *   .uav-plot                    the tree a reader steps through
@@ -33,7 +33,7 @@ import { ASPECT, GAP, HEAD, HEAD_MOST, KID_GAP, LINE, MAX, boxesOf } from './ind
  * Below the room a treemap needs, the `marks` rule's `fallback` shows the same query as a list in its place. That is
  * the element's doing (view.ts), and nothing here knows of it. */
 const at = (gap: number, off: number) => `inset-inline-start: calc(var(--uav-x) * 100% + ${off}px); inset-block-start: calc(${FROM_TOP} + ${off}px); inline-size: calc(var(--uav-w) * 100% - ${gap}px); block-size: calc(var(--uav-v) * 100% - ${gap}px);`;
-const shape = holdShape(MAX + 'px', 'var(--uav-aspect, ' + ASPECT + ')');
+const shape = holdShape(MAX + 'em', 'var(--uav-aspect, ' + ASPECT + ')');
 const css = `
 .uav[data-layout="partition"] .uav-body { display: flex; flex-direction: column; }
 .uav[data-layout="partition"] .uav-plot { ${shape.part} container-type: inline-size; }
@@ -42,10 +42,10 @@ const css = `
  * children is that much larger, so the last of them end where their parent does. */
 .uav[data-layout="partition"] .uav-plot > div { position: absolute; ${at(GAP, GAP / 2)} display: flex; flex-direction: column; overflow: hidden; border-radius: ${token('border-radius-bar')}; background: var(--uav-paint); }
 .uav[data-layout="partition"] .uav-head { position: absolute; inset: 0; overflow: hidden; }
-.uav[data-layout="partition"] .uav-plot[data-divided] .uav-head { position: relative; inset: auto; flex: none; block-size: ${HEAD}px; max-block-size: ${Math.round(HEAD_MOST * 100)}%; }
+.uav[data-layout="partition"] .uav-plot[data-divided] .uav-head { position: relative; inset: auto; flex: none; block-size: ${HEAD}em; max-block-size: ${Math.round(HEAD_MOST * 100)}%; }
 .uav[data-layout="partition"] .uav-kids { position: relative; flex: 1; min-block-size: 0; margin-inline-end: -${KID_GAP}px; margin-block-end: -${KID_GAP}px; }
 .uav[data-layout="partition"] .uav-kids i { position: absolute; ${at(KID_GAP, 0)} overflow: hidden; border-radius: ${token('border-radius-cell')}; background: var(--uav-paint); }
-.uav[data-layout="partition"] .uav-label { position: absolute; inset-inline-start: 0; inset-block-start: 0; inline-size: max-content; padding: 1px 4px; line-height: ${lineOf('tick', LINE)}; pointer-events: none; ${LABEL} }
+.uav[data-layout="partition"] .uav-label { position: absolute; inset-inline-start: 0; inset-block-start: 0; inline-size: max-content; padding: 0.125em 0.5em; line-height: ${lineOf('tick', LINE)}; pointer-events: none; ${LABEL} }
 /* Boxes lie edge to edge and a parent cuts off what leaves it, so the chosen one is outlined inside its own edge. */
 .uav[data-layout="partition"] .uav-plot { outline: none; }
 .uav[data-layout="partition"] .uav-plot:focus-visible::after { content: ""; position: absolute; inset: 0; pointer-events: none; ${FOCUS.around} }
@@ -92,9 +92,9 @@ function bind(plot: HTMLElement): void {
 /** What each box says, by its node's key: the readout every mark's row has (dom's readout), of the row it came from,
  * named by its parent's value and then its own. A parent's values are the engine's totals for it. This is a box's
  * accessible name and its readout, so no value is said by area or colour alone. `rows` are the rows inside it. */
-export function boxNames(view: Omit<MarkView, 'guides'>): Map<string, { says: string; row: Row; rows: Row[]; where: Where }> {
-  const { query, catalog, layers } = view, [dim, detail] = [layers[0]!.encode!.x as string, layers[0]!.encode!.detail as string];
-  const says = (r: Row, by: string[]) => readout(r, { ...query, by }, catalog, layers);
+export function boxNames(view: Omit<MarkView, 'guides'> & { readout?: readonly string[] }): Map<string, { says: string; row: Row; rows: Row[]; where: Where }> {
+  const { query, catalog, layers, formats: F } = view, [dim, detail] = [layers[0]!.encode!.x as string, layers[0]!.encode!.detail as string];
+  const says = (r: Row, by: string[]) => readout(r, { ...query, by }, catalog, layers, F, view.readout);
   type Said = [string, { says: string; row: Row; rows: Row[]; where: Where }];
   return new Map(boxesOf(view).flatMap((g): Said[] => [[g.key, { says: says(g.row, [dim]), row: g.row, rows: g.rows, where: whereOf(g.row, [dim]) }],
     ...g.kids.map((c): Said => [c.key, { says: says(c.row, [dim, detail]), row: c.row, rows: [c.row], where: whereOf(c.row, [dim, detail]) }])]));
@@ -160,19 +160,19 @@ export const partitionPainter: LayoutPainter = {
 
   /* A row for each row of the result, under a row for its parent that holds the engine's total for it, and the engine's
    * total for the whole at the foot. Nothing is summed. With one dimension it is the table every view has. */
-  table(table, title, _scene, { query: q, result, catalog }) {
+  table(table, title, _scene, { query: q, result, catalog, formats: F }) {
     const by = q.by || [], [a, b] = by, fields = q.metrics.flatMap((m) => (q.compare === 'previous' ? [m, m + '@previous'] : [m]));
-    const row = (parent: HTMLElement, heads: string[], from: Row) => tableRow(parent, [...heads.map((s): Cell => [s, 'th']), ...fields.map((f): Cell => [valueText(from[f], f, catalog), 'td', true])]);
-    const say = (d: string, r: Row) => formatDimension(r[d], catalog.dimensions[d]!);
+    const row = (parent: HTMLElement, heads: string[], from: Row) => tableRow(parent, [...heads.map((s): Cell => [s, 'th']), ...fields.map((f): Cell => [valueText(from[f], f, catalog, F), 'td', true])]);
+    const say = (d: string, r: Row) => F.dimension(r[d], catalog.dimensions[d]!);
     emptyTable(table, title);
-    tableRow(table.createTHead(), [...by.map((d): Cell => [catalog.dimensions[d]!.label, 'th']), ...fields.map((f): Cell => [fieldLabel(f, catalog), 'th', true])]);
+    tableRow(table.createTHead(), [...by.map((d): Cell => [catalog.dimensions[d]!.label, 'th']), ...fields.map((f): Cell => [fieldLabel(f, catalog, F), 'th', true])]);
     const body = table.createTBody();
     if (b == null) for (const r of result.rows) row(body, [say(a!, r)], r);
     else for (const top of result.totalsBy?.[a!] ?? []) {
       row(body, [say(a!, top), 'All'], top);
       for (const r of result.rows) if (r[a!] === top[a!]) row(body, [say(a!, r), say(b, r)], r);
     }
-    row(table.createTFoot(), ['Total', ...by.slice(1).map(() => '')], result.totals);
+    row(table.createTFoot(), [F.say('total'), ...by.slice(1).map(() => '')], result.totals);
   },
 
   /* A name is read against the box it stands in, and one that does not fit is hidden, keeping its box. A child's goes

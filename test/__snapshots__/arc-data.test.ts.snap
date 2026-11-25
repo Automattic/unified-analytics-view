@@ -22,14 +22,12 @@ exports[`golden scenes > rings, at each room 1`] = `
       "hidden": [],
       "parts": [
         "radial",
-        "legend",
+        "legend-top",
       ],
       "rules": [
         "legend",
       ],
-      "set": {
-        "legend": "top",
-      },
+      "set": {},
     },
   ],
   [
@@ -122,14 +120,12 @@ exports[`golden scenes > sunburst, at each room 1`] = `
       "hidden": [],
       "parts": [
         "radial",
-        "legend",
+        "legend-top",
       ],
       "rules": [
         "legend",
       ],
-      "set": {
-        "legend": "top",
-      },
+      "set": {},
     },
   ],
   [

@@ -13,7 +13,7 @@ import { ensure, keyed, pageWay, prop, text } from '../dom.ts';
  * the two are one length and the width alone says it. A hairline parts a glyph from the next.
  *
  *   .uav-plot .uav-dots i[data-unit]      a stack's dot: its band's width, or its share of the plot's height
- *   .uav-row > i[data-mark="unit"]        a run's dot: its share of the track, or the row's height less 8 px (track.ts)
+ *   .uav-row > i[data-mark="unit"]        a run's dot: its share of the track, or the row's height less 0.6 em (track.ts)
  *   .uav-band[data-unit] > i              a grid's cell: one of ten columns of a square (band.ts)
  *   .uav-radial .uav-dots i[data-unit]    a seat: its share of the half circle's width (radial.ts)
  *   .uav-unit-key                         "Each is 500", in a line under the glyphs
@@ -28,10 +28,10 @@ export const UNIT_CSS = `
 .uav-plot .uav-dots i[data-unit] { inline-size: ${glyph('min(var(--uav-w) * 100cqi, var(--uav-h) * 100cqb)')}; }
 /* The key takes a line of its own under whatever the body holds, and the view is that much taller
  * for it: 20 px where a tick is 11 px, and with the tick's face from there. In a list it is the row after the rows. */
-.uav-unit-key { display: none; grid-column: 1 / -1; flex: none; padding-block-start: 4px; overflow: hidden; white-space: nowrap; }
+.uav-unit-key { display: none; grid-column: 1 / -1; flex: none; padding-block-start: 0.3em; overflow: hidden; white-space: nowrap; }
 .uav[data-parts~="unit-key"] .uav-unit-key { display: block; }
-.uav-unit-key span { display: block; overflow: hidden; text-overflow: ellipsis; line-height: ${lineOf('tick', 16)}; color: var(--uav-paint); }
-.uav[data-layout="rows"] .uav-unit-key { grid-row: 3; padding-inline: 8px; }`;
+.uav-unit-key span { display: block; overflow: hidden; text-overflow: ellipsis; line-height: ${lineOf('tick', 1.2)}; color: var(--uav-paint); }
+.uav[data-layout="rows"] .uav-unit-key { grid-row: 3; padding-inline: 0.6em; }`;
 
 /** The key to a unit's glyphs, after whatever the body holds already. Every layout that draws the mark has the
  * element, empty where the scene has no key, so it stands in the same place whenever a later scene has one. */

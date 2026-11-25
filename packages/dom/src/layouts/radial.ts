@@ -1,5 +1,5 @@
 import { CONTAINER_RULES, SEATS_LEAST, arcD, declutter, ruleFor, type ArcNode, type CircleNode, type PathNode, type TextNode } from '@unified-analytics/core';
-import { LEGEND_FIT, LEGEND_SWAP, SPLIT_PLAIN, hideCutLegends, legendBlock, legendTop, paintLegend } from '../chrome/legend.ts';
+import { LEGEND_FIT, LEGEND_SWAP, hideCutLegends, legendBlock, paintLegend } from '../chrome/legend.ts';
 import { attr, ensure, hits, keyed, svg, paintVar, prop, text } from '../dom.ts';
 import { FROM_TOP, IN_BOX, NUMBER_ALONE, holdShape, type LayoutPainter } from '../layout.ts';
 import { FOCUS, HOVER, token } from '../tokens.ts';
@@ -10,7 +10,7 @@ import { IS } from '../rove.ts';
 import { paintPaths } from './points.ts';
 
 /* Arcs about one centre, and under them the legend a band has. The part holds its shape: it is as wide as the view up
- * to 160 px and its height follows from the scene's aspect, 1 for a circle and 2 for the top half of one. Its SVG has
+ * to 12 em and its height follows from the scene's aspect, 1 for a circle and 2 for the top half of one. Its SVG has
  * a view box of that shape and the default preserveAspectRatio, so where a box leaves the part some other shape the
  * arcs sit in the middle of it and are not stretched. Paths are core's, drawn about the origin at a radius of 50.
  * The part is the `plot` container, which is what the `hole` rule asks about: the number sits over the hole of a
@@ -22,16 +22,16 @@ import { paintPaths } from './points.ts';
  * as its series, which the pointer and the up and down keys choose (keys.ts).
  *
  * Labels round the rim are HTML over the part, each set outside the point of the rim the scene gave it. The circle
- * gives up 14 px all round to them, a line's height, and those to either side run out of the part into the view's
+ * gives up 1.05 em all round to them, a line's height, and those to either side run out of the part into the view's
  * width: the \`rim\` rule holds that wide enough, and gives the circle its margin back when it takes them away. */
 /** The least circle of arcs, in px: the height core's `marks` rule for it needs. */
 const ARCS_LEAST = ruleFor(CONTAINER_RULES.fit, 'radial', 'marks')!.needs.block!;
-const shape = holdShape('var(--uav-radial-most, 160px)', 'var(--uav-aspect, 1)');
+const shape = holdShape('var(--uav-radial-most, 12em)', 'var(--uav-aspect, 1)');
 const css = `
 .uav[data-layout="radial"] .uav-body { display: flex; flex-direction: column; }
 .uav-radial { position: relative; box-sizing: border-box; padding: var(--uav-rim, 0px); ${shape.part} container: uav-plot / inline-size; }
 /* A unit's seats are dots over the part's box, placed across and up it as a plot's are, from the left whichever way
- * the page reads. They are their own hit targets. A hundred of them are small, so the part is given 240 px. */
+ * the page reads. They are their own hit targets. A hundred of them are small, so the part is given 18 em. */
 .uav-radial > .uav-dots { direction: ltr; }
 .uav-radial > .uav-dots i { pointer-events: auto; }
 /* The arcs run clockwise whichever way the page reads, and the keys step the way they run (keys.ts). */
@@ -55,8 +55,8 @@ const css = `
 .uav-radial:has(.uav-under ${IS.highlighted}) svg[data-hits] path:is(${IS.focus}, ${IS.hover}) { stroke: ${token('color-background')}; stroke-width: calc(${token('stroke-width-rule')} * 2); }
 /* Labels round the rim. Each is set from the point the scene gave it: to the right of one on the right, to the left of
  * one on the left, over one at the top and under one at the foot, and by degrees between. */
-.uav[data-layout="radial"][data-parts~="rim"] .uav-radial { --uav-rim: 14px; }
-.uav-rim { position: absolute; inset: calc(var(--uav-rim, 0px) - 3px); pointer-events: none; direction: ltr; }
+.uav[data-layout="radial"][data-parts~="rim"] .uav-radial { --uav-rim: 1.05em; }
+.uav-rim { position: absolute; inset: calc(var(--uav-rim, 0px) - 0.225em); pointer-events: none; direction: ltr; }
 .uav-rim span { position: absolute; left: calc(var(--uav-x) * 100%); top: ${FROM_TOP}; translate: calc((var(--uav-x) - 1) * 100%) calc(var(--uav-t) * -100%);
   line-height: 1; ${LABEL} }
 .uav[data-layout="radial"]:not([data-parts~="rim"]) .uav-rim { display: none; }
@@ -67,14 +67,12 @@ const css = `
 .uav-radial path { fill: var(--uav-paint); stroke: ${token('color-background')}; stroke-width: calc(${token('stroke-width-rule')} * 2); vector-effect: non-scaling-stroke; stroke-linejoin: round; }
 .uav-hole { position: absolute; inset: 0; display: none; place-items: center; overflow: hidden; pointer-events: none; color: var(--uav-paint); }
 /* The small face of the number, and smaller with the circle: there is no measuring the hole from a stylesheet. */
-.uav-hole.uav-f-display { font-size: clamp(14px, 18cqi, var(--uav-font-display-small)); line-height: 0.92; }
+.uav-hole.uav-f-display { font-size: clamp(1.05em, 18cqi, var(--uav-font-display-small)); line-height: 0.92; }
 .uav-radial[data-half] .uav-hole { place-items: end center; }
 .uav[data-layout="radial"][data-parts~="hole"] .uav-hole { display: grid; }
-/* The plan names one legend, as it does for a band, or neither. */
-${legendTop('radial')}
 /* In a box the part gives way to the height, down to nothing, and its width follows; it is no taller than the body's
  * width allows its shape, which cqi is here, the part being a container itself. The legends swap as a band's do:
- * the full one needs the least circle of 64 px, 10 px and a line and its 4 px gap for each row, less the last gap. Under the one-line legend's
+ * the full one needs the least circle of 4.8 em, 0.75 em and a line and its 0.3 em gap for each row, less the last gap. Under the one-line legend's
  * need the \`legend-top\` rule takes both away. */
 ${IN_BOX} {
   .uav[data-layout="radial"] .uav-body { container-type: size; overflow: hidden; --uav-legend-block: ${legendBlock(ARCS_LEAST)}; }
@@ -118,10 +116,8 @@ export const radial: LayoutPainter = {
   layout: 'radial',
   css,
   fit: {
-    // As the band's: the rule's data only sets a switch, and this is the swap.
-    legend: LEGEND_FIT,
-    // With no legend left, the segments are in one paint, parted by their gaps.
-    'legend-top': SPLIT_PLAIN,
+    // The legend's ladder, as a band has it. With no legend left, the segments are in one paint, parted by their gaps.
+    ...LEGEND_FIT,
     // The number alone. The body goes whole, and so does its grid row.
     marks: NUMBER_ALONE,
   },
@@ -152,7 +148,7 @@ export const radial: LayoutPainter = {
     // where a unit's seats stand there are no arcs: the seats are the targets, a group of them to a row (keys.ts).
     hits(own, rows.length && !seats.length ? 'x' : null);
     part.toggleAttribute('data-half', aspect !== 1);
-    prop(part, '--uav-aspect', aspect); prop(body, '--uav-rows', rows.length); prop(part, '--uav-radial-most', seats.length ? '240px' : null);
+    prop(part, '--uav-aspect', aspect); prop(body, '--uav-rows', rows.length); prop(part, '--uav-radial-most', seats.length ? '18em' : null);
     keyed(own, points.concat(bare), () => 'path', (el, n) => { turn(el as SVGElement, n); el.toggleAttribute('data-bare', bare.includes(n)); });
     const dots = ensure(part, 'div', 'uav-dots');
     attr(dots, 'data-hits', seats.length ? 'x' : null);
@@ -172,7 +168,8 @@ export const radial: LayoutPainter = {
     // Those that would meet, and those to either side that the view is too narrow to hold: a name is whole or gone.
     const view = body.getBoundingClientRect();
     thinLabels(body, '.uav-rim > span:not([data-exit])', (labels) => {
-      const boxes = labels.map((el) => el.getBoundingClientRect()), met = declutter(boxes.map((r, i) => ({ x: r.left, y: r.top, w: r.width, h: r.height, rank: Number(labels[i]!.dataset.rank) || 0 })));
+      // The gap two names keep is in the view's em, which the body is set in.
+      const boxes = labels.map((el) => el.getBoundingClientRect()), met = declutter(boxes.map((r, i) => ({ x: r.left, y: r.top, w: r.width, h: r.height, rank: Number(labels[i]!.dataset.rank) || 0 })), 0.15 * parseFloat(getComputedStyle(body).fontSize));
       return boxes.map((r, i) => met[i]! || r.left < view.left - 0.5 || r.right > view.right + 0.5);
     });
     hideCutLegends(body);

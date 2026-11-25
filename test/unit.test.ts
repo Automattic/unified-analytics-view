@@ -342,9 +342,9 @@ describe('fallbacks: under the room its glyphs need, a form becomes the preset o
   it('each form has a rule that names the mark and the preset, by the room a plot with axes needs across', () => {
     expect(FIT_RULES.filter((r) => r.fallback).map((r) => [r.layout, r.id, r.mark, r.fallback, r.needs])).toEqual([
       // Each form's height is its glyphs' and the line's that says what one is worth. A grid divided by a dimension has no line.
-      ['cartesian', 'unit', 'unit', 'bar', { inline: 280, block: 160 }], ['rows', 'unit', 'unit', 'bar-list', { inline: 280, block: 120 }],
-      ['band', 'unit', 'unit', 'share-bar', { inline: 280, block: 180 }], ['band', 'unit-alone', 'unit', 'gauge', { inline: 280, block: 220 }],
-      ['radial', 'unit', 'unit', 'pie-semi-circle', { inline: 280, block: 200 }]]);
+      ['cartesian', 'unit', 'unit', 'bar', { inline: 21, block: 12 }], ['rows', 'unit', 'unit', 'bar-list', { inline: 21, block: 9 }],
+      ['band', 'unit', 'unit', 'share-bar', { inline: 21, block: 13.5 }], ['band', 'unit-alone', 'unit', 'gauge', { inline: 21, block: 16.5 }],
+      ['radial', 'unit', 'unit', 'pie-semi-circle', { inline: 21, block: 15 }]]);
   });
   for (const name of NAMES) it(name + ': at 279 px it is that preset\'s scene to the node, and from there steps down by that preset\'s own rules', () => {
     const spec = specs[name]!, [layout, fallback] = FORMS[name]!, other: Spec = { ...spec, layers: undefined, use: fallback };

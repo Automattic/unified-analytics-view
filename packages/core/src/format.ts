@@ -1,30 +1,25 @@
 import type { DimensionDef, MetricDef, Polarity, Row, Unit } from './types.ts';
+import { WORDS, checkWords, many, type Word, type Words } from './words.ts';
 
-const NF = new Intl.NumberFormat('en-US');
-const CF = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
-const DF = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });                    // Sep 8
-const HF = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', timeZone: 'UTC' });   // Sep 8, 3 PM
-const MF = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });                    // Sep 2026
-// A time's fields, as fmtTime reads them. The offset is matched and left where it is.
+/* How a view says a number, a time and a name, and the words it says of its own. The forms are core's and the language
+ * is where the view lands: a set of formatters is made for a locale and a table of words (`formats`), and whoever builds
+ * a view's text is handed the one for its plan. Nothing here asks the machine what language it is in, so a scene is the
+ * same on every machine that has the locale's data. */
+
+// A time's fields, as timeOf reads them. The offset is matched and left where it is.
 const TIME = /^(\d{4})-(\d\d)(?:-(\d\d)(?:[T ](\d\d):(\d\d)(?::(\d\d)(?:\.\d+)?)?(?:Z|[+-]\d\d(?::?\d\d)?)?)?)?$/, WEEK = /^(\d{4})-W(\d\d)$/;
-const RN = new Intl.DisplayNames('en-US', { type: 'region' });                                                        // US: United States
-export const CHAR_W = 6.6; // rough advance of the 13px label face, for clipping
+export const CHAR_W = 0.495; // rough advance of a character of the label face, in em of it
+/** The language a view speaks where its container names none. */
+export const LOCALE = 'en-US';
 
-export function fmt(v: number | null | undefined, compact?: boolean): string {
-  if (v == null) return '–';
-  return compact || Math.abs(v) >= 10000 ? CF.format(v).replace('K', 'k') : NF.format(v);
-}
-export function fmtPct(p: number): string {
-  return pct(p * 100);
-}
-/** A bucket of time, said as the engine wrote it: the date and the time of day are read from the string, and an offset
+/** A bucket of time, read as the engine wrote it: the date and the time of day are read from the string, and an offset
  * ("Z", "+02:00") is not applied. An engine names a bucket by the clock where it cut it, so "2026-09-08T00:00:00+02:00" is
  * Sep 8 on every machine, and the viewer's zone is never asked. The forms: a day, "2026-09-08"; a day and time, with a "T" or
- * a space, seconds or not, a fraction or not, an offset or not; a month, "2026-09", which reads "Sep 2026"; an ISO week,
- * "2026-W36", which reads as the Monday it starts on. One on an hour of a day reads "Sep 8, 3 PM". Anything else is refused.
+ * a space, seconds or not, a fraction or not, an offset or not; a month, "2026-09"; an ISO week, "2026-W36", which is
+ * the Monday it starts on. Anything else is refused. `t` is that clock time as if it were UTC, and `form` how it is said.
  * ponytail: the grain is read from the value, since neither the catalog nor the result states it. So the midnight bucket
- * of an hourly result reads "Sep 8", as a day does. When the result says its grain, branch on that here. */
-export function fmtTime(iso: string): string {
+ * of an hourly result is a `day`, as a day is. When the result says its grain, branch on that here. */
+export function timeOf(iso: string): { t: number; form: 'month' | 'hour' | 'day' } {
   const m = TIME.exec(iso), w = WEEK.exec(iso);
   let t = NaN;
   if (m) {
@@ -37,83 +32,22 @@ export function fmtTime(iso: string): string {
     if (!+w[2]! || new Date(t + 3 * 86400000).getUTCFullYear() !== +w[1]!) t = NaN;   // a week is in the year its Thursday is in
   }
   if (isNaN(t)) throw new Error('The time ' + JSON.stringify(iso) + ' is not in a form a view reads. Send a day ("2026-09-08"), a day and time ("2026-09-08T15:00:00", "2026-09-08 15:00:00", with or without an offset such as "Z" or "+02:00"), a month ("2026-09") or an ISO week ("2026-W36"), or give the dimension the type "categorical" in the catalog for its values to be written as they come.');
-  return (m && !m[3] ? MF : t % 86400000 ? HF : DF).format(t);
+  return { t, form: m && !m[3] ? 'month' : t % 86400000 ? 'hour' : 'day' };
 }
-// Percent points, as a rate is said: whole from ten, a decimal under it. Exact keeps two.
-const pct = (x: number, exact?: boolean) => (exact ? +x.toFixed(2) : x >= 10 ? Math.round(x) : Math.round(x * 10) / 10) + '%';
-// Money is in its currency's own units, dollars and not cents, and its unit is the currency's ISO 4217 code in lower case.
-// One set of formatters a currency, made when first asked for: $1,234.50, then $49 and $49.50, then $63.5K.
-const CURRENCIES = new Set(Intl.supportedValuesOf('currency').map((c) => c.toLowerCase()));
-const MONEY = new Map<string, [Intl.NumberFormat, Intl.NumberFormat, Intl.NumberFormat]>();
-function money(v: number, unit: string, form?: 'compact' | 'exact'): string {
-  const cur = { style: 'currency', currency: unit.toUpperCase() } as const;
-  if (!MONEY.has(unit)) MONEY.set(unit, [new Intl.NumberFormat('en-US', cur),
-    new Intl.NumberFormat('en-US', { ...cur, trailingZeroDisplay: 'stripIfInteger' } as Intl.NumberFormatOptions),         // ES2023, so not in this target's types
-    new Intl.NumberFormat('en-US', { ...cur, notation: 'compact', maximumFractionDigits: 1 })]);
-  const [full, whole, short] = MONEY.get(unit)!;
-  return form === 'exact' ? full.format(v) : form === 'compact' || Math.abs(v) >= 10000 ? short.format(v).replace('K', 'k') : whole.format(v);
-}
-const two = (n: number) => String(n).padStart(2, '0');
-// A length of time, from milliseconds, in the largest terms that read: "340ms", "1.2s", "2m 05s", "1h 05m".
-function duration(ms: number): string {
-  const sign = ms < 0 ? '-' : '', a = Math.abs(ms), s = a / 1000, t = Math.round(s);
-  if (a < 999.5) return sign + +a.toFixed(a < 10 ? 1 : 0) + 'ms';
-  if (s < 59.95) return sign + +s.toFixed(1) + 's';
-  return sign + (t < 3600 ? Math.floor(t / 60) + 'm ' + two(t % 60) + 's' : Math.floor(t / 3600) + 'h ' + two(Math.floor((t % 3600) / 60)) + 'm');
-}
-// A place in an order: "1st", "2nd", "3rd", "11th".
-const ordinal = (n: number) => { const th = ['th', 'st', 'nd', 'rd'], v = Math.abs(n) % 100; return n + (th[(v - 20) % 10] || th[v] || th[0]!); };
-const BYTES = ['B', 'kB', 'MB', 'GB', 'TB', 'PB'];
-// Bytes in steps of a thousand, as the SI prefixes mean: "1.2 MB".
-function bytes(v: number): string {
-  let a = Math.abs(v), i = 0;
-  while (a >= 999.95 && i < BYTES.length - 1) { a /= 1000; i++; }
-  return (v < 0 ? '-' : '') + +a.toFixed(i ? 1 : 0) + ' ' + BYTES[i];
-}
-/** A number in its metric's format, and a plain number where it has no metric. */
-export const formatMetric = (v: number, metric: MetricDef | undefined, compact = false): string => (metric ? formatValue(v, metric, compact ? 'compact' : undefined) : fmt(v, compact));
-/** A list as a sentence says it: "a, b or c". */
-export const orList = (items: readonly string[]): string => (items.length < 2 ? items.join('') : items.slice(0, -1).join(', ') + ' or ' + items[items.length - 1]);
-/** The units a catalog may give a metric, beside a currency's code. The `Unit` type, the catalog schema's enum and `formatUnit` are kept in step: a new unit is added to all three. */
-export const UNITS: Unit[] = ['count', 'ratio', 'percent', 'ms', 's', 'bytes', 'rank'];
-/** A value in a unit, where there is a unit and no one metric to hand: a tick on a scale that several metrics share. */
-export function formatUnit(v: number | null | undefined, unit: string, form?: 'compact' | 'exact'): string {
-  if (v == null) return '–';
-  const exact = form === 'exact';
-  switch (unit) {
-    case 'count': return exact ? NF.format(v) : fmt(v, form === 'compact');
-    case 'ratio': return pct(v * 100, exact);                             // a rate from 0 to 1
-    case 'percent': return pct(v, exact);                                 // percent points already, 0 to 100
-    case 'ms': return exact ? NF.format(v) + ' ms' : duration(v);
-    case 's': return exact ? NF.format(v) + ' s' : duration(v * 1000);
-    case 'bytes': return exact ? NF.format(v) + ' B' : bytes(v);
-    case 'rank': return form === 'compact' || !Number.isInteger(v) ? String(v) : ordinal(v);   // a tick on a scale of ranks is the bare number
-  }
-  if (CURRENCIES.has(unit)) return money(v, unit, form);
-  throw new Error('The unit "' + unit + '" has no format. Give the metric one of ' + UNITS.join(', ') + ' in the catalog, or a currency\'s ISO 4217 code in lower case ("usd"), or add a branch for it to formatUnit in packages/core/src/format.ts.');
-}
-/** A metric's value as its catalog entry sets it: in its unit. With no form it is what a readout says: a count whole
- * under ten thousand and "10.5k" from there, money as "$49.50" and "$63.5k" in its own currency, a rate as "12%", a time as "340ms" or
- * "2m 05s", bytes as "1.2 MB". `compact` is always the short form, and `exact` never is: a table cell, where the digits matter. */
-export function formatValue(v: number | null | undefined, metric: MetricDef, form?: 'compact' | 'exact'): string {
-  return formatUnit(v, metric.unit, form);
-}
-/** A dimension's value as its catalog entry sets it: a day as "Sep 8", an hour as "Sep 8, 3 PM", a country's code as its
- * name, a category as itself. A code the engine left empty is no value, and one that is not a code is said as it came. */
-/** A bin by both its ends: "10–20", and in words where an end is below zero, since a dash there reads as a sign. */
-export function formatBin(start: Row[string], end: Row[string]): string {
-  return end == null ? String(start) : start + (Number(start) < 0 || Number(end) < 0 ? ' to ' : '–') + end;
-}
-export function formatDimension(v: Row[string], dim: DimensionDef): string {
-  if (v == null || (dim.values && v === '')) return '–';
-  if (dim.values === 'country') return /^[A-Z]{2}$/.test(String(v)) ? RN.of(String(v)) ?? String(v) : String(v);
-  return dim.type === 'time' ? fmtTime(String(v)) : String(v);
-}
-export function rangeLabel(r: string | null | undefined): string {
+/** A range an answer is over, read: a count of days, or null for "now". One a view cannot say is refused. */
+export function rangeOf(r: string | null | undefined): number | null {
   const m = /^([1-9]\d*)d$/.exec(r || '');
   if (r !== 'now' && !m) throw new Error('The result has meta.range: ' + JSON.stringify(r) + ', and a view reads a range as a count of days, "28d", or as "now". Send one of those from the query layer, or leave meta.range out and the prose names no range.');
-  return m ? (m[1] === '1' ? 'last day' : 'last ' + m[1] + ' days') : 'right now';
+  return m ? +m[1]! : null;
 }
+
+// Money is in its currency's own units, dollars and not cents, and its unit is the currency's ISO 4217 code in lower case.
+const CURRENCIES = new Set(Intl.supportedValuesOf('currency').map((c) => c.toLowerCase()));
+const BYTES = ['B', 'kB', 'MB', 'GB', 'TB', 'PB'];
+/** A list as a sentence says it: "a, b or c". */
+export const orList = (items: readonly string[]): string => (items.length < 2 ? items.join('') : items.slice(0, -1).join(', ') + ' or ' + items[items.length - 1]);
+/** The units a catalog may give a metric, beside a currency's code. The `Unit` type, the catalog schema's enum and `Formats.unit` are kept in step: a new unit is added to all three. */
+export const UNITS: Unit[] = ['count', 'ratio', 'percent', 'ms', 's', 'bytes', 'rank'];
 export function clip(s: string, n: number): string {
   n = Math.max(3, n);
   return s.length > n ? s.slice(0, n - 1) + '…' : s;
@@ -125,14 +59,149 @@ export interface Delta {
   paint: string;
   pct?: number;
 }
-/** The change from what was to what is. With no current figure there is nothing to compare and nothing to say of it:
- * state `none` with no text, where no prior figure has "No prior period". A caller with an empty text adds no node and no clause. */
-export function delta(cur: number | null | undefined, prev: number | null | undefined, polarity: Polarity): Delta {
-  if (cur == null) return { state: 'none', text: '', paint: 'ink.muted' };
-  if (prev == null) return { state: 'none', text: 'No prior period', paint: 'ink.muted' };
-  if (prev === 0 && cur !== 0) return { state: 'new', text: 'New', paint: 'ink.muted' };
-  const p = (cur - prev) / Math.abs(prev);                                // against the size of what was, so a rise from below zero is a rise
-  if (cur === prev || Math.abs(p) < 0.005) return { state: 'flat', text: 'No change', paint: 'ink.muted' };
-  const up = p > 0, good = polarity === 'none' ? null : (polarity === 'up') === up;
-  return { state: up ? 'up' : 'down', pct: p, text: (up ? '▲ ' : '▼ ') + fmtPct(Math.abs(p)), paint: good == null ? 'ink.muted' : good ? 'delta.good' : 'delta.bad' };
+
+/** A view's formatters, in one locale, and its words. */
+export interface Formats {
+  /** The locale they are made for, as it was asked. */
+  locale: string;
+  /** One of the view's own words (words.ts), by its name, filled with `values`. `count` picks the form of an entry that
+   * depends on one, and is what `:plural` goes by. */
+  say(word: keyof Words, values?: Record<string, string>, count?: number): string;
+  /** A plain number: whole under ten thousand, and "10.5k" from there or where `compact`. */
+  fmt(v: number | null | undefined, compact?: boolean): string;
+  /** A whole number said bare, with nothing grouped and nothing cut short: a count in a sentence, "12 pages". */
+  count(n: number): string;
+  /** A share from 0 to 1, as a rate is said: whole from ten percent, a decimal under it. */
+  pct(p: number): string;
+  /** A bucket of time (`timeOf`): a day as "Sep 8", one on an hour as "Sep 8, 3 PM", a month as "Sep 2026". */
+  time(iso: string): string;
+  /** A number in its metric's format, and a plain number where it has no metric. */
+  metric(v: number, metric: MetricDef | undefined, compact?: boolean): string;
+  /** A value in a unit, where there is a unit and no one metric to hand: a tick on a scale that several metrics share. */
+  unit(v: number | null | undefined, unit: string, form?: 'compact' | 'exact'): string;
+  /** A metric's value as its catalog entry sets it: in its unit. With no form it is what a readout says: a count whole
+   * under ten thousand and "10.5k" from there, money as "$49.50" and "$63.5k" in its own currency, a rate as "12%", a time as "340ms" or
+   * "2m 05s", bytes as "1.2 MB". `compact` is always the short form, and `exact` never is: a table cell, where the digits matter. */
+  value(v: number | null | undefined, metric: MetricDef, form?: 'compact' | 'exact'): string;
+  /** A dimension's value as its catalog entry sets it: a day as "Sep 8", an hour as "Sep 8, 3 PM", a country's code as its
+   * name, a category as itself. A code the engine left empty is no value, and one that is not a code is said as it came. */
+  dimension(v: Row[string], dim: DimensionDef): string;
+  /** A bin by both its ends: "10–20", and in words where an end is below zero, since a dash there reads as a sign. */
+  bin(start: Row[string], end: Row[string]): string;
+  /** A range an answer is over (`rangeOf`): "last 28 days", "right now". */
+  range(r: string | null | undefined): string;
+  /** The change from what was to what is. With no current figure there is nothing to compare and nothing to say of it:
+   * state `none` with no text, where no prior figure has "No prior period". A caller with an empty text adds no node and no clause. */
+  delta(cur: number | null | undefined, prev: number | null | undefined, polarity: Polarity): Delta;
 }
+
+const plain = new Map<string, Formats>(), worded = new WeakMap<object, Map<string, Formats>>();
+/** The formatters for a locale, a BCP 47 tag, and English where none is given, with a container's words over the
+ * English ones where it hands any (`rules.words`). One set a locale and a table, made when first asked for. A tag that
+ * is no locale is refused, and so is one this machine has no data for: Intl would answer for it in the machine's own
+ * language, and a scene would then differ from one machine to the next. A word a view does not say is refused too. */
+export function formats(locale: string = LOCALE, words?: Partial<Words>): Formats {
+  if (words && !worded.has(words)) { checkWords(words); worded.set(words, new Map()); }
+  const made = words ? worded.get(words)! : plain;
+  let f = made.get(locale);
+  if (!f) {
+    let known: string[] = [];
+    try { known = Intl.NumberFormat.supportedLocalesOf(locale); } catch { /* not a tag at all */ }
+    if (!known.length) throw new Error('The locale ' + JSON.stringify(locale) + ' is not one a view can speak here. Give a BCP 47 language tag this machine has, such as "en-US", "de" or "pt-BR", or leave it out for English.');
+    made.set(locale, (f = make(locale, words)));
+  }
+  return f;
+}
+
+function make(locale: string, words: Partial<Words> = {}): Formats {
+  const PR = new Intl.PluralRules(locale), OR = new Intl.PluralRules(locale, { type: 'ordinal' });
+  const say: Formats['say'] = (word, values = {}, count) => {
+    const w: Word = words[word] ?? WORDS[word], form = typeof w === 'string' ? w : (count != null && w[(word === 'nth' ? OR : PR).select(count)]) || w.other;
+    return form.replace(/\{(\w+)(?::(lower|plural))?\}/g, (_: string, name: string, as?: string) => { const v = values[name] ?? ''; return as === 'plural' ? many(count ?? 0, v.toLowerCase()) : as ? v.toLowerCase() : v; });
+  };
+  const NF = new Intl.NumberFormat(locale), CF = new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 });
+  // A number that is said beside a unit of its own: a decimal at most, and no grouping. And one of two digits, for the seconds of "2m 05s".
+  const N1 = new Intl.NumberFormat(locale, { maximumFractionDigits: 1, useGrouping: false }), N2 = new Intl.NumberFormat(locale, { minimumIntegerDigits: 2, useGrouping: false });
+  // Percent points already rounded, said with the sign where the locale puts it: "12%", "12 %".
+  const PF = new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 2, useGrouping: false });
+  // The clock time was read as if it were UTC (timeOf), so it is said in UTC: as it was written.
+  const DF = new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric', timeZone: 'UTC' });                    // Sep 8
+  const HF = new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric', hour: 'numeric', timeZone: 'UTC' });   // Sep 8, 3 PM
+  const MF = new Intl.DateTimeFormat(locale, { month: 'short', year: 'numeric', timeZone: 'UTC' });                    // Sep 2026
+  const RN = new Intl.DisplayNames(locale, { type: 'region' });                                                        // US: United States
+  // ponytail: the small k is the house's, put on whatever the locale writes for a thousand. A locale that writes a "K" of another meaning would want it left.
+  const short = (f: Intl.NumberFormat, v: number) => f.format(v).replace('K', 'k');
+  const fmt: Formats['fmt'] = (v, compact) => (v == null ? '–' : compact || Math.abs(v) >= 10000 ? short(CF, v) : NF.format(v));
+  // Percent points, as a rate is said: whole from ten, a decimal under it. Exact keeps two. The rounding is done here, so the locale only writes it.
+  const pct = (x: number, exact?: boolean) => PF.format((exact ? +x.toFixed(2) : x >= 10 ? Math.round(x) : Math.round(x * 10) / 10) / 100);
+  // One set of formatters a currency, made when first asked for: $1,234.50, then $49 and $49.50, then $63.5K.
+  const MONEY = new Map<string, [Intl.NumberFormat, Intl.NumberFormat, Intl.NumberFormat]>();
+  function money(v: number, unit: string, form?: 'compact' | 'exact'): string {
+    const cur = { style: 'currency', currency: unit.toUpperCase() } as const;
+    if (!MONEY.has(unit)) MONEY.set(unit, [new Intl.NumberFormat(locale, cur),
+      new Intl.NumberFormat(locale, { ...cur, trailingZeroDisplay: 'stripIfInteger' } as Intl.NumberFormatOptions),         // ES2023, so not in this target's types
+      new Intl.NumberFormat(locale, { ...cur, notation: 'compact', maximumFractionDigits: 1 })]);
+    const [full, whole, less] = MONEY.get(unit)!;
+    return form === 'exact' ? full.format(v) : form === 'compact' || Math.abs(v) >= 10000 ? short(less, v) : whole.format(v);
+  }
+  // A length of time, from milliseconds, in the largest terms that read: "340ms", "1.2s", "2m 05s", "1h 05m".
+  // ponytail: the letters are English's. Intl.DurationFormat says them in a locale, where every browser a host has ships it.
+  function duration(ms: number): string {
+    const sign = ms < 0 ? '-' : '', a = Math.abs(ms), s = a / 1000, t = Math.round(s);
+    if (a < 999.5) return sign + N1.format(+a.toFixed(a < 10 ? 1 : 0)) + 'ms';
+    if (s < 59.95) return sign + N1.format(+s.toFixed(1)) + 's';
+    return sign + (t < 3600 ? N1.format(Math.floor(t / 60)) + 'm ' + N2.format(t % 60) + 's' : N1.format(Math.floor(t / 3600)) + 'h ' + N2.format(Math.floor((t % 3600) / 60)) + 'm');
+  }
+  // Bytes in steps of a thousand, as the SI prefixes mean: "1.2 MB".
+  function bytes(v: number): string {
+    let a = Math.abs(v), i = 0;
+    while (a >= 999.95 && i < BYTES.length - 1) { a /= 1000; i++; }
+    return (v < 0 ? '-' : '') + N1.format(+a.toFixed(i ? 1 : 0)) + ' ' + BYTES[i];
+  }
+  const unit: Formats['unit'] = (v, unit, form) => {
+    if (v == null) return '–';
+    const exact = form === 'exact';
+    switch (unit) {
+      case 'count': return exact ? NF.format(v) : fmt(v, form === 'compact');
+      case 'ratio': return pct(v * 100, exact);                             // a rate from 0 to 1
+      case 'percent': return pct(v, exact);                                 // percent points already, 0 to 100
+      case 'ms': return exact ? NF.format(v) + ' ms' : duration(v);
+      case 's': return exact ? NF.format(v) + ' s' : duration(v * 1000);
+      case 'bytes': return exact ? NF.format(v) + ' B' : bytes(v);
+      // A tick on a scale of ranks is the bare number. ponytail: a rank that is no whole number is said as it came, digits and all.
+      case 'rank': return !Number.isInteger(v) ? String(v) : form === 'compact' ? N1.format(v) : say('nth', { n: N1.format(v) }, Math.abs(v));
+    }
+    if (CURRENCIES.has(unit)) return money(v, unit, form);
+    throw new Error('The unit "' + unit + '" has no format. Give the metric one of ' + UNITS.join(', ') + ' in the catalog, or a currency\'s ISO 4217 code in lower case ("usd"), or add a branch for it to Formats.unit in packages/core/src/format.ts.');
+  };
+  const value: Formats['value'] = (v, metric, form) => unit(v, metric.unit, form);
+  const time: Formats['time'] = (iso) => { const { t, form } = timeOf(iso); return (form === 'month' ? MF : form === 'hour' ? HF : DF).format(t); };
+  return {
+    locale, say, fmt, unit, value, time,
+    count: (n) => N1.format(n),
+    pct: (p) => pct(p * 100),
+    metric: (v, metric, compact = false) => (metric ? value(v, metric, compact ? 'compact' : undefined) : fmt(v, compact)),
+    dimension(v, dim) {
+      if (v == null || (dim.values && v === '')) return '–';
+      if (dim.values === 'country') return /^[A-Z]{2}$/.test(String(v)) ? RN.of(String(v)) ?? String(v) : String(v);
+      return dim.type === 'time' ? time(String(v)) : String(v);
+    },
+    bin: (start, end) => (end == null ? String(start) : say(Number(start) < 0 || Number(end) < 0 ? 'binTo' : 'bin', { start: String(start), end: String(end) })),
+    range(r) { const days = rangeOf(r); return days == null ? say('now') : say('lastDays', { count: N1.format(days) }, days); },
+    delta(cur, prev, polarity) {
+      if (cur == null) return { state: 'none', text: '', paint: 'ink.muted' };
+      if (prev == null) return { state: 'none', text: say('noPrior'), paint: 'ink.muted' };
+      if (prev === 0 && cur !== 0) return { state: 'new', text: say('isNew'), paint: 'ink.muted' };
+      const p = (cur - prev) / Math.abs(prev);                                // against the size of what was, so a rise from below zero is a rise
+      if (cur === prev || Math.abs(p) < 0.005) return { state: 'flat', text: say('noChange'), paint: 'ink.muted' };
+      const up = p > 0, good = polarity === 'none' ? null : (polarity === 'up') === up;
+      return { state: up ? 'up' : 'down', pct: p, text: say(up ? 'up' : 'down', { change: pct(Math.abs(p) * 100) }), paint: good == null ? 'ink.muted' : good ? 'delta.good' : 'delta.bad' };
+    },
+  };
+}
+
+/* The same in English, by the names they had before a view had a locale: for a test, and for a caller that is in no
+ * view. What builds a view's text takes its plan's formatters and none of these (test/locale.test.ts holds that). */
+const EN = formats();
+export const fmt = EN.fmt, fmtPct = EN.pct, fmtTime = EN.time, formatMetric = EN.metric, formatUnit = EN.unit, formatValue = EN.value,
+  formatDimension = EN.dimension, formatBin = EN.bin, rangeLabel = EN.range, delta = EN.delta;

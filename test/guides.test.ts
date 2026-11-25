@@ -42,7 +42,7 @@ describe('a key leaves no sooner than the marks it keys', () => {
   const windows = (rules: FitRule[]): string[] => [...new Set(rules.map((r) => r.layout))].flatMap((layout) => {
     const own = rules.filter((r) => r.layout === layout);
     return own.flatMap((r) => {
-      const keys = r.hide.filter((p) => keyOf(p)), shorter = (r.show ?? []).some((p) => keys.some((k) => keyOf(k) === keyOf(p))) || r.set?.legend === 'top';
+      const keys = r.hide.filter((p) => keyOf(p)), shorter = (r.show ?? []).some((p) => keys.some((k) => keyOf(k) === keyOf(p)));
       // A rule that takes the marks takes their keys with good reason: all of a view's marks, or the ones a key is for.
       // So does one that has the marks drawn without the encoding: dots of one size, series in one paint.
       const settled = (k: string) => { const g = keyOf(k)!; return r.hide.includes(g.marks ?? '') || (!!g.plain && r.set?.[g.plain[0]] === g.plain[1]); };
@@ -60,8 +60,8 @@ describe('a key leaves no sooner than the marks it keys', () => {
   });
 
   it('and one that did would be named, with its window', () => {
-    const bare = { id: 'bare', layout: 'cartesian', container: 'view', needs: { inline: 400 }, hide: ['legend'], keep: 'guides' } as FitRule;
-    expect(windows([...FIT_RULES, bare])).toEqual(['cartesian bare: legend under 400 × 0, marks to 152 × 46']);
+    const bare = { id: 'bare', layout: 'cartesian', container: 'view', needs: { inline: 30 }, hide: ['legend'] } as FitRule;
+    expect(windows([...FIT_RULES, bare])).toEqual(['cartesian bare: legend under 30 × 0, marks to 11.4 × 3.45']);
     // The same rule is honest once it says the marks are then one paint.
     expect(windows([...FIT_RULES, { ...bare, set: { split: 'plain' } }])).toEqual([]);
   });

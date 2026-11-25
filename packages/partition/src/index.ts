@@ -1,4 +1,4 @@
-import { SERIES, formatDimension, isDim, isMetric, layerKeys, metricOf, registerMark, registerPreset, roleOf, seqScale, tooManySeries, uniqueKeys } from '@unified-analytics/core';
+import { SERIES, isDim, isMetric, layerKeys, metricOf, registerMark, registerPreset, roleOf, seqScale, tooManySeries, uniqueKeys } from '@unified-analytics/core';
 import type { CustomMark, FitRule, MarkView, Part, RectNode, Row, SceneNode, TextNode } from '@unified-analytics/core';
 
 /* The `partition` mark: a box divided by area, nested once, which is a treemap. A custom mark (core's marks.ts). This
@@ -57,13 +57,13 @@ export function squarify(values: number[], w: number, h: number, total = 0): Box
 /* What the scene sets and the painter's stylesheet sets again, so both are read from here. */
 /** The part's width over its height. */
 export const ASPECT = 1.6;
-/** px across a treemap that has room to spare. */
-export const MAX = 480;
-/** px a parent's name takes at the top of its box, over its children, and the most of the box's height it takes. */
-export const HEAD = 16, HEAD_MOST = 0.3;
-/** px a label's line takes. */
-export const LINE = 14;
-/** px between two parents, and between two children: a parent stands half its gap in from the part's edge all round. */
+/** How far across a treemap with room to spare is, in em of the view's type. */
+export const MAX = 36;
+/** What a parent's name takes at the top of its box, over its children, in em, and the most of the box's height it takes. */
+export const HEAD = 1.2, HEAD_MOST = 0.3;
+/** The line a label takes, in em. */
+export const LINE = 1.05;
+/** The hairlines between two parents, and between two children, in px as a border is: a parent stands half its gap in from the part's edge all round. */
 export const GAP = 2, KID_GAP = 1;
 
 /* Below the room a treemap needs it is not a smaller treemap: the view becomes a list of the same query. Which list
@@ -71,11 +71,11 @@ export const GAP = 2, KID_GAP = 1;
  * fill is the one that applies (core's fallbackRule). With two dimensions it is `pair-list`, registered below, since
  * `bar-list` has one dimension to its rows and would leave the other undrawn. With one it is `bar-list`. */
 export const PARTITION_RULES: FitRule[] = [
-  { id: 'guides', layout: 'partition', container: 'view', needs: { inline: 320, block: 170 },     // the ramp, where a metric is on color: under this a thin strip, which stays as long as the boxes
+  { id: 'guides', layout: 'partition', container: 'view', needs: { inline: 24, block: 12.75 },     // the ramp, where a metric is on color: under this a thin strip, which stays as long as the boxes
     hide: [], set: { ramp: 'strip' } },
-  { id: 'marks',  layout: 'partition', container: 'view', needs: { inline: 280, block: 120 },     // boxes too small to tell apart, or to name
+  { id: 'marks',  layout: 'partition', container: 'view', needs: { inline: 21, block: 9 },     // boxes too small to tell apart, or to name
     hide: [], fallback: 'pair-list' },
-  { id: 'marks-flat', layout: 'partition', container: 'view', needs: { inline: 280, block: 120 }, // the same room, for a query by one dimension
+  { id: 'marks-flat', layout: 'partition', container: 'view', needs: { inline: 21, block: 9 }, // the same room, for a query by one dimension
     hide: [], fallback: 'bar-list' },
 ];
 
@@ -84,7 +84,7 @@ interface Group extends Leaf { kids: Leaf[]; rows: Row[]; n: number }
 
 /** What a view's layers ask for, checked, and the boxes it comes to: a group for each parent with its box in ratios of
  * the part, and in each its children, with their boxes in ratios of the parent's. Both the scene and the names are made from this. */
-function read({ layers, query, result, catalog }: Omit<MarkView, 'guides'>) {
+function read({ layers, query, result, catalog, formats: F }: Omit<MarkView, 'guides'>) {
   const l = layers[0]!, { x: dim, detail, size, color } = l.encode || {}, by = query.by || [], q = '"' + l.mark + '"';
   if (layers.length > 1) throw new Error('A treemap draws one ' + q + ' layer, and this view has ' + layers.length + '. Put the dimension to divide by on x, the one to divide each part by on detail, and the metric on size, in one layer.');
   if (!isDim(catalog, dim)) throw new Error('A ' + q + ' layer needs the dimension to divide the box by on x, and this one has ' + JSON.stringify(dim) + ' there. Encode one of the query\'s dimensions on x: ' + (by.join(', ') || 'it has none, so add one to query.by') + '.');
@@ -102,7 +102,7 @@ function read({ layers, query, result, catalog }: Omit<MarkView, 'guides'>) {
   const total = result.totals[size], shown = total ? tops.filter((r) => is(r[size])) : [];
   const drawn = two ? result.rows.filter((r) => is(r[size]) && shown.some((t) => of(t) === of(r))) : shown;
   // The colour scale runs over the boxes that are painted by it, as a grid's runs over its cells.
-  const fill = typeof color === 'string' ? seqScale(drawn.map((r) => r[color]).filter((v): v is number => typeof v === 'number'), metricOf(catalog, color)!, result) : null;
+  const fill = typeof color === 'string' ? seqScale(drawn.map((r) => r[color]).filter((v): v is number => typeof v === 'number'), metricOf(catalog, color)!, result, F) : null;
   if (!fill && shown.length > SERIES) throw new Error(tooManySeries('Dividing by "' + dim + '"', shown.length, 'boxes', ', or encode a metric on color to paint every box by the ramp'));
   // A key is made unique as it is given out: two rows of one value, or a value with the separator in it.
   const id = layerKeys(layers)[0]!, key = uniqueKeys();
@@ -110,9 +110,9 @@ function read({ layers, query, result, catalog }: Omit<MarkView, 'guides'>) {
   const groups = squarify(shown.map((r) => r[size] as number), ASPECT, 1, total || 0).map((b, i): Group => {
     const top = shown[i]!, k = key(id + ':' + of(top)), rows = two ? result.rows.filter((r) => of(r) === of(top)) : [top], inside = rows.filter((r) => two && is(r[size]));
     const kids = squarify(inside.map((r) => r[size] as number), b.w, b.h, top[size] as number).map((c, j): Leaf => ({
-      key: key(k + ':' + inside[j]![detail as string]), name: formatDimension(inside[j]![detail as string], catalog.dimensions[detail as string]!), row: inside[j]!,
+      key: key(k + ':' + inside[j]![detail as string]), name: F.dimension(inside[j]![detail as string], catalog.dimensions[detail as string]!), row: inside[j]!,
       box: { x: b.w ? c.x / b.w : 0, y: b.h ? c.y / b.h : 0, w: b.w ? c.w / b.w : 0, h: b.h ? c.h / b.h : 0 }, paint: paint(inside[j]!, i) }));
-    return { key: k, name: formatDimension(top[dim], catalog.dimensions[dim]!), row: top, rows, box: { x: b.x / ASPECT, y: b.y, w: b.w / ASPECT, h: b.h }, paint: two && fill ? 'seq.none' : paint(top, i), kids, n: i + 1 };
+    return { key: k, name: F.dimension(top[dim], catalog.dimensions[dim]!), row: top, rows, box: { x: b.x / ASPECT, y: b.y, w: b.w / ASPECT, h: b.h }, paint: two && fill ? 'seq.none' : paint(top, i), kids, n: i + 1 };
   });
   return { groups, two, fill, dim, role: roleOf(l), none: drawn.some((r) => fill && r[color as string] == null), key };
 }

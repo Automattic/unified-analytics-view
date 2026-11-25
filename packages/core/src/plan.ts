@@ -1,7 +1,7 @@
 import { CONTAINER_RULES } from './container.ts';
 import { fitTo, gaveWay, type Fit, type Rooms } from './fit.ts';
 import { guidesOf } from './guides.ts';
-import { fmtTime, formatDimension, orList, rangeLabel } from './format.ts';
+import { formats, orList, rangeOf, timeOf } from './format.ts';
 import { customMarks } from './marks.ts';
 import { PRESETS, expand, fills, presetNames, usesPrevious } from './presets.ts';
 import { checkReads } from './reads.ts';
@@ -136,6 +136,26 @@ function checkWhere(q: Query, result: Result, catalog: Catalog): void {
   if (filterOf(q.where) !== filterOf(result.meta.where)) throw new Error('The query ' + (Object.keys(q.where || {}).length ? 'filters by where: ' + JSON.stringify(q.where) : 'has no "where"') + ', and the answer says it is of ' + (result.meta.where ? 'where: ' + JSON.stringify(result.meta.where) : 'everything, with no "where" in its meta') + '. An engine that filters says so on its answer, as meta.where. Pass what this query returned, or make query.where the same.');
 }
 
+/** A spec's read-out fields, each once: companions the result returns with one of the query's metrics. One that is said
+ * without a place here, a metric of the query's or its period before, is refused by name, with where it is said from:
+ * a list that changed nothing would read as though it had. */
+function checkReadout(readout: unknown, q: Query, catalog: Catalog, result: Result): string[] {
+  if (readout == null) return [];
+  const eg = '"' + q.metrics[0] + '@rank"';
+  if (!Array.isArray(readout) || readout.some((f) => typeof f !== 'string')) throw new Error('The spec\'s "readout" is ' + JSON.stringify(readout) + ', and it is a list of fields, as [' + eg + '] is. Write the fields in a list, or remove "readout".');
+  const row = result.rows[0];
+  for (const f of readout as string[]) {
+    const of = baseOf(f), n = 'The spec\'s "readout" names "' + f + '"';
+    if (q.metrics.includes(f)) throw new Error(n + ', which is one of the query\'s metrics, and every one of those is read out already, whether or not a mark draws it. Remove it from "readout".');
+    if (!q.metrics.includes(of)) throw new Error(n + ', and a read-out field is a companion the result returns with one of the query\'s metrics (' + q.metrics.join(', ') + '), as ' + eg + ' is. '
+      + (Object.hasOwn(catalog.metrics, of) ? 'A metric is read out once the query asks for it: add "' + of + '" to query.metrics' + (f === of ? ', and remove it from "readout".' : '.') : 'Name one of those, or remove it from "readout".'));
+    if (f === of + '@previous') throw new Error(n + ', which is the period before, and that is read out wherever the query compares. ' + (q.compare === 'previous' ? 'Remove it from "readout".' : 'Write "compare": "previous" in the query, and remove it from "readout".'));
+    // The engine's to send, as a companion on a channel is, so it is looked for in the result. An empty result has none to show.
+    if (row && !(f in row)) throw new Error(n + ', which the result does not return. With "' + of + '" it returns: ' + (Object.keys(row).filter((c) => baseOf(c) === of && c !== of).join(', ') || 'nothing') + '.');
+  }
+  return [...new Set(readout as string[])];
+}
+
 /** The plan for a spec: its layout, its layers with their roles, its guides and its sentence. It takes no size, so
  * it is everything the spec asks for. What a room is short of is the fit rules' to say (`fitTo`, `viewAt`), and a
  * surface's to act on. `rules` are a context's own. Throws, with a message that names the fix, when the spec is invalid. */
@@ -165,9 +185,10 @@ export function resolve(spec0: Spec, result: Result, catalog: Catalog, rules: Co
   let layers = (spec.layers || []).slice();
   if (!layers.length && by) throw new Error('This spec has a dimension but no layers, so there is nothing to draw it with. Add "layers", or "use" one of: ' + presetNames(presets).join(', ') + '.');
   checkLayers(layers, q, catalog, result);
+  const readout = checkReadout(spec0.readout, q, catalog, result);
   // A time no view can read is refused here, once, before anything is built or painted. fmtTime's error names the forms.
-  for (const d of q.by || []) if (catalog.dimensions[d]?.type === 'time') for (const r of result.rows) if (r[d] != null) fmtTime(String(r[d]));
-  if (result.meta.range) rangeLabel(result.meta.range);                   // and a range the prose cannot say, the same way
+  for (const d of q.by || []) if (catalog.dimensions[d]?.type === 'time') for (const r of result.rows) if (r[d] != null) timeOf(String(r[d]));
+  if (result.meta.range) rangeOf(result.meta.range);                   // and a range the prose cannot say, the same way
   if (layers.some(usesPrevious) && (q.compare !== 'previous' || result.totals[m + '@previous'] == null)) {
     const why = q.compare === 'previous' ? ' (no prior data)' : ' (the query has no "compare")';
     if (!result.meta.empty) [['previous', 'comparison series'], ['delta', 'the change on the previous period']].forEach(([series, what]) => { if (layers.some((l) => l.series === series)) dropped.push(what + why); });
@@ -203,11 +224,13 @@ export function resolve(spec0: Spec, result: Result, catalog: Catalog, rules: Co
     });
   }
   // Glyphs with no dimension say how far along its range a metric is, and not what it is: the number stands above them.
+  // The view's text is in its container's locale, and so is its scene's, which is built from this plan.
+  const F = formats(rules.locale, rules.words);
   const p: PlanShape = { layout: laid, layers, guides: guidesOf(laid, layers, catalog), tldrValue: rules.tldrValue.above === 'always' || !!M.instant || !layers.length || (unit && !by),
-                         share, text: tldrProse(q, result, share, catalog) };
+                         share, text: tldrProse(q, result, share, catalog, F), ...(rules.locale != null && { locale: rules.locale }), ...(rules.words && { words: rules.words }) };
   // What the answer is filtered to is said last, of everything before it: a view of some rows never reads as one of all.
-  const only = filterSaid(result.meta.where, catalog);
-  if (only) p.text += ' Filtered to ' + only + '.';
+  const only = filterSaid(result.meta.where, catalog, F);
+  if (only) p.text += ' ' + F.say('filtered', { filter: only });
   if (result.meta.empty || (M.instant && !result.rows.length)) {
     if (M.instant || !layers.length) { p.layout = 'none'; p.layers = []; p.tldrValue = true; p.guides = {}; }
     else { p.layout = 'notice'; p.layers = []; p.guides = {}; p.tldrValue = false; }
@@ -221,7 +244,7 @@ export function resolve(spec0: Spec, result: Result, catalog: Catalog, rules: Co
   return {
     preset: spec0.use && !spec0.layers ? spec0.use : null, layout: p.layout,
     layers: p.layers.map((l) => Object.assign({}, l, { role: roleOf(l) })),
-    guides: p.guides, tldrValue: p.tldrValue, share: p.share, dropped, text: p.text,
+    guides: p.guides, tldrValue: p.tldrValue, share: p.share, dropped, text: p.text, ...(p.locale != null && { locale: p.locale }), ...(p.words && { words: p.words }), ...(readout.length > 0 && { readout }),
   };
 }
 
@@ -256,12 +279,12 @@ export function facets(spec0: Spec, result: Result, catalog: Catalog, rules: Con
     if (held === f) throw new Error('Layer ' + (i + 1) + ' encodes "' + f + '" on ' + channel + ', and "' + f + '" is the facet: each view holds one value of it. Take it off the layer, or remove "facet" and keep it there.');
   }));
   // The engine's total for a value: its row of totalsBy where the query has a second dimension, and its own row where it has none.
-  const whole = result.totalsBy && result.totalsBy[f], values = [...new Set((whole || result.rows).map((r) => String(r[f])))];
+  const whole = result.totalsBy && result.totalsBy[f], values = [...new Set((whole || result.rows).map((r) => String(r[f])))], F = formats(rules.locale, rules.words);
   if (!values.length) return [{ key: '', label: dim.label, spec, result }];
   const views = values.map((v): Facet => {
     const rows = result.rows.filter((r) => String(r[f]) === v), total = (by.length > 1 ? whole && whole.find((r) => String(r[f]) === v) : rows[0]) || {};
     const totals = Object.fromEntries(Object.keys(result.totals).map((m) => [m, typeof total[m] === 'number' ? (total[m] as number) : null]));
-    return { key: v, label: formatDimension(v, dim), spec: { ...spec, title: formatDimension(v, dim) }, result: { rows, totals, meta: rows.length ? result.meta : { ...result.meta, empty: true } } };   // a value the result has no rows for says so
+    return { key: v, label: F.dimension(v, dim), spec: { ...spec, title: F.dimension(v, dim) }, result: { rows, totals, meta: rows.length ? result.meta : { ...result.meta, empty: true } } };   // a value the result has no rows for says so
   });
   const domains = widest(() => views.forEach((v) => buildScene(resolve(v.spec, v.result, catalog, rules, presets), expand(v.spec, presets).query, v.result, catalog)));
   for (const v of views) v.result.domains = domains;

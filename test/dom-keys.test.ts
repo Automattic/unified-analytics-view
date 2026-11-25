@@ -337,7 +337,7 @@ describe('the tooltip chip', () => {
     expect(centred(50, 200, -10, 100)).toBe(-10);
   });
   it('is set closer and kept to one line on an axis, and on the secondary surface in that tone', () => {
-    expect(TIP_CSS).toContain('.uav-tip[data-anchor="axis"] { padding: 1px 5px; white-space: nowrap; }');
+    expect(TIP_CSS).toContain('.uav-tip[data-anchor="axis"] { padding: 0.125em 0.625em; white-space: nowrap; }');
     expect(TIP_CSS).toContain('.uav-tip[data-tone="secondary"] { background: var(--ua-charts-color-tooltip-surface-secondary');
   });
 });

@@ -32,19 +32,19 @@ import type { CircleNode, CustomMark, FitRule, Part, PathNode, Row, SceneNode } 
 export interface Shapes { type: string; keys?: string; planar?: boolean; features: { type: string; id?: string | number; properties?: { name?: string } | null; geometry: { type: string; coordinates: unknown[] } | null }[] }
 
 const BOX = 100;      // the width of the box paths are drawn in. Its height follows from the shapes
-/** px across a map that has room to spare. The painter's part holds to it too. */
-export const MAP = 480;
-/** px the line of the note takes under the map, here and in the painter. */
-export const NOTE = 18;
+/** How far across a map with room to spare is, in em of the view's type. The painter's part holds to it too. */
+export const MAP = 36;
+/** The line the note takes under the map, in em, here and in the painter. */
+export const NOTE = 1.35;
 
 /* Below the room a map needs it is not a smaller map: the view becomes the ranked list of the same query. The note goes
  * with the keys, before that, so it never takes the room of a small map, and is never beside the list, which has every row. */
 export const geoRules = (layout: string): FitRule[] => [
   // The ramp and the key to sizes are the keys to a map's fills and its symbols, so they stay as long as the map: under
   // this each is in its shorter form. The note of what the map could not draw stays with them.
-  { id: 'guides', layout, container: 'view', needs: { inline: 320, block: 170 },
+  { id: 'guides', layout, container: 'view', needs: { inline: 24, block: 12.75 },
     hide: [], set: { ramp: 'strip', 'size-key': 'most' } },
-  { id: 'marks',  layout, container: 'view', needs: { inline: 280, block: 120 },      // regions too small to tell apart
+  { id: 'marks',  layout, container: 'view', needs: { inline: 21, block: 9 },      // regions too small to tell apart
     hide: [], fallback: 'bar-list' },
 ];
 /** The rules of the mark under its own name, `geo`. Under another name they are `geoRules(name)`: a rule names its layout. */
@@ -78,7 +78,7 @@ export function geoMark(shapes: Shapes, { name = 'geo', projection }: GeoOptions
     reads: { x: ['dimension'], color: ['metric'], size: ['metric'] },
     fields: ['paint'],   // the paint of its symbols
 
-    scene({ layers, guides, query, result, catalog }) {
+    scene({ layers, guides, query, result, catalog, formats: F }) {
       const l = layers[0]!, { x: dim, color, size } = l.encode || {}, rows = result.rows;
       if (layers.length > 1) throw new Error('A map draws one "' + l.mark + '" layer, and this view has ' + layers.length + '. Put the metric to fill by on color and the metric for symbols on size, in one layer.');
       if (!isDim(catalog, dim)) throw new Error('A "' + l.mark + '" layer needs the dimension whose values are region keys on x, and this one has ' + JSON.stringify(dim) + ' there. Encode one of the query\'s dimensions on x: ' + ((query.by || []).join(', ') || 'it has none, so add one to query.by') + '.');
@@ -96,7 +96,7 @@ export function geoMark(shapes: Shapes, { name = 'geo', projection }: GeoOptions
       const of = (id: string | null, f: unknown) => (typeof f === 'string' ? (at.get(id)?.[f] as number | null | undefined) : undefined);
       const values = (f: unknown) => drawn.map((s) => of(s.id, f)).filter((v): v is number => v != null);
       // The colour scale runs over the regions drawn, as a grid's runs over its cells: geometry, read from the rows.
-      const fill = isMetric(catalog, color) ? seqScale(values(color), metricOf(catalog, color)!, result) : null;
+      const fill = isMetric(catalog, color) ? seqScale(values(color), metricOf(catalog, color)!, result, F) : null;
       const top = common(result, 'size', [0, Math.max(0, ...values(size)) || 1])[1], id = layerKeys(layers)[0]!, role = roleOf(l);
       // Every shape handed in is drawn, in the shapes' own order, so the map does not change with the ranking. One the
       // result has a row for carries it. Under symbols the regions are the ground they stand on, in the tone of no value.
@@ -105,10 +105,10 @@ export function geoMark(shapes: Shapes, { name = 'geo', projection }: GeoOptions
       if (typeof size === 'string') nodes.push(...drawn.filter((s) => of(s.id, size) != null).map((s): CircleNode => ({ key: id + ':' + s.key + ':symbol', part: 'points', kind: 'circle', pulse: false, x: s.x, y: s.t,
         size: sizeStep(of(s.id, size)!, top), opacity: 0.7, row: s.id!, paint: l.paint || 'series.1', layer: 'data', role })));
       // Rows the map has no shape for: a count of rows, and of nothing in them.
-      const ids = new Set(regions.map((s) => s.id)), note = notShownNote(rows.length - named.filter((r) => ids.has(String(r[dim]))).length, catalog.dimensions[dim]!.label);
+      const ids = new Set(regions.map((s) => s.id)), note = notShownNote(rows.length - named.filter((r) => ids.has(String(r[dim]))).length, catalog.dimensions[dim]!.label, F);
       if (note) nodes.push({ key: 'note:not-shown', part: 'note', kind: 'text', text: note, anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' });
       if (fill) nodes.push(...fill.ramp(regions.some((s) => of(s.id, color) == null)));
-      if (typeof size === 'string') nodes.push(...sizeKey(metricOf(catalog, size)!, top));
+      if (typeof size === 'string') nodes.push(...sizeKey(metricOf(catalog, size)!, top, F));
       const sized = typeof size === 'string', parts: Part[] = ['plot'];
       if (sized) parts.push('points');
       if (note && (guides.ramp || guides.size)) parts.push('note');

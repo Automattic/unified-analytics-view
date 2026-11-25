@@ -59,7 +59,7 @@ function check(records: Record[]): Finding[] {
   }
   // Steady: down the widths, a part that comes back after it has gone.
   for (const r of records.filter((r) => r.width === 'free' && r.plan)) {
-    const shows = new Set(FIT_RULES.filter((f) => f.layout === r.plan!.layout).flatMap((f) => [...(f.show ?? []), ...(f.set?.legend === 'top' ? ['legend-top'] : [])]));
+    const shows = new Set(FIT_RULES.filter((f) => f.layout === r.plan!.layout).flatMap((f) => f.show ?? []));
     const seen = new Set<string>(), gone = new Set<string>();
     for (const w of WIDTHS) {
       const frame = at.get([r.sample, r.theme, r.height, w].join('|'));
@@ -85,10 +85,8 @@ function rules(r: Record, say: (r: Record, check: string, part: string, detail: 
   const has = plan.has ?? plan.parts, scene = { layout: plan.layout, parts: plan.parts, ...(has.includes('track') && { track: 'beside' }), nodes: (plan.drawn ?? [...PARTS]).map((part) => ({ part })) };
   const fit = fitTo(scene, room, FIT_RULES, { marks: plan.marks, fills: () => true });
   if (fit.fallback) return;
-  // A rule that sets the legend at the top hides the full one: `legend-top` takes its place.
-  const top = fit.set.legend === 'top', expected = new Set(fit.parts.filter((p) => !(top && p === 'legend')));
-  const took = (p: string) => [...fit.held].reverse().find((h) => h.rule.hide.includes(p) || (p === 'legend' && h.rule.set?.legend === 'top'))?.rule;
-  const need = (f: FitRule) => `"${f.id}" needs ${[f.needs.inline && f.needs.inline + ' wide', f.needs.block && f.needs.block + ' tall'].filter(Boolean).join(', ')} of the ${f.container}`;
+  const expected = new Set(fit.parts), took = (p: string) => [...fit.held].reverse().find((h) => h.rule.hide.includes(p))?.rule;
+  const need = (f: FitRule) => `"${f.id}" needs ${[f.needs.inline && f.needs.inline + 'em wide', f.needs.block && f.needs.block + 'em tall'].filter(Boolean).join(', ')} of the ${f.container}`;
   for (const p of Object.keys(parts)) { const f = PARTS.has(p) && !expected.has(p) && took(p); if (f) say(r, 'hidden', p, `shown, but ${need(f)} and has ${room[f.container]?.inline ?? '?'}×${room[f.container]?.block ?? 'natural'}`); }
   // Down to the number alone, the view has collapsed, by a rule or by the measured pass, and every other part went with it.
   if (Object.keys(parts).every((p) => p === 'number' || p === 'notice')) return;
@@ -103,7 +101,7 @@ const box = (b?: number[]) => (b ? { inline: b[2]!, block: b[3]! } : null);
 function contracts(): string {
   const by = new Map<string, string[]>();
   for (const f of FIT_RULES) for (const p of f.hide.filter((p) => PARTS.has(p))) {
-    const needs = [f.needs.inline && `${f.needs.inline} wide`, f.needs.block && `${f.needs.block} tall`].filter(Boolean).join(' and ');
+    const needs = [f.needs.inline && `${f.needs.inline}em wide`, f.needs.block && `${f.needs.block}em tall`].filter(Boolean).join(' and ');
     by.set(p, [...(by.get(p) ?? []), `${f.layout}: needs ${needs} of the ${f.container}${f.show?.length ? `; else ${f.show.join(', ')} shows` : ''}`]);
   }
   return [...by].sort().map(([p, lines]) => `- **${p}**\n${lines.map((l) => `  - ${l}`).join('\n')}`).join('\n');

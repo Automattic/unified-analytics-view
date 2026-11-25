@@ -17,7 +17,8 @@ exports[`explain > says which rule hides a part at a room, what it needs and wha
   "band",
   "- | the layout is band | use "share-bar": layers[0] | a dimension on color | change what that layer puts on x, y, color or angle",
   "band | shown | use "share-bar": layers[0] | bar marks | ",
-  "legend | shown as one line | use "share-bar": layers[0].encode.color | rule "legend" needs 170 px wide of the view, and it has 120 × natural height | give the view 170 px wide",
+  "legend | hidden | use "share-bar": layers[0].encode.color | rule "legend" needs 170 px wide of the view, and it has 120 × natural height | give the view 170 px wide",
+  "legend-top | shown in its place | use "share-bar": layers[0].encode.color | rule "legend" needs 170 px wide of the view, and it has 120 × natural height | ",
 ]
 `;
 
@@ -27,7 +28,8 @@ exports[`explain > says which rule hides a part at a room, what it needs and wha
   "- | the layout is radial | use "donut": layers[0] | something is on angle, so it is drawn about a centre | change what that layer puts on x, y, color or angle",
   "radial | shown | use "donut": layers[0] | arc marks | ",
   "hole | shown | query.metrics[0] | the total of "visitors", from the engine | ",
-  "legend | shown as one line | use "donut": layers[0].encode.color | rule "legend" needs 170 px wide of the view, and it has 120 × 100 | give the view 170 px wide",
+  "legend | hidden | use "donut": layers[0].encode.color | rule "legend" needs 170 px wide of the view, and it has 120 × 100 | give the view 170 px wide",
+  "legend-top | shown in its place | use "donut": layers[0].encode.color | rule "legend" needs 170 px wide of the view, and it has 120 × 100 | ",
   "hole | not asked | the room | rule "hole" needs 120 px wide of the plot, and the room says nothing of the plot: give its size as the room's "plot" to ask | ",
 ]
 `;

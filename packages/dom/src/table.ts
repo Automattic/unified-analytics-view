@@ -1,4 +1,4 @@
-import { formatValue, metricOf, type Catalog, type Layer, type Query, type Result, type Row } from '@unified-analytics/core';
+import { formats, metricOf, type Catalog, type Formats, type Layer, type Query, type Result, type Row } from '@unified-analytics/core';
 import { companionLabel, companions, dimName } from './keys.ts';
 
 /* The table alternative: the same result as a table, in place of the marks. The element's own is here, and so are the
@@ -19,14 +19,14 @@ export function tableRow(parent: HTMLElement, cells: Cell[]): HTMLTableRowElemen
 }
 
 /** A field's column label: its metric's, and after it the period before or a companion's own name, as the readout says it. */
-export function fieldLabel(f: string, catalog: Catalog): string {
+export function fieldLabel(f: string, catalog: Catalog, F: Formats = formats()): string {
   const [m, of] = f.split('@');
-  return catalog.metrics[m!]!.label + (of == null ? '' : ', ' + (of === 'previous' ? 'previous period' : companionLabel(f, catalog)));
+  return catalog.metrics[m!]!.label + (of == null ? '' : ', ' + (of === 'previous' ? F.say('previous') : companionLabel(f, catalog)));
 }
 
 /** A field's value in a table: exact, in its own unit. */
-export function valueText(v: Row[string] | undefined, f: string, catalog: Catalog): string {
-  return formatValue(v as number | null, metricOf(catalog, f)!, 'exact');
+export function valueText(v: Row[string] | undefined, f: string, catalog: Catalog, F: Formats = formats()): string {
+  return F.value(v as number | null, metricOf(catalog, f)!, 'exact');
 }
 
 /** A table's caption and nothing else: what a table is rebuilt from. Nothing in it moves, so there is nothing to keep. */
@@ -53,27 +53,27 @@ export function pivot(q: Query, result: Result, fields: string[]): { cols: Row[s
 }
 
 /** The element's table: a row of the table per row of the result, or with two dimensions the pivot. */
-export function paintTable(table: HTMLTableElement, title: string | undefined, q: Query, result: Result, catalog: Catalog, layers: Layer[]): void {
+export function paintTable(table: HTMLTableElement, title: string | undefined, q: Query, result: Result, catalog: Catalog, layers: Layer[], F: Formats = formats(), also: readonly string[] = []): void {
   const by = q.by || [], prev = q.compare === 'previous';
-  // A companion of a metric that a layer encodes has a column after it, under its suffix, or its own label where the catalog has an entry for it, as the readout says it, and in its own unit. With two dimensions the table is a pivot, and has none.
-  const more = (m: string) => (by.length === 2 ? [] : companions(m, result.rows[0], layers));
+  // A companion of a metric that a layer encodes or the spec reads out (`also`) has a column after it, under its suffix, or its own label where the catalog has an entry for it, as the readout says it, and in its own unit. With two dimensions the table is a pivot, and has none.
+  const more = (m: string) => (by.length === 2 ? [] : companions(m, result.rows[0], layers, also));
   const fields = q.metrics.flatMap((m) => [m, ...(prev ? [m + '@previous'] : []), ...more(m)]);
-  const label = (f: string) => fieldLabel(f, catalog), value = (v: Row[string] | undefined, f: string): Cell => [valueText(v, f, catalog), 'td', true];
+  const label = (f: string) => fieldLabel(f, catalog, F), value = (v: Row[string] | undefined, f: string): Cell => [valueText(v, f, catalog, F), 'td', true];
   emptyTable(table, title);
   if (by.length === 2) {
     // Two dimensions: the first down the side, the second across, and each field once more for the whole row.
     const p = pivot(q, result, fields), per = (v: Row[string][]) => v.map((x, i): Cell => (x === undefined ? ['', 'td', true] : value(x, fields[i % fields.length]!)));
     // A bin is named by both its ends, as the readout names it.
-    const dim = (i: number, v: Row[string]) => { const d = by[i]!; return dimName((result.totalsBy?.[d] ?? result.rows).find((r) => r[d] === v) ?? { [d]: v }, d, catalog); };
+    const dim = (i: number, v: Row[string]) => { const d = by[i]!; return dimName((result.totalsBy?.[d] ?? result.rows).find((r) => r[d] === v) ?? { [d]: v }, d, catalog, F); };
     tableRow(table.createTHead(), [[catalog.dimensions[by[0]!]!.label, 'th'], ...p.cols.flatMap((c) => fields.map((f): Cell => [dim(1, c) + (fields.length > 1 ? ', ' + label(f) : ''), 'th', true])), ...fields.map((f): Cell => [label(f), 'th', true])]);
     const tbody = table.createTBody();
     for (const r of p.rows) tableRow(tbody, [[dim(0, r.key), 'th'], ...per(r.cells)]);
-    tableRow(table.createTFoot(), [['Total', 'th'], ...per(p.foot)]);
+    tableRow(table.createTFoot(), [[F.say('total'), 'th'], ...per(p.foot)]);
     return;
   }
   tableRow(table.createTHead(), [...by.map((d): Cell => [catalog.dimensions[d]!.label, 'th']), ...fields.map((f): Cell => [label(f), 'th', true])]);
   const body = table.createTBody(), totals = fields.map((f) => value(result.totals[f], f));
-  for (const r of result.rows) tableRow(body, [...by.map((d): Cell => [dimName(r, d, catalog), 'th']), ...fields.map((f) => value(r[f], f))]);
+  for (const r of result.rows) tableRow(body, [...by.map((d): Cell => [dimName(r, d, catalog, F), 'th']), ...fields.map((f) => value(r[f], f))]);
   if (!by.length) tableRow(body, totals);
-  else tableRow(table.createTFoot(), [['Total', 'th'], ...by.slice(1).map((): Cell => ['', 'td']), ...totals]);
+  else tableRow(table.createTFoot(), [[F.say('total'), 'th'], ...by.slice(1).map((): Cell => ['', 'td']), ...totals]);
 }

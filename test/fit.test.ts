@@ -27,31 +27,32 @@ describe('applies', () => {
   });
 });
 
-/* A need is written in px at the default type, and a need of the view follows the type: a surface says the size of
- * its label face with the room, and the element asks the same in em (test/dom-compile.test.ts). */
+/* A need is in em, the size of the view's type, so it follows that type: a surface says the size of its label face
+ * with the room, and the element asks the same in em (test/dom-compile.test.ts). */
 describe('a need follows the type', () => {
-  const axes = rule('cartesian', 'axes'), secondary = rule('cartesian', 'secondary');
-  it('is the px its rule says at the default type, and where no size is given', () => {
-    for (const r of FIT_RULES) { expect(needAt(r), r.layout + ' ' + r.id).toEqual({ inline: r.needs.inline, block: r.needs.block }); expect(needAt(r, EM)).toEqual(needAt(r)); }
+  const axes = rule('cartesian', 'axes'), secondary = rule('cartesian', 'secondary'), near = (need: FitRule['needs'], px: [number, number]) => { expect(need.inline).toBeCloseTo(px[0], 6); expect(need.block).toBeCloseTo(px[1], 6); };
+  it('is in em, and is so many px where a surface says no size: on a page of 16 px type', () => {
+    expect([axes.needs, EM]).toEqual([{ inline: 21, block: 9 }, 16 * 5 / 6]);
+    near(needAt(axes), [280, 120]);
     expect(applies(axes, { view: { inline: 280, block: 120 }, em: EM })).toBe(false);
   });
-  it('of the view grows and shrinks with it, whole', () => {
-    expect(needAt(axes, 2 * EM)).toEqual({ inline: 560, block: 240 });
-    expect(applies(axes, { view: { inline: 400, block: 300 }, em: 20 })).toBe(true);     // 280 at 13.33 is 420 at 20
-    expect(applies(axes, { view: { inline: 421, block: 300 }, em: 20 })).toBe(false);
-    expect(applies(axes, { view: { inline: 240, block: 110 }, em: 11 })).toBe(false);    // and 231 by 99 at 11
+  it('grows and shrinks with it, whole, on the view and on its plot alike', () => {
+    near(needAt(axes, 20), [420, 180]); near(needAt(secondary, 20), [270, 135]);
+    expect(applies(axes, { view: { inline: 400, block: 300 }, em: 20 })).toBe(true);
+    expect(applies(axes, { view: { inline: 420, block: 300 }, em: 20 })).toBe(false);
+    expect(applies(axes, { view: { inline: 240, block: 110 }, em: 11 })).toBe(false);    // 231 by 99 at 11
+    expect(applies(secondary, { view: { inline: 700 }, plot: { inline: 180, block: 90 }, em: 20 })).toBe(true);
   });
-  it('of the plot is of its own box, and stays', () => {
-    expect(needAt(secondary, 2 * EM)).toEqual(secondary.needs);
-    expect(applies(secondary, { view: { inline: 700 }, plot: { inline: 180, block: 90 }, em: 20 })).toBe(false);
+  it('is read half a px under, as a compiled query reads it, so a room of exactly the need fits whatever a float makes of it', () => {
+    expect([279.4, 279.6, 280].map((inline) => applies(axes, { view: { inline } }))).toEqual([true, false, false]);
   });
   it('is what fitTo reads, and what explain says the room is short of', () => {
     const { ratio: scene, plan, result } = run(trend, 400), marks = plan.layers.map((l) => l.mark);
     expect(fitTo(scene, { view: { inline: 400 } }, FIT_RULES, { marks }).parts).toContain('x-axis');
     expect(fitTo(scene, { view: { inline: 400 }, em: 20 }, FIT_RULES, { marks }).parts).not.toContain('x-axis');
     const because = explain(trend, result, catalog, { inline: 400, em: 20 }).entries.find((b) => b.rule === 'axes')!;
-    expect(because.why).toContain('needs 420.1 px wide');
-    expect(because.lever).toBe('give the view 420.1 px wide');
+    expect(because.why).toContain('needs 420 px wide');
+    expect(because.lever).toBe('give the view 420 px wide');
   });
 });
 
@@ -59,7 +60,8 @@ describe('fitTo: a view at a room, read off its rules', () => {
   // A scene of four parts, with the number and a second form of the legend there to be shown, and rules of its own.
   const scene = { layout: 'toy', parts: ['plot', 'axis', 'legend'], nodes: ['number', 'plot', 'axis', 'legend', 'legend-top'].map((part) => ({ part })) };
   const R = (id: string, needs: FitRule['needs'], more: Partial<FitRule> = {}): FitRule => ({ id, layout: 'toy', container: 'view', needs, hide: [], ...more });
-  const at = (inline: number, rules: FitRule[], view = {}, plot?: { inline: number; block: number } | null) => fitTo(scene, { view: { inline }, ...(plot !== undefined && { plot }) }, rules, view);
+  // An em of one px, so that a toy rule's need reads as the px its room is given in.
+  const at = (inline: number, rules: FitRule[], view = {}, plot?: { inline: number; block: number } | null) => fitTo(scene, { view: { inline }, ...(plot !== undefined && { plot }), em: 1 }, rules, view);
 
   it('every rule short of its need holds, each on its own: it hides, shows in its place and sets', () => {
     const rules = [R('axis', { inline: 300 }, { hide: ['axis', 'grid'], set: { arrange: 'side' } }), R('legend', { inline: 200 }, { hide: ['legend'], show: ['legend-top'] })];
@@ -83,7 +85,7 @@ describe('fitTo: a view at a room, read off its rules', () => {
     const forLine = R('ends', { inline: 300 }, { hide: ['legend'], mark: 'line' }), forTrack = R('track', { inline: 300 }, { hide: ['plot'], has: 'track' }), forLegend = R('key', { inline: 300 }, { hide: ['axis'], has: 'legend' });
     expect([at(200, [forLine], { marks: ['bar'] }).parts, at(200, [forLine], { marks: ['bar', 'line'] }).parts]).toEqual([['plot', 'axis', 'legend'], ['plot', 'axis']]);
     expect(at(200, [forTrack, forLegend]).parts).toEqual(['plot', 'legend']);
-    expect(fitTo({ ...scene, track: 'beside' }, { view: { inline: 200 } }, [forTrack]).parts).toEqual(['axis', 'legend']);
+    expect(fitTo({ ...scene, track: 'beside' }, { view: { inline: 200 }, em: 1 }, [forTrack]).parts).toEqual(['axis', 'legend']);
     expect([hasOf(scene), hasOf({ ...scene, track: 'beside' })]).toEqual([['plot', 'axis', 'legend'], ['plot', 'axis', 'legend', 'track']]);
   });
   it('a rule on the plot is asked of a plot that was measured, holds where there is none, and is passed over where nobody said', () => {
@@ -108,16 +110,26 @@ describe('the rule set', () => {
     const ids = FIT_RULES.map((r) => r.layout + '/' + r.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
+  it('has one ladder for a legend, in a list, a band and a circle: the least of its marks is what differs', () => {
+    const ladder = (layout: string) => ['legend', 'legend-top'].map((id) => { const { layout: _, needs, ...what } = rule(layout, id); return [what, needs.inline]; });
+    expect(ladder('band')).toEqual(ladder('rows'));
+    expect(ladder('radial')).toEqual(ladder('rows'));
+    // The one line goes where the least of the marks has no room over it: two rows, a bar, the least circle.
+    expect(['rows', 'band', 'radial'].map((l) => +rule(l, 'legend-top').needs.block!.toFixed(4))).toEqual([6.3, 3.6, 6.6]);
+    // A band's bar goes at that same height, so a band is never drawn in one paint.
+    expect(rule('band', 'marks').needs.block).toBe(rule('band', 'legend-top').needs.block);
+    expect(shown(run(specs.mix!, 346, 40)).parts).toEqual(['number']);
+  });
   it('is the container\'s to replace', () => {
     const swap = (id: string, needs: FitRule['needs']) => ({ ...CONTAINER_RULES, fit: FIT_RULES.map((r) => (r.id === id ? { ...r, needs } : r)) });
     const at = (rules = CONTAINER_RULES, w = 250, h: number | null = null, sc: (typeof scenarios)[number] = 'typical') => shown(run(trend, w, h, sc, { rules }));
     expect(at().parts).toEqual(['number', 'plot']);
-    expect(at({ ...CONTAINER_RULES, fit: FIT_RULES.map((r) => (r.layout === 'cartesian' && r.id === 'axes' ? { ...r, needs: { inline: 200 } } : r)) }).parts).toEqual(['y-axis', 'plot', 'x-axis']);
+    expect(at({ ...CONTAINER_RULES, fit: FIT_RULES.map((r) => (r.layout === 'cartesian' && r.id === 'axes' ? { ...r, needs: { inline: 15 } } : r)) }).parts).toEqual(['y-axis', 'plot', 'x-axis']);
     // A part with no rule needs no room, so it is never given up.
     expect(at({ ...CONTAINER_RULES, fit: [] }, 20, 10)).toEqual({ parts: ['y-axis', 'plot', 'x-axis'], set: {}, hidden: [], rules: [] });
     // A context that moves a rule moves what it takes: the middle date, and the room a notice has.
-    expect([at(CONTAINER_RULES, 346).hidden, at(swap('mid-tick', { inline: 300 }), 346).hidden]).toEqual([['x-tick.mid'], []]);
-    expect([at(CONTAINER_RULES, 346, 30, 'empty').parts, at(swap('notice', { inline: 150, block: 20 }), 346, 30, 'empty').parts]).toEqual([['number'], ['notice']]);
+    expect([at(CONTAINER_RULES, 346).hidden, at(swap('mid-tick', { inline: 22.5 }), 346).hidden]).toEqual([['x-tick.mid'], []]);
+    expect([at(CONTAINER_RULES, 346, 30, 'empty').parts, at(swap('notice', { inline: 11.25, block: 1.5 }), 346, 30, 'empty').parts]).toEqual([['number'], ['notice']]);
   });
 });
 

@@ -131,7 +131,7 @@ describe('the dot-matrix face', () => {
   // What plays once is taken off when it is over, so a part a resize brings back does not play again.
   it('draws a plot\'s lines in from the start when the plot first shows, and only then', () => {
     expect(cartesian.css).toContain('@media (prefers-reduced-motion: no-preference) { .uav-plot svg[data-draw] { animation: uav-draw var(--ua-charts-motion-duration-draw, 1400ms) linear both; } }');
-    expect(cartesian.css).toContain('@keyframes uav-draw { from { clip-path: inset(-8px 100% -8px -8px); } to { clip-path: inset(-8px); } }');
+    expect(cartesian.css).toContain('@keyframes uav-draw { from { clip-path: inset(-0.6em 100% -0.6em -0.6em); } to { clip-path: inset(-0.6em); } }');
     const off: string[] = [], el = { removeAttribute: (a: string) => void off.push(a) } as unknown as Element;
     // With no frames to play in, the marks come straight off.
     once(el, ['data-roll', 'data-was']);

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { CONTAINER_RULES, EM, FIT_RULES, type FitRule, type Spec } from '@unified-analytics/core';
+import { CONTAINER_RULES, FIT_RULES, type FitRule, type Spec } from '@unified-analytics/core';
 import { UaView, check as checked, compileFitRules, defineUaView } from '@unified-analytics/dom';
 import { catalog, moreSamples, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
 import { GEO_RULES } from '@unified-analytics/geo';
@@ -11,25 +11,25 @@ import { BASE_CSS, FALLBACK_CSS, check, rulesOver } from '../packages/dom/src/vi
 const only = (layout: string, id: string) => FIT_RULES.filter((r) => r.layout === layout && r.id === id);
 
 describe('compileFitRules', () => {
-  // The view is set in its label face and is the container its rules ask, so an em in a query there is the size of the
-  // view's type: at the default it is the px the rule says, and core's needAt() is the same reading with no browser.
-  it('asks a need of the view in em, so that it follows the type, and one of the plot in px', () => {
+  // The view is set in its label face and its plot inherits that, so an em in a query on either is the size of the
+  // view's type. Core's fitTo() is the same reading with no browser.
+  it('asks every need in em, of the view and of its plot, so that it follows the type', () => {
     for (const r of FIT_RULES) for (const [axis, px] of Object.entries(r.needs)) {
       const css = compileFitRules([r]);
-      expect(css, r.layout + ' ' + r.id).toContain('@container uav-' + r.container + ' (' + axis + '-size < ' + (r.container === 'view' ? 'calc(' + px + 'em / ' + EM + ' - 0.5px)' : (px - 0.5) + 'px') + ') {');
+      expect(css, r.layout + ' ' + r.id).toContain('@container uav-' + r.container + ' (' + axis + '-size < ' + 'calc(' + +px.toFixed(4) + 'em - 0.5px)) {');
     }
   });
   it('writes one @container block per need, never an "or" across both axes', () => {
     const css = compileFitRules(only('cartesian', 'axes'));
     expect(css).toBe([
       '/* cartesian axes */',
-      '@container uav-view (inline-size < calc(280em / 13.33 - 0.5px)) {',
+      '@container uav-view (inline-size < calc(21em - 0.5px)) {',
       '  .uav[data-layout="cartesian"] :is(.uav-x-axis, .uav-y-axis, .uav-y-axis-2, .uav-grid, [data-axis="2"], .uav-size) { display: none; }',
       '  .uav[data-layout="cartesian"] .uav-number { display: block; }',
       '  .uav[data-layout="cartesian"] { --uav-arrange: side; --uav-dots: one; }',
       '}',
       '/* cartesian axes */',
-      '@container uav-view (block-size < calc(120em / 13.33 - 0.5px)) {',
+      '@container uav-view (block-size < calc(9em - 0.5px)) {',
       '  .uav[data-layout="cartesian"] :is(.uav-x-axis, .uav-y-axis, .uav-y-axis-2, .uav-grid, [data-axis="2"], .uav-size) { display: none; }',
       '  .uav[data-layout="cartesian"] .uav-number { display: block; }',
       '  .uav[data-layout="cartesian"] { --uav-arrange: side; --uav-dots: one; }',
@@ -40,24 +40,24 @@ describe('compileFitRules', () => {
 
   it('maps roles to data-role, on the plot container', () => {
     expect(compileFitRules(only('cartesian', 'secondary'))).toContain(
-      '@container uav-plot (block-size < 89.5px) {\n  .uav[data-layout="cartesian"] :is([data-role="comparison"], [data-role="reference"], [data-role="context"]) { display: none; }\n}');
+      '@container uav-plot (block-size < calc(6.75em - 0.5px)) {\n  .uav[data-layout="cartesian"] :is([data-role="comparison"], [data-role="reference"], [data-role="context"]) { display: none; }\n}');
   });
 
   it('maps the middle tick to the ranked x label, and a rule to a bare figure', () => {
     expect(compileFitRules(only('cartesian', 'mid-tick'))).toBe(
-      '/* cartesian mid-tick */\n@container uav-view (inline-size < calc(380em / 13.33 - 0.5px)) {\n  .uav[data-layout="cartesian"] .uav-x-axis [data-rank] { display: none; }\n}');
+      '/* cartesian mid-tick */\n@container uav-view (inline-size < calc(28.5em - 0.5px)) {\n  .uav[data-layout="cartesian"] .uav-x-axis [data-rank] { display: none; }\n}');
   });
 
-  it('writes a set with nothing hidden, as the band legend has', () => {
-    expect(compileFitRules(only('band', 'legend'))).toBe(
-      '/* band legend */\n@container uav-view (inline-size < calc(170em / 13.33 - 0.5px)) {\n  .uav[data-layout="band"] { --uav-legend: top; }\n}');
+  it('writes a set with nothing hidden, as the key to sizes has', () => {
+    expect(compileFitRules(only('cartesian', 'size'))).toBe(['inline-size < calc(24em', 'block-size < calc(12em'].map((need) =>
+      '/* cartesian size */\n@container uav-view (' + need + ' - 0.5px)) {\n  .uav[data-layout="cartesian"] { --uav-size-key: most; }\n}').join('\n'));
   });
 
   it('adds what a layout says changes with a rule, under the same condition', () => {
     const css = compileFitRules(only('cartesian', 'marks'), { cartesian: { marks: { '': 'grid-template: none;', '.uav-body': 'display: none;' } } });
     const fig = '.uav[data-layout="cartesian"]';
     expect(css.split('\n').slice(0, 6)).toEqual([
-      '/* cartesian marks */', '@container uav-view (inline-size < calc(152em / 13.33 - 0.5px)) {',
+      '/* cartesian marks */', '@container uav-view (inline-size < calc(11.4em - 0.5px)) {',
       '  ' + fig + ' :is(.uav-plot, .uav-points, .uav-point-labels, .uav-x-axis, .uav-y-axis, .uav-y-axis-2, .uav-labels, .uav-legend, .uav-ramp, .uav-size, .uav-unit-key) { display: none; }', '  ' + fig + ' .uav-number { display: block; }',
       '  ' + fig + ' { grid-template: none; }', '  ' + fig + ' .uav-body { display: none; }',
     ]);
@@ -85,7 +85,7 @@ describe('compileFitRules', () => {
   it('refuses a name that would escape its selector, and says what a name is', () => {
     const bad: FitRule = { id: 'x', layout: 'cartesian', container: 'view', needs: { inline: 100 }, hide: ['plot } :host { display: none'] };
     expect(() => compileFitRules([bad])).toThrow(/not a name\. Use letters, digits/);
-    expect(() => compileFitRules([{ ...bad, hide: [], needs: { inline: '1px) or (x' as unknown as number } }])).toThrow(/as a number of px/);
+    expect(() => compileFitRules([{ ...bad, hide: [], needs: { inline: '1px) or (x' as unknown as number } }])).toThrow(/as a number of em/);
   });
 
   it('says how to write a list given as a bare value, and a rule with no needs', () => {

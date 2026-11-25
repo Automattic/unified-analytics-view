@@ -1,4 +1,4 @@
-import { BAND_BAR, PLOT_TOP, X_AXIS_BLOCK } from './sizes.ts';
+import { BAND_BAR, EM, PLOT_TOP, X_AXIS_BLOCK } from './sizes.ts';
 import type { Layout } from './types.ts';
 
 /* Fit rules: one declaration per part. Each names a container, the room the part
@@ -9,17 +9,18 @@ export interface FitRule {
   id: string;
   layout: Layout;
   container: 'view' | 'plot';
-  /** In px at the default type (`EM`). The part stays while the container has at least this in each. A need of the
-   * view is of what is set in its type, and follows it (`needAt`); one of the plot is of the plot's own box. */
+  /** In em: the size of the view's type, which is its label face. The part stays while the container has at least
+   * this in each. So a need follows the type, on the view and on its plot alike. */
   needs: { inline?: number; block?: number };
   /** Parts or roles given up otherwise, and `axis:2` for the marks drawn on the second y axis. */
   hide: string[];
   /** Parts that appear in compensation, under the same condition. */
   show?: string[];
   /** Switches under the same condition, each a custom property on the figure that a layout's own rules answer to.
-   * `arrange: side` sets the number beside a bare plot, and `legend: top` a legend as its one line. A key's shorter form
-   * is one too: `ramp: strip`, `size-key: most`. So is a drawing without an encoding whose key the rule takes:
-   * `dots: one` for dots of one size, `split: plain` for series in one paint. */
+   * `arrange: side` sets the number beside a bare plot. A key's shorter form is one too, where it is the same part cut
+   * down: `ramp: strip`, `size-key: most`. So is a drawing without an encoding whose key the rule takes:
+   * `dots: one` for dots of one size, `split: plain` for series in one paint. A legend's one line is no switch: it is a
+   * part of its own, which a rule shows (`show`). */
   set?: Record<string, string>;
   /** A preset the view becomes under the same condition: the same query, drawn another way. It takes the place of the
    * whole view, so `hide` and `show` have nothing left to act on. `viewAt()` plans again with it. A browser container
@@ -39,8 +40,9 @@ export interface FitRule {
 /** The room a container has. A view that takes its natural height has no `block`. */
 export interface Room { inline: number; block?: number | null }
 
-/** The size of the type the needs below are written at, in px: the label face, where no theme sets it. */
-export const EM = 13.33;
+/** Half a px, which a need is read under: a container laid out at exactly its need measures a hair under it at a
+ * fractional zoom, and its part would go at the very size the rule says it fits. A compiled query asks the same. */
+export const SLACK = 0.5;
 
 /* The defaults. A context passes its containers a different set, as `rules.fit`.
  * What these cannot say is a surface's to measure: the width of the number, the width of a row's value and of each
@@ -48,36 +50,48 @@ export const EM = 13.33;
  * A rule names every part it takes, one that stands inside another among them: a reader with no browser has no
  * nesting to go by, and test/fit.test.ts holds a view to be its number alone wherever a rule takes its marks. */
 /* What is picked (docs/focus-plan.md, step 8). Every need in the rules below is one of these, or a sum of them and of
- * the gutters a surface builds to (sizes.ts). Each was set by eye, for the part it is of, at the default type sizes,
- * and is in px there. They are what a need has yet to be worked out from, and they are said here once, so that what is
+ * the gutters a surface builds to (sizes.ts). Each was set by eye, for the part it is of, and is in em, the size of
+ * the view's type. They are what a need has yet to be worked out from, and they are said here once, so that what is
  * picked can be counted. */
 const LEAST = {
   /** A plot with its axes; with a legend under it; with a label on each point; with the whole key to its dots' sizes. */
-  plot: { inline: 280, block: 120 }, plotLegend: { inline: 320, block: 180 }, plotPointLabels: { inline: 340, block: 180 }, plotSizeKey: { inline: 320, block: 160 },
+  plot: { inline: 21, block: 9 }, plotLegend: { inline: 24, block: 13.5 }, plotPointLabels: { inline: 25.5, block: 13.5 }, plotSizeKey: { inline: 24, block: 12 },
   /** A plot wide enough for the date in the middle of its x axis. */
-  plotMidTick: 380,
+  plotMidTick: 28.5,
   /** A plot's own box, in which a comparison, a reference and a fill still read. */
-  secondary: { inline: 180, block: 90 },
+  secondary: { inline: 13.5, block: 6.75 },
   /** A plot with no axes; the number that stands beside it; the gap between the two. */
-  bare: { inline: 64, block: 46 }, number: 76, gap: 12,
+  bare: { inline: 4.8, block: 3.45 }, number: 5.7, gap: 0.9,
   /** A row's label; a row; the gap between two rows; a track read by where its marks are, beside its label. */
-  label: 90, row: 28, rowGap: 4, track: 70,
+  label: 6.75, row: 2.1, rowGap: 0.3, track: 5.25,
   /** A legend whole, across; its one line, tall; a list whose rows are divided, with its legend whole under it. */
-  legend: 170, legendLine: 24, dividedRows: 150,
+  legend: 12.75, legendLine: 1.8, dividedRows: 11.25,
   /** A band's bar across. */
-  band: 110,
+  band: 8.25,
   /** A circle; one with a name for each slice round its rim; one with the number in its hole, across its own box. */
-  circle: { inline: 72, block: 64 }, rim: { inline: 230, block: 120 }, hole: 120,
+  circle: { inline: 5.4, block: 4.8 }, rim: { inline: 17.25, block: 9 }, hole: 9,
   /** A grid; one with its ramp and its key to sizes whole. */
-  grid: { inline: 150, block: 90 }, gridKeys: { inline: 240, block: 150 },
+  grid: { inline: 11.25, block: 6.75 }, gridKeys: { inline: 18, block: 11.25 },
   /** A notice. */
-  notice: { inline: 150, block: 40 },
+  notice: { inline: 11.25, block: 3 },
   /** Counted glyphs, across, and each form of them, tall: a stack, a run of rows, a grid of a hundred with its legend, one under the number, seats. */
-  glyphs: 280, stack: 160, run: 120, hundred: 180, hundredAlone: 220, seats: 200,
+  glyphs: 21, stack: 12, run: 9, hundred: 13.5, hundredAlone: 16.5, seats: 15,
 };
 /** Every part of a plot's body, and of a list's: what a rule takes where the view is its number alone. */
 const PLOT = ['plot', 'points', 'point-labels', 'x-axis', 'y-axis', 'y-axis-2', 'labels', 'legend', 'ramp', 'size', 'unit-key'];
 const ROWS = ['rows', 'track', 'columns', 'legend', 'legend-top', 'unit-key'];
+/** A legend's ladder, said once, for the layouts whose legend has nothing but its own one line to give way to: a list
+ * divided into series, a band and a circle. It is whole while the view has its width, and its height where a rule can
+ * say one (`whole`): a list's wraps, and the height it is given is picked. A band's and a circle's is a line for each
+ * entry, which depends on the data and is the surface's to see to. Under that it is its one line. And where the view
+ * has no room for the least of its marks (`marks`, tall) with that line under them, the line goes and the colours go
+ * with it. What differs from one layout to the next is the least of its marks. */
+const legend = (layout: Layout, marks: number, whole?: number): FitRule[] => [
+  { id: 'legend',     layout, container: 'view', needs: { inline: LEAST.legend, ...(whole != null && { block: whole }) },
+    hide: ['legend'], show: ['legend-top'] },
+  { id: 'legend-top', layout, container: 'view', needs: { block: marks + LEAST.legendLine },
+    hide: ['legend', 'legend-top'], set: { split: 'plain' } },
+];
 export const FIT_RULES: FitRule[] = [
   // A plot with axes. The second y axis is the key to what is measured in a second unit, which is read against nothing
   // else: it stays as long as the first does, and what is drawn on it goes when it goes. A bare plot is of one unit.
@@ -100,29 +114,26 @@ export const FIT_RULES: FitRule[] = [
   { id: 'points',    layout: 'cartesian', has: 'points', container: 'view', needs: LEAST.plot,   // a plot of points has no sparkline form: under the axes' need it is the number alone
     hide: PLOT, show: ['number'] },
   { id: 'mid-tick',  layout: 'cartesian', container: 'view', needs: { inline: LEAST.plotMidTick }, hide: ['x-tick.mid'] },
-  // A short plot keeps its unranked y ticks: 120 px for the plot, 10 above it and 22 for the x axis.
+  // A short plot keeps its unranked y ticks: 9 em for the plot, 0.75 above it and 1.65 for the x axis.
   // ponytail: it asks the view, since the y axis stands outside the plot's container. Wrong when the number is above
   // the plot. A rule on the plot, and the y axis inside that container, would say it properly.
   { id: 'y-ticks',   layout: 'cartesian', container: 'view', needs: { block: LEAST.plot.block + PLOT_TOP + X_AXIS_BLOCK }, hide: ['y-tick.ranked'] },
   { id: 'secondary', layout: 'cartesian', container: 'plot', needs: LEAST.secondary,       // comparison and reference layers stay legible above this
     hide: ['role:comparison', 'role:reference', 'role:context'] },
-  { id: 'marks',     layout: 'cartesian', container: 'view', needs: { inline: LEAST.number + LEAST.gap + LEAST.bare.inline, block: LEAST.bare.block },       // 76 for the number, a 12 px gap and a 64 px bare plot
+  { id: 'marks',     layout: 'cartesian', container: 'view', needs: { inline: LEAST.number + LEAST.gap + LEAST.bare.inline, block: LEAST.bare.block },       // 5.7 em for the number, a gap of 0.9 and a bare plot of 4.8
     hide: PLOT, show: ['number'] },
-  { id: 'legend',     layout: 'rows',     container: 'view', needs: { inline: LEAST.legend, block: LEAST.dividedRows },      // a divided row's legend becomes one line, as the band's does, and where the rows have under three of their own
-    hide: ['legend'], show: ['legend-top'] },
-  { id: 'legend-top', layout: 'rows',     container: 'view', needs: { block: 2 * LEAST.row + LEAST.rowGap + LEAST.legendLine },                    // and that line goes where it would leave no two rows, and the series' colours with it
-    hide: ['legend', 'legend-top'], set: { split: 'plain' } },
+  // A divided row's legend is whole while the rows have three of their own over it, and its one line goes where it would leave no two rows.
+  ...legend('rows', 2 * LEAST.row + LEAST.rowGap, LEAST.dividedRows),
   // After the legend's rules, as every layout's is: where two rules say otherwise of a part the later one wins, and the one that takes the marks has the last word.
   { id: 'marks',     layout: 'rows',      container: 'view', needs: { inline: LEAST.label, block: LEAST.row },        // the label, and one row: a surface shows whole rows, so a box shorter than one shows none. The value's room is measured, and each ranked column's
     hide: ROWS, show: ['number'] },
-  { id: 'legend',    layout: 'band',      container: 'view', needs: { inline: LEAST.legend },                  // the full legend becomes the largest segment's label
-    hide: [], set: { legend: 'top' } },
-  { id: 'marks',     layout: 'band',      container: 'view', needs: { inline: LEAST.band, block: BAND_BAR + LEAST.legendLine },       // the bar and the one-line legend, 24 px each
+  // A band's one line names its largest segment. Its last step never shows: the rule after it takes the bar at the
+  // height that step would leave it with no key, so a band is not drawn in one paint.
+  ...legend('band', BAND_BAR),
+  { id: 'marks',     layout: 'band',      container: 'view', needs: { inline: LEAST.band, block: BAND_BAR + LEAST.legendLine },       // the bar and the one-line legend, 1.8 em each
     hide: ['band', 'legend', 'legend-top', 'unit-key'], show: ['number'] },
-  { id: 'legend',     layout: 'radial', container: 'view', needs: { inline: LEAST.legend },                    // as the band's
-    hide: [], set: { legend: 'top' } },
-  { id: 'legend-top', layout: 'radial', container: 'view', needs: { block: LEAST.circle.block + LEAST.legendLine },                      // the least circle, and one line under it. Under that the legend goes, and the segments' colours with it
-    hide: ['legend', 'legend-top'], set: { split: 'plain' } },
+  // A circle's one line stays while the least circle has room over it. Under that the segments are in one paint.
+  ...legend('radial', LEAST.circle.block),
   // Labels round the rim: the circle, and a label's width to either side of it. They are the key to which slice is
   // which, so under that they thin to the ones with no rank, about four, and stay as long as the circle does.
   { id: 'rim',        layout: 'radial', container: 'view', needs: LEAST.rim,
@@ -139,7 +150,7 @@ export const FIT_RULES: FitRule[] = [
     hide: ['plot', 'point-labels', 'x-axis', 'y-axis', 'ramp', 'size'], show: ['number'] },
   { id: 'notice',    layout: 'notice',    container: 'view', needs: LEAST.notice,
     hide: ['notice'], show: ['number'] },
-  { id: 'track',     layout: 'rows',      has: 'track', container: 'view', needs: { inline: LEAST.label + LEAST.track },    // a track beside its label: the label's 90 px and 70 to read a mark's place in. The value's room is measured
+  { id: 'track',     layout: 'rows',      has: 'track', container: 'view', needs: { inline: LEAST.label + LEAST.track },    // a track beside its label: the label's 6.75 em and 5.25 to read a mark's place in. The value's room is measured
     hide: ROWS, show: ['number'] },
   /* The `unit` mark, in each layout it draws in. Glyphs are counted, so under the room that takes they are not drawn
    * smaller: the view becomes the preset of the same query that needs less, whole, and that one steps down to the
@@ -149,7 +160,7 @@ export const FIT_RULES: FitRule[] = [
    * asked. A grid with no dimension has no share bar to become, so the rule after it gives it the gauge, which reads
    * the same metric against the same range. A grid divided by a dimension has no line: its cells are hundredths.
    * ponytail: a form whose glyph is worth one has no line, and gives way at the height one would need all the same.
-   * A rule cannot ask what a view shows. Let one name a part it is for (`has`), if those 40 px are ever missed. */
+   * A rule cannot ask what a view shows. Let one name a part it is for (`has`), if those 3 em are ever missed. */
   { id: 'unit',       layout: 'cartesian', mark: 'unit', container: 'view', needs: { inline: LEAST.glyphs, block: LEAST.stack },                           // a stack, where a plot has its axes, and the line
     hide: [], fallback: 'bar' },
   { id: 'unit',       layout: 'rows',      mark: 'unit', container: 'view', needs: { inline: LEAST.glyphs, block: LEAST.run },                           // a run of ten beside its label and its value: three rows and the line
@@ -167,13 +178,9 @@ export function ruleFor(rules: FitRule[], layout: Layout, id: string): FitRule |
   return rules.find((r) => r.layout === layout && r.id === id);
 }
 
-/** What a rule needs where the type is `em` px, in px. A need of the view grows and shrinks with the type, whole: a
- * view set in type half as large again needs half as much room again. A need of the plot is of its own box, where what
- * is drawn is sized by the box and no type is set, and stays as written.
- * ponytail: a need scales whole, so a part with no type in it (a bare plot, a circle) gives way a little early under
- * larger type. Write a need as its type and its px apart if that room is ever missed. */
+/** What a rule needs in px, where an em is `em` px: what a surface that measures in px holds its room to. */
 export function needAt(rule: FitRule, em: number = EM): FitRule['needs'] {
-  const k = rule.container === 'view' ? em / EM : 1, at = (px?: number) => (px == null ? undefined : px * k);
+  const at = (n?: number) => (n == null ? undefined : n * em);
   return { inline: at(rule.needs.inline), block: at(rule.needs.block) };
 }
 
@@ -181,13 +188,13 @@ export function needAt(rule: FitRule, em: number = EM): FitRule['needs'] {
  * A size the container does not have never matches, as an unknown container query never does. */
 export function applies(rule: FitRule, room: Rooms): boolean {
   const c = room[rule.container], need = needAt(rule, room.em);
-  const short = (need?: number, has?: number | null) => need != null && has != null && has < need;
+  const short = (need?: number, has?: number | null) => need != null && has != null && has < need - SLACK;
   return !!c && (short(need.inline, c.inline) || short(need.block, c.block));
 }
 
 /** The rooms a view's rules ask about: its own, and its plot's. A plot nobody has measured is left out, and no rule on
- * it is asked. `null` says there is no plot to measure, and what sits in one has gone with it. `em` is the size of the
- * view's type in px, its label face, where that is not `EM`. */
+ * it is asked. `null` says there is no plot to measure, and what sits in one has gone with it. A room is in px, and
+ * `em` is the size of the view's type in px, its label face, where that is not `EM`. */
 export interface Rooms { view: Room; plot?: Room | null; em?: number }
 
 /** What the fit rules make of a view at a room. */

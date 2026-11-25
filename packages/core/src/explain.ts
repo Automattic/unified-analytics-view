@@ -1,5 +1,5 @@
 import { CONTAINER_RULES } from './container.ts';
-import { fitTo, needAt, type FitRule, type Room } from './fit.ts';
+import { SLACK, fitTo, needAt, type FitRule, type Room } from './fit.ts';
 import { GUIDE_CHANNEL } from './guides.ts';
 import { customMarks } from './marks.ts';
 import { PRESETS, expand, fills, usesPrevious } from './presets.ts';
@@ -39,7 +39,7 @@ export interface Explanation { layout: Layout; entries: Because[] }
 export interface ExplainRoom { inline: number; block?: number | null; plot?: Room | null; em?: number }
 
 /** A key's shorter form, by the switch a fit rule sets for it: the part, and what is said of it. */
-const SHORTER: Record<string, [part: string, what: string]> = { 'legend: top': ['legend', 'shown as one line'], 'ramp: strip': ['ramp', 'shown as a thin strip'], 'size-key: most': ['size', 'shown as its largest step'] };
+const SHORTER: Record<string, [part: string, what: string]> = { 'ramp: strip': ['ramp', 'shown as a thin strip'], 'size-key: most': ['size', 'shown as its largest step'] };
 /** What the marks give up when a rule takes their key, by the switch it sets: the parts that are that key, and what is said of them. */
 const PLAIN: Record<string, [parts: string[], what: string]> = { 'split: plain': [['legend', 'legend-top', 'labels', 'ramp'], 'hidden, and the marks it keyed drawn in one colour'], 'dots: one': [['size'], 'hidden, and the dots drawn at one size'] };
 /** A part a rule thins and does not take, by the target it names. */
@@ -87,6 +87,7 @@ export function explain(spec0: Spec, result: Result, catalog: Catalog, room?: Ex
   }
   const only = filterSaid(result.meta.where, catalog);
   if (only) out.push({ what: 'filtered to ' + only, from: 'query.where', why: 'the engine answered for the rows where this holds, so every number and mark here is of those alone', lever: 'remove it from "where" to draw the whole' });
+  if (plan.readout) out.push({ what: 'read out: ' + plan.readout.join(', '), from: 'readout', why: 'the spec names what a row says beside its metric\'s value, in the readout and the table, whether or not a mark draws it', lever: 'take a field out of "readout" to leave it unsaid' });
   // Layers of the period before need it in the query and in the result.
   layers.forEach((l, i) => {
     if (!usesPrevious(l) || plan.layers.some((p) => p.series === l.series)) return;
@@ -123,13 +124,13 @@ export function explain(spec0: Spec, result: Result, catalog: Catalog, room?: Ex
   // Which rules hold is the reader's to say (fitTo), as it is for any surface. A plot nobody measured is asked nothing.
   const rooms = { view: { inline: room.inline, block: room.block ?? null }, ...(room.plot !== undefined && { plot: room.plot }), ...(room.em != null && { em: room.em }) };
   const fit = fitTo(scene, rooms, rules, { marks: plan.layers.map((l) => l.mark), fills: (use) => fills(use, q, presets) });
-  // A need is said as it stands at this room's type: the px the container is short of.
+  // A need is in em, and is said in px as it stands at this room's type: what the container is short of.
   const need = (r: FitRule, least = needAt(r, room.em)) => [least.inline && px(least.inline) + ' px wide', least.block && px(least.block) + ' px tall'].filter(Boolean).join(' and ');
   const gone = new Set<string>(), placed = new Set<string>(), said = (r: FitRule) => 'rule "' + r.id + '" needs ' + need(r) + ' of the ' + r.container + ', and it has ' + has(rooms[r.container]);
   for (const { rule: r } of fit.held) {
     // What the room is short of: a width, a height, or both. A spec has no say in what a container gives up, so the
     // one thing that changes a rule's verdict is the room, and that is the surface's to give.
-    const c = rooms[r.container], least = needAt(r, room.em), short = [least.inline != null && c && c.inline < least.inline && px(least.inline) + ' px wide', least.block != null && c?.block != null && c.block < least.block && px(least.block) + ' px tall'].filter(Boolean).join(' and ');
+    const c = rooms[r.container], least = needAt(r, room.em), short = [least.inline != null && c && c.inline < least.inline - SLACK && px(least.inline) + ' px wide', least.block != null && c?.block != null && c.block < least.block - SLACK && px(least.block) + ' px tall'].filter(Boolean).join(' and ');
     const lever = short ? 'give the ' + r.container + ' ' + short : undefined;
     if (r.fallback) {
       const j = plan.layers.findIndex((l) => !r.mark || l.mark === r.mark);

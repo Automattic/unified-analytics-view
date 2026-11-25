@@ -154,7 +154,7 @@ describe('fitting the container (reference section 10.1)', () => {
   });
   it('a share bar gives up its legend before its marks', () => {
     expect(at('mix', 346)).toMatchObject({ parts: ['band', 'legend'], set: {} });
-    expect(at('mix', 150)).toMatchObject({ parts: ['band', 'legend'], set: { legend: 'top' } });
+    expect(at('mix', 150)).toMatchObject({ parts: ['band', 'legend-top'], rules: ['legend'] });
     expect(at('mix', 100).parts).toEqual(['number']);
   });
   it('the tldr value sits above the marks for an instant metric, or wherever the context says always', () => {
@@ -251,10 +251,10 @@ describe('the ratio scene (dom-painter-plan section 3)', () => {
     // The number is there to be shown in compensation, though this plan does not show it.
     expect(ratio.nodes.filter((n) => n.part === 'number').map((n) => n.key)).toEqual(['value', 'delta', 'sub']);
   });
-  it('a band carries both legends, each in its own part: `parts` names the whole one, and a rule sets the one line', () => {
-    for (const [w, legend] of [[346, undefined], [150, 'top']] as const) {
+  it('a band carries both legends, each in its own part: `parts` names the whole one, and a rule shows the one line in its place', () => {
+    for (const [w, legend] of [[346, 'legend'], [150, 'legend-top']] as const) {
       const { ratio, fit } = run(specs.mix!, w);
-      expect([ratio.parts, fit.parts, fit.set.legend]).toEqual([['band', 'legend'], ['band', 'legend'], legend]);
+      expect([ratio.parts, fit.parts]).toEqual([['band', 'legend'], ['band', legend]]);
       expect(ratio.nodes.filter((n) => n.part === 'legend').length).toBe(18);
       expect(ratio.nodes.filter((n) => n.part === 'legend-top').map((n) => n.key)).toEqual(['legend-top']);
     }

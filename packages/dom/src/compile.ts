@@ -1,4 +1,4 @@
-import { EM, type FitRule } from '@unified-analytics/core';
+import { SLACK, type FitRule } from '@unified-analytics/core';
 
 /* The fit-rule compiler: the same data core's fitTo() reads, as container queries.
  * Pure string work, so it runs and is tested with no DOM. */
@@ -32,16 +32,15 @@ const anyOf = (sel: string[]) => (sel.length > 1 ? ':is(' + sel.join(', ') + ')'
 /** CSS for a set of fit rules. A rule names its container "view" or "plot"; in CSS they are `uav-view` and `uav-plot`, so a page's
  * own container named "view" does not answer these queries. Each need gets its own @container block: a query naming both axes is passed over
  * whole by a width-only container, so a rule's block need is simply inert until a layout hands the view a box.
- * A need of the view is asked in em. The view is that query's container and is set in the label face for it (view.ts),
- * so an em there is the size of the view's type, and the need follows it as core's `needAt` has it: at the default
- * type it is the px the rule says. A need of the plot is of the plot's own box, and is asked in px.
- * A query asks for half a pixel under the need: at a fractional zoom a container laid out at exactly its need
- * measures a hair under it, and its part would go at the very size the rule says it fits.
+ * A need is in em and is asked in em. The view is set in its label face (view.ts) and its plot inherits that, so an em
+ * in a query on either is the size of the view's type, and a need follows it. Core's fitTo() is the same reading.
+ * A query asks for half a pixel under the need (core's SLACK): at a fractional zoom a container laid out at exactly
+ * its need measures a hair under it, and its part would go at the very size the rule says it fits.
  * Rules are written in order, so where two set the same thing the later one wins. */
 export function compileFitRules(rules: FitRule[], extras: FitExtras = {}): string {
   return rules.map((r) => {
     name(r.id, r, 'the id'); name(r.layout, r, 'the layout');
-    if (!r.needs || typeof r.needs !== 'object') throw new Error('Fit rule "' + r.id + '" has no "needs". Give the room its part needs, for example { "inline": 280 }.');
+    if (!r.needs || typeof r.needs !== 'object') throw new Error('Fit rule "' + r.id + '" has no "needs". Give the room its part needs, in em, for example { "inline": 21 }.');
     for (const k of ['hide', 'show'] as const) if (r[k] != null && !Array.isArray(r[k])) throw new Error('Fit rule "' + r.id + '" gives "' + k + '" as ' + JSON.stringify(r[k]) + '. It is a list: write ' + JSON.stringify([r[k]]) + '.');
     if (r.container !== 'view' && r.container !== 'plot') throw new Error('Fit rule "' + r.id + '" names the container ' + JSON.stringify(r.container) + '. Use "view" or "plot".');
     // A rule for one mark is for a view that holds it, which the figure says of itself. One with a `fallback` needs no
@@ -61,10 +60,10 @@ export function compileFitRules(rules: FitRule[], extras: FitExtras = {}): strin
       own ? fig + ' { ' + own + ' }' : '',
       ...Object.entries(more).filter(([sel]) => sel).map(([sel, decl]) => fig + ' ' + sel + ' { ' + decl + ' }'),
     ].filter(Boolean).map((line) => '  ' + line).join('\n');
-    return Object.entries(r.needs ?? {}).filter(([, px]) => px != null).map(([axis, px]) => {
-      if ((axis !== 'inline' && axis !== 'block') || !Number.isFinite(px)) throw new Error('Fit rule "' + r.id + '" needs ' + JSON.stringify(r.needs) + '. Give "inline" or "block" as a number of px.');
-      const under = r.container === 'view' ? 'calc(' + px + 'em / ' + EM + ' - 0.5px)' : (px - 0.5) + 'px';
-      return '/* ' + r.layout + ' ' + r.id + ' */\n@container uav-' + r.container + ' (' + axis + '-size < ' + under + ') {\n' + body + '\n}';
+    return Object.entries(r.needs ?? {}).filter(([, em]) => em != null).map(([axis, em]) => {
+      if ((axis !== 'inline' && axis !== 'block') || !Number.isFinite(em)) throw new Error('Fit rule "' + r.id + '" needs ' + JSON.stringify(r.needs) + '. Give "inline" or "block" as a number of em.');
+      // A sum of needs is said to four places: 5.7 + 0.9 + 4.8 is 11.4, and not the float it adds up to.
+      return '/* ' + r.layout + ' ' + r.id + ' */\n@container uav-' + r.container + ' (' + axis + '-size < calc(' + +em.toFixed(4) + 'em - ' + SLACK + 'px)) {\n' + body + '\n}';
     }).join('\n');
   }).filter(Boolean).join('\n');
 }

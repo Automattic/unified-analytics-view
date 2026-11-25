@@ -24,13 +24,13 @@ describe('right to left', () => {
   it('lets a label in the frame run the way its own words do: on either axis, at a line\'s end, in the plot and under the crosshair', () => {
     expect(AXES_CSS).toContain(':is(.uav-x-axis, .uav-y-axis, .uav-y-axis-2) > span { unicode-bidi: plaintext; }');
     expect(cartesian.css).toContain(':is(.uav-labels, .uav-refs, .uav-point-labels) > span { unicode-bidi: plaintext; }');
-    expect(KEYS_CSS).toContain('.uav-cross-x { inset-block-start: calc(100% + 3px); unicode-bidi: plaintext; }');
+    expect(KEYS_CSS).toContain('.uav-cross-x { inset-block-start: calc(100% + 0.375em); unicode-bidi: plaintext; }');
   });
   it('leaves the rows to the page, and states a direction nowhere else', () => {
     expect((cartesian.css + rows.css + KEYS_CSS).match(/direction: ltr/g)).toHaveLength(1);
     // A row's track reads from the page's start, so a mark on it is set back by half its width and not moved there.
     expect(rows.css).not.toMatch(/\.uav-row[^{]*\{[^}]*translate/);
-    expect(rows.css).toContain('[data-mark="dot"] { inset-block: calc(50% - 3px); inline-size: 6px; border-radius: 50%; inset-inline-start: calc(calc(var(--uav-row-gap) + var(--uav-x) * (100% - 2 * var(--uav-row-gap))) - 3px); }');
+    expect(rows.css).toContain('[data-mark="dot"] { inset-block: calc(50% - 0.225em); inline-size: 0.45em; border-radius: 50%; inset-inline-start: calc(calc(var(--uav-row-gap) + var(--uav-x) * (100% - 2 * var(--uav-row-gap))) - 0.225em); }');
   });
   it('runs a circle clockwise and a number from its first character, whichever way the page reads', () => {
     expect(radial.css).toMatch(/\.uav-radial svg \{[^}]*direction: ltr;/);

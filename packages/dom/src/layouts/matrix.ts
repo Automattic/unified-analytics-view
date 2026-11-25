@@ -36,7 +36,7 @@ const css = `
 /* The frame is set from the left whichever way the page reads, as a plot's is (cartesian.ts): the row labels stay on
  * the left of the cells. The ramp is a legend, and follows the page. */
 .uav[data-layout="matrix"] .uav-body { display: grid; grid-template: "y plot" minmax(0, 1fr) ". x" auto "ramp ramp" auto "size size" auto / fit-content(${LABELS_SHARE}%) minmax(0, 1fr); direction: ltr; }
-.uav[data-layout="matrix"][data-parts~="size"] { --uav-body-block: calc(${AXES_HEIGHT} + ${SIZE_KEY_BLOCK}px); }
+.uav[data-layout="matrix"][data-parts~="size"] { --uav-body-block: calc(${AXES_HEIGHT} + ${SIZE_KEY_BLOCK}em); }
 /* Row labels are names, and a name can be longer than the view is wide. Their column is as wide as the widest, up to a
  * share of the view, and a longer one is cut short to it (chrome/axes.ts): its cells keep the rest, and its readout says it whole. */
 .uav[data-layout="matrix"] .uav-y-axis { grid-area: y; min-inline-size: 0; }
@@ -44,7 +44,7 @@ const css = `
 .uav[data-layout="matrix"] .uav-size { grid-area: size; }
 /* One row of cells is 34 px tall and no taller, with its labels and its ramp under it. Handed a box, it fills it. */
 .uav[data-layout="matrix"]:has(> .uav-body[data-strip]) { --uav-body-block: auto; }
-.uav[data-layout="matrix"] .uav-body[data-strip] { grid-template-rows: minmax(34px, 1fr) auto auto auto; }
+.uav[data-layout="matrix"] .uav-body[data-strip] { grid-template-rows: minmax(2.55em, 1fr) auto auto auto; }
 .uav-cells { position: absolute; inset: 0; container-type: size; display: grid; gap: 1px; grid-template: repeat(var(--uav-ny), minmax(0, 1fr)) / repeat(var(--uav-nx), minmax(0, 1fr)); }
 .uav-cells > div { display: contents; }
 .uav-cells i { grid-area: var(--uav-cy) / var(--uav-cx); background: var(--uav-paint); border-radius: ${token('border-radius-cell')}; }
@@ -115,7 +115,7 @@ export const matrix: LayoutPainter = {
     grids.set(cells, { nx: xs.length, ny: ys.length, rows, dims: [xf, yf] });
     prop(cells, '--uav-nx', xs.length); prop(cells, '--uav-ny', ys.length);
     attr(cells, 'role', 'grid'); attr(cells, 'aria-multiselectable', 'true'); attr(cells, 'tabindex', xs.length && ys.length ? 0 : null);
-    attr(cells, 'aria-label', [yf, xf].filter(Boolean).map((f) => dims[f!]!.label).join(' by '));
+    attr(cells, 'aria-label', [yf, xf].filter(Boolean).map((f) => dims[f!]!.label).reduce((a, b) => (a ? data.formats.say('by', { a, b }) : b), ''));
     // One row is as tall as a cell and no taller: the stylesheet gives a strip its own height.
     body.toggleAttribute('data-strip', !yf);
     // A pair is one element: its cell, with its dot on it where it has one, or its dot alone where no cell is drawn.
@@ -133,7 +133,7 @@ export const matrix: LayoutPainter = {
         attr(c, 'data-dot', dot ? (dot === n ? 'alone' : 'over') : null); prop(c, '--uav-size', dot?.size); prop(c, '--uav-dot', dot && dot !== n ? nodePaint(dot) : null);
         attr(c, 'role', 'gridcell'); attr(c, 'id', id(cx, cy));
         // Never colour alone: the value is in the cell's name, which is also its readout. No value says so in words.
-        attr(c, 'aria-label', readout(row ?? Object.fromEntries((data.query.by || []).map((d) => [d, d === xf ? x : y])), data.query, data.catalog, data.layers));
+        attr(c, 'aria-label', readout(row ?? Object.fromEntries((data.query.by || []).map((d) => [d, d === xf ? x : y])), data.query, data.catalog, data.layers, data.formats, data.readout));
         if (row) rows.set(c.id, row);
       });
     });
@@ -145,31 +145,31 @@ export const matrix: LayoutPainter = {
 
   // The same query pivoted: a row for each value on y, a column for each on x, and the engine's totals at the edges.
   // ponytail: the cells' metric alone. A second metric or a comparison has no place in a pivot of one value yet.
-  table(table, title, scene, { layers, result, catalog }) {
+  table(table, title, scene, { layers, result, catalog, formats: F }) {
     // ponytail: the first layer's metric, on color or else on size. Dots over cells of another metric are in the readout and not in the pivot.
     // Not pivot() (table.ts): the grid's columns are the scene's, in its order, and named as its axis names them.
     const { x: xf, y: yf, color, size } = (layers.find((l) => l.mark !== 'text') ?? layers[0]!).encode as Record<string, string>, m = (color ?? size)!;
     const at = new Map(result.rows.map((r) => [(xf ? r[xf] : '') + '\n' + (yf ? r[yf] : ''), r[m]]));
-    const value = (v: Row[string] | undefined): Cell => [valueText(v, m, catalog), 'td', true];
+    const value = (v: Row[string] | undefined): Cell => [valueText(v, m, catalog, F), 'td', true];
     // A value is a key here, and so a string: a bin's start is a number in the result. A bin is named by both its ends.
     const of = (f: string, k: string) => (result.totalsBy?.[f] ?? result.rows).find((r) => String(r[f]) === k);
     const total = (f: string, k: string) => value(result.totalsBy?.[f]?.find((r) => String(r[f]) === k)?.[m]);
-    const name = (f: string, k: string) => dimName({ ...of(f, k), [f]: k }, f, catalog), xs = scene.rows ?? [];
+    const name = (f: string, k: string) => dimName({ ...of(f, k), [f]: k }, f, catalog, F), xs = scene.rows ?? [];
     emptyTable(table, title);
     const head = table.createTHead(), body = table.createTBody(), foot = table.createTFoot();
     // A strip is a list: its one dimension down the side, and the metric's own column, with no total beside it to repeat it.
     if (!xf || !yf) {
       const f = (yf || xf)!;
-      tableRow(head, [[catalog.dimensions[f]!.label, 'th'], [fieldLabel(m, catalog), 'th', true]]);
+      tableRow(head, [[catalog.dimensions[f]!.label, 'th'], [fieldLabel(m, catalog, F), 'th', true]]);
       for (const k of (yf ? scene.ys : xs) ?? []) tableRow(body, [[name(f, k), 'th'], value(at.get(yf ? '\n' + k : k + '\n'))]);
-      tableRow(foot, [['Total', 'th'], value(result.totals[m])]);
+      tableRow(foot, [[F.say('total'), 'th'], value(result.totals[m])]);
       return;
     }
-    tableRow(head, [[catalog.dimensions[yf]!.label, 'th'], ...xs.map((x): Cell => [name(xf, x), 'th', true]), ['Total', 'th', true]]);
+    tableRow(head, [[catalog.dimensions[yf]!.label, 'th'], ...xs.map((x): Cell => [name(xf, x), 'th', true]), [F.say('total'), 'th', true]]);
     // A quantity down the side is drawn from the foot, as a plot is, and listed from its least, as a table is.
     for (const y of catalog.dimensions[yf]!.type === 'number' ? (scene.ys ?? []).slice().reverse() : scene.ys ?? []) {
       tableRow(body, [[name(yf, y), 'th'], ...xs.map((x) => value(at.get(x + '\n' + y))), total(yf, y)]);
     }
-    tableRow(foot, [['Total', 'th'], ...xs.map((x) => total(xf, x)), value(result.totals[m])]);
+    tableRow(foot, [[F.say('total'), 'th'], ...xs.map((x) => total(xf, x)), value(result.totals[m])]);
   },
 };

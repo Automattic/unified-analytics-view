@@ -1,4 +1,4 @@
-import { SERIES, formatDimension, isDim, isMetric, layerKeys, registerMark, registerPreset, roleOf, rowKeys, tooManySeries } from '@unified-analytics/core';
+import { SERIES, isDim, isMetric, layerKeys, registerMark, registerPreset, roleOf, rowKeys, tooManySeries } from '@unified-analytics/core';
 import type { CustomMark, FitRule, Part, PathNode, RectNode, Row, SceneNode, TextNode } from '@unified-analytics/core';
 
 /* The `link` mark: a ribbon from a value of one dimension to a value of another, as a custom mark (core's marks.ts).
@@ -42,7 +42,7 @@ export const linkMark: CustomMark = {
   reads: { x: ['dimension'], y: ['dimension'], size: ['metric'] },
   fields: [],   // it draws in paints of its own, and takes no field beside its channels
 
-  scene({ layers, guides, query, result, catalog }) {
+  scene({ layers, guides, query, result, catalog, formats: F }) {
     const l = layers[0]!, { x: src, y: tgt, size: m } = l.encode || {}, by = query.by || [];
     if (layers.length > 1) throw new Error('A Sankey draws one "' + l.mark + '" layer, and this view has ' + layers.length + '. Keep one, with the source on x, the target on y and the metric on size.');
     if (!isDim(catalog, src) || !isDim(catalog, tgt) || src === tgt) throw new Error('A "' + l.mark + '" layer runs from the values of one dimension to the values of another, the source on x and the target on y, and this one has ' + JSON.stringify(src) + ' on x and ' + JSON.stringify(tgt) + ' on y. '
@@ -83,7 +83,7 @@ export const linkMark: CustomMark = {
     // A label for each node, ranked by its node's size within its column: where two would meet, the larger node's stands.
     cols.forEach((c, side) => {
       const ranks = c.slice().sort((a, b) => b.v - a.v);
-      nodes.push(...c.map((n): TextNode => ({ key: 'label:' + dims[side] + ':' + n.key, part: 'labels', kind: 'text', text: formatDimension(n.value, catalog.dimensions[dims[side]!]!), x: side, y: 1 - (n.y + n.h / 2),
+      nodes.push(...c.map((n): TextNode => ({ key: 'label:' + dims[side] + ':' + n.key, part: 'labels', kind: 'text', text: F.dimension(n.value, catalog.dimensions[dims[side]!]!), x: side, y: 1 - (n.y + n.h / 2),
         anchor: side ? 'end' : 'start', baseline: 'middle', font: 'tick', paint: 'ink', layer: 'guide', rank: ranks.indexOf(n) + 1 })));
     });
     // A plan's guides are on or off together, and the labels are this mark's.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PRESETS, customMarks, customPresets, expand, fallbackRule, fills, type Spec, type TextNode } from '@unified-analytics/core';
+import { PRESETS, customMarks, customPresets, expand, fallbackRule, fills, formats, type Spec, type TextNode } from '@unified-analytics/core';
 import { compileFitRules } from '@unified-analytics/dom';
 import { catalog, moreSamples, runQuery, scenarios } from '@unified-analytics/fixtures';
 import { PARTITION_RULES, squarify, type Box } from '@unified-analytics/partition';
@@ -255,17 +255,17 @@ describe('partition, painted by a second metric', () => {
 
 describe('names, prose and errors', () => {
   it('every box says its value: a parent the engine\'s total for it, a child its own under its parent\'s name', () => {
-    const result = runQuery(treemap.query), said = boxNames({ layers: expand(treemap).layers!, query: treemap.query, result, catalog });
+    const result = runQuery(treemap.query), said = boxNames({ layers: expand(treemap).layers!, query: treemap.query, result, catalog, formats: formats() });
     expect(said.size).toBe(20);
     expect(said.get('primary:partition:Marketing')).toEqual({ says: 'Marketing: Page views 10.5k', row: result.totalsBy!.section![0], rows: result.rows.slice(0, 5), where: { section: 'Marketing' } });
     expect(said.get('primary:partition:Marketing:/pricing')).toEqual({ says: 'Marketing, /pricing: Page views 3,282', row: result.rows[1], rows: [result.rows[1]], where: { section: 'Marketing', page: '/pricing' } });
     expect([...said.keys()]).toEqual(rects(run(treemap, 346).ratio).map((n) => n.key));
     const both = runQuery(ramped.query);
-    expect(boxNames({ layers: ramped.layers!, query: ramped.query, result: both, catalog }).get('primary:partition:Docs:/docs/api')!.says).toMatch(/^Docs, \/docs\/api: Page views [\d,]+; Visitors [\d,]+$/);
-    expect(boxNames({ layers: tiles.layers!, query: tiles.query, result: runQuery(tiles.query), catalog }).get('primary:partition:Search')!.says).toBe('Search: Visitors 4,318');
+    expect(boxNames({ layers: ramped.layers!, query: ramped.query, result: both, catalog, formats: formats() }).get('primary:partition:Docs:/docs/api')!.says).toMatch(/^Docs, \/docs\/api: Page views [\d,]+; Visitors [\d,]+$/);
+    expect(boxNames({ layers: tiles.layers!, query: tiles.query, result: runQuery(tiles.query), catalog, formats: formats() }).get('primary:partition:Search')!.says).toBe('Search: Visitors 4,318');
     // A box says what every other mark's readout says of its row: the period before, where the query compares, among it.
     const compared = { ...tiles.query, compare: 'previous' as const }, prior = runQuery(compared);
-    expect(boxNames({ layers: tiles.layers!, query: compared, result: prior, catalog }).get('primary:partition:Search')!.says).toMatch(/^Search: Visitors 4,318, previous period [\d,]+$/);
+    expect(boxNames({ layers: tiles.layers!, query: compared, result: prior, catalog, formats: formats() }).get('primary:partition:Search')!.says).toMatch(/^Search: Visitors 4,318, previous period [\d,]+$/);
   });
   it('the prose is any view\'s: the number, and the parent that leads, from the engine\'s totals', () => {
     expect(run(treemap, 346).plan.text).toBe('Page views: 25.1k in the last 28 days. The top section is Marketing.');

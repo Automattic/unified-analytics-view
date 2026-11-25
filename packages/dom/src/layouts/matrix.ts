@@ -133,7 +133,7 @@ export const matrix: LayoutPainter = {
         attr(c, 'data-dot', dot ? (dot === n ? 'alone' : 'over') : null); prop(c, '--uav-size', dot?.size); prop(c, '--uav-dot', dot && dot !== n ? nodePaint(dot) : null);
         attr(c, 'role', 'gridcell'); attr(c, 'id', id(cx, cy));
         // Never colour alone: the value is in the cell's name, which is also its readout. No value says so in words.
-        attr(c, 'aria-label', readout(row ?? Object.fromEntries((data.query.by || []).map((d) => [d, d === xf ? x : y])), data.query, data.catalog, data.layers));
+        attr(c, 'aria-label', readout(row ?? Object.fromEntries((data.query.by || []).map((d) => [d, d === xf ? x : y])), data.query, data.catalog, data.layers, data.formats));
         if (row) rows.set(c.id, row);
       });
     });
@@ -145,16 +145,16 @@ export const matrix: LayoutPainter = {
 
   // The same query pivoted: a row for each value on y, a column for each on x, and the engine's totals at the edges.
   // ponytail: the cells' metric alone. A second metric or a comparison has no place in a pivot of one value yet.
-  table(table, title, scene, { layers, result, catalog }) {
+  table(table, title, scene, { layers, result, catalog, formats: F }) {
     // ponytail: the first layer's metric, on color or else on size. Dots over cells of another metric are in the readout and not in the pivot.
     // Not pivot() (table.ts): the grid's columns are the scene's, in its order, and named as its axis names them.
     const { x: xf, y: yf, color, size } = (layers.find((l) => l.mark !== 'text') ?? layers[0]!).encode as Record<string, string>, m = (color ?? size)!;
     const at = new Map(result.rows.map((r) => [(xf ? r[xf] : '') + '\n' + (yf ? r[yf] : ''), r[m]]));
-    const value = (v: Row[string] | undefined): Cell => [valueText(v, m, catalog), 'td', true];
+    const value = (v: Row[string] | undefined): Cell => [valueText(v, m, catalog, F), 'td', true];
     // A value is a key here, and so a string: a bin's start is a number in the result. A bin is named by both its ends.
     const of = (f: string, k: string) => (result.totalsBy?.[f] ?? result.rows).find((r) => String(r[f]) === k);
     const total = (f: string, k: string) => value(result.totalsBy?.[f]?.find((r) => String(r[f]) === k)?.[m]);
-    const name = (f: string, k: string) => dimName({ ...of(f, k), [f]: k }, f, catalog), xs = scene.rows ?? [];
+    const name = (f: string, k: string) => dimName({ ...of(f, k), [f]: k }, f, catalog, F), xs = scene.rows ?? [];
     emptyTable(table, title);
     const head = table.createTHead(), body = table.createTBody(), foot = table.createTFoot();
     // A strip is a list: its one dimension down the side, and the metric's own column, with no total beside it to repeat it.

@@ -1,4 +1,4 @@
-import { SERIES, formatDimension, isDim, isMetric, layerKeys, metricOf, registerMark, registerPreset, roleOf, seqScale, tooManySeries, uniqueKeys } from '@unified-analytics/core';
+import { SERIES, isDim, isMetric, layerKeys, metricOf, registerMark, registerPreset, roleOf, seqScale, tooManySeries, uniqueKeys } from '@unified-analytics/core';
 import type { CustomMark, FitRule, MarkView, Part, RectNode, Row, SceneNode, TextNode } from '@unified-analytics/core';
 
 /* The `partition` mark: a box divided by area, nested once, which is a treemap. A custom mark (core's marks.ts). This
@@ -84,7 +84,7 @@ interface Group extends Leaf { kids: Leaf[]; rows: Row[]; n: number }
 
 /** What a view's layers ask for, checked, and the boxes it comes to: a group for each parent with its box in ratios of
  * the part, and in each its children, with their boxes in ratios of the parent's. Both the scene and the names are made from this. */
-function read({ layers, query, result, catalog }: Omit<MarkView, 'guides'>) {
+function read({ layers, query, result, catalog, formats: F }: Omit<MarkView, 'guides'>) {
   const l = layers[0]!, { x: dim, detail, size, color } = l.encode || {}, by = query.by || [], q = '"' + l.mark + '"';
   if (layers.length > 1) throw new Error('A treemap draws one ' + q + ' layer, and this view has ' + layers.length + '. Put the dimension to divide by on x, the one to divide each part by on detail, and the metric on size, in one layer.');
   if (!isDim(catalog, dim)) throw new Error('A ' + q + ' layer needs the dimension to divide the box by on x, and this one has ' + JSON.stringify(dim) + ' there. Encode one of the query\'s dimensions on x: ' + (by.join(', ') || 'it has none, so add one to query.by') + '.');
@@ -102,7 +102,7 @@ function read({ layers, query, result, catalog }: Omit<MarkView, 'guides'>) {
   const total = result.totals[size], shown = total ? tops.filter((r) => is(r[size])) : [];
   const drawn = two ? result.rows.filter((r) => is(r[size]) && shown.some((t) => of(t) === of(r))) : shown;
   // The colour scale runs over the boxes that are painted by it, as a grid's runs over its cells.
-  const fill = typeof color === 'string' ? seqScale(drawn.map((r) => r[color]).filter((v): v is number => typeof v === 'number'), metricOf(catalog, color)!, result) : null;
+  const fill = typeof color === 'string' ? seqScale(drawn.map((r) => r[color]).filter((v): v is number => typeof v === 'number'), metricOf(catalog, color)!, result, F) : null;
   if (!fill && shown.length > SERIES) throw new Error(tooManySeries('Dividing by "' + dim + '"', shown.length, 'boxes', ', or encode a metric on color to paint every box by the ramp'));
   // A key is made unique as it is given out: two rows of one value, or a value with the separator in it.
   const id = layerKeys(layers)[0]!, key = uniqueKeys();
@@ -110,9 +110,9 @@ function read({ layers, query, result, catalog }: Omit<MarkView, 'guides'>) {
   const groups = squarify(shown.map((r) => r[size] as number), ASPECT, 1, total || 0).map((b, i): Group => {
     const top = shown[i]!, k = key(id + ':' + of(top)), rows = two ? result.rows.filter((r) => of(r) === of(top)) : [top], inside = rows.filter((r) => two && is(r[size]));
     const kids = squarify(inside.map((r) => r[size] as number), b.w, b.h, top[size] as number).map((c, j): Leaf => ({
-      key: key(k + ':' + inside[j]![detail as string]), name: formatDimension(inside[j]![detail as string], catalog.dimensions[detail as string]!), row: inside[j]!,
+      key: key(k + ':' + inside[j]![detail as string]), name: F.dimension(inside[j]![detail as string], catalog.dimensions[detail as string]!), row: inside[j]!,
       box: { x: b.w ? c.x / b.w : 0, y: b.h ? c.y / b.h : 0, w: b.w ? c.w / b.w : 0, h: b.h ? c.h / b.h : 0 }, paint: paint(inside[j]!, i) }));
-    return { key: k, name: formatDimension(top[dim], catalog.dimensions[dim]!), row: top, rows, box: { x: b.x / ASPECT, y: b.y, w: b.w / ASPECT, h: b.h }, paint: two && fill ? 'seq.none' : paint(top, i), kids, n: i + 1 };
+    return { key: k, name: F.dimension(top[dim], catalog.dimensions[dim]!), row: top, rows, box: { x: b.x / ASPECT, y: b.y, w: b.w / ASPECT, h: b.h }, paint: two && fill ? 'seq.none' : paint(top, i), kids, n: i + 1 };
   });
   return { groups, two, fill, dim, role: roleOf(l), none: drawn.some((r) => fill && r[color as string] == null), key };
 }

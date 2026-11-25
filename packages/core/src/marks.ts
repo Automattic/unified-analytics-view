@@ -1,4 +1,5 @@
 import type { FitRule } from './fit.ts';
+import type { Formats } from './format.ts';
 import type { Field, Reads } from './reads.ts';
 import { LAYOUTS, MARKS } from './types.ts';
 import type { Catalog, Guides, Layer, Part, Query, Result, Scene } from './types.ts';
@@ -15,8 +16,8 @@ import type { Catalog, Guides, Layer, Part, Query, Result, Scene } from './types
  *
  * The registry is a map and two functions. Do not let it grow into a plugin system. */
 
-/** What a custom mark's scene is built from: the plan's layers and guides, the query, and the result and catalog as they were given. */
-export interface MarkView { layers: Layer[]; guides: Guides; query: Query; result: Result; catalog: Catalog }
+/** What a custom mark's scene is built from. `formats` is how the view says a number, a time and a name, in its container's locale: a mark's text goes through it. */
+export interface MarkView { layers: Layer[]; guides: Guides; query: Query; result: Result; catalog: Catalog; formats: Formats }
 
 export interface CustomMark {
   /** The channels it reads, and what each may hold (reads.ts). `resolve()` refuses an encoding that is not among them,

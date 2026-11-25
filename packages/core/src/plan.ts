@@ -1,7 +1,7 @@
 import { CONTAINER_RULES } from './container.ts';
 import { fitTo, gaveWay, type Fit, type Rooms } from './fit.ts';
 import { guidesOf } from './guides.ts';
-import { fmtTime, formatDimension, orList, rangeLabel } from './format.ts';
+import { formats, orList, rangeOf, timeOf } from './format.ts';
 import { customMarks } from './marks.ts';
 import { PRESETS, expand, fills, presetNames, usesPrevious } from './presets.ts';
 import { checkReads } from './reads.ts';
@@ -166,8 +166,8 @@ export function resolve(spec0: Spec, result: Result, catalog: Catalog, rules: Co
   if (!layers.length && by) throw new Error('This spec has a dimension but no layers, so there is nothing to draw it with. Add "layers", or "use" one of: ' + presetNames(presets).join(', ') + '.');
   checkLayers(layers, q, catalog, result);
   // A time no view can read is refused here, once, before anything is built or painted. fmtTime's error names the forms.
-  for (const d of q.by || []) if (catalog.dimensions[d]?.type === 'time') for (const r of result.rows) if (r[d] != null) fmtTime(String(r[d]));
-  if (result.meta.range) rangeLabel(result.meta.range);                   // and a range the prose cannot say, the same way
+  for (const d of q.by || []) if (catalog.dimensions[d]?.type === 'time') for (const r of result.rows) if (r[d] != null) timeOf(String(r[d]));
+  if (result.meta.range) rangeOf(result.meta.range);                   // and a range the prose cannot say, the same way
   if (layers.some(usesPrevious) && (q.compare !== 'previous' || result.totals[m + '@previous'] == null)) {
     const why = q.compare === 'previous' ? ' (no prior data)' : ' (the query has no "compare")';
     if (!result.meta.empty) [['previous', 'comparison series'], ['delta', 'the change on the previous period']].forEach(([series, what]) => { if (layers.some((l) => l.series === series)) dropped.push(what + why); });
@@ -203,10 +203,12 @@ export function resolve(spec0: Spec, result: Result, catalog: Catalog, rules: Co
     });
   }
   // Glyphs with no dimension say how far along its range a metric is, and not what it is: the number stands above them.
+  // The view's text is in its container's locale, and so is its scene's, which is built from this plan.
+  const F = formats(rules.locale);
   const p: PlanShape = { layout: laid, layers, guides: guidesOf(laid, layers, catalog), tldrValue: rules.tldrValue.above === 'always' || !!M.instant || !layers.length || (unit && !by),
-                         share, text: tldrProse(q, result, share, catalog) };
+                         share, text: tldrProse(q, result, share, catalog, F), ...(rules.locale != null && { locale: rules.locale }) };
   // What the answer is filtered to is said last, of everything before it: a view of some rows never reads as one of all.
-  const only = filterSaid(result.meta.where, catalog);
+  const only = filterSaid(result.meta.where, catalog, F);
   if (only) p.text += ' Filtered to ' + only + '.';
   if (result.meta.empty || (M.instant && !result.rows.length)) {
     if (M.instant || !layers.length) { p.layout = 'none'; p.layers = []; p.tldrValue = true; p.guides = {}; }
@@ -221,7 +223,7 @@ export function resolve(spec0: Spec, result: Result, catalog: Catalog, rules: Co
   return {
     preset: spec0.use && !spec0.layers ? spec0.use : null, layout: p.layout,
     layers: p.layers.map((l) => Object.assign({}, l, { role: roleOf(l) })),
-    guides: p.guides, tldrValue: p.tldrValue, share: p.share, dropped, text: p.text,
+    guides: p.guides, tldrValue: p.tldrValue, share: p.share, dropped, text: p.text, ...(p.locale != null && { locale: p.locale }),
   };
 }
 
@@ -256,12 +258,12 @@ export function facets(spec0: Spec, result: Result, catalog: Catalog, rules: Con
     if (held === f) throw new Error('Layer ' + (i + 1) + ' encodes "' + f + '" on ' + channel + ', and "' + f + '" is the facet: each view holds one value of it. Take it off the layer, or remove "facet" and keep it there.');
   }));
   // The engine's total for a value: its row of totalsBy where the query has a second dimension, and its own row where it has none.
-  const whole = result.totalsBy && result.totalsBy[f], values = [...new Set((whole || result.rows).map((r) => String(r[f])))];
+  const whole = result.totalsBy && result.totalsBy[f], values = [...new Set((whole || result.rows).map((r) => String(r[f])))], F = formats(rules.locale);
   if (!values.length) return [{ key: '', label: dim.label, spec, result }];
   const views = values.map((v): Facet => {
     const rows = result.rows.filter((r) => String(r[f]) === v), total = (by.length > 1 ? whole && whole.find((r) => String(r[f]) === v) : rows[0]) || {};
     const totals = Object.fromEntries(Object.keys(result.totals).map((m) => [m, typeof total[m] === 'number' ? (total[m] as number) : null]));
-    return { key: v, label: formatDimension(v, dim), spec: { ...spec, title: formatDimension(v, dim) }, result: { rows, totals, meta: rows.length ? result.meta : { ...result.meta, empty: true } } };   // a value the result has no rows for says so
+    return { key: v, label: F.dimension(v, dim), spec: { ...spec, title: F.dimension(v, dim) }, result: { rows, totals, meta: rows.length ? result.meta : { ...result.meta, empty: true } } };   // a value the result has no rows for says so
   });
   const domains = widest(() => views.forEach((v) => buildScene(resolve(v.spec, v.result, catalog, rules, presets), expand(v.spec, presets).query, v.result, catalog)));
   for (const v of views) v.result.domains = domains;

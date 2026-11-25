@@ -191,6 +191,9 @@ export interface ContainerRules {
   rows: { rowHeight: number; gap: number };
   /** When the tldr value sits above the marks while there is room for both. */
   tldrValue: { above: 'instant' | 'always' };
+  /** The language the view speaks: a BCP 47 tag, as "de" or "pt-BR". It is where the view lands, as its sizes are, and
+   * never a spec's. Numbers, dates and the names of countries are said in it. English where none is given. */
+  locale?: string;
 }
 
 /* Plan: what a spec asks to have drawn, with no size. */
@@ -205,6 +208,8 @@ export interface PlanShape {
   tldrValue: boolean;
   share: boolean;
   text: string;
+  /** The locale the plan's text is in, and its scene's is built in: the container's (`rules.locale`). Absent for English. */
+  locale?: string;
 }
 export interface Plan extends PlanShape {
   preset: string | null;

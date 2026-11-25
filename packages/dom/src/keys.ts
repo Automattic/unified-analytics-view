@@ -1,4 +1,4 @@
-import { POINT_INSET, formatBin, formatDimension, formatValue, holds, layerKeys, many, metricOf, most, partialNote, rowKeys, unitsOf, whereOf, type Catalog, type Layer, type Query, type RectNode, type Result, type Row, type Scene, type Gesture, type Where } from '@unified-analytics/core';
+import { POINT_INSET, formats, holds, layerKeys, many, metricOf, most, partialNote, rowKeys, unitsOf, whereOf, type Catalog, type Formats, type Layer, type Query, type RectNode, type Result, type Row, type Scene, type Gesture, type Where } from '@unified-analytics/core';
 import { attr, ensure, paintVar, prop } from './dom.ts';
 import { centred, say, tip as chip } from './chrome/tip.ts';
 import { apart } from './measure.ts';
@@ -50,24 +50,24 @@ export function companionLabel(f: string, catalog: Catalog): string {
 }
 
 /** A row's value of a dimension, as the readout and a table name it: a bin by both its ends, as its label on an axis is. */
-export function dimName(row: Row, d: string, catalog: Catalog): string {
-  return row[d + '@end'] == null ? formatDimension(row[d], catalog.dimensions[d]!) : formatBin(row[d], row[d + '@end']);
+export function dimName(row: Row, d: string, catalog: Catalog, F: Formats = formats()): string {
+  return row[d + '@end'] == null ? F.dimension(row[d], catalog.dimensions[d]!) : F.bin(row[d], row[d + '@end']);
 }
 
 /** What the readout says for one row of the result, in the catalog's formats: the dimension value, each metric
  * (marked when its bucket is unfinished), its comparison if the row has one, and each companion of it that a layer
  * encodes, under its suffix: what a range or a tick is drawn from is said as well as shown. */
-export function readout(row: Row, q: Query, catalog: Catalog, layers: Layer[]): string {
+export function readout(row: Row, q: Query, catalog: Catalog, layers: Layer[], F: Formats = formats()): string {
   // Two bins are each named by their dimension as well: two bare ranges do not say which is which.
   const both = (q.by || []).filter((d) => row[d + '@end'] != null).length > 1;
-  const dims = (q.by || []).map((d) => (both && row[d + '@end'] != null ? catalog.dimensions[d]!.label + ' ' : '') + dimName(row, d, catalog)).join(', '), partial = partialNote(row);
+  const dims = (q.by || []).map((d) => (both && row[d + '@end'] != null ? catalog.dimensions[d]!.label + ' ' : '') + dimName(row, d, catalog, F)).join(', '), partial = partialNote(row);
   // Never a row of dashes: a row with nothing to say, no value, no period before and no companion, says so in words.
   const said = (m: string) => row[m] != null || (q.compare === 'previous' && row[m + '@previous'] != null) || companions(m, row, layers).some((f) => row[f] != null);
   if (!q.metrics.some(said)) return (dims ? dims + ': ' : '') + 'No data';
   const values = q.metrics.map((m) => {
     const def = catalog.metrics[m]!, prev = q.compare === 'previous' ? row[m + '@previous'] : null;
-    const more = companions(m, row, layers).filter((f) => row[f] != null).map((f) => ', ' + companionLabel(f, catalog) + ' ' + formatValue(row[f] as number, metricOf(catalog, f)!)).join('');
-    return def.label + ' ' + formatValue(row[m] as number | null, def) + (partial && ' ' + partial) + (prev == null ? '' : ', previous period ' + formatValue(prev as number, def)) + more;
+    const more = companions(m, row, layers).filter((f) => row[f] != null).map((f) => ', ' + companionLabel(f, catalog) + ' ' + F.value(row[f] as number, metricOf(catalog, f)!)).join('');
+    return def.label + ' ' + F.value(row[m] as number | null, def) + (partial && ' ' + partial) + (prev == null ? '' : ', previous period ' + F.value(prev as number, def)) + more;
   }).join('; ');
   return dims ? dims + ': ' + values : values;
 }
@@ -75,10 +75,10 @@ export function readout(row: Row, q: Query, catalog: Catalog, layers: Layer[]): 
 /** Whether a row's own words already say every value its readout would: each metric's, the period before where the
  * query compares, and what the engine sent with it. Such a row has no readout to show: it would be the row again.
  * ponytail: by the values alone. A label cut short for room is not counted as unsaid; the table has it whole. */
-export function written(shown: string, row: Row, q: Query, catalog: Catalog, layers: Layer[]): boolean {
+export function written(shown: string, row: Row, q: Query, catalog: Catalog, layers: Layer[], F: Formats = formats()): boolean {
   return q.metrics.every((m) => {
     const def = catalog.metrics[m]!, also = q.compare === 'previous' && row[m + '@previous'] != null ? [m + '@previous'] : [];
-    return [m, ...also, ...companions(m, row, layers).filter((f) => row[f] != null)].every((f) => shown.includes(formatValue(row[f] as number | null, metricOf(catalog, f) ?? def)));
+    return [m, ...also, ...companions(m, row, layers).filter((f) => row[f] != null)].every((f) => shown.includes(F.value(row[f] as number | null, metricOf(catalog, f) ?? def)));
   });
 }
 
@@ -86,23 +86,23 @@ export function written(shown: string, row: Row, q: Query, catalog: Catalog, lay
  * engine's total for that x when the result has one, and the value of every series. With `mass`, where the series
  * are in one paint and may be many, it says how many there are and the one with the most there, by name: a comparison
  * of the engine's rows, as the prose's leader is. */
-export function readoutAt(rows: Row[], total: Row | undefined, q: Query, catalog: Catalog, x: string, split: string, mass = false): string {
-  const of = catalog.dimensions[split]!, { name, metrics } = headAt(rows, total, q, catalog, x);
+export function readoutAt(rows: Row[], total: Row | undefined, q: Query, catalog: Catalog, x: string, split: string, mass = false, F: Formats = formats()): string {
+  const of = catalog.dimensions[split]!, { name, metrics } = headAt(rows, total, q, catalog, x, F);
   return name + ': ' + q.metrics.map((m, i) => {
     // A series with no value here says so in words, as a row's readout does, and never with a dash.
-    const def = catalog.metrics[m]!, said = (r: Row) => formatDimension(r[split], of) + ' ' + (r[m] == null ? 'no data' : formatValue(r[m] as number, def));
+    const def = catalog.metrics[m]!, said = (r: Row) => F.dimension(r[split], of) + ' ' + (r[m] == null ? 'no data' : F.value(r[m] as number, def));
     const top = most(rows, m);
-    return metrics[i] + ' (' + (mass ? rows.length + ' ' + many(rows.length, of.label.toLowerCase()) + (top?.[m] != null ? ', the most ' + said(top) : '') : rows.map(said).join(', ')) + ')';
+    return metrics[i] + ' (' + (mass ? F.count(rows.length) + ' ' + many(rows.length, of.label.toLowerCase()) + (top?.[m] != null ? ', the most ' + said(top) : '') : rows.map(said).join(', ')) + ')';
   }).join('; ');
 }
 
 /** What a point of a split plot is called, and each metric there with the engine's total for the point where the result
  * has one: the head of its readout, in words (readoutAt) and as drawn (readoutLines). */
-function headAt(rows: Row[], total: Row | undefined, q: Query, catalog: Catalog, x: string): { name: string; metrics: string[] } {
+function headAt(rows: Row[], total: Row | undefined, q: Query, catalog: Catalog, x: string, F: Formats): { name: string; metrics: string[] } {
   const first = rows[0] ?? {}, partial = partialNote(first);
   return {
-    name: formatDimension(first[x], catalog.dimensions[x]!),
-    metrics: q.metrics.map((m) => { const def = catalog.metrics[m]!; return def.label + (total ? ' ' + formatValue(total[m] as number | null, def) + (partial && ' ' + partial) : ''); }),
+    name: F.dimension(first[x], catalog.dimensions[x]!),
+    metrics: q.metrics.map((m) => { const def = catalog.metrics[m]!; return def.label + (total ? ' ' + F.value(total[m] as number | null, def) + (partial && ' ' + partial) : ''); }),
   };
 }
 
@@ -110,9 +110,9 @@ function headAt(rows: Row[], total: Row | undefined, q: Query, catalog: Catalog,
  * total there, and a line to each series, its name and its value, which the readout sets beside a swatch of the
  * series' paint. readoutAt() says the same in words, for the point's name. More than one metric: each line has
  * their values in the head's order. */
-export function readoutLines(rows: Row[], total: Row | undefined, q: Query, catalog: Catalog, x: string, split: string): { head: string; lines: { series: string; name: string; value: string }[] } {
-  const of = catalog.dimensions[split]!, { name, metrics } = headAt(rows, total, q, catalog, x), head = name + ': ' + metrics.join('; ');
-  return { head, lines: rows.map((r) => ({ series: String(r[split]), name: formatDimension(r[split], of), value: q.metrics.every((m) => r[m] == null) ? 'No data' : q.metrics.map((m) => formatValue(r[m] as number | null, catalog.metrics[m]!)).join(', ') })) };
+export function readoutLines(rows: Row[], total: Row | undefined, q: Query, catalog: Catalog, x: string, split: string, F: Formats = formats()): { head: string; lines: { series: string; name: string; value: string }[] } {
+  const of = catalog.dimensions[split]!, { name, metrics } = headAt(rows, total, q, catalog, x, F), head = name + ': ' + metrics.join('; ');
+  return { head, lines: rows.map((r) => ({ series: String(r[split]), name: F.dimension(r[split], of), value: q.metrics.every((m) => r[m] == null) ? 'No data' : q.metrics.map((m) => F.value(r[m] as number | null, catalog.metrics[m]!)).join(', ') })) };
 }
 
 /** The rows of the result at each point of the scene. One each, in step, unless the plot is split into series:
@@ -137,7 +137,7 @@ export interface CrossMark { t: number; text: string; side: 0 | 1; role?: string
  * the scene set it. A line is read against the axes, so these are what a crosshair says on them. A filled area says
  * nothing of its own, and neither does a bar or a dot, which wears the outline and keeps the readout.
  * `rows` are the result's at each point, as rowsAt() gives them, and `split` the dimension a split plot's series are of. */
-export function crossMarks(scene: Scene, layers: Layer[], rows: Row[][], catalog: Catalog, split?: string): Map<string, CrossMark[]> {
+export function crossMarks(scene: Scene, layers: Layer[], rows: Row[][], catalog: Catalog, split?: string, F: Formats = formats()): Map<string, CrossMark[]> {
   const out = new Map<string, CrossMark[]>(), keys = scene.rows ?? [];
   if (scene.layout !== 'cartesian') return out;
   const ids = layerKeys(layers), units = unitsOf(catalog, layers), seen = new Set<string>();
@@ -154,7 +154,7 @@ export function crossMarks(scene: Scene, layers: Layer[], rows: Row[][], catalog
         if (row?.[field] == null || seen.has(id)) continue;
         seen.add(id);
         const partial = prev ? '' : partialNote(row);
-        out.set(p.row, (out.get(p.row) ?? []).concat({ t: p.y, text: formatValue(row[field] as number, def) + (partial && ' ' + partial), side, ...(n.role && { role: n.role }), ...(n.series != null && { series: n.series }) }));
+        out.set(p.row, (out.get(p.row) ?? []).concat({ t: p.y, text: F.value(row[field] as number, def) + (partial && ' ' + partial), side, ...(n.role && { role: n.role }), ...(n.series != null && { series: n.series }) }));
       }
     }
   });
@@ -337,7 +337,7 @@ export class Keys {
   // The dimension a series is a value of, whether or not a point has series to step through.
   #of: string | undefined;
   // The series of a split plot, the one chosen at the point, and what a readout of one needs.
-  #order: string[] = []; #series: string | null = null; #split: string | undefined; #q: Query | null = null; #catalog: Catalog | null = null; #layers: Layer[] = [];
+  #order: string[] = []; #series: string | null = null; #split: string | undefined; #q: Query | null = null; #catalog: Catalog | null = null; #layers: Layer[] = []; #F: Formats = formats();
   // How the chosen point was chosen. Each has its own look, and a paint keeps the one it found.
   #how: 'keys' | 'pointer' = 'pointer';
   // What a crosshair says at each row of a plot of lines, the dimension on x, and the crosshair once one is drawn.
@@ -382,14 +382,15 @@ export class Keys {
   }
 
   /** After each paint: name the points the layout made, and keep the chosen one if it is still there. */
-  paint(scene: Scene, q: Query, result: Result, catalog: Catalog, layers: Layer[]): void {
+  paint(scene: Scene, q: Query, result: Result, catalog: Catalog, layers: Layer[], F: Formats = formats()): void {
+    this.#F = F;
     // A point of a plot of points is one row whatever colours it, so it is read as a row, and has no series to step through.
     const found = rowsAt(scene, q, result), { rows, x } = found, split = scene.parts?.includes('points') ? undefined : found.split, totals = (x != null && split != null && result.totalsBy?.[x]) || [];
     this.#of = found.split; this.#keys = scene.rows ?? []; this.#rows = rows; this.#order = split == null ? [] : scene.series ?? scene.detail ?? []; this.#split = split; this.#q = q; this.#catalog = catalog; this.#layers = layers;
-    this.#x = x; this.#cross = crossMarks(scene, layers, rows, catalog, split);
-    this.#says = this.#keys.map((k, i) => (split == null ? readout(rows[i]![0] ?? {}, q, catalog, layers) : readoutAt(rows[i]!, totals.find((t) => String(t[x!]) === k), q, catalog, x!, split, !scene.series)));
+    this.#x = x; this.#cross = crossMarks(scene, layers, rows, catalog, split, F);
+    this.#says = this.#keys.map((k, i) => (split == null ? readout(rows[i]![0] ?? {}, q, catalog, layers, F) : readoutAt(rows[i]!, totals.find((t) => String(t[x!]) === k), q, catalog, x!, split, !scene.series, F)));
     // A mass is in one paint, so it is said in words alone (readoutAt). Series painted apart each have a line and a swatch.
-    this.#lines = this.#keys.map((k, i) => (split == null || !scene.series ? null : readoutLines(rows[i]!, totals.find((t) => String(t[x!]) === k), q, catalog, x!, split)));
+    this.#lines = this.#keys.map((k, i) => (split == null || !scene.series ? null : readoutLines(rows[i]!, totals.find((t) => String(t[x!]) === k), q, catalog, x!, split, F)));
     this.#paints = split == null || !scene.series ? new Map() : new Map(scene.nodes.filter((n) => n.series != null && n.layer === 'data').reverse().map((n) => [n.series!, n.paint]));
     const box = this.#box();
     if (box) {
@@ -477,14 +478,14 @@ export class Keys {
     this.#drawCross(point, marks, how);
     if (!point) return;
     const i = this.#keys.indexOf(key!), pair = this.#pair(i);
-    const says = pair ? readout(pair, this.#q!, this.#catalog!, this.#layers) : this.#says[i] ?? '';
+    const says = pair ? readout(pair, this.#q!, this.#catalog!, this.#layers, this.#F) : this.#says[i] ?? '';
     // The option is named by what is read out, so a series chosen inside it is announced as it is shown.
     // ponytail: the name of the option in focus changes under it. Whether a screen reader says so is not checked.
     if (this.#order.length) for (const el of Array.from(box!.children)) attr(el, 'aria-label', el === point ? says : this.#says[this.#keys.indexOf(el.getAttribute('data-row') ?? '')]);
     if (marks.length) return;
     // A row that has every value in writing is its own readout. The option's name above still says it to a screen reader.
     const row = pair ?? (this.#order.length ? undefined : this.#rows[i]?.[0]);
-    if (row && (point as Element).classList?.contains('uav-row') && written((point as Element).textContent ?? '', row, this.#q!, this.#catalog!, this.#layers)) { hideReadout(tip); return; }
+    if (row && (point as Element).classList?.contains('uav-row') && written((point as Element).textContent ?? '', row, this.#q!, this.#catalog!, this.#layers, this.#F)) { hideReadout(tip); return; }
     const lines = pair ? null : this.#lines[i];
     say(tip, !lines ? says : [el('b', lines.head), ...lines.lines.flatMap((l) => {
       const swatch = document.createElement('i'); swatchOf(swatch, 'readout');
@@ -537,7 +538,7 @@ export class Keys {
     const row = this.#rows[this.#keys.indexOf(point.getAttribute('data-row') ?? '')]?.[0], dim = this.#x == null ? undefined : this.#catalog!.dimensions[this.#x];
     if (row && dim) {
       const name = chip(add('span', 'uav-cross-x'), 'axis'), c = parseFloat((point as HTMLElement).style.getPropertyValue('--uav-c'));
-      say(name, formatDimension(row[this.#x!], dim));
+      say(name, this.#F.dimension(row[this.#x!], dim));
       prop(name, 'left', centred(r.left + r.width * (Number.isFinite(c) ? c : 0.5) - p.left, name.offsetWidth, -before, p.width + after) + 'px');
     }
     for (const side of [0, 1] as const) {

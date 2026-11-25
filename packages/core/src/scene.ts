@@ -1,6 +1,6 @@
 import { max, min } from 'd3-array';
 import { scaleBand, scaleLinear, scalePoint, scaleQuantize } from 'd3-scale';
-import { CHAR_W, delta, fmtPct, fmtTime, formatBin, formatDimension, formatMetric, formatUnit, formatValue, orList } from './format.ts';
+import { CHAR_W, formats, orList, type Formats } from './format.ts';
 import { arcD, pathD, steady } from './path.ts';
 import { customMarks, type CustomMark, type MarkView } from './marks.ts';
 import { NOW, crossesZero, emptyNote, endsOf, leader, portion } from './prose.ts';
@@ -134,7 +134,7 @@ interface Draw {
 }
 type MarkFn = (l: Layer, d: Draw) => SceneNode[];
 /** What a row says of a field, in a catalog's terms. */
-const sayOf = (catalog: Catalog): Draw['say'] => (r, f) => { const M = metricOf(catalog, f); return typeof r[f] !== 'number' ? String(r[f]) : formatMetric(r[f] as number, M); };
+const sayOf = (catalog: Catalog, F: Formats): Draw['say'] => (r, f) => { const M = metricOf(catalog, f); return typeof r[f] !== 'number' ? String(r[f]) : F.metric(r[f] as number, M); };
 /** A mark's key and what it came from: its layer, its row, and its series where the row has one of it for each. */
 const markOf = (id: string, k: string, series?: string) => ({ key: id + ':' + k + (series == null ? '' : ':' + series), row: k, ...(series != null && { series }) });
 /** A field's definition: its own, where the catalog has one under its whole name, and for a companion with none the
@@ -311,8 +311,8 @@ const held = (f: unknown) => (f == null ? 'nothing' : JSON.stringify(f));
 /** What a row's value is called in an error: the field, and the row it is in. */
 const valueOf = (f: string, key: string) => 'The value of "' + f + '" for "' + key + '"';
 /** The key to a `unit`: what one glyph is worth, in its metric's own format. A guide, under the marks. None where a glyph is worth one. */
-function unitKey(id: string, worth: number, metric: MetricDef | undefined): SceneNode[] {
-  return worth === 1 ? [] : [{ key: 'unit-key:' + id, part: 'unit-key', kind: 'text', text: 'Each is ' + formatMetric(worth, metric), anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' }];
+function unitKey(F: Formats, id: string, worth: number, metric: MetricDef | undefined): SceneNode[] {
+  return worth === 1 ? [] : [{ key: 'unit-key:' + id, part: 'unit-key', kind: 'text', text: 'Each is ' + F.metric(worth, metric), anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' }];
 }
 /** A layer's own paint, where it states one. `delta` is the paint of its metric's change over the range, as the tldr
  * value's delta has it: good or bad by the metric's polarity. With no change to judge, the layer has stated none. */
@@ -320,7 +320,7 @@ function paintOf(l: Layer, catalog: Catalog, result: Result): string | undefined
   if (l.paint === 'direction') return undefined;                          // not a paint: each mark is painted by the way it goes, over the layer's own
   if (l.paint !== 'delta') return l.paint;
   const f = l.encode && (isDim(catalog, l.encode.y) ? l.encode.x : l.encode.y), M = metricOf(catalog, f);
-  const d = M && delta(result.totals[f as string] as number, result.totals[f + '@previous'], M.polarity);
+  const d = M && formats().delta(result.totals[f as string] as number, result.totals[f + '@previous'], M.polarity);   // for its paint, which no language changes
   return d && d.pct != null && d.paint !== 'ink.muted' ? d.paint : undefined;
 }
 /* The marks a plot draws, by name. A new mark is a function here. */
@@ -417,7 +417,7 @@ function stacked(rows: Row[], series: string[], split: string, k: (r: Row) => st
 // Each layer's mark draws against them.
 // With a metric on x as well, a row is still one value of a dimension: the query's, `by`. `xField` is the dimension the
 // rows are keyed by either way, and `xOn` the field x is measured along where that is a linear scale.
-function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, result: Result, by?: string): Body {
+function sceneCartesian(catalog: Catalog, F: Formats, layers: Layer[], guides: Guides, result: Result, by?: string): Body {
   const nodes: SceneNode[] = [], rows = result.rows;
   const xDim = xDimOf(catalog, layers), xField = (xDim || pointDimOf(catalog, layers, by))!;
   const xOn = !xDim ? (layers.map((l) => (across(l) ? undefined : l.encode && l.encode.x)).find((f) => typeof f === 'string') as string) : catalog.dimensions[xDim]!.type === 'number' ? xDim : null;
@@ -479,7 +479,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     if (u === 'rank') {
       const last = common(result, 'y' + ui, [1, Math.max(1, Math.ceil(max(vals) ?? 1))])[1], every = Math.ceil(last / 10);
       const ticks = Array.from({ length: last }, (_, i) => i + 1).filter((n) => n === 1 || n === last || (n % every === 0 && last - n >= every / 2));
-      return { v: (n: number) => (n < 1 ? 0 : last === 1 ? 1 : (last - n) / (last - 1)), ticks, coarse: [1, last], text: (t: number) => formatUnit(t, u, 'compact') };
+      return { v: (n: number) => (n < 1 ? 0 : last === 1 ? 1 : (last - n) / (last - 1)), ticks, coarse: [1, last], text: (t: number) => F.unit(t, u, 'compact') };
     }
     // A stack set about the middle is read by how thick each band is, and a scale that counts away from the middle says
     // nothing true of that. So it has no ticks and no grid, and is not rounded: the bands take the height of the plot.
@@ -493,7 +493,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     const fine = y.ticks(4), two = y.ticks(2).filter((t) => fine.includes(t));
     // A diverging stack counts away from zero on both sides, so its ticks say how much and not which side: no series is less than nothing.
     const away = layers.some((l) => l.stack === 'diverge' && splitOf(catalog, l, xField) && Math.max(0, units.indexOf(unitOf(catalog, l, xField)!)) === ui);
-    return { v: (n: number) => (n - bottom) / (top - bottom), ticks: fine, coarse: two.length > 1 ? two : fine.filter((_, i) => i % 2 === 0), text: (t: number) => (share ? fmtPct(t) : formatUnit(away ? Math.abs(t) : t, u || lone, 'compact')) };
+    return { v: (n: number) => (n - bottom) / (top - bottom), ticks: fine, coarse: two.length > 1 ? two : fine.filter((_, i) => i % 2 === 0), text: (t: number) => (share ? F.pct(t) : F.unit(away ? Math.abs(t) : t, u || lone, 'compact')) };
   });
   let unit: Draw['unit'] = xScale(keys, shared, 0, 1), xv: Draw['xv'];
   // A column's width is its x's total over the engine's total, so with a `limit` the columns stop short of the plot's end, as a band does.
@@ -519,7 +519,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     const xM = xDim ? undefined : metricOf(catalog, xOn);                 // a number dimension has no unit in the catalog, so its ticks are plain numbers
     unit = { x: (key) => to(lo(key)), w: 0, cx: (key) => to((lo(key) + hi(key)) / 2), span: (key) => to(hi(key)) - to(lo(key)) };
     if (guides.x && keys.length) x.ticks(4).forEach((t, i, all) => {
-      nodes.push(axisTick('x-axis', t, to(t), formatMetric(t, xM, true), { anchor: to(t) <= 0 ? 'start' : to(t) >= 1 ? 'end' : 'middle', rank: Number(i > 0 && i < all.length - 1) }));
+      nodes.push(axisTick('x-axis', t, to(t), F.metric(t, xM, true), { anchor: to(t) <= 0 ? 'start' : to(t) >= 1 ? 'end' : 'middle', rank: Number(i > 0 && i < all.length - 1) }));
     });
   }
   // One metric sizes the dots of a plot, whichever layers name it. On a bar it is the column's width, and has no key.
@@ -543,7 +543,7 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
     const order = wide ? keys.slice().sort((a, b) => widths.get(b)! - widths.get(a)!) : [];
     idx.forEach((i, j) => {
       const mid = isTime && j > 0 && j < idx.length - 1, rank = wide ? order.indexOf(keys[i]!) : mid ? 1 : 0;   // the middle date is given up on a narrow plot
-      nodes.push(axisTick('x-axis', keys[i]!, unit.cx(keys[i]!), isTime ? fmtTime(said.get(keys[i]!)!) : said.get(keys[i]!)!,
+      nodes.push(axisTick('x-axis', keys[i]!, unit.cx(keys[i]!), isTime ? F.time(said.get(keys[i]!)!) : said.get(keys[i]!)!,
         { row: keys[i]!, anchor: !isTime ? 'middle' : j === 0 ? 'start' : j === idx.length - 1 ? 'end' : 'middle', rank }));
     });
   }
@@ -558,13 +558,13 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
   const tints = layers.map((l) => l.encode && l.encode.color).filter((f): f is string => isMetric(catalog, f)), tint = tints[0];
   if (new Set(tints).size > 1) throw new Error('These layers put ' + new Set(tints).size + ' metrics on color (' + [...new Set(tints)].join(', ') + '), and a plot has one colour scale. Put one of them on color, and show the other on y or as a size.');
   if (tint && (painted || several)) throw new Error('"' + tint + '" is on color, which paints each mark by its value, and these layers are also told apart by colour: ' + (painted ? 'they are split by "' + split + '"' : 'they measure ' + measures.join(' and ')) + '. Keep one: take "' + tint + '" off color, or ' + (painted ? 'put "' + split + '" on detail' : 'draw one metric') + '.');
-  const ramp = tint ? seqScale(rows.map((r) => r[tint]).filter((n): n is number => typeof n === 'number'), metricOf(catalog, tint)!, result) : null;
+  const ramp = tint ? seqScale(rows.map((r) => r[tint]).filter((n): n is number => typeof n === 'number'), metricOf(catalog, tint)!, result, F) : null;
   const unpainted = several ? layers.findIndex((l) => !l.paint && l.series !== 'previous' && measures.indexOf(measureOf(catalog, l)!) >= SERIES) : -1;
   if (unpainted >= 0) throw new Error('These layers measure ' + measures.length + ' metrics (' + measures.join(', ') + '), and there are ' + SERIES + ' series colours for the ones that state no paint. Give layer ' + (unpainted + 1) + ' a "paint", or draw fewer metrics on one plot.');
   // Bars of one metric that fall below nothing as well as rise from it: each is a gain or a loss, and is painted as one.
   // A split plot's bars are painted by their series, and are not these.
   const diverges = (l: Layer) => { const y = l.encode!.y; return typeof y === 'string' && !splitOf(catalog, l, xField) && rows.some((r) => (r[y] as number) < 0); };
-  const say = sayOf(catalog);
+  const say = sayOf(catalog, F);
   // Bars of several layers on one x sit side by side, as the bars of a split do: one drawn over another hid it.
   // A bar with two ends floats, and is laid over what it belongs to: a box over its whiskers.
   const beside = layers.flatMap((l, i) => (l.mark === 'bar' && l.encode!.y2 == null && !splitOf(catalog, l, xField) ? [i] : []));
@@ -637,9 +637,9 @@ function sceneCartesian(catalog: Catalog, layers: Layer[], guides: Guides, resul
       nodes.push(...legendEntry(f, {}, name, paint));
     });
   }
-  if (size) nodes.push(...sizeKey(metricOf(catalog, size.field)!, size.top));
+  if (size) nodes.push(...sizeKey(metricOf(catalog, size.field)!, size.top, F));
   if (ramp) nodes.push(...ramp.ramp(rows.some((r) => r[tint!] == null)));
-  layers.forEach((l, i) => { if (worths[i] != null) nodes.push(...unitKey(ids[i]!, worths[i]!, metricOf(catalog, l.encode!.y))); });
+  layers.forEach((l, i) => { if (worths[i] != null) nodes.push(...unitKey(F, ids[i]!, worths[i]!, metricOf(catalog, l.encode!.y))); });
   return { nodes, rows: keys, ...(split && (painted ? { series } : { detail: series })), scale };
 }
 /** A tick's label on an axis, whichever layout the axis is in: a plot's and a grid's are the same node. It stands at
@@ -653,13 +653,13 @@ function axisTick(part: 'x-axis' | 'y-axis' | 'y-axis-2', k: string | number, at
     ...(!x && { baseline: 'middle' as const }), font: 'tick', paint: 'ink.muted', layer: 'guide', ...(rank && { rank }) };
 }
 /** The key to sizes: the metric's name, then each step with the most it stands for, in the metric's unit. */
-export function sizeKey(metric: MetricDef, top: number): SceneNode[] {
+export function sizeKey(metric: MetricDef, top: number, F: Formats = formats()): SceneNode[] {
   // A step of a count is a whole number of things. Where the most is so few that the steps would round to each other, they are said as they are.
   const whole = (n: number) => (metric.unit === 'count' && top >= SIZES ** 2 ? Math.round(n) : n);
   const nodes: SceneNode[] = [{ key: 'size:title', part: 'size', kind: 'text', text: metric.label, anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' }];
   for (let s = 1; s <= SIZES; s++) {
     nodes.push({ key: 'size:' + s, part: 'size', kind: 'circle', pulse: false, size: s, paint: 'ink.muted', layer: 'guide' });
-    nodes.push({ key: 'size:' + s + ':label', part: 'size', kind: 'text', text: formatValue(whole(top * (s / SIZES) ** 2), metric, 'compact'), anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' });
+    nodes.push({ key: 'size:' + s + ':label', part: 'size', kind: 'text', text: F.value(whole(top * (s / SIZES) ** 2), metric, 'compact'), anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' });
   }
   return nodes;
 }
@@ -673,12 +673,12 @@ export function columnLabel(catalog: Catalog, l: Layer): string {
   return l.series === 'delta' ? 'Change' : catalog.metrics[l.encode!.text as string]!.label;
 }
 // What a text layer says in one row.
-function cellOf(catalog: Catalog, l: Layer, r: Row): { text: string; paint: string } {
+function cellOf(catalog: Catalog, F: Formats, l: Layer, r: Row): { text: string; paint: string } {
   const f = l.encode!.text as string, M = catalog.metrics[f], D = catalog.dimensions[f];
   // A dimension is said as the readout says it, so a day is "Sep 29".
-  if (!M || l.series !== 'delta') return { text: M ? formatValue(num(r, f), M) : D ? formatDimension(r[f], D) : String(r[f]), paint: 'ink' };
+  if (!M || l.series !== 'delta') return { text: M ? F.value(num(r, f), M) : D ? F.dimension(r[f], D) : String(r[f]), paint: 'ink' };
   // The row's change, as the tldr value's delta says the total's. A row with nothing before it has a dash: a column has no room for the words.
-  const d = delta(num(r, f), r[f + '@previous'] as number | null | undefined, M.polarity);
+  const d = F.delta(num(r, f), r[f + '@previous'] as number | null | undefined, M.polarity);
   return { text: d.state === 'none' ? '–' : d.text, paint: d.paint };
 }
 export const TICK_W = CHAR_W - 0.06;   // rough advance of the tick face, which a column's header is set in
@@ -774,7 +774,7 @@ function listOf(catalog: Catalog, layers: Layer[], result: Result): { dim: strin
 // its values, in that dimension's own order, which is the engine's: paint follows it, and there is a legend.
 // With it on the detail of a dot or a tick, a row has one for each of its pairs, all in one paint and with no legend.
 // `told` is whether the plan shows a legend: without one a divided row's series are in one paint, parted by their gaps.
-function sceneRows(catalog: Catalog, layers: Layer[], result: Result, told = true): Body {
+function sceneRows(catalog: Catalog, F: Formats, layers: Layer[], result: Result, told = true): Body {
   const nodes: SceneNode[] = [];
   const { dim, split, own, items: all } = listOf(catalog, layers, result), items = all, rows = items.map((i) => i.row), shown = items.flatMap((i) => i.pairs);
   // A bar with nothing on x is no mark of a value: it is the range the row's marks are read against, as an arc with
@@ -817,7 +817,7 @@ function sceneRows(catalog: Catalog, layers: Layer[], result: Result, told = tru
   const spans = new Map(tracked.filter((l) => divides(l) && l.stack).map((l) => { const f = l.encode!.x as string; return [l, stacked(shown, series, split!, (r) => own.get(r)!, f, l.stack, l.stack === 'normalize' ? (r) => (whole.get(r)![f] as number) || Infinity : () => 1)] as const; }));
   const vals = edges.concat(tracked.flatMap((l) => (spans.has(l) ? [...spans.get(l)!.values()].flat() : divides(l) ? shown.flatMap((r) => on(l, r) as number[]) : rows.flatMap((r) => on(l, r) as number[])))), beside = trackBeside(layers);
   const [lo, hi] = common(result, 'track', holdingZero(vals)), v = (n: number) => (n - lo) / (hi - lo);
-  const ids = layerKeys(layers), cols = columnsOf(catalog, layers), say = sayOf(catalog);
+  const ids = layerKeys(layers), cols = columnsOf(catalog, layers), say = sayOf(catalog, F);
   // A column after the first is ranked by its place, so the last goes first. One column of values needs no header: the view's title says what it is.
   const rank = (l: Layer) => { const j = cols.indexOf(l); return j > 0 && { rank: j }; };
   // Where the columns are headed, so is what the rows are: the dimension's name over the labels, from the start.
@@ -852,7 +852,7 @@ function sceneRows(catalog: Catalog, layers: Layer[], result: Result, told = tru
         nodes.push(...inTrack(l, { id: ids[li]!, role: roleOf(l), say, paint: paintOf(l, catalog, result) || shade(l, r) || (l.series === 'previous' ? 'compare' : 'series.1'), k, row: r, at, ...(two && { to: to! }), v, beside, worth: worths.get(l),
           ...(l.mark === 'bar' && two && l.paint === 'direction' && { polarity: metricOf(catalog, fieldOn(l))?.polarity }) }));
       } else if (l.mark === 'text') {
-        const cell = cellOf(catalog, l, r);
+        const cell = cellOf(catalog, F, l, r);
         nodes.push({ key: ids[li] + ':' + k, part: 'rows', kind: 'text', row: k, text: cell.text,
           anchor: l.align === 'end' ? 'end' : 'start', baseline: 'middle', font: cols.includes(l) ? 'value' : 'label', paint: cell.paint, layer: 'data', role: roleOf(l), ...rank(l) });
       } else if (!LIST_MARKS[l.mark]) {
@@ -867,18 +867,18 @@ function sceneRows(catalog: Catalog, layers: Layer[], result: Result, told = tru
   layers.forEach((l, li) => {
     const draw = LIST_MARKS[l.mark], prev = l.series === 'previous';
     if (draw) nodes.push(...draw(l, {
-      id: ids[li]!, role: roleOf(l), paint: paintOf(l, catalog, result) || (prev ? 'compare' : 'series.1'), prev, rows: rows.filter((r) => on(l, r)[0] != null), k: (r) => keyOf.get(r)!, say: sayOf(catalog), v, part: 'track',
+      id: ids[li]!, role: roleOf(l), paint: paintOf(l, catalog, result) || (prev ? 'compare' : 'series.1'), prev, rows: rows.filter((r) => on(l, r)[0] != null), k: (r) => keyOf.get(r)!, say: sayOf(catalog, F), v, part: 'track',
       unit: { x: (k) => place.get(k)! / count, w: 1 / count, cx: (k) => (place.get(k)! + 0.5) / count }, ends: (r) => [v(0), v(on(l, r)[0] as number)],
     }));
   });
-  worths.forEach((worth, l) => nodes.push(...unitKey(ids[layers.indexOf(l)]!, worth, metricOf(catalog, l.encode!.x))));
+  worths.forEach((worth, l) => nodes.push(...unitKey(F, ids[layers.indexOf(l)]!, worth, metricOf(catalog, l.encode!.x))));
   if (painted) {
     // Both keys to the series, each in its own part, as a band has: a swatch and a name for each, and one line that
     // names the series with the most, in its colour, by the engine's totals. The plan names one in `parts`.
-    const name = (s: unknown) => formatDimension(s as string, catalog.dimensions[split!]!), f = layers.find((l) => spans.has(l))!.encode!.x as string, by = result.totalsBy && result.totalsBy[split!];
+    const name = (s: unknown) => F.dimension(s as string, catalog.dimensions[split!]!), f = layers.find((l) => spans.has(l))!.encode!.x as string, by = result.totalsBy && result.totalsBy[split!];
     nodes.push(...seriesLegend(series, name));
     const top = by && leader(result, split!, f);
-    if (top) nodes.push({ key: 'legend-top', part: 'legend-top', kind: 'text', series: str(top, split!), text: name(top[split!]) + ' ' + portion(num(top, f), result.totals[f], metricOf(catalog, f)!), anchor: 'start', font: 'label', paint: 'series.' + (series.indexOf(str(top, split!)) + 1), layer: 'guide' });
+    if (top) nodes.push({ key: 'legend-top', part: 'legend-top', kind: 'text', series: str(top, split!), text: name(top[split!]) + ' ' + portion(F, num(top, f), result.totals[f], metricOf(catalog, f)!), anchor: 'start', font: 'label', paint: 'series.' + (series.indexOf(str(top, split!)) + 1), layer: 'guide' });
   }
   return { nodes, rows: items.map((i) => i.k), ...(split && (painted ? { series } : { detail: series })), ...(beside && { track: 'beside' as const }) };
 }
@@ -886,13 +886,13 @@ function sceneRows(catalog: Catalog, layers: Layer[], result: Result, told = tru
 // No positional dimension: one band, stacked and normalized, split by colour. A share is of the engine's total, so
 // with a `limit` the band stops short of its end by what the rows past the limit hold. With no total, or one of zero,
 // no segment has a share and none has a length: the legend says each value. The rows are never summed to make one.
-function sceneBand(catalog: Catalog, layer: Layer, rows: Row[], totals: Result['totals']): Body {
+function sceneBand(catalog: Catalog, F: Formats, layer: Layer, rows: Row[], totals: Result['totals']): Body {
   const nodes: SceneNode[] = [], m = layer.encode!.x as string, dim = layer.encode!.color as string;
   const total = totals[m] || Infinity, own = rowKeys(rows, dim), k = (r: Row) => own.get(r)!;
   rows.forEach((r, i) => {
     nodes.push({ key: 'seg:' + k(r), part: 'band', kind: 'rect', w: num(r, m) / total, row: k(r), paint: 'series.' + ((i % SERIES) + 1), layer: 'data', role: roleOf(layer) });
   });
-  return { nodes: nodes.concat(shareLegend(rows, k, dim, catalog.dimensions[dim]!, m, catalog.metrics[m]!, totals[m], (i) => 'series.' + ((i % SERIES) + 1))), rows: rows.map(k) };
+  return { nodes: nodes.concat(shareLegend(F, rows, k, dim, catalog.dimensions[dim]!, m, catalog.metrics[m]!, totals[m], (i) => 'series.' + ((i % SERIES) + 1))), rows: rows.map(k) };
 }
 // A `unit` where a bar would make the band: a grid of a hundred cells, ten rows of ten, in reading order. The part
 // holds its shape, as a circle of arcs does. With a dimension on color the cells are shared out among its values by
@@ -901,7 +901,7 @@ function sceneBand(catalog: Catalog, layer: Layer, rows: Row[], totals: Result['
 // says each value, and the rows are never summed. With no dimension the metric is read against its catalog `domain`, as
 // a gauge reads it: the cells up to its place are lit, and the rest are the same paint as a tint. A cell there is
 // keyed by its place alone, so one that stays lit keeps its key. The legend is the band's.
-function sceneGrid(catalog: Catalog, layer: Layer, id: string, result: Result): Body & Pick<Scene, 'aspect'> {
+function sceneGrid(catalog: Catalog, F: Formats, layer: Layer, id: string, result: Result): Body & Pick<Scene, 'aspect'> {
   const m = layer.encode!.x, dim = layer.encode!.color, M = metricOf(catalog, m), side = Math.sqrt(UNIT_CELLS), role = roleOf(layer);
   if (typeof m !== 'string' || !M || m.includes('@')) throw new Error('A "unit" with no dimension on x or y is a grid of a hundred, and needs a metric on x to share it out by. This one has ' + held(m) + ' there. Encode { "x": <a metric>, "color": <a dimension> }.');
   const nodes: SceneNode[] = [], own = paintOf(layer, catalog, result) || 'series.1';
@@ -910,14 +910,14 @@ function sceneGrid(catalog: Catalog, layer: Layer, id: string, result: Result): 
     if (!M.domain) throw new Error('A "unit" with no dimension reads "' + m + '" against a range, and the catalog gives that metric no "domain". Add "domain": [least, most] to it in the catalog, or encode a dimension on color to divide the grid by it.');
     const v = result.totals[m], [least, most] = M.domain, lit = v == null || !(v > least) ? 0 : Math.max(1, Math.round(along(M.domain, v) * UNIT_CELLS));
     for (let i = 0; i < UNIT_CELLS; i++) cell(id + ':' + (i + 1), i < lit ? {} : TINT);
-    return { nodes: nodes.concat(unitKey(id, (most - least) / UNIT_CELLS, M)), aspect: 1 };
+    return { nodes: nodes.concat(unitKey(F, id, (most - least) / UNIT_CELLS, M)), aspect: 1 };
   }
   const rows = result.rows, total = result.totals[m], keys = rowKeys(rows, dim), k = (r: Row) => keys.get(r)!, paint = (i: number) => 'series.' + ((i % SERIES) + 1);
   // A count of cells cannot be less than none, so a value below zero is refused, as a stack's is.
   const cells = unitShares(rows.map((r) => { const v = (r[m] as number | null) ?? 0; unitCount(v, 1, valueOf(m, k(r))); return v; }), total);
   rows.forEach((r, i) => { for (let n = 1; n <= cells[i]! && nodes.length < UNIT_CELLS; n++) cell(id + ':' + k(r) + ':' + n, { row: k(r), paint: paint(i) }); });
   for (let n = 1; nodes.length < UNIT_CELLS; n++) cell(id + '#rest:' + n, { paint: 'seq.none' });
-  return { nodes: nodes.concat(shareLegend(rows, k, dim, catalog.dimensions[dim]!, m, M, total, paint)), rows: rows.map(k), aspect: 1 };
+  return { nodes: nodes.concat(shareLegend(F, rows, k, dim, catalog.dimensions[dim]!, m, M, total, paint)), rows: rows.map(k), aspect: 1 };
 }
 // A legend's entry, whichever legend it is in: a swatch in the paint of what it stands for, a row or a series, and its name.
 const legendEntry = (k: string, of: { row?: string; series?: string }, text: string, paint: string): SceneNode[] => [
@@ -931,8 +931,8 @@ const seriesLegend = (series: string[], name: (s: string) => string = (s) => s):
 // The plan names one in `parts`; a fit rule swaps them.
 // A segment is named as the readout names it, so a day is "Sep 29".
 // `said` is what an entry says of its row in place of its share: rings that are read against a range say the value.
-function shareLegend(rows: Row[], k: (r: Row) => string, f: string, dim: DimensionDef, m: string, M: MetricDef, total: number | null | undefined, paint: (i: number) => string, said = (r: Row) => portion(num(r, m), total, M)): SceneNode[] {
-  const nodes: SceneNode[] = [], name = (r: Row) => formatDimension(r[f], dim);
+function shareLegend(F: Formats, rows: Row[], k: (r: Row) => string, f: string, dim: DimensionDef, m: string, M: MetricDef, total: number | null | undefined, paint: (i: number) => string, said = (r: Row) => portion(F, num(r, m), total, M)): SceneNode[] {
+  const nodes: SceneNode[] = [], name = (r: Row) => F.dimension(r[f], dim);
   rows.forEach((r, i) => {
     nodes.push(...legendEntry(k(r), { row: k(r) }, name(r), paint(i)));
     nodes.push({ key: 'share:' + k(r), part: 'legend', kind: 'text', row: k(r), text: said(r), anchor: 'end', baseline: 'middle', font: 'value', paint: 'ink', layer: 'guide' });
@@ -968,7 +968,7 @@ const RINGS = 6;     // the most rings a circle is divided into: under that each
 // `reference`, its `target` marked. A constant on angle is marked the same way. A layer with nothing on angle is the
 // whole sweep: the range behind the value.
 // `told` is whether the plan shows a legend: without one the segments, rings and seats are in one paint, parted by their gaps.
-function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result, told = true): Body & Pick<Scene, 'aspect'> {
+function sceneRadial(catalog: Catalog, F: Formats, layers: Layer[], q: Query, result: Result, told = true): Body & Pick<Scene, 'aspect'> {
   const hue = (j: number) => (told ? 'series.' + (j + 1) : 'series.1');
   const half = layers.some((l) => l.sweep === 'half'), from = half ? -0.25 : 0, span = half ? 0.5 : 1;
   const ids = layerKeys(layers), arcs: ArcNode[] = [], legend: SceneNode[] = [], rim: SceneNode[] = [], seats: SceneNode[] = [];
@@ -987,7 +987,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
     const dim = catalog.dimensions[one]!, every = Math.ceil(rows.length / 4), rank = (j: number) => (j % every ? { rank: every % 2 || j % (every / 2) ? 2 : 1 } : {});
     rows.forEach((r, j) => {
       const lo = j / rows.length, hi = (j + 1) / rows.length, mid = (lo + hi) * Math.PI;
-      rim.push({ key: 'rim:' + k(r), part: 'rim', kind: 'text', x: steady(0.5 + Math.sin(mid) / 2), y: steady(0.5 + Math.cos(mid) / 2), row: k(r), text: formatDimension(r[one], dim),
+      rim.push({ key: 'rim:' + k(r), part: 'rim', kind: 'text', x: steady(0.5 + Math.sin(mid) / 2), y: steady(0.5 + Math.cos(mid) / 2), row: k(r), text: F.dimension(r[one], dim),
         anchor: Math.sin(mid) > 0.2 ? 'start' : Math.sin(mid) < -0.2 ? 'end' : 'middle', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide', ...rank(j) });
     });
   };
@@ -1019,7 +1019,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
       };
       rows.forEach((r, j) => { for (let c = 1; c <= counts[j]!; c++) seat(ids[i] + ':' + k(r) + ':' + c, { row: k(r), paint: hue(j), legend: true }); });
       for (let c = 1; c <= rest; c++) seat(ids[i] + '#rest:' + c, {});
-      legend.push(...unitKey(ids[i]!, worth, M), ...shareLegend(rows, k, dim, catalog.dimensions[dim]!, m, M, total, (j) => 'series.' + (j + 1)));
+      legend.push(...unitKey(F, ids[i]!, worth, M), ...shareLegend(F, rows, k, dim, catalog.dimensions[dim]!, m, M, total, (j) => 'series.' + (j + 1)));
       keys = rows.map(k);
       return;
     }
@@ -1032,7 +1032,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
       if (!isDim(catalog, angle) || typeof f !== 'string' || !metricOf(catalog, f)) throw new Error(n + ' is a "' + l.mark + '" about a centre, which stands at each value of a dimension round the circle and reaches out to its value, and it has ' + held(angle) + ' on angle and ' + held(f) + ' on radius. Put a dimension on angle and a metric on radius.');
       if (keys && around !== angle) throw new Error(n + ' divides the circle again, by "' + angle + '", and a circle is divided once. Remove one of the layers that divide it.');
       const rows = result.rows, own = rowKeys(rows, angle), k = (r: Row) => own.get(r)!, place = new Map(rows.map((r, j) => [k(r), j])), count = rows.length, prev = l.series === 'previous', by = outBy(l);
-      const drawn = round(l, { id: ids[i]!, role: roleOf(l), paint: paintOf(l, catalog, result) || (prev ? 'compare' : 'series.1'), prev, rows: rows.filter((r) => r[by] != null), k, say: sayOf(catalog), v: reach, part: 'radial', bend: true,
+      const drawn = round(l, { id: ids[i]!, role: roleOf(l), paint: paintOf(l, catalog, result) || (prev ? 'compare' : 'series.1'), prev, rows: rows.filter((r) => r[by] != null), k, say: sayOf(catalog, F), v: reach, part: 'radial', bend: true,
         unit: { x: (key) => place.get(key)! / count, w: 1 / count, cx: (key) => (place.get(key)! + 0.5) / count }, ends: (r) => [0, reach(num(r, by))] });
       bent.push(...drawn.map((node): SceneNode => (node.kind === 'circle' ? { ...node, x: steady(0.5 + node.y! * Math.sin(node.x! * TURN) / 2), y: steady(0.5 + node.y! * Math.cos(node.x! * TURN) / 2) } : node)));
       if (!rim.length) rimOf(rows, angle, k);
@@ -1077,7 +1077,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
           if (r[m as string] != null) arcs.push(arc(ids[i] + ':' + k(r), l, 0, along([least, most], num(r, m as string)), inner, shade(j), { row: k(r), ...keyed }, r1));
         });
         // A ring in a colour of its own has an entry in the legend, which says its value: a ring is no share of a whole.
-        if (angle != null && enc.color != null && !legend.length) legend.push(...shareLegend(rows, k, one, dim, m as string, M!, null, shade, (r) => formatValue(r[m as string] as number | null, M!)));
+        if (angle != null && enc.color != null && !legend.length) legend.push(...shareLegend(F, rows, k, one, dim, m as string, M!, null, shade, (r) => F.value(r[m as string] as number | null, M!)));
       }
       keys = rows.map(k); rings = slices ? '' : one;
       return;
@@ -1108,7 +1108,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
           arcs.push(arc(ids[i] + ':' + k(r) + ':' + str(p, split!), l, start, Math.max(start, end - GAP / span), edge, hue(j), { row: k(r), series: str(p, split!), opacity: CHILD, legend: true }));
         });
       });
-      legend.push(...shareLegend(rows, k, dim, catalog.dimensions[dim]!, m, catalog.metrics[m]!, result.totals[m], (j) => 'series.' + (j + 1)));
+      legend.push(...shareLegend(F, rows, k, dim, catalog.dimensions[dim]!, m, catalog.metrics[m]!, result.totals[m], (j) => 'series.' + (j + 1)));
       keys = rows.map(k);
       if (split) detail = kids;
       return;
@@ -1126,7 +1126,7 @@ function sceneRadial(catalog: Catalog, layers: Layer[], q: Query, result: Result
   });
   // The number sits in the hole of a donut: the short form, which is what fits. Whether it shows is a fit rule's to say.
   const inner = arcs.filter((a) => a.role === 'primary').map((a) => a.r0), nodes: SceneNode[] = arcs;
-  if (inner.length && Math.min(...inner) >= HOLE) nodes.push({ key: 'hole', part: 'hole', kind: 'text', text: tldrValueText(catalog, q, result, true), anchor: 'middle', font: 'display', paint: 'ink', layer: 'data' });
+  if (inner.length && Math.min(...inner) >= HOLE) nodes.push({ key: 'hole', part: 'hole', kind: 'text', text: tldrValueText(catalog, q, result, true, F), anchor: 'middle', font: 'display', paint: 'ink', layer: 'data' });
   return { nodes: nodes.concat(bent, rim, seats, legend), ...(keys && { rows: keys }), ...(detail && { detail }), aspect: half ? 2 : 1 };
 }
 
@@ -1140,8 +1140,8 @@ const DIV = 9;      // and from div.1 to div.9 where the values cross zero: four
  * on either ramp, and not a step of it: nothing is not a little, and it is not zero. `ramp` is the legend, set in
  * order: the low end, a swatch for each step, the high end, and with `none` the swatch for no value. A diverging
  * one says zero after its middle swatch, and its ends are the scale's, which are as far from zero as each other. */
-export function seqScale(vals: number[], metric?: MetricDef, result: Pick<Result, 'domains'> = {}): { paint(v: number | null | undefined): string; ramp(none: boolean): SceneNode[] } {
-  const [lo, hi] = common(result, 'color', endsOf(vals, metric)), say = (n: number) => formatMetric(n, metric, true);
+export function seqScale(vals: number[], metric?: MetricDef, result: Pick<Result, 'domains'> = {}, F: Formats = formats()): { paint(v: number | null | undefined): string; ramp(none: boolean): SceneNode[] } {
+  const [lo, hi] = common(result, 'color', endsOf(vals, metric)), say = (n: number) => F.metric(n, metric, true);
   const far = Math.max(-lo, hi), div = crossesZero([lo, hi]), name = div ? 'div.' : 'seq.', n = div ? DIV : SEQ;
   // Values that are all one have no least and most. They are measured from zero.
   const ends = div ? [-far, far] : lo < hi ? [lo, hi] : [Math.min(lo, 0), Math.max(hi, lo ? 0 : 1)];
@@ -1162,7 +1162,7 @@ export function seqScale(vals: number[], metric?: MetricDef, result: Pick<Result
 // by how far the value is from zero, whichever side it is on. Alone, it may be painted by a metric too, as a cell is.
 // A grid is a plot whose two axes are both lists, so a mark of the plot's that needs no quantity to stand at is drawn
 // here by the plot's own function, handed the grid's places (GRID_MARKS): a `text` says a value in the middle of each pair.
-function sceneMatrix(catalog: Catalog, layers: Layer[], result: Result): Body {
+function sceneMatrix(catalog: Catalog, F: Formats, layers: Layer[], result: Result): Body {
   const rest = layers.filter((l) => !GRID_MARKS[l.mark]);
   const cell = rest.find((l) => l.mark === 'cell'), dot = rest.find((l) => l.mark === 'dot'), l = cell || dot || layers[0]!, { x: xf, y: yf } = l.encode || {};
   const metric = (f: unknown): f is string => typeof f === 'string' && f in catalog.metrics, of = (r: Row, f: string | undefined) => (f == null ? '' : String(r[f]));
@@ -1193,17 +1193,17 @@ function sceneMatrix(catalog: Catalog, layers: Layer[], result: Result): Body {
   const held = (f: string) => new Map(result.rows.map((r) => [of(r, xf) + '\n' + of(r, yf), r[f] as number | null | undefined])), known = (at: Map<string, number | null | undefined>) => [...at.values()].filter((v): v is number => v != null);
   // The colour scale runs from the least to the most of the cells drawn. That is geometry, as the top of a y scale is,
   // and not a total, so it is read from the rows. A domain the catalog states for the metric comes before it.
-  const at = metric(m) ? held(m) : null, vals = at ? known(at) : [], seq = at && seqScale(vals, catalog.metrics[m as string]!, result);
+  const at = metric(m) ? held(m) : null, vals = at ? known(at) : [], seq = at && seqScale(vals, catalog.metrics[m as string]!, result, F);
   // A size is read the same way: the most a dot stands for is the value farthest from zero, or the farther end of a stated domain.
   const sizes = metric(sized) ? held(sized) : null, top = sizes ? common(result, 'size', [0, Math.max(...endsOf(known(sizes), catalog.metrics[sized as string]!).map(Math.abs)) || 1])[1] : 1;
   const nodes: SceneNode[] = [], ids = layerKeys(layers), nx = xs.length, ny = ys.length;
   // Every sixth label stays, and the rest are ranked to be given up where they would meet: every third goes last.
   const rank = (i: number) => (i % 6 ? (i % 3 ? 2 : 1) : 0);
   const end = (f: string, v: string) => result.rows.find((r) => String(r[f]) === v)?.[f + '@end'];
-  const tick = (f: string, v: string) => formatDimension(v, catalog.dimensions[f]!);
+  const tick = (f: string, v: string) => F.dimension(v, catalog.dimensions[f]!);
   // Down the side a bin's label is the bin, start to end. Along the foot there is no room for that, and a bin is read
   // as on any binned axis: an edge at each end of it.
-  if (yf != null) ys.forEach((y, j) => nodes.push(axisTick('y-axis', y, 1 - (j + 0.5) / ny, end(yf, y) == null ? tick(yf, y) : formatBin(y, end(yf, y)), { rank: rank(j) })));
+  if (yf != null) ys.forEach((y, j) => nodes.push(axisTick('y-axis', y, 1 - (j + 0.5) / ny, end(yf, y) == null ? tick(yf, y) : F.bin(y, end(yf, y)), { rank: rank(j) })));
   const edges = xf != null && xs.length > 0 && xs.every((x) => end(xf, x) != null);
   if (xf != null) xs.forEach((x, i) => nodes.push(axisTick('x-axis', x, (i + (edges ? 0 : 0.5)) / nx, tick(xf, x), { anchor: edges && !i ? 'start' : 'middle', rank: rank(i) })));
   if (edges) nodes.push(axisTick('x-axis', 'end', 1, String(end(xf!, xs[nx - 1]!)), { anchor: 'end' }));
@@ -1219,7 +1219,7 @@ function sceneMatrix(catalog: Catalog, layers: Layer[], result: Result): Body {
   for (const i of sharedAt) {
     const own = layers[i]!, f = own.encode?.text, rows = result.rows.filter((r) => typeof f !== 'string' || r[f] != null);
     nodes.push(...GRID_MARKS[own.mark]!(own, {
-      id: ids[i]!, role: roleOf(own), paint: own.paint || 'ink', prev: false, rows, say: sayOf(catalog), v: (n) => n,
+      id: ids[i]!, role: roleOf(own), paint: own.paint || 'ink', prev: false, rows, say: sayOf(catalog, F), v: (n) => n,
       k: (r) => of(r, xf) + '\n' + of(r, yf), unit: { x: (k) => xs.indexOf(k.split('\n')[0]!) / nx, w: 1 / nx, cx: (k) => (xs.indexOf(k.split('\n')[0]!) + 0.5) / nx },
       ends: (r) => { const t = 1 - (ys.indexOf(of(r, yf)) + 0.5) / ny; return [t, t]; },
       of: (r) => ({ key: ids[i] + ':' + of(r, xf) + ':' + of(r, yf), pair: [of(r, xf), of(r, yf)] }),
@@ -1227,19 +1227,19 @@ function sceneMatrix(catalog: Catalog, layers: Layer[], result: Result): Body {
     }));
   }
   if (seq) nodes.push(...seq.ramp(vals.length < nx * ny));
-  if (sizes) nodes.push(...sizeKey(catalog.metrics[sized as string]!, top));
+  if (sizes) nodes.push(...sizeKey(catalog.metrics[sized as string]!, top, F));
   return { nodes, rows: xs, ys };
 }
 
 /** The value shown as the number, formatted. */
-export function tldrValueText(catalog: Catalog, q: Query, result: Result, compact?: boolean): string {
+export function tldrValueText(catalog: Catalog, q: Query, result: Result, compact?: boolean, F: Formats = formats()): string {
   const m = q.metrics[0]!, M = catalog.metrics[m]!;
-  return formatValue(M.instant ? result.totals[m] || 0 : result.meta.empty ? 0 : result.totals[m], M, compact ? 'compact' : undefined);
+  return F.value(M.instant ? result.totals[m] || 0 : result.meta.empty ? 0 : result.totals[m], M, compact ? 'compact' : undefined);
 }
 
 /* The tldr value: a total from the engine, a delta if the query compares, and a derived note.
  * It carries both forms of its text. Which one is set depends on the room, so that is not decided here. */
-function sceneNumber(catalog: Catalog, q: Query, result: Result, share: boolean): SceneNode[] {
+function sceneNumber(catalog: Catalog, F: Formats, q: Query, result: Result, share: boolean): SceneNode[] {
   const m = q.metrics[0]!, M = catalog.metrics[m]!, t = result.totals, by = (q.by || [])[0], rows = result.rows;
   const nodes: SceneNode[] = [];
   const value = (text: string, short = text) => nodes.push({ key: 'value', part: 'number', kind: 'text', text, ...(short !== text && { short }), anchor: 'start', font: 'display', paint: 'ink', layer: 'data', ...(M.definition && { note: M.definition }) });
@@ -1247,19 +1247,19 @@ function sceneNumber(catalog: Catalog, q: Query, result: Result, share: boolean)
   if (M.instant) {
     const n = t[m] || 0;
     nodes.push({ key: 'pulse', part: 'number', kind: 'circle', paint: n > 0 ? 'live' : 'ink.muted', pulse: n > 0, layer: 'data' });
-    value(formatValue(n, M)); sub(NOW);
+    value(F.value(n, M)); sub(NOW);
     return nodes;
   }
-  if (result.meta.empty) { value(formatValue(0, M)); sub(emptyNote(M)); return nodes; }
-  let note: string | null = M.rangeTotal === 'sum of daily' ? 'Sum of daily counts' : M.target != null ? 'Target ' + formatValue(M.target, M) : null;
+  if (result.meta.empty) { value(F.value(0, M)); sub(emptyNote(M)); return nodes; }
+  let note: string | null = M.rangeTotal === 'sum of daily' ? 'Sum of daily counts' : M.target != null ? 'Target ' + F.value(M.target, M) : null;
   if (by && catalog.dimensions[by]!.type === 'categorical' && rows.length) {
     const top = leader(result, by, m)!;                                      // with two dimensions a row is a pair, so the leader is the engine's
-    const name = formatDimension(top[by], catalog.dimensions[by]!);
+    const name = F.dimension(top[by], catalog.dimensions[by]!);
     // With no total there is no share to say, and where the engine has no figure for any value there is no top one either.
-    note = share && t[m] ? name + ' ' + fmtPct(num(top, m) / t[m]!) : top[m] == null ? note : 'Top: ' + name;
+    note = share && t[m] ? name + ' ' + F.pct(num(top, m) / t[m]!) : top[m] == null ? note : 'Top: ' + name;
   }
-  const dl = q.compare === 'previous' ? delta(t[m] as number, t[m + '@previous'], M.polarity) : null;
-  value(formatValue(t[m], M), formatValue(t[m], M, 'compact'));
+  const dl = q.compare === 'previous' ? F.delta(t[m] as number, t[m + '@previous'], M.polarity) : null;
+  value(F.value(t[m], M), F.value(t[m], M, 'compact'));
   if (dl && dl.text) nodes.push({ key: 'delta', part: 'number', kind: 'text', text: dl.text + (dl.pct != null ? ' on the previous period' : ''), ...(dl.pct != null && { short: dl.text }), anchor: 'start', font: 'value', paint: dl.paint, layer: 'guide' });
   if (note) sub(note, 1);                                                   // the note is given up beside a bare plot
   return nodes;
@@ -1310,7 +1310,7 @@ function sceneOver(layers: Layer[], name: string, mark: CustomMark, view: MarkVi
     if (first !== i) throw new Error(n + ', and layer ' + (first + 1) + ' is one already: a place has room for one. Remove one of the two.');
     // A row says something where it has something to say and its value has a place.
     const rows = view.result.rows.filter((r) => r[f] != null && r[dim] != null && place(key(r)));
-    return OVER_MARKS[own.mark]!(own, { id: ids[i]!, role: roleOf(own), paint: own.paint || 'ink', prev: false, rows, say: sayOf(view.catalog), v: (x) => x, k: key, rank: f,
+    return OVER_MARKS[own.mark]!(own, { id: ids[i]!, role: roleOf(own), paint: own.paint || 'ink', prev: false, rows, say: sayOf(view.catalog, view.formats), v: (x) => x, k: key, rank: f,
       unit: { x: (k) => place(k)!.x, w: 0, cx: (k) => place(k)!.x }, ends: (r) => { const y = place(key(r))!.y; return [y, y]; }, of: (r) => ({ key: ids[i] + ':' + key(r), row: key(r) }) });
   });
 }
@@ -1319,7 +1319,7 @@ const TURN = 2 * Math.PI;
 /** The scene for a plan, in ratios. Neither takes a size, so this is everything the spec asks for. */
 export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Catalog): Scene {
   checkValues(result, catalog);
-  const number = sceneNumber(catalog, q, result, p.share);
+  const F = formats(p.locale), number = sceneNumber(catalog, F, q, result, p.share);
   const parts: Part[] = p.tldrValue || p.layout === 'none' ? ['number'] : [];
   let body: Body = { nodes: [] };
   // The key to a unit's glyphs, where the plan shows it and the scene has one: a glyph worth one has none.
@@ -1330,7 +1330,7 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
     parts.push('notice');
     body.nodes.push({ key: 'notice', part: 'notice', kind: 'text', text: emptyNote(catalog.metrics[q.metrics[0]!]!, true), anchor: 'middle', baseline: 'middle', font: 'label', paint: 'ink.muted', layer: 'guide' });
   } else if (p.layout === 'cartesian') {
-    body = sceneCartesian(catalog, p.layers, p.guides, result, (q.by || [])[0]);
+    body = sceneCartesian(catalog, F, p.layers, p.guides, result, (q.by || [])[0]);
     if (p.guides.y && body.nodes.some((n) => n.part === 'y-axis')) parts.push('y-axis');   // a stack about the middle has no value axis
     parts.push('plot');
     if (body.nodes.some((n) => n.part === 'points')) parts.push('points');
@@ -1342,7 +1342,7 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
     keyTo('size', p.guides.size);
     unitKeyed();
   } else if (p.layout === 'matrix') {
-    body = sceneMatrix(catalog, p.layers, result);
+    body = sceneMatrix(catalog, F, p.layers, result);
     if (p.guides.y && body.nodes.some((n) => n.part === 'y-axis')) parts.push('y-axis');   // one row of cells has no label down its side
     parts.push('plot');
     if (p.guides.pointLabels && body.nodes.some((n) => n.part === 'point-labels')) parts.push('point-labels');
@@ -1352,7 +1352,7 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
   } else if (p.layout === 'rows') {
     if (p.guides.columns) parts.push('columns');
     parts.push('rows');
-    body = sceneRows(catalog, p.layers, result, !!p.guides.legend);
+    body = sceneRows(catalog, F, p.layers, result, !!p.guides.legend);
     if (body.nodes.some((n) => n.part === 'track')) parts.push('track');
     unitKeyed();
     // The key to a divided row's series, under the rows.
@@ -1360,12 +1360,12 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
   } else if (p.layout === 'band') {
     // A unit there is a grid of cells in the band's part, where a bar is the band itself.
     const unit = p.layers.findIndex((l) => l.mark === 'unit');
-    body = unit < 0 ? sceneBand(catalog, p.layers[0]!, result.rows, result.totals) : sceneGrid(catalog, p.layers[unit]!, layerKeys(p.layers)[unit]!, result);
+    body = unit < 0 ? sceneBand(catalog, F, p.layers[0]!, result.rows, result.totals) : sceneGrid(catalog, F, p.layers[unit]!, layerKeys(p.layers)[unit]!, result);
     parts.push('band');
     unitKeyed();
     if (p.guides.legend) parts.push('legend');
   } else if (p.layout === 'radial') {
-    body = sceneRadial(catalog, p.layers, q, result, !!p.guides.legend);
+    body = sceneRadial(catalog, F, p.layers, q, result, !!p.guides.legend);
     parts.push('radial');
     // A number above the circle is not said again inside it.
     if (!parts.includes('number') && body.nodes.some((n) => n.part === 'hole')) parts.push('hole');
@@ -1375,7 +1375,7 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
   } else if (customMarks().has(p.layout)) {
     // A custom mark builds its own scene, and says which of its parts the plan shows.
     // What lies over it is the plot's, at the places the mark offers: its own layers are all its scene is handed.
-    const mark = customMarks().get(p.layout)!, view = { layers: p.layers.filter((l) => l.mark === p.layout), guides: p.guides, query: q, result, catalog };
+    const mark = customMarks().get(p.layout)!, view = { layers: p.layers.filter((l) => l.mark === p.layout), guides: p.guides, query: q, result, catalog, formats: F };
     const { parts: own, ...rest } = mark.scene(view), over = sceneOver(p.layers, p.layout, mark, view);
     parts.push(...own);
     body = { ...rest, nodes: rest.nodes.concat(over) };

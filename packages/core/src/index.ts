@@ -8,7 +8,8 @@ export { buildScene, detailOf, isDim, isMetric, layerKeys, metricOf, roleOf, row
 export { COLUMNS_BLOCK, EM, FACET_GAP, FACET_LEAST, columnRooms, declutter, facetColumns, inColumn, type LabelBox } from './sizes.ts';
 export { arcD, pathD, steady, type PathBox } from './path.ts';
 export { filterSaid, many, most, notShownNote, partialNote, plural, tldrProse } from './prose.ts';
-export { UNITS, formatBin, formatDimension, formatUnit, formatValue, orList, rangeLabel } from './format.ts';
+export { LOCALE, UNITS, formatBin, formatDimension, formatUnit, formatValue, formats, orList, rangeLabel, rangeOf, timeOf } from './format.ts';
+export type { Delta, Formats } from './format.ts';
 export { SERIES, SIZES, TINT, common, seqScale, sizeKey, sizeStep, tooManySeries } from './scene.ts';
 export { radius as dotRadius } from './sizes.ts';
 export { fallbackRule, gaveWay } from './fit.ts';

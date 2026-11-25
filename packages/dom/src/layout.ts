@@ -1,4 +1,4 @@
-import { CONTAINER_RULES, type Catalog, type ContainerRules, type FitRule, type Layer, type Layout, type Query, type Result, type Room, type Scene } from '@unified-analytics/core';
+import { CONTAINER_RULES, type Catalog, type ContainerRules, type FitRule, type Formats, type Layer, type Layout, type Query, type Result, type Room, type Scene } from '@unified-analytics/core';
 
 /* The seam between <ua-view> and a layout. A layout is one module in layouts/, exporting one LayoutPainter.
  *
@@ -20,8 +20,9 @@ import { CONTAINER_RULES, type Catalog, type ContainerRules, type FitRule, type 
  * What a stylesheet cannot see is the measured pass's (measure.ts). The element runs it after each paint and when
  * the view's room changes, and owns the number and the prose rung. A layout joins it with `measure`. */
 /** What a view was planned from, for a layout that names its own points or lays out its own table: the plan's layers,
- * the query with its preset expanded, and the result and catalog as they were given. */
-export interface ViewData { layers: Layer[]; query: Query; result: Result; catalog: Catalog }
+ * the query with its preset expanded, the result and catalog as they were given, and the formatters of the plan's
+ * locale: what a painter says of a value goes through them. */
+export interface ViewData { layers: Layer[]; query: Query; result: Result; catalog: Catalog; formats: Formats }
 
 export interface LayoutPainter {
   layout: Layout;

@@ -1,4 +1,4 @@
-import { formatDimension, whereOf, type MarkView, type RectNode, type Row, type TextNode, type Where } from '@unified-analytics/core';
+import { whereOf, type MarkView, type RectNode, type Row, type TextNode, type Where } from '@unified-analytics/core';
 import { FOCUS, FROM_TOP, HOVER, IN_BOX, IS, attr, chooseItem, emptyTable, ensure, fieldLabel, heldBy, holdShape, keyed, LABEL, lineOf, nodePaint, paintRamp, prop, RAMP_STRIP, readout, registerPainter, roveItems, tableRow, text, token, valueText, type Cell, type LayoutPainter } from '@unified-analytics/dom';
 import { ASPECT, GAP, HEAD, HEAD_MOST, KID_GAP, LINE, MAX, boxesOf } from './index.ts';
 
@@ -93,8 +93,8 @@ function bind(plot: HTMLElement): void {
  * named by its parent's value and then its own. A parent's values are the engine's totals for it. This is a box's
  * accessible name and its readout, so no value is said by area or colour alone. `rows` are the rows inside it. */
 export function boxNames(view: Omit<MarkView, 'guides'>): Map<string, { says: string; row: Row; rows: Row[]; where: Where }> {
-  const { query, catalog, layers } = view, [dim, detail] = [layers[0]!.encode!.x as string, layers[0]!.encode!.detail as string];
-  const says = (r: Row, by: string[]) => readout(r, { ...query, by }, catalog, layers);
+  const { query, catalog, layers, formats: F } = view, [dim, detail] = [layers[0]!.encode!.x as string, layers[0]!.encode!.detail as string];
+  const says = (r: Row, by: string[]) => readout(r, { ...query, by }, catalog, layers, F);
   type Said = [string, { says: string; row: Row; rows: Row[]; where: Where }];
   return new Map(boxesOf(view).flatMap((g): Said[] => [[g.key, { says: says(g.row, [dim]), row: g.row, rows: g.rows, where: whereOf(g.row, [dim]) }],
     ...g.kids.map((c): Said => [c.key, { says: says(c.row, [dim, detail]), row: c.row, rows: [c.row], where: whereOf(c.row, [dim, detail]) }])]));
@@ -160,10 +160,10 @@ export const partitionPainter: LayoutPainter = {
 
   /* A row for each row of the result, under a row for its parent that holds the engine's total for it, and the engine's
    * total for the whole at the foot. Nothing is summed. With one dimension it is the table every view has. */
-  table(table, title, _scene, { query: q, result, catalog }) {
+  table(table, title, _scene, { query: q, result, catalog, formats: F }) {
     const by = q.by || [], [a, b] = by, fields = q.metrics.flatMap((m) => (q.compare === 'previous' ? [m, m + '@previous'] : [m]));
-    const row = (parent: HTMLElement, heads: string[], from: Row) => tableRow(parent, [...heads.map((s): Cell => [s, 'th']), ...fields.map((f): Cell => [valueText(from[f], f, catalog), 'td', true])]);
-    const say = (d: string, r: Row) => formatDimension(r[d], catalog.dimensions[d]!);
+    const row = (parent: HTMLElement, heads: string[], from: Row) => tableRow(parent, [...heads.map((s): Cell => [s, 'th']), ...fields.map((f): Cell => [valueText(from[f], f, catalog, F), 'td', true])]);
+    const say = (d: string, r: Row) => F.dimension(r[d], catalog.dimensions[d]!);
     emptyTable(table, title);
     tableRow(table.createTHead(), [...by.map((d): Cell => [catalog.dimensions[d]!.label, 'th']), ...fields.map((f): Cell => [fieldLabel(f, catalog), 'th', true])]);
     const body = table.createTBody();

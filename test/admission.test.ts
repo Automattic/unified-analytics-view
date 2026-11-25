@@ -1,6 +1,6 @@
 import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
-import { customMarks, expand, type Spec } from '@unified-analytics/core';
+import { customMarks, expand, formats, type Spec } from '@unified-analytics/core';
 import sceneSchema from '@unified-analytics/core/schema/scene.schema.json';
 import { catalog, moreSamples, samples, scenarios } from '@unified-analytics/fixtures';       // registers the custom marks
 import { heights, run, widths } from './helpers.ts';
@@ -46,7 +46,7 @@ describe.each([...customMarks().keys()])('the custom mark "%s" is held to what a
   it('offers places that are in its box, where it offers any', () => {
     if (!mark.places) return;
     for (const [k, spec] of mine) {
-      const { plan, ratio, result } = run(spec, 700), place = mark.places({ layers: plan.layers, guides: {}, query: expand(spec).query, result, catalog });
+      const { plan, ratio, result } = run(spec, 700), place = mark.places({ layers: plan.layers, guides: {}, query: expand(spec).query, result, catalog, formats: formats() });
       for (const row of ratio.rows ?? []) { const at = place(row); if (at) expect([at.x >= 0 && at.x <= 1, at.y >= 0 && at.y <= 1], k + ' ' + row).toEqual([true, true]); }
     }
   });

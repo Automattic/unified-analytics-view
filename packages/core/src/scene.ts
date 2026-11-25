@@ -3,7 +3,7 @@ import { scaleBand, scaleLinear, scalePoint, scaleQuantize } from 'd3-scale';
 import { CHAR_W, formats, orList, type Formats } from './format.ts';
 import { arcD, pathD, steady } from './path.ts';
 import { customMarks, type CustomMark, type MarkView } from './marks.ts';
-import { NOW, crossesZero, emptyNote, endsOf, leader, portion } from './prose.ts';
+import { crossesZero, emptyNote, endsOf, leader, portion } from './prose.ts';
 import { UNIT_CELLS, UNIT_MOST, UNIT_SEATS, unitCount, unitSeats, unitShares, unitWorth } from './unit.ts';
 import { baseOf } from './types.ts';
 import type { ArcNode, Catalog, DimensionDef, Domains, Guides, Layer, Mark, MetricDef, Part, PathNode, PlanShape, Polarity, Query, RectNode, Result, Role, Row, Scene, SceneNode, TextNode } from './types.ts';
@@ -312,7 +312,7 @@ const held = (f: unknown) => (f == null ? 'nothing' : JSON.stringify(f));
 const valueOf = (f: string, key: string) => 'The value of "' + f + '" for "' + key + '"';
 /** The key to a `unit`: what one glyph is worth, in its metric's own format. A guide, under the marks. None where a glyph is worth one. */
 function unitKey(F: Formats, id: string, worth: number, metric: MetricDef | undefined): SceneNode[] {
-  return worth === 1 ? [] : [{ key: 'unit-key:' + id, part: 'unit-key', kind: 'text', text: 'Each is ' + F.metric(worth, metric), anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' }];
+  return worth === 1 ? [] : [{ key: 'unit-key:' + id, part: 'unit-key', kind: 'text', text: F.say('eachIs', { value: F.metric(worth, metric) }), anchor: 'start', baseline: 'middle', font: 'tick', paint: 'ink.muted', layer: 'guide' }];
 }
 /** A layer's own paint, where it states one. `delta` is the paint of its metric's change over the range, as the tldr
  * value's delta has it: good or bad by the metric's polarity. With no change to judge, the layer has stated none. */
@@ -1247,20 +1247,20 @@ function sceneNumber(catalog: Catalog, F: Formats, q: Query, result: Result, sha
   if (M.instant) {
     const n = t[m] || 0;
     nodes.push({ key: 'pulse', part: 'number', kind: 'circle', paint: n > 0 ? 'live' : 'ink.muted', pulse: n > 0, layer: 'data' });
-    value(F.value(n, M)); sub(NOW);
+    value(F.value(n, M)); sub(F.say('now'));
     return nodes;
   }
-  if (result.meta.empty) { value(F.value(0, M)); sub(emptyNote(M)); return nodes; }
-  let note: string | null = M.rangeTotal === 'sum of daily' ? 'Sum of daily counts' : M.target != null ? 'Target ' + F.value(M.target, M) : null;
+  if (result.meta.empty) { value(F.value(0, M)); sub(emptyNote(M, false, F)); return nodes; }
+  let note: string | null = M.rangeTotal === 'sum of daily' ? F.say('sumOfDaily') : M.target != null ? F.say('target', { value: F.value(M.target, M) }) : null;
   if (by && catalog.dimensions[by]!.type === 'categorical' && rows.length) {
     const top = leader(result, by, m)!;                                      // with two dimensions a row is a pair, so the leader is the engine's
     const name = F.dimension(top[by], catalog.dimensions[by]!);
     // With no total there is no share to say, and where the engine has no figure for any value there is no top one either.
-    note = share && t[m] ? name + ' ' + F.pct(num(top, m) / t[m]!) : top[m] == null ? note : 'Top: ' + name;
+    note = share && t[m] ? name + ' ' + F.pct(num(top, m) / t[m]!) : top[m] == null ? note : F.say('top', { name });
   }
   const dl = q.compare === 'previous' ? F.delta(t[m] as number, t[m + '@previous'], M.polarity) : null;
   value(F.value(t[m], M), F.value(t[m], M, 'compact'));
-  if (dl && dl.text) nodes.push({ key: 'delta', part: 'number', kind: 'text', text: dl.text + (dl.pct != null ? ' on the previous period' : ''), ...(dl.pct != null && { short: dl.text }), anchor: 'start', font: 'value', paint: dl.paint, layer: 'guide' });
+  if (dl && dl.text) nodes.push({ key: 'delta', part: 'number', kind: 'text', text: dl.pct != null ? F.say('onPrevious', { change: dl.text }) : dl.text, ...(dl.pct != null && { short: dl.text }), anchor: 'start', font: 'value', paint: dl.paint, layer: 'guide' });
   if (note) sub(note, 1);                                                   // the note is given up beside a bare plot
   return nodes;
 }
@@ -1319,7 +1319,7 @@ const TURN = 2 * Math.PI;
 /** The scene for a plan, in ratios. Neither takes a size, so this is everything the spec asks for. */
 export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Catalog): Scene {
   checkValues(result, catalog);
-  const F = formats(p.locale), number = sceneNumber(catalog, F, q, result, p.share);
+  const F = formats(p.locale, p.words), number = sceneNumber(catalog, F, q, result, p.share);
   const parts: Part[] = p.tldrValue || p.layout === 'none' ? ['number'] : [];
   let body: Body = { nodes: [] };
   // The key to a unit's glyphs, where the plan shows it and the scene has one: a glyph worth one has none.
@@ -1328,7 +1328,7 @@ export function buildScene(p: PlanShape, q: Query, result: Result, catalog: Cata
   const keyTo = (part: 'ramp' | 'size', guide: boolean | undefined) => { if (guide && body.nodes.some((n) => n.part === part)) parts.push(part); };
   if (p.layout === 'notice') {
     parts.push('notice');
-    body.nodes.push({ key: 'notice', part: 'notice', kind: 'text', text: emptyNote(catalog.metrics[q.metrics[0]!]!, true), anchor: 'middle', baseline: 'middle', font: 'label', paint: 'ink.muted', layer: 'guide' });
+    body.nodes.push({ key: 'notice', part: 'notice', kind: 'text', text: emptyNote(catalog.metrics[q.metrics[0]!]!, true, F), anchor: 'middle', baseline: 'middle', font: 'label', paint: 'ink.muted', layer: 'guide' });
   } else if (p.layout === 'cartesian') {
     body = sceneCartesian(catalog, F, p.layers, p.guides, result, (q.by || [])[0]);
     if (p.guides.y && body.nodes.some((n) => n.part === 'y-axis')) parts.push('y-axis');   // a stack about the middle has no value axis

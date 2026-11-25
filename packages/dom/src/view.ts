@@ -292,7 +292,7 @@ export class UaView extends Base {
     this.#error.setAttribute('role', 'alert'); this.#error.hidden = true;
     // Loading until the first paint: the base sheet is adopted now so the placeholder is drawn before the view is.
     this.#loading = ensure(this.#root as unknown as Element, 'div', 'uav-loading');
-    this.#loading.setAttribute('role', 'status'); this.#loading.setAttribute('aria-label', 'Loading');
+    this.#loading.setAttribute('role', 'status'); this.#loading.setAttribute('aria-label', formats().say('loading'));
     this.#fig.hidden = true;
     this.#root.adoptedStyleSheets = [sheet(this.ownerDocument, BASE_CSS)];
     this.#room = ensure(this.#fig, 'div', 'uav-room');
@@ -471,7 +471,7 @@ export class UaView extends Base {
       this.#said = plan.text;
       for (const el of [this.#number, ...this.#ruler]) paintNumber(el, scene.nodes.filter((n) => n.part === 'number'));
       if (this.#layout !== scene.layout) { this.#body.replaceChildren(); this.#body.removeAttribute('data-scale'); this.#layout = scene.layout; }
-      const painter = painterOf(scene.layout), data = { layers: plan.layers, query: expand(spec).query, result, catalog, formats: formats(plan.locale) };
+      const painter = painterOf(scene.layout), data = { layers: plan.layers, query: expand(spec).query, result, catalog, formats: formats(plan.locale, plan.words) };
       painter?.paint(this.#body, scene, rules, data);
       // Only while it shows: nothing reads a hidden table, and it is a row per row of the result.
       if (!this.hasAttribute('table')) this.#table.replaceChildren();

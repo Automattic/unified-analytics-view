@@ -1,4 +1,4 @@
-import { POINT_INSET, formats, holds, layerKeys, many, metricOf, most, partialNote, rowKeys, unitsOf, whereOf, type Catalog, type Formats, type Layer, type Query, type RectNode, type Result, type Row, type Scene, type Gesture, type Where } from '@unified-analytics/core';
+import { POINT_INSET, formats, holds, layerKeys, metricOf, most, partialNote, rowKeys, unitsOf, whereOf, type Catalog, type Formats, type Layer, type Query, type RectNode, type Result, type Row, type Scene, type Gesture, type Where } from '@unified-analytics/core';
 import { attr, ensure, paintVar, prop } from './dom.ts';
 import { centred, say, tip as chip } from './chrome/tip.ts';
 import { apart } from './measure.ts';
@@ -60,14 +60,14 @@ export function dimName(row: Row, d: string, catalog: Catalog, F: Formats = form
 export function readout(row: Row, q: Query, catalog: Catalog, layers: Layer[], F: Formats = formats()): string {
   // Two bins are each named by their dimension as well: two bare ranges do not say which is which.
   const both = (q.by || []).filter((d) => row[d + '@end'] != null).length > 1;
-  const dims = (q.by || []).map((d) => (both && row[d + '@end'] != null ? catalog.dimensions[d]!.label + ' ' : '') + dimName(row, d, catalog, F)).join(', '), partial = partialNote(row);
+  const dims = (q.by || []).map((d) => (both && row[d + '@end'] != null ? catalog.dimensions[d]!.label + ' ' : '') + dimName(row, d, catalog, F)).join(', '), partial = partialNote(row, F);
   // Never a row of dashes: a row with nothing to say, no value, no period before and no companion, says so in words.
   const said = (m: string) => row[m] != null || (q.compare === 'previous' && row[m + '@previous'] != null) || companions(m, row, layers).some((f) => row[f] != null);
-  if (!q.metrics.some(said)) return (dims ? dims + ': ' : '') + 'No data';
+  if (!q.metrics.some(said)) return (dims ? dims + ': ' : '') + F.say('noData');
   const values = q.metrics.map((m) => {
     const def = catalog.metrics[m]!, prev = q.compare === 'previous' ? row[m + '@previous'] : null;
     const more = companions(m, row, layers).filter((f) => row[f] != null).map((f) => ', ' + companionLabel(f, catalog) + ' ' + F.value(row[f] as number, metricOf(catalog, f)!)).join('');
-    return def.label + ' ' + F.value(row[m] as number | null, def) + (partial && ' ' + partial) + (prev == null ? '' : ', previous period ' + F.value(prev as number, def)) + more;
+    return def.label + ' ' + F.value(row[m] as number | null, def) + (partial && ' ' + partial) + (prev == null ? '' : ', ' + F.say('previous') + ' ' + F.value(prev as number, def)) + more;
   }).join('; ');
   return dims ? dims + ': ' + values : values;
 }
@@ -90,16 +90,16 @@ export function readoutAt(rows: Row[], total: Row | undefined, q: Query, catalog
   const of = catalog.dimensions[split]!, { name, metrics } = headAt(rows, total, q, catalog, x, F);
   return name + ': ' + q.metrics.map((m, i) => {
     // A series with no value here says so in words, as a row's readout does, and never with a dash.
-    const def = catalog.metrics[m]!, said = (r: Row) => F.dimension(r[split], of) + ' ' + (r[m] == null ? 'no data' : F.value(r[m] as number, def));
+    const def = catalog.metrics[m]!, said = (r: Row) => F.dimension(r[split], of) + ' ' + (r[m] == null ? F.say('noDataOf') : F.value(r[m] as number, def));
     const top = most(rows, m);
-    return metrics[i] + ' (' + (mass ? F.count(rows.length) + ' ' + many(rows.length, of.label.toLowerCase()) + (top?.[m] != null ? ', the most ' + said(top) : '') : rows.map(said).join(', ')) + ')';
+    return metrics[i] + ' (' + (mass ? F.say('counted', { count: F.count(rows.length), dimension: of.label }, rows.length) + (top?.[m] != null ? ', ' + F.say('theMost', { said: said(top) }) : '') : rows.map(said).join(', ')) + ')';
   }).join('; ');
 }
 
 /** What a point of a split plot is called, and each metric there with the engine's total for the point where the result
  * has one: the head of its readout, in words (readoutAt) and as drawn (readoutLines). */
 function headAt(rows: Row[], total: Row | undefined, q: Query, catalog: Catalog, x: string, F: Formats): { name: string; metrics: string[] } {
-  const first = rows[0] ?? {}, partial = partialNote(first);
+  const first = rows[0] ?? {}, partial = partialNote(first, F);
   return {
     name: F.dimension(first[x], catalog.dimensions[x]!),
     metrics: q.metrics.map((m) => { const def = catalog.metrics[m]!; return def.label + (total ? ' ' + F.value(total[m] as number | null, def) + (partial && ' ' + partial) : ''); }),
@@ -112,7 +112,7 @@ function headAt(rows: Row[], total: Row | undefined, q: Query, catalog: Catalog,
  * their values in the head's order. */
 export function readoutLines(rows: Row[], total: Row | undefined, q: Query, catalog: Catalog, x: string, split: string, F: Formats = formats()): { head: string; lines: { series: string; name: string; value: string }[] } {
   const of = catalog.dimensions[split]!, { name, metrics } = headAt(rows, total, q, catalog, x, F), head = name + ': ' + metrics.join('; ');
-  return { head, lines: rows.map((r) => ({ series: String(r[split]), name: F.dimension(r[split], of), value: q.metrics.every((m) => r[m] == null) ? 'No data' : q.metrics.map((m) => F.value(r[m] as number | null, catalog.metrics[m]!)).join(', ') })) };
+  return { head, lines: rows.map((r) => ({ series: String(r[split]), name: F.dimension(r[split], of), value: q.metrics.every((m) => r[m] == null) ? F.say('noData') : q.metrics.map((m) => F.value(r[m] as number | null, catalog.metrics[m]!)).join(', ') })) };
 }
 
 /** The rows of the result at each point of the scene. One each, in step, unless the plot is split into series:
@@ -153,7 +153,7 @@ export function crossMarks(scene: Scene, layers: Layer[], rows: Row[][], catalog
         const at = rows[keys.indexOf(p.row)] ?? [], row = n.series == null ? at[0] : at.find((r) => String(r[split!]) === n.series), id = li + ':' + (n.series ?? '') + ':' + p.row;
         if (row?.[field] == null || seen.has(id)) continue;
         seen.add(id);
-        const partial = prev ? '' : partialNote(row);
+        const partial = prev ? '' : partialNote(row, F);
         out.set(p.row, (out.get(p.row) ?? []).concat({ t: p.y, text: F.value(row[field] as number, def) + (partial && ' ' + partial), side, ...(n.role && { role: n.role }), ...(n.series != null && { series: n.series }) }));
       }
     }

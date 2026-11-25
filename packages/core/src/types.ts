@@ -1,4 +1,5 @@
 import type { FitRule } from './fit.ts';
+import type { Words } from './words.ts';
 
 /* Catalog: the slice of the semantic model the front end needs.
  * Each `as const` list here is the one source of a union below and of the enum the schemas give it (test/core.test.ts compares them). */
@@ -194,6 +195,8 @@ export interface ContainerRules {
   /** The language the view speaks: a BCP 47 tag, as "de" or "pt-BR". It is where the view lands, as its sizes are, and
    * never a spec's. Numbers, dates and the names of countries are said in it. English where none is given. */
   locale?: string;
+  /** The view's own words in that language (words.ts): any of them, as templates, and English is said for the rest. */
+  words?: Partial<Words>;
 }
 
 /* Plan: what a spec asks to have drawn, with no size. */
@@ -210,6 +213,8 @@ export interface PlanShape {
   text: string;
   /** The locale the plan's text is in, and its scene's is built in: the container's (`rules.locale`). Absent for English. */
   locale?: string;
+  /** The container's words (`rules.words`), which the scene is built with as the text was. Absent where it handed none. */
+  words?: Partial<Words>;
 }
 export interface Plan extends PlanShape {
   preset: string | null;

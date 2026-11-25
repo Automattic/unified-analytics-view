@@ -7,7 +7,9 @@ export { explain, facetBecause, selectedBecause, type Because, type Explanation,
 export { buildScene, detailOf, isDim, isMetric, layerKeys, metricOf, roleOf, rowKeys, uniqueKeys, unitsOf } from './scene.ts';
 export { COLUMNS_BLOCK, EM, FACET_GAP, FACET_LEAST, columnRooms, declutter, facetColumns, inColumn, type LabelBox } from './sizes.ts';
 export { arcD, pathD, steady, type PathBox } from './path.ts';
-export { filterSaid, many, most, notShownNote, partialNote, plural, tldrProse } from './prose.ts';
+export { filterSaid, most, notShownNote, partialNote, tldrProse } from './prose.ts';
+export { WORDS, checkWords, many, plural } from './words.ts';
+export type { Word, Words } from './words.ts';
 export { LOCALE, UNITS, formatBin, formatDimension, formatUnit, formatValue, formats, orList, rangeLabel, rangeOf, timeOf } from './format.ts';
 export type { Delta, Formats } from './format.ts';
 export { SERIES, SIZES, TINT, common, seqScale, sizeKey, sizeStep, tooManySeries } from './scene.ts';

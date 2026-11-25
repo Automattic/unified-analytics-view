@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { CONTAINER_RULES, buildScene, expand, facets, formats, resolve, viewAt, type Row } from '@unified-analytics/core';
+import { CONTAINER_RULES, WORDS, buildScene, expand, facets, formats, resolve, viewAt, type Row } from '@unified-analytics/core';
 import { catalog, facetSamples, moreSamples, runQuery, samples, scenarios } from '@unified-analytics/fixtures';
 import { errOf, trend } from './helpers.ts';
 
@@ -74,10 +74,46 @@ describe('a view is in its container\'s locale', () => {
   });
 });
 
+describe('the words a view says of its own are one table', () => {
+  // Enough German to see a view say it. A real table is a host's to write, and gives every entry.
+  const DE = { lastDays: { one: 'letzten Tag', other: 'letzten {count} Tagen' }, over: ' in den {range}', saidUp: ', {change} mehr als im Zeitraum davor', saidSumOfDaily: 'Das ist eine Summe von Tageswerten.',
+    sumOfDaily: 'Summe der Tageswerte', onPrevious: '{change} zum Zeitraum davor', noData: 'Keine Daten', previous: 'Zeitraum davor' };
+  it('a container hands its own with its rules, and English is said for the rest', () => {
+    const F = formats('de', DE);
+    expect([F.say('noData'), F.say('soFar'), formats('de').say('noData')]).toEqual(['Keine Daten', 'so far', 'No data']);
+    expect(formats('de', DE)).toBe(F);
+    const result = runQuery(trend.query), plan = resolve(trend, result, catalog, { ...at('de'), words: DE }), scene = buildScene(plan, expand(trend).query, result, catalog);
+    expect(plan.text).toMatch(/^Visitors: \S+ in den letzten 28 Tagen, \d+\s% mehr als im Zeitraum davor\. Das ist eine Summe von Tageswerten\.$/);
+    expect(scene.nodes.filter((n) => n.kind === 'text' && n.part === 'number').map((n) => (n as { text: string }).text.replace(/\d+\s%/, 'N'))).toEqual([formats('de').fmt(result.totals.visitors), '▲ N zum Zeitraum davor', 'Summe der Tageswerte']);
+  });
+  it('an entry that depends on a count has a form for each, by the locale\'s own plural rules', () => {
+    expect([formats().range('1d'), formats().range('28d'), formats().range('now')]).toEqual(['last day', 'last 28 days', 'right now']);
+    expect([formats('de', DE).range('1d'), formats('de', DE).range('28d')]).toEqual(['letzten Tag', 'letzten 28 Tagen']);
+    expect([1, 2, 3, 4, 11, 12, 13, 21, 22, 103].map((n) => formats().unit(n, 'rank'))).toEqual(['1st', '2nd', '3rd', '4th', '11th', '12th', '13th', '21st', '22nd', '103rd']);
+    // A form the table does not give is the one for the rest.
+    expect(formats('en-US', { nth: { other: '{n}.' } }).unit(2, 'rank')).toBe('2.');
+  });
+  it('a name may ask for an English form of what fills it, and a translation need not', () => {
+    expect([formats().say('counted', { count: '3', dimension: 'Country' }, 3), formats().say('counted', { count: '1', dimension: 'Country' }, 1)]).toEqual(['3 countries', '1 country']);
+    expect(formats('de', { counted: '{count} × {dimension}' }).say('counted', { count: '3', dimension: 'Land' }, 3)).toBe('3 × Land');
+  });
+  it('a word a view does not say is refused, and so is one that is no template', () => {
+    expect(errOf(() => formats('de', { nodata: 'x' } as never))).toMatch(/^The words have "nodata", which is not something a view says\. It says: up, down, .* Correct the name, or remove it\.$/);
+    expect(errOf(() => formats('de', { noData: 3 } as never))).toMatch(/^The words give "noData" as 3\. Give a template, as English has it \("No data"\), or one for each plural form of a count, with "other" among them\.$/);
+    expect(errOf(() => formats('de', { lastDays: { one: 'x' } } as never))).toMatch(/^The words give "lastDays"/);
+    expect(errOf(() => resolve(trend, runQuery(trend.query), catalog, { ...CONTAINER_RULES, words: [] as never }))).toMatch(/^The words are \[\], and they are a table/);
+  });
+  it('every entry is one that something says', () => {
+    const root = new URL('../packages', import.meta.url).pathname, src = readdirSync(root).filter((pkg) => existsSync(root + '/' + pkg + '/src')).flatMap((pkg) => files(root + '/' + pkg + '/src')).map((f) => readFileSync(f, 'utf8')).join('\n');
+    const said = src.split('\n').filter((line) => /\bsay\(/.test(line)).join('\n');
+    expect(Object.keys(WORDS).filter((w) => !said.includes("'" + w + "'"))).toEqual([]);
+  });
+});
+
+const files = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? files(dir + '/' + e.name) : e.name.endsWith('.ts') ? [dir + '/' + e.name] : []));
 describe('nothing that builds a view formats in English behind its back', () => {
   // The English formatters keep their old names for a test and an error. A view's text is built with its plan's.
   const BARE = /(?<![.\w])(fmt|fmtPct|fmtTime|formatMetric|formatUnit|formatValue|formatDimension|formatBin|rangeLabel)\(/;
-  const files = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? files(dir + '/' + e.name) : e.name.endsWith('.ts') ? [dir + '/' + e.name] : []));
   it('no source file but format.ts calls one', () => {
     const root = new URL('../packages', import.meta.url).pathname;
     const found = readdirSync(root).filter((pkg) => existsSync(root + '/' + pkg + '/src')).flatMap((pkg) => files(root + '/' + pkg + '/src')).filter((f) => !f.endsWith('core/src/format.ts'))

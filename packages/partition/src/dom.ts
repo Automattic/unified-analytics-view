@@ -165,7 +165,7 @@ export const partitionPainter: LayoutPainter = {
     const row = (parent: HTMLElement, heads: string[], from: Row) => tableRow(parent, [...heads.map((s): Cell => [s, 'th']), ...fields.map((f): Cell => [valueText(from[f], f, catalog, F), 'td', true])]);
     const say = (d: string, r: Row) => F.dimension(r[d], catalog.dimensions[d]!);
     emptyTable(table, title);
-    tableRow(table.createTHead(), [...by.map((d): Cell => [catalog.dimensions[d]!.label, 'th']), ...fields.map((f): Cell => [fieldLabel(f, catalog), 'th', true])]);
+    tableRow(table.createTHead(), [...by.map((d): Cell => [catalog.dimensions[d]!.label, 'th']), ...fields.map((f): Cell => [fieldLabel(f, catalog, F), 'th', true])]);
     const body = table.createTBody();
     if (b == null) for (const r of result.rows) row(body, [say(a!, r)], r);
     else for (const top of result.totalsBy?.[a!] ?? []) {

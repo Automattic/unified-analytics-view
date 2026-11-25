@@ -19,9 +19,9 @@ export function tableRow(parent: HTMLElement, cells: Cell[]): HTMLTableRowElemen
 }
 
 /** A field's column label: its metric's, and after it the period before or a companion's own name, as the readout says it. */
-export function fieldLabel(f: string, catalog: Catalog): string {
+export function fieldLabel(f: string, catalog: Catalog, F: Formats = formats()): string {
   const [m, of] = f.split('@');
-  return catalog.metrics[m!]!.label + (of == null ? '' : ', ' + (of === 'previous' ? 'previous period' : companionLabel(f, catalog)));
+  return catalog.metrics[m!]!.label + (of == null ? '' : ', ' + (of === 'previous' ? F.say('previous') : companionLabel(f, catalog)));
 }
 
 /** A field's value in a table: exact, in its own unit. */
@@ -58,7 +58,7 @@ export function paintTable(table: HTMLTableElement, title: string | undefined, q
   // A companion of a metric that a layer encodes has a column after it, under its suffix, or its own label where the catalog has an entry for it, as the readout says it, and in its own unit. With two dimensions the table is a pivot, and has none.
   const more = (m: string) => (by.length === 2 ? [] : companions(m, result.rows[0], layers));
   const fields = q.metrics.flatMap((m) => [m, ...(prev ? [m + '@previous'] : []), ...more(m)]);
-  const label = (f: string) => fieldLabel(f, catalog), value = (v: Row[string] | undefined, f: string): Cell => [valueText(v, f, catalog, F), 'td', true];
+  const label = (f: string) => fieldLabel(f, catalog, F), value = (v: Row[string] | undefined, f: string): Cell => [valueText(v, f, catalog, F), 'td', true];
   emptyTable(table, title);
   if (by.length === 2) {
     // Two dimensions: the first down the side, the second across, and each field once more for the whole row.

@@ -1,8 +1,10 @@
 import type { DimensionDef, MetricDef, Polarity, Row, Unit } from './types.ts';
+import { WORDS, checkWords, many, type Word, type Words } from './words.ts';
 
-/* How a view says a number, a time and a name. The forms are core's and the language is where the view lands: a set of
- * formatters is made for a locale (`formats`), and whoever builds a view's text is handed the one for its plan. Nothing
- * here asks the machine what language it is in, so a scene is the same on every machine that has the locale's data. */
+/* How a view says a number, a time and a name, and the words it says of its own. The forms are core's and the language
+ * is where the view lands: a set of formatters is made for a locale and a table of words (`formats`), and whoever builds
+ * a view's text is handed the one for its plan. Nothing here asks the machine what language it is in, so a scene is the
+ * same on every machine that has the locale's data. */
 
 // A time's fields, as timeOf reads them. The offset is matched and left where it is.
 const TIME = /^(\d{4})-(\d\d)(?:-(\d\d)(?:[T ](\d\d):(\d\d)(?::(\d\d)(?:\.\d+)?)?(?:Z|[+-]\d\d(?::?\d\d)?)?)?)?$/, WEEK = /^(\d{4})-W(\d\d)$/;
@@ -41,8 +43,6 @@ export function rangeOf(r: string | null | undefined): number | null {
 
 // Money is in its currency's own units, dollars and not cents, and its unit is the currency's ISO 4217 code in lower case.
 const CURRENCIES = new Set(Intl.supportedValuesOf('currency').map((c) => c.toLowerCase()));
-// What follows a place in an order: "1st", "2nd", "3rd", "11th".
-const nth = (n: number) => { const th = ['th', 'st', 'nd', 'rd'], v = Math.abs(n) % 100; return th[(v - 20) % 10] || th[v] || th[0]!; };
 const BYTES = ['B', 'kB', 'MB', 'GB', 'TB', 'PB'];
 /** A list as a sentence says it: "a, b or c". */
 export const orList = (items: readonly string[]): string => (items.length < 2 ? items.join('') : items.slice(0, -1).join(', ') + ' or ' + items[items.length - 1]);
@@ -60,10 +60,13 @@ export interface Delta {
   pct?: number;
 }
 
-/** A view's formatters, in one locale. */
+/** A view's formatters, in one locale, and its words. */
 export interface Formats {
   /** The locale they are made for, as it was asked. */
   locale: string;
+  /** One of the view's own words (words.ts), by its name, filled with `values`. `count` picks the form of an entry that
+   * depends on one, and is what `:plural` goes by. */
+  say(word: keyof Words, values?: Record<string, string>, count?: number): string;
   /** A plain number: whole under ten thousand, and "10.5k" from there or where `compact`. */
   fmt(v: number | null | undefined, compact?: boolean): string;
   /** A whole number said bare, with nothing grouped and nothing cut short: a count in a sentence, "12 pages". */
@@ -92,22 +95,30 @@ export interface Formats {
   delta(cur: number | null | undefined, prev: number | null | undefined, polarity: Polarity): Delta;
 }
 
-const made = new Map<string, Formats>();
-/** The formatters for a locale, a BCP 47 tag, and English where none is given. One set a locale, made when first asked
- * for. A tag that is no locale is refused, and so is one this machine has no data for: Intl would answer for it in the
- * machine's own language, and a scene would then differ from one machine to the next. */
-export function formats(locale: string = LOCALE): Formats {
+const plain = new Map<string, Formats>(), worded = new WeakMap<object, Map<string, Formats>>();
+/** The formatters for a locale, a BCP 47 tag, and English where none is given, with a container's words over the
+ * English ones where it hands any (`rules.words`). One set a locale and a table, made when first asked for. A tag that
+ * is no locale is refused, and so is one this machine has no data for: Intl would answer for it in the machine's own
+ * language, and a scene would then differ from one machine to the next. A word a view does not say is refused too. */
+export function formats(locale: string = LOCALE, words?: Partial<Words>): Formats {
+  if (words && !worded.has(words)) { checkWords(words); worded.set(words, new Map()); }
+  const made = words ? worded.get(words)! : plain;
   let f = made.get(locale);
   if (!f) {
     let known: string[] = [];
     try { known = Intl.NumberFormat.supportedLocalesOf(locale); } catch { /* not a tag at all */ }
     if (!known.length) throw new Error('The locale ' + JSON.stringify(locale) + ' is not one a view can speak here. Give a BCP 47 language tag this machine has, such as "en-US", "de" or "pt-BR", or leave it out for English.');
-    made.set(locale, (f = make(locale)));
+    made.set(locale, (f = make(locale, words)));
   }
   return f;
 }
 
-function make(locale: string): Formats {
+function make(locale: string, words: Partial<Words> = {}): Formats {
+  const PR = new Intl.PluralRules(locale), OR = new Intl.PluralRules(locale, { type: 'ordinal' });
+  const say: Formats['say'] = (word, values = {}, count) => {
+    const w: Word = words[word] ?? WORDS[word], form = typeof w === 'string' ? w : (count != null && w[(word === 'nth' ? OR : PR).select(count)]) || w.other;
+    return form.replace(/\{(\w+)(?::(lower|plural))?\}/g, (_: string, name: string, as?: string) => { const v = values[name] ?? ''; return as === 'plural' ? many(count ?? 0, v.toLowerCase()) : as ? v.toLowerCase() : v; });
+  };
   const NF = new Intl.NumberFormat(locale), CF = new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 });
   // A number that is said beside a unit of its own: a decimal at most, and no grouping. And one of two digits, for the seconds of "2m 05s".
   const N1 = new Intl.NumberFormat(locale, { maximumFractionDigits: 1, useGrouping: false }), N2 = new Intl.NumberFormat(locale, { minimumIntegerDigits: 2, useGrouping: false });
@@ -158,7 +169,7 @@ function make(locale: string): Formats {
       case 's': return exact ? NF.format(v) + ' s' : duration(v * 1000);
       case 'bytes': return exact ? NF.format(v) + ' B' : bytes(v);
       // A tick on a scale of ranks is the bare number. ponytail: a rank that is no whole number is said as it came, digits and all.
-      case 'rank': return !Number.isInteger(v) ? String(v) : N1.format(v) + (form === 'compact' ? '' : nth(v));
+      case 'rank': return !Number.isInteger(v) ? String(v) : form === 'compact' ? N1.format(v) : say('nth', { n: N1.format(v) }, Math.abs(v));
     }
     if (CURRENCIES.has(unit)) return money(v, unit, form);
     throw new Error('The unit "' + unit + '" has no format. Give the metric one of ' + UNITS.join(', ') + ' in the catalog, or a currency\'s ISO 4217 code in lower case ("usd"), or add a branch for it to Formats.unit in packages/core/src/format.ts.');
@@ -166,7 +177,7 @@ function make(locale: string): Formats {
   const value: Formats['value'] = (v, metric, form) => unit(v, metric.unit, form);
   const time: Formats['time'] = (iso) => { const { t, form } = timeOf(iso); return (form === 'month' ? MF : form === 'hour' ? HF : DF).format(t); };
   return {
-    locale, fmt, unit, value, time,
+    locale, say, fmt, unit, value, time,
     count: (n) => N1.format(n),
     pct: (p) => pct(p * 100),
     metric: (v, metric, compact = false) => (metric ? value(v, metric, compact ? 'compact' : undefined) : fmt(v, compact)),
@@ -175,16 +186,16 @@ function make(locale: string): Formats {
       if (dim.values === 'country') return /^[A-Z]{2}$/.test(String(v)) ? RN.of(String(v)) ?? String(v) : String(v);
       return dim.type === 'time' ? time(String(v)) : String(v);
     },
-    bin: (start, end) => (end == null ? String(start) : start + (Number(start) < 0 || Number(end) < 0 ? ' to ' : '–') + end),
-    range(r) { const days = rangeOf(r); return days == null ? 'right now' : days === 1 ? 'last day' : 'last ' + N1.format(days) + ' days'; },
+    bin: (start, end) => (end == null ? String(start) : say(Number(start) < 0 || Number(end) < 0 ? 'binTo' : 'bin', { start: String(start), end: String(end) })),
+    range(r) { const days = rangeOf(r); return days == null ? say('now') : say('lastDays', { count: N1.format(days) }, days); },
     delta(cur, prev, polarity) {
       if (cur == null) return { state: 'none', text: '', paint: 'ink.muted' };
-      if (prev == null) return { state: 'none', text: 'No prior period', paint: 'ink.muted' };
-      if (prev === 0 && cur !== 0) return { state: 'new', text: 'New', paint: 'ink.muted' };
+      if (prev == null) return { state: 'none', text: say('noPrior'), paint: 'ink.muted' };
+      if (prev === 0 && cur !== 0) return { state: 'new', text: say('isNew'), paint: 'ink.muted' };
       const p = (cur - prev) / Math.abs(prev);                                // against the size of what was, so a rise from below zero is a rise
-      if (cur === prev || Math.abs(p) < 0.005) return { state: 'flat', text: 'No change', paint: 'ink.muted' };
+      if (cur === prev || Math.abs(p) < 0.005) return { state: 'flat', text: say('noChange'), paint: 'ink.muted' };
       const up = p > 0, good = polarity === 'none' ? null : (polarity === 'up') === up;
-      return { state: up ? 'up' : 'down', pct: p, text: (up ? '▲ ' : '▼ ') + pct(Math.abs(p) * 100), paint: good == null ? 'ink.muted' : good ? 'delta.good' : 'delta.bad' };
+      return { state: up ? 'up' : 'down', pct: p, text: say(up ? 'up' : 'down', { change: pct(Math.abs(p) * 100) }), paint: good == null ? 'ink.muted' : good ? 'delta.good' : 'delta.bad' };
     },
   };
 }

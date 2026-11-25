@@ -595,6 +595,14 @@ A preset is a saved fragment of a spec with slots filled from the query: `$metri
 
 **The language is where the view lands** (Decided 67). A container says it with its rules: `rules.locale`, a BCP 47 tag such as `de` or `pt-BR`. Every number, date and country's name a view says is then in that locale: in its sentence, its scene, its readout and its table. With none said a view is in English. A spec never says a locale, as it never says a size. What the engine sent as a value (a page's path, a bin's ends) and what an author wrote (a layer's `label`) are said as they came, and a time is said as it was written, with no zone asked, in any locale.
 
+**Its own words are one table** (Decided 68): 48 short templates, `WORDS` in `packages/core/src/words.ts`, for what a view says that is neither the catalog's, the engine's nor the author's: "No data", "last {count} days", "Top: {name}", the clauses of the sentence. A container hands its own with its rules, as `rules.words`: any of them, and English is said for the rest.
+
+```json
+{ "locale": "de", "words": { "noData": "Keine Daten", "lastDays": { "one": "letzten Tag", "other": "letzten {count} Tagen" } } }
+```
+
+A `{name}` is filled with what the view has for it, already in the locale. An entry that depends on a count gives a form for each plural category the language has, with `other` for the rest. A word that is not in the table is refused by name. Two things are English still: the letters of a unit ("ms", "kB", "2m 05s"), and the order of the sentence's clauses, each of which is its own template.
+
 **Intrinsic by default.** A container does not know or care where it is. It fills the room it is handed and renders itself for that room.
 
 - With nothing said, a container fills the width and takes its natural height.
@@ -920,6 +928,7 @@ Each entry is the decision. What led to it, and what building it found, is in gi
 65. Sizes are relative. A need is written in em, and so is every size in the element: a row, a gutter, a gap, a swatch, a dot, in em of the view's type or of the face it stands by. The view is set in its label face and everything in it inherits that, so one em is the unit of a need, on the view and on its plot, and of what the need is a sum of. px is for a stroke, a hairline, a radius, what is measured, and a grid of pixels: the cell of a number set in dots is the one size left in it. A room is still given in px, with the size of an em. On the bench nothing moved by more than 0.6 px, but for a legend that wraps, which fits one more name on a line where the theme sets its label smaller. (November 24)
 66. A legend has one ladder, in a divided list, a band and a circle, written once (`legend` in `fit.ts`): whole, then its one line, then neither, with its marks in one paint. The least of a layout's marks is what differs between the three. The one line is a part a rule shows in the whole legend's place, `legend-top`, so `fitTo` names what shows, and the switch `legend: top` is gone. A band's bar still goes at the height its line would, so a band is not drawn in one paint. A list's whole legend has a height a rule says, since it wraps; a band's and a circle's is a line for each entry, which the stylesheet reads. (November 25)
 67. A view speaks the language of where it lands. Its container says which, as `rules.locale`, and every number, date and country's name the view says is then in it. The formatters are a set made for a locale (`formats`), which the plan names and everything that builds a view's text is handed: nothing asks the machine its own language, and a tag the machine has no data for is refused, so a scene is the same on every machine. English where none is said. (November 25)
+68. The words a view says of its own are one table, `WORDS`: templates with named places, and a form for each plural category where one depends on a count. A container hands its own with its rules (`rules.words`), any of them, and English is said for the rest. The table is data, so a host's translation is JSON, and a word a view does not say is refused. The sentence is made of the table's clauses in English's order, and a unit's letters are not in it. (November 25)
 
 ### Open
 
@@ -939,7 +948,7 @@ Each entry is the decision. What led to it, and what building it found, is in gi
 14. Which survives at the smallest size, the marks or the tldr value. Today the number does. A sparkline in a table's cell wants the line alone.
 15. Whether the prose rung can be anything but measured. Its threshold is the width of the number itself, which is the one place the fit is not intrinsic.
 16. What building the chart coverage left to decide: `docs/archive/chart-coverage-plan.md`, section 9.
-17. Time zone, grain and locale. Raised again by the Jetpack Stats team's review, which asked that it be threaded through while the call sites were few. The locale of numbers and dates is settled (Decided 67): it is where the view lands, an input a container hands with its rules, and never part of a spec. Still to come, in the two stages left: the words a view says of its own, which are English, gathered into one table a container can hand in; and the element reading the page's own language. Still open: the time zone. A time is said as its string writes it, which needs no zone while an engine names buckets by its own clock.
+17. Time zone, grain and locale. Raised again by the Jetpack Stats team's review, which asked that it be threaded through while the call sites were few. The locale of numbers and dates is settled (Decided 67): it is where the view lands, an input a container hands with its rules, and never part of a spec. A view's own words are one table a container can hand in (Decided 68). Still to come, in the stage left: the element reading the page's own language. Still open: the time zone. A time is said as its string writes it, which needs no zone while an engine names buckets by its own clock.
 18. Settled: Decided 41 and 42.
 19. What the fit rules do not say (section 10.2). Recommendation: write each as a rule where its need can be stated, starting with the number's forms and whole rows, and leave label collision to the surface (Open 5).
 20. A placer for surfaces with no CSS. Recommendation: one generic function that maps a ratio and its part's box to pixels and knows no layout, written when a pixel painter is wanted.

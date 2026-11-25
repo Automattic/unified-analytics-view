@@ -115,7 +115,7 @@ export const matrix: LayoutPainter = {
     grids.set(cells, { nx: xs.length, ny: ys.length, rows, dims: [xf, yf] });
     prop(cells, '--uav-nx', xs.length); prop(cells, '--uav-ny', ys.length);
     attr(cells, 'role', 'grid'); attr(cells, 'aria-multiselectable', 'true'); attr(cells, 'tabindex', xs.length && ys.length ? 0 : null);
-    attr(cells, 'aria-label', [yf, xf].filter(Boolean).map((f) => dims[f!]!.label).join(' by '));
+    attr(cells, 'aria-label', [yf, xf].filter(Boolean).map((f) => dims[f!]!.label).reduce((a, b) => (a ? data.formats.say('by', { a, b }) : b), ''));
     // One row is as tall as a cell and no taller: the stylesheet gives a strip its own height.
     body.toggleAttribute('data-strip', !yf);
     // A pair is one element: its cell, with its dot on it where it has one, or its dot alone where no cell is drawn.
@@ -160,7 +160,7 @@ export const matrix: LayoutPainter = {
     // A strip is a list: its one dimension down the side, and the metric's own column, with no total beside it to repeat it.
     if (!xf || !yf) {
       const f = (yf || xf)!;
-      tableRow(head, [[catalog.dimensions[f]!.label, 'th'], [fieldLabel(m, catalog), 'th', true]]);
+      tableRow(head, [[catalog.dimensions[f]!.label, 'th'], [fieldLabel(m, catalog, F), 'th', true]]);
       for (const k of (yf ? scene.ys : xs) ?? []) tableRow(body, [[name(f, k), 'th'], value(at.get(yf ? '\n' + k : k + '\n'))]);
       tableRow(foot, [['Total', 'th'], value(result.totals[m])]);
       return;

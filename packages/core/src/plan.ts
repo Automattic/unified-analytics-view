@@ -204,12 +204,12 @@ export function resolve(spec0: Spec, result: Result, catalog: Catalog, rules: Co
   }
   // Glyphs with no dimension say how far along its range a metric is, and not what it is: the number stands above them.
   // The view's text is in its container's locale, and so is its scene's, which is built from this plan.
-  const F = formats(rules.locale);
+  const F = formats(rules.locale, rules.words);
   const p: PlanShape = { layout: laid, layers, guides: guidesOf(laid, layers, catalog), tldrValue: rules.tldrValue.above === 'always' || !!M.instant || !layers.length || (unit && !by),
-                         share, text: tldrProse(q, result, share, catalog, F), ...(rules.locale != null && { locale: rules.locale }) };
+                         share, text: tldrProse(q, result, share, catalog, F), ...(rules.locale != null && { locale: rules.locale }), ...(rules.words && { words: rules.words }) };
   // What the answer is filtered to is said last, of everything before it: a view of some rows never reads as one of all.
   const only = filterSaid(result.meta.where, catalog, F);
-  if (only) p.text += ' Filtered to ' + only + '.';
+  if (only) p.text += ' ' + F.say('filtered', { filter: only });
   if (result.meta.empty || (M.instant && !result.rows.length)) {
     if (M.instant || !layers.length) { p.layout = 'none'; p.layers = []; p.tldrValue = true; p.guides = {}; }
     else { p.layout = 'notice'; p.layers = []; p.guides = {}; p.tldrValue = false; }
@@ -223,7 +223,7 @@ export function resolve(spec0: Spec, result: Result, catalog: Catalog, rules: Co
   return {
     preset: spec0.use && !spec0.layers ? spec0.use : null, layout: p.layout,
     layers: p.layers.map((l) => Object.assign({}, l, { role: roleOf(l) })),
-    guides: p.guides, tldrValue: p.tldrValue, share: p.share, dropped, text: p.text, ...(p.locale != null && { locale: p.locale }),
+    guides: p.guides, tldrValue: p.tldrValue, share: p.share, dropped, text: p.text, ...(p.locale != null && { locale: p.locale }), ...(p.words && { words: p.words }),
   };
 }
 
@@ -258,7 +258,7 @@ export function facets(spec0: Spec, result: Result, catalog: Catalog, rules: Con
     if (held === f) throw new Error('Layer ' + (i + 1) + ' encodes "' + f + '" on ' + channel + ', and "' + f + '" is the facet: each view holds one value of it. Take it off the layer, or remove "facet" and keep it there.');
   }));
   // The engine's total for a value: its row of totalsBy where the query has a second dimension, and its own row where it has none.
-  const whole = result.totalsBy && result.totalsBy[f], values = [...new Set((whole || result.rows).map((r) => String(r[f])))], F = formats(rules.locale);
+  const whole = result.totalsBy && result.totalsBy[f], values = [...new Set((whole || result.rows).map((r) => String(r[f])))], F = formats(rules.locale, rules.words);
   if (!values.length) return [{ key: '', label: dim.label, spec, result }];
   const views = values.map((v): Facet => {
     const rows = result.rows.filter((r) => String(r[f]) === v), total = (by.length > 1 ? whole && whole.find((r) => String(r[f]) === v) : rows[0]) || {};
